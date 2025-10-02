@@ -18,8 +18,8 @@ from merino.curated_recommendations.corpus_backends.sections_backend import (
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.ml_backends.static_local_model import (
-    LimitedTopicV1Model as FakeLocalModel,
+from merino.curated_recommendations.ml_backends.fake_local_model import (
+    LimitedTopicV0Model as FakeLocalModel,
 )
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
 from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend

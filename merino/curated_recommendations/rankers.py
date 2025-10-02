@@ -9,7 +9,6 @@ from datetime import datetime, timedelta, timezone
 from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.ml_backends.static_local_model import DEFAULT_INTERESTS_KEY
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
     Prior,
@@ -62,8 +61,6 @@ MAX_TOP_REC_SLOTS = 10
 NUM_RECS_PER_TOPIC = 2
 
 TOP_STORIES_SECTION_KEY = "top_stories_section"
-
-INFERRED_SCORE_WEIGHT = 0.001
 
 # For taking down reported content
 DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.001  # using a low number for now (0.1%)
@@ -171,7 +168,6 @@ def thompson_sampling(
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
     rescaler: ExperimentRescaler | None = None,
-    personal_interests: ProcessedInterests | None = None,
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
     CTR with exploration of new items using a prior.
@@ -182,7 +178,6 @@ def thompson_sampling(
     :param region: Optionally, the client's region, e.g. 'US'.
     :param region_weight: In a weighted average, how much to weigh regional engagement.
     :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
-    :param personal_interests User interests
 
     :return: A re-ordered version of recs, ranked according to the Thompson sampling score.
 
@@ -199,16 +194,6 @@ def thompson_sampling(
             return engagement.click_count, engagement.impression_count - engagement.click_count
         else:
             return 0, 0
-
-    def boost_interest(rec: CuratedRecommendation) -> float:
-        if personal_interests is None or rec.topic is None:
-            return 0.0
-        if rec.topic.value not in personal_interests.normalized_scores:
-            return (
-                personal_interests.normalized_scores.get(DEFAULT_INTERESTS_KEY, 0.0)
-                * INFERRED_SCORE_WEIGHT
-            )
-        return personal_interests.normalized_scores[rec.topic.value] * INFERRED_SCORE_WEIGHT
 
     def sample_score(rec: CuratedRecommendation) -> float:
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
@@ -235,7 +220,7 @@ def thompson_sampling(
         opens += max(a_prior, 1e-18)
         no_opens += max(b_prior, 1e-18)
 
-        return float(beta.rvs(opens, no_opens)) + boost_interest(rec)
+        return float(beta.rvs(opens, no_opens))
 
     # Sort the recommendations from best to worst sampled score & renumber
     sorted_recs = sorted(recs, key=sample_score, reverse=True)

@@ -66,25 +66,28 @@ class InferredLocalModel(BaseModel):
 
     model_data: ModelData
 
-    def get_unary_encoded_index(self, encoded_string: str, support_two: bool = False) -> list[int]:
+    def get_unary_encoded_index(
+        self, encoded_string: str, random_if_uncertain: bool = False
+    ) -> int | None:
         """Decode a unary encoded string with differential privacy added.
         Input must be a string containing 0's and 1's representing a one-hot-encoded
         string length representing the 0-indexed possible values. Since randomness may be added
         we can choose to return None if there are multiple 1's.
         The function does not typecheck the string and assume non-"0" values are "1" values
 
-        Returns a list of 1 or 2 integers between 0 and the length of the input string,
-        or empty list if all values are 0.
-
-        If support_two is False, then a result is returned if there is exactly one 1 value,
+        Returns number between 0 and the length of the string, or None if random_if_uncertain is
+        True and more than one values in the string are 1.
         """
         bin_values = np.frombuffer(encoded_string.encode("ascii"), dtype=np.uint8) - ord("0")
         candidates = np.flatnonzero(bin_values)
         if candidates.size == 1:
-            return [int(candidates[0])]
-        if support_two and candidates.size == 2:
-            return [int(candidates[0]), int(candidates[1])]
-        return []
+            return int(candidates[0])
+        if random_if_uncertain:
+            if candidates.size > 0:
+                return int(np.random.choice(candidates))
+            else:
+                return 0
+        return None
 
     def model_matches_interests(self, interest_key: float | str | None) -> bool:
         """Return whether a user's inferred interests are created with the correct
@@ -92,12 +95,11 @@ class InferredLocalModel(BaseModel):
         """
         return interest_key is not None and interest_key == self.model_id
 
-    def get_interest_keys(self) -> set[str]:
-        """Return set of keys, each representing an interest computed by the model"""
-        return set(self.model_data.interest_vector.keys())
-
     def decode_dp_interests(
-        self, dp_values: list[str], interest_key: float | str | None, support_two: bool = True
+        self,
+        dp_values: list[str],
+        interest_key: float | str | None,
+        random_if_uncertain: bool = False,
     ) -> dict[str, float | str]:
         """Decode differentially private (DP) interest values from unary-encoded strings
         into a numeric interest vector.
@@ -111,34 +113,28 @@ class InferredLocalModel(BaseModel):
         model features based on the dictionary keys sorting order.
 
         :param interests: User interest vector in differentially private encoding
-        :param support_two: Supports two values set due to randomness (return mean as result)
+        :param random_if_uncertain:
+            Whether to randomly select among multiple "1" candidates in a unary
+            string. Defaults to False, in which case such features are omitted from the result.
         :returns:
             An updated inferred interests.
         :raises Exception:
             If model IDs do not match, or there is a mismatch in length and format of the
             values
         """
-
-        def interpret_index(index: int) -> float:
-            feature_result: float = 0.0
-            if index > 0:
-                feature_result = ivconfig.thresholds[index - 1]
-            return feature_result
-
-        result: dict[str, float | str] = {LOCAL_MODEL_MODEL_ID_KEY: cast(str, interest_key)}
+        result: dict[str, float | str] = {}
+        result[LOCAL_MODEL_MODEL_ID_KEY] = cast(str, interest_key)
         for idx, (key, ivconfig) in enumerate(self.model_data.interest_vector.items()):
-            decoded_values: list[float] = [
-                interpret_index(a)
-                for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
-            ]
-            if len(decoded_values) == 1:
+            index_interpreted: int | None = self.get_unary_encoded_index(
+                dp_values[idx], random_if_uncertain=random_if_uncertain
+            )
+            if index_interpreted is not None:
                 # For n thresholds there are n+1 dimensions in the dp string
                 # This is because the 0 index means the values is less than the 0 threshold
-                result[key] = decoded_values[0]
-            if len(decoded_values) == 2:
-                # When there are two 1 values there is a high likelyhood that one of them
-                # is correct, so we average just in case
-                result[key] = 0.5 * (decoded_values[0] + decoded_values[1])
+                feature_result: float = 0.0
+                if index_interpreted > 0:
+                    feature_result = ivconfig.thresholds[index_interpreted - 1]
+                result[key] = feature_result
         return result
 
 

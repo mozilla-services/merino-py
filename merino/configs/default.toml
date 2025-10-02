@@ -320,6 +320,34 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
 forecast_ttl_sec = 3600 # 1 hr
 
+[default.providers.sports]
+# MERINO_PROVIDERS__SPORTS__SPORTS
+# Comma delimited list of active sports to use
+# e.g. "NFL,NBA,NHL"
+sports="NFL,NBA,NHL"
+type="sports"
+# Default timeout for queries
+query_timeout_sec=100
+# Disable this provider by default
+enabled_by_default = false
+
+[default.providers.sports.es]
+# MERINO_PROVIDERS__SPORTS__ES_dsn
+# DSN to Elastic Search database
+dsn="http://localhost:9200"
+# MERINO_PROVIDERS__SPORTS__ES_dsn
+# API Key for Elastic Search database
+api_key=""
+
+[default.providers.sports.sportsdata]
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
+# The SportsData API key for local or remote access
+api_key=""
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA_CACHE_DIR
+# Directory to store JSON request responses
+cache_dir="/tmp"
+
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
 # The interval of the ManifestFilemanager cron job (in seconds)

@@ -37,9 +37,6 @@ from merino.curated_recommendations.engagement_backends.protocol import (
     Engagement,
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
-from merino.curated_recommendations.ml_backends.static_local_model import (
-    CTR_LIMITED_TOPIC_MODEL_ID2,
-)
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
     ModelData,
@@ -2092,40 +2089,6 @@ class TestSections:
         # order is in receivedFeedRank
         for i, sec in enumerate(sorted_interests):
             assert data["feeds"][sec]["receivedFeedRank"] == i
-
-    def test_sections_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
-        """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
-        np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
-
-        # define interest vector, reversed from previous order
-        interests = {
-            "sports": 0.0,
-            "other": 0.0,
-            "arts": 0.5,
-            "model_id": CTR_LIMITED_TOPIC_MODEL_ID2,
-        }
-
-        # make the api call
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": Locale.EN_US,
-                "feeds": ["sections"],
-                "inferredInterests": interests,
-            },
-        )
-        data = response.json()
-
-        ## sort sections received
-        sections = data["feeds"]
-
-        ## we should get some sections out
-        assert len(sections) > 3
-        assert sections["top_stories_section"]["receivedFeedRank"] == 0
-        assert len(sections["top_stories_section"]["recommendations"]) > 10
-
-        # TODO - Verify this in the future
-        # assert sections["top_stories_section"]["recommendations"][0]["topic"] == "arts"
 
     @pytest.mark.parametrize(
         "repeat",

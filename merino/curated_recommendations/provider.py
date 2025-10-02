@@ -186,7 +186,7 @@ class CuratedRecommendationsProvider:
             )
             else None
         )
-        # Check if we need to decode differentially private values
+        # Check if we need to decode DP values
         if inferred_local_model is not None and inferred_local_model.model_matches_interests(
             interest_id
         ):
@@ -202,11 +202,7 @@ class CuratedRecommendationsProvider:
                     for k, v in decoded.items()
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
-                return ProcessedInterests(
-                    model_id=interest_id,
-                    scores=scores,
-                    expected_keys=inferred_local_model.get_interest_keys(),
-                )
+                return ProcessedInterests(model_id=interest_id, scores=scores)
 
         # Either no decoding needed or no model available - extract existing scores
         scores = {}
