@@ -1,5 +1,4 @@
 import json
-from test.re_tests import u
 
 # IATA code set
 iata = set()
