@@ -326,8 +326,6 @@ forecast_ttl_sec = 3600 # 1 hr
 # e.g. "NFL,NBA,NHL"
 sports="NFL,NBA,NHL"
 type="sports"
-# Default timeout for queries
-query_timeout_sec=100
 # Disable this provider by default
 enabled_by_default = false
 

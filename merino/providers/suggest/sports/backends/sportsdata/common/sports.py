@@ -149,7 +149,6 @@ class NHL(Sport):
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
-        # TODO: call ../CurrentSeason?
         logging.debug(f"{LOGGING_TAG} Getting {self.name} season ")
         url = f"{self.base_url}/CurrentSeason?key={self.api_key}"
         response = await get_data(

@@ -79,7 +79,9 @@ class Team(BaseModel):
         return json.dumps(self)
 
     @classmethod
-    def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
+    def from_data(
+        cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta
+    ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         # build the list of terms we want to search:
         terms = set()
@@ -103,7 +105,9 @@ class Team(BaseModel):
             terms=" ".join(terms),
             key=team_data["Key"],
             name=team_data.get("FullName", team_data["Name"]),
-            locale=" ".join([team_data.get("City", ""), team_data.get("AreaName", "")]).strip(),
+            locale=" ".join(
+                [team_data.get("City", ""), team_data.get("AreaName", "")]
+            ).strip(),
             aliases=list(
                 filter(
                     lambda x: x is not None,
@@ -218,12 +222,16 @@ class Sport(BaseModel):
         logging.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
         if "api_key" not in kwargs:
-            kwargs.update({"api_key": settings.providers.sports.sportsdata.get("api_key")})
+            kwargs.update(
+                {"api_key": settings.providers.sports.sportsdata.get("api_key")}
+            )
         if "event_ttl" not in kwargs:
             kwargs.update(
                 {
                     "event_ttl": timedelta(
-                        weeks=settings.providers.sports.get("event_ttl_weeks", EVENT_TTL_WEEKS)
+                        weeks=settings.providers.sports.get(
+                            "event_ttl_weeks", EVENT_TTL_WEEKS
+                        )
                     )
                 }
             )
@@ -231,7 +239,9 @@ class Sport(BaseModel):
             kwargs.update(
                 {
                     "team_ttl": timedelta(
-                        weeks=settings.providers.sports.get("team_ttl_weeks", TEAM_TTL_WEEKS)
+                        weeks=settings.providers.sports.get(
+                            "team_ttl_weeks", TEAM_TTL_WEEKS
+                        )
                     )
                 }
             )
@@ -325,7 +335,6 @@ class Sport(BaseModel):
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            # TODO: put this in Event.from_data()?
             date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
                 tzinfo=timezone.utc
             )
@@ -350,7 +359,9 @@ class Sport(BaseModel):
             self.events[event.id] = event
         return self.events
 
-    def load_schedules_from_source(self, data: list[dict[str, Any]]) -> dict[int, "Event"]:
+    def load_schedules_from_source(
+        self, data: list[dict[str, Any]]
+    ) -> dict[int, "Event"]:
         """Scan the list of Scheduled events, storing any in the current interest window.
         (Note: this is very similar to `load_scores_from_source` with some minor
         differences in the source data.)
@@ -392,7 +403,6 @@ class Sport(BaseModel):
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            # TODO: put this in Event.from_data()?
             status = GameStatus.parse(event_description["Status"])
             home_team = self.teams[event_description["HomeTeam"]]
             away_team = self.teams[event_description["AwayTeam"]]

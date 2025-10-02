@@ -1,6 +1,5 @@
 """Handle incoming Sports related queries"""
 
-import re
 from abc import abstractmethod
 from dynaconf.base import LazySettings
 from pydantic import HttpUrl
@@ -25,7 +24,6 @@ class SportsDataBackend(SportsDataProtocol):
     """Provide the methods specific to this provider for fulfilling the request"""
 
     data_store: SportsDataStore
-    word_breaker: re.Pattern
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -50,6 +48,7 @@ class SportsDataBackend(SportsDataProtocol):
             },
             settings=settings,
         )
+        self.max_suggestions = settings.providers.sports.get("max_suggestions", 10)
 
     async def query(
         self,
@@ -63,10 +62,13 @@ class SportsDataBackend(SportsDataProtocol):
         """
         # break the description into words
         if query_string:
-            events = await self.data_store.search_events(q=query_string, language_code="en")
-            # TODO: convert to suggestions
-            suggestions = []
+            events = await self.data_store.search_events(
+                q=query_string, language_code="en"
+            )
+            suggestions: list[BaseSuggestion] = []
             for sport, events in events.items():
+                if len(suggestions) > self.max_suggestions:
+                    break
                 suggestions.append(
                     cast(
                         BaseSuggestion,

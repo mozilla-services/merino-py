@@ -25,7 +25,6 @@ async def get_data(
     `ttl` for the local cache.
 
     """
-    # TODO: read from cache dir based on timestamp.
     cache_file = None
     if cache_dir:
         # painfully stupid cacher.
@@ -37,7 +36,10 @@ async def get_data(
         if os.path.exists(cache_file):
             try:
                 if ttl:
-                    if os.path.getctime(cache_file) > (datetime.now() - ttl).timestamp():
+                    if (
+                        os.path.getctime(cache_file)
+                        > (datetime.now() - ttl).timestamp()
+                    ):
                         logging.debug(f"{LOGGING_TAG}💾 Reading cache for {url}")
                         return json.load(open(cache_file, "r"))
                 else:
@@ -145,7 +147,9 @@ class SportSuggestion(BaseSuggestion):
         }
         ```
         """
-        custom_details = CustomDetails(sports=SportsSuggestDetails.from_events(events=events))
+        custom_details = CustomDetails(
+            sports=SportsSuggestDetails.from_events(events=events)
+        )
         return SportSuggestion(
             title=f"{sport_name}",
             description=f"{sport_name} report for {query}",

@@ -205,7 +205,6 @@ class ElasticDataStore:
         """
 
 
-# TODO: Eventually wrap this with DataStore
 class SportsDataStore(ElasticDataStore):
     """Wrapper for the Elastic Search data store.
 
@@ -312,7 +311,9 @@ class SportsDataStore(ElasticDataStore):
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logging.info(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
+                logging.info(
+                    f"{LOGGING_TAG} Encountered conflict error, ignoring for now"
+                )
         return True
 
     async def search_events(self, q: str, language_code: str) -> dict[str, dict]:
@@ -369,7 +370,6 @@ class SportsDataStore(ElasticDataStore):
         index = (self.index_map["event"]).format(lang=language_code)
 
         for event in sport.events.values():
-            # TODO: convert to bulk.
             action = {
                 "_index": index,
                 "_id": event.id,
