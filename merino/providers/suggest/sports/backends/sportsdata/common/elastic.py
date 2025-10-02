@@ -313,9 +313,7 @@ class SportsDataStore(ElasticDataStore):
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logging.info(
-                    f"{LOGGING_TAG} Encountered conflict error, ignoring for now"
-                )
+                logging.info(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
         return True
 
     async def search_events(self, q: str, language_code: str) -> dict[str, dict]:
