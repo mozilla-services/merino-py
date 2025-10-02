@@ -1,17 +1,18 @@
-"""Unit tests for fake local model"""
+"""Unit tests for static local model"""
 
-import numpy as np
+import math
+
 import pytest
 from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.ml_backends.fake_local_model import (
+from merino.curated_recommendations.ml_backends.static_local_model import (
     FakeLocalModelTopics,
     FakeLocalModelSections,
-    LimitedTopicV0Model,
+    LimitedTopicV1Model,
     CTR_TOPIC_MODEL_ID,
     CTR_SECTION_MODEL_ID,
-    CTR_LIMITED_TOPIC_MODEL_ID,
+    CTR_LIMITED_TOPIC_MODEL_ID2,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -36,7 +37,7 @@ def model_topics():
 @pytest.fixture
 def model_limited():
     """Create fake model"""
-    return LimitedTopicV0Model()
+    return LimitedTopicV1Model()
 
 
 def test_model_returns_inferred_local_model_topics(model_topics):
@@ -78,13 +79,13 @@ def test_model_returns_inferred_local_model_sections(model_sections):
 
 
 def test_model_returns_limited_model(model_limited):
-    """Tests fake local model, sections"""
+    """Tests fake local model"""
     surface_id = TEST_SURFACE
     result = model_limited.get(surface_id)
 
     assert isinstance(result, InferredLocalModel)
     assert result.surface_id == surface_id
-    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
     assert result.model_version == 0
     assert result.model_data is not None
     assert (
@@ -95,7 +96,7 @@ def test_model_returns_limited_model(model_limited):
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
 
     # test a specific threshold value
-    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.005
+    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.008
 
 
 def test_unary_decoding(model_limited):
@@ -103,18 +104,24 @@ def test_unary_decoding(model_limited):
     # "00100" -> index 2
     model = model_limited.get(TEST_SURFACE)
 
-    assert model.get_unary_encoded_index("00100") == 2
-    # Multiple 1s and random_if_uncertain == False => None
-    assert model.get_unary_encoded_index("01101", random_if_uncertain=False) is None
-    # Make randomness deterministic
-    np.random.seed(123)
-    encoded = "01011"  # candidates at indices 1,3,4
-    idx = model.get_unary_encoded_index(encoded, random_if_uncertain=True)
-    assert idx in {1, 3, 4}
-    # non-"0" characters are treated as "1"
-    assert model.get_unary_encoded_index("0a00") == 1
-    assert model.get_unary_encoded_index("0000") is None
-    assert model.get_unary_encoded_index("") is None
+    assert model.get_unary_encoded_index("00100") == [2]
+
+    # Test too many oness
+    assert model.get_unary_encoded_index("01101", support_two=False) == []
+    assert model.get_unary_encoded_index("01101", support_two=True) == []
+
+    # Test support for two results
+    encoded = "01010"  # candidates at indices 1,3,4
+    idx = model.get_unary_encoded_index(encoded, support_two=True)
+    assert idx == [1, 3]
+    # Test support for two results
+    encoded = "01010"  # candidates at indices 1,3,4
+    assert model.get_unary_encoded_index(encoded, support_two=False) == []
+
+    # non-"0" characters are treated as "1" and empty case
+    assert model.get_unary_encoded_index("0a00") == [1]
+    assert model.get_unary_encoded_index("0000") == []
+    assert model.get_unary_encoded_index("") == []
 
 
 def test_decode_skipped_when_model_id_mismatch(model_limited):
@@ -131,34 +138,10 @@ def test_model_matches_interests_none_and_non_str(model_limited):
     assert not model.model_matches_interests(3.14159)  # float should not match
 
 
-def test_unary_random_if_uncertain_when_no_ones(model_limited):
-    """When there are no '1' bits and random_if_uncertain=True, returns 0."""
+def test_unary_when_no_ones(model_limited):
+    """When there are no '1' bits and returns no items."""
     model = model_limited.get(TEST_SURFACE)
-    assert model.get_unary_encoded_index("0000", random_if_uncertain=True) == 0
-
-
-def test_decode_dp_interests_random_choice_sets_key(model_limited):
-    """With multiple '1' bits and random_if_uncertain=True, we still decode to an allowed value
-    (either 0.0 for index 0 or the corresponding threshold for the chosen index).
-    """
-    model = model_limited.get(TEST_SURFACE)
-    iv = model.model_data.interest_vector
-
-    dp_values = []
-    first_key = next(iter(iv.keys()))
-    first_cfg = iv[first_key]
-    for i, (_k, cfg) in enumerate(iv.items()):
-        n = len(cfg.thresholds) + 1
-        if i == 0:
-            dp_values.append("1010" if n >= 4 else "11")  # multiple ones
-        else:
-            dp_values.append("0" * (n - 1) + "1")  # deterministic high
-
-    np.random.seed(123)
-    out = model.decode_dp_interests(dp_values, model.model_id, random_if_uncertain=True)
-    allowed = {0.0, first_cfg.thresholds[1]} if len(first_cfg.thresholds) >= 2 else {0.0}
-    assert first_key in out
-    assert out[first_key] in allowed
+    assert model.get_unary_encoded_index("0000", support_two=True) == []
 
 
 def test_decode_dp_interests_empty_list_raises(model_limited):
@@ -230,8 +213,8 @@ def test_model_matches_interests_rejects_none_and_float(model_limited):
     assert not model.model_matches_interests(3.14)
 
 
-def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited):
-    """With multiple '1's and random_if_uncertain=True, decoded value is within allowed set."""
+def test_decode_with_multiple_ones_sets_valid_value(model_limited):
+    """With multiple '1's decoded value is as expected."""
     model = model_limited.get(TEST_SURFACE)
     iv = model.model_data.interest_vector
     first_key = next(iter(iv.keys()))
@@ -240,27 +223,35 @@ def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited)
     for i, (_k, cfg) in enumerate(iv.items()):
         n = len(cfg.thresholds) + 1
         if i == 0:
-            # multiple ones at indices 0 and 2 (requires n>=3); otherwise use "11"
-            dp_values.append("1010" if n >= 4 else "11")
+            # multiple ones at indices 0 and 1
+            dp_values.append("11" + "0" * (n - 2))
         else:
             dp_values.append("0" * (n - 1) + "1")
-    np.random.seed(123)
-    out = model.decode_dp_interests(dp_values, model.model_id, random_if_uncertain=True)
-    allowed = {0.0}
-    if len(first_cfg.thresholds) >= 2:
-        allowed.add(first_cfg.thresholds[1])
+    out = model.decode_dp_interests(dp_values, model.model_id)
     assert first_key in out
-    assert out[first_key] in allowed
+    assert out[first_key] == (0.0 + first_cfg.thresholds[0]) * 0.5
 
 
 @pytest.mark.parametrize(
-    "pattern_func,assertion_func,rand",
+    "pattern_func,assertion_func,support_two",
     [
-        # ambiguous: all ones; no random -> key not present
+        # Two values allowed
+        (
+            lambda thresholds: "011" + (len(thresholds) - 2) * "0",
+            lambda result, key, thresholds: result[key] == (thresholds[0] + thresholds[1]) * 0.5,
+            True,
+        ),
+        # two values not allowed
+        (
+            lambda thresholds: "011" + (len(thresholds) - 2) * "0",
+            lambda result, key, thresholds: key not in result,
+            False,
+        ),
+        # All values set
         (
             lambda thresholds: "1" * (len(thresholds) + 1),
             lambda result, key, thresholds: key not in result,
-            False,
+            True,
         ),
         # lowest value (index 0) -> 0.0
         (
@@ -294,39 +285,31 @@ def test_decode_with_multiple_ones_random_branch_sets_valid_value(model_limited)
             ),
             False,
         ),
-        # ambiguous with random -> value is allowed (0.0 or any threshold)
-        (
-            lambda thresholds: "1" * (len(thresholds) + 1),
-            lambda result, key, thresholds: key in result
-            and result[key] in ({0.0} | set(thresholds)),
-            True,
-        ),
     ],
     ids=[
-        "ambiguous_no_random",
+        "two_values_allowed",
+        "two_values_not_allowed",
+        "all_values_set",
         "lowest",
         "highest",
         "middle",
-        "ambiguous_with_random",
     ],
 )
-def test_decode_dp_interests(model_limited, pattern_func, assertion_func, rand):
-    """decode_dp_interests decodes various unary patterns; ambiguous behavior depends on random flag."""
+def test_decode_dp_interests(model_limited, pattern_func, assertion_func, support_two):
+    """decode_dp_interests decodes various unary patterns."""
     model = model_limited.get(TEST_SURFACE)
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
 
     values = []
     for _key, feature in model.model_data.interest_vector.items():
         values.append(pattern_func(feature.thresholds))
     interests.root["values"] = values
 
-    if rand:
-        np.random.seed(123)
     updated = model.decode_dp_interests(
         interests.root["values"],
         interests.root[LOCAL_MODEL_MODEL_ID_KEY],
-        random_if_uncertain=rand,
+        support_two=support_two,
     )
 
     for key, feature in model.model_data.interest_vector.items():
@@ -336,7 +319,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, rand):
 @pytest.mark.parametrize(
     "input_id,expected",
     [
-        (CTR_LIMITED_TOPIC_MODEL_ID, True),
+        (CTR_LIMITED_TOPIC_MODEL_ID2, True),
         ("bad id", False),
         (None, False),
         (3.14, False),
@@ -351,7 +334,7 @@ def test_model_matches_interests_param(model_limited, input_id, expected):
 @pytest.fixture
 def inferred_model():
     """Build a concrete InferredLocalModel for tests."""
-    backend = LimitedTopicV0Model()
+    backend = LimitedTopicV1Model()
     return backend.get("surface")
 
 
@@ -370,12 +353,13 @@ def test_process_returns_none_when_request_has_no_interests(inferred_model):
 def test_process_passes_through_when_no_model():
     """When inferred_local_model is None, return ProcessedInterests with empty scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
     req = make_request(interests)
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_local_model=None)
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
     assert out.scores == {}
+    assert out.normalized_scores == {}
 
 
 def test_process_passes_through_on_model_id_mismatch(inferred_model):
@@ -388,9 +372,10 @@ def test_process_passes_through_on_model_id_mismatch(inferred_model):
     assert isinstance(out, ProcessedInterests)
     assert out.model_id == "not-this-model"
     assert out.scores == {}  # String values are not included in scores
+    assert out.normalized_scores == {}
 
 
-def test_process_decodes_when_values_present(inferred_model):
+def test_process_decodes_when_same_values_present(inferred_model):
     """When model_id matches and values are present, decode into floats."""
     # Build a valid dp_values array aligned with the model's interest_vector order
     iv = inferred_model.model_data.interest_vector
@@ -400,34 +385,69 @@ def test_process_decodes_when_values_present(inferred_model):
         dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
 
     # spot-check a couple of features decode to the last threshold
-    checked = 0
     for key, cfg in iv.items():
         assert out.scores[key] == cfg.thresholds[-1]
-        checked += 1
-        if checked >= 2:
-            break
+        assert abs(out.normalized_scores[key] - 1 / math.sqrt(len(iv))) < 0.01  # normalized
+
+
+def test_process_decodes_when_different_present(inferred_model):
+    """When model_id matches and values are present, decode into floats."""
+    # Build a valid dp_values array aligned with the model's interest_vector order
+    iv = inferred_model.model_data.interest_vector
+    dp_values = []
+    for idx, (_key, cfg) in enumerate(iv.items()):
+        n = len(cfg.thresholds) + 1
+        if idx == 0:
+            dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
+        else:
+            dp_values.append("1" + (n - 1) * "0")  # lowest (0) value
+
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
+    interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
+    req = make_request(interests)
+
+    out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
+    assert isinstance(out, ProcessedInterests)
+    # model_id is preserved
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
+    print(dp_values)
+    print("raw")
+    print(out.scores)
+    print("normalized")
+    print(out.normalized_scores)
+    # spot-check a couple of features decode to the last threshold
+    for idx, (key, cfg) in enumerate(iv.items()):
+        if idx == 0:
+            assert out.scores[key] == cfg.thresholds[-1]
+            assert abs(out.normalized_scores[key] - 1) < 0.01  # normalizes to 1
+        else:
+            assert out.scores[key] == 0.0
+            assert abs(out.normalized_scores[key]) < 0.01  # normalizes to 0
 
 
 def test_process_passthrough_when_values_missing_even_with_matching_model(inferred_model):
     """If model_id matches but no DP values key, extract existing numeric scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
     interests.root["foo"] = 0.123
     interests.root["bar"] = "baz"  # String, not a score
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
     assert out.scores["foo"] == 0.123
+    assert "foo" not in out.normalized_scores
+    assert "bar" not in out.normalized_scores  # String values are not included in scores
     assert "bar" not in out.scores  # String values are not included in scores

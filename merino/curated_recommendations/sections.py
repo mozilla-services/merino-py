@@ -488,6 +488,7 @@ def rank_sections(
     engagement_backend: EngagementBackend,
     personal_interests: ProcessedInterests | None,
     experiment_rescaler: ExperimentRescaler | None,
+    do_section_personalization_reranking: bool = True,
     include_headlines_section: bool = False,
 ) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
@@ -505,6 +506,8 @@ def rank_sections(
         engagement_backend: provides engagement signals for Thompson sampling.
         personal_interests: provides personal interests.
         experiment_rescaler: Rescaler that can rescale based on experiment size
+        do_section_personalization_reranking: Whether to implement section based reranking for personalization
+        if interest vector is avialable.
         include_headlines_section: If headlines_section experiment is enabled, don't put top_stories_section on top
 
     Returns:
@@ -516,7 +519,7 @@ def rank_sections(
     )
 
     # 3rd priority: reorder based on inferred interest vector
-    if personal_interests is not None:
+    if do_section_personalization_reranking and personal_interests is not None:
         sections = greedy_personalized_section_rank(sections, personal_interests)
 
     # 2nd priority: boost followed sections, if any
@@ -648,7 +651,6 @@ async def get_sections(
         cs.recommendations = [
             rec for rec in cs.recommendations if rec.corpusItemId in remaining_ids
         ]
-
     # 7. Rank all corpus recommendations globally by engagement to build top_stories_section
     all_ranked_corpus_recommendations = thompson_sampling(
         all_remaining_corpus_recommendations,
@@ -656,8 +658,8 @@ async def get_sections(
         prior_backend=prior_backend,
         region=region,
         rescaler=rescaler,
+        personal_interests=personal_interests,
     )
-
     # 8. Split top stories
     # Use 2-row layout as default for Popular Today
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
