@@ -87,12 +87,17 @@ class ExperimentName(str, Enum):
     ML_SECTIONS_EXPERIMENT = "new-tab-ml-sections"
     # Experiment to compare RSS vs. Zyte content sources for legacy topic sections
     RSS_VS_ZYTE_EXPERIMENT = "new-ranking-for-legacy-topics-in-new-tab-v1"
-    # Experiment to apply 1 row layout for Popular Today for contextual ads
-    CONTEXTUAL_AD_EXPERIMENT = "new-tab-ad-updates-nightly"
     # Experiment to display Daily Briefing section as the first section on New Tab
     DAILY_BRIEFING_EXPERIMENT = "daily-briefing-v1"
     # Experiment slug for crawling with identical behavior/branches as RSS_VS_ZYTE_EXPERIMENT
     NEW_TAB_CRAWLING_V2 = "new-tab-crawling-v2"
+    # The following are 6 experiments to apply 1 row layout for Popular Today for contextual ads
+    CONTEXTUAL_AD_NIGHTLY_EXPERIMENT = "new-tab-ad-updates-nightly"
+    CONTEXTUAL_AD_V2_NIGHTLY_EXPERIMENT = "new-tab-contextual-ad-updates-v2-nightly"
+    CONTEXTUAL_AD_BETA_EXPERIMENT = "new-tab-contextual-ad-updates-beta"
+    CONTEXTUAL_AD_V2_BETA_EXPERIMENT = "new-tab-contextual-ad-updates-v2-beta"
+    CONTEXTUAL_AD_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-release"
+    CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
 
 
 @unique
