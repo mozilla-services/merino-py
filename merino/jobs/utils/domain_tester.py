@@ -1,23 +1,16 @@
 """Domain metadata extraction testing tool."""
 
 from datetime import datetime
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, Type
 import asyncio
 import typer
 from rich.console import Console
 from rich.table import Table
 from pydantic import BaseModel
 from google.cloud.storage import Blob
+import importlib
+import contextvars
 
-from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
-    DomainMetadataExtractor,
-    current_scraper,
-    Scraper,
-)
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
-from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
-    DomainMetadataUploader,
-)
 from merino.utils.gcs.models import BaseContentUploader
 
 cli = typer.Typer(no_args_is_help=True)
@@ -36,11 +29,42 @@ class DomainTestResult(BaseModel):
     error: Optional[str] = None
 
 
+def _get_required_classes() -> (
+    tuple[Type[Any], contextvars.ContextVar[Any], Type[Any], Type[Any], Type[Any]]
+):
+    """Dynamically import required classes to avoid circular import at module level"""
+    # Import at runtime to avoid circular dependency
+    domain_metadata_extractor = importlib.import_module(
+        "merino.jobs.navigational_suggestions.domain_metadata_extractor"
+    )
+    utils_module = importlib.import_module("merino.jobs.navigational_suggestions.utils")
+    uploader_module = importlib.import_module(
+        "merino.jobs.navigational_suggestions.domain_metadata_uploader"
+    )
+
+    return (
+        domain_metadata_extractor.DomainMetadataExtractor,
+        domain_metadata_extractor.current_scraper,
+        domain_metadata_extractor.Scraper,
+        utils_module.AsyncFaviconDownloader,
+        uploader_module.DomainMetadataUploader,
+    )
+
+
 async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
     """Test metadata extraction for a single domain asynchronously"""
     timestamp = datetime.now().isoformat()
 
     try:
+        # Get the required classes dynamically
+        (
+            DomainMetadataExtractor,
+            current_scraper,
+            Scraper,
+            AsyncFaviconDownloader,
+            DomainMetadataUploader,
+        ) = _get_required_classes()
+
         domain_data = {
             "rank": 1,
             "domain": domain,
@@ -73,15 +97,15 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
         # Create a domain metadata uploader with our mock uploader
         dummy_uploader = DomainMetadataUploader(
             force_upload=False,
-            uploader=cast(Any, MockUploader()),  # Use cast to satisfy the type checker
+            uploader=cast(Any, MockUploader()),
             async_favicon_downloader=favicon_downloader,
         )
 
         # Process the domain data using the standard method
-        # We have a single domain, so take the first result
-        metadata = extractor.process_domain_metadata(
+        results = await extractor._process_domains(
             [domain_data], favicon_min_width=min_width, uploader=dummy_uploader
-        )[0]
+        )
+        metadata = results[0]
 
         favicon_data = None
         total_favicons = 0
@@ -171,26 +195,65 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
     return asyncio.run(async_test_domain(domain, min_width))
 
 
+async def probe_domains(domains: list[str], min_width: int) -> list[DomainTestResult]:
+    """Test multiple domains concurrently using TaskGroup"""
+    results = []
+
+    try:
+        async with asyncio.TaskGroup() as task_group:
+            # Create tasks for all domains
+            tasks = {
+                domain: task_group.create_task(async_test_domain(domain, min_width))
+                for domain in domains
+            }
+
+        # Collect results in the same order as input domains
+        for domain in domains:
+            result = tasks[domain].result()
+            results.append(result)
+
+    except* Exception as eg:
+        console.print(f"[red]Errors occurred while probing domains: {eg}[/red]")
+        # Return partial results for domains that succeeded
+        for domain in domains:
+            if domain in tasks and tasks[domain].done() and not tasks[domain].exception():
+                results.append(tasks[domain].result())
+            else:
+                # Create a failed result for domains that didn't complete
+                results.append(
+                    DomainTestResult(
+                        domain=domain,
+                        timestamp=datetime.now().isoformat(),
+                        success=False,
+                        metadata={},
+                        details={},
+                        favicon_data=None,
+                        error="Task failed or was cancelled",
+                    )
+                )
+
+    return results
+
+
 @cli.command()
 def test_domains(
     domains: list[str] = typer.Argument(..., help="List of domains to test"),
     min_width: int = typer.Option(32, help="Minimum favicon width", show_default=True),
 ):
     """Test domain metadata extraction for multiple domains"""
-    results = []
+    # Use the new concurrent approach
+    with console.status("Testing domains concurrently..."):
+        results = asyncio.run(probe_domains(domains, min_width))
 
-    for domain in domains:
-        with console.status(f"Testing {domain}..."):
-            result = test_domain(domain, min_width)
-            results.append(result)
-
+    # Display results
+    for result in results:
         if result.success:
-            console.print(f"\nTesting domain: {domain}")
+            console.print(f"\nTesting domain: {result.domain}")
 
             table = Table(show_header=False, box=None)
             table.add_row("Title", result.metadata.get("title", "N/A"))
             table.add_row("Best Icon", result.metadata.get("icon", "N/A"))
-            table.add_row("Total Favicons", str(result.details["favicons_found"]))
+            table.add_row("Total Favicons", str(result.details.get("favicons_found", 0)))
 
             console.print("✅ Success!")
             console.print(table)
@@ -208,7 +271,7 @@ def test_domains(
                             desc.append(f"type={link['type']}")
                         console.print(f"- {link['href']} ({' '.join(desc)})")
         else:
-            console.print("❌ Failed!")
+            console.print(f"\n❌ Failed testing domain: {result.domain}")
             if result.error:
                 console.print(f"Error: {result.error}")
 
