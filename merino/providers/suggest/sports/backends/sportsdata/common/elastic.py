@@ -15,10 +15,12 @@ from merino.exceptions import BackendError
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
 )
-from merino.providers.suggest.sports.backends.sportsdata.errors import SportsDataError
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
 )
 
 # TODO: Put this into a separate file?
@@ -311,7 +313,9 @@ class SportsDataStore(ElasticDataStore):
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logging.info(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
+                logging.info(
+                    f"{LOGGING_TAG} Encountered conflict error, ignoring for now"
+                )
         return True
 
     async def search_events(self, q: str, language_code: str) -> dict[str, dict]:

@@ -2,7 +2,7 @@
 
 
 # Errors
-class SportDataError(BaseException):
+class SportsDataError(BaseException):
     """Significant error occurring with Sports"""
 
     message: str
@@ -15,7 +15,7 @@ class SportDataError(BaseException):
         return f"{name}: {self.message}"
 
 
-class SportDataWarning(BaseException):
+class SportsDataWarning(BaseException):
     """Cautionary error occurring with Sports"""
 
     message: str
