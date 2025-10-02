@@ -281,6 +281,7 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
         for exp_name in contextual_ads_experiments
     )
 
+
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled."""
     return is_enrolled_in_experiment(
