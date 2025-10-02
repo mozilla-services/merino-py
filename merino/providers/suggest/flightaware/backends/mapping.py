@@ -1,23 +1,27 @@
+from curses.ascii import isalpha
 import json
 
-# Maps ID : Airline JSON data
-id_mapping = {}
+# IATA code set
+iata = set()
 
-# Maps Name, IATA and ICAO codes : ID
+# Name and ICAO mapping : IATA
 name_mapping = {}
-iata_mapping = {}
 icao_mapping = {}
 
 with open('airlines.json', 'r') as file:
     data = json.load(file)
 
 for airline in data:
-    id_mapping[airline["id"]] = airline
-    name_mapping[airline["name"].lower()] = airline["id"]
-    if airline["iata"].isalpha():
-        iata_mapping[airline["iata"].lower()] = airline["id"]
-    if airline["icao"].isalpha():
-        icao_mapping[airline["icao"].lower()] = airline["id"]
+    if airline["active"] == "Y":
+        if airline["iata"].isalpha():
+            iata.add(airline["iata"])
+            name_mapping[airline["name"].lower()] = airline["iata"]
+            if airline["icao"].isalpha():
+                icao_mapping[airline["icao"]] = airline["iata"]
+        elif airline["icao"].isalpha():
+            name_mapping[airline["name"].lower()] = airline["icao"]
+            icao_mapping[airline["icao"]] = airline["icao"]
+
 
 def parsing(query: str) -> list:
     """Parses a query to an identified airline and flight number"""
@@ -26,26 +30,24 @@ def parsing(query: str) -> list:
     flight_data = []
     if idx != "-1":
         name = query[:idx].strip()
-        # print(name)
         try:
             number = int(query[idx:].strip())
-            # print(number)
         except:
-            # print("bad number")
+            # Bad Number
             return flight_data
     else:
-        # print("no number")
+        # No Number
         return flight_data
-    if name in name_mapping:
-        flight_data = [id_mapping[name_mapping[name]], number]
-    elif name in iata_mapping:
-        flight_data = [id_mapping[iata_mapping[name]], number]
-    elif name in icao_mapping:
-        flight_data = [id_mapping[icao_mapping[name]], number]
-    if not flight_data:
-        # print("unidentified airline")
+    if name.upper() in iata:
+        flight_data = [name.upper(), number]
+    elif name in name_mapping:
+        flight_data = [name_mapping[name], number]
+    elif name.upper() in icao_mapping:
+        flight_data = [icao_mapping[name], number]
+    else:
+        # Unidentified Airline
         pass
     return flight_data
 
-# print(parsing("ac 130"))
-# print(parsing("united airlines 101"))
+print(parsing("ac 130"))
+print(parsing("united airlines 101"))
