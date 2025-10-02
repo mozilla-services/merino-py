@@ -1,4 +1,3 @@
-from curses.ascii import isalpha
 import json
 
 # IATA code set
@@ -49,5 +48,5 @@ def parsing(query: str) -> list:
         pass
     return flight_data
 
-print(parsing("ac 130"))
-print(parsing("united airlines 101"))
+# print(parsing("ac 130"))
+# print(parsing("united airlines 101"))
