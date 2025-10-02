@@ -1354,6 +1354,24 @@ class TestSections:
                 for rec in sec["recommendations"]:
                     assert rec["corpusItemId"] not in top_story_ids
 
+        # check editorial section with extra metadata is also returned along with ML subfeeds
+        editorial_section_id = "042b10d6-4fab-4df6-8006-e73ae5fd021d"
+        if (
+            data["feeds"].get(editorial_section_id) is not None
+            and experiment_payload.get("experimentName")
+            == ExperimentName.ML_SECTIONS_EXPERIMENT.value
+        ):
+            assert data["feeds"][editorial_section_id]["title"] == "Amsterdam Tips"
+            assert data["feeds"][editorial_section_id]["subtitle"] == "Travel tips in Amsterdam"
+            assert (
+                data["feeds"][editorial_section_id]["heroTitle"]
+                == "Discover the Best of Amsterdam"
+            )
+            assert (
+                data["feeds"][editorial_section_id]["heroSubtitle"]
+                == "Insider advice on where to eat, what to see, and how to enjoy the city like a local."
+            )
+
     @pytest.mark.parametrize(
         "sections_payload",
         [
