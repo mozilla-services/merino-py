@@ -3,11 +3,12 @@
 import hashlib
 import logging
 import aiodogstatsd
+from datetime import timedelta
 from httpx import AsyncClient, Response, HTTPStatusError
 import orjson
 from pydantic import HttpUrl, ValidationError
 from merino.configs import settings
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional
 
 from merino.providers.suggest.finance.backends.polygon.filemanager import PolygonFilemanager
 from merino.providers.suggest.finance.backends.protocol import (
@@ -25,6 +26,7 @@ from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapp
 from merino.providers.suggest.finance.backends.polygon.utils import (
     extract_snapshot_if_valid,
     build_ticker_summary,
+    generate_cache_key_for_ticker,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
@@ -45,7 +47,7 @@ for _, k in ipairs(KEYS) do
   local snapshot = redis.call('GET', k)
   if snapshot ~= false then
     local ttl = redis.call('TTL', k)
-    if t ~= -2 then
+    if ttl ~= -2 then
       table.insert(result, snapshot)
       table.insert(result, ttl)
     end
@@ -126,19 +128,26 @@ class PolygonBackend(FinanceBackend):
         """
         return build_ticker_summary(snapshot, image_url)
 
-    async def get_snapshots_from_cache(self, tickers: list[str]) -> list[TickerSnapshot | None]:
+    async def get_snapshots_from_cache(
+        self, tickers: list[str]
+    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
         """Return snapshots from the cache with their respective TTLs in a list of tuples format."""
         try:
+            cache_keys = []
+            for ticker in tickers:
+                cache_keys.append(generate_cache_key_for_ticker(ticker))
+
             cached_data: list[bytes | None] = await self.cache.run_script(
                 sid=SCRIPT_ID_BULK_FETCH_TICKERS,
-                keys=tickers,
+                keys=cache_keys,
                 args=[],
                 readonly=True,
             )
 
             if cached_data:
                 parsed_cached_data = self._parse_cached_data(cached_data)
-                print(parsed_cached_data)
+                # TODO
+                return parsed_cached_data
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch snapshots from Redis: {exc}")
 
@@ -306,16 +315,30 @@ class PolygonBackend(FinanceBackend):
             logger.error(f"Error building/uploading manifest: {e}")
             return None
 
+    async def store_snapshots_in_cache(self, snapshots: list[TickerSnapshot]) -> None:
+        """TODO"""
+        if len(snapshots) == 0:
+            return
+
+        for snapshot in snapshots:
+            cache_key = generate_cache_key_for_ticker(snapshot.ticker)
+            cache_value = orjson.dumps(snapshot.model_dump_json())
+            # TODO add try catch and metrics
+            # TODO modify TTL logic
+            await self.cache.set(
+                cache_key, cache_value, ttl=timedelta(seconds=self.ticker_ttl_sec)
+            )
+
     def _parse_cached_data(
         self, cached_data: list[bytes | None]
-    ) -> list[Tuple[TickerSnapshot, int]]:
+    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
         """TODO comment"""
         # Valid cached_data should be a list of even number (multiple of 2) length e.g
         # [snapshot_1, ttl_1, snapshot_2, ttl_2, ...]
         if (len(cached_data) % 2) != 0:
             return []
 
-        result: list[Tuple[TickerSnapshot, int]] = []
+        result: list[Optional[Tuple[TickerSnapshot, int]]] = []
 
         snapshots_bytes = cached_data[0::2]  # values at even indexes
         ttls_bytes = cached_data[1::2]  # values at odd indexes
@@ -326,7 +349,7 @@ class PolygonBackend(FinanceBackend):
                     continue
 
                 # Parse snapshot JSON (bytes -> dict) then validate
-                valid_snapshot = TickerSnapshot.model_validate(orjson.loads(snapshot))
+                valid_snapshot = TickerSnapshot.model_validate_json(orjson.loads(snapshot))
 
                 # Convert TTL to int (handles int/bytes/str)
                 # TODO might have to use cast() here
@@ -336,9 +359,6 @@ class PolygonBackend(FinanceBackend):
 
             except ValidationError as exc:
                 logger.error(f"TickerSnapshot validation failed: {exc}")
-            except (ValueError, TypeError) as exc:
-                # Covers bad TTL casts or bad JSON types
-                logger.error(f"Failed to parse cached pair from Redis: {exc}")
             except Exception as exc:
                 # Defensive catch-all so one bad pair doesn't drop the whole result
                 logger.exception(f"Unexpected error parsing cached pair: {exc}")

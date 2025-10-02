@@ -30,6 +30,7 @@ from merino.providers.suggest.finance.backends.protocol import (
 
 URL_SINGLE_TICKER_SNAPSHOT = settings.polygon.url_single_ticker_snapshot
 URL_SINGLE_TICKER_OVERVIEW = settings.polygon.url_single_ticker_overview
+TICKER_TTL_SEC = settings.providers.polygon.cache_ttls.ticker_ttl_sec
 
 
 @pytest.fixture(name="mock_gcs_uploader")
@@ -67,6 +68,8 @@ def fixture_polygon_parameters(
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
         "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
         "gcs_uploader": mock_gcs_uploader,
+        "cache": mocker.MagicMock(),
+        "ticker_ttl_sec": TICKER_TTL_SEC,
     }
 
 
