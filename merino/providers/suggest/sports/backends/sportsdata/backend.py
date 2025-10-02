@@ -57,14 +57,15 @@ class SportsDataBackend(SportsDataProtocol):
         score: float = 0.5,
         url: HttpUrl | None = None,
     ) -> list[BaseSuggestion]:
-        """Eventually use clever logic in order to return an emoji specific to the
-        passed description string, but for now, just return the default in a list.
+        """Query the data store for terms and return a list of potential sporting events relevant to those terms.
+
+        This relies on Elastic's internal tokenizer and full text search to scan the list of "terms" for matching results.
+        Note that we would want to use elastic's term score as a multiplier for the returned suggestion score, since it would
+        indicate how likely that suggestion matched the provided query.
         """
         # break the description into words
         if query_string:
-            events = await self.data_store.search_events(
-                q=query_string, language_code="en"
-            )
+            events = await self.data_store.search_events(q=query_string, language_code="en")
             suggestions: list[BaseSuggestion] = []
             for sport, events in events.items():
                 if len(suggestions) > self.max_suggestions:

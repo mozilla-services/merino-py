@@ -47,15 +47,12 @@ class SportsDataProvider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         super().__init__()
 
-        # Define our manifest data here. It's fairly early, but we need that data defined
-        # and included with the backend to ensure that types are properly set.
-
     def initialize(self):
-        """Create connections, components and other actions needed when starting up. This is called"""
+        """Create connections, components and other actions needed when starting up"""
         pass
 
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
-        """Fetch the appropriate emojis for the given request."""
+        """Query elastic search with the provided user terms and return relevant sport event information."""
         if self.enabled_by_default:
             self.metrics_client.increment("sports.suggestions.count")
             return await self.backend.query(sreq.query, score=self.score, url=self.url)

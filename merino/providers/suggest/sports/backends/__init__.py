@@ -36,10 +36,7 @@ async def get_data(
         if os.path.exists(cache_file):
             try:
                 if ttl:
-                    if (
-                        os.path.getctime(cache_file)
-                        > (datetime.now() - ttl).timestamp()
-                    ):
+                    if os.path.getctime(cache_file) > (datetime.now() - ttl).timestamp():
                         logging.debug(f"{LOGGING_TAG}💾 Reading cache for {url}")
                         return json.load(open(cache_file, "r"))
                 else:
@@ -62,7 +59,82 @@ async def get_data(
 
 
 class SportSuggestion(BaseSuggestion):
-    """Return a well structured Suggestion for the UA to process"""
+    """Return a well structured Suggestion for the UA to process
+
+    A returned suggestion will be a set of minimized event data for a
+    given sport (e.g. for `NFL` there could be a "previous" entry indicating
+    the final score of any previously finished games, a "current" entry
+    indicating the state and score of any in play games, and a "next" entry
+    indicating the time that a future game will be played.
+
+    Note that any "current" game (a game in progress) overrides the "previous"
+    per UA design.
+
+    An example would be:
+    ```
+    {
+        "NFL": {
+            "previous": {
+                "sport": "NFL",
+                "id": 19127,
+                "date": 1759130400,
+                "home_team": {
+                    "key": "DAL",
+                    "name": "Dallas Cowboys",
+                    "colors": [
+                    "002244",
+                    "B0B7BC",
+                    "00338D",
+                    "ADD9CE"
+                    ]
+                },
+                "away_team": {
+                    "key": "GB",
+                    "name": "Green Bay Packers",
+                    "colors": [
+                    "203731",
+                    "FFB612",
+                    "FFFFFF"
+                    ]
+                },
+                "home_score": 40,
+                "away_score": 40,
+                "status": "Final - Over Time",
+                "expiry": 1760390110
+            },
+            "next": {
+                "sport": "NFL",
+                "id": 19135,
+                "date": 1759708800,
+                "home_team": {
+                    "key": "NYJ",
+                    "name": "New York Jets",
+                    "colors": [
+                    "115740",
+                    "FFFFFF",
+                    "000000"
+                    ]
+                },
+                "away_team": {
+                    "key": "DAL",
+                    "name": "Dallas Cowboys",
+                    "colors": [
+                    "002244",
+                    "B0B7BC",
+                    "00338D",
+                    "ADD9CE"
+                    ]
+                },
+                "home_score": null,
+                "away_score": null,
+                "status": "Scheduled",
+                "expiry": 1760390110
+            }
+        }
+    }
+    ```
+
+    """
 
     # Required fields.
     provider: str
@@ -76,80 +148,8 @@ class SportSuggestion(BaseSuggestion):
         rating: float = 0,
         events: dict = {},
     ):
-        """Return a Suggestion for a given sport based on the results.
-
-        A returned suggestion will be a set of minimized event data for a
-        given sport (e.g. for `NFL` there could be a "previous" entry indicating
-        the final score of any previously finished games, a "current" entry
-        indicating the state and score of any in play games, and a "next" entry
-        indicating the time that a future game will be played.
-
-        ```
-        {
-            "NFL": {
-                "previous": {
-                    "sport": "NFL",
-                    "id": 19127,
-                    "date": 1759130400,
-                    "home_team": {
-                        "key": "DAL",
-                        "name": "Dallas Cowboys",
-                        "colors": [
-                        "002244",
-                        "B0B7BC",
-                        "00338D",
-                        "ADD9CE"
-                        ]
-                    },
-                    "away_team": {
-                        "key": "GB",
-                        "name": "Green Bay Packers",
-                        "colors": [
-                        "203731",
-                        "FFB612",
-                        "FFFFFF"
-                        ]
-                    },
-                    "home_score": 40,
-                    "away_score": 40,
-                    "status": "Final - Over Time",
-                    "expiry": 1760390110
-                },
-                "next": {
-                    "sport": "NFL",
-                    "id": 19135,
-                    "date": 1759708800,
-                    "home_team": {
-                        "key": "NYJ",
-                        "name": "New York Jets",
-                        "colors": [
-                        "115740",
-                        "FFFFFF",
-                        "000000"
-                        ]
-                    },
-                    "away_team": {
-                        "key": "DAL",
-                        "name": "Dallas Cowboys",
-                        "colors": [
-                        "002244",
-                        "B0B7BC",
-                        "00338D",
-                        "ADD9CE"
-                        ]
-                    },
-                    "home_score": null,
-                    "away_score": null,
-                    "status": "Scheduled",
-                    "expiry": 1760390110
-                }
-            }
-        }
-        ```
-        """
-        custom_details = CustomDetails(
-            sports=SportsSuggestDetails.from_events(events=events)
-        )
+        """Return a Suggestion for a given sport based on the query results."""
+        custom_details = CustomDetails(sports=SportsSuggestDetails.from_events(events=events))
         return SportSuggestion(
             title=f"{sport_name}",
             description=f"{sport_name} report for {query}",

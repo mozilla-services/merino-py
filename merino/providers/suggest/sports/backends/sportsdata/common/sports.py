@@ -13,9 +13,7 @@ from httpx import AsyncClient
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
-    Event,
     Sport,
-    SportDate,
     Team,
 )
 
@@ -120,7 +118,7 @@ class NFL(Sport):
 
 
 class NHL(Sport):
-    """Major Hockey League"""
+    """National Hockey League"""
 
     season: str | None
     _lock: asyncio.Lock
@@ -281,75 +279,75 @@ class NBA(Sport):
 # THE FOLLOWING CLASSES ARE WIP:::
 
 
-class MLB(Sport):
-    """Major League Baseball"""
-
-    def __init__(self, settings: LazySettings, *args, **kwargs):
-        name = self.__class__.__name__
-
-        super().__init__(
-            name=name,
-            base_url=settings.providers.sports.sportsdata.get(
-                f"base_url.{name.lower()}",
-                default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
-            ),
-            season=None,
-            week=None,
-            teams={},
-            *args,
-            **kwargs,
-        )
-        self._lock = asyncio.Lock()
-
-    async def update_events(self, client: AsyncClient) -> list[Event]:
-        """Fetch the list of events for the sport. (5 min interval)"""
-        # https://api.sportsdata.io/v3/mlb/scores/json/teams?key=
-        # Sample:
-        """
-        [
-            {
-                "AwayTeamRuns": 0,
-                "HomeTeamRuns": 0,
-                "AwayTeamHits": 2,
-                "HomeTeamHits": 5,
-                "AwayTeamErrors": 0,
-                "HomeTeamErrors": 0,
-                "Attendance": null,
-                "GlobalGameID": 10076415,
-                "GlobalAwayTeamID": 10000012,
-                "GlobalHomeTeamID": 10000032,
-                "NeutralVenue": false,
-                "Inning": 4,
-                "InningHalf": "B",
-                "GameID": 76415,
-                "Season": 2025,
-                "SeasonType": 1,
-                "Status": "InProgress",
-                "Day": "2025-09-04T00:00:00",
-                "DateTime": "2025-09-04T16:10:00",
-                "AwayTeam": "PHI",
-                "HomeTeam": "MIL",
-                "AwayTeamID": 12,
-                "HomeTeamID": 32,
-                "RescheduledGameID": null,
-                "StadiumID": 92,
-                "IsClosed": false,
-                "Updated": "2025-09-04T17:19:20",
-                "GameEndDateTime": null,
-                "DateTimeUTC": "2025-09-04T20:10:00",
-                "RescheduledFromGameID": null,
-                "SuspensionResumeDay": null,
-                "SuspensionResumeDateTime": null,
-                "SeriesInfo": null
-            },
-        ...]
-        """
-        date = SportDate.new()
-        season = str(date)
-        url = f"{self.base_url}/ScoresBasic/{season}?key={self.api_key}"
-        await get_data(client, url)
-        # TODO: Parse events
-        return []
+# class MLB(Sport):
+#    """Major League Baseball"""
+#
+#    def __init__(self, settings: LazySettings, *args, **kwargs):
+#        name = self.__class__.__name__
+#
+#        super().__init__(
+#            name=name,
+#            base_url=settings.providers.sports.sportsdata.get(
+#                f"base_url.{name.lower()}",
+#                default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
+#            ),
+#            season=None,
+#            week=None,
+#            teams={},
+#            *args,
+#            **kwargs,
+#        )
+#        self._lock = asyncio.Lock()
+#
+#    async def update_events(self, client: AsyncClient) -> list[Event]:
+#        """Fetch the list of events for the sport. (5 min interval)"""
+#        # https://api.sportsdata.io/v3/mlb/scores/json/teams?key=
+#        # Sample:
+#        """
+#        [
+#            {
+#                "AwayTeamRuns": 0,
+#                "HomeTeamRuns": 0,
+#                "AwayTeamHits": 2,
+#                "HomeTeamHits": 5,
+#                "AwayTeamErrors": 0,
+#                "HomeTeamErrors": 0,
+#                "Attendance": null,
+#                "GlobalGameID": 10076415,
+#                "GlobalAwayTeamID": 10000012,
+#                "GlobalHomeTeamID": 10000032,
+#                "NeutralVenue": false,
+#                "Inning": 4,
+#                "InningHalf": "B",
+#                "GameID": 76415,
+#                "Season": 2025,
+#                "SeasonType": 1,
+#                "Status": "InProgress",
+#                "Day": "2025-09-04T00:00:00",
+#                "DateTime": "2025-09-04T16:10:00",
+#                "AwayTeam": "PHI",
+#                "HomeTeam": "MIL",
+#                "AwayTeamID": 12,
+#                "HomeTeamID": 32,
+#                "RescheduledGameID": null,
+#                "StadiumID": 92,
+#                "IsClosed": false,
+#                "Updated": "2025-09-04T17:19:20",
+#                "GameEndDateTime": null,
+#                "DateTimeUTC": "2025-09-04T20:10:00",
+#                "RescheduledFromGameID": null,
+#                "SuspensionResumeDay": null,
+#                "SuspensionResumeDateTime": null,
+#                "SeriesInfo": null
+#            },
+#        ...]
+#        """
+#        date = SportDate.new()
+#        season = str(date)
+#        url = f"{self.base_url}/ScoresBasic/{season}?key={self.api_key}"
+#        await get_data(client, url)
+#        # TODO: Parse events
+#        return []
 
 
 # class EPL(Sport):
