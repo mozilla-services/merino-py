@@ -42,9 +42,9 @@ source = ["merino"]
 branch = true
 relative_files = true
 omit = [
-  "merino/jobs/utils/domain_category_mapping.py",
   "merino/jobs/utils/domain_tester.py",
   "merino/jobs/utils/system_monitor.py",
+  "merino/utils/domain_categories/domain_category_mapping.py",
 ]
 
 [dependency-groups]
@@ -122,7 +122,7 @@ lint.pydocstyle = { convention = "pep257" }
 skips = ["B101", "B104", "B311"]
 exclude_dirs = [
   # Data file only
-  "merino/jobs/utils/domain_category_mapping.py"
+  "merino/utils/domain_categories/domain_category_mapping.py",
 ]
 
 [tool.mypy]

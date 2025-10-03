@@ -15,8 +15,8 @@ from merino.jobs.navigational_suggestions import (
     _construct_top_picks,
     _write_xcom_file,
 )
-from merino.providers.suggest.base import Category
 from merino.jobs.navigational_suggestions import _run_normal_mode
+from merino.utils.domain_categories.models import Category
 
 
 def test_write_xcom_file(mocker):

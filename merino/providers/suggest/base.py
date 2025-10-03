@@ -1,7 +1,6 @@
 """Abstract class for Providers"""
 
 from abc import ABC, abstractmethod
-from enum import Enum
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -9,6 +8,7 @@ from merino.configs import settings
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.custom_details import CustomDetails
+from merino.utils.domain_categories.models import Category
 
 
 class SuggestionRequest(BaseModel):
@@ -25,32 +25,6 @@ class SuggestionRequest(BaseModel):
     source: str | None = None
     google_suggest_params: str | None = None
     session_id: str | None = None
-
-
-class Category(Enum):
-    """Enum of possible interests for a suggestion."""
-
-    Inconclusive = 0
-    Animals = 1
-    Arts = 2
-    Autos = 3
-    Business = 4
-    Career = 5
-    Education = 6
-    Fashion = 7
-    Finance = 8
-    Food = 9
-    Government = 10
-    # Disable this per policy consultation
-    # Health = 11
-    Hobbies = 12
-    Home = 13
-    News = 14
-    RealEstate = 15
-    Society = 16
-    Sports = 17
-    Tech = 18
-    Travel = 19
 
 
 class BaseSuggestion(BaseModel):

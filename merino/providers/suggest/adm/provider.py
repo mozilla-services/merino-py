@@ -15,10 +15,12 @@ from moz_merino_ext.amp import AmpIndexManager
 from pydantic import HttpUrl
 from tldextract.tldextract import ExtractResult
 
+from merino.utils.domain_categories.domain_category_mapping import DOMAIN_MAPPING
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, Category, SuggestionRequest
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.utils.domain_categories.models import Category
 
 logger = logging.getLogger(__name__)
 
@@ -159,8 +161,6 @@ class Provider(BaseProvider):
             `domain`: the domain of a URL.
         Returns a list of SERP categories if any or else an empty list.
         """
-        from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
-
         hash = base64.b64encode(
             hashlib.md5(domain.encode(), usedforsecurity=False).digest()
         ).decode()
