@@ -13,11 +13,12 @@ from pytest import LogCaptureFixture
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.base import BaseSuggestion, Category
 from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.suggest.top_picks.backends.protocol import TopPicksData
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.suggest.top_picks.provider import Provider, Suggestion
+from merino.providers.suggest.base import BaseSuggestion
+from merino.utils.domain_categories.models import Category
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 

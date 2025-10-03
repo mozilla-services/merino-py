@@ -1,16 +1,23 @@
 """Domain metadata extraction testing tool."""
 
 from datetime import datetime
-from typing import Any, Optional, cast, Type
+from typing import Any, Optional, cast
 import asyncio
 import typer
 from rich.console import Console
 from rich.table import Table
 from pydantic import BaseModel
 from google.cloud.storage import Blob
-import importlib
-import contextvars
 
+from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
+    DomainMetadataExtractor,
+    current_scraper,
+    Scraper,
+)
+from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
+    DomainMetadataUploader,
+)
 from merino.utils.gcs.models import BaseContentUploader
 
 cli = typer.Typer(no_args_is_help=True)
@@ -29,42 +36,11 @@ class DomainTestResult(BaseModel):
     error: Optional[str] = None
 
 
-def _get_required_classes() -> (
-    tuple[Type[Any], contextvars.ContextVar[Any], Type[Any], Type[Any], Type[Any]]
-):
-    """Dynamically import required classes to avoid circular import at module level"""
-    # Import at runtime to avoid circular dependency
-    domain_metadata_extractor = importlib.import_module(
-        "merino.jobs.navigational_suggestions.domain_metadata_extractor"
-    )
-    utils_module = importlib.import_module("merino.jobs.navigational_suggestions.utils")
-    uploader_module = importlib.import_module(
-        "merino.jobs.navigational_suggestions.domain_metadata_uploader"
-    )
-
-    return (
-        domain_metadata_extractor.DomainMetadataExtractor,
-        domain_metadata_extractor.current_scraper,
-        domain_metadata_extractor.Scraper,
-        utils_module.AsyncFaviconDownloader,
-        uploader_module.DomainMetadataUploader,
-    )
-
-
 async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
     """Test metadata extraction for a single domain asynchronously"""
     timestamp = datetime.now().isoformat()
 
     try:
-        # Get the required classes dynamically
-        (
-            DomainMetadataExtractor,
-            current_scraper,
-            Scraper,
-            AsyncFaviconDownloader,
-            DomainMetadataUploader,
-        ) = _get_required_classes()
-
         domain_data = {
             "rank": 1,
             "domain": domain,
