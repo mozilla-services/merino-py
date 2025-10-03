@@ -6,20 +6,22 @@
 
 import datetime
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 from pydantic import HttpUrl
 import pytest
 
 from merino.providers.suggest.flightaware.backends.protocol import (
     AirportDetails,
-    FlightScheduleSegment,
     FlightStatus,
     FlightSummary,
 )
 from merino.providers.suggest.flightaware.backends.utils import (
     build_flight_summary,
+    calculate_time_left,
     get_live_url,
+    is_delayed,
     is_valid_flight_number_pattern,
-    is_within_two_hours,
+    is_within_one_hour,
     minutes_from_now,
     parse_timestamp,
     pick_best_flights,
@@ -28,25 +30,96 @@ from merino.providers.suggest.flightaware.backends.utils import (
 import merino.providers.suggest.flightaware.backends.utils as utils
 
 
+@pytest.fixture
+def fixed_now():
+    """Provide a fixed UTC datetime (2025-09-29T12:00:00Z) for testing."""
+    return datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc)
+
+
+@pytest.fixture
+def flight_with_codeshare():
+    """Return a valid flight response with codeshares for testing"""
+    return {
+        "ident_iata": "UA123",
+        "ident_icao": "UAL123",
+        "codeshares_iata": ["AC9876"],
+        "codeshares": ["ACA9876"],
+        "destination": {
+            "code_iata": "EWR",
+            "city": "Newark",
+            "timezone": "America/New_York",
+        },
+        "origin": {
+            "code_iata": "SFO",
+            "city": "San Francisco",
+            "timezone": "America/Los_Angeles",
+        },
+        "scheduled_out": "2025-09-29T12:00:00Z",
+        "estimated_out": "2025-09-29T12:05:00Z",
+        "scheduled_in": "2025-09-29T16:00:00Z",
+        "estimated_in": "2025-09-29T16:05:00Z",
+        "status": "En Route",
+        "progress_percent": 50,
+    }
+
+
 @pytest.mark.parametrize(
-    "ts, expected",
+    "description, ts, tz, expected",
     [
         (
+            "valid UTC timestamp with Z suffix, default UTC",
             "2025-09-29T12:34:56Z",
+            None,
             datetime.datetime(2025, 9, 29, 12, 34, 56, tzinfo=datetime.timezone.utc),
         ),
         (
+            "valid UTC timestamp with explicit +00:00 offset, default UTC",
             "2025-09-29T12:34:56+00:00",
+            None,
             datetime.datetime(2025, 9, 29, 12, 34, 56, tzinfo=datetime.timezone.utc),
         ),
-        (None, None),
-        ("", None),
-        ("not-a-timestamp", None),
+        (
+            "convert UTC timestamp to New York local time",
+            "2025-09-29T12:34:56Z",
+            "America/New_York",
+            datetime.datetime(2025, 9, 29, 8, 34, 56, tzinfo=ZoneInfo("America/New_York")),
+        ),
+        (
+            "convert UTC timestamp to Berlin local time",
+            "2025-09-29T12:34:56Z",
+            "Europe/Berlin",
+            datetime.datetime(2025, 9, 29, 14, 34, 56, tzinfo=ZoneInfo("Europe/Berlin")),
+        ),
+        (
+            "None input returns None",
+            None,
+            None,
+            None,
+        ),
+        (
+            "Unrecognized timezone returns None",
+            "2025-09-29T12:34:56Z",
+            "not-a-timezone",
+            None,
+        ),
+        (
+            "empty string returns None",
+            "",
+            None,
+            None,
+        ),
+        (
+            "invalid timestamp returns None",
+            "not-a-timestamp",
+            None,
+            None,
+        ),
     ],
 )
-def test_parse_timestamp(ts, expected):
-    """Ensure parse_timestamp correctly parses valid ISO-8601 UTC strings and returns None for invalid or empty input."""
-    assert parse_timestamp(ts) == expected
+def test_parse_timestamp(description, ts, tz, expected):
+    """Ensure parse_timestamp correctly parses UTC strings, converts to local when tz provided, and handles invalid input."""
+    result = parse_timestamp(ts, tz)
+    assert result == expected, f"Failed: {description}"
 
 
 @pytest.mark.parametrize(
@@ -100,38 +173,26 @@ def test_minutes_from_now(description, timestamp, now, expected):
             True,
         ),
         (
-            "timestamp 1 hour in the future",
+            "timestamp exactly 1 hour in the future",
             "2025-09-29T13:00:00Z",
             datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc),
             True,
         ),
         (
-            "timestamp 1 hour in the past",
+            "timestamp exactly 1 hour in the past",
             "2025-09-29T11:00:00Z",
             datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc),
             True,
         ),
         (
-            "timestamp exactly 2 hours in the future",
-            "2025-09-29T14:00:00Z",
-            datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc),
-            True,
-        ),
-        (
-            "timestamp exactly 2 hours in the past",
-            "2025-09-29T10:00:00Z",
-            datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc),
-            True,
-        ),
-        (
-            "timestamp just over 2 hours in the future",
-            "2025-09-29T14:01:00Z",
+            "timestamp just over 1 hour in the future",
+            "2025-09-29T13:01:00Z",
             datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc),
             False,
         ),
         (
-            "timestamp just over 2 hours in the past",
-            "2025-09-29T09:59:00Z",
+            "timestamp just over 1 hour in the past",
+            "2025-09-29T10:59:00Z",
             datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc),
             False,
         ),
@@ -149,64 +210,45 @@ def test_minutes_from_now(description, timestamp, now, expected):
         ),
     ],
 )
-def test_is_within_two_hours(description, timestamp, now, expected):
-    """Check that is_within_two_hours correctly detects timestamps within 2 hours of now."""
-    result = is_within_two_hours(timestamp, now)
+def test_is_within_one_hour(description, timestamp, now, expected):
+    """Check that is_within_one_hour correctly detects timestamps within 2 hours of now."""
+    result = is_within_one_hour(timestamp, now)
     assert result == expected, f"Failed: {description}"
 
 
-def test_build_flight_summary_valid():
-    """Confirm build_flight_summary returns a valid FlightSummary for a complete flight dict."""
-    flight = {
-        "ident_iata": "UA123",
-        "ident_icao": "UAL123",
-        "codeshares_iata": [],
-        "codeshares": [],
-        "destination": {"code_iata": "EWR", "city": "Newark"},
-        "origin": {"code_iata": "SFO", "city": "San Francisco"},
-        "scheduled_out": "2025-09-29T12:00:00Z",
-        "estimated_out": "2025-09-29T12:05:00Z",
-        "scheduled_in": "2025-09-29T16:00:00Z",
-        "estimated_in": "2025-09-29T16:05:00Z",
-        "status": "En Route",
-        "progress_percent": 50,
-    }
-
-    summary = build_flight_summary(flight, normalized_query="UA123")
+def test_build_flight_summary_valid(flight_with_codeshare):
+    """Confirm build_flight_summary returns a valid FlightSummary with local timezone conversions."""
+    summary = build_flight_summary(flight_with_codeshare, normalized_query="UA123")
 
     assert isinstance(summary, FlightSummary)
     assert summary.flight_number == "UA123"
     assert summary.destination == AirportDetails(code="EWR", city="Newark")
     assert summary.origin == AirportDetails(code="SFO", city="San Francisco")
-    assert summary.departure == FlightScheduleSegment(
-        scheduled_time="2025-09-29T12:00:00Z", estimated_time="2025-09-29T12:05:00Z"
+
+    # departure times should be localized to San Francisco time
+    assert summary.departure.scheduled_time == datetime.datetime(
+        2025, 9, 29, 5, 0, 0, tzinfo=ZoneInfo("America/Los_Angeles")
     )
-    assert summary.arrival == FlightScheduleSegment(
-        scheduled_time="2025-09-29T16:00:00Z", estimated_time="2025-09-29T16:05:00Z"
+    assert summary.departure.estimated_time == datetime.datetime(
+        2025, 9, 29, 5, 5, 0, tzinfo=ZoneInfo("America/Los_Angeles")
     )
-    assert summary.status == "En Route"
+
+    # arrival times should be localized to New York time
+    assert summary.arrival.scheduled_time == datetime.datetime(
+        2025, 9, 29, 12, 0, 0, tzinfo=ZoneInfo("America/New_York")
+    )
+    assert summary.arrival.estimated_time == datetime.datetime(
+        2025, 9, 29, 12, 5, 0, tzinfo=ZoneInfo("America/New_York")
+    )
+
+    assert summary.status == "Scheduled"
     assert summary.progress_percent == 50
     assert summary.url == HttpUrl("https://www.flightaware.com/live/flight/UAL123")
 
 
-def test_build_flight_summary_with_codeshare():
+def test_build_flight_summary_with_codeshare(flight_with_codeshare):
     """Confirm build_flight_summary resolves codeshare queries to the correct ICAO ident in the live URL."""
-    flight = {
-        "ident_iata": "UA123",
-        "ident_icao": "UAL123",
-        "codeshares_iata": ["AC9876"],
-        "codeshares": ["ACA9876"],
-        "destination": {"code_iata": "EWR", "city": "Newark"},
-        "origin": {"code_iata": "SFO", "city": "San Francisco"},
-        "scheduled_out": "2025-09-29T12:00:00Z",
-        "estimated_out": "2025-09-29T12:05:00Z",
-        "scheduled_in": "2025-09-29T16:00:00Z",
-        "estimated_in": "2025-09-29T16:05:00Z",
-        "status": "En Route",
-        "progress_percent": 50,
-    }
-
-    summary = build_flight_summary(flight, normalized_query="AC9876")
+    summary = build_flight_summary(flight_with_codeshare, normalized_query="AC9876")
 
     assert isinstance(summary, FlightSummary)
     assert summary.url == HttpUrl("https://www.flightaware.com/live/flight/ACA9876")
@@ -306,12 +348,6 @@ def test_get_live_url(description, query, flight, expected):
     assert result == expected, f"Failed: {description}"
 
 
-@pytest.fixture
-def fixed_now():
-    """Provide a fixed UTC datetime (2025-09-29T12:00:00Z) for testing."""
-    return datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc)
-
-
 def test_pick_best_flight_en_route_always_top():
     """Check that en route flights are always prioritized to the top regardless of other flights."""
     flights = [
@@ -346,8 +382,8 @@ def test_pick_best_flight_scheduled_sorted_by_proximity(fixed_now):
     assert [f["id"] for f in results] == ["sooner", "later"]
 
 
-def test_pick_best_flight_arrived_included_if_within_two_hours(fixed_now):
-    """Confirm arrived flights within the past 2 hours are included in results."""
+def test_pick_best_flight_arrived_included_if_within_one_hour(fixed_now):
+    """Confirm arrived flights within the past 1 hours are included in results."""
     flights = [
         {"id": "arrived", "actual_on": "2025-09-29T11:30:00Z"},
     ]
@@ -364,8 +400,8 @@ def test_pick_best_flight_arrived_included_if_within_two_hours(fixed_now):
     assert "_distance_minutes" in results[0]
 
 
-def test_pick_best_flight_cancelled_included_if_within_two_hours(fixed_now):
-    """Confirm cancelled flights scheduled within the past 2 hours are included in results."""
+def test_pick_best_flight_cancelled_included_if_within_one_hour(fixed_now):
+    """Confirm cancelled flights scheduled within the past 1 hour are included in results."""
     flights = [
         {"id": "cancelled", "scheduled_out": "2025-09-29T11:30:00Z"},
     ]
@@ -417,9 +453,9 @@ def test_pick_best_flights_mixed_statuses_prioritized(fixed_now):
         {"id": "enroute"},
         # Scheduled flight 30m from now
         {"id": "scheduled", "scheduled_out": "2025-09-29T12:30:00Z"},
-        # Arrived flight 30m ago (within 2h, but after scheduled)
+        # Arrived flight 30m ago (within 1h, but after scheduled)
         {"id": "arrived", "actual_on": "2025-09-29T11:30:00Z"},
-        # Cancelled flight 1h ago (within 2h, but lowest priority)
+        # Cancelled flight 1h ago (within 1h, but lowest priority)
         {"id": "cancelled", "scheduled_out": "2025-09-29T11:00:00Z"},
     ]
 
@@ -542,3 +578,224 @@ def test_is_valid_flight_number_pattern(description, query, expected):
     """Test the is_valid_flight_number_pattern function against a range of inputs."""
     result = is_valid_flight_number_pattern(query)
     assert result == expected, f"Failed: {description} (input: '{query}')"
+
+
+@pytest.mark.parametrize(
+    "description, flight, expected",
+    [
+        (
+            "cancelled flight takes priority even if other fields present",
+            {
+                "cancelled": True,
+                "actual_out": "2025-09-29T12:00:00Z",
+                "actual_on": None,
+                "actual_in": None,
+                "scheduled_out": "2025-09-29T14:10:00Z",
+                "estimated_out": "2025-09-29T14:10:00Z",
+                "departure_delay": 1800,
+            },
+            FlightStatus.CANCELLED,
+        ),
+        (
+            "en route flight (actual_out set, no actual_on)",
+            {
+                "cancelled": False,
+                "actual_out": "2025-09-29T12:00:00Z",
+                "actual_on": None,
+                "actual_in": None,
+                "scheduled_out": "2025-09-29T14:10:00Z",
+                "estimated_out": "2025-09-29T14:10:00Z",
+                "departure_delay": 0,
+            },
+            FlightStatus.EN_ROUTE,
+        ),
+        (
+            "arrived flight (actual_on set, actual_in missing)",
+            {
+                "cancelled": False,
+                "actual_out": "2025-09-29T12:00:00Z",
+                "actual_on": "2025-09-29T14:00:00Z",
+                "scheduled_out": "2025-09-29T14:10:00Z",
+                "estimated_out": "2025-09-29T14:10:00Z",
+                "actual_in": None,
+                "departure_delay": 1800,
+            },
+            FlightStatus.ARRIVED,
+        ),
+        (
+            "arrived flight (actual_in set, actual_on missing)",
+            {
+                "cancelled": False,
+                "actual_out": "2025-09-29T12:00:00Z",
+                "actual_on": None,
+                "actual_in": "2025-09-29T14:10:00Z",
+                "scheduled_out": "2025-09-29T14:10:00Z",
+                "estimated_out": "2025-09-29T14:10:00Z",
+                "departure_delay": 0,
+            },
+            FlightStatus.ARRIVED,
+        ),
+        (
+            "scheduled flight (no actual_out, no delay)",
+            {
+                "cancelled": False,
+                "actual_out": None,
+                "actual_on": None,
+                "actual_in": None,
+                "scheduled_out": "2025-09-29T14:10:00Z",
+                "estimated_out": "2025-09-29T14:10:00Z",
+                "departure_delay": None,
+            },
+            FlightStatus.SCHEDULED,
+        ),
+        (
+            "scheduled but delayed flight (no actual_out, delay > 15 minutes)",
+            {
+                "cancelled": False,
+                "actual_out": None,
+                "actual_on": None,
+                "actual_in": None,
+                "scheduled_out": "2025-09-29T14:10:00Z",
+                "estimated_out": "2025-09-29T14:10:00Z",
+                "departure_delay": 1800,
+            },
+            FlightStatus.DELAYED,
+        ),
+        (
+            "scheduled but on time (no actual_out, delay < 15 minutes)",
+            {
+                "cancelled": False,
+                "actual_out": None,
+                "actual_on": None,
+                "actual_in": None,
+                "scheduled_out": "2025-09-29T14:10:00Z",
+                "estimated_out": "2025-09-29T14:10:00Z",
+                "departure_delay": 600,
+            },
+            FlightStatus.SCHEDULED,
+        ),
+        (
+            "unknown status - missing fields",
+            {
+                "cancelled": False,
+                "actual_out": None,
+                "actual_on": None,
+                "actual_in": None,
+                "scheduled_out": None,
+                "estimated_out": None,
+                "departure_delay": None,
+            },
+            FlightStatus.UNKNOWN,
+        ),
+    ],
+)
+def test_derive_flight_status(description, flight, expected):
+    """Verify derive_flight_status returns the correct FlightStatus for each scenario."""
+    result = utils.derive_flight_status(flight)
+    assert result == expected, f"Failed: {description}"
+
+
+@pytest.mark.parametrize(
+    "description, flight, expected",
+    [
+        (
+            "arrived flight with actual_in present returns 0",
+            {
+                "actual_out": "2025-09-29T10:00:00Z",
+                "actual_in": "2025-09-29T11:30:00Z",
+                "scheduled_in": "2025-09-29T12:30:00Z",
+            },
+            0,
+        ),
+        (
+            "arrived flight with actual_on present returns 0",
+            {
+                "actual_out": "2025-09-29T10:00:00Z",
+                "actual_on": "2025-09-29T11:45:00Z",
+                "scheduled_in": "2025-09-29T12:30:00Z",
+            },
+            0,
+        ),
+        (
+            "not departed (no actual_out) returns None",
+            {
+                "actual_out": None,
+                "scheduled_in": "2025-09-29T14:00:00Z",
+            },
+            None,
+        ),
+        (
+            "en route with estimated_in returns minutes until ETA",
+            {
+                "actual_out": "2025-09-29T11:00:00Z",
+                "estimated_in": "2025-09-29T13:00:00Z",  # 1 hour after fixed_now
+            },
+            60,
+        ),
+        (
+            "en route with scheduled_in returns minutes until scheduled arrival",
+            {
+                "actual_out": "2025-09-29T11:00:00Z",
+                "scheduled_in": "2025-09-29T13:30:00Z",  # 1.5 hours after fixed_now
+            },
+            90,
+        ),
+        (
+            "past arrival time returns 0",
+            {
+                "actual_out": "2025-09-29T10:00:00Z",
+                "estimated_in": "2025-09-29T11:00:00Z",  # 1 hour before fixed_now
+            },
+            0,
+        ),
+        (
+            "en route but no estimated_in or scheduled_in returns None",
+            {
+                "actual_out": "2025-09-29T11:00:00Z",
+            },
+            None,
+        ),
+    ],
+)
+def test_calculate_time_left(description, flight, expected, fixed_now):
+    """Test calculate_time_left across all lifecycle scenarios."""
+    with patch.object(utils.datetime, "datetime", wraps=datetime.datetime) as mock_datetime:
+        mock_datetime.now.return_value = fixed_now
+        result = calculate_time_left(flight)
+        assert result == expected, f"Failed: {description}"
+
+
+@pytest.mark.parametrize(
+    "description, flight, expected",
+    [
+        (
+            "no departure_delay field returns False",
+            {},
+            False,
+        ),
+        (
+            "departure_delay is None returns False",
+            {"departure_delay": None},
+            False,
+        ),
+        (
+            "departure_delay less than 15 minutes returns False",
+            {"departure_delay": 600},  # 10 minutes
+            False,
+        ),
+        (
+            "departure_delay equal to 15 minutes returns False",
+            {"departure_delay": 900},  # exactly 15 minutes
+            False,
+        ),
+        (
+            "departure_delay greater than 15 minutes returns True",
+            {"departure_delay": 1200},  # 20 minutes
+            True,
+        ),
+    ],
+)
+def test_is_delayed(description, flight, expected):
+    """Verify is_delayed correctly detects delays above 15 minutes."""
+    result = is_delayed(flight)
+    assert result == expected, f"Failed: {description}"

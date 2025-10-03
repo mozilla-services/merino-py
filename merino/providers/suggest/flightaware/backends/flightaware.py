@@ -11,6 +11,7 @@ from merino.providers.suggest.flightaware.backends.protocol import (
 )
 from merino.providers.suggest.flightaware.backends.utils import (
     build_flight_summary,
+    pick_best_flights,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class FlightAwareBackend(FlightBackendProtocol):
 
             now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
             start = (now - datetime.timedelta(hours=20)).isoformat().replace("+00:00", "Z")
-            end = (now + datetime.timedelta(hours=20)).isoformat().replace("+00:00", "Z")
+            end = (now + datetime.timedelta(hours=28)).isoformat().replace("+00:00", "Z")
 
             formatted_url = self.ident_url.format(ident=flight_num, start=start, end=end)
 
@@ -59,17 +60,19 @@ class FlightAwareBackend(FlightBackendProtocol):
 
         return response.json()
 
-    def get_flight_summaries(self, flight_response: Any | None, query: str) -> list[FlightSummary]:
+    def get_flight_summaries(
+        self, flight_response: dict | None, query: str
+    ) -> list[FlightSummary]:
         """Return a prioritized list of summaries of a flight instance."""
         if flight_response is None:
             return []
 
         flights = flight_response["flights"] or []
-        # prioritized_flights = pick_best_flights(flights) # TODO this will be uncommented in DISCO-3736
+        prioritized_flights = pick_best_flights(flights)
 
         return [
             summary
-            for flight in flights
+            for flight in prioritized_flights
             if (summary := build_flight_summary(flight, query)) is not None
         ]
 
