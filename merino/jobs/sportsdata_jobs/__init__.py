@@ -83,8 +83,7 @@ class SportDataUpdater(BaseModel):
             raise SportsDataError("No sports defined")
         platform = settings.providers.sports.get("platform", "sports")
         active_sports = [
-            sport.strip().upper()
-            for sport in settings.providers.sports.sports.split(",")
+            sport.strip().upper() for sport in settings.providers.sports.sports.split(",")
         ]
         self.store = SportsDataStore(
             dsn=settings.providers.sports.es.dsn,

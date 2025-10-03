@@ -28,8 +28,10 @@ def utc_time_from_now(delta: timedelta) -> int:
     return int((datetime.now(tz=timezone.utc) + delta).timestamp())
 
 
-def init_logs() -> logging.Logger:
+def init_logs(level: str | None = None) -> logging.Logger:
     """Initialize logging based on `PYTHON_LOG` environ)"""
-    level = getattr(logging, os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL).upper(), None)
+    level = getattr(
+        logging, (level or os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL)).upper()
+    )
     logging.basicConfig(level=level)
     return logging.getLogger(__name__)

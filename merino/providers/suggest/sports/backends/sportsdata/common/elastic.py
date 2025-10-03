@@ -339,6 +339,7 @@ class SportsDataStore(ElasticDataStore):
             )
         except Exception as ex:
             raise BackendError(f"Elasticsearch error for {index_id}") from ex
+        logging.debug(f"{LOGGING_TAG} found {res} for `{q}`")
         if res.get("hits", {}).get("total", {}).get("value", 0) > 0:
             # filter sport for prev, current, next
             filter: dict[str, dict] = {}
