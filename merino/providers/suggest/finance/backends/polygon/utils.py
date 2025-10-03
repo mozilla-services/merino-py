@@ -3,6 +3,7 @@
 import logging
 import re
 from typing import Any
+import hashlib
 
 from pydantic import HttpUrl
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
@@ -140,3 +141,12 @@ def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) ->
         image_url=image_url,
         exchange=exchange,
     )
+
+
+def generate_cache_key_for_ticker(ticker: str) -> str:
+    """Generate cache key for a ticker."""
+    hasher = hashlib.blake2s()
+    hasher.update(ticker.upper().encode("utf-8"))
+    ticker_hash = hasher.hexdigest()
+
+    return f"PolygonBackend:v1:ticker_snapshot:{ticker_hash}"
