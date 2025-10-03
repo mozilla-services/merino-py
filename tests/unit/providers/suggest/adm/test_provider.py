@@ -14,7 +14,7 @@ from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
-from merino.providers.suggest.base import Category
+from merino.utils.domain_categories.models import Category
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 

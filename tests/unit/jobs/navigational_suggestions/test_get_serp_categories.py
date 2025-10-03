@@ -10,7 +10,7 @@ import hashlib
 from unittest.mock import patch
 
 from merino.jobs.navigational_suggestions import _get_serp_categories
-from merino.providers.suggest.base import Category
+from merino.utils.domain_categories.models import Category
 
 
 def test_get_serp_categories_with_valid_url():

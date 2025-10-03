@@ -17,7 +17,7 @@ from merino.jobs.navigational_suggestions import (
     _construct_partner_manifest,
     _construct_top_picks,
 )
-from merino.providers.suggest.base import Category
+from merino.utils.domain_categories.models import Category
 
 
 def test_prepare_domain_metadata_top_picks_construction():

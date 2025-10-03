@@ -6,7 +6,6 @@ from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.base import Category
 from merino.providers.suggest.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
 from merino.providers.suggest.wikipedia.provider import (
     ADVERTISER,
@@ -14,6 +13,7 @@ from merino.providers.suggest.wikipedia.provider import (
     Provider,
     WikipediaSuggestion,
 )
+from merino.utils.domain_categories.models import Category
 from tests.unit.types import SuggestionRequestFixture
 
 
