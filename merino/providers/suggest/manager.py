@@ -38,6 +38,10 @@ from merino.providers.suggest.flightaware.provider import (
     Provider as FlightAwareProvider,
 )
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
+from merino.providers.suggest.sports.provider import SportsDataProvider
+from merino.providers.suggest.sports.backends.sportsdata.backend import (
+    SportsDataBackend,
+)
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.providers.suggest.google_suggest.provider import (
     Provider as GoogleSuggestProvider,
@@ -64,6 +68,7 @@ class ProviderType(str, Enum):
     YELP = "yelp"
     FLIGHTAWARE = "flightaware"
     GOOGLE_SUGGEST = "google_suggest"
+    SPORTS = "sports"
 
 
 def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
@@ -301,6 +306,15 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     http_client=create_http_client(base_url=settings.flightaware.base_url),
                     ident_url=settings.flightaware.ident_url_path,
                 ),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.SPORTS:
+            return SportsDataProvider(
+                backend=SportsDataBackend(settings=settings),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
                 name=provider_id,
