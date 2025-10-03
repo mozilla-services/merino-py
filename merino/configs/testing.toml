@@ -48,6 +48,7 @@ partner_code_newtab_value="test_newtab"
 [testing.remote_settings]
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
 form_factors = ["desktop", "phone",]
+countries = ["US", "DE",]
 
 [testing.providers.accuweather]
 enabled_by_default = false
