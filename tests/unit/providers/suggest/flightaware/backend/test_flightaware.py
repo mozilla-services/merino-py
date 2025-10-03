@@ -31,10 +31,12 @@ def make_summary(flight_number: str) -> FlightSummary:
         destination=AirportDetails(code="EWR", city="Newark"),
         origin=AirportDetails(code="SFO", city="San Francisco"),
         departure=FlightScheduleSegment(
-            scheduled_time="2025-09-29T12:00:00Z", estimated_time="2025-09-29T12:05:00Z"
+            scheduled_time="2025-10-03T16:40:00-04:00",
+            estimated_time="2025-10-03T16:40:00-04:00",
         ),
         arrival=FlightScheduleSegment(
-            scheduled_time="2025-09-29T16:00:00Z", estimated_time="2025-09-29T16:05:00Z"
+            scheduled_time="2025-10-03T18:40:00-04:00",
+            estimated_time="2025-10-03T18:40:00-04:00",
         ),
         status="En Route",
         delayed=False,
@@ -146,8 +148,16 @@ def test_get_flight_summaries_filters_out_none_summaries():
         "ident_icao": "UAL123",
         "codeshares_iata": [],
         "codeshares": [],
-        "destination": {"code_iata": "EWR", "city": "Newark"},
-        "origin": {"code_iata": "SFO", "city": "San Francisco"},
+        "destination": {
+            "code_iata": "EWR",
+            "city": "Newark",
+            "timezone": "America/New_York",
+        },
+        "origin": {
+            "code_iata": "SFO",
+            "city": "San Francisco",
+            "timezone": "America/Los_Angeles",
+        },
         "scheduled_out": "2025-09-29T12:00:00Z",
         "estimated_out": "2025-09-29T12:05:00Z",
         "scheduled_in": "2025-09-29T16:00:00Z",
@@ -187,8 +197,16 @@ def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now):
             "ident_icao": "UAL111",
             "codeshares_iata": [],
             "codeshares": [],
-            "destination": {"code_iata": "EWR", "city": "Newark"},
-            "origin": {"code_iata": "SFO", "city": "San Francisco"},
+            "destination": {
+                "code_iata": "EWR",
+                "city": "Newark",
+                "timezone": "America/New_York",
+            },
+            "origin": {
+                "code_iata": "SFO",
+                "city": "San Francisco",
+                "timezone": "America/Los_Angeles",
+            },
             "scheduled_out": "2025-09-29T10:00:00Z",
             "estimated_out": "2025-09-29T10:05:00Z",
             "actual_out": "2025-09-29T10:05:00Z",
@@ -203,8 +221,16 @@ def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now):
             "ident_icao": "UAL111",
             "codeshares_iata": [],
             "codeshares": [],
-            "destination": {"code_iata": "EWR", "city": "Newark"},
-            "origin": {"code_iata": "SFO", "city": "San Francisco"},
+            "destination": {
+                "code_iata": "EWR",
+                "city": "Newark",
+                "timezone": "America/New_York",
+            },
+            "origin": {
+                "code_iata": "SFO",
+                "city": "San Francisco",
+                "timezone": "America/Los_Angeles",
+            },
             "scheduled_out": "2025-09-29T14:00:00Z",
             "estimated_out": "2025-09-29T14:16:00Z",
             "scheduled_in": "2025-09-29T18:00:00Z",

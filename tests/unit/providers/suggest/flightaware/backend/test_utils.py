@@ -6,12 +6,12 @@
 
 import datetime
 from unittest.mock import patch
+from zoneinfo import ZoneInfo
 from pydantic import HttpUrl
 import pytest
 
 from merino.providers.suggest.flightaware.backends.protocol import (
     AirportDetails,
-    FlightScheduleSegment,
     FlightStatus,
     FlightSummary,
 )
@@ -30,25 +30,90 @@ from merino.providers.suggest.flightaware.backends.utils import (
 import merino.providers.suggest.flightaware.backends.utils as utils
 
 
+@pytest.fixture
+def fixed_now():
+    """Provide a fixed UTC datetime (2025-09-29T12:00:00Z) for testing."""
+    return datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc)
+
+
+@pytest.fixture
+def flight_with_codeshare():
+    """Return a valid flight response with codeshares for testing"""
+    return {
+        "ident_iata": "UA123",
+        "ident_icao": "UAL123",
+        "codeshares_iata": ["AC9876"],
+        "codeshares": ["ACA9876"],
+        "destination": {
+            "code_iata": "EWR",
+            "city": "Newark",
+            "timezone": "America/New_York",
+        },
+        "origin": {
+            "code_iata": "SFO",
+            "city": "San Francisco",
+            "timezone": "America/Los_Angeles",
+        },
+        "scheduled_out": "2025-09-29T12:00:00Z",
+        "estimated_out": "2025-09-29T12:05:00Z",
+        "scheduled_in": "2025-09-29T16:00:00Z",
+        "estimated_in": "2025-09-29T16:05:00Z",
+        "status": "En Route",
+        "progress_percent": 50,
+    }
+
+
 @pytest.mark.parametrize(
-    "ts, expected",
+    "description, ts, tz, expected",
     [
         (
+            "valid UTC timestamp with Z suffix, default UTC",
             "2025-09-29T12:34:56Z",
+            None,
             datetime.datetime(2025, 9, 29, 12, 34, 56, tzinfo=datetime.timezone.utc),
         ),
         (
+            "valid UTC timestamp with explicit +00:00 offset, default UTC",
             "2025-09-29T12:34:56+00:00",
+            None,
             datetime.datetime(2025, 9, 29, 12, 34, 56, tzinfo=datetime.timezone.utc),
         ),
-        (None, None),
-        ("", None),
-        ("not-a-timestamp", None),
+        (
+            "convert UTC timestamp to New York local time",
+            "2025-09-29T12:34:56Z",
+            "America/New_York",
+            datetime.datetime(2025, 9, 29, 8, 34, 56, tzinfo=ZoneInfo("America/New_York")),
+        ),
+        (
+            "convert UTC timestamp to Berlin local time",
+            "2025-09-29T12:34:56Z",
+            "Europe/Berlin",
+            datetime.datetime(2025, 9, 29, 14, 34, 56, tzinfo=ZoneInfo("Europe/Berlin")),
+        ),
+        (
+            "None input returns None",
+            None,
+            None,
+            None,
+        ),
+        (
+            "empty string returns None",
+            "",
+            None,
+            None,
+        ),
+        (
+            "invalid timestamp returns None",
+            "not-a-timestamp",
+            None,
+            None,
+        ),
     ],
 )
-def test_parse_timestamp(ts, expected):
-    """Ensure parse_timestamp correctly parses valid ISO-8601 UTC strings and returns None for invalid or empty input."""
-    assert parse_timestamp(ts) == expected
+def test_parse_timestamp(description, ts, tz, expected):
+    """Ensure parse_timestamp correctly parses UTC strings, converts to local when tz provided, and handles invalid input."""
+    result = parse_timestamp(ts, tz)
+    assert result == expected, f"Failed: {description}"
 
 
 @pytest.mark.parametrize(
@@ -145,59 +210,39 @@ def test_is_within_one_hour(description, timestamp, now, expected):
     assert result == expected, f"Failed: {description}"
 
 
-def test_build_flight_summary_valid():
-    """Confirm build_flight_summary returns a valid FlightSummary for a complete flight dict."""
-    flight = {
-        "ident_iata": "UA123",
-        "ident_icao": "UAL123",
-        "codeshares_iata": [],
-        "codeshares": [],
-        "destination": {"code_iata": "EWR", "city": "Newark"},
-        "origin": {"code_iata": "SFO", "city": "San Francisco"},
-        "scheduled_out": "2025-09-29T12:00:00Z",
-        "estimated_out": "2025-09-29T12:05:00Z",
-        "scheduled_in": "2025-09-29T16:00:00Z",
-        "estimated_in": "2025-09-29T16:05:00Z",
-        "actual_out": "2025-09-29T12:00:00Z",
-        "status": "En Route",
-        "progress_percent": 50,
-    }
-
-    summary = build_flight_summary(flight, normalized_query="UA123")
+def test_build_flight_summary_valid(flight_with_codeshare):
+    """Confirm build_flight_summary returns a valid FlightSummary with local timezone conversions."""
+    summary = build_flight_summary(flight_with_codeshare, normalized_query="UA123")
 
     assert isinstance(summary, FlightSummary)
     assert summary.flight_number == "UA123"
     assert summary.destination == AirportDetails(code="EWR", city="Newark")
     assert summary.origin == AirportDetails(code="SFO", city="San Francisco")
-    assert summary.departure == FlightScheduleSegment(
-        scheduled_time="2025-09-29T12:00:00Z", estimated_time="2025-09-29T12:05:00Z"
+
+    # departure times should be localized to San Francisco time
+    assert summary.departure.scheduled_time == datetime.datetime(
+        2025, 9, 29, 5, 0, 0, tzinfo=ZoneInfo("America/Los_Angeles")
     )
-    assert summary.arrival == FlightScheduleSegment(
-        scheduled_time="2025-09-29T16:00:00Z", estimated_time="2025-09-29T16:05:00Z"
+    assert summary.departure.estimated_time == datetime.datetime(
+        2025, 9, 29, 5, 5, 0, tzinfo=ZoneInfo("America/Los_Angeles")
     )
-    assert summary.status == "En Route"
+
+    # arrival times should be localized to New York time
+    assert summary.arrival.scheduled_time == datetime.datetime(
+        2025, 9, 29, 12, 0, 0, tzinfo=ZoneInfo("America/New_York")
+    )
+    assert summary.arrival.estimated_time == datetime.datetime(
+        2025, 9, 29, 12, 5, 0, tzinfo=ZoneInfo("America/New_York")
+    )
+
+    assert summary.status == "Scheduled"
     assert summary.progress_percent == 50
     assert summary.url == HttpUrl("https://www.flightaware.com/live/flight/UAL123")
 
 
-def test_build_flight_summary_with_codeshare():
+def test_build_flight_summary_with_codeshare(flight_with_codeshare):
     """Confirm build_flight_summary resolves codeshare queries to the correct ICAO ident in the live URL."""
-    flight = {
-        "ident_iata": "UA123",
-        "ident_icao": "UAL123",
-        "codeshares_iata": ["AC9876"],
-        "codeshares": ["ACA9876"],
-        "destination": {"code_iata": "EWR", "city": "Newark"},
-        "origin": {"code_iata": "SFO", "city": "San Francisco"},
-        "scheduled_out": "2025-09-29T12:00:00Z",
-        "estimated_out": "2025-09-29T12:05:00Z",
-        "scheduled_in": "2025-09-29T16:00:00Z",
-        "estimated_in": "2025-09-29T16:05:00Z",
-        "status": "En Route",
-        "progress_percent": 50,
-    }
-
-    summary = build_flight_summary(flight, normalized_query="AC9876")
+    summary = build_flight_summary(flight_with_codeshare, normalized_query="AC9876")
 
     assert isinstance(summary, FlightSummary)
     assert summary.url == HttpUrl("https://www.flightaware.com/live/flight/ACA9876")
@@ -295,12 +340,6 @@ def test_get_live_url(description, query, flight, expected):
     """Verify get_live_url builds the correct FlightAware URL."""
     result: HttpUrl = get_live_url(query, flight)
     assert result == expected, f"Failed: {description}"
-
-
-@pytest.fixture
-def fixed_now():
-    """Provide a fixed UTC datetime (2025-09-29T12:00:00Z) for testing."""
-    return datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc)
 
 
 def test_pick_best_flight_en_route_always_top():

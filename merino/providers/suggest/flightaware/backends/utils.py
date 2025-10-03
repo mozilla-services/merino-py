@@ -3,6 +3,7 @@
 import datetime
 import logging
 import re
+from zoneinfo import ZoneInfo
 
 from pydantic import HttpUrl
 from merino.providers.suggest.flightaware.backends.protocol import (
@@ -65,12 +66,21 @@ def derive_flight_status(flight: dict) -> FlightStatus:
     return FlightStatus.UNKNOWN
 
 
-def parse_timestamp(timestamp: str | None) -> datetime.datetime | None:
-    """Parse an ISO 8601 UTC timestamp string into a datetime object."""
+def parse_timestamp(
+    timestamp: str | None, timezone: str | None = None
+) -> datetime.datetime | None:
+    """Parse an ISO 8601 UTC timestamp string into a datetime object.
+
+    - If timezone is None, return a UTC datetime (default).
+    - If timezone is provided, return the datetime converted to that timezone.
+    """
     if not timestamp:
         return None
     try:
-        return datetime.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        dt = datetime.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        if timezone:
+            return dt.astimezone(ZoneInfo(timezone))
+        return dt
     except ValueError:
         return None
 
@@ -164,18 +174,21 @@ def build_flight_summary(flight: dict, normalized_query: str) -> FlightSummary |
 
         destination_code = flight["destination"]["code_iata"]
         destination_city = flight["destination"]["city"]
+        destination_timezone = flight["destination"]["timezone"]
 
         origin_code = flight["origin"]["code_iata"]
         origin_city = flight["origin"]["city"]
+        origin_timezone = flight["origin"]["timezone"]
 
         destination = AirportDetails(code=destination_code, city=destination_city)
         origin = AirportDetails(code=origin_code, city=origin_city)
 
-        scheduled_departure = flight["scheduled_out"]
-        estimated_departure = flight["estimated_out"]
+        # return local timezone for departure and arrival times
+        scheduled_departure = parse_timestamp(flight["scheduled_out"], origin_timezone)
+        estimated_departure = parse_timestamp(flight["estimated_out"], origin_timezone)
 
-        scheduled_arrival = flight["scheduled_in"]
-        estimated_arrival = flight["estimated_in"]
+        scheduled_arrival = parse_timestamp(flight["scheduled_in"], destination_timezone)
+        estimated_arrival = parse_timestamp(flight["estimated_in"], destination_timezone)
 
         departure = FlightScheduleSegment(
             scheduled_time=scheduled_departure, estimated_time=estimated_departure
