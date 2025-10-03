@@ -636,12 +636,12 @@ backend = "polygon"
 # MERINO_PROVIDERS__POLYGON__CACHE
 # The store used to finance data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
-cache = "redis"
+cache = "none"
 
 # MERINO_PROVIDERS__POLYGON__CACHE_DB
 # The db within the redis instance that the clients should connect to.
 # Default is `0`. See redis.py.
-cache_db = 1
+cache_db = 0
 
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.

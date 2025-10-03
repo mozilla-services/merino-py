@@ -169,9 +169,6 @@ async def test_get_snapshots_from_cache_raises_cache_error(
     redis_error_mock = mocker.patch.object(polygon.cache, "run_script", new_callable=AsyncMock)
     redis_error_mock.side_effect = CacheAdapterError("test cache error")
 
-    # write to cache
-    await polygon.store_snapshots_in_cache([ticker_snapshot_AAPL])
-
     # get from cache
     actual = await polygon.get_snapshots_from_cache(["AAPL"])
 

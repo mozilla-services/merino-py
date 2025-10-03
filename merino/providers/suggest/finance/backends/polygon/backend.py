@@ -1,9 +1,9 @@
 """A wrapper for Polygon API interactions."""
 
+import itertools
 import hashlib
 import logging
 import aiodogstatsd
-from datetime import timedelta
 from httpx import AsyncClient, Response, HTTPStatusError
 import orjson
 from pydantic import HttpUrl, ValidationError
@@ -40,6 +40,22 @@ logger = logging.getLogger(__name__)
 
 GCS_BLOB_NAME = "polygon_latest.json"
 
+# The Lua script to write ticker snapshots and their TTLs for a list of keys.
+#
+# Note:
+#   - TTL is the last value in the ARGV list and is the same for all keys.
+LUA_SCRIPT_CACHE_BULK_WRITE_TICKERS: str = """
+local ttl = ARGV[#ARGV]
+
+for i = 1, #KEYS do
+  redis.call('SET', KEYS[i], ARGV[i], 'EX', ttl)
+end
+
+return #KEYS
+"""
+SCRIPT_ID_BULK_WRITE_TICKERS: str = "bulk_write_tickers"
+
+
 # The Lua script to fetch cached ticker snapshots and their TTLs for a list of keys.
 #
 # Note:
@@ -50,9 +66,9 @@ LUA_SCRIPT_CACHE_BULK_FETCH_TICKERS: str = """
 local result = {}
 for _, k in ipairs(KEYS) do
   local snapshot = redis.call('GET', k)
-  if snapshot ~= false then
+  if snapshot then
     local ttl = redis.call('TTL', k)
-    if ttl ~= -2 then
+    if ttl > 0 then
       table.insert(result, snapshot)
       table.insert(result, ttl)
     end
@@ -107,8 +123,13 @@ class PolygonBackend(FinanceBackend):
             blob_name=GCS_BLOB_NAME,
         )
         # This registration is lazy (i.e. no interaction with Redis) and infallible.
+        # Read script.
         self.cache.register_script(
             SCRIPT_ID_BULK_FETCH_TICKERS, LUA_SCRIPT_CACHE_BULK_FETCH_TICKERS
+        )
+        # Write script.
+        self.cache.register_script(
+            SCRIPT_ID_BULK_WRITE_TICKERS, LUA_SCRIPT_CACHE_BULK_WRITE_TICKERS
         )
 
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
@@ -328,14 +349,22 @@ class PolygonBackend(FinanceBackend):
         if len(snapshots) == 0:
             return
 
-        for snapshot in snapshots:
-            cache_key = generate_cache_key_for_ticker(snapshot.ticker)
-            cache_value = orjson.dumps(snapshot.model_dump_json())
-            # TODO @Herraj -- add try catch and metrics
-            # TODO @Herraj -- modify TTL logic for keeping entries warm
-            await self.cache.set(
-                cache_key, cache_value, ttl=timedelta(seconds=self.ticker_ttl_sec)
-            )
+        cache_keys: list[str] = [
+            generate_cache_key_for_ticker(snapshot.ticker) for snapshot in snapshots
+        ]
+        cache_values: list[bytes] = [
+            orjson.dumps(snapshot.model_dump_json()) for snapshot in snapshots
+        ]
+
+        # TODO @Herraj -- add try catch and metrics
+        await self.cache.run_script(
+            sid=SCRIPT_ID_BULK_WRITE_TICKERS,
+            keys=cache_keys,
+            args=[
+                *cache_values,
+                self.ticker_ttl_sec,  # the last value is the TTL used for all keys
+            ],
+        )
 
     # TODO @herraj add unit tests for this
     def _parse_cached_data(
@@ -356,10 +385,8 @@ class PolygonBackend(FinanceBackend):
 
         result: list[Optional[Tuple[TickerSnapshot, int]]] = []
 
-        snapshots_bytes = cached_data[0::2]  # values at even indexes
-        ttls_bytes = cached_data[1::2]  # values at odd indexes
-
-        for snapshot, ttl in zip(snapshots_bytes, ttls_bytes):
+        # every even index is a snapshot and odd index is its TTL
+        for snapshot, ttl in itertools.batched(cached_data, 2):
             try:
                 if snapshot is None or ttl is None:
                     continue
