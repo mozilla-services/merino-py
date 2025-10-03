@@ -64,7 +64,6 @@ url_base = "http://test-polygon"
 [testing.providers.polygon]
 enabled_by_default = false
 backend="polygon"
-# cache = "none"
 
 [testing.providers.yelp]
 enabled_by_default = false
