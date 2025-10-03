@@ -1179,6 +1179,8 @@ class TestGetCorpusSections:
         health_crawl.externalId = "health_crawl"
         health_crawl.title = "Health (Crawl)"
         health_crawl.description = None
+        health_crawl.heroTitle = None
+        health_crawl.heroSubtitle = None
         health_crawl.sectionItems = []
         health_crawl.iab = None
 
@@ -1186,6 +1188,8 @@ class TestGetCorpusSections:
         tech_crawl.externalId = "tech_crawl"
         tech_crawl.title = "Tech (Crawl)"
         tech_crawl.description = None
+        tech_crawl.heroTitle = None
+        tech_crawl.heroSubtitle = None
         tech_crawl.sectionItems = []
         tech_crawl.iab = None
 
@@ -1193,6 +1197,8 @@ class TestGetCorpusSections:
         sports.externalId = "sports"
         sports.title = "Sports"
         sports.description = None
+        sports.heroTitle = None
+        sports.heroSubtitle = None
         sports.sectionItems = []
         sports.iab = None
 
@@ -1200,6 +1206,8 @@ class TestGetCorpusSections:
         arts.externalId = "arts"
         arts.title = "Arts"
         arts.description = None
+        arts.heroTitle = None
+        arts.heroSubtitle = None
         arts.sectionItems = []
         arts.iab = None
 
@@ -1219,6 +1227,8 @@ class TestGetCorpusSections:
         tech_crawl.externalId = "tech_crawl"
         tech_crawl.title = "Tech (Crawl)"
         tech_crawl.description = None
+        tech_crawl.heroTitle = None
+        tech_crawl.heroSubtitle = None
         tech_crawl.sectionItems = []
         tech_crawl.iab = None
 
@@ -1226,6 +1236,8 @@ class TestGetCorpusSections:
         sports.externalId = "sports"
         sports.title = "Sports"
         sports.description = None
+        sports.heroTitle = None
+        sports.heroSubtitle = None
         sports.sectionItems = []
         sports.iab = None
 
@@ -1234,6 +1246,8 @@ class TestGetCorpusSections:
         headlines_crawl.externalId = "headlines_crawl"
         headlines_crawl.title = "Headlines"
         headlines_crawl.description = "Top Headlines today"
+        headlines_crawl.heroTitle = None
+        headlines_crawl.heroSubtitle = None
         headlines_crawl.sectionItems = []
         headlines_crawl.iab = {"taxonomy": "IAB-3.0", "categories": ["386", "JLBCU7"]}
 

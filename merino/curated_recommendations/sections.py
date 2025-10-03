@@ -117,6 +117,8 @@ def map_corpus_section_to_section(
         recommendations=recommendations,
         title=corpus_section.title,
         subtitle=corpus_section.description,
+        heroTitle=corpus_section.heroTitle,
+        heroSubtitle=corpus_section.heroSubtitle,
         iab=corpus_section.iab,
         layout=deepcopy(layout),
     )

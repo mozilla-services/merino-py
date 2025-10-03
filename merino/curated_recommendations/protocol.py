@@ -369,6 +369,8 @@ class Section(BaseModel):
     title: str
     iab: IABMetadata | None = None
     subtitle: str | None = None
+    heroTitle: str | None = None
+    heroSubtitle: str | None = None
     layout: Layout
     isFollowed: bool = False
     isBlocked: bool = False

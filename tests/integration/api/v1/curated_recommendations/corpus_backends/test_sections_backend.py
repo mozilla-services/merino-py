@@ -11,7 +11,7 @@ async def test_fetch(sections_backend: SectionsBackend):
     """Test that fetch returns expected sections from the backend."""
     sections = await sections_backend.fetch(SurfaceId.NEW_TAB_EN_US)
     # The test data now includes both regular sections and _crawl versions
-    assert len(sections) == 43
+    assert len(sections) == 44
 
     # Lookup the NFL section by its externalId.
     nfl = next(s for s in sections if s.externalId == "nfl")

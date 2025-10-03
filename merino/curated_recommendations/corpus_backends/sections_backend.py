@@ -85,6 +85,8 @@ class SectionsBackend(SectionsProtocol):
                 active
                 title
                 description
+                heroTitle
+                heroDescription
                 iab {
                     taxonomy
                     categories
@@ -131,7 +133,9 @@ class SectionsBackend(SectionsProtocol):
                 externalId=section["externalId"],
                 title=section["title"],
                 description=section.get("description"),  # use .get (can be None)
-                iab=section["iab"],  # use .get (can be None)
+                heroTitle=section.get("heroTitle"),
+                heroSubtitle=section.get("heroDescription"),
+                iab=section["iab"],
                 sectionItems=[
                     build_corpus_item(
                         section_item["corpusItem"], self.manifest_provider, utm_source
