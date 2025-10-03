@@ -3,7 +3,7 @@
 import datetime
 import logging
 import re
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import HttpUrl
 from merino.providers.suggest.flightaware.backends.protocol import (
@@ -72,7 +72,8 @@ def parse_timestamp(
     """Parse an ISO 8601 UTC timestamp string into a datetime object.
 
     - If timezone is None, return a UTC datetime (default).
-    - If timezone is provided, return the datetime converted to that timezone.
+    - If timezone (an IANA time zone string such as "America/New_York") is provided,
+    return the datetime converted to that timezone.
     """
     if not timestamp:
         return None
@@ -81,7 +82,7 @@ def parse_timestamp(
         if timezone:
             return dt.astimezone(ZoneInfo(timezone))
         return dt
-    except ValueError:
+    except (ValueError, ZoneInfoNotFoundError):
         return None
 
 

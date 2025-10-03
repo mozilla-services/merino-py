@@ -97,6 +97,12 @@ def flight_with_codeshare():
             None,
         ),
         (
+            "Unrecognized timezone returns None",
+            "2025-09-29T12:34:56Z",
+            "not-a-timezone",
+            None,
+        ),
+        (
             "empty string returns None",
             "",
             None,
