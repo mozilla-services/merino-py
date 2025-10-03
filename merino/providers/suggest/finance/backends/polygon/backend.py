@@ -40,7 +40,12 @@ logger = logging.getLogger(__name__)
 
 GCS_BLOB_NAME = "polygon_latest.json"
 
-# TODO comment
+# The Lua script to fetch cached ticker snapshots and their TTLs for a list of keys.
+#
+# Note:
+#   - The script expects each key to contain a JSON-serialized ticker snapshot string.
+#   - For every existing key, it returns the snapshot value followed by its TTL (in seconds).
+#   - Keys that are missing or expired are skipped and not included in the result.
 LUA_SCRIPT_CACHE_BULK_FETCH_TICKERS: str = """
 local result = {}
 for _, k in ipairs(KEYS) do
@@ -146,12 +151,11 @@ class PolygonBackend(FinanceBackend):
 
             if cached_data:
                 parsed_cached_data = self._parse_cached_data(cached_data)
-                # TODO
                 return parsed_cached_data
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch snapshots from Redis: {exc}")
 
-            # TODO Propagate the error for circuit breaking as PolygonError.
+            # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
         return []
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
@@ -316,24 +320,36 @@ class PolygonBackend(FinanceBackend):
             return None
 
     async def store_snapshots_in_cache(self, snapshots: list[TickerSnapshot]) -> None:
-        """TODO"""
+        """Store a list of ticker snapshots in the cache.
+
+        Each snapshot is serialized to JSON and written under a generated cache key
+        for its ticker symbol, with a configured TTL applied.
+        """
         if len(snapshots) == 0:
             return
 
         for snapshot in snapshots:
             cache_key = generate_cache_key_for_ticker(snapshot.ticker)
             cache_value = orjson.dumps(snapshot.model_dump_json())
-            # TODO add try catch and metrics
-            # TODO modify TTL logic
+            # TODO @Herraj -- add try catch and metrics
+            # TODO @Herraj -- modify TTL logic for keeping entries warm
             await self.cache.set(
                 cache_key, cache_value, ttl=timedelta(seconds=self.ticker_ttl_sec)
             )
 
+    # TODO @herraj add unit tests for this
     def _parse_cached_data(
         self, cached_data: list[bytes | None]
     ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
-        """TODO comment"""
-        # Valid cached_data should be a list of even number (multiple of 2) length e.g
+        """Parse Redis output of the form [snapshot_json, ttl, snapshot_json, ttl, ...].
+        Each snapshot is JSON-decoded and validated into a `TickerSnapshot`,
+        and each TTL is converted to an int.
+
+        Returns:
+            A list of (TickerSnapshot, int) tuples for valid entries.
+            Invalid or None pairs are skipped.
+        """
+        # Valid cached_data length should be an even number (multiple of 2) length e.g
         # [snapshot_1, ttl_1, snapshot_2, ttl_2, ...]
         if (len(cached_data) % 2) != 0:
             return []
@@ -351,8 +367,7 @@ class PolygonBackend(FinanceBackend):
                 # Parse snapshot JSON (bytes -> dict) then validate
                 valid_snapshot = TickerSnapshot.model_validate_json(orjson.loads(snapshot))
 
-                # Convert TTL to int (handles int/bytes/str)
-                # TODO might have to use cast() here
+                # Convert TTL bytes to int
                 ttl_int = int(ttl)
 
                 result.append((valid_snapshot, ttl_int))
@@ -360,7 +375,6 @@ class PolygonBackend(FinanceBackend):
             except ValidationError as exc:
                 logger.error(f"TickerSnapshot validation failed: {exc}")
             except Exception as exc:
-                # Defensive catch-all so one bad pair doesn't drop the whole result
                 logger.exception(f"Unexpected error parsing cached pair: {exc}")
 
         return result

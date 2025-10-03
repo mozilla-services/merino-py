@@ -5,18 +5,23 @@
 """Integration tests for the Polygon backend module."""
 
 import logging
-from typing import Any, AsyncGenerator
-from merino.configs import settings
-
 import pytest
 import pytest_asyncio
+
+from logging import LogRecord, ERROR
+from pytest import LogCaptureFixture
+from typing import Any, AsyncGenerator
+from merino.configs import settings
+from tests.types import FilterCaplogFixture
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
+from unittest.mock import AsyncMock
 from redis.asyncio import Redis
 from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.redis import AsyncRedisContainer
 
 from merino.cache.redis import RedisAdapter
+from merino.exceptions import CacheAdapterError
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot
 from merino.providers.suggest.finance.backends.polygon import PolygonBackend
@@ -148,5 +153,33 @@ async def test_get_snapshots_from_cache_returns_empty_list(
     assert actual == []
 
 
-# TODO add test for cache adapter error
-# TODO add test for validation error
+@pytest.mark.asyncio
+async def test_get_snapshots_from_cache_raises_cache_error(
+    polygon: PolygonBackend,
+    ticker_snapshot_AAPL: TickerSnapshot,
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that get_snapshots_from_cache method raises a CacheAdapterError and error logs."""
+    # Set the log level
+    caplog.set_level(ERROR)
+
+    # patch the polygon back cache with a mock that throws on run_script()
+    redis_error_mock = mocker.patch.object(polygon.cache, "run_script", new_callable=AsyncMock)
+    redis_error_mock.side_effect = CacheAdapterError("test cache error")
+
+    # write to cache
+    await polygon.store_snapshots_in_cache([ticker_snapshot_AAPL])
+
+    # get from cache
+    actual = await polygon.get_snapshots_from_cache(["AAPL"])
+
+    # capture error log
+    records: list[LogRecord] = filter_caplog(
+        caplog.records, "merino.providers.suggest.finance.backends.polygon.backend"
+    )
+
+    assert len(records) == 1
+    assert records[0].message.startswith("Failed to fetch snapshots from Redis: test cache error")
+    assert actual == []
