@@ -3,10 +3,13 @@
 See https://sportsdata.io/developers/integration-guide for details.
 
 There are several tasks that should be performed on a regular basis, these are
-broken out into `nightly`, `hourly` and `10minute`, with a number of "plug-in"
+broken out into `nightly`, `hourly` and `5minute`, with a number of "plug-in"
 elements to fetch and process the data appropriately. These three tasks are meant to be
-called from a `cron` like function. These will require access to a centralized data
-storage system (and will presume a Redis-like storage system)
+called from a `cron` like function.
+
+NOTE: `sport.update_teams(...)` will attempt to read a locally cached file (see
+`settings.providers.sports.sportsdata.cache_dir`). The cache time on these files is
+hardcoded in the calling function for now, but is based on the file creation time.
 
     * Add tests (unit and integration)
     * Address TODOs
@@ -80,7 +83,8 @@ class SportDataUpdater(BaseModel):
             raise SportsDataError("No sports defined")
         platform = settings.providers.sports.get("platform", "sports")
         active_sports = [
-            sport.strip().upper() for sport in settings.providers.sports.sports.split(",")
+            sport.strip().upper()
+            for sport in settings.providers.sports.sports.split(",")
         ]
         self.store = SportsDataStore(
             dsn=settings.providers.sports.es.dsn,

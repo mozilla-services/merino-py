@@ -1373,7 +1373,27 @@ class TestSections:
                 "experimentBranch": "control",
             },
             {
-                "experimentName": ExperimentName.CONTEXTUAL_AD_EXPERIMENT.value,
+                "experimentName": ExperimentName.CONTEXTUAL_AD_NIGHTLY_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+            {
+                "experimentName": ExperimentName.CONTEXTUAL_AD_V2_NIGHTLY_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+            {
+                "experimentName": ExperimentName.CONTEXTUAL_AD_BETA_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+            {
+                "experimentName": ExperimentName.CONTEXTUAL_AD_V2_BETA_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+            {
+                "experimentName": ExperimentName.CONTEXTUAL_AD_RELEASE_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+            {
+                "experimentName": ExperimentName.CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT.value,
                 "experimentBranch": "treatment",
             },
         ],
@@ -1400,9 +1420,10 @@ class TestSections:
 
         # Assert layout of the first section (Popular Today).
         assert first_section["title"] == "Popular Today"
+        print(experiment_payload.get("experimentName"))
         if (
-            experiment_payload.get("experimentName")
-            != ExperimentName.CONTEXTUAL_AD_EXPERIMENT.value
+            experiment_payload.get("experimentName") == ExperimentName.ML_SECTIONS_EXPERIMENT.value
+            or experiment_payload.get("experimentName") is None
         ):
             assert first_section["layout"]["name"] == "7-double-row-2-ad"
         else:

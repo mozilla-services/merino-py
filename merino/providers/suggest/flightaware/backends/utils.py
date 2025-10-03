@@ -3,10 +3,11 @@
 import datetime
 import logging
 import re
-from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import HttpUrl
 from merino.providers.suggest.flightaware.backends.protocol import (
+    AirlineDetails,
     AirportDetails,
     FlightScheduleSegment,
     FlightStatus,
@@ -25,19 +26,63 @@ FLIGHT_NUM_PATTERN_2 = re.compile(
 )  # matches 1 digit, 1 letter, followed by 1-4 digits e.g '3U 1001'
 
 
-# TODO this will be implemented in DISCO-3736
 def derive_flight_status(flight: dict) -> FlightStatus:
-    """Determine a flight's operational status from its timestamp fields."""
-    return FlightStatus.EN_ROUTE  # hardcoded for now
+    """Derive a stable, backend-calculated flight status from AeroAPI fields.
+
+    This method determines a flight's operational status using a combination
+    of lifecycle timestamps and delay information, instead of relying on
+    AeroAPI's free-form status string. The mapping is:
+
+    - CANCELLED  : Flight is explicitly marked as cancelled by the AeroAPI flag.
+    - EN_ROUTE   : Flight has an actual departure time (`actual_out`) but
+                   no recorded arrival time (`actual_on`).
+    - ARRIVED    : Flight has an arrival timestamp (`actual_on` or `actual_in`).
+    - DELAYED    : Flight has not departed (`actual_out` is None) and
+                   `departure_delay` is greater than 15 minutes.
+    - SCHEDULED  : Flight has not departed (`actual out` is None and `scheduled_out` is set) and either
+                   - `departure_delay` is None, or
+                   - `departure_delay` is 15 minutes or less (on time or early).
+    - UNKNOWN    : Any case not covered by the above.
+    """
+    actual_out = flight.get("actual_out")
+    actual_on = flight.get("actual_on")
+    actual_in = flight.get("actual_in")
+    scheduled_out = flight.get("scheduled_out")
+    estimated_out = flight.get("estimated_out")
+
+    if flight.get("cancelled"):
+        return FlightStatus.CANCELLED
+
+    elif actual_out and not actual_on and not actual_in:
+        return FlightStatus.EN_ROUTE
+    elif actual_on or actual_in:
+        return FlightStatus.ARRIVED
+
+    elif actual_out is None:
+        if is_delayed(flight):
+            return FlightStatus.DELAYED
+        elif scheduled_out or estimated_out:
+            return FlightStatus.SCHEDULED
+    return FlightStatus.UNKNOWN
 
 
-def parse_timestamp(timestamp: str | None) -> datetime.datetime | None:
-    """Parse an ISO 8601 UTC timestamp string into a datetime object."""
+def parse_timestamp(
+    timestamp: str | None, timezone: str | None = None
+) -> datetime.datetime | None:
+    """Parse an ISO 8601 UTC timestamp string into a datetime object.
+
+    - If timezone is None, return a UTC datetime (default).
+    - If timezone (an IANA time zone string such as "America/New_York") is provided,
+    return the datetime converted to that timezone.
+    """
     if not timestamp:
         return None
     try:
-        return datetime.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-    except ValueError:
+        dt = datetime.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        if timezone:
+            return dt.astimezone(ZoneInfo(timezone))
+        return dt
+    except (ValueError, ZoneInfoNotFoundError):
         return None
 
 
@@ -47,22 +92,23 @@ def minutes_from_now(timestamp: str | None, now: datetime.datetime) -> float:
     return abs((dt - now).total_seconds()) / 60 if dt else float("inf")
 
 
-def is_within_two_hours(timestamp: str | None, now: datetime.datetime) -> bool:
-    """Return True if the timestamp is within 2 hours of now."""
+def is_within_one_hour(timestamp: str | None, now: datetime.datetime) -> bool:
+    """Return True if the timestamp is within 1 hour of now."""
     dt = parse_timestamp(timestamp)
-    return abs(now - dt) <= datetime.timedelta(hours=2) if dt else False
+    return abs(now - dt) <= datetime.timedelta(hours=1) if dt else False
 
 
-def pick_best_flights(flights: list[dict], limit: int = 3) -> list[dict]:
+def pick_best_flights(flights: list[dict], limit: int = 2) -> list[dict]:
     """Select up to `limit` flight instances based on status and proximity to now.
 
     Flights from these statuses are included:
     - En Route - all eligible, top priority
     - Scheduled/Delayed - all eligible, sorted by proximity
-    - Arrived - only the most recent (within 2h)
-    - Cancelled - only the most recent (within 2h)
+    - Arrived - only the most recent (within 1h)
+    - Cancelled - only the most recent (within 1h)
 
     All candidates are sorted by their time distance from now and top-N are returned.
+    Flights with unknown statuses are skipped.
     """
     now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -81,6 +127,7 @@ def pick_best_flights(flights: list[dict], limit: int = 3) -> list[dict]:
 
     for flight in flights:
         status: FlightStatus = derive_flight_status(flight)
+        flight["_status"] = status
 
         if status == FlightStatus.EN_ROUTE:
             # Force it to the top by assigning small negative distance
@@ -95,15 +142,17 @@ def pick_best_flights(flights: list[dict], limit: int = 3) -> list[dict]:
 
         elif status == FlightStatus.ARRIVED:
             timestamp = flight.get("actual_on") or flight.get("actual_in")
-            if timestamp and is_within_two_hours(timestamp, now):
+            if timestamp and is_within_one_hour(timestamp, now):
                 flight["_distance_minutes"] = minutes_from_now(timestamp, now)
                 arrived_candidates.append(flight)
 
         elif status == FlightStatus.CANCELLED:
             timestamp = flight.get("scheduled_out")
-            if timestamp and is_within_two_hours(timestamp, now):
+            if timestamp and is_within_one_hour(timestamp, now):
                 flight["_distance_minutes"] = minutes_from_now(timestamp, now)
                 cancelled_candidates.append(flight)
+        else:
+            continue
 
     if arrived_candidates:
         closest_arrived = min(arrived_candidates, key=lambda f: f["_distance_minutes"])
@@ -114,32 +163,33 @@ def pick_best_flights(flights: list[dict], limit: int = 3) -> list[dict]:
         candidates.append(closest_cancelled)
 
     # Sort by distance to now
-    candidates.sort(
-        key=lambda f: (f["_distance_minutes"], priority_order[derive_flight_status(f)])
-    )
+    candidates.sort(key=lambda f: (f["_distance_minutes"], priority_order[f["_status"]]))
 
     return candidates[:limit]
 
 
-def build_flight_summary(flight: Any, normalized_query: str) -> FlightSummary | None:
+def build_flight_summary(flight: dict, normalized_query: str) -> FlightSummary | None:
     """Build and return a flight summary from the flight response"""
     try:
         flight_number = normalized_query
 
         destination_code = flight["destination"]["code_iata"]
         destination_city = flight["destination"]["city"]
+        destination_timezone = flight["destination"]["timezone"]
 
         origin_code = flight["origin"]["code_iata"]
         origin_city = flight["origin"]["city"]
+        origin_timezone = flight["origin"]["timezone"]
 
         destination = AirportDetails(code=destination_code, city=destination_city)
         origin = AirportDetails(code=origin_code, city=origin_city)
 
-        scheduled_departure = flight["scheduled_out"]
-        estimated_departure = flight["estimated_out"]
+        # return local timezone for departure and arrival times
+        scheduled_departure = parse_timestamp(flight["scheduled_out"], origin_timezone)
+        estimated_departure = parse_timestamp(flight["estimated_out"], origin_timezone)
 
-        scheduled_arrival = flight["scheduled_in"]
-        estimated_arrival = flight["estimated_in"]
+        scheduled_arrival = parse_timestamp(flight["scheduled_in"], destination_timezone)
+        estimated_arrival = parse_timestamp(flight["estimated_in"], destination_timezone)
 
         departure = FlightScheduleSegment(
             scheduled_time=scheduled_departure, estimated_time=estimated_departure
@@ -148,14 +198,15 @@ def build_flight_summary(flight: Any, normalized_query: str) -> FlightSummary | 
             scheduled_time=scheduled_arrival, estimated_time=estimated_arrival
         )
 
-        status = flight["status"]  # TODO would change to use derive_flight_status in DISCO-3736
-        progress_percent = flight["progress_percent"]
+        # would be none for now until we can retrieve these details
+        airline = AirlineDetails(code=None, name=None, icon=None)
+
+        status = derive_flight_status(flight)
+        progress_percent = flight.get("progress_percent") or 0
+        delayed = is_delayed(flight)
 
         url = get_live_url(normalized_query, flight)
-
-        # TODO
-        # delayed_until = ""
-        # time_left_minutes =
+        time_left_minutes = calculate_time_left(flight)
 
         return FlightSummary(
             flight_number=flight_number,
@@ -164,16 +215,22 @@ def build_flight_summary(flight: Any, normalized_query: str) -> FlightSummary | 
             departure=departure,
             arrival=arrival,
             status=status,
+            airline=airline,
+            delayed=delayed,
             progress_percent=progress_percent,
+            time_left_minutes=time_left_minutes,
             url=url,
         )
 
     except (KeyError, IndexError, TypeError):
         logger.warning(f"Flightaware response json has incorrect shape: {flight}")
         return None
+    except Exception as e:
+        logger.warning(f"Unexpected error parsing flightaware response: {e}")
+        return None
 
 
-def get_live_url(query: str, flight: Any) -> HttpUrl:
+def get_live_url(query: str, flight: dict) -> HttpUrl:
     """Return the FlightAware live tracking URL for the queried flight.
 
     If the query does not match the primary IATA ident of the flight (i.e., it's a codeshare),
@@ -181,9 +238,9 @@ def get_live_url(query: str, flight: Any) -> HttpUrl:
     If a matching codeshare is found, the corresponding ident is used to construct the URL.
     Otherwise, the primary ICAO ident for the flight is used.
     """
-    if query != flight["ident_iata"]:
-        codeshares_iata = flight["codeshares_iata"]
-        codeshares_icao = flight["codeshares"]
+    if query != flight.get("ident_iata"):
+        codeshares_iata = flight.get("codeshares_iata")
+        codeshares_icao = flight.get("codeshares")
 
         if codeshares_iata and codeshares_icao:
             codeshare_map = codeshare_map = dict(zip(codeshares_iata, codeshares_icao))
@@ -197,3 +254,49 @@ def get_live_url(query: str, flight: Any) -> HttpUrl:
 def is_valid_flight_number_pattern(query: str) -> bool:
     """Return true if flight number matches either of the two valid flight regex patterns"""
     return bool(FLIGHT_NUM_PATTERN_1.match(query) or FLIGHT_NUM_PATTERN_2.match(query))
+
+
+def calculate_time_left(flight: dict) -> int | None:
+    """Calculate how much time (in minutes) is left until a flight arrives.
+
+    - Returns 0 if the flight has already arrived (`actual_on` or `actual_in`).
+    - Returns None if the flight has not departed (`actual_out` is None),
+      or if no arrival estimates are available.
+    - Otherwise, returns the number of minutes until arrival based on
+      `estimated_in` (preferred) or `scheduled_in` (fallback).
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+    scheduled_in = flight.get("scheduled_in")
+    estimated_in = flight.get("estimated_in")
+
+    if flight.get("actual_in") or flight.get("actual_on"):
+        return 0
+
+    elif not flight.get("actual_out"):
+        return None
+
+    # use estimated arrival if available
+    elif estimated_in:
+        estimated_arrival = parse_timestamp(estimated_in)
+        if estimated_arrival:
+            minutes = max(int((estimated_arrival - now).total_seconds() // 60), 0)
+            return minutes if minutes >= 0 else None
+
+    # fallback to scheduled arrival
+    elif scheduled_in:
+        scheduled_arrival = parse_timestamp(scheduled_in)
+        if scheduled_arrival:
+            minutes = max(int((scheduled_arrival - now).total_seconds() // 60), 0)
+            return minutes if minutes >= 0 else None
+
+    return None
+
+
+def is_delayed(flight: dict) -> bool:
+    """Return True if a flight is delayed"""
+    departure_delay = flight.get("departure_delay")
+    if departure_delay is not None:
+        delay_minutes = departure_delay / 60.0
+        if delay_minutes > 15:
+            return True
+    return False

@@ -15,7 +15,10 @@ from merino.middleware.geolocation import Location
 from merino.providers.suggest.flightaware.provider import Provider
 from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, FlightAwareDetails
-from merino.providers.suggest.flightaware.backends.protocol import FlightSummary
+from merino.providers.suggest.flightaware.backends.protocol import (
+    AirlineDetails,
+    FlightSummary,
+)
 
 
 @pytest.fixture
@@ -111,6 +114,8 @@ async def test_query_fetches_and_builds_suggestion(provider, backend_mock, geolo
         },
         status="En Route",
         progress_percent=50,
+        airline=AirlineDetails(code=None, name=None, icon=None),
+        delayed=False,
         url="https://www.flightaware.com/live/flight/UA3711",
     )
     backend_mock.get_flight_summaries.return_value = [fake_summary]
@@ -152,7 +157,10 @@ def test_build_suggestion_creates_expected_object(provider):
             "estimated_time": "2025-09-29T16:05:00Z",
         },
         status="Scheduled",
-        progress_percent=None,
+        progress_percent=0,
+        airline=AirlineDetails(code=None, name=None, icon=None),
+        delayed=False,
+        time_left_minutes=None,
         url="https://www.flightaware.com/live/flight/AA100",
     )
     suggestion = provider.build_suggestion([summary])

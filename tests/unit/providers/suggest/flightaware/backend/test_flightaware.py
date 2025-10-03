@@ -4,16 +4,20 @@
 
 """Unit tests for the flightaware backend module."""
 
+import datetime
 from pydantic import HttpUrl
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import HTTPStatusError, Request, Response
 
+from merino.providers.suggest.flightaware.backends import utils
 import merino.providers.suggest.flightaware.backends.flightaware as flightaware
 
 from merino.providers.suggest.flightaware.backends.protocol import (
+    AirlineDetails,
     AirportDetails,
     FlightScheduleSegment,
+    FlightStatus,
     FlightSummary,
 )
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
@@ -27,15 +31,26 @@ def make_summary(flight_number: str) -> FlightSummary:
         destination=AirportDetails(code="EWR", city="Newark"),
         origin=AirportDetails(code="SFO", city="San Francisco"),
         departure=FlightScheduleSegment(
-            scheduled_time="2025-09-29T12:00:00Z", estimated_time="2025-09-29T12:05:00Z"
+            scheduled_time="2025-10-03T16:40:00-04:00",
+            estimated_time="2025-10-03T16:40:00-04:00",
         ),
         arrival=FlightScheduleSegment(
-            scheduled_time="2025-09-29T16:00:00Z", estimated_time="2025-09-29T16:05:00Z"
+            scheduled_time="2025-10-03T18:40:00-04:00",
+            estimated_time="2025-10-03T18:40:00-04:00",
         ),
         status="En Route",
+        delayed=False,
+        airline=AirlineDetails(code=None, name=None, icon=None),
+        time_left_minutes=60,
         progress_percent=50,
         url=HttpUrl(f"https://www.flightaware.com/live/flight/{flight_number}"),
     )
+
+
+@pytest.fixture
+def fixed_now():
+    """Provide a fixed UTC datetime (2025-09-29T12:00:00Z) for testing."""
+    return datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc)
 
 
 @pytest.mark.asyncio
@@ -127,40 +142,122 @@ def test_get_flight_summaries_returns_empty_list_when_no_flights():
 def test_get_flight_summaries_filters_out_none_summaries():
     """Ensure get_flight_summaries excludes flights where build_flight_summary returns None."""
     backend = FlightAwareBackend(api_key="k", http_client=MagicMock(), ident_url="url")
-    flights = [{"id": "good"}, {"id": "bad"}]
 
-    summary = make_summary("UA123")
+    good_flight = {
+        "ident_iata": "UA123",
+        "ident_icao": "UAL123",
+        "codeshares_iata": [],
+        "codeshares": [],
+        "destination": {
+            "code_iata": "EWR",
+            "city": "Newark",
+            "timezone": "America/New_York",
+        },
+        "origin": {
+            "code_iata": "SFO",
+            "city": "San Francisco",
+            "timezone": "America/Los_Angeles",
+        },
+        "scheduled_out": "2025-09-29T12:00:00Z",
+        "estimated_out": "2025-09-29T12:05:00Z",
+        "scheduled_in": "2025-09-29T16:00:00Z",
+        "estimated_in": "2025-09-29T16:05:00Z",
+        "status": "Scheduled",
+        "progress_percent": 0,
+    }
 
-    with patch(
-        "merino.providers.suggest.flightaware.backends.flightaware.build_flight_summary"
-    ) as mock_build:
-        mock_build.side_effect = [
-            summary,
-            None,
-        ]
-        result = backend.get_flight_summaries({"flights": flights}, "UA123")
+    bad_flight = {
+        "origin": {"code_iata": "SFO", "city": "San Francisco"},
+        "codeshares_iata": [],
+        "codeshares": [],
+        "scheduled_out": "2025-09-29T12:00:00Z",
+        "estimated_out": "2025-09-29T12:05:00Z",
+        "status": "Scheduled",
+        "progress_percent": 0,
+    }
+    flights = [good_flight, bad_flight]
+
+    result = backend.get_flight_summaries({"flights": flights}, "UA123")
 
     assert len(result) == 1
-    assert isinstance(result[0], FlightSummary)
-    assert result[0].flight_number == "UA123"
-    assert result[0].origin.city == "San Francisco"
-    assert result[0].destination.code == "EWR"
+    summary = result[0]
+    assert isinstance(summary, FlightSummary)
+    assert summary.flight_number == "UA123"
+    assert summary.origin.city == "San Francisco"
+    assert summary.destination.code == "EWR"
 
 
-def test_get_flight_summaries_returns_multiple_valid_summaries():
+def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now):
     """Ensure get_flight_summaries returns multiple summaries when build_flight_summary succeeds."""
     backend = FlightAwareBackend(api_key="k", http_client=MagicMock(), ident_url="url")
-    flights = [{"id": "f1"}, {"id": "f2"}]
 
-    summary1 = make_summary("UA111")
-    summary2 = make_summary("UA222")
+    flights = [
+        {
+            "ident_iata": "UA111",
+            "ident_icao": "UAL111",
+            "codeshares_iata": [],
+            "codeshares": [],
+            "destination": {
+                "code_iata": "EWR",
+                "city": "Newark",
+                "timezone": "America/New_York",
+            },
+            "origin": {
+                "code_iata": "SFO",
+                "city": "San Francisco",
+                "timezone": "America/Los_Angeles",
+            },
+            "scheduled_out": "2025-09-29T10:00:00Z",
+            "estimated_out": "2025-09-29T10:05:00Z",
+            "actual_out": "2025-09-29T10:05:00Z",
+            "actual_in": "2025-09-29T11:25:00Z",
+            "scheduled_in": "2025-09-29T10:00:00Z",
+            "estimated_in": "2025-09-29T10:05:00Z",
+            "status": "Arrived / At Gate",
+            "progress_percent": 0,
+        },
+        {
+            "ident_iata": "UA111",
+            "ident_icao": "UAL111",
+            "codeshares_iata": [],
+            "codeshares": [],
+            "destination": {
+                "code_iata": "EWR",
+                "city": "Newark",
+                "timezone": "America/New_York",
+            },
+            "origin": {
+                "code_iata": "SFO",
+                "city": "San Francisco",
+                "timezone": "America/Los_Angeles",
+            },
+            "scheduled_out": "2025-09-29T14:00:00Z",
+            "estimated_out": "2025-09-29T14:16:00Z",
+            "scheduled_in": "2025-09-29T18:00:00Z",
+            "estimated_in": "2025-09-29T18:20:00Z",
+            "status": "Scheduled / Not departed",
+            "departure_delay": 960,
+            "progress_percent": 0,
+        },
+    ]
 
-    with patch(
-        "merino.providers.suggest.flightaware.backends.flightaware.build_flight_summary"
-    ) as mock_build:
-        mock_build.side_effect = [summary1, summary2]
-        result = backend.get_flight_summaries({"flights": flights}, "UA123")
+    with (
+        patch.object(utils.datetime, "datetime", wraps=datetime.datetime) as mock_datetime,
+    ):
+        mock_datetime.now.return_value = fixed_now
 
-    assert len(result) == 2
-    assert all(isinstance(s, FlightSummary) for s in result)
-    assert {s.flight_number for s in result} == {"UA111", "UA222"}
+        results = backend.get_flight_summaries({"flights": flights}, "UA111")
+
+        assert len(results) == 2
+        assert all(isinstance(r, FlightSummary) for r in results)
+        summary_1 = results[0]
+        summary_2 = results[1]
+
+        assert summary_1.delayed is False
+        assert summary_2.delayed is True
+
+        assert summary_1.time_left_minutes == 0
+        assert summary_2.time_left_minutes is None
+
+        assert summary_1.status == FlightStatus.ARRIVED
+        assert summary_2.status == FlightStatus.DELAYED

@@ -14,14 +14,21 @@ class AirportDetails(BaseModel):
     city: str
 
 
+class AirlineDetails(BaseModel):
+    """Details of the operating airline for a flight"""
+
+    code: str | None = None
+    name: str | None = None
+    icon: HttpUrl | None = None
+
+
 class FlightScheduleSegment(BaseModel):
     """Scheduled date and time details for a flight segment (e.g., departure or arrival)."""
 
     scheduled_time: datetime
-    estimated_time: datetime
+    estimated_time: datetime | None
 
 
-# TODO these will be properly deducted in DISCO-3736
 class FlightStatus(StrEnum):
     """Status of a specific flight instance"""
 
@@ -30,6 +37,7 @@ class FlightStatus(StrEnum):
     ARRIVED = "Arrived"
     CANCELLED = "Cancelled"
     DELAYED = "Delayed"
+    UNKNOWN = "Unknown"
 
 
 class FlightSummary(BaseModel):
@@ -40,12 +48,12 @@ class FlightSummary(BaseModel):
     origin: AirportDetails
     departure: FlightScheduleSegment
     arrival: FlightScheduleSegment
-    status: str  # TODO string for now, will replace with enum in DISCO-3736
-    progress_percent: int | None
-    # TODO these will be properly deducted in DISCO-3736
-    # delayed_until: datetime | None
-    # time_left_minutes: int | None
+    status: FlightStatus
+    progress_percent: int = 0
+    time_left_minutes: int | None = None
+    delayed: bool
     url: HttpUrl
+    airline: AirlineDetails
 
 
 class FlightBackendProtocol(Protocol):
@@ -56,7 +64,7 @@ class FlightBackendProtocol(Protocol):
     directly depend on.
     """
 
-    def get_flight_summaries(self, flight_response: Any, query: str) -> list[FlightSummary]:
+    def get_flight_summaries(self, flight_response: dict, query: str) -> list[FlightSummary]:
         """Return a prioritized list of summaries of a flight instance."""
         ...
 

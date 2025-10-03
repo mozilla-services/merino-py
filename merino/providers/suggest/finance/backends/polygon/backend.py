@@ -1,5 +1,6 @@
 """A wrapper for Polygon API interactions."""
 
+import itertools
 import hashlib
 import logging
 import aiodogstatsd
@@ -7,7 +8,7 @@ from httpx import AsyncClient, Response, HTTPStatusError
 import orjson
 from pydantic import HttpUrl, ValidationError
 from merino.configs import settings
-from typing import Any
+from typing import Any, Tuple, Optional
 
 from merino.providers.suggest.finance.backends.polygon.filemanager import PolygonFilemanager
 from merino.providers.suggest.finance.backends.protocol import (
@@ -17,12 +18,15 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerSnapshot,
     TickerSummary,
 )
+from merino.cache.protocol import CacheAdapter
+from merino.exceptions import CacheAdapterError
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
     extract_snapshot_if_valid,
     build_ticker_summary,
+    generate_cache_key_for_ticker,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
@@ -36,11 +40,51 @@ logger = logging.getLogger(__name__)
 
 GCS_BLOB_NAME = "polygon_latest.json"
 
+# The Lua script to write ticker snapshots and their TTLs for a list of keys.
+#
+# Note:
+#   - TTL is the last value in the ARGV list and is the same for all keys.
+LUA_SCRIPT_CACHE_BULK_WRITE_TICKERS: str = """
+local ttl = ARGV[#ARGV]
+
+for i = 1, #KEYS do
+  redis.call('SET', KEYS[i], ARGV[i], 'EX', ttl)
+end
+
+return #KEYS
+"""
+SCRIPT_ID_BULK_WRITE_TICKERS: str = "bulk_write_tickers"
+
+
+# The Lua script to fetch cached ticker snapshots and their TTLs for a list of keys.
+#
+# Note:
+#   - The script expects each key to contain a JSON-serialized ticker snapshot string.
+#   - For every existing key, it returns the snapshot value followed by its TTL (in seconds).
+#   - Keys that are missing or expired are skipped and not included in the result.
+LUA_SCRIPT_CACHE_BULK_FETCH_TICKERS: str = """
+local result = {}
+for _, k in ipairs(KEYS) do
+  local snapshot = redis.call('GET', k)
+  if snapshot then
+    local ttl = redis.call('TTL', k)
+    if ttl > 0 then
+      table.insert(result, snapshot)
+      table.insert(result, ttl)
+    end
+  end
+end
+return result
+"""
+SCRIPT_ID_BULK_FETCH_TICKERS: str = "bulk_fetch_tickers"
+
 
 class PolygonBackend(FinanceBackend):
     """Backend that connects to the Polygon API."""
 
     api_key: str
+    cache: CacheAdapter
+    ticker_ttl_sec: int
     metrics_client: aiodogstatsd.Client
     http_client: AsyncClient
     metrics_sample_rate: float
@@ -53,6 +97,8 @@ class PolygonBackend(FinanceBackend):
     def __init__(
         self,
         api_key: str,
+        cache: CacheAdapter,
+        ticker_ttl_sec: int,
         url_param_api_key: str,
         url_single_ticker_snapshot: str,
         url_single_ticker_overview: str,
@@ -63,6 +109,8 @@ class PolygonBackend(FinanceBackend):
     ) -> None:
         """Initialize the Polygon backend."""
         self.api_key = api_key
+        self.cache = cache
+        self.ticker_ttl_sec = ticker_ttl_sec
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.metrics_sample_rate = metrics_sample_rate
@@ -73,6 +121,15 @@ class PolygonBackend(FinanceBackend):
         self.filemanager = PolygonFilemanager(
             gcs_bucket_path=settings.image_gcs.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
+        )
+        # This registration is lazy (i.e. no interaction with Redis) and infallible.
+        # Read script.
+        self.cache.register_script(
+            SCRIPT_ID_BULK_FETCH_TICKERS, LUA_SCRIPT_CACHE_BULK_FETCH_TICKERS
+        )
+        # Write script.
+        self.cache.register_script(
+            SCRIPT_ID_BULK_WRITE_TICKERS, LUA_SCRIPT_CACHE_BULK_WRITE_TICKERS
         )
 
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
@@ -96,6 +153,31 @@ class PolygonBackend(FinanceBackend):
         Simply calls the util function since that is not exposed to the provider.
         """
         return build_ticker_summary(snapshot, image_url)
+
+    async def get_snapshots_from_cache(
+        self, tickers: list[str]
+    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
+        """Return snapshots from the cache with their respective TTLs in a list of tuples format."""
+        try:
+            cache_keys = []
+            for ticker in tickers:
+                cache_keys.append(generate_cache_key_for_ticker(ticker))
+
+            cached_data: list[bytes | None] = await self.cache.run_script(
+                sid=SCRIPT_ID_BULK_FETCH_TICKERS,
+                keys=cache_keys,
+                args=[],
+                readonly=True,
+            )
+
+            if cached_data:
+                parsed_cached_data = self._parse_cached_data(cached_data)
+                return parsed_cached_data
+        except CacheAdapterError as exc:
+            logger.error(f"Failed to fetch snapshots from Redis: {exc}")
+
+            # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
+        return []
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
         """Make a request and fetch the snapshot for this single ticker."""
@@ -258,8 +340,75 @@ class PolygonBackend(FinanceBackend):
             logger.error(f"Error building/uploading manifest: {e}")
             return None
 
+    async def store_snapshots_in_cache(self, snapshots: list[TickerSnapshot]) -> None:
+        """Store a list of ticker snapshots in the cache.
+
+        Each snapshot is serialized to JSON and written under a generated cache key
+        for its ticker symbol, with a configured TTL applied.
+        """
+        if len(snapshots) == 0:
+            return
+
+        cache_keys: list[str] = [
+            generate_cache_key_for_ticker(snapshot.ticker) for snapshot in snapshots
+        ]
+        cache_values: list[bytes] = [
+            orjson.dumps(snapshot.model_dump_json()) for snapshot in snapshots
+        ]
+
+        # TODO @Herraj -- add try catch and metrics
+        await self.cache.run_script(
+            sid=SCRIPT_ID_BULK_WRITE_TICKERS,
+            keys=cache_keys,
+            args=[
+                *cache_values,
+                self.ticker_ttl_sec,  # the last value is the TTL used for all keys
+            ],
+        )
+
+    # TODO @herraj add unit tests for this
+    def _parse_cached_data(
+        self, cached_data: list[bytes | None]
+    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
+        """Parse Redis output of the form [snapshot_json, ttl, snapshot_json, ttl, ...].
+        Each snapshot is JSON-decoded and validated into a `TickerSnapshot`,
+        and each TTL is converted to an int.
+
+        Returns:
+            A list of (TickerSnapshot, int) tuples for valid entries.
+            Invalid or None pairs are skipped.
+        """
+        # Valid cached_data length should be an even number (multiple of 2) length e.g
+        # [snapshot_1, ttl_1, snapshot_2, ttl_2, ...]
+        if (len(cached_data) % 2) != 0:
+            return []
+
+        result: list[Optional[Tuple[TickerSnapshot, int]]] = []
+
+        # every even index is a snapshot and odd index is its TTL
+        for snapshot, ttl in itertools.batched(cached_data, 2):
+            try:
+                if snapshot is None or ttl is None:
+                    continue
+
+                # Parse snapshot JSON (bytes -> dict) then validate
+                valid_snapshot = TickerSnapshot.model_validate_json(orjson.loads(snapshot))
+
+                # Convert TTL bytes to int
+                ttl_int = int(ttl)
+
+                result.append((valid_snapshot, ttl_int))
+
+            except ValidationError as exc:
+                logger.error(f"TickerSnapshot validation failed: {exc}")
+            except Exception as exc:
+                logger.exception(f"Unexpected error parsing cached pair: {exc}")
+
+        return result
+
     async def shutdown(self) -> None:
         """Close http client and cache connections."""
         logger.info("Shutting down polygon backend")
+        await self.cache.close()
         await self.http_client.aclose()
         logger.info("polygon backend successfully shut down")

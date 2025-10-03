@@ -260,6 +260,7 @@ class DomainMetadataExtractor:
                     continue
                 if not favicon_url.startswith("http") and not favicon_url.startswith("//"):
                     favicon["href"] = urljoin(scraped_url, favicon_url)
+                favicon["_source"] = "link"
                 favicons.append(favicon)
 
                 # Early stopping if we've reached our limit
@@ -276,6 +277,7 @@ class DomainMetadataExtractor:
                     favicon["href"] = urljoin(scraped_url, favicon_url)
                 else:
                     favicon["href"] = favicon_url
+                favicon["_source"] = "meta"
                 favicons.append(favicon)
 
                 # Check if we've reached our limit
@@ -286,7 +288,7 @@ class DomainMetadataExtractor:
             if len(favicons) < max_icons:
                 default_favicon_url = await scraper.get_default_favicon(scraped_url)
                 if default_favicon_url is not None:
-                    favicons.append({"href": default_favicon_url})
+                    favicons.append({"href": default_favicon_url, "_source": "default"})
 
                     # Check if we've reached our limit
                     if len(favicons) >= max_icons:
@@ -318,7 +320,7 @@ class DomainMetadataExtractor:
                         else:
                             favicon_url = urljoin(manifest_absolute_url, favicon_src)
 
-                        favicons.append({"href": favicon_url})
+                        favicons.append({"href": favicon_url, "_source": "manifest"})
 
                         # Check if we've reached our limit
                         if len(favicons) >= max_icons:
@@ -331,6 +333,24 @@ class DomainMetadataExtractor:
             logger.error(f"Exception extracting favicons: {e}")
 
         return favicons
+
+    def _is_better_favicon(
+        self, favicon: dict[str, Any], width: int, best_width: int, best_source: str
+    ) -> bool:
+        """Check if this favicon is better than the current best using Firefox prioritization"""
+        source = favicon.get("_source", "default")
+        source_priority = {"link": 1, "meta": 2, "manifest": 3, "default": 4}
+
+        current_priority = source_priority.get(source, 4)
+        best_priority = source_priority.get(best_source, 4)
+
+        if current_priority < best_priority:
+            return True
+
+        if current_priority == best_priority and width > best_width:
+            return True
+
+        return False
 
     async def _process_favicon(
         self,
@@ -345,7 +365,6 @@ class DomainMetadataExtractor:
         # Extract favicon candidates (with a reasonable limit)
         favicons = await self._extract_favicons(scraped_url, max_icons=5)
 
-        # Use the optimized method to handle favicons
         return await self._upload_best_favicon(favicons, min_width, uploader)
 
     async def _upload_best_favicon(
@@ -367,6 +386,7 @@ class DomainMetadataExtractor:
             # Tracking variables for best favicon
             best_favicon_url = ""
             best_favicon_width = 0
+            best_favicon_source = "default"
 
             # Prioritization: Process SVGs first, then bitmap images
             # This allows us to exit early once we find a good SVG
@@ -461,7 +481,12 @@ class DomainMetadataExtractor:
                                         continue
 
                                     # Check if this is a better favicon than what we've seen so far
-                                    if width_val > best_favicon_width:
+                                    if self._is_better_favicon(
+                                        favicons[original_idx],
+                                        width_val,
+                                        best_favicon_width,
+                                        best_favicon_source,
+                                    ):
                                         try:
                                             dst_favicon_name = uploader.destination_favicon_name(
                                                 image
@@ -471,12 +496,23 @@ class DomainMetadataExtractor:
                                             )
                                             best_favicon_url = favicon_url
                                             best_favicon_width = width_val
+                                            best_favicon_source = favicons[original_idx].get(
+                                                "_source", "default"
+                                            )
                                         except Exception as e:
                                             logger.warning(f"Failed to upload bitmap favicon: {e}")
                                             # Fallback to original URL if upload fails
-                                            if width_val > best_favicon_width:
+                                            if self._is_better_favicon(
+                                                favicons[original_idx],
+                                                width_val,
+                                                best_favicon_width,
+                                                best_favicon_source,
+                                            ):
                                                 best_favicon_url = url
                                                 best_favicon_width = width_val
+                                                best_favicon_source = favicons[original_idx].get(
+                                                    "_source", "default"
+                                                )
                                 except Exception as e:
                                     logger.warning(
                                         f"Exception for favicon at position {local_idx}: {e}"

@@ -191,7 +191,7 @@ score = 0.25
 
 # MERINO_REMOTE_SETTINGS__COUNTRIES
 # Default countries used to filter out records from remote settings.
-countries = ["US", "GB", "DE", "FR", "IT", "PL"]
+countries = ["US"]
 
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
 form_factors = ["desktop"]
@@ -664,6 +664,11 @@ backend = "polygon"
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "none"
 
+# MERINO_PROVIDERS__POLYGON__CACHE_DB
+# The db within the redis instance that the clients should connect to.
+# Default is `0`. See redis.py.
+cache_db = 0
+
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
 enabled_by_default = true
@@ -702,13 +707,10 @@ circuit_breaker_failure_threshold = 10
 circuit_breaker_recover_timeout_sec = 30
 
 [default.providers.polygon.cache_ttls]
-# Cache TTLs for finance data.
+# Cache TTLs for Polygon ticker snapshots.
 
-# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__STOCK_TICKER_TTL_SEC
-stock_ticker_ttl_sec = 900 # 15 minutes
-
-# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__INDEX_TICKER_TTL_SEC
-index_ticker_ttl_sec = 900 # 15 minutes
+# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__TICKER_TTL_SEC
+ticker_ttl_sec = 300 # 5 minutes
 
 [default.polygon]
 # MERINO_POLYGON__API_KEY
