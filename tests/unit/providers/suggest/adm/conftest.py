@@ -42,6 +42,7 @@ def fixture_rs_attachment_raw_us() -> str:
                 "full_keywords": [["firefox accounts", 3], ["mozilla firefox accounts", 4]],
                 "iab_category": "5 - Education",
                 "icon": "01",
+                "serp_categories": [],
                 "impression_url": "https://example.org/impression/mozilla",
                 "keywords": [
                     "firefox",
@@ -71,6 +72,7 @@ def fixture_rs_attachment_raw_de() -> str:
                 "full_keywords": [["firefox accounts de", 4], ["mozilla firefox accounts de", 5]],
                 "iab_category": "5 - Education",
                 "icon": "01",
+                "serp_categories": [],
                 "impression_url": "https://de.example.org/impression/mozilla",
                 "keywords": [
                     "firefox",

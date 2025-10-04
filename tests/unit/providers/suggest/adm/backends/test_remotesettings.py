@@ -290,6 +290,7 @@ async def test_fetch(
             ["firefox accounts de", 3],
         ],
         iab_category="5 - Education",
+        serp_categories=[0],
         icon="01",
         keywords=[
             "firefox",
@@ -525,6 +526,7 @@ async def test_get_suggestions(
                 "click_url": "https://example.org/click/mozilla",
                 "full_keywords": [["firefox accounts", 3], ["mozilla firefox accounts", 4]],
                 "iab_category": "5 - Education",
+                "serp_categories": [],
                 "icon": "01",
                 "impression_url": "https://example.org/impression/mozilla",
                 "keywords": [
