@@ -5,9 +5,14 @@ from typing import Any
 from httpx import AsyncClient, HTTPStatusError
 
 import logging
+from merino.configs import settings
+from merino.providers.suggest.flightaware.backends.filemanager import (
+    FlightawareFilemanager,
+)
 from merino.providers.suggest.flightaware.backends.protocol import (
     FlightBackendProtocol,
     FlightSummary,
+    GetFlightNumbersResultCode,
 )
 from merino.providers.suggest.flightaware.backends.utils import (
     build_flight_summary,
@@ -16,6 +21,8 @@ from merino.providers.suggest.flightaware.backends.utils import (
 
 logger = logging.getLogger(__name__)
 
+GCS_BLOB_NAME = "flight_numbers_latest.json"
+
 
 class FlightAwareBackend(FlightBackendProtocol):
     """Backend that connects to the Flight Aware API."""
@@ -23,6 +30,7 @@ class FlightAwareBackend(FlightBackendProtocol):
     api_key: str
     http_client: AsyncClient
     ident_url: str
+    filemanager: FlightawareFilemanager
 
     def __init__(
         self,
@@ -34,6 +42,10 @@ class FlightAwareBackend(FlightBackendProtocol):
         self.api_key = api_key
         self.http_client = http_client
         self.ident_url = ident_url
+        self.filemanager = FlightawareFilemanager(
+            gcs_bucket_path=settings.image_gcs.gcs_bucket,
+            blob_name=GCS_BLOB_NAME,
+        )
 
     async def fetch_flight_details(self, flight_num: str) -> Any | None:
         """Fetch flight details through aeroAPI"""
@@ -76,6 +88,16 @@ class FlightAwareBackend(FlightBackendProtocol):
             if (summary := build_flight_summary(flight, query)) is not None
         ]
 
+    async def fetch_flight_numbers(
+        self,
+    ) -> tuple[GetFlightNumbersResultCode, list[str] | None]:
+        """Fetch flight numbers file from GCS through the filemanager."""
+        try:
+            return await self.filemanager.get_file()
+        except Exception as e:
+            logger.warning(f"Failed to fetch flight numbers from GCS: {e}")
+            return GetFlightNumbersResultCode.FAIL, None
+
     async def shutdown(self) -> None:
-        """Shutdown any persistent connections. Currently a no-op."""
-        pass
+        """Close http client connections."""
+        await self.http_client.aclose()

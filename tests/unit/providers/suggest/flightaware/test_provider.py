@@ -4,8 +4,9 @@
 
 """Unit tests for the flightaware provider module."""
 
+import logging
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiodogstatsd
 from fastapi import HTTPException
@@ -18,6 +19,7 @@ from merino.providers.suggest.custom_details import CustomDetails, FlightAwareDe
 from merino.providers.suggest.flightaware.backends.protocol import (
     AirlineDetails,
     FlightSummary,
+    GetFlightNumbersResultCode,
 )
 
 
@@ -51,6 +53,8 @@ def provider(backend_mock):
         metrics_client=MagicMock(spec=aiodogstatsd.Client),
         query_timeout_sec=1.0,
         score=0.8,
+        resync_interval_sec=60,
+        cron_interval_sec=60,
     )
 
 
@@ -82,22 +86,25 @@ async def test_query_returns_empty_if_query_does_not_match_pattern(provider, geo
     assert results == []
 
 
-# TODO update to gcs cache solution
 @pytest.mark.asyncio
-async def test_query_returns_empty_if_not_in_temp_cache(provider, geolocation):
-    """Query should return empty list if query matches pattern but not in cache."""
-    request = SuggestionRequest(
-        query="LH9999", geolocation=geolocation
-    )  # matches pattern but not in temp_cache
+async def test_query_returns_empty_if_not_in_flight_numbers(provider, geolocation):
+    """Query should return empty list if query matches pattern but not present in flight_numbers cache."""
+    provider.flight_numbers = {"UA123", "AA100"}  # known cached flights
+
+    request = SuggestionRequest(query="LH9999", geolocation=geolocation)
     results = await provider.query(request)
+
     assert results == []
 
 
-# TODO update to gcs cache solution
 @pytest.mark.asyncio
-async def test_query_fetches_and_builds_suggestion(provider, backend_mock, geolocation):
-    """Query should call backend and return a built suggestion if query is valid and cached."""
-    request = SuggestionRequest(query="UA3711", geolocation=geolocation)  # in temp_cache
+async def test_query_fetches_and_builds_suggestion_from_cached_numbers(
+    provider, backend_mock, geolocation
+):
+    """Query should call backend and return a built suggestion if query is valid and present in flight_numbers cache."""
+    provider.flight_numbers = {"UA3711", "AA100", "AC701"}
+
+    request = SuggestionRequest(query="UA3711", geolocation=geolocation)
     backend_mock.fetch_flight_details.return_value = {"flights": [{"ident": "UA3711"}]}
 
     fake_summary = FlightSummary(
@@ -133,10 +140,12 @@ async def test_query_fetches_and_builds_suggestion(provider, backend_mock, geolo
 @pytest.mark.asyncio
 async def test_query_handles_backend_exception(provider, backend_mock, caplog, geolocation):
     """Query should catch exceptions and return empty list if backend fails."""
+    provider.flight_numbers = {"UA3711"}
     request = SuggestionRequest(query="UA3711", geolocation=geolocation)
     backend_mock.fetch_flight_details.side_effect = Exception("boom")
 
-    results = await provider.query(request)
+    with caplog.at_level("WARNING"):
+        results = await provider.query(request)
 
     assert results == []
     assert "Exception occurred for FlightAware provider" in caplog.text
@@ -171,3 +180,70 @@ def test_build_suggestion_creates_expected_object(provider):
     assert isinstance(suggestion.custom_details, CustomDetails)
     assert isinstance(suggestion.custom_details.flightaware, FlightAwareDetails)
     assert suggestion.custom_details.flightaware.values[0].flight_number == "AA100"
+
+
+@pytest.mark.asyncio
+async def test_fetch_data_success_sets_flight_numbers_and_logs(provider, caplog):
+    """_fetch_data should set flight_numbers and log success when backend returns SUCCESS."""
+    mock_backend = AsyncMock()
+    mock_backend.fetch_flight_numbers.return_value = (
+        GetFlightNumbersResultCode.SUCCESS,
+        ["UA123", "AA100"],
+    )
+    provider.backend = mock_backend
+
+    with caplog.at_level(logging.INFO):
+        await provider._fetch_data()
+
+    assert provider.flight_numbers == {"UA123", "AA100"}
+    assert "Successfully fetched and set flight numbers from backend" in caplog.text
+    assert provider.data_fetched_event.is_set()
+
+
+@pytest.mark.asyncio
+async def test_fetch_data_fail_logs_error_and_does_not_set_numbers(provider, caplog):
+    """_fetch_data should log error and not set flight_numbers when backend returns FAIL."""
+    mock_backend = AsyncMock()
+    mock_backend.fetch_flight_numbers.return_value = (
+        GetFlightNumbersResultCode.FAIL,
+        None,
+    )
+    provider.backend = mock_backend
+    provider.flight_numbers = set()
+
+    with caplog.at_level(logging.ERROR):
+        await provider._fetch_data()
+
+    assert provider.flight_numbers == set()
+    assert "Failed to fetch data from flightaware backend" in caplog.text
+    assert provider.data_fetched_event.is_set()
+
+
+@pytest.mark.asyncio
+async def test_fetch_data_backend_exception_logs_error(provider, caplog):
+    """_fetch_data should handle exceptions raised by backend.fetch_flight_numbers."""
+    mock_backend = AsyncMock()
+    mock_backend.fetch_flight_numbers.side_effect = Exception("Network error")
+    provider.backend = mock_backend
+
+    with caplog.at_level(logging.ERROR):
+        await provider._fetch_data()
+
+    assert "Failed to fetch data from flightaware backend" in caplog.text
+    assert provider.data_fetched_event.is_set()
+
+
+def test_should_fetch_returns_true_when_interval_exceeded(provider):
+    """_should_fetch should return True when enough time has passed since last fetch."""
+    with patch("merino.providers.suggest.flightaware.provider.time.time", return_value=2000):
+        provider.last_fetch_at = 1000
+        provider.resync_interval_sec = 500
+        assert provider._should_fetch() is True
+
+
+def test_should_fetch_returns_false_when_interval_not_exceeded(provider):
+    """_should_fetch should return False when interval has not elapsed."""
+    with patch("merino.providers.suggest.flightaware.provider.time.time", return_value=2000):
+        provider.last_fetch_at = 1700
+        provider.resync_interval_sec = 500
+        assert provider._should_fetch() is False
