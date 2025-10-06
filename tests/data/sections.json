@@ -7773,6 +7773,166 @@
             }
           }
         ]
+      },
+      {
+        "externalId": "042b10d6-4fab-4df6-8006-e73ae5fd021d",
+        "active": true,
+        "title": "Amsterdam Tips",
+        "description": "Travel tips in Amsterdam",
+        "heroTitle": "Discover the Best of Amsterdam",
+        "heroDescription": "Insider advice on where to eat, what to see, and how to enjoy the city like a local.",
+        "iab": {
+          "taxonomy": "IAB-3.0",
+          "categories": [
+            "653"
+          ]
+        },
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "c85d0be8-1974-4d01-98c8-a8c44fc28604",
+              "url": "https://www.cntraveler.com/gallery/the-best-hotels-in-amsterdam",
+              "title": "The Best Hotels in Amsterdam",
+              "excerpt": "Amsterdam, with its spider’s web of canals, charming quarters, and quirky corners, is the place to eschew purpose-built hotels and go for buildings with a past: converted canalside mansions, old schools, former almshouses, and more.",
+              "topic": "TRAVEL",
+              "publisher": "Condé Nast Traveler",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/1f2974f6-44bc-4add-a55a-f3d9de8b73f6.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "05b26733-88e9-4958-af3b-846502fbe616",
+              "url": "https://www.cosmopolitan.com/uk/lifestyle/travel/a60179587/amsterdam-travel-guide/",
+              "title": "Amsterdam travel guide: what to do, eat and drink",
+              "excerpt": "If I could live anywhere in the world, it would be Amsterdam. I envision spending my days clutching bunches of tulips, cycling along the canal and waving to locals (everyone I’ve ever met in Amsterdam is so friendly).",
+              "topic": "TRAVEL",
+              "publisher": "Cosmopolitan",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/425aea91-cbcc-4778-9caa-10dfa2cc79eb.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "e8b1b36b-0e9d-492c-8fe1-08fb9f73ac68",
+              "url": "https://www.bbc.com/travel/article/20230827-amsterdam-the-european-capital-fighting-bad-tourists",
+              "title": "Amsterdam: The European capital fighting bad tourists",
+              "excerpt": "The Dutch capital is only home to about 800,000 people but draws up to 20 million tourists a year. Now, new policies are encouraging sustainable tourism to everyone.",
+              "topic": "TRAVEL",
+              "publisher": "BBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/784134dd-64ed-4c74-9d9d-601fdcbe7070.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "15767f08-b5e9-4f1d-a99a-c70ba65c17fd",
+              "url": "https://www.lonelyplanet.com/articles/48-hours-amsterdam",
+              "title": "How to spend a perfect weekend in Amsterdam",
+              "excerpt": "Enchanting Golden Age canals lined by gabled buildings, rambling parks, cosy bruin cafés (traditional pubs), magnificent museums, diverse cuisine and some of Europe's best nightlife make Amsterdam a captivating place to spend a weekend; and its compact size and flat terrain makes it easy to explore",
+              "topic": "TRAVEL",
+              "publisher": "Lonely Planet",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/e172fbf4-a8a0-48cb-857a-9f6fc8bbdc6b.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "7eded1ee-ef23-4ac7-bf15-c13d20a11d10",
+              "url": "https://www.lonelyplanet.com/articles/rijksmuseum-or-van-gogh-museum-amsterdam",
+              "title": "Should I visit the Rijksmuseum or the Van Gogh Museum in Amsterdam?",
+              "excerpt": "Of Amsterdam's trove of museums, the twin standouts are the monumental Rijksmuseum, the Netherlands' national museum, crammed with treasures spanning more than eight centuries, and the streamlined, modern Van Gogh Museum, containing the world's largest collection of works by seminal Dutch artist Vin",
+              "topic": "TRAVEL",
+              "publisher": "Lonely Planet",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/64c8e685-b18c-43d1-b1bd-6122ae2c55e8.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "97caaae0-2f62-44e3-b23e-d5c0ac103e6f",
+              "url": "https://www.lonelyplanet.com/articles/amsterdam-with-kids",
+              "title": "The best things to do in Amsterdam with kids",
+              "excerpt": "Sprinkled with winding canals, pockets of green space and power-packed cultural centers, Amsterdam is much more than its red-light district and coffeeshops – it's also surprisingly awesome for the wee ones, thanks to a deluge of kid-friendly museums and fun-filled attractions.",
+              "topic": "TRAVEL",
+              "publisher": "Lonely Planet",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/728186ea-133d-442c-9571-0d3809ca497a.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "6feb1852-f67a-4519-ac31-e725b1e6bb9d",
+              "url": "https://www.lonelyplanet.com/articles/take-your-teenagers-to-amsterdam",
+              "title": "Why You Should Take Your Teens to Amsterdam",
+              "excerpt": "When the kids are too old to be enticed by ice-cream shops and petting zoos, but not so big they can explore cities on their own, family holiday destinations need planning with care.",
+              "topic": "TRAVEL",
+              "publisher": "Lonely Planet",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/7250e28e-1219-48ea-b8ac-dc0a6016f413.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "7e4f43ac-e38d-4c8b-a73e-ea8bf0a25d8f",
+              "url": "https://www.lonelyplanet.com/articles/best-parks-amsterdam",
+              "title": "Amsterdam's loveliest parks and open spaces",
+              "excerpt": "Amsterdam’s parks are much more than prime places to experience the Netherlands’ famous gardening skills – they embody the freedom, tolerance and laissez-faire attitude that this particular European city is all about.",
+              "topic": "TRAVEL",
+              "publisher": "Lonely Planet",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/179286df-1105-475a-af98-0c875b9944e4.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "3e5c0f08-5bfb-4c02-a43e-dc1ffa0efad5",
+              "url": "https://www.lonelyplanet.com/articles/best-museums-in-amsterdam",
+              "title": "Best Museums in Amsterdam: 12 Must-Visit Spaces That Cover Everything From Dutch Masters to Digital Photography",
+              "excerpt": "With priceless artworks by some the most important artists ever to have created and invaluable historical collections, Amsterdam's museums and galleries astound for their quality as well as their quantity.",
+              "topic": "TRAVEL",
+              "publisher": "Lonely Planet",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/e65f893e-aece-44ef-b75f-b1f02ca634b5.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "67ca2a80-2c50-4bfc-b608-d6da347cb75d",
+              "url": "https://techcrunch.com/2025/10/01/what-founders-need-to-know-before-choosing-their-exit-at-techcrunch-disrupt-2025/",
+              "title": "What founders need to know before choosing their exit — straight from Roseanne Wincek, Jai Das, and Dan Springer — at TechCrunch Disrupt 2025",
+              "excerpt": "Exit planning is no longer optional — it’s an essential conversation on the Going Public Stage at TechCrunch Disrupt 2025, happening October 27–29 at San Francisco’s Moscone West.",
+              "topic": "TECHNOLOGY",
+              "publisher": "TechCrunch",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/0f0cb69f-c093-466b-97fa-f35d1e5db9f7.png"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "106614c0-804f-4192-b2b2-79db1e705c67",
+              "url": "https://techcrunch.com/2025/10/01/meet-the-end-of-life-planning-startup-co-founded-by-nba-all-star-russell-westbrook/",
+              "title": "Meet the end-of-life planning startup co-founded by NBA All-Star Russell Westbrook",
+              "excerpt": "When Donnell Beverly Jr. decided to launch end-of-life planning startup Eazewell after the loss of both of his parents, he knew exactly who to call to help launch the business: longtime friend, and nine-time NBA All-Star, Russell Westbrook.   Westbrook was in.",
+              "topic": "BUSINESS",
+              "publisher": "TechCrunch",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/b5b29eb1-0c25-4692-b56e-5199c5d0eebd.jpeg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "146146db-0289-43da-9b5f-769831d1a66d",
+              "url": "https://techcrunch.com/2025/10/01/prickly-pear-health-will-showcase-how-its-helping-womens-brain-health-at-techcrunch-disrupt-2025/",
+              "title": "Prickly Pear Health will showcase how it’s helping women’s brain health at TechCrunch Disrupt 2025",
+              "excerpt": "Iman Clark, CEO of Prickly Pear Health, says she had an epiphany that eventually led her to TechCrunch’s Startup Battlefield at TechCrunch Disrupt 2025. It was around nine years ago. She moved from Tunisia to the U.S.",
+              "topic": "BUSINESS",
+              "publisher": "TechCrunch",
+              "isTimeSensitive": false,
+              "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-dev-images/dae68ef6-db6a-40f2-b6e4-108881718c10.png"
+            }
+          }
+        ]
       }
     ]
   }
