@@ -1,5 +1,6 @@
 """A wrapper for Polygon API interactions."""
 
+import asyncio
 import itertools
 import hashlib
 import logging
@@ -400,6 +401,28 @@ class PolygonBackend:
                 self.ticker_ttl_sec,  # the last value is the TTL used for all keys
             ],
         )
+
+    async def refresh_ticker_cache_entries(
+        self, tickers: list[str], *, await_store: bool = False
+    ) -> None:
+        """Refresh ticker snapshot in cache. Fetches new snapshot from upstream API and
+        fires a background task to write it to the cache.
+
+        Note: Only awaits the cache write process if await_store is true. Used only for testing.
+        """
+        snapshots = await self.get_snapshots(tickers)
+
+        # early exit if no snapshots returned.
+        if len(snapshots) == 0:
+            return
+
+        # this parameter is only used for testing.
+        if await_store:
+            await self.store_snapshots_in_cache(snapshots)
+        else:
+            task = asyncio.create_task(self.store_snapshots_in_cache(snapshots))
+            # consume/log
+            task.add_done_callback(lambda t: t.exception())
 
     # TODO @herraj add unit tests for this
     def _parse_cached_data(

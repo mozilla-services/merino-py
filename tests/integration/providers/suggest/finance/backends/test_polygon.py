@@ -25,6 +25,7 @@ from merino.exceptions import CacheAdapterError
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot
 from merino.providers.suggest.finance.backends.polygon import PolygonBackend
+from merino.providers.suggest.finance.backends.polygon.utils import generate_cache_key_for_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,29 @@ def fixture_polygon_parameters(
     }
 
 
+@pytest.fixture(name="polygon_factory")
+def fixture_polygon_factory(mocker: MockerFixture, statsd_mock: Any, redis_client: Redis):
+    """Return factory fixture to create Polygon backend parameters with overrides."""
+
+    def _polygon_parameters(**overrides: Any) -> dict[str, Any]:
+        params = {
+            "api_key": "api_key",
+            "metrics_client": statsd_mock,
+            "http_client": mocker.AsyncMock(spec=AsyncClient),
+            "metrics_sample_rate": 1,
+            "url_param_api_key": "apiKey",
+            "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
+            "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
+            "gcs_uploader": mocker.MagicMock(),
+            "cache": RedisAdapter(redis_client),
+            "ticker_ttl_sec": TICKER_TTL_SEC,
+        }
+        params.update(overrides)
+        return params
+
+    return _polygon_parameters
+
+
 @pytest.fixture(name="polygon")
 def fixture_polygon(
     polygon_parameters: dict[str, Any],
@@ -117,6 +141,14 @@ def fixture_ticker_snapshot_NFLX() -> TickerSnapshot:
         last_trade_price="555.01",
         todays_change_percent="1.82",
     )
+
+
+async def set_redis_key_expiry(
+    redis_client: Redis, keys_and_expiry: list[tuple[str, int]]
+) -> None:
+    """Set redis cache key expiry (TTL seconds)."""
+    for key, ttl in keys_and_expiry:
+        await redis_client.expire(key, ttl)
 
 
 @pytest.mark.asyncio
@@ -195,3 +227,44 @@ async def test_get_snapshots_from_cache_raises_cache_error(
     assert len(records) == 1
     assert records[0].message.startswith("Failed to fetch snapshots from Redis: test cache error")
     assert actual == []
+
+
+@pytest.mark.asyncio
+async def test_refresh_ticker_cache_entries_success(
+    polygon_factory,
+    ticker_snapshot_AAPL: TickerSnapshot,
+    ticker_snapshot_NFLX,
+    redis_client: Redis,
+    mocker,
+) -> None:
+    """Test that refresh_ticker_cache_entries method successfully writes snapshots to cache with new TTL."""
+    polygon = PolygonBackend(**polygon_factory(cache=RedisAdapter(redis_client)))
+
+    # Mocking the get_snapshots method to return AAPL and NFLX snapshots fixtures for 2 calls.
+    get_snapshots_mock = mocker.patch.object(
+        polygon, "get_snapshots", new_callable=mocker.AsyncMock
+    )
+    get_snapshots_mock.return_value = [ticker_snapshot_AAPL, ticker_snapshot_NFLX]
+
+    expected = [(ticker_snapshot_AAPL, TICKER_TTL_SEC), (ticker_snapshot_NFLX, TICKER_TTL_SEC)]
+
+    # write to cache (this method writes with the default 300 sec TTL)
+    await polygon.store_snapshots_in_cache([ticker_snapshot_AAPL, ticker_snapshot_NFLX])
+
+    # manually modify the TTL for the above cache entries to 100 instead of 300
+    cache_keys = []
+    for key in ["AAPL", "NFLX"]:
+        cache_keys.append(generate_cache_key_for_ticker(key))
+    await set_redis_key_expiry(redis_client, [(cache_keys[0], 100), (cache_keys[1], 100)])
+
+    # refresh the cache entries -- this should reset the TTL to 300
+    # forcing the await here otherwise this task finishes after test execution
+    await polygon.refresh_ticker_cache_entries(["AAPL", "NFLX"], await_store=True)
+
+    actual = await polygon.get_snapshots_from_cache(["AAPL", "NFLX"])
+
+    assert actual is not None
+    assert actual == expected
+
+    assert actual[0] == expected[0]
+    assert actual[1] == expected[1]
