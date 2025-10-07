@@ -1,7 +1,7 @@
 """Module containing static airline name-code data"""
 
 # Name : IATA mapping with ICAO as backup
-name_mapping = {
+NAME_TO_AIRLINE_CODE_MAPPING = {
     "1Time Airline": "1T",
     "40-Mile Air": "Q5",
     "Ansett Australia": "AN",
@@ -1247,7 +1247,7 @@ name_mapping = {
 }
 
 # IATA : Name and ICAO : Name mapping
-code_mapping = {
+AIRLINE_CODE_TO_NAME_MAPPING = {
     "1T": "1Time Airline",
     "RNX": "1Time Airline",
     "Q5": "40-Mile Air",
