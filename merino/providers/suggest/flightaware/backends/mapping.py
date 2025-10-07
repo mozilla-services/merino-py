@@ -3,7 +3,6 @@
 import json
 
 # Name : IATA mapping with ICAO as backup
-# Optional alias handling is included
 name_mapping = {}
 
 # IATA : Name and ICAO : Name mapping
