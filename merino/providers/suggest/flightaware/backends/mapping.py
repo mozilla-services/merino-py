@@ -2,48 +2,42 @@
 
 import json
 
-# IATA code set
-iata = set()
-
-# Name and ICAO mapping : IATA
+# Name : IATA mapping with ICAO as backup
+# Optional alias handling is included
 name_mapping = {}
-icao_mapping = {}
 
-with open("airlines.json", "r") as file:
+# IATA : Name and ICAO : Name mapping
+code_mapping = {}
+
+# Note that the mappings cannot be merged due to conflict
+# For example "88" is both an airline name (IATA code "47")
+# and an IATA code for the airline "All Australia"
+
+with open("merino/providers/suggest/flightaware/backends/airlines.json", "r") as file:
     data = json.load(file)
 
 for airline in data:
     if airline["active"] == "Y":
-        if airline["iata"].isalpha():
-            iata.add(airline["iata"])
-            name_mapping[airline["name"].lower()] = airline["iata"]
+        if airline["iata"].isalnum():
+            name_mapping[airline["name"]] = airline["iata"]
+            if (
+                airline["alias"] != ""
+                and airline["alias"] != "\\N"
+                and airline["alias"] not in name_mapping
+            ):
+                name_mapping[airline["alias"]] = airline["iata"]
+            code_mapping[airline["iata"]] = airline["name"]
             if airline["icao"].isalpha():
-                icao_mapping[airline["icao"]] = airline["iata"]
+                code_mapping[airline["icao"]] = airline["name"]
         elif airline["icao"].isalpha():
-            name_mapping[airline["name"].lower()] = airline["icao"]
-            icao_mapping[airline["icao"]] = airline["icao"]
+            name_mapping[airline["name"]] = airline["icao"]
+            if (
+                airline["alias"] != ""
+                and airline["alias"] != "\\N"
+                and airline["alias"] not in name_mapping
+            ):
+                name_mapping[airline["alias"]] = airline["iata"]
+            code_mapping[airline["icao"]] = airline["name"]
 
-
-def parsing(query: str) -> str:
-    """Parse a query to an identified airline and flight number"""
-    query = query.strip().lower()
-    idx = query.rfind(" ")
-    if idx != "-1":
-        name = query[:idx].strip()
-        try:
-            number = int(query[idx:].strip())
-        except ValueError:
-            return "Bad Number"
-    else:
-        return "No Number"
-    if name.upper() in iata:
-        return name.upper() + " " + str(number)
-    elif name in name_mapping:
-        return str(name_mapping[name]) + " " + str(number)
-    elif name.upper() in icao_mapping:
-        return str(icao_mapping[name]) + " " + str(number)
-    return "Unidentified Airline"
-
-
-# print(parsing("ac 130"))
-# print(parsing("united airlines 101"))
+# print(name_mapping)
+# print(code_mapping)
