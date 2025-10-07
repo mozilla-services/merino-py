@@ -40,3 +40,9 @@ for airline in data:
 
 # print(name_mapping)
 # print(code_mapping)
+
+valid_airline_codes = set()
+for code in code_mapping:
+    valid_airline_codes.add(code)
+
+print(valid_airline_codes)
