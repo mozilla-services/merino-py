@@ -18,25 +18,25 @@ with open("merino/providers/suggest/flightaware/backends/airlines.json", "r") as
 for airline in data:
     if airline["active"] == "Y":
         if airline["iata"].isalnum():
-            name_mapping[airline["name"]] = airline["iata"]
+            name_mapping[airline["name"].lower()] = airline["iata"]
             if (
                 airline["alias"] != ""
                 and airline["alias"] != "\\N"
-                and airline["alias"] not in name_mapping
+                and airline["alias"].lower() not in name_mapping
             ):
-                name_mapping[airline["alias"]] = airline["iata"]
-            code_mapping[airline["iata"]] = airline["name"]
+                name_mapping[airline["alias"].lower()] = airline["iata"]
+            code_mapping[airline["iata"]] = airline["name"].lower()
             if airline["icao"].isalpha():
-                code_mapping[airline["icao"]] = airline["name"]
+                code_mapping[airline["icao"]] = airline["name"].lower()
         elif airline["icao"].isalpha():
-            name_mapping[airline["name"]] = airline["icao"]
+            name_mapping[airline["name"].lower()] = airline["icao"]
             if (
                 airline["alias"] != ""
                 and airline["alias"] != "\\N"
-                and airline["alias"] not in name_mapping
+                and airline["alias"].lower() not in name_mapping
             ):
-                name_mapping[airline["alias"]] = airline["iata"]
-            code_mapping[airline["icao"]] = airline["name"]
+                name_mapping[airline["alias"].lower()] = airline["iata"]
+            code_mapping[airline["icao"]] = airline["name"].lower()
 
 # print(name_mapping)
 # print(code_mapping)
