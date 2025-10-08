@@ -699,14 +699,15 @@ async def get_sections(
 
     # 10. Create a global rank lookup from the already-ranked recommendations
     # This preserves the Thompson sampling ranking done at step 7 without expensive re-sampling
-    global_rank_map = {rec.corpusItemId: rank for rank, rec in enumerate(all_ranked_corpus_recommendations)}
+    global_rank_map = {
+        rec.corpusItemId: rank for rank, rec in enumerate(all_ranked_corpus_recommendations)
+    }
 
     # 11. Sort each section's recommendations by their global rank (preserves Thompson sampling order)
     # This is much faster than re-running Thompson sampling for each section
     for cs in corpus_sections.values():
         cs.recommendations = sorted(
-            cs.recommendations,
-            key=lambda rec: global_rank_map.get(rec.corpusItemId, float('inf'))
+            cs.recommendations, key=lambda rec: global_rank_map.get(rec.corpusItemId, float("inf"))
         )
         # Renumber recommendations within each section
         for idx, rec in enumerate(cs.recommendations):
