@@ -660,7 +660,7 @@ async def get_sections(
         cs.recommendations = [
             rec for rec in cs.recommendations if rec.corpusItemId in remaining_ids
         ]
-    # 7. Rank all corpus recommendations globally by engagement to build top_stories_section
+    # 7. Rank all corpus recommendations globally by engagement
     all_ranked_corpus_recommendations = thompson_sampling(
         all_remaining_corpus_recommendations,
         engagement_backend=engagement_backend,
@@ -669,7 +669,7 @@ async def get_sections(
         rescaler=rescaler,
         personal_interests=personal_interests,
     )
-    # 8. Split top stories
+    # 8. Split top stories from the globally ranked recommendations
     # Use 2-row layout as default for Popular Today
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
     popular_today_layout = layout_7_tiles_2_ads
@@ -693,21 +693,27 @@ async def get_sections(
     story_ids_to_remove = set(top_stories_rec_ids)
     story_ids_to_remove.update(headlines_rec_ids)
 
-    # 7. Remove top story / headlines recs (if present) from original corpus sections
+    # 9. Remove top stories/headlines from individual sections (they're already in their own sections)
     for cs in corpus_sections.values():
         cs.recommendations = remove_story_recs(cs.recommendations, story_ids_to_remove)
 
-    # 8. Rank remaining recs in sections by engagement
-    for cs in corpus_sections.values():
-        cs.recommendations = thompson_sampling(
-            cs.recommendations,
-            engagement_backend=engagement_backend,
-            prior_backend=prior_backend,
-            region=region,
-            rescaler=rescaler,
-        )
+    # 10. Create a global rank lookup from the already-ranked recommendations
+    # This preserves the Thompson sampling ranking done at step 7 without expensive re-sampling
+    global_rank_map = {
+        rec.corpusItemId: rank for rank, rec in enumerate(all_ranked_corpus_recommendations)
+    }
 
-    # 9. Initialize sections with top stories
+    # 11. Sort each section's recommendations by their global rank (preserves Thompson sampling order)
+    # This is much faster than re-running Thompson sampling for each section
+    for cs in corpus_sections.values():
+        cs.recommendations = sorted(
+            cs.recommendations, key=lambda rec: global_rank_map.get(rec.corpusItemId, float("inf"))
+        )
+        # Renumber recommendations within each section
+        for idx, rec in enumerate(cs.recommendations):
+            rec.receivedRank = idx
+
+    # 12. Initialize sections with top stories
     sections: dict[str, Section] = {
         "top_stories_section": Section(
             receivedFeedRank=0,
@@ -717,18 +723,18 @@ async def get_sections(
         )
     }
 
-    # 10. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
+    # 13. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
     if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
         sections["headlines_section"] = headlines_corpus_section
         sections["top_stories_section"].layout = layout_4_medium
 
-    # 11. Add remaining corpus sections
+    # 14. Add remaining corpus sections
     sections.update(corpus_sections)
 
-    # 12. Prune undersized sections
+    # 15. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
 
-    # 13. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
+    # 16. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(
         sections,
         request.sections,
@@ -738,10 +744,10 @@ async def get_sections(
         include_headlines_section=include_headlines_section,
     )
 
-    # 14. Apply final layout cycling to ranked sections except top_stories
+    # 17. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
-    # 15. Apply ad adjustments
+    # 18. Apply ad adjustments
     adjust_ads_in_sections(sections)
 
     return sections
