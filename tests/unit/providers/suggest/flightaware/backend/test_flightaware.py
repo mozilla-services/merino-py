@@ -19,6 +19,7 @@ from merino.providers.suggest.flightaware.backends.protocol import (
     FlightScheduleSegment,
     FlightStatus,
     FlightSummary,
+    GetFlightNumbersResultCode,
 )
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
 from merino.configs import settings
@@ -261,3 +262,58 @@ def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now):
 
         assert summary_1.status == FlightStatus.ARRIVED
         assert summary_2.status == FlightStatus.DELAYED
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_numbers_success():
+    """Ensure fetch_flight_numbers returns SUCCESS and the expected flight list."""
+    mock_filemanager = AsyncMock()
+    mock_filemanager.get_file.return_value = (
+        GetFlightNumbersResultCode.SUCCESS,
+        ["UA123", "AA100"],
+    )
+
+    backend = flightaware.FlightAwareBackend(api_key="k", http_client=AsyncMock(), ident_url="url")
+    backend.filemanager = mock_filemanager
+
+    result_code, data = await backend.fetch_flight_numbers()
+
+    assert result_code == GetFlightNumbersResultCode.SUCCESS
+    assert data == ["UA123", "AA100"]
+    mock_filemanager.get_file.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_numbers_fail():
+    """Ensure fetch_flight_numbers returns FAIL when filemanager fails."""
+    mock_filemanager = AsyncMock()
+    mock_filemanager.get_file.return_value = (
+        GetFlightNumbersResultCode.FAIL,
+        None,
+    )
+
+    backend = flightaware.FlightAwareBackend(api_key="k", http_client=AsyncMock(), ident_url="url")
+    backend.filemanager = mock_filemanager
+
+    result_code, data = await backend.fetch_flight_numbers()
+
+    assert result_code == GetFlightNumbersResultCode.FAIL
+    assert data is None
+    mock_filemanager.get_file.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_numbers_exception(caplog):
+    """Ensure fetch_flight_numbers logs error and returns FAIL on exception."""
+    mock_filemanager = AsyncMock()
+    mock_filemanager.get_file.side_effect = Exception("GCS failure")
+
+    backend = flightaware.FlightAwareBackend(api_key="k", http_client=AsyncMock(), ident_url="url")
+    backend.filemanager = mock_filemanager
+
+    with caplog.at_level("WARNING"):
+        result_code, result = await backend.fetch_flight_numbers()
+
+    assert result_code == GetFlightNumbersResultCode.FAIL
+    assert result is None
+    assert "Failed to fetch flight numbers from GCS" in caplog.text
