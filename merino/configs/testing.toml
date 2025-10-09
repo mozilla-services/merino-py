@@ -10,7 +10,7 @@ dynaconf_merge = true
 [testing.runtime]
 # Use a larger timeout for testing
 query_timeout_sec = 0.5
-disabled_providers = ["disabled_provider", "amo"]
+disabled_providers = ["disabled_provider", "amo", "sports"]
 
 
 [testing.metrics]
@@ -42,8 +42,8 @@ api_key = "test"
 # The URL in `url_base` isn't actually pinged during testing but we set it
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "test://test"
-partner_code_ffsuggest_value="test_urlbar"
-partner_code_newtab_value="test_newtab"
+partner_code_ffsuggest_value = "test_urlbar"
+partner_code_newtab_value = "test_newtab"
 
 [testing.remote_settings]
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
@@ -52,9 +52,19 @@ countries = ["US", "DE",]
 
 [testing.providers.accuweather]
 enabled_by_default = false
-backend="test_weather"
+backend = "test_weather"
 circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
+
+[testing.providers.sports]
+enabled_by_default = false
+max_suggestions = 5
+score = 0.5
+query_timeout_sec = 100
+
+[testing.providers.sports.es]
+dsn = "http://localhost:9200"
+request_timeout_ms = 100
 
 [testing.polygon]
 api_key = "test"
@@ -69,7 +79,7 @@ base_url = "http://test-flightaware.com"
 
 [testing.providers.polygon]
 enabled_by_default = false
-backend="polygon"
+backend = "polygon"
 
 [testing.providers.yelp]
 enabled_by_default = false
