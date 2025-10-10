@@ -95,6 +95,17 @@ _validators = [
     Validator("providers.geolocation.enabled_by_default", is_type_of=bool),
     Validator("providers.geolocation.dummy_url", is_type_of=str),
     Validator("providers.geolocation.dummy_title", is_type_of=str),
+    # comma delimited list of active sports (e.g. "NFL,NHL,ELP")
+    Validator("providers.sports.sports", is_type_of=str),
+    Validator("providers.sports.enabled_by_default", is_type_of=bool),
+    Validator("providers.sports.sportsdata.api_key", is_type_of=str),
+    Validator("providers.sports.sportsdata.cache_dir", is_type_of=str),
+    Validator("providers.sports.max_suggestions", is_type_of=int, gte=1, required=True),
+    Validator("providers.sports.event_ttl_weeks", is_type_of=int, gte=1),
+    # TODO: Break these out into a generic "elastic search" set?
+    Validator("providers.sports.es.dsn", is_type_of=str, required=True),
+    Validator("providers.sports.es.api_key", is_type_of=str, required=True),
+    Validator("providers.sports.es.request_timeout_ms", is_type_of=int, gte=1, required=True),
     Validator("providers.top_picks.enabled_by_default", is_type_of=bool),
     Validator("providers.top_picks.score", is_type_of=float, gte=0, lte=1),
     Validator("providers.top_picks.query_char_limit", is_type_of=int, gte=1),
@@ -166,6 +177,7 @@ settings = Dynaconf(
     root_path="merino",
     envvar_prefix="MERINO",
     settings_files=[
+        "configs/default.local.toml",
         "configs/default.toml",
         "configs/development.toml",
         "configs/production.toml",
