@@ -127,6 +127,17 @@ class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
         """Return empty inferred interests"""
         return InferredInterests(root={})
 
+    def get_model_used(self) -> str | None:
+        """ Return the id of the model used to create this inferred interest, if valid
+        """
+        return (self.root["model_id"]
+                if (
+                "model_id" in self.root
+                and isinstance(self.root["model_id"], str)
+                )
+                else None
+                )
+
 
 class ProcessedInterests(BaseModel):
     """Internal representation of interests after processing/decoding"""
@@ -179,7 +190,7 @@ class SectionConfiguration(BaseModel):
     followedAt: datetime | None = Field(
         default=None,
         description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
-        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
+                    "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
 
     @field_validator("followedAt", mode="before")
@@ -214,7 +225,7 @@ class CuratedRecommendation(CorpusItem):
     features: dict[str, float] = Field(
         default_factory=dict,
         description="Maps feature names to weights, which the client "
-        "can use to create a coarse interest vector.",
+                    "can use to create a coarse interest vector.",
     )
 
     def in_experiment(self, experiment_name) -> bool:
@@ -377,7 +388,7 @@ class Section(BaseModel):
     followedAt: datetime | None = Field(
         default=None,
         description="Timestamp when the section was followed. Must be in ISO 8601 format with timezone, "
-        "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
+                    "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
     isInitiallyVisible: bool = True
 

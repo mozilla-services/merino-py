@@ -12,8 +12,15 @@ from merino.curated_recommendations.ml_backends.protocol import (
 
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
+
 CTR_LIMITED_TOPIC_MODEL_ID = "ctr_limited_topic_v0"
+
 CTR_LIMITED_TOPIC_MODEL_ID2 = "ctr_limited_topic_v1"
+CTR_LIMITED_TOPIC_MODEL_ID2_B = "ctr_limited_topic_v2"
+SUPPORTED_LIVE_MODELS = {CTR_LIMITED_TOPIC_MODEL_ID2, CTR_LIMITED_TOPIC_MODEL_ID}
+
+
+DEFAULT_PRODUCTION_MODEL_ID = CTR_LIMITED_TOPIC_MODEL_ID2_B
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -225,7 +232,7 @@ class LimitedTopicV0Model(LocalModelBackend):
 
 
 V1_THRESHOLDS = [0.008, 0.016, 0.024]
-
+V1B_THRESHOLDS = [0.005, 0.010, 0.015]
 
 # Creates a simple model based on sections. Section features are stored with a s_
 # in telemetry.
@@ -247,28 +254,40 @@ class LimitedTopicV1Model(LocalModelBackend):
         Topic.BUSINESS.value,
     ]
     limited_topics_set = set(limited_topics)
-    model_id = CTR_LIMITED_TOPIC_MODEL_ID2
 
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
-        """Fetch local model for the region
+    default_model_id = DEFAULT_PRODUCTION_MODEL_ID
+
+    def get(self, surface_id: str | None = None, model_id: str | None = None) -> InferredLocalModel | None:
+        """Fetch local model for the region.
         We could update these thresholds by looking at the percentiles of the CTR
+
+        If model_id is not none, only return a model of id specified, otherwise 0
+        If model is None, return default model
         """
 
-        def get_topic(topic: str) -> InterestVectorConfig:
+        def get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
             return InterestVectorConfig(
                 features={f"t_{topic}": 1},
-                thresholds=V1_THRESHOLDS,
+                thresholds=thresholds,
                 diff_p=V0_MODEL_P_VALUE,
                 diff_q=V0_MODEL_Q_VALUE,
             )
 
+        if model_id is not None:
+            if model_id not in SUPPORTED_LIVE_MODELS:
+                return None
+
+        model_thresholds = V1B_THRESHOLDS
+        if model_id == CTR_LIMITED_TOPIC_MODEL_ID2:
+            model_thresholds = V1_THRESHOLDS
         category_fields: dict[str, InterestVectorConfig] = {
-            a: get_topic(a) for a in self.limited_topics
+            a: get_topic(a, model_thresholds) for a in self.limited_topics
         }
+        # Remainder of topics an interest
         remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
         category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
             features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
-            thresholds=V1_THRESHOLDS,
+            thresholds=model_thresholds,
             diff_p=V0_MODEL_P_VALUE,
             diff_q=V0_MODEL_Q_VALUE,
         )
@@ -285,8 +304,9 @@ class LimitedTopicV1Model(LocalModelBackend):
         )
 
         return InferredLocalModel(
-            model_id=self.model_id,
+            model_id=model_id,
             surface_id=surface_id,
             model_data=model_data,
             model_version=0,
         )
+

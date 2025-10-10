@@ -134,10 +134,11 @@ class CuratedRecommendationsProvider:
         is_sections_experiment = self.is_sections_experiment(request, surface_id)
 
         inferred_local_model = None
-        if is_sections_experiment and request.inferredInterests:
-            inferred_local_model = self.local_model_backend.get(surface_id)
 
         if is_sections_experiment:
+            if request.inferredInterests:
+                inferred_local_model = self.local_model_backend.get(surface_id,
+                                                                    request.inferredInterests.get_model_used())
             inferred_interests = self.process_request_interests(request, inferred_local_model)
             sections_feeds = await get_sections(
                 request,
@@ -157,7 +158,7 @@ class CuratedRecommendationsProvider:
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
-            inferredLocalModel=inferred_local_model,
+            inferredLocalModel=self.local_model_backend.get(surface_id),
         )
 
         if request.enableInterestPicker and response.feeds:
@@ -178,24 +179,17 @@ class CuratedRecommendationsProvider:
             return None
 
         # Extract model_id if present
-        interest_id = (
-            request_interests.root["model_id"]
-            if (
-                "model_id" in request_interests.root
-                and isinstance(request_interests.root["model_id"], str)
-            )
-            else None
-        )
+        model_id = request_interests.get_model_used()
         # Check if we need to decode differentially private values
         if inferred_local_model is not None and inferred_local_model.model_matches_interests(
-            interest_id
+            model_id
         ):
             dp_values: list[str] | None = cast(
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )
             if dp_values is not None:
                 # Decode the DP values
-                decoded = inferred_local_model.decode_dp_interests(dp_values, interest_id)
+                decoded = inferred_local_model.decode_dp_interests(dp_values, model_id)
                 # Extract just the numeric scores
                 scores = {
                     k: v

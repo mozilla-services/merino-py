@@ -145,6 +145,6 @@ class InferredLocalModel(BaseModel):
 class LocalModelBackend(Protocol):
     """Protocol for local model that is applied to New Tab article interactions on the client."""
 
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
+    def get(self, surface_id: str | None = None, model_id: str | None = None) -> InferredLocalModel | None:
         """Fetch local model for the region"""
         ...
