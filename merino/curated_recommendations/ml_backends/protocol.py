@@ -58,7 +58,7 @@ class InferredLocalModel(BaseModel):
     events
     """
 
-    model_id: str
+    model_id: str | None
 
     # Schema version
     model_version: int
@@ -145,6 +145,12 @@ class InferredLocalModel(BaseModel):
 class LocalModelBackend(Protocol):
     """Protocol for local model that is applied to New Tab article interactions on the client."""
 
-    def get(self, surface_id: str | None = None, model_id: str | None = None) -> InferredLocalModel | None:
+    def get(
+        self,
+        surface_id: str | None = None,
+        model_id: str | None = None,
+        experiment_name: str | None = None,
+        experiment_branch: str | None = None,
+    ) -> InferredLocalModel | None:
         """Fetch local model for the region"""
         ...

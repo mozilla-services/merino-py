@@ -7,12 +7,10 @@ from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    FakeLocalModelTopics,
     FakeLocalModelSections,
     LimitedTopicV1Model,
-    CTR_TOPIC_MODEL_ID,
     CTR_SECTION_MODEL_ID,
-    CTR_LIMITED_TOPIC_MODEL_ID2,
+    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -29,31 +27,9 @@ TEST_SURFACE = "test_surface"
 
 
 @pytest.fixture
-def model_topics():
-    """Create fake model"""
-    return FakeLocalModelTopics()
-
-
-@pytest.fixture
 def model_limited():
     """Create fake model"""
     return LimitedTopicV1Model()
-
-
-def test_model_returns_inferred_local_model_topics(model_topics):
-    """Tests fake local model, topics"""
-    surface_id = TEST_SURFACE
-    result = model_topics.get(surface_id)
-
-    assert isinstance(result, InferredLocalModel)
-    assert result.model_id == CTR_TOPIC_MODEL_ID
-    assert result.surface_id == surface_id
-    assert result.model_version == 0
-    assert result.model_data is not None
-    assert result.model_data.noise_scale > 0
-    assert len(result.model_data.interest_vector) > 0
-    assert len(result.model_data.day_time_weighting.days) > 0
-    assert len(result.model_data.day_time_weighting.relative_weight) > 0
 
 
 @pytest.fixture
@@ -85,7 +61,7 @@ def test_model_returns_limited_model(model_limited):
 
     assert isinstance(result, InferredLocalModel)
     assert result.surface_id == surface_id
-    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
+    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     assert result.model_version == 0
     assert result.model_data is not None
     assert (
@@ -299,7 +275,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
     """decode_dp_interests decodes various unary patterns."""
     model = model_limited.get(TEST_SURFACE)
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
 
     values = []
     for _key, feature in model.model_data.interest_vector.items():
@@ -319,7 +295,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
 @pytest.mark.parametrize(
     "input_id,expected",
     [
-        (CTR_LIMITED_TOPIC_MODEL_ID2, True),
+        (CTR_LIMITED_TOPIC_MODEL_ID_V1_B, True),
         ("bad id", False),
         (None, False),
         (3.14, False),
@@ -353,11 +329,11 @@ def test_process_returns_none_when_request_has_no_interests(inferred_model):
 def test_process_passes_through_when_no_model():
     """When inferred_local_model is None, return ProcessedInterests with empty scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     req = make_request(interests)
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_local_model=None)
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     assert out.scores == {}
     assert out.normalized_scores == {}
 
@@ -385,14 +361,14 @@ def test_process_decodes_when_same_values_present(inferred_model):
         dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
 
     # spot-check a couple of features decode to the last threshold
     for key, cfg in iv.items():
@@ -413,14 +389,14 @@ def test_process_decodes_when_different_present(inferred_model):
             dp_values.append("1" + (n - 1) * "0")  # lowest (0) value
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     print(dp_values)
     print("raw")
     print(out.scores)
@@ -439,14 +415,14 @@ def test_process_decodes_when_different_present(inferred_model):
 def test_process_passthrough_when_values_missing_even_with_matching_model(inferred_model):
     """If model_id matches but no DP values key, extract existing numeric scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID2
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     interests.root["foo"] = 0.123
     interests.root["bar"] = "baz"  # String, not a score
     req = make_request(interests)
 
     out = CuratedRecommendationsProvider.process_request_interests(req, inferred_model)
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID2
+    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     assert out.scores["foo"] == 0.123
     assert "foo" not in out.normalized_scores
     assert "bar" not in out.normalized_scores  # String values are not included in scores

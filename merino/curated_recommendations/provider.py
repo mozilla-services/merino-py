@@ -137,8 +137,12 @@ class CuratedRecommendationsProvider:
 
         if is_sections_experiment:
             if request.inferredInterests:
-                inferred_local_model = self.local_model_backend.get(surface_id,
-                                                                    request.inferredInterests.get_model_used())
+                inferred_local_model = self.local_model_backend.get(
+                    surface_id,
+                    request.inferredInterests.get_model_used(),
+                    experiment_name=request.experimentName,
+                    experiment_branch=request.experimentBranch,
+                )
             inferred_interests = self.process_request_interests(request, inferred_local_model)
             sections_feeds = await get_sections(
                 request,
@@ -158,7 +162,11 @@ class CuratedRecommendationsProvider:
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
-            inferredLocalModel=self.local_model_backend.get(surface_id),
+            inferredLocalModel=self.local_model_backend.get(
+                surface_id,
+                experiment_name=request.experimentName,
+                experiment_branch=request.experimentBranch,
+            ),
         )
 
         if request.enableInterestPicker and response.feeds:
@@ -197,7 +205,7 @@ class CuratedRecommendationsProvider:
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
                 return ProcessedInterests(
-                    model_id=interest_id,
+                    model_id=model_id,
                     scores=scores,
                     expected_keys=inferred_local_model.get_interest_keys(),
                 )
@@ -210,4 +218,4 @@ class CuratedRecommendationsProvider:
             ):
                 scores[key] = float(value)
 
-        return ProcessedInterests(model_id=interest_id, scores=scores)
+        return ProcessedInterests(model_id=model_id, scores=scores)

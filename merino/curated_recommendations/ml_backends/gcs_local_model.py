@@ -29,7 +29,13 @@ class GCSLocalModel(LocalModelBackend):
         self.synced_blob = synced_gcs_blob
         self.synced_blob.set_fetch_callback(self._fetch_callback)
 
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
+    def get(
+        self,
+        surface_id: str | None = None,
+        model_id: str | None = None,
+        experiment_name: str | None = None,
+        experiment_branch: str | None = None,
+    ) -> InferredLocalModel | None:
         """Get cached click and impression counts from the last 24h for the corpus item id
 
         Args:
