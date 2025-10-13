@@ -163,11 +163,14 @@ class LimitedTopicV1Model(LocalModelBackend):
         experiment_name: str | None = None,
         experiment_branch: str | None = None,
     ) -> InferredLocalModel | None:
-        """Fetch local model for the region.
-        We could update these thresholds by looking at the percentiles of the CTR
+        """Fetch local model for the region and optional target experiment branch/name
 
-        If model_id is not none, only return a model of id specified, otherwise 0
-        If model is None, return default model
+        If model_id is not none, only return a model of id specified, otherwise return Null
+        If model is None, return default model for the surface and experiment.
+
+        A common use case may be to call this function with the model_id to get the model
+        information for decoding the interests sent, then calling again with model_id=None
+        to return the current default model for future interest calculations.
         """
 
         def get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
@@ -179,12 +182,15 @@ class LimitedTopicV1Model(LocalModelBackend):
             )
 
         if model_id is not None:
+            """ If model is specified we only return if supported. """
             if model_id not in SUPPORTED_LIVE_MODELS:
                 return None
-
         model_thresholds = THRESHOLDS_V1_B
         if model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_A:
             model_thresholds = THRESHOLDS_V1_A
+        if model_id is None:
+            model_id = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+
         category_fields: dict[str, InterestVectorConfig] = {
             a: get_topic(a, model_thresholds) for a in self.limited_topics
         }
