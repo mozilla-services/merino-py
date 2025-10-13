@@ -1,7 +1,7 @@
 """Protocol for flight aware provider backends."""
 
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum, StrEnum
 from typing import Any, Protocol
 
 from pydantic import BaseModel, HttpUrl
@@ -56,6 +56,13 @@ class FlightSummary(BaseModel):
     airline: AirlineDetails
 
 
+class GetFlightNumbersResultCode(Enum):
+    """Enum to capture the result of getting flight numbers file."""
+
+    SUCCESS = 0
+    FAIL = 1
+
+
 class FlightBackendProtocol(Protocol):
     """Protocol for a flight aware backend that this provider depends on.
 
@@ -71,6 +78,11 @@ class FlightBackendProtocol(Protocol):
     async def fetch_flight_details(self, flight_num: str) -> Any | None:
         """Fetch flight details by flight number through aeroAPI"""
 
+    async def fetch_flight_numbers(
+        self,
+    ) -> tuple[GetFlightNumbersResultCode, list[str] | None]:
+        """Fetch flight numbers file from GCS through the filemanager."""
+
     async def shutdown(self) -> None:  # pragma: no cover
-        """Close down any open connections."""
+        """Close http client connections."""
         ...

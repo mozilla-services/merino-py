@@ -81,6 +81,8 @@ class CorpusSection(BaseModel):
     sectionItems: list[CorpusItem]
     title: str
     description: str | None = None
+    heroTitle: str | None = None
+    heroSubtitle: str | None = None
     iab: IABMetadata | None = None
     externalId: str
 
