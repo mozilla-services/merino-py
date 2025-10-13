@@ -5,8 +5,7 @@ from dynaconf.base import LazySettings
 from pydantic import HttpUrl
 from typing import Protocol, cast
 
-from merino.providers.suggest.base import BaseSuggestion
-from merino.providers.suggest.sports.backends import SportSuggestion
+from merino.providers.suggest.sports.backends.sportsdata.protocol import SportSummary
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
@@ -24,6 +23,7 @@ class SportsDataBackend(SportsDataProtocol):
     """Provide the methods specific to this provider for fulfilling the request"""
 
     data_store: SportsDataStore
+    base_score: float
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -48,6 +48,7 @@ class SportsDataBackend(SportsDataProtocol):
             },
             settings=settings,
         )
+        self.base_score = settings.providers.sports.get("score", 0.5)
         self.max_suggestions = settings.providers.sports.get("max_suggestions", 10)
 
     async def query(
@@ -56,7 +57,7 @@ class SportsDataBackend(SportsDataProtocol):
         language_code: str = "en",
         score: float = 0.5,
         url: HttpUrl | None = None,
-    ) -> list[BaseSuggestion]:
+    ) -> list[dict]:
         """Query the data store for terms and return a list of potential sporting events relevant to those terms.
 
         This relies on Elastic's internal tokenizer and full text search to scan the list of "terms" for matching results.
@@ -66,17 +67,14 @@ class SportsDataBackend(SportsDataProtocol):
         # break the description into words
         if query_string:
             events = await self.data_store.search_events(q=query_string, language_code="en")
-            suggestions: list[BaseSuggestion] = []
+            suggestions: list[dict] = []
             for sport, events in events.items():
                 if len(suggestions) > self.max_suggestions:
                     break
                 suggestions.append(
-                    cast(
-                        BaseSuggestion,
-                        SportSuggestion.from_events(
-                            sport_name=sport,
-                            query=query_string,
-                            rating=0,
+                    dict(
+                        sport=sport,
+                        summary=SportSummary.from_events(
                             events=events,
                         ),
                     )

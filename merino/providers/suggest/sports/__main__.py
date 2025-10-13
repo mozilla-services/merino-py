@@ -2,6 +2,7 @@
 
 import asyncio
 import sys
+from datetime import datetime
 from logging import Logger
 
 from dynaconf.base import LazySettings
@@ -9,7 +10,10 @@ from httpx import AsyncClient, Timeout
 
 # Reminder: this will instantiate `settings`
 from merino.configs import settings
+from merino.middleware.geolocation import Location
+from merino.providers.suggest.base import SuggestionRequest
 from merino.providers.suggest.sports import init_logs, LOGGING_TAG
+from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
@@ -20,6 +24,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Spor
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     FORCE_IMPORT,
 )
+from merino.utils.metrics import get_metrics_client
 
 # fool ruff into understanding that we really are importing this package.
 _ = FORCE_IMPORT
@@ -94,18 +99,29 @@ async def main_loader(
 
 async def main_query(log: Logger, settings: LazySettings):
     """Pretend we're a query function"""
-    backend = SportsDataBackend(
-        settings=settings,
+    provider = SportsDataProvider(
+        backend=SportsDataBackend(settings=settings),
+        metrics_client=get_metrics_client(),
+        base_score=settings.providers.sports.score,
+        name="test_sports_provider_id",
+        enabled_by_default=True,
     )
-    res = await backend.query("Dallas")
-    print(res)
-    await backend.shutdown()
+    sreq = SuggestionRequest(query="Dallas", geolocation=Location())
+    start = datetime.now()
+    res = await provider.query(sreq=sreq)
+    log.debug(f"{LOGGING_TAG}⏰ query: {datetime.now()-start}")
+    print("## Output >>> ")
+    print("===\n".join([rr.model_dump_json(indent=2) for rr in res]))
+
+    await provider.shutdown()
 
 
 if __name__ == "__main__":
     log = init_logs()
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
+
     asyncio.run(main_loader(log=log, settings=settings, build_indices=True))
+
     # Perform a query and return the results.
     asyncio.run(main_query(log=log, settings=settings))

@@ -346,7 +346,7 @@ class SportsDataStore(ElasticDataStore):
             for doc in res["hits"]["hits"]:
                 event = json.loads((doc["_source"]["event"]))
                 # Add the elastic search score as a baseline score for the return result.
-                event["_score"] = doc.get("_score", 0)
+                event["score"] = doc.get("_score", 0)
                 sport = event["sport"]
                 if sport not in filter:
                     filter[sport] = {}

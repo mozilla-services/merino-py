@@ -8,11 +8,15 @@ from pydantic import HttpUrl
 
 from merino.providers.suggest.base import (
     BaseProvider,
+    BaseSuggestion,
+    CustomDetails,
     SuggestionRequest,
 )
-from merino.providers.suggest.base import BaseSuggestion
+from merino.providers.suggest.custom_details import SportDetails
+from merino.providers.suggest.base import Category
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
+    SportSummary,
 )
 
 
@@ -27,7 +31,6 @@ class SportsDataProvider(BaseProvider):
 
     backend: SportsDataBackend
     metrics_client: aiodogstatsd.Client
-    score: float
     url: HttpUrl
     enabled_by_default: bool
 
@@ -55,7 +58,18 @@ class SportsDataProvider(BaseProvider):
         """Query elastic search with the provided user terms and return relevant sport event information."""
         if self.enabled_by_default:
             self.metrics_client.increment("sports.suggestions.count")
-            return await self.backend.query(sreq.query, score=self.score, url=self.url)
+            results = await self.backend.query(
+                sreq.query, score=self.backend.base_score, url=self.url
+            )
+            return [
+                self.build_suggestion(
+                    sport_name=result["sport"],
+                    query=sreq.query,
+                    score_adj=result.get("score", 0),
+                    events=[result["summary"]],
+                )
+                for result in results
+            ]
         return []
 
     def normalize_query(self, query: str) -> str:
@@ -65,3 +79,22 @@ class SportsDataProvider(BaseProvider):
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the incoming request"""
         return super().validate(srequest)
+
+    def build_suggestion(
+        self,
+        sport_name: str,
+        query: str,
+        events: list[SportSummary],
+        score_adj: float = 0,
+    ) -> BaseSuggestion:
+        """Build a base suggestion with the sport data results"""
+        return BaseSuggestion(
+            title=f"{sport_name}",
+            description=f"{sport_name} report for {query}",
+            url=HttpUrl("https://SportsData.io"),
+            provider="SportsData.io",
+            is_sponsored=False,
+            custom_details=CustomDetails(sports=SportDetails(values=events)),
+            categories=[Category.Sports],
+            score=self.backend.base_score + score_adj,
+        )
