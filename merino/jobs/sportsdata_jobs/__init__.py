@@ -130,7 +130,7 @@ class SportDataUpdater(BaseModel):
                     continue
             self.sports[sport_name] = sport
 
-    async def update(self) -> bool:
+    async def update(self, include_teams: bool = False) -> bool:
         """Perform sport specific updates."""
         timeout = Timeout(
             3,
@@ -141,7 +141,8 @@ class SportDataUpdater(BaseModel):
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
             # which matches the recommended query period for SportsData.
-            await sport.update_teams(client=client)
+            if include_teams:
+                await sport.update_teams(client=client)
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)
             await sport.update_events(client=client)
             # Put the data in the shared storage for the live query.
@@ -151,15 +152,10 @@ class SportDataUpdater(BaseModel):
 
     async def nightly(self) -> None:
         """Perform the nightly maintenance tasks"""
-        for sport in self.sports.values():
-            # Fetch the meta data for the sport, this includes if the sport is "active"
-            # as well as any upcoming events for the sport.
-            await self.update()
+        # Fetch the meta data for the sport, this includes if the sport is "active"
+        # as well as any upcoming events for the sport.
+        await self.update(include_teams=True)
         await self.store.prune()
-
-    async def hourly(self) -> None:
-        """Perform the hourly maintenance tasks"""
-        await self.update()
 
 
 logger = init_logs()
@@ -179,10 +175,10 @@ def nightly():
     asyncio.run(provider.nightly())
 
 
-@app.command("hourly")
-def hourly():
-    """Perform the hourly operations"""
-    asyncio.run(provider.hourly())
+@app.command("update")
+def update():
+    """Perform the frequently required tasks (Approx once every 5 min)"""
+    asyncio.run(provider.update(include_teams=False))
 
 
 if __name__ == "__main__":
