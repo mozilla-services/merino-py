@@ -26,6 +26,7 @@ from pydantic import BaseModel
 from typing import cast
 
 from merino.configs import settings
+from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.sports import init_logs, LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
@@ -114,17 +115,17 @@ class SportDataUpdater(BaseModel):
         for sport_name in active_sports:
             match sport_name:
                 case "NFL":
-                    sport = NFL(settings=settings)
+                    sport = NFL(settings)
                 # case "MLB":
-                #    sport = MLB(settings, self.store)
+                #    sport = MLB(settings)
                 case "NBA":
-                    sport = NBA(settings, self.store)
+                    sport = NBA(settings)
                 case "NHL":
-                    sport = NHL(settings, self.store)
+                    sport = NHL(settings)
                 # case "EPL":
-                #    sport = EPL(settings, self.store)
+                #    sport = EPL(settings)
                 # case "UCL":
-                #    sport = UCL(settings=settings)
+                #    sport = UCL(settings)
                 case _:
                     logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue

@@ -67,17 +67,20 @@ class SportsDataBackend(SportsDataProtocol):
         """
         # break the description into words
         if query_string:
-            events = await self.data_store.search_events(
-                q=query_string, language_code="en", mix_sports=self.mix_sports
-            )
             # This will build a list of events by sport.
             # There is an outstanding question about whether we
             # should mix events for sports
             # (e.g. prior NHL, current MLB, future NFL)
+            events = await self.data_store.search_events(
+                q=query_string, language_code=language_code, mix_sports=self.mix_sports
+            )
             suggestions: list[dict] = []
             for sport, events in events.items():
                 if len(suggestions) > self.max_suggestions:
                     break
+                # TODO: collect the es_score from the events, calculate an average, and
+                # apply that as an adjustment value to the returned score value.
+                # Waiting for guidance about what ranges to have scores.
                 suggestions.append(
                     dict(
                         sport=sport,

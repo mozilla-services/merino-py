@@ -13,6 +13,7 @@ from dynaconf.base import LazySettings
 from httpx import AsyncClient
 from pydantic import BaseModel
 
+from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
     TEAM_TTL_WEEKS,
@@ -98,12 +99,14 @@ class Team(BaseModel):
                     lword = word.lower()
                     if word not in term_filter:
                         terms.add(lword)
-        logging.debug(f"{LOGGING_TAG} - Team: {team_data.get("Name")}")
+        locale = " ".join([team_data.get("City", ""), team_data.get("AreaName", "")]).strip()
+        fullname = team_data.get("FullName", f"{locale} {team_data["Name"]}")
+        logging.debug(f"{LOGGING_TAG} - Team: {fullname}")
         return cls(
             terms=" ".join(terms),
             key=team_data["Key"],
-            name=team_data.get("FullName", team_data["Name"]),
-            locale=" ".join([team_data.get("City", ""), team_data.get("AreaName", "")]).strip(),
+            name=fullname,
+            locale=locale,
             aliases=list(
                 filter(
                     lambda x: x is not None,
@@ -404,6 +407,10 @@ class Sport(BaseModel):
                     tzinfo=timezone.utc
                 )
             except TypeError as ex:
+                # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
+                # but if there's an error, it's probably wise to ignore this.
+                # note: declaring a `self.metrics_client` causes a circular dependency.
+                get_metrics_client().increment("sports.error.no_date", tags={"sport": self.name})
                 logging.debug(
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )

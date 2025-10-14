@@ -4,6 +4,7 @@ by Merino, when we get a request to process.
 """
 
 import aiodogstatsd
+
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import (
@@ -58,18 +59,19 @@ class SportsDataProvider(BaseProvider):
         """Query elastic search with the provided user terms and return relevant sport event information."""
         if self.enabled_by_default:
             self.metrics_client.increment("sports.suggestions.count")
-            results = await self.backend.query(
-                sreq.query, score=self.backend.base_score, url=self.url
-            )
-            return [
-                self.build_suggestion(
-                    sport_name=result["sport"],
-                    query=sreq.query,
-                    score_adj=result.get("score", 0),
-                    events=[result["summary"]],
+            with self.metrics_client.timeit("sports.suggestion.query"):
+                results = await self.backend.query(
+                    sreq.query, score=self.backend.base_score, url=self.url
                 )
-                for result in results
-            ]
+                return [
+                    self.build_suggestion(
+                        sport_name=result["sport"],
+                        query=sreq.query,
+                        score_adj=result.get("score", 0),
+                        events=[result["summary"]],
+                    )
+                    for result in results
+                ]
         return []
 
     def normalize_query(self, query: str) -> str:
@@ -90,6 +92,7 @@ class SportsDataProvider(BaseProvider):
         """Build a base suggestion with the sport data results"""
         if sport_name == "all":
             sport_name = "All Sport"
+        self.metrics_client.increment("sports.suggestions.result", tags={"sport": sport_name})
         return BaseSuggestion(
             title=f"{sport_name}",  # IGNORED
             url=HttpUrl("https://SportsData.io"),  # IGNORED

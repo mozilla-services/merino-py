@@ -6,11 +6,12 @@ from abc import abstractmethod
 from datetime import datetime, timezone
 from typing import Any, Final
 
-
+from aiodogstatsd import Client
 from dynaconf.base import LazySettings
 from elasticsearch import AsyncElasticsearch, BadRequestError, ConflictError, helpers
 
 from merino.configs import settings
+from merino.utils.metrics import get_metrics_client
 from merino.exceptions import BackendError
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
@@ -299,21 +300,28 @@ class SportsDataStore(ElasticDataStore):
             }
         }
 
-    async def prune(self, expiry: int | None = None, language_code: str = "en") -> bool:
+    async def prune(
+        self,
+        expiry: int | None = None,
+        language_code: str = "en",
+        metrics_client: Client = get_metrics_client(),
+    ) -> bool:
         """Remove data that has expired."""
         utc_now = expiry or int(datetime.now(tz=timezone.utc).timestamp())
         for index_pattern in self.index_map.values():
             index = index_pattern.format(lang=language_code)
             query = {"range": {"expiry": {"lte": utc_now}}}
             try:
-                res = await self.client.delete_by_query(
-                    index=index, query=query, timeout=TIMEOUT_MS
-                )
-                logging.info(f"{LOGGING_TAG}✂️ Deleted {res.get("deleted")}")
+                with metrics_client.timeit("sports.time.prune"):
+                    res = await self.client.delete_by_query(
+                        index=index, query=query, timeout=TIMEOUT_MS
+                    )
+                    logging.info(f"{LOGGING_TAG}✂️ Deleted {res.get("deleted")}")
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logging.info(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
+                logging.warning(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
+                return False
         return True
 
     async def search_events(
@@ -378,7 +386,12 @@ class SportsDataStore(ElasticDataStore):
         else:
             return {}
 
-    async def store_events(self, sport: "Sport", language_code: str):
+    async def store_events(
+        self,
+        sport: "Sport",
+        language_code: str,
+        metrics_client: Client = get_metrics_client(),
+    ):
         """Store the events using the calculated terms"""
         actions = []
 
@@ -402,7 +415,11 @@ class SportsDataStore(ElasticDataStore):
             actions.append(action)
 
             try:
-                await helpers.async_bulk(client=self.client, actions=actions)
+                with metrics_client.timeit("sports.time.load.events", tags={"sport": sport.name}):
+                    await helpers.async_bulk(client=self.client, actions=actions)
             except Exception as ex:
-                print(ex)
-        await self.client.indices.refresh(index=index)
+                raise SportsDataError(
+                    f"Could not load data into elasticSearch for {sport.name}"
+                ) from ex
+        with metrics_client.timeit("sports.time.load.refresh_indexes"):
+            await self.client.indices.refresh(index=index)

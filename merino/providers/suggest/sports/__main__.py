@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
 
-    # asyncio.run(main_loader(log=log, settings=settings, build_indices=True))
+    asyncio.run(main_loader(log=log, settings=settings, build_indices=True))
 
     # Perform a query and return the results.
     asyncio.run(main_query(log=log, settings=settings))
