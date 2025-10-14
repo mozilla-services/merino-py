@@ -6,6 +6,9 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import HttpUrl
+from merino.providers.suggest.flightaware.backends.airline_mappings import (
+    NAME_TO_AIRLINE_CODE_MAPPING,
+)
 from merino.providers.suggest.flightaware.backends.protocol import (
     AirlineDetails,
     AirportDetails,
@@ -24,6 +27,10 @@ FLIGHT_NUM_PATTERN_1 = re.compile(
 FLIGHT_NUM_PATTERN_2 = re.compile(
     r"^\d\s*[A-Za-z]\s*\d{1,4}$", re.IGNORECASE
 )  # matches 1 digit, 1 letter, followed by 1-4 digits e.g '3U 1001'
+FLIGHT_KEYWORD_PATTERN = pattern = re.compile(
+    r"^[A-Za-z]+(?:\s+[a-z]+){0,4}\s+\d{1,5}$", re.IGNORECASE
+)
+# matches 1-5 words, followed by 1-5 digits e.g united airlines 100, air canada 250
 
 
 def derive_flight_status(flight: dict) -> FlightStatus:
@@ -252,8 +259,31 @@ def get_live_url(query: str, flight: dict) -> HttpUrl:
 
 
 def is_valid_flight_number_pattern(query: str) -> bool:
-    """Return true if flight number matches either of the two valid flight regex patterns"""
+    """Return true if the query matches either of the two valid flight regex patterns"""
     return bool(FLIGHT_NUM_PATTERN_1.match(query) or FLIGHT_NUM_PATTERN_2.match(query))
+
+
+def is_valid_flight_keyword_pattern(query: str) -> bool:
+    """Return true if the query matches a valid flight keyword pattern"""
+    return bool(FLIGHT_KEYWORD_PATTERN.match(query))
+
+
+def get_flight_number_from_query_if_valid(query: str) -> str | None:
+    """Return a processed flight number or None if a valid one doesn't exist"""
+    flight_number = None
+    if is_valid_flight_number_pattern(query):
+        flight_number = query.replace(" ", "").upper()
+
+    elif is_valid_flight_keyword_pattern(query):
+        query_list = query.lower().split()
+        digits = query_list[-1]
+        airline_name = " ".join(query_list[: len(query_list) - 1])
+        airline_code = NAME_TO_AIRLINE_CODE_MAPPING.get(airline_name)
+
+        if airline_code:
+            flight_number = airline_code + digits
+
+    return flight_number
 
 
 def calculate_time_left(flight: dict) -> int | None:
