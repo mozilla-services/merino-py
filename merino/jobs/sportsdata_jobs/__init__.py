@@ -20,31 +20,27 @@ hardcoded in the calling function for now, but is based on the file creation tim
 
 import asyncio
 import typer
-from httpx import AsyncClient
+from httpx import AsyncClient, Timeout
 from dynaconf.base import LazySettings
 from pydantic import BaseModel
 from typing import cast
 
-from merino.providers.suggest.sports import (
-    init_logs,
-)
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
-
 from merino.configs import settings
-from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports import init_logs, LOGGING_TAG
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
-    # MLB,
     NBA,
     NHL,
+    # MLB,
     # EPL,
     # UCL,
-)
-from merino.providers.suggest.sports.backends.sportsdata.errors import (
-    SportsDataError,
 )
 
 
@@ -78,9 +74,12 @@ class SportDataUpdater(BaseModel):
     settings: LazySettings
 
     def __init__(self, settings: LazySettings, *args, **kwargs) -> None:
+        log = init_logs()
         super().__init__(*args, **kwargs)
         if not settings.sports:
             raise SportsDataError("No sports defined")
+        self.log = log
+        log.debug(f"{LOGGING_TAG}: Starting up...")
         platform = settings.providers.sports.get("platform", "sports")
         active_sports = [
             sport.strip().upper() for sport in settings.providers.sports.sports.split(",")
@@ -133,14 +132,21 @@ class SportDataUpdater(BaseModel):
 
     async def update(self) -> bool:
         """Perform sport specific updates."""
+        timeout = Timeout(
+            3,
+            connect=self.settings.providers.sports.sportsdata.get("connect_timeout", 1),
+            read=settings.providers.sports.sportsdata.get("read_timeout", 1),
+        )
+        client = AsyncClient(timeout=timeout)
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
             # which matches the recommended query period for SportsData.
-            await sport.update_teams(client=self.client)
+            await sport.update_teams(client=client)
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)
-            await sport.update_events(client=self.client)
+            await sport.update_events(client=client)
             # Put the data in the shared storage for the live query.
             await self.store.store_events(sport, language_code="en")
+        await self.store.shutdown()
         return True
 
     async def nightly(self) -> None:

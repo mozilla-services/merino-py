@@ -124,5 +124,4 @@ if __name__ == "__main__":
     # asyncio.run(main_loader(log=log, settings=settings, build_indices=True))
 
     # Perform a query and return the results.
-    settings.providers.sports.mix_sports = True
     asyncio.run(main_query(log=log, settings=settings))
