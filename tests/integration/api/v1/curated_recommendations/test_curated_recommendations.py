@@ -38,7 +38,8 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    CTR_LIMITED_TOPIC_MODEL_ID2,
+    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+    DEFAULT_PRODUCTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -146,7 +147,13 @@ class MockEngagementBackend(EngagementBackend):
 class MockLocalModelBackend(LocalModelBackend):
     """Mock class implementing the protocol for EngagementBackend."""
 
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
+    def get(
+        self,
+        surface_id: str | None = None,
+        model_id: str | None = None,
+        experiment_name: str | None = None,
+        experiment_branch: str | None = None,
+    ) -> InferredLocalModel | None:
         """Return sample local model"""
         model_data = ModelData(
             model_type=ModelType.CLICKS,
@@ -2109,8 +2116,8 @@ class TestSections:
         assert len(sorted_sections) > 3
 
         # define interest vector, reversed from previous order
-        interests = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
-
+        interests: dict[str, float | str] = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
+        interests["model_id"] = DEFAULT_PRODUCTION_MODEL_ID
         # make the api call
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2132,7 +2139,7 @@ class TestSections:
         for i, sec in enumerate(sorted_interests):
             assert data["feeds"][sec]["receivedFeedRank"] == i
 
-    def test_sections_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
+    def test_topic_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
 
@@ -2141,7 +2148,7 @@ class TestSections:
             "sports": 0.0,
             "other": 0.0,
             "arts": 0.5,
-            "model_id": CTR_LIMITED_TOPIC_MODEL_ID2,
+            "model_id": CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
         }
 
         # make the api call

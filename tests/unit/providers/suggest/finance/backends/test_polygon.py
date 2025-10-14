@@ -12,12 +12,14 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, call
 from httpx import AsyncClient, HTTPStatusError, Request, Response
 from pytest_mock import MockerFixture
-from typing import Any, cast
+from typing import Any, Awaitable, Callable, cast
+from merino.cache.redis import RedisAdapter
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from tests.types import FilterCaplogFixture
 from pytest import LogCaptureFixture
 from merino.configs import settings
+from redis.asyncio import Redis
 
 from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
 from merino.providers.suggest.finance.backends.protocol import (
@@ -54,9 +56,32 @@ def fixture_mock_gcs_uploader(mocker) -> GcsUploader:
     return cast(GcsUploader, mock_uploader)
 
 
+@pytest.fixture(name="redis_mock_cache_miss")
+def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
+    """Create a Redis client mock object for testing."""
+
+    async def mock_get(key) -> Any:
+        return None
+
+    async def mock_set(key, value, **kwargs) -> Any:
+        return None
+
+    async def script_callable(keys, args, readonly) -> list:
+        return []
+
+    def mock_register_script(script) -> Callable[[list, list, bool], Awaitable[list]]:
+        return script_callable
+
+    mock = mocker.AsyncMock(spec=Redis)
+    mock.get.side_effect = mock_get
+    mock.set.side_effect = mock_set
+    mock.register_script.side_effect = mock_register_script
+    return mock
+
+
 @pytest.fixture(name="polygon_parameters")
 def fixture_polygon_parameters(
-    mocker: MockerFixture, statsd_mock: Any, mock_gcs_uploader
+    mocker: MockerFixture, statsd_mock: Any, redis_mock_cache_miss: AsyncMock, mock_gcs_uploader
 ) -> dict[str, Any]:
     """Create constructor parameters for Polygon backend module."""
     return {
@@ -68,7 +93,7 @@ def fixture_polygon_parameters(
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
         "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
         "gcs_uploader": mock_gcs_uploader,
-        "cache": mocker.MagicMock(),
+        "cache": RedisAdapter(redis_mock_cache_miss),
         "ticker_ttl_sec": TICKER_TTL_SEC,
     }
 

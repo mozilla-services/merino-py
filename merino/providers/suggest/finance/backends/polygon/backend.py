@@ -12,7 +12,6 @@ from typing import Any, Tuple, Optional
 
 from merino.providers.suggest.finance.backends.polygon.filemanager import PolygonFilemanager
 from merino.providers.suggest.finance.backends.protocol import (
-    FinanceBackend,
     FinanceManifest,
     GetManifestResultCode,
     TickerSnapshot,
@@ -79,7 +78,7 @@ return result
 SCRIPT_ID_BULK_FETCH_TICKERS: str = "bulk_fetch_tickers"
 
 
-class PolygonBackend(FinanceBackend):
+class PolygonBackend:
     """Backend that connects to the Polygon API."""
 
     api_key: str
@@ -134,6 +133,14 @@ class PolygonBackend(FinanceBackend):
 
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
         """Get snapshots for the list of tickers."""
+        # check the cache first.
+        cached = await self.get_snapshots_from_cache(tickers)
+        # each tuple has the shape of `(snapshot, ttl)` and ignore the none tuples for now.
+        cached_snapshots = [tupl[0] for tupl in cached if tupl is not None]
+        if cached_snapshots:
+            return cached_snapshots
+
+        # request from the vendor on cache misses.
         snapshots: list[TickerSnapshot] = []
 
         for ticker in tickers:
@@ -143,6 +150,8 @@ class PolygonBackend(FinanceBackend):
                 snapshots.append(snapshot)
             else:
                 self.metrics_client.increment("polygon.snapshot.invalid")
+
+        await self.store_snapshots_in_cache(snapshots)
 
         return snapshots
 
