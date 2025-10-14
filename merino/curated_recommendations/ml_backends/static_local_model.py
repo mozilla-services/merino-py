@@ -12,8 +12,12 @@ from merino.curated_recommendations.ml_backends.protocol import (
 
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
-CTR_LIMITED_TOPIC_MODEL_ID = "ctr_limited_topic_v0"
-CTR_LIMITED_TOPIC_MODEL_ID2 = "ctr_limited_topic_v1"
+
+CTR_LIMITED_TOPIC_MODEL_ID_V1_A = "ctr_limited_topic_v1"
+CTR_LIMITED_TOPIC_MODEL_ID_V1_B = "ctr_limited_topic_v1_b"
+SUPPORTED_LIVE_MODELS = {CTR_LIMITED_TOPIC_MODEL_ID_V1_A, CTR_LIMITED_TOPIC_MODEL_ID_V1_B}
+
+DEFAULT_PRODUCTION_MODEL_ID = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -37,48 +41,6 @@ BASE_TOPICS = [
     "tech",
     "travel",
 ]
-
-
-# Creates a simple model based on topics. Topic features are stored with a t_
-# in telemetry
-class FakeLocalModelTopics(LocalModelBackend):
-    """Class that defines sample parameters on the local Firefox client for defining an interest
-    vector from interaction events
-
-    Topics are the features of the model. The model is a represetion of users interests.
-
-    Set which model is used at __init__ import
-    """
-
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
-        """Fetch local model for the region"""
-
-        def get_topic(topic: str) -> InterestVectorConfig:
-            return InterestVectorConfig(
-                features={f"t_{topic}": 1},
-                thresholds=[0.3, 0.4],
-                diff_p=0.75,
-                diff_q=0.25,
-            )
-
-        category_fields: dict[str, InterestVectorConfig] = {a: get_topic(a) for a in BASE_TOPICS}
-        model_data: ModelData = ModelData(
-            model_type=ModelType.CTR,
-            rescale=False,
-            noise_scale=0.002,
-            day_time_weighting=DayTimeWeightingConfig(
-                days=[3, 14, 45],
-                relative_weight=[1, 1, 1],
-            ),
-            interest_vector=category_fields,
-        )
-
-        return InferredLocalModel(
-            model_id=CTR_TOPIC_MODEL_ID,
-            surface_id=surface_id,
-            model_data=model_data,
-            model_version=0,
-        )
 
 
 BASE_SECTIONS = [
@@ -128,7 +90,13 @@ class FakeLocalModelSections(LocalModelBackend):
     [probably never clicked, almost certainly clicked, clicked quite a bit]
     """
 
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
+    def get(
+        self,
+        surface_id: str | None = None,
+        model_id: str | None = None,
+        experiment_name: str | None = None,
+        experiment_branch: str | None = None,
+    ) -> InferredLocalModel | None:
         """Fetch local model for the region"""
 
         def get_topic(topic: str) -> InterestVectorConfig:
@@ -159,80 +127,18 @@ class FakeLocalModelSections(LocalModelBackend):
         )
 
 
-V0_MODEL_P_VALUE = 0.806
-V0_MODEL_Q_VALUE = 0.030
+MODEL_P_VALUE_V1 = 0.806
+MODEL_Q_VALUE_V1 = 0.030
+
+THRESHOLDS_V1_A = [0.008, 0.016, 0.024]
+THRESHOLDS_V1_B = [0.005, 0.010, 0.015]
 
 
-# Creates a simple model based on sections. Section features are stored with a s_
-# in telemetry.
-class LimitedTopicV0Model(LocalModelBackend):
-    """Class that defines a limited topic model that supports coarse interest vector
-    This is the first version for the privacy launch, with vetted p/q privacy values
-    Set which model is used at __init__ import
-    """
-
-    """
-     Based on data analysis these were the most impactful topics from personalization when limited to 6
-     However we could in the future benefit from combining HEALTH_FITNESS with SELF_IMPROVEMENT,
-     PERSONAL_FINANCE and FOOD. This would free up one additional, possibly SCIENCE or PARENTING
-    """
-    limited_topics = [
-        Topic.SPORTS.value,
-        Topic.POLITICS.value,
-        Topic.ARTS.value,
-        Topic.HEALTH_FITNESS.value,
-        Topic.BUSINESS.value,
-        Topic.SELF_IMPROVEMENT.value,
-    ]
-
-    model_id = CTR_LIMITED_TOPIC_MODEL_ID2
-
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
-        """Fetch local model for the region
-        We could update these thresholds by looking at the percentiles of the CTR
-        """
-
-        def get_topic(topic: str) -> InterestVectorConfig:
-            return InterestVectorConfig(
-                features={f"t_{topic}": 1},
-                thresholds=[0.01, 0.02, 0.03]
-                if topic is not Topic.SPORTS.value
-                else [0.005, 0.008, 0.02],
-                diff_p=V0_MODEL_P_VALUE,
-                diff_q=V0_MODEL_Q_VALUE,
-            )
-
-        category_fields: dict[str, InterestVectorConfig] = {
-            a: get_topic(a) for a in self.limited_topics
-        }
-        model_data: ModelData = ModelData(
-            model_type=ModelType.CTR,
-            rescale=False,
-            noise_scale=0.0,
-            day_time_weighting=DayTimeWeightingConfig(
-                days=[3, 14, 45],
-                relative_weight=[1, 1, 1],
-            ),
-            interest_vector=category_fields,
-        )
-
-        return InferredLocalModel(
-            model_id=self.model_id,
-            surface_id=surface_id,
-            model_data=model_data,
-            model_version=0,
-        )
-
-
-V1_THRESHOLDS = [0.008, 0.016, 0.024]
-
-
-# Creates a simple model based on sections. Section features are stored with a s_
+# Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
 class LimitedTopicV1Model(LocalModelBackend):
-    """Class that defines a limited topic model that supports coarse interest vector
-    This is the first version for the privacy launch, with vetted p/q privacy values
-    Set which model is used at __init__ import
+    """Class that provides various versions a limited topic models that supports coarse interest vector
+    This has with vetted p/q privacy value for the first experiment.
     """
 
     """
@@ -247,30 +153,54 @@ class LimitedTopicV1Model(LocalModelBackend):
         Topic.BUSINESS.value,
     ]
     limited_topics_set = set(limited_topics)
-    model_id = CTR_LIMITED_TOPIC_MODEL_ID2
 
-    def get(self, surface_id: str | None = None) -> InferredLocalModel | None:
-        """Fetch local model for the region
-        We could update these thresholds by looking at the percentiles of the CTR
+    default_model_id = DEFAULT_PRODUCTION_MODEL_ID
+
+    def get(
+        self,
+        surface_id: str | None = None,
+        model_id: str | None = None,
+        experiment_name: str | None = None,
+        experiment_branch: str | None = None,
+    ) -> InferredLocalModel | None:
+        """Fetch local model for the region and optional target experiment branch/name
+
+        If model_id is not none, only return a model of id specified, otherwise return Null
+        If model is None, return default model for the surface and experiment.
+
+        A common use case may be to call this function with the model_id to get the model
+        information for decoding the interests sent, then calling again with model_id=None
+        to return the current default model for future interest calculations.
         """
 
-        def get_topic(topic: str) -> InterestVectorConfig:
+        def get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
             return InterestVectorConfig(
                 features={f"t_{topic}": 1},
-                thresholds=V1_THRESHOLDS,
-                diff_p=V0_MODEL_P_VALUE,
-                diff_q=V0_MODEL_Q_VALUE,
+                thresholds=thresholds,
+                diff_p=MODEL_P_VALUE_V1,
+                diff_q=MODEL_Q_VALUE_V1,
             )
 
+        if model_id is not None:
+            """ If model is specified we only return if supported. """
+            if model_id not in SUPPORTED_LIVE_MODELS:
+                return None
+        model_thresholds = THRESHOLDS_V1_B
+        if model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_A:
+            model_thresholds = THRESHOLDS_V1_A
+        if model_id is None:
+            model_id = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+
         category_fields: dict[str, InterestVectorConfig] = {
-            a: get_topic(a) for a in self.limited_topics
+            a: get_topic(a, model_thresholds) for a in self.limited_topics
         }
+        # Remainder of topics an interest
         remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
         category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
             features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
-            thresholds=V1_THRESHOLDS,
-            diff_p=V0_MODEL_P_VALUE,
-            diff_q=V0_MODEL_Q_VALUE,
+            thresholds=model_thresholds,
+            diff_p=MODEL_P_VALUE_V1,
+            diff_q=MODEL_Q_VALUE_V1,
         )
 
         model_data: ModelData = ModelData(
@@ -285,7 +215,7 @@ class LimitedTopicV1Model(LocalModelBackend):
         )
 
         return InferredLocalModel(
-            model_id=self.model_id,
+            model_id=model_id,
             surface_id=surface_id,
             model_data=model_data,
             model_version=0,

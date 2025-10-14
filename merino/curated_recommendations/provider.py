@@ -20,7 +20,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
     ProcessedInterests,
-    InferredLocalModel,
 )
 
 from merino.curated_recommendations.rankers import (
@@ -133,12 +132,10 @@ class CuratedRecommendationsProvider:
         general_feed = []
         is_sections_experiment = self.is_sections_experiment(request, surface_id)
 
-        inferred_local_model = None
-        if is_sections_experiment and request.inferredInterests:
-            inferred_local_model = self.local_model_backend.get(surface_id)
-
         if is_sections_experiment:
-            inferred_interests = self.process_request_interests(request, inferred_local_model)
+            inferred_interests = self.process_request_interests(
+                request, surface_id, self.local_model_backend
+            )
             sections_feeds = await get_sections(
                 request,
                 surface_id,
@@ -157,7 +154,13 @@ class CuratedRecommendationsProvider:
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
-            inferredLocalModel=inferred_local_model,
+            inferredLocalModel=self.local_model_backend.get(
+                surface_id,
+                experiment_name=request.experimentName,
+                experiment_branch=request.experimentBranch,
+            )
+            if request.inferredInterests
+            else None,  # Inferred interests being not none implies personalization
         )
 
         if request.enableInterestPicker and response.feeds:
@@ -167,35 +170,43 @@ class CuratedRecommendationsProvider:
 
     @staticmethod
     def process_request_interests(
-        request: CuratedRecommendationsRequest, inferred_local_model: InferredLocalModel | None
+        request: CuratedRecommendationsRequest,
+        surface_id: str,
+        local_model_backend: LocalModelBackend,
     ) -> ProcessedInterests | None:
         """Convert the interest vector from the request into a clean internal representation
         with numeric scores. This does the unary decoding if necessary.
+
+        Older models may be supported in some instances, otherwise scores will be empty.
         """
         request_interests = request.inferredInterests
-
         if request_interests is None:
             return None
 
         # Extract model_id if present
-        interest_id = (
-            request_interests.root["model_id"]
-            if (
-                "model_id" in request_interests.root
-                and isinstance(request_interests.root["model_id"], str)
-            )
-            else None
+        model_id = request_interests.get_model_used()
+        if model_id is None:
+            return None
+        scores = {}
+        # We need a known model ID in the request to interpret the values sent.
+        inferred_local_model = local_model_backend.get(
+            model_id=model_id,
+            surface_id=surface_id,
+            experiment_name=request.experimentName,
+            experiment_branch=request.experimentBranch,
         )
+        # TODO - pass through computed surface ID
+
         # Check if we need to decode differentially private values
         if inferred_local_model is not None and inferred_local_model.model_matches_interests(
-            interest_id
+            model_id
         ):
             dp_values: list[str] | None = cast(
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )
             if dp_values is not None:
                 # Decode the DP values
-                decoded = inferred_local_model.decode_dp_interests(dp_values, interest_id)
+                decoded = inferred_local_model.decode_dp_interests(dp_values, model_id)
                 # Extract just the numeric scores
                 scores = {
                     k: v
@@ -203,17 +214,15 @@ class CuratedRecommendationsProvider:
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
                 return ProcessedInterests(
-                    model_id=interest_id,
+                    model_id=model_id,
                     scores=scores,
                     expected_keys=inferred_local_model.get_interest_keys(),
                 )
 
         # Either no decoding needed or no model available - extract existing scores
-        scores = {}
         for key, value in request_interests.root.items():
             if key not in ["model_id", LOCAL_MODEL_DB_VALUES_KEY] and isinstance(
                 value, (int, float)
             ):
                 scores[key] = float(value)
-
-        return ProcessedInterests(model_id=interest_id, scores=scores)
+        return ProcessedInterests(model_id=model_id, scores=scores)

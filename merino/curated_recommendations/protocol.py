@@ -127,6 +127,14 @@ class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
         """Return empty inferred interests"""
         return InferredInterests(root={})
 
+    def get_model_used(self) -> str | None:
+        """Return the id of the model used to create this inferred interest, if valid"""
+        return (
+            self.root["model_id"]
+            if ("model_id" in self.root and isinstance(self.root["model_id"], str))
+            else None
+        )
+
 
 class ProcessedInterests(BaseModel):
     """Internal representation of interests after processing/decoding"""
