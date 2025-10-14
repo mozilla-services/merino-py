@@ -88,11 +88,13 @@ class SportsDataProvider(BaseProvider):
         score_adj: float = 0,
     ) -> BaseSuggestion:
         """Build a base suggestion with the sport data results"""
+        if sport_name == "all":
+            sport_name = "All Sport"
         return BaseSuggestion(
-            title=f"{sport_name}",
+            title=f"{sport_name}",  # IGNORED
+            url=HttpUrl("https://SportsData.io"),  # IGNORED
             description=f"{sport_name} report for {query}",
-            url=HttpUrl("https://SportsData.io"),
-            provider="SportsData.io",
+            provider="sportsdata_io",
             is_sponsored=False,
             custom_details=CustomDetails(sports=SportDetails(values=events)),
             categories=[Category.Sports],

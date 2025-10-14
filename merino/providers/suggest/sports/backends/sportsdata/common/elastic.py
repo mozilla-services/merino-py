@@ -316,11 +316,15 @@ class SportsDataStore(ElasticDataStore):
                 logging.info(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
         return True
 
-    async def search_events(self, q: str, language_code: str) -> dict[str, dict]:
+    async def search_events(
+        self, q: str, language_code: str, mix_sports: bool = False
+    ) -> dict[str, dict]:
         """Search based on the language and platform template"""
         index_id = self.index_map["event"].format(lang=language_code)
         utc_now = int(datetime.now(tz=timezone.utc).timestamp())
 
+        if mix_sports:
+            logging.debug(f"{LOGGING_TAG} Mixing sports...")
         try:
             query = {
                 "bool": {
@@ -346,16 +350,26 @@ class SportsDataStore(ElasticDataStore):
             for doc in res["hits"]["hits"]:
                 event = json.loads((doc["_source"]["event"]))
                 # Add the elastic search score as a baseline score for the return result.
-                event["score"] = doc.get("_score", 0)
-                sport = event["sport"]
+                event["es_score"] = doc.get("_score", 0)
+                if mix_sports:
+                    sport = "all"
+                else:
+                    sport = event["sport"]
                 if sport not in filter:
                     filter[sport] = {}
                 status = GameStatus.parse(event["status"])
+                event["event_status"] = status
+                # Because we may be collecting "all" sports, we want to find the most recently
+                # concluded game and the next scheduled game. As for current, we just grab the last
+                # "inprogress" game that is reported.
                 if status.is_final():
-                    filter[sport]["previous"] = event
+                    if filter[sport].get("previous", {}).get("date", 0) < event["date"]:
+                        filter[sport]["previous"] = event
                 # If only show the next upcoming game.
-                if status.is_scheduled() and "next" not in filter[sport]:
-                    filter[sport]["next"] = event
+                if status.is_scheduled():
+                    now = int(datetime.now(tz=timezone.utc).timestamp())
+                    if filter[sport].get("next", {}).get("date", now + 86400) < event["date"]:
+                        filter[sport]["next"] = event
                 if status.is_in_progress():
                     # remove the previous game info because we have a current one.
                     del filter[sport]["previous"]

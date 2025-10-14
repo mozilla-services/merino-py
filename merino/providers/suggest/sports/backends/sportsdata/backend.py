@@ -50,6 +50,7 @@ class SportsDataBackend(SportsDataProtocol):
         )
         self.base_score = settings.providers.sports.get("score", 0.5)
         self.max_suggestions = settings.providers.sports.get("max_suggestions", 10)
+        self.mix_sports = settings.providers.sports.get("mix_sports", False)
 
     async def query(
         self,
@@ -66,7 +67,13 @@ class SportsDataBackend(SportsDataProtocol):
         """
         # break the description into words
         if query_string:
-            events = await self.data_store.search_events(q=query_string, language_code="en")
+            events = await self.data_store.search_events(
+                q=query_string, language_code="en", mix_sports=self.mix_sports
+            )
+            # This will build a list of events by sport.
+            # There is an outstanding question about whether we
+            # should mix events for sports
+            # (e.g. prior NHL, current MLB, future NFL)
             suggestions: list[dict] = []
             for sport, events in events.items():
                 if len(suggestions) > self.max_suggestions:
@@ -75,6 +82,7 @@ class SportsDataBackend(SportsDataProtocol):
                     dict(
                         sport=sport,
                         summary=SportSummary.from_events(
+                            sport=sport,
                             events=events,
                         ),
                     )
