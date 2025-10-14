@@ -431,11 +431,6 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
     assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
-    print(dp_values)
-    print("raw")
-    print(out.scores)
-    print("normalized")
-    print(out.normalized_scores)
     # spot-check a couple of features decode to the last threshold
     for idx, (key, cfg) in enumerate(iv.items()):
         if idx == 0:
