@@ -39,6 +39,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+    DEFAULT_PRODUCTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -2115,8 +2116,8 @@ class TestSections:
         assert len(sorted_sections) > 3
 
         # define interest vector, reversed from previous order
-        interests = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
-
+        interests: dict[str, float | str] = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
+        interests["model_id"] = DEFAULT_PRODUCTION_MODEL_ID
         # make the api call
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2127,6 +2128,7 @@ class TestSections:
             },
         )
         data = response.json()
+        print(data)
         # expect interests to be sorted by value
         sorted_interests = sorted(
             [k for k, v in interests.items() if isinstance(v, float)],
