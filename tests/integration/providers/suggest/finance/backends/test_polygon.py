@@ -120,7 +120,10 @@ def fixture_ticker_snapshot_NFLX() -> TickerSnapshot:
 
 @pytest.mark.asyncio
 async def test_get_snapshots_from_cache_success(
-    polygon: PolygonBackend, ticker_snapshot_AAPL: TickerSnapshot, ticker_snapshot_NFLX
+    mocker: MockerFixture,
+    polygon: PolygonBackend,
+    ticker_snapshot_AAPL: TickerSnapshot,
+    ticker_snapshot_NFLX,
 ) -> None:
     """Test that get_snapshots_from_cache method successfully returns the correct snapshots with TTLs."""
     expected = [(ticker_snapshot_AAPL, TICKER_TTL_SEC), (ticker_snapshot_NFLX, TICKER_TTL_SEC)]
@@ -136,6 +139,14 @@ async def test_get_snapshots_from_cache_success(
 
     assert actual[0] == expected[0]
     assert actual[1] == expected[1]
+
+    # `get_snapshots` should not make a network API call on a cache hit.
+    spy = mocker.spy(polygon.http_client, "get")
+
+    snapshots = await polygon.get_snapshots(["AAPL", "NFLX"])
+
+    spy.assert_not_called()
+    assert snapshots == [snapshot for snapshot, _ttl in expected]
 
 
 @pytest.mark.asyncio
