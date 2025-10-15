@@ -1,6 +1,8 @@
 """Stunt main for development and testing"""
 
 import asyncio
+
+import json
 import sys
 from datetime import datetime
 from logging import Logger
@@ -35,7 +37,7 @@ async def main_loader(
     log: Logger,
     settings: LazySettings,
     build_indices: bool = False,
-):
+) -> list[str]:
     """Be a simple "stunt" main process that fetches data to ensure that the load and retrieval
     functions work the way you'd expect
     """
@@ -86,11 +88,17 @@ async def main_loader(
     client = AsyncClient(timeout=timeout)
     log.info(f"{LOGGING_TAG} Pruning data...")
     await event_store.prune()
+    team_names: set[str] = set()
     for sport in my_sports:
         await sport.update_teams(client=client)
+        for team in sport.teams.values():
+            team_names.add(team.name.lower())
         await sport.update_events(client=client)
         await event_store.store_events(sport, language_code="en")
     await event_store.shutdown()
+    reply: list[str] = list(team_names)
+    reply.sort()
+    return reply
 
 
 async def main_query(log: Logger, settings: LazySettings):
@@ -125,7 +133,14 @@ if __name__ == "__main__":
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
 
-    asyncio.run(main_loader(log=log, settings=settings.providers.sports, build_indices=True))
+    team_names = asyncio.run(
+        main_loader(log=log, settings=settings.providers.sports, build_indices=True)
+    )
 
     # Perform a query and return the results.
     asyncio.run(main_query(log=log, settings=settings.providers.sports))
+
+    # Dump out the accumulated team names
+    # Ideal World: This should go into some common data storage engine and be pulled regularly by
+    # the suggest server.
+    print(json.dumps([name.lower() for name in team_names], indent=2))

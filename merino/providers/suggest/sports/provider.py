@@ -19,6 +19,7 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
     SportSummary,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import TEAM_NAMES
 
 
 class SportsDataProvider(BaseProvider):
@@ -51,7 +52,7 @@ class SportsDataProvider(BaseProvider):
         self._name = name
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self._enabled_by_default = enabled_by_default
-        self.trigger_words = trigger_words
+        self.trigger_words = trigger_words + TEAM_NAMES
         # TODO: Add all teams, sports to trigger_words ?
         super().__init__()
 

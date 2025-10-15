@@ -64,6 +64,8 @@ class Team(BaseModel):
     # Search terms for elastic search
     terms: str
     #  Team long name
+    fullname: str
+    # Team short name
     name: str
     # Team sport specific unique key
     key: str
@@ -103,12 +105,14 @@ class Team(BaseModel):
                     if word not in term_filter:
                         terms.add(lword)
         locale = " ".join([team_data.get("City", ""), team_data.get("AreaName", "")]).strip()
+        name = team_data["Name"]
         fullname = team_data.get("FullName", f"{locale} {team_data["Name"]}")
         logging.debug(f"{LOGGING_TAG} - Team: {fullname}")
         return cls(
             terms=" ".join(terms),
             key=team_data["Key"],
-            name=fullname,
+            fullname=fullname,
+            name=name,
             locale=locale,
             aliases=list(
                 filter(
@@ -140,7 +144,7 @@ class Team(BaseModel):
 
     def minimal(self) -> dict[str, Any]:
         """Return the very minimal version of the team info used in Events"""
-        return dict(key=self.key, name=self.name, colors=self.colors)
+        return dict(key=self.key, name=self.fullname, colors=self.colors)
 
 
 class Event(BaseModel):
