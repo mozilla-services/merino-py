@@ -41,7 +41,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NHL,
     # MLB,
     # EPL,
-    # UCL,
+    UCL,
 )
 
 
@@ -87,7 +87,8 @@ class SportDataUpdater(BaseModel):
             dsn=settings.es.dsn,
             api_key=settings.es.api_key,
             languages=[
-                lang.strip().lower() for lang in settings.get("languages", "en").split(",")
+                lang.strip().lower()
+                for lang in settings.get("languages", "en").split(",")
             ],
             platform=f"{{lang}}_{platform}",
             index_map={
@@ -121,8 +122,8 @@ class SportDataUpdater(BaseModel):
                     sport = NHL(settings)
                 # case "EPL":
                 #    sport = EPL(settings)
-                # case "UCL":
-                #    sport = UCL(settings)
+                case "UCL":
+                    sport = UCL(settings)
                 case _:
                     logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue
