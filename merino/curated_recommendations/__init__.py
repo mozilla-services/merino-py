@@ -44,7 +44,7 @@ def init_local_model_backend() -> LocalModelBackend:
     """Initialize the Local Model Backend. This will be repaced with GCSLocal model
     prior to production launch so we can dynamically update models.
     """
-    return LimitedTopicV1Model()
+    return LimitedTopicV1Model() ##TODO how to support n>1 model here?
 
 
 def init_engagement_backend() -> EngagementBackend:

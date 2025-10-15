@@ -220,3 +220,61 @@ class LimitedTopicV1Model(LocalModelBackend):
             model_data=model_data,
             model_version=0,
         )
+
+
+# Creates a limited model based on topics. Topics features are stored with a t_
+# in telemetry.
+class LocalOnlyV1Model(LocalModelBackend):
+    """TODO
+    """
+    
+
+    def get(
+        self,
+        surface_id: str | None = None,
+        model_id: str | None = None,
+        experiment_name: str | None = None,
+        experiment_branch: str | None = None,
+    ) -> InferredLocalModel | None:
+        """TODO
+        """
+        private_features = []
+        def get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
+            return InterestVectorConfig(
+                features={f"t_{topic}": 1},
+                thresholds=thresholds,
+                diff_p=MODEL_P_VALUE_V1,
+                diff_q=MODEL_Q_VALUE_V1,
+            )
+
+        if model_id is not None:
+            """ If model is specified we only return if supported. """
+            if model_id not in SUPPORTED_LIVE_MODELS:
+                return None
+        model_thresholds = THRESHOLDS_V1_B
+        if model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_A:
+            model_thresholds = THRESHOLDS_V1_A
+        if model_id is None:
+            model_id = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+        ## get every section
+        category_fields: dict[str, InterestVectorConfig] = {
+            a: get_topic(a, model_thresholds) for a in BASE_SECTIONS
+        }
+        model_data: ModelData = ModelData(
+            model_type=ModelType.CTR,
+            rescale=False,
+            noise_scale=0.0,
+            day_time_weighting=DayTimeWeightingConfig(
+                days=[3, 14, 45],
+                relative_weight=[1, 1, 1],
+            ),
+            interest_vector=category_fields,
+        )
+
+        return InferredLocalModel(
+            model_id=model_id,
+            surface_id=surface_id,
+            model_data=model_data,
+            model_version=0,
+            private_features=private_features
+        )
