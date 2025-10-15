@@ -19,6 +19,7 @@ class AirlineDetails(BaseModel):
 
     code: str | None = None
     name: str | None = None
+    color: str | None = None
     icon: HttpUrl | None = None
 
 

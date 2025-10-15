@@ -7,7 +7,9 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import HttpUrl
 from merino.providers.suggest.flightaware.backends.airline_mappings import (
+    AIRLINE_CODE_TO_NAME_MAPPING,
     NAME_TO_AIRLINE_CODE_MAPPING,
+    VALID_AIRLINE_CODES,
 )
 from merino.providers.suggest.flightaware.backends.protocol import (
     AirlineDetails,
@@ -205,8 +207,7 @@ def build_flight_summary(flight: dict, normalized_query: str) -> FlightSummary |
             scheduled_time=scheduled_arrival, estimated_time=estimated_arrival
         )
 
-        # would be none for now until we can retrieve these details
-        airline = AirlineDetails(code=None, name=None, icon=None)
+        airline = get_airline_details(flight_number)
 
         status = derive_flight_status(flight)
         progress_percent = flight.get("progress_percent") or 0
@@ -330,3 +331,26 @@ def is_delayed(flight: dict) -> bool:
         if delay_minutes > 15:
             return True
     return False
+
+
+def get_airline_details(flight_number: str) -> AirlineDetails:
+    """Return airline details if they exist and are valid."""
+    code = None
+
+    # Try 2-letter IATA code first, then 3-letter ICAO code
+    if flight_number[:2] in VALID_AIRLINE_CODES:
+        code = flight_number[:2]
+    elif flight_number[:3] in VALID_AIRLINE_CODES:
+        code = flight_number[:3]
+
+    airline_data = AIRLINE_CODE_TO_NAME_MAPPING.get(code, {}) if code else {}
+
+    name = airline_data.get("name")
+    color = airline_data.get("color")
+
+    return AirlineDetails(
+        code=code,
+        name=name,
+        color=color,
+        icon=None,
+    )
