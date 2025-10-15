@@ -73,15 +73,15 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
         # Create a domain metadata uploader with our mock uploader
         dummy_uploader = DomainMetadataUploader(
             force_upload=False,
-            uploader=cast(Any, MockUploader()),  # Use cast to satisfy the type checker
+            uploader=cast(Any, MockUploader()),
             async_favicon_downloader=favicon_downloader,
         )
 
         # Process the domain data using the standard method
-        # We have a single domain, so take the first result
-        metadata = extractor.process_domain_metadata(
+        results = await extractor._process_domains(
             [domain_data], favicon_min_width=min_width, uploader=dummy_uploader
-        )[0]
+        )
+        metadata = results[0]
 
         favicon_data = None
         total_favicons = 0
@@ -171,26 +171,58 @@ def test_domain(domain: str, min_width: int) -> DomainTestResult:
     return asyncio.run(async_test_domain(domain, min_width))
 
 
+async def probe_domains(domains: list[str], min_width: int) -> list[DomainTestResult]:
+    """Test multiple domains concurrently using TaskGroup"""
+    results = []
+    tasks = {}
+
+    try:
+        async with asyncio.TaskGroup() as task_group:
+            tasks = {
+                domain: task_group.create_task(async_test_domain(domain, min_width))
+                for domain in domains
+            }
+
+    except* Exception as eg:
+        console.print(f"[red]Errors occurred while probing domains: {eg}[/red]")
+
+    # Collect results in the same order as input domains (moved outside try/except)
+    for domain in domains:
+        if domain in tasks and tasks[domain].done() and not tasks[domain].exception():
+            results.append(tasks[domain].result())
+        else:
+            results.append(
+                DomainTestResult(
+                    domain=domain,
+                    timestamp=datetime.now().isoformat(),
+                    success=False,
+                    metadata={},
+                    details={},
+                    favicon_data=None,
+                    error="Task failed or was cancelled",
+                )
+            )
+
+    return results
+
+
 @cli.command()
 def test_domains(
     domains: list[str] = typer.Argument(..., help="List of domains to test"),
     min_width: int = typer.Option(32, help="Minimum favicon width", show_default=True),
 ):
     """Test domain metadata extraction for multiple domains"""
-    results = []
+    with console.status("Testing domains concurrently..."):
+        results = asyncio.run(probe_domains(domains, min_width))
 
-    for domain in domains:
-        with console.status(f"Testing {domain}..."):
-            result = test_domain(domain, min_width)
-            results.append(result)
-
+    for result in results:
         if result.success:
-            console.print(f"\nTesting domain: {domain}")
+            console.print(f"\nTesting domain: {result.domain}")
 
             table = Table(show_header=False, box=None)
             table.add_row("Title", result.metadata.get("title", "N/A"))
             table.add_row("Best Icon", result.metadata.get("icon", "N/A"))
-            table.add_row("Total Favicons", str(result.details["favicons_found"]))
+            table.add_row("Total Favicons", str(result.details.get("favicons_found", 0)))
 
             console.print("✅ Success!")
             console.print(table)
@@ -208,7 +240,7 @@ def test_domains(
                             desc.append(f"type={link['type']}")
                         console.print(f"- {link['href']} ({' '.join(desc)})")
         else:
-            console.print("❌ Failed!")
+            console.print(f"\n❌ Failed testing domain: {result.domain}")
             if result.error:
                 console.print(f"Error: {result.error}")
 

@@ -1,7 +1,7 @@
 """Mapping of domain to serp categories"""
 
 from merino.configs import settings
-from merino.providers.suggest.base import Category
+from merino.utils.domain_categories.models import Category
 
 _mapping: dict[str, list[Category]]
 if settings.env_for_dynaconf in ["testing", "ci"]:
