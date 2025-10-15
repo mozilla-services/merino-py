@@ -73,9 +73,9 @@ def test_validate_accepts_valid_query(provider, geolocation):
     provider.validate(req)
 
 
-def test_normalize_query_strips_and_uppercases(provider):
-    """Normalize_query should strip spaces and uppercase."""
-    assert provider.normalize_query(" ua123 ") == "UA123"
+def test_normalize_query_strips(provider):
+    """Normalize_query should strip spaces"""
+    assert provider.normalize_query(" ua123 ") == "ua123"
 
 
 @pytest.mark.asyncio
@@ -83,6 +83,74 @@ async def test_query_returns_empty_if_query_does_not_match_pattern(provider, geo
     """Query should return empty list if query doesn't match flight number regex."""
     request = SuggestionRequest(query="notaflight", geolocation=geolocation)
     results = await provider.query(request)
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_query_uses_get_flight_number_from_query_if_valid(provider, geolocation):
+    """Query should call get_flight_number_from_query_if_valid and skip backend if it returns None."""
+    with patch(
+        "merino.providers.suggest.flightaware.provider.get_flight_number_from_query_if_valid",
+        return_value=None,
+    ) as mock_get_flight_number:
+        request = SuggestionRequest(query="invalidquery", geolocation=geolocation)
+        results = await provider.query(request)
+
+    mock_get_flight_number.assert_called_once_with("invalidquery")
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_query_validates_keyword_pattern_and_fetches(provider, backend_mock, geolocation):
+    """Query should resolve a valid keyword pattern (e.g., 'Air Canada 250') using get_flight_number_from_query_if_valid."""
+    with patch(
+        "merino.providers.suggest.flightaware.provider.get_flight_number_from_query_if_valid",
+        return_value="AC250",
+    ):
+        provider.flight_numbers = {"AC250"}
+        request = SuggestionRequest(query="Air Canada 250", geolocation=geolocation)
+
+        backend_mock.fetch_flight_details.return_value = {"flights": [{"ident": "AC250"}]}
+
+        fake_summary = FlightSummary(
+            flight_number="AC250",
+            destination={"code": "YYZ", "city": "Toronto"},
+            origin={"code": "YVR", "city": "Vancouver"},
+            departure={
+                "scheduled_time": "2025-09-29T08:00:00Z",
+                "estimated_time": "2025-09-29T08:05:00Z",
+            },
+            arrival={
+                "scheduled_time": "2025-09-29T11:00:00Z",
+                "estimated_time": "2025-09-29T11:05:00Z",
+            },
+            status="Scheduled",
+            progress_percent=0,
+            airline=AirlineDetails(code="AC", name="Air Canada", icon=None),
+            delayed=False,
+            url="https://www.flightaware.com/live/flight/AC250",
+        )
+        backend_mock.get_flight_summaries.return_value = [fake_summary]
+
+        results = await provider.query(request)
+
+    backend_mock.fetch_flight_details.assert_awaited_once_with("AC250")
+    assert len(results) == 1
+    suggestion = results[0]
+    assert isinstance(suggestion, BaseSuggestion)
+    assert suggestion.custom_details.flightaware.values[0].flight_number == "AC250"
+
+
+@pytest.mark.asyncio
+async def test_query_returns_empty_if_helper_returns_invalid(provider, geolocation):
+    """Query should return empty if get_flight_number_from_query_if_valid returns None."""
+    with patch(
+        "merino.providers.suggest.flightaware.provider.get_flight_number_from_query_if_valid",
+        return_value=None,
+    ):
+        request = SuggestionRequest(query="garbage input", geolocation=geolocation)
+        results = await provider.query(request)
+
     assert results == []
 
 

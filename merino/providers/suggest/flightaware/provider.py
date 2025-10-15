@@ -18,7 +18,7 @@ from merino.providers.suggest.flightaware.backends.protocol import (
     GetFlightNumbersResultCode,
 )
 from merino.providers.suggest.flightaware.backends.utils import (
-    is_valid_flight_number_pattern,
+    get_flight_number_from_query_if_valid,
 )
 from merino.utils import cron
 
@@ -108,25 +108,21 @@ class Provider(BaseProvider):
             )
 
     def normalize_query(self, query: str) -> str:
-        """Remove trailing spaces from query and transform to uppercase"""
-        return query.strip().upper()
+        """Remove trailing spaces from query and convert to lowercase"""
+        return query.strip()
 
     async def query(self, request: SuggestionRequest) -> list[BaseSuggestion]:
         """Retrieve flight suggestions"""
         try:
-            if not is_valid_flight_number_pattern(request.query):
-                return []
-            else:
-                query = request.query.replace(" ", "")
+            flight_number = get_flight_number_from_query_if_valid(request.query)
+            if flight_number is not None and flight_number in self.flight_numbers:
+                result = await self.backend.fetch_flight_details(flight_number)
 
-                if query in self.flight_numbers:
-                    result = await self.backend.fetch_flight_details(query)
-
-                    if result:
-                        flight_summaries: list[FlightSummary] = self.backend.get_flight_summaries(
-                            result, query
-                        )
-                        return [self.build_suggestion(flight_summaries)]
+                if result:
+                    flight_summaries: list[FlightSummary] = self.backend.get_flight_summaries(
+                        result, flight_number
+                    )
+                    return [self.build_suggestion(flight_summaries)]
             return []
         except Exception as e:
             logger.warning(f"Exception occurred for FlightAware provider: {e}")
