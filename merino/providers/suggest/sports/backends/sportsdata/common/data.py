@@ -85,9 +85,7 @@ class Team(BaseModel):
         return json.dumps(self)
 
     @classmethod
-    def from_data(
-        cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta
-    ):
+    def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         # build the list of terms we want to search:
         terms = set()
@@ -106,9 +104,7 @@ class Team(BaseModel):
                     lword = word.lower()
                     if word not in term_filter:
                         terms.add(lword)
-        locale = " ".join(
-            [team_data.get("City") or "", team_data.get("AreaName") or ""]
-        ).strip()
+        locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logging.debug(f"{LOGGING_TAG} - Team: {fullname}")
@@ -235,19 +231,11 @@ class Sport(BaseModel):
             kwargs.update({"api_key": settings.sportsdata.get("api_key")})
         if "event_ttl" not in kwargs:
             kwargs.update(
-                {
-                    "event_ttl": timedelta(
-                        weeks=settings.get("event_ttl_weeks", EVENT_TTL_WEEKS)
-                    )
-                }
+                {"event_ttl": timedelta(weeks=settings.get("event_ttl_weeks", EVENT_TTL_WEEKS))}
             )
         if "team_ttl" not in kwargs:
             kwargs.update(
-                {
-                    "team_ttl": timedelta(
-                        weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS)
-                    )
-                }
+                {"team_ttl": timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))}
             )
         if "term_filter" not in kwargs:
             kwargs.update({"term_filter": []})
@@ -363,9 +351,7 @@ class Sport(BaseModel):
             self.events[event.id] = event
         return self.events
 
-    def load_schedules_from_source(
-        self, data: list[dict[str, Any]]
-    ) -> dict[int, "Event"]:
+    def load_schedules_from_source(self, data: list[dict[str, Any]]) -> dict[int, "Event"]:
         """Scan the list of Scheduled events, storing any in the current interest window.
         (Note: this is very similar to `load_scores_from_source` with some minor
         differences in the source data.)
@@ -423,16 +409,13 @@ class Sport(BaseModel):
             try:
                 # US Sports use DateTimeUTC as the UTC timestamp. Soccer uses DateTime and it's already UTC.
                 date = datetime.fromisoformat(
-                    event_description.get("DateTimeUTC")
-                    or event_description["DateTime"]
+                    event_description.get("DateTimeUTC") or event_description["DateTime"]
                 ).replace(tzinfo=timezone.utc)
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
                 # note: declaring a `self.metrics_client` causes a circular dependency.
-                get_metrics_client().increment(
-                    "sports.error.no_date", tags={"sport": self.name}
-                )
+                get_metrics_client().increment("sports.error.no_date", tags={"sport": self.name})
                 logging.debug(
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )

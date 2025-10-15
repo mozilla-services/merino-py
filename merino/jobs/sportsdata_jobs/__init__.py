@@ -87,8 +87,7 @@ class SportDataUpdater(BaseModel):
             dsn=settings.es.dsn,
             api_key=settings.es.api_key,
             languages=[
-                lang.strip().lower()
-                for lang in settings.get("languages", "en").split(",")
+                lang.strip().lower() for lang in settings.get("languages", "en").split(",")
             ],
             platform=f"{{lang}}_{platform}",
             index_map={

@@ -390,7 +390,7 @@ class UCL(Sport):
             name=name,
             base_url=settings.sportsdata.get(
                 f"base_url.{name.lower()}",
-                default=f"https://api.sportsdata.io/v4/soccer/scores/json",
+                default="https://api.sportsdata.io/v4/soccer/scores/json",
             ),
             season=None,
             cache_dir=settings.sportsdata.get("cache_dir"),

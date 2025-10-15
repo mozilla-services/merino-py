@@ -72,9 +72,7 @@ async def main_loader(
     for sport_name in active_sports:
         try:
             sport = getattr(
-                sys.modules[
-                    "merino.providers.suggest.sports.backends.sportsdata.common.sports"
-                ],
+                sys.modules["merino.providers.suggest.sports.backends.sportsdata.common.sports"],
                 sport_name.upper(),
             )(settings=settings)
             my_sports.append(sport)
