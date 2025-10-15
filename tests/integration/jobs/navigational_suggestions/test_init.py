@@ -19,8 +19,8 @@ from merino.jobs.navigational_suggestions import (
 from merino.jobs.navigational_suggestions.domain_metadata_diff import DomainDiff
 from merino.jobs.navigational_suggestions.domain_data_downloader import DomainDataDownloader
 from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
-from merino.providers.suggest.base import Category
 from merino.jobs.utils.system_monitor import SystemMonitor
+from merino.utils.domain_categories.models import Category
 
 
 @pytest.fixture
