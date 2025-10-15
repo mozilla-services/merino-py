@@ -66,7 +66,7 @@ class InferredLocalModel(BaseModel):
 
     model_data: ModelData
 
-    private_features: str | None ## TODO confirm manually that None here keeps original experiment happy by not blocking features
+    private_features: list | None ## TODO confirm manually that None here keeps original experiment happy by not blocking features
 
     def get_unary_encoded_index(self, encoded_string: str, support_two: bool = False) -> list[int]:
         """Decode a unary encoded string with differential privacy added.
