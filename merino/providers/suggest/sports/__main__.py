@@ -39,20 +39,20 @@ async def main_loader(
     """Be a simple "stunt" main process that fetches data to ensure that the load and retrieval
     functions work the way you'd expect
     """
-    platform = settings.providers.sports.get("platform", "sports")
+    platform = settings.get("platform", "sports")
     event_store = SportsDataStore(
-        dsn=settings.providers.sports.es.dsn,
-        api_key=settings.providers.sports.es.api_key,
-        languages=str_to_list(settings.providers.sports.get("languages", "en").lower()),
+        dsn=settings.es.dsn,
+        api_key=settings.es.api_key,
+        languages=str_to_list(settings.get("languages", "en").lower()),
         platform=f"{{lang}}_{platform}",
         index_map={
-            # "meta": settings.providers.sports.get(
+            # "meta": settings.get(
             #     "meta_index", f"{self.platform}_meta"
             # ),
-            # "team": settings.providers.sports.get(
+            # "team": settings.get(
             #     "team_index", f"{self.platform}_team"
             # ),
-            "event": settings.providers.sports.get("event_index", f"{platform}_event"),
+            "event": settings.get("event_index", f"{platform}_event"),
         },
         settings=settings,
     )
@@ -66,7 +66,7 @@ async def main_loader(
 
     log.debug(f"{LOGGING_TAG}: Starting up...")
     my_sports: list[Sport] = []
-    active_sports = str_to_list(settings.providers.sports.sports.upper())
+    active_sports = str_to_list(settings.sports.upper())
     for sport_name in active_sports:
         try:
             sport = getattr(
@@ -80,8 +80,8 @@ async def main_loader(
     # Sadly, we can't instantiate the AsyncClient lower.
     timeout = Timeout(
         3,
-        connect=settings.providers.sports.sportsdata.get("connect_timeout", 1),
-        read=settings.providers.sports.sportsdata.get("read_timeout", 1),
+        connect=settings.sportsdata.get("connect_timeout", 1),
+        read=settings.sportsdata.get("read_timeout", 1),
     )
     client = AsyncClient(timeout=timeout)
     log.info(f"{LOGGING_TAG} Pruning data...")
@@ -95,11 +95,8 @@ async def main_loader(
 
 async def main_query(log: Logger, settings: LazySettings):
     """Pretend we're a query function"""
-    import pdb
-
-    pdb.set_trace()
     trigger_words = str_to_list(
-        settings.providers.sports.get(
+        settings.get(
             "trigger_words",
             "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
         ).lower()
@@ -108,7 +105,7 @@ async def main_query(log: Logger, settings: LazySettings):
     provider = SportsDataProvider(
         backend=SportsDataBackend(settings=settings),
         metrics_client=get_metrics_client(),
-        base_score=settings.providers.sports.score,
+        base_score=settings.score,
         name="test_sports_provider_id",
         trigger_words=trigger_words,
         enabled_by_default=True,
@@ -128,7 +125,7 @@ if __name__ == "__main__":
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
 
-    asyncio.run(main_loader(log=log, settings=settings, build_indices=True))
+    asyncio.run(main_loader(log=log, settings=settings.providers.sports, build_indices=True))
 
     # Perform a query and return the results.
-    asyncio.run(main_query(log=log, settings=settings))
+    asyncio.run(main_query(log=log, settings=settings.providers.sports))

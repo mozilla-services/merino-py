@@ -224,22 +224,14 @@ class Sport(BaseModel):
         logging.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
         if "api_key" not in kwargs:
-            kwargs.update({"api_key": settings.providers.sports.sportsdata.get("api_key")})
+            kwargs.update({"api_key": settings.sportsdata.get("api_key")})
         if "event_ttl" not in kwargs:
             kwargs.update(
-                {
-                    "event_ttl": timedelta(
-                        weeks=settings.providers.sports.get("event_ttl_weeks", EVENT_TTL_WEEKS)
-                    )
-                }
+                {"event_ttl": timedelta(weeks=settings.get("event_ttl_weeks", EVENT_TTL_WEEKS))}
             )
         if "team_ttl" not in kwargs:
             kwargs.update(
-                {
-                    "team_ttl": timedelta(
-                        weeks=settings.providers.sports.get("team_ttl_weeks", TEAM_TTL_WEEKS)
-                    )
-                }
+                {"team_ttl": timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))}
             )
         if "term_filter" not in kwargs:
             kwargs.update({"term_filter": []})

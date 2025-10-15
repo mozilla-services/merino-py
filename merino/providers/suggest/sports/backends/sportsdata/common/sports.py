@@ -33,13 +33,13 @@ class NFL(Sport):
         super().__init__(
             settings=settings,
             name=name,
-            base_url=settings.providers.sports.sportsdata.get(
+            base_url=settings.sportsdata.get(
                 f"base_url.{name.lower()}",
                 default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
             ),
             season=None,
             week=0,
-            cache_dir=settings.providers.sports.sportsdata.get("cache_dir"),
+            cache_dir=settings.sportsdata.get("cache_dir"),
             team_ttl=timedelta(weeks=4),
             lock=asyncio.Lock(),
             **kwargs,
@@ -128,12 +128,12 @@ class NHL(Sport):
         super().__init__(
             settings=settings,
             name=name,
-            base_url=settings.providers.sports.sportsdata.get(
+            base_url=settings.sportsdata.get(
                 f"base_url.{name.lower()}",
                 default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
             ),
             season=None,
-            cache_dir=settings.providers.sports.sportsdata.get("cache_dir"),
+            cache_dir=settings.sportsdata.get("cache_dir"),
             event_ttl=timedelta(hours=48),
             team_ttl=timedelta(weeks=4),
             **kwargs,
@@ -207,12 +207,12 @@ class NBA(Sport):
         super().__init__(
             settings=settings,
             name=name,
-            base_url=settings.providers.sports.sportsdata.get(
+            base_url=settings.sportsdata.get(
                 f"base_url.{name.lower()}",
                 default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
             ),
             season=None,
-            cache_dir=settings.providers.sports.sportsdata.get("cache_dir"),
+            cache_dir=settings.sportsdata.get("cache_dir"),
             team_ttl=timedelta(weeks=4),
             **kwargs,
         )
@@ -287,7 +287,7 @@ class NBA(Sport):
 #
 #        super().__init__(
 #            name=name,
-#            base_url=settings.providers.sports.sportsdata.get(
+#            base_url=settings.sportsdata.get(
 #                f"base_url.{name.lower()}",
 #                default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
 #            ),
@@ -361,7 +361,7 @@ class NBA(Sport):
 #        super().__init__(
 #            settings=settings,
 #            name=name,
-#            base_url=settings.providers.sports.sportsdata.get(
+#            base_url=settings.sportsdata.get(
 #                f"base_url.{name.lower()}",
 #                default="https://api.sportsdata.io/v3/soccer/scores/json/",
 #            ),
@@ -399,7 +399,7 @@ class NBA(Sport):
 #        super().__init__(
 #            settings=settings,
 #            name=name,
-#            base_url=settings.providers.sports.sportsdata.get(
+#            base_url=settings.sportsdata.get(
 #                f"base_url.{name.lower()}",
 #                default="https://api.sportsdata.io/v3/soccer/scores/json/",
 #            ),

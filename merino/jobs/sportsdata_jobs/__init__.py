@@ -8,7 +8,7 @@ elements to fetch and process the data appropriately. These three tasks are mean
 called from a `cron` like function.
 
 NOTE: `sport.update_teams(...)` will attempt to read a locally cached file (see
-`settings.providers.sports.sportsdata.cache_dir`). The cache time on these files is
+`settings.sportsdata.cache_dir`). The cache time on these files is
 hardcoded in the calling function for now, but is based on the file creation time.
 
     * Add tests (unit and integration)
@@ -81,28 +81,25 @@ class SportDataUpdater(BaseModel):
             raise SportsDataError("No sports defined")
         self.log = log
         log.debug(f"{LOGGING_TAG}: Starting up...")
-        platform = settings.providers.sports.get("platform", "sports")
-        active_sports = [
-            sport.strip().upper() for sport in settings.providers.sports.sports.split(",")
-        ]
+        platform = settings.get("platform", "sports")
+        active_sports = [sport.strip().upper() for sport in settings.sports.split(",")]
         self.store = SportsDataStore(
-            dsn=settings.providers.sports.es.dsn,
-            api_key=settings.providers.sports.es.api_key,
+            dsn=settings.es.dsn,
+            api_key=settings.es.api_key,
             languages=[
-                lang.strip().lower()
-                for lang in settings.providers.sports.get("languages", "en").split(",")
+                lang.strip().lower() for lang in settings.get("languages", "en").split(",")
             ],
             platform=f"{{lang}}_{platform}",
             index_map={
-                # "meta": settings.providers.sports.get(
+                # "meta": settings.get(
                 #     "meta_index", f"{self.platform}_meta"
                 # ),
-                # "team": settings.providers.sports.get(
+                # "team": settings.get(
                 #     "team_index", f"{self.platform}_team"
                 # ),
                 "event": cast(
                     str,
-                    settings.providers.sports.get("event_index", f"{platform}_event"),
+                    settings.get("event_index", f"{platform}_event"),
                 ),
             },
             settings=settings,
@@ -135,8 +132,8 @@ class SportDataUpdater(BaseModel):
         """Perform sport specific updates."""
         timeout = Timeout(
             3,
-            connect=self.settings.providers.sports.sportsdata.get("connect_timeout", 1),
-            read=settings.providers.sports.sportsdata.get("read_timeout", 1),
+            connect=self.settings.sportsdata.get("connect_timeout", 1),
+            read=settings.sportsdata.get("read_timeout", 1),
         )
         client = AsyncClient(timeout=timeout)
         for sport in self.sports.values():

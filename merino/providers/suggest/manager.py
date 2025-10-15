@@ -318,21 +318,22 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
         case ProviderType.SPORTS:
             trigger_words = (
                 str_to_list(
-                    settings.providers.sports.get(
+                    setting.get(
                         "trigger_words",
                         "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
                     ).lower()
                 ),
             )
-            # TODO: Add cached team names to trigger_words?
+            # TODO: Add cached team names, active sports to trigger_words?
+            # TODO: Refactor to use `setting` as
             return SportsDataProvider(
-                backend=SportsDataBackend(settings=settings),
+                backend=SportsDataBackend(settings=setting),
                 metrics_client=get_metrics_client(),
-                score=settings.providers.sports.get("score", 0.5),
+                score=setting.get("score", 0.5),
                 name=provider_id,
-                query_timeout_sec=settings.providers.sports.query_timeout_sec,
+                query_timeout_sec=setting.query_timeout_sec,
                 trigger_words=trigger_words,
-                enabled_by_default=settings.providers.sports.enabled_by_default,
+                enabled_by_default=setting.enabled_by_default,
             )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")

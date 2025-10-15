@@ -32,27 +32,27 @@ class SportsDataBackend(SportsDataProtocol):
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        platform = settings.providers.sports.get("platform", "sports")
-        event_map = settings.providers.sports.get("event_index", f"{platform}_event")
+        platform = settings.get("platform", "sports")
+        event_map = settings.get("event_index", f"{platform}_event")
         self.data_store = SportsDataStore(
-            dsn=settings.providers.sports.es.dsn,
-            api_key=settings.providers.sports.es.api_key,
-            languages=str_to_list(settings.providers.sports.get("languages", "en").lower()),
+            dsn=settings.es.dsn,
+            api_key=settings.es.api_key,
+            languages=str_to_list(settings.get("languages", "en").lower()),
             platform=f"{{lang}}_{platform}",
             index_map={
-                # "meta": settings.providers.sports.get(
+                # "meta": settings.get(
                 #     "meta_index", f"{self.platform}_meta"
                 # ),
-                # "team": settings.providers.sports.get(
+                # "team": settings.get(
                 #     "team_index", f"{self.platform}_team"
                 # ),
                 "event": cast(str, event_map),
             },
             settings=settings,
         )
-        self.base_score = settings.providers.sports.get("score", 0.5)
-        self.max_suggestions = settings.providers.sports.get("max_suggestions", 10)
-        self.mix_sports = settings.providers.sports.get("mix_sports", False)
+        self.base_score = settings.get("score", 0.5)
+        self.max_suggestions = settings.get("max_suggestions", 10)
+        self.mix_sports = settings.get("mix_sports", False)
 
     async def query(
         self,
