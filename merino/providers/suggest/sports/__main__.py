@@ -16,6 +16,7 @@ from merino.providers.suggest.sports import init_logs, LOGGING_TAG
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
+    str_to_list,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
@@ -42,10 +43,7 @@ async def main_loader(
     event_store = SportsDataStore(
         dsn=settings.providers.sports.es.dsn,
         api_key=settings.providers.sports.es.api_key,
-        languages=[
-            lang.strip().lower()
-            for lang in settings.providers.sports.get("languages", "en").split(",")
-        ],
+        languages=str_to_list(settings.providers.sports.get("languages", "en").lower()),
         platform=f"{{lang}}_{platform}",
         index_map={
             # "meta": settings.providers.sports.get(
@@ -68,9 +66,7 @@ async def main_loader(
 
     log.debug(f"{LOGGING_TAG}: Starting up...")
     my_sports: list[Sport] = []
-    active_sports = [
-        sport.strip().upper() for sport in settings.providers.sports.sports.split(",")
-    ]
+    active_sports = str_to_list(settings.providers.sports.sports.upper())
     for sport_name in active_sports:
         try:
             sport = getattr(
@@ -99,14 +95,25 @@ async def main_loader(
 
 async def main_query(log: Logger, settings: LazySettings):
     """Pretend we're a query function"""
+    import pdb
+
+    pdb.set_trace()
+    trigger_words = str_to_list(
+        settings.providers.sports.get(
+            "trigger_words",
+            "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
+        ).lower()
+    )
+
     provider = SportsDataProvider(
         backend=SportsDataBackend(settings=settings),
         metrics_client=get_metrics_client(),
         base_score=settings.providers.sports.score,
         name="test_sports_provider_id",
+        trigger_words=trigger_words,
         enabled_by_default=True,
     )
-    sreq = SuggestionRequest(query="Dallas", geolocation=Location())
+    sreq = SuggestionRequest(query="Dallas game", geolocation=Location())
     start = datetime.now()
     res = await provider.query(sreq=sreq)
     log.debug(f"{LOGGING_TAG}⏰ query: {datetime.now()-start}")

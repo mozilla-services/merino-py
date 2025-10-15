@@ -34,6 +34,7 @@ class SportsDataProvider(BaseProvider):
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     enabled_by_default: bool
+    trigger_words: list[str]
 
     def __init__(
         self,
@@ -41,6 +42,7 @@ class SportsDataProvider(BaseProvider):
         backend: SportsDataBackend,
         name: str = "SportsData",
         enabled_by_default: bool = False,
+        trigger_words: list[str] = [],
         *args,
         **kwargs,
     ):
@@ -49,6 +51,8 @@ class SportsDataProvider(BaseProvider):
         self._name = name
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self._enabled_by_default = enabled_by_default
+        self.trigger_words = trigger_words
+        # TODO: Add all teams, sports to trigger_words ?
         super().__init__()
 
     def initialize(self):
@@ -58,6 +62,14 @@ class SportsDataProvider(BaseProvider):
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Query elastic search with the provided user terms and return relevant sport event information."""
         if self.enabled_by_default:
+            # scan the query for trigger words.
+            trigger = False
+            for word in [word.lower().strip() for word in sreq.query.split(" ")]:
+                # we're not using "in" because that may match partials in words. (e.g. "matchstick")
+                trigger |= word in self.trigger_words
+            if not trigger:
+                return []
+
             self.metrics_client.increment("sports.suggestions.count")
             with self.metrics_client.timeit("sports.suggestion.query"):
                 results = await self.backend.query(

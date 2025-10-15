@@ -342,7 +342,7 @@ class NBA(Sport):
 #            },
 #        ...]
 #        """
-#        date = SportDate.new()
+#        date = SportDate()
 #        season = str(date)
 #        url = f"{self.base_url}/ScoresBasic/{season}?key={self.api_key}"
 #        await get_data(client, url)

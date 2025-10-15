@@ -31,14 +31,14 @@ class GameStatus(StrEnum):
             return cls(state.lower())
         except ValueError:
             # Handle our custom strings
-            match state:
-                case "In Progress":
+            match state.lower():
+                case "in progress":
                     return GameStatus.InProgress
-                case "Final - Over Time":
+                case "final - over time":
                     return GameStatus.F_OT
-                case "Final - Shoot Out":
+                case "final - shoot out":
                     return GameStatus.F_SO
-                case "Not Necessary":
+                case "not necessary":
                     return GameStatus.NotNecessary
                 case _:
                     return GameStatus.Unknown

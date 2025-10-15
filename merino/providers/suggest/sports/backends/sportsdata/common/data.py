@@ -34,14 +34,17 @@ class SportDate(BaseModel):
 
     instance: datetime
 
-    @classmethod
-    def new(cls, instance=datetime.now()) -> "SportDate":
+    def __init__(self, *args, **kwargs):
         """Instantiate using an optional instance time.
 
         mypy will fail to recognize `__init__()` as typed, see
         https://github.com/python/mypy/issues/5502
         """
-        return cls(instance=instance)
+        instance = kwargs.get("instance", datetime.now(tz=timezone.utc))
+        kwargs["instance"] = instance.replace(
+            hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc
+        )
+        super().__init__(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.instance.strftime("%Y-%b-%d")
@@ -126,10 +129,10 @@ class Team(BaseModel):
                     lambda x: x is not None,
                     [
                         # Some Teams use "ClubColor#"
-                        team_data.get("PrimaryColor"),
-                        team_data.get("SecondaryColor"),
-                        team_data.get("TertiaryColor"),
-                        team_data.get("QuaternaryColor"),
+                        team_data.get("PrimaryColor", team_data.get("ClubColor1")),
+                        team_data.get("SecondaryColor", team_data.get("ClubColor2")),
+                        team_data.get("TertiaryColor", team_data.get("ClubColor3")),
+                        team_data.get("QuaternaryColor", team_data.get("ClubColor4")),
                     ],
                 )
             ),

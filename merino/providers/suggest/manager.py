@@ -41,6 +41,7 @@ from merino.providers.suggest.flightaware.backends.flightaware import FlightAwar
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
+    str_to_list,
 )
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.providers.suggest.google_suggest.provider import (
@@ -315,13 +316,23 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.SPORTS:
+            trigger_words = (
+                str_to_list(
+                    settings.providers.sports.get(
+                        "trigger_words",
+                        "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
+                    ).lower()
+                ),
+            )
+            # TODO: Add cached team names to trigger_words?
             return SportsDataProvider(
                 backend=SportsDataBackend(settings=settings),
                 metrics_client=get_metrics_client(),
-                score=setting.score,
+                score=settings.providers.sports.get("score", 0.5),
                 name=provider_id,
-                query_timeout_sec=setting.query_timeout_sec,
-                enabled_by_default=setting.enabled_by_default,
+                query_timeout_sec=settings.providers.sports.query_timeout_sec,
+                trigger_words=trigger_words,
+                enabled_by_default=settings.providers.sports.enabled_by_default,
             )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")
