@@ -30,8 +30,10 @@ def utc_time_from_now(delta: timedelta) -> int:
 
 def init_logs(level: str | None = None) -> logging.Logger:
     """Initialize logging based on `PYTHON_LOG` environ)"""
-    level = getattr(
-        logging, (level or os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL)).upper()
-    )
+    # be very verbose because `mypy` does not understand
+    # `None or x.get(label, CONST_STR_VALUE)` does not produce a None value.
+    if not level:
+        level = os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL)
+    level = getattr(logging, level.upper())
     logging.basicConfig(level=level)
     return logging.getLogger(__name__)

@@ -304,7 +304,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return FlightAwareProvider(
                 backend=FlightAwareBackend(
                     api_key=settings.flightaware.api_key,
-                    http_client=create_http_client(base_url=settings.flightaware.base_url),
+                    http_client=create_http_client(
+                        base_url=settings.flightaware.base_url
+                    ),
                     ident_url=settings.flightaware.ident_url_path,
                 ),
                 metrics_client=get_metrics_client(),
@@ -316,13 +318,11 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.SPORTS:
-            trigger_words = (
-                str_to_list(
-                    setting.get(
-                        "trigger_words",
-                        "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
-                    ).lower()
-                ),
+            trigger_words = str_to_list(
+                setting.get(
+                    "trigger_words",
+                    "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
+                ).lower()
             )
             # TODO: Add cached team names, active sports to trigger_words?
             # TODO: Refactor to use `setting` as
