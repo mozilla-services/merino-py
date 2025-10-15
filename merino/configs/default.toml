@@ -39,7 +39,7 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo", "flightaware"]
+disabled_providers = ["amo"]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -785,7 +785,7 @@ cache = "none"
 
 # MERINO_PROVIDERS__FLIGHTAWARE__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = true
+enabled_by_default = false
 
 # MERINO_PROVIDERS__FLIGHTAWARE__SCORE
 # The ranking score for this provider as a floating point number.

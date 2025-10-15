@@ -18,8 +18,10 @@ from merino.providers.suggest.flightaware.backends.protocol import (
 from merino.providers.suggest.flightaware.backends.utils import (
     build_flight_summary,
     calculate_time_left,
+    get_flight_number_from_query_if_valid,
     get_live_url,
     is_delayed,
+    is_valid_flight_keyword_pattern,
     is_valid_flight_number_pattern,
     is_within_one_hour,
     minutes_from_now,
@@ -799,3 +801,75 @@ def test_is_delayed(description, flight, expected):
     """Verify is_delayed correctly detects delays above 15 minutes."""
     result = is_delayed(flight)
     assert result == expected, f"Failed: {description}"
+
+
+@pytest.mark.parametrize(
+    "description, query, expected",
+    [
+        ("single word + digits", "Delta 101", True),
+        ("two words + digits", "United Airlines 101", True),
+        ("three words + digits", "Air Canada Express 200", True),
+        ("max five words + digits", "Lufthansa Cargo Regional Flight 12345", True),
+        ("mixed case words + digits", "aIr FrAnCe 789", True),
+        ("extra spaces between words allowed", "British    Airways    555", True),
+        ("lowercase airline + digits", "air canada 250", True),
+        ("uppercase airline + digits", "AIR CANADA 250", True),
+        ("only airline name, no digits", "United Airlines", False),
+        ("no airline name, only digits", "12345", False),
+        ("too many words before digits", "This Has Too Many Words Before 123", False),
+        ("contains symbols in airline name", "Air-Canada 123", False),
+        ("contains special character in digits", "United 12A3", False),
+        ("empty string", "", False),
+        ("spaces only", "   ", False),
+        ("leading digits not allowed", "123 United Airlines", False),
+    ],
+)
+def test_is_valid_flight_keyword_pattern(description, query, expected):
+    """Test is_valid_flight_keyword_pattern with valid and invalid airline + flight number combinations."""
+    result = is_valid_flight_keyword_pattern(query)
+    assert result == expected, f"Failed: {description} (input: '{query}')"
+
+
+@pytest.mark.parametrize(
+    "description, query, mapping, expected",
+    [
+        ("2-letter + digits", "UA123", {}, "UA123"),
+        ("with space between letters and digits", "AA 101", {}, "AA101"),
+        ("lowercase input normalized to uppercase", "ac432", {}, "AC432"),
+        ("3-letter airline + digits", "UAL987", {}, "UAL987"),
+        ("alphanumeric airline code pattern", "3U1001", {}, "3U1001"),
+        (
+            "airline keyword pattern with mapping",
+            "Air Canada 250",
+            {"air canada": "AC"},
+            "AC250",
+        ),
+        (
+            "mixed case keyword airline name",
+            "aIr FrAnCe 789",
+            {"air france": "AF"},
+            "AF789",
+        ),
+        (
+            "keyword query with multiple spaces normalized",
+            "British   Airways   555",
+            {"british airways": "BA"},
+            "BA555",
+        ),
+        ("no matching mapping for keyword query", "Air Something 400", {}, None),
+        ("invalid flight number format", "1234", {}, None),
+        ("keyword without digits", "Air Canada", {"air canada": "AC"}, None),
+        ("invalid keyword pattern", "Air Canada XYZ", {"air canada": "AC"}, None),
+        ("empty string", "", {}, None),
+        ("spaces only", "   ", {}, None),
+        ("garbage input", "@@@@", {}, None),
+    ],
+)
+def test_get_flight_number_from_query_if_valid(description, query, mapping, expected):
+    """Test get_flight_number_from_query_if_valid with direct and keyword-based flight patterns."""
+    with patch(
+        "merino.providers.suggest.flightaware.backends.utils.NAME_TO_AIRLINE_CODE_MAPPING",
+        mapping,
+    ):
+        result = get_flight_number_from_query_if_valid(query)
+        assert result == expected, f"Failed: {description} (input: '{query}')"
