@@ -332,8 +332,18 @@ class Sport(BaseModel):
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            home_team = self.teams[event_description["HomeTeam"]]
-            away_team = self.teams[event_description["AwayTeam"]]
+            try:
+                home_team = self.teams[
+                    event_description.get("HomeTeam") or event_description["HomeTeamKey"]
+                ]
+                away_team = self.teams[
+                    event_description.get("AwayTeam") or event_description["AwayTeamKey"]
+                ]
+            except Exception as ex:
+                import pdb
+
+                pdb.set_trace()
+                print(ex)
             try:
                 if "DateTimeUTC" in event_description:
                     date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(

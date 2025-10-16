@@ -10,7 +10,9 @@ from merino.providers.suggest.google_suggest.backends.protocol import (
 from merino.providers.suggest.flightaware.backends.protocol import FlightSummary
 from merino.providers.suggest.yelp.backends.protocol import YelpBusinessDetails
 
-from merino.providers.suggest.sports.backends.sportsdata.protocol import SportSummary
+from merino.providers.suggest.sports.backends.sportsdata.protocol import (
+    SportEventDetails,
+)
 
 
 class AmoDetails(BaseModel):
@@ -62,12 +64,6 @@ class GoogleSuggestDetails(BaseModel):
     suggestions: GoogleSuggestResponse
 
 
-class SportDetails(BaseModel):
-    """SportsData Sport event fields."""
-
-    values: list[SportSummary]
-
-
 class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     """Contain references to custom fields for each provider.
     This object uses the provider name as the key, and references custom schema models.
@@ -80,5 +76,5 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     polygon: PolygonDetails | None = None
     yelp: YelpDetails | None = None
     google_suggest: GoogleSuggestDetails | None = None
-    sports: SportDetails | None = None
+    sports: SportEventDetails | None = None
     flightaware: FlightAwareDetails | None = None

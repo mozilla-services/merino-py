@@ -60,7 +60,7 @@ class SportsDataBackend(SportsDataProtocol):
         language_code: str = "en",
         score: float = 0.5,
         url: HttpUrl | None = None,
-    ) -> list[dict]:
+    ) -> list[SportSummary]:
         """Query the data store for terms and return a list of potential sporting events relevant to those terms.
 
         This relies on Elastic's internal tokenizer and full text search to scan the list of "terms" for matching results.
@@ -76,7 +76,7 @@ class SportsDataBackend(SportsDataProtocol):
             events = await self.data_store.search_events(
                 q=query_string, language_code=language_code, mix_sports=self.mix_sports
             )
-            suggestions: list[dict] = []
+            suggestions: list[SportSummary] = []
             for sport, events in events.items():
                 if len(suggestions) > self.max_suggestions:
                     break
@@ -84,12 +84,9 @@ class SportsDataBackend(SportsDataProtocol):
                 # apply that as an adjustment value to the returned score value.
                 # Waiting for guidance about what ranges to have scores.
                 suggestions.append(
-                    dict(
+                    SportSummary.from_events(
                         sport=sport,
-                        summary=SportSummary.from_events(
-                            sport=sport,
-                            events=events,
-                        ),
+                        events=events,
                     )
                 )
             return suggestions

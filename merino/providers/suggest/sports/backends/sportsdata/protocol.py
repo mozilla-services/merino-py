@@ -21,7 +21,7 @@ def build_query(event: dict[str, Any]) -> str:
     return f"{event.get("sport")} {event.get("away_team",{}).get("name","")} at {event.get("home_team", {}).get("name", "")} {date}"
 
 
-class SportEventDetails(BaseModel):
+class SportEventDetail(BaseModel):
     """Data about the specific Sport event."""
 
     sport: str  # Sport Name ("NFL", "NHL", "NBA", etc.)
@@ -60,11 +60,26 @@ class SportEventDetails(BaseModel):
         )
 
 
+class SportEventDetails(BaseModel):
+    """Return a set of Sports Results in a decollated manner.
+
+    This presumes that results can be from mixed sports, and that there
+    is only one level of structure to the result. If you want to do
+    multiple sport results that are collated, you probably want to
+    look at SportSummary and returning a list of those.
+    """
+
+    values: list[SportEventDetail]
+
+    def __init__(self, summary: "SportSummary"):
+        super().__init__(values=summary.values)
+
+
 class SportSummary(BaseModel):
     """SportsData Suggest Specific fields"""
 
     sport: str
-    values: list[SportEventDetails]
+    values: list[SportEventDetail]
 
     @classmethod
     def from_events(cls, sport: str, events: dict[str, Any]):
@@ -74,12 +89,12 @@ class SportSummary(BaseModel):
         """
         previous = current = next = None
         if events.get("previous"):
-            previous = SportEventDetails.from_event_dict(events["previous"])
+            previous = SportEventDetail.from_event_dict(events["previous"])
         if events.get("current"):
             previous = None
-            current = SportEventDetails.from_event_dict(events["current"])
+            current = SportEventDetail.from_event_dict(events["current"])
         if events.get("next"):
-            next = SportEventDetails.from_event_dict(events["next"])
+            next = SportEventDetail.from_event_dict(events["next"])
         # Note, each event result contains a "score" which is the returned ES score.
         # This may be used as an adjustment to the returned score for the suggestion.
         # Higher "scores" have a greater match against the provided search term.

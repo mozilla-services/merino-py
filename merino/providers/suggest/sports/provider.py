@@ -13,8 +13,13 @@ from merino.providers.suggest.base import (
     CustomDetails,
     SuggestionRequest,
 )
-from merino.providers.suggest.custom_details import SportDetails
 from merino.providers.suggest.base import Category
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+)
+from merino.providers.suggest.sports.backends.sportsdata.protocol import (
+    SportEventDetails,
+)
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
     SportSummary,
@@ -73,15 +78,21 @@ class SportsDataProvider(BaseProvider):
 
             self.metrics_client.increment("sports.suggestions.count")
             with self.metrics_client.timeit("sports.suggestion.query"):
+                # Both query and build suggestion have the ability to differentiate
+                # and collate by sport. Product and UI do not want that, so
+                # we will always return only one sport.
                 results = await self.backend.query(
                     sreq.query, score=self.backend.base_score, url=self.url
                 )
                 return [
                     self.build_suggestion(
-                        sport_name=result["sport"],
+                        # If we are collating, this should be the sport group.
+                        sport_name="all",
                         query=sreq.query,
-                        score_adj=result.get("score", 0),
-                        events=[result["summary"]],
+                        # This should be the max es_score value returned to
+                        # act as a general score adjustment for this suggestion
+                        score_adj=0,
+                        events=results,
                     )
                     for result in results
                 ]
@@ -105,6 +116,10 @@ class SportsDataProvider(BaseProvider):
         """Build a base suggestion with the sport data results"""
         if sport_name == "all":
             sport_name = "All Sport"
+            details = SportEventDetails(events[0])
+        else:
+            # TODO, construct a collated detail set.
+            raise SportsDataError("Multiple Sports Returned")
         self.metrics_client.increment("sports.suggestions.result", tags={"sport": sport_name})
         return BaseSuggestion(
             title=f"{sport_name}",  # IGNORED
@@ -112,7 +127,7 @@ class SportsDataProvider(BaseProvider):
             description=f"{sport_name} report for {query}",
             provider="sportsdata_io",
             is_sponsored=False,
-            custom_details=CustomDetails(sports=SportDetails(values=events)),
+            custom_details=CustomDetails(sports=details),
             categories=[Category.Sports],
             score=self.backend.base_score + score_adj,
         )
