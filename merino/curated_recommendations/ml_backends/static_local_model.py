@@ -10,9 +10,9 @@ from merino.curated_recommendations.ml_backends.protocol import (
     DayTimeWeightingConfig,
 )
 
-LOCAL_EXPERIMENT_NAME = "local_experiment_v1"
-LOCAL_AND_SERVER_V1 = "local_and_server_v1"
-LOCAL_ONLY_V1 = "local_only_v1"
+LOCAL_EXPERIMENT_NAME = "optin-new-tab-automated-personalization-local-ranking"
+LOCAL_AND_SERVER_V1 = "local-and-server"
+LOCAL_ONLY_V1 = "local-only"
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1
 LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1
 
@@ -199,7 +199,7 @@ class LimitedTopicV1Model(LocalModelBackend): ## TODO rename ## TODO normalizati
         print('in get!', experiment_name, experiment_branch)
         if experiment_name is not None and experiment_name==LOCAL_EXPERIMENT_NAME: 
             if experiment_branch==LOCAL_AND_SERVER_BRANCH_NAME:
-                ## private features are sent to merino, "private" from differentially private
+                ## private features are sent to merino, "private" from differentially private                
                 private_features = ["sports","government","arts","health","business","entertainment"] ## TODO entertainment?
                 model_id = LOCAL_AND_SERVER_V1
             else: ## includes (experiment_branch == LOCAL_ONLY_BRANCH_NAME)
@@ -232,7 +232,9 @@ class LimitedTopicV1Model(LocalModelBackend): ## TODO rename ## TODO normalizati
             ),
             interest_vector=category_fields,
         )
-
+        print('INFERRRED MODEL STUFF',
+              model_id, 
+              private_features)
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
