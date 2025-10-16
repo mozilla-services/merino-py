@@ -6,6 +6,8 @@ This contains the sport specific calls and data formats which are normalized.
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
 
 from dynaconf.base import LazySettings
 from httpx import AsyncClient
@@ -205,6 +207,7 @@ class NFL(Sport):
     async def update_events(self, client: AsyncClient):
         """Update the events for this sport in the elastic search database"""
         logging.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
+        local_timezone = ZoneInfo("US/Eastern")
         # get this week and next week
         for week in [int(self.week), int(self.week) + 1]:
             url = f"{self.base_url}/ScoresBasic/{self.season}/{week}?key={self.api_key}"
@@ -214,7 +217,8 @@ class NFL(Sport):
                 ttl=timedelta(minutes=5),
                 cache_dir=self.cache_dir,
             )
-            self.load_scores_from_source(response)
+
+            self.load_scores_from_source(response, event_timezone=local_timezone)
         return self
 
 
@@ -287,13 +291,14 @@ class NHL(Sport):
         """Update schedules and game scores for this sport"""
         logging.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
+        local_timezone = ZoneInfo("US/Eastern")
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_schedules_from_source(response)
+        self.load_scores_from_source(response, event_timezone=local_timezone)
         return self
 
 
@@ -366,6 +371,7 @@ class NBA(Sport):
         """Update schedules and game scores for this sport"""
         """Update the schedules for games"""
         logging.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
+        local_timezone = ZoneInfo("US/Eastern")
         url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
         response = await get_data(
             client=client,
@@ -373,7 +379,7 @@ class NBA(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_schedules_from_source(response)
+        self.load_scores_from_source(response, event_timezone=local_timezone)
         return self
 
 
@@ -464,13 +470,14 @@ class UCL(Sport):
         """Update the schedules for games"""
         logging.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}?key={self.api_key}"
+        local_timezone = ZoneInfo("UTC")
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_schedules_from_source(response)
+        self.load_scores_from_source(response, event_timezone=local_timezone)
         return self
 
 

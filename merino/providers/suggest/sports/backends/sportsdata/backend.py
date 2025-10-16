@@ -52,7 +52,7 @@ class SportsDataBackend(SportsDataProtocol):
         )
         self.base_score = settings.get("score", 0.5)
         self.max_suggestions = settings.get("max_suggestions", 10)
-        self.mix_sports = settings.get("mix_sports", False)
+        self.mix_sports = settings.get("mix_sports", True)
 
     async def query(
         self,

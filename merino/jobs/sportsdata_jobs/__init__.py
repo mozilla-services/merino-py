@@ -39,9 +39,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
     NBA,
     NHL,
+    # UCL,
     # MLB,
     # EPL,
-    UCL,
 )
 
 
@@ -113,16 +113,16 @@ class SportDataUpdater(BaseModel):
             match sport_name:
                 case "NFL":
                     sport = NFL(settings)
-                # case "MLB":
-                #    sport = MLB(settings)
                 case "NBA":
                     sport = NBA(settings)
                 case "NHL":
                     sport = NHL(settings)
+                # case "UCL":
+                #    sport = UCL(settings)
+                # case "MLB":
+                #    sport = MLB(settings)
                 # case "EPL":
                 #    sport = EPL(settings)
-                case "UCL":
-                    sport = UCL(settings)
                 case _:
                     logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue

@@ -2,7 +2,7 @@
 
 import asyncio
 
-import json
+import os
 import sys
 from datetime import datetime
 from logging import Logger
@@ -118,11 +118,12 @@ async def main_query(log: Logger, settings: LazySettings):
         trigger_words=trigger_words,
         enabled_by_default=True,
     )
-    sreq = SuggestionRequest(query="Dallas game", geolocation=Location())
+    sreq = SuggestionRequest(query="Jets game", geolocation=Location())
     start = datetime.now()
     res = await provider.query(sreq=sreq)
     log.debug(f"{LOGGING_TAG}⏰ query: {datetime.now()-start}")
     print("## Output >>> ")
+
     print("===\n".join([rr.model_dump_json(indent=2) for rr in res]))
 
     await provider.shutdown()
@@ -143,4 +144,10 @@ if __name__ == "__main__":
     # Dump out the accumulated team names
     # Ideal World: This should go into some common data storage engine and be pulled regularly by
     # the suggest server.
-    print(json.dumps([name.lower() for name in team_names], indent=2))
+    # `json.dumps()` converts these to non-UTF8 values.
+    if os.environ.get("DUMP_GROUPS"):
+        print("[")
+        for name in team_names[:-1]:
+            print(f'  "{name.lower().encode("utf8")!r}",')
+        print(f'  "{team_names[-1].lower().encode("utf8")!r}"')
+        print("]")

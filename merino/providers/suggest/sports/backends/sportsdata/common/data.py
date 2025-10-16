@@ -8,6 +8,7 @@ import logging
 from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from dynaconf.base import LazySettings
 from httpx import AsyncClient
@@ -158,6 +159,8 @@ class Event(BaseModel):
     terms: str
     # Event UTC start time
     date: datetime
+    # The original date string (used for debugging)
+    original_date: str
     # minimal team info for home
     home_team: dict[str, Any]
     # minimal team info for home
@@ -278,7 +281,9 @@ class Sport(BaseModel):
             self.teams[team.key] = team
         return self.teams
 
-    def load_scores_from_source(self, data: list[dict[str, Any]]) -> dict[int, "Event"]:
+    def load_scores_from_source(
+        self, data: list[dict[str, Any]], event_timezone: ZoneInfo = ZoneInfo("UTC")
+    ) -> dict[int, "Event"]:
         """Scan the list of Event scores for any event within the 'current' window.
 
         This presumes that we are receiving data that complies with the SportsData.io
@@ -327,31 +332,51 @@ class Sport(BaseModel):
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                tzinfo=timezone.utc
-            )
+            home_team = self.teams[event_description["HomeTeam"]]
+            away_team = self.teams[event_description["AwayTeam"]]
+            try:
+                if "DateTimeUTC" in event_description:
+                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
+                        tzinfo=timezone.utc
+                    )
+                else:
+                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
+                        tzinfo=event_timezone
+                    )
+            except TypeError as ex:
+                # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
+                # but if there's an error, it's probably wise to ignore this.
+                # note: declaring a `self.metrics_client` causes a circular dependency.
+                get_metrics_client().increment("sports.error.no_date", tags={"sport": self.name})
+                logging.debug(
+                    f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
+                )
+                continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
                 continue
-            home_team = self.teams[event_description["HomeTeam"]]
-            away_team = self.teams[event_description["AwayTeam"]]
             terms = f"{home_team.terms} {away_team.terms}"
             event = Event(
                 sport=self.name,
                 id=event_description["GlobalGameID"],
                 terms=terms,
-                date=datetime.fromisoformat(event_description["DateTimeUTC"]),
+                date=date,
+                original_date=event_description["DateTimeUTC"],
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
-                home_score=event_description["HomeScore"],
-                away_score=event_description["AwayScore"],
+                home_score=event_description.get("HomeTeamScore")
+                or event_description.get("HomeScore"),
+                away_score=event_description.get("AwayTeamScore")
+                or event_description.get("AwayScore"),
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
             )
             self.events[event.id] = event
         return self.events
 
-    def load_schedules_from_source(self, data: list[dict[str, Any]]) -> dict[int, "Event"]:
+    def load_schedules_from_source(
+        self, data: list[dict[str, Any]], event_timezone: ZoneInfo = ZoneInfo("UTC")
+    ) -> dict[int, "Event"]:
         """Scan the list of Scheduled events, storing any in the current interest window.
         (Note: this is very similar to `load_scores_from_source` with some minor
         differences in the source data.)
@@ -393,7 +418,6 @@ class Sport(BaseModel):
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            status = GameStatus.parse(event_description["Status"])
             # US sports use "(Away|Home)Team", Soccer uses "(Away|Home)TeamKey"
             home_team = self.teams[
                 event_description.get("HomeTeamKey") or event_description["HomeTeam"]
@@ -402,15 +426,15 @@ class Sport(BaseModel):
                 event_description.get("AwayTeamKey") or event_description["AwayTeam"]
             ]
             id = event_description.get("GlobalGameID") or event_description["GameId"]
-            # Ignore cancelled games.
-            if status == GameStatus.Canceled:
-                # Cancelled games have no UTC time stamp, so we can't know how recent they were.
-                continue
             try:
-                # US Sports use DateTimeUTC as the UTC timestamp. Soccer uses DateTime and it's already UTC.
-                date = datetime.fromisoformat(
-                    event_description.get("DateTimeUTC") or event_description["DateTime"]
-                ).replace(tzinfo=timezone.utc)
+                if "DateTimeUTC" in event_description:
+                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
+                        tzinfo=timezone.utc
+                    )
+                else:
+                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
+                        tzinfo=event_timezone
+                    )
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
@@ -420,6 +444,11 @@ class Sport(BaseModel):
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
                 continue
+            status = GameStatus.parse(event_description["Status"])
+            # Ignore cancelled games.
+            if status == GameStatus.Canceled:
+                # Cancelled games have no UTC time stamp, so we can't know how recent they were.
+                continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
                 continue
@@ -428,7 +457,8 @@ class Sport(BaseModel):
                 sport=self.name,
                 id=id,
                 terms=terms,
-                date=datetime.fromisoformat(event_description["DateTimeUTC"]),
+                date=datetime.strptime(event_description["DateTimeUTC"], "%Y-%m-%dT%H:%M:%S"),
+                original_date=event_description["DateTimeUTC"],
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
                 home_score=event_description["HomeTeamScore"],  # Differs
