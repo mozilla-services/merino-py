@@ -1,7 +1,6 @@
 """Unit Test for Sports Data models."""
 
-import json
-from datetime import timedelta, datetime
+from datetime import datetime
 
 import freezegun
 import pytest
@@ -98,6 +97,7 @@ def events_response():
 def home_team_fixture():
     """Home team fixture."""
     return Team(
+        fullname="The Home Team",
         terms="Home Team",
         name="Home Team",
         key="HOM",
@@ -105,7 +105,7 @@ def home_team_fixture():
         aliases=["Home Team", "Home", "AA Home Team"],
         colors=[],
         updated=datetime(2025, 9, 21, 10, 30, 00),
-        expiry=1760502209
+        expiry=1760502209,
     )
 
 
@@ -113,6 +113,7 @@ def home_team_fixture():
 def away_team_fixture():
     """Away team fixture."""
     return Team(
+        fullname="The Away Team",
         terms="Away Team",
         name="Away Team",
         key="AWA",
@@ -120,13 +121,15 @@ def away_team_fixture():
         aliases=["Away Team", "Away Team", "BB Away Team"],
         colors=[],
         updated=datetime(2025, 9, 22, 10, 30, 00),
-        expiry=1760502209
+        expiry=1760502209,
     )
+
 
 @pytest.fixture(name="teams")
 def teams_fixture():
     """Teams fixture."""
-    return [ {
+    return [
+        {
             "Key": "HOM",
             "Name": "Home",
             "City": "Toronto",
@@ -144,7 +147,9 @@ def teams_fixture():
             "FullName": "The Aways",
             "PrimaryColor": "00205B",
             "SecondaryColor": "41B6E6",
-        },]
+        },
+    ]
+
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
@@ -155,7 +160,7 @@ def test_load_schedules_from_source_filters_and_populates(
     away_team: Team,
 ):
     """Ensure Load scores from source filters and returns relevant events."""
-    sport = sport_cls(settings=settings)
+    sport = sport_cls(settings=settings.providers.sports)
     sport.teams = {
         "HOM": home_team,
         "AWA": away_team,
@@ -174,8 +179,9 @@ def test_load_schedules_from_source_filters_and_populates(
     assert ev.home_score == 3
     assert ev.away_score == 2
 
-    assert ev.suggest_title() == "Away Team at Home Team"
+    assert ev.suggest_title() == "The Away Team at The Home Team"
     assert ev.suggest_description() == "Final score: 2 - 3"
+
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
@@ -187,7 +193,7 @@ def test_load_teams_from_source(
     away_team: Team,
 ):
     """Ensure teams are loaded correctly."""
-    sport = sport_cls(settings=settings)
+    sport = sport_cls(settings=settings.providers.sports)
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {"AWA", "HOM"}
