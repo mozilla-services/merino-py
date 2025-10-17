@@ -226,6 +226,7 @@ class SportsDataStore(ElasticDataStore):
         languages: list[str],
         platform: str,
         index_map: dict[str, str],
+        **kwargs,
     ) -> None:
         """Initialize a connection to ElasticSearch"""
         super().__init__(dsn=dsn, api_key=api_key)

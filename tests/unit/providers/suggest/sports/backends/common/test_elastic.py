@@ -16,8 +16,12 @@ from merino.exceptions import BackendError
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
 
-from merino.providers.suggest.sports.backends.sportsdata.common.elastic import SportsDataStore
-from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    SportsDataStore,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import NFL
 
 
@@ -47,7 +51,6 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events"},
-        settings=settings,
     )
     s.client = es_client
     return s
@@ -110,7 +113,10 @@ async def test_store_event_fail_and_metrics_captured(
 
     await sport_data_store.store_events(sport=nfl, language_code="en", metrics_client=statsd_mock)
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
-    assert metrics_called == ["sports.time.load.events", "sports.time.load.refresh_indexes"]
+    assert metrics_called == [
+        "sports.time.load.events",
+        "sports.time.load.refresh_indexes",
+    ]
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")

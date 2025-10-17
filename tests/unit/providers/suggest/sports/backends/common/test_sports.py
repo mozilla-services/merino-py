@@ -13,8 +13,17 @@ from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport, Team
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+    SportsDataWarning,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
-from merino.providers.suggest.sports.backends.sportsdata.common.sports import NFL, NHL, NBA, UCL
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
+    NFL,
+    NHL,
+    NBA,
+    UCL,
+)
 
 
 @pytest.fixture
@@ -312,7 +321,10 @@ async def test_ucl_update_teams(
     ucl = UCL(settings=settings.providers.sports)
     get_data = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
-        side_effect=[nhl_nba_teams_payload, nhl_nba_teams_payload],  # called twice per code
+        side_effect=[
+            nhl_nba_teams_payload,
+            nhl_nba_teams_payload,
+        ],  # called twice per code
     )
     await ucl.update_teams(client=mock_client)
     assert ucl.season == "2025"
@@ -428,3 +440,13 @@ async def test_ucl_update_events(
     await ucl.update_events(client=mock_client)
     assert 30023869 in ucl.events and 0 not in ucl.events
     assert "/SchedulesBasic/UCL/2025?key=" in get_data.call_args_list[0].kwargs["url"]
+
+
+@pytest.mark.asyncio
+async def test_sportsdata_errors() -> None:
+    """Test that the warning and error wrappers work."""
+    warning = SportsDataWarning("Foo")
+    assert str(warning) == "SportsDataWarning: Foo"
+
+    error = SportsDataError("Foo")
+    assert str(error) == "SportsDataError: Foo"

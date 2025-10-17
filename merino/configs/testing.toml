@@ -57,14 +57,17 @@ circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
 
 [testing.providers.sports]
+type = "sports"
 enabled_by_default = false
 max_suggestions = 5
 score = 0.5
 query_timeout_sec = 100
+api_key = "test"
 
 [testing.providers.sports.es]
 dsn = "http://localhost:9200"
 request_timeout_ms = 100
+api_key = "test"
 
 [testing.polygon]
 api_key = "test"
