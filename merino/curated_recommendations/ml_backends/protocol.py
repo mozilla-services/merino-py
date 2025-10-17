@@ -51,6 +51,9 @@ class ModelData(BaseModel):
     # Output key, and inputs for how fields affect it
     interest_vector: dict[str, InterestVectorConfig]
     noise_scale: float
+    private_features: list | None ## TODO confirm manually that None here keeps original experiment happy by not blocking features
+
+    
 
 
 class InferredLocalModel(BaseModel):
@@ -66,7 +69,6 @@ class InferredLocalModel(BaseModel):
 
     model_data: ModelData
 
-    private_features: list | None ## TODO confirm manually that None here keeps original experiment happy by not blocking features
 
     def get_unary_encoded_index(self, encoded_string: str, support_two: bool = False) -> list[int]:
         """Decode a unary encoded string with differential privacy added.
@@ -128,7 +130,14 @@ class InferredLocalModel(BaseModel):
             return feature_result
 
         result: dict[str, float | str] = {LOCAL_MODEL_MODEL_ID_KEY: cast(str, interest_key)}
-        for idx, (key, ivconfig) in enumerate(self.model_data.interest_vector.items()):
+        if self.model_data.private_features is None:            
+            iv_items = self.model_data.interest_vector.items()
+        else:
+            iv_items = [item for item in self.model_data.interest_vector.items()
+                        if item[0] in self.model_data.private_features]
+        print('iv_items', iv_items)
+        for idx, (key, ivconfig) in enumerate(iv_items):
+            print('idx key ivconfig', idx, '...', key,'...',ivconfig)
             decoded_values: list[float] = [
                 interpret_index(a)
                 for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)

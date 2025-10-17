@@ -231,6 +231,7 @@ class LimitedTopicV1Model(LocalModelBackend): ## TODO rename ## TODO normalizati
                 relative_weight=[1, 1, 1],
             ),
             interest_vector=category_fields,
+            private_features=private_features
         )
         print('INFERRRED MODEL STUFF',
               model_id, 
@@ -240,7 +241,7 @@ class LimitedTopicV1Model(LocalModelBackend): ## TODO rename ## TODO normalizati
             surface_id=surface_id,
             model_data=model_data,
             model_version=0,
-            private_features=private_features
+            
         )
 
 
