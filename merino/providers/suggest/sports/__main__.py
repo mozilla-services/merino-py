@@ -56,7 +56,6 @@ async def main_loader(
             # ),
             "event": settings.get("event_index", f"{platform}_event"),
         },
-        settings=settings,
     )
 
     log.debug(f"{LOGGING_TAG}: Building storage...")

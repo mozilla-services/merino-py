@@ -325,7 +325,10 @@ forecast_ttl_sec = 3600 # 1 hr
 # Comma delimited list of active sports to use
 # e.g. "NFL,NBA,NHL"
 sports="NFL,NBA,NHL"
-type="sports"
+# Index names for Elastic Search.
+event_index="sports_{lang}_event"
+team_index="sports_{lang}_team"
+max_suggestions = 5
 # Disable this provider by default
 enabled_by_default = false
 

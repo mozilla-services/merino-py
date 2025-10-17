@@ -215,7 +215,6 @@ class SportsDataStore(ElasticDataStore):
     """
 
     platform: str
-    client: AsyncElasticsearch
     index_map: dict[str, str]
     languages: list[str]
 
@@ -227,7 +226,6 @@ class SportsDataStore(ElasticDataStore):
         languages: list[str],
         platform: str,
         index_map: dict[str, str],
-        settings: LazySettings,
     ) -> None:
         """Initialize a connection to ElasticSearch"""
         super().__init__(dsn=dsn, api_key=api_key)

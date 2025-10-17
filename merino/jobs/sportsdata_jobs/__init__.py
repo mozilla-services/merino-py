@@ -3,7 +3,7 @@
 See https://sportsdata.io/developers/integration-guide for details.
 
 There are several tasks that should be performed on a regular basis, these are
-broken out into `nightly`, `hourly` and `5minute`, with a number of "plug-in"
+broken out into `nightly`, and `update`, with a number of "plug-in"
 elements to fetch and process the data appropriately. These three tasks are meant to be
 called from a `cron` like function.
 
@@ -12,18 +12,20 @@ NOTE: `sport.update_teams(...)` will attempt to read a locally cached file (see
 hardcoded in the calling function for now, but is based on the file creation time.
 
     * Add tests (unit and integration)
-    * Address TODOs
     * Document
 
 
 """
 
 import asyncio
+import logging
 import typer
 from httpx import AsyncClient, Timeout
 from dynaconf.base import LazySettings
 from pydantic import BaseModel
 from typing import cast
+
+from aiodogstatsd import Client
 
 from merino.configs import settings
 from merino.utils.metrics import get_metrics_client
@@ -65,25 +67,22 @@ class Options:
 class SportDataUpdater(BaseModel):
     """Fetch and update SportsData info"""
 
-    # HTTP Client for fetching Data.
-    client: AsyncClient
-    # Data Storage backend
-    store: SportsDataStore
     # Collection of known sports
     sports: dict[str, Sport]
+    store: SportsDataStore
+    connect_timeout: int
+    read_timeout: int
     # Copy of the general configuration
-    settings: LazySettings
+    # settings: LazySettings
 
     def __init__(self, settings: LazySettings, *args, **kwargs) -> None:
-        log = init_logs()
-        super().__init__(*args, **kwargs)
         if not settings.sports:
             raise SportsDataError("No sports defined")
-        self.log = log
-        log.debug(f"{LOGGING_TAG}: Starting up...")
-        platform = settings.get("platform", "sports")
         active_sports = [sport.strip().upper() for sport in settings.sports.split(",")]
-        self.store = SportsDataStore(
+        sport: Sport | None = None
+        sports: dict[str, Sport] = {}
+        platform = settings.get("platform", "sports")
+        store = SportsDataStore(
             dsn=settings.es.dsn,
             api_key=settings.es.api_key,
             languages=[
@@ -102,9 +101,7 @@ class SportDataUpdater(BaseModel):
                     settings.get("event_index", f"{platform}_event"),
                 ),
             },
-            settings=settings,
         )
-        sport: Sport | None = None
         # We could be clever here, but we'd have to fight the style and type checkers.
         # Basically, you import the merino...sports module, then
         # `getattr[sys.modules["merino...sports"],sport_name](settings,api_key)`
@@ -126,25 +123,40 @@ class SportDataUpdater(BaseModel):
                 case _:
                     logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue
-            self.sports[sport_name] = sport
+            sports[sport_name] = sport
+        super().__init__(
+            metrics=get_metrics_client(),
+            sports=sports,
+            store=store,
+            connect_timeout=settings.sportsdata.get("connect_timeout", 1),
+            read_timeout=settings.sportsdata.get("read_timeout", 1),
+            *args,
+            **kwargs,
+        )
+        logging.debug(f"{LOGGING_TAG}: Starting up...")
 
     async def update(self, include_teams: bool = False) -> bool:
         """Perform sport specific updates."""
+        metrics = get_metrics_client()
         timeout = Timeout(
             3,
-            connect=self.settings.sportsdata.get("connect_timeout", 1),
-            read=settings.sportsdata.get("read_timeout", 1),
+            connect=self.connect_timeout,
+            read=self.read_timeout,
         )
         client = AsyncClient(timeout=timeout)
+
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
             # which matches the recommended query period for SportsData.
             if include_teams:
-                await sport.update_teams(client=client)
+                with metrics.timeit("sports.time.load.team", tags={"sport": sport.name}):
+                    await sport.update_teams(client=client)
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)
-            await sport.update_events(client=client)
+            with metrics.timeit("sports.time.update.events", tags={"sport": sport.name}):
+                await sport.update_events(client=client)
             # Put the data in the shared storage for the live query.
-            await self.store.store_events(sport, language_code="en")
+            with metrics.timeit("sports.time.load.events", tags={"sport": sport.name}):
+                await self.store.store_events(sport, language_code="en")
         await self.store.shutdown()
         return True
 
@@ -152,11 +164,11 @@ class SportDataUpdater(BaseModel):
         """Perform the nightly maintenance tasks"""
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
+
         await self.update(include_teams=True)
         await self.store.prune()
 
 
-logger = init_logs()
 sports_settings = getattr(settings.providers, "sportsdata", None)
 if not sports_settings:
     raise SportsDataError(
@@ -179,5 +191,11 @@ def update():
     asyncio.run(provider.update(include_teams=False))
 
 
+cli = typer.Typer(
+    name="fetch_sports",
+    help="Commands to fetch and store sport information",
+)
+
 if __name__ == "__main__":
+    logger = init_logs()
     app()

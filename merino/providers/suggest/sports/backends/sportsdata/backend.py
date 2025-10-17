@@ -48,7 +48,6 @@ class SportsDataBackend(SportsDataProtocol):
                 # ),
                 "event": cast(str, event_map),
             },
-            settings=settings,
         )
         self.base_score = settings.get("score", 0.5)
         self.max_suggestions = settings.get("max_suggestions", 10)
