@@ -12,6 +12,9 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CTR_SECTION_MODEL_ID,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
+    LOCAL_EXPERIMENT_NAME,
+    LOCAL_AND_SERVER_V1,
+    LOCAL_ONLY_V1,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -131,6 +134,28 @@ def test_decode_skipped_when_model_id_mismatch(model_limited):
     assert not model.model_matches_interests(wrong_id)
 
 
+def test_model_defaults_v1b(model_limited):
+    """Caller should not decode when the model id doesn't match."""
+    model = model_limited.get("surface")
+    assert model.model_matches_interests(CTR_LIMITED_TOPIC_MODEL_ID_V1_B)
+
+
+def test_model_experiment_name_and_branch_name(model_limited):
+    """Caller should not decode when the model id doesn't match."""
+    model = model_limited.get(
+        "surface", experiment_name=LOCAL_EXPERIMENT_NAME, experiment_branch=LOCAL_AND_SERVER_V1
+    )
+    assert model.model_matches_interests(LOCAL_AND_SERVER_V1)
+    assert (
+        len(model.model_data.private_features) > 0 and len(model.model_data.private_features) <= 6
+    )
+    model = model_limited.get(
+        "surface", experiment_name=LOCAL_EXPERIMENT_NAME, experiment_branch=LOCAL_ONLY_V1
+    )
+    assert model.model_matches_interests(LOCAL_ONLY_V1)
+    assert len(model.model_data.private_features) == 0
+
+
 def test_model_matches_interests_none_and_non_str(model_limited):
     """Ensure model_matches_interests rejects None and non-string ids."""
     model = model_limited.get(TEST_SURFACE)
@@ -144,8 +169,35 @@ def test_unary_when_no_ones(model_limited):
     assert model.get_unary_encoded_index("0000", support_two=True) == []
 
 
+def test_decode_dp_interests_passes_no_private(model_limited):
+    """Empty dp_values should raise due to direct indexing in decode.
+    this is not true when private_features=[]
+    """
+    model = model_limited.get(TEST_SURFACE)
+    model.model_data.private_features = []
+    result = model.decode_dp_interests("1", model.model_id)
+    assert len(result.keys()) == 1  ## 1 key is model_id
+    assert "model_id" in result
+
+
+def test_decode_dp_interests_passes_one_private(model_limited):
+    """If we set one private interest, we get one back"""
+    model = model_limited.get(TEST_SURFACE)
+    model.model_data.private_features = ["arts"]
+    result = model.decode_dp_interests("1", model.model_id)
+    ## if model changes to exclude arts, this should be changed in PR
+    assert "arts" in model.model_data.interest_vector
+    ## 1 key is model_id , second is arts
+    assert len(result.keys()) == 2
+    ## we get out arts still
+    assert "arts" in result
+    assert "model_id" in result
+
+
 def test_decode_dp_interests_empty_list_raises(model_limited):
-    """Empty dp_values should raise due to direct indexing in decode."""
+    """Empty dp_values should raise due to direct indexing in decode.
+    this is not true when private_features=[]
+    """
     model = model_limited.get(TEST_SURFACE)
     with pytest.raises(IndexError):
         model.decode_dp_interests([], model.model_id)

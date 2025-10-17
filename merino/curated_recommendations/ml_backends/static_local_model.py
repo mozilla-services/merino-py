@@ -21,7 +21,12 @@ CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 
 CTR_LIMITED_TOPIC_MODEL_ID_V1_A = "ctr_limited_topic_v1"
 CTR_LIMITED_TOPIC_MODEL_ID_V1_B = "ctr_limited_topic_v1_b"
-SUPPORTED_LIVE_MODELS = {CTR_LIMITED_TOPIC_MODEL_ID_V1_A, CTR_LIMITED_TOPIC_MODEL_ID_V1_B, LOCAL_AND_SERVER_V1,LOCAL_ONLY_V1}
+SUPPORTED_LIVE_MODELS = {
+    CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
+    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+    LOCAL_AND_SERVER_V1,
+    LOCAL_ONLY_V1,
+}
 
 DEFAULT_PRODUCTION_MODEL_ID = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
 
@@ -142,7 +147,9 @@ THRESHOLDS_V1_B = [0.005, 0.010, 0.015]
 
 # Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
-class LimitedTopicV1Model(LocalModelBackend): ## TODO rename ## TODO normalization ## everything in US is OHTTP
+class LimitedTopicV1Model(
+    LocalModelBackend
+):  ## TODO rename ## TODO normalization ## everything in US is OHTTP
     """Class that provides various versions a limited topic models that supports coarse interest vector
     This has with vetted p/q privacy value for the first experiment.
     """
@@ -196,25 +203,34 @@ class LimitedTopicV1Model(LocalModelBackend): ## TODO rename ## TODO normalizati
             model_thresholds = THRESHOLDS_V1_A
         if model_id is None:
             model_id = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
-        print('in get!', experiment_name, experiment_branch)
-        if experiment_name is not None and experiment_name==LOCAL_EXPERIMENT_NAME: 
-            if experiment_branch==LOCAL_AND_SERVER_BRANCH_NAME:
-                ## private features are sent to merino, "private" from differentially private                
-                private_features = ["sports","government","arts","health","business","entertainment"] ## TODO entertainment?
+        category_fields: dict[str, InterestVectorConfig]
+        private_features: list[str] | None
+        if experiment_name is not None and experiment_name == LOCAL_EXPERIMENT_NAME:
+            if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:
+                ## private features are sent to merino, "private" from differentially private
+                private_features = [
+                    "sports",
+                    "government",
+                    "arts",
+                    "health",
+                    "business",
+                    "entertainment",
+                ]  ## TODO entertainment?
                 model_id = LOCAL_AND_SERVER_V1
-            else: ## includes (experiment_branch == LOCAL_ONLY_BRANCH_NAME)
+            else:  ## includes (experiment_branch == LOCAL_ONLY_BRANCH_NAME)
                 ## nothing sent to merino
                 private_features = []
                 model_id = LOCAL_ONLY_V1
-            category_fields: dict[str, InterestVectorConfig] = {
-                a: get_topic(a, model_thresholds) for a in BASE_SECTIONS} ## all sections                
+            category_fields = {
+                a: get_topic(a, model_thresholds) for a in BASE_SECTIONS
+            }  ## all sections
         else:
-            private_features = None ## private features null on frontend
-            category_fields: dict[str, InterestVectorConfig] = {
-                a: get_topic(a, model_thresholds) for a in self.limited_topics
-            }
+            private_features = None  ## private features null on frontend
+            category_fields = {a: get_topic(a, model_thresholds) for a in self.limited_topics}
             # Remainder of topics an interest
-            remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
+            remainder_topic_list = [
+                topic for topic in Topic if topic not in self.limited_topics_set
+            ]
             category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
                 features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
                 thresholds=model_thresholds,
@@ -231,17 +247,11 @@ class LimitedTopicV1Model(LocalModelBackend): ## TODO rename ## TODO normalizati
                 relative_weight=[1, 1, 1],
             ),
             interest_vector=category_fields,
-            private_features=private_features
+            private_features=private_features,
         )
-        print('INFERRRED MODEL STUFF',
-              model_id, 
-              private_features)
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
             model_data=model_data,
             model_version=0,
-            
         )
-
-
