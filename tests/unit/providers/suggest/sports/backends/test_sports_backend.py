@@ -112,9 +112,7 @@ async def test_team():
         "GlobalTeamId": 90000694,
     }
     ttl = timedelta(seconds=300)
-    team = Team.from_data(
-        team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl
-    )
+    team = Team.from_data(team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl)
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
     assert team.colors == ["FF0000", "FFFFFF"]

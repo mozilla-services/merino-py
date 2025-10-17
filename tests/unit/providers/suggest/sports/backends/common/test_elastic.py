@@ -61,9 +61,7 @@ async def test_create_raise_exception(
     sport_data_store: SportsDataStore, es_client: AsyncMock
 ) -> None:
     """Test Sport Data Store create raises exception."""
-    es_client.indices.create.side_effect = BadRequestError(
-        "oops", cast(Any, object()), {}
-    )
+    es_client.indices.create.side_effect = BadRequestError("oops", cast(Any, object()), {})
 
     with pytest.raises(SportsDataError):
         await sport_data_store.build_indexes(settings=settings)
@@ -76,9 +74,7 @@ async def test_prune_fail_and_metrics_captured(
     statsd_mock: Any,
 ) -> None:
     """Test Sport Data Store fail prune and metrics captured."""
-    es_client.delete_by_query.side_effect = ConflictError(
-        "oops", cast(Any, object()), {}
-    )
+    es_client.delete_by_query.side_effect = ConflictError("oops", cast(Any, object()), {})
 
     result = await sport_data_store.prune(metrics_client=statsd_mock)
     assert result is False
@@ -115,9 +111,7 @@ async def test_store_event_fail_and_metrics_captured(
     nfl = NFL(settings=settings.providers.sports)
     nfl.events = {0: event}
 
-    await sport_data_store.store_events(
-        sport=nfl, language_code="en", metrics_client=statsd_mock
-    )
+    await sport_data_store.store_events(sport=nfl, language_code="en", metrics_client=statsd_mock)
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
     assert metrics_called == [
         "sports.time.load.events",
@@ -137,17 +131,13 @@ async def test_search_event_hits(
         {
             "_score": 1.0,
             "_source": {
-                "event": json.dumps(
-                    {"sport": "NFL", "status": "Final", "date": now - 3600}
-                )
+                "event": json.dumps({"sport": "NFL", "status": "Final", "date": now - 3600})
             },
         },
         {
             "_score": 0.9,
             "_source": {
-                "event": json.dumps(
-                    {"sport": "NFL", "status": "InProgress", "date": now - 100}
-                )
+                "event": json.dumps({"sport": "NFL", "status": "InProgress", "date": now - 100})
             },
         },
         {
@@ -169,9 +159,7 @@ async def test_search_event_hits(
     ]
     es_client.search.return_value = {"hits": {"total": {"value": 1}, "hits": hits}}
 
-    result = await sport_data_store.search_events(
-        q="game", language_code="en", mix_sports=False
-    )
+    result = await sport_data_store.search_events(q="game", language_code="en", mix_sports=False)
     expected_result = {
         "NFL": {
             "current": {
@@ -201,9 +189,7 @@ async def test_search_event_bad_hit_data(
 ):
     """Test Sport Data Store search event with a bad hit."""
     es_client.search.return_value = {"hits": {}}
-    result = await sport_data_store.search_events(
-        q="game", language_code="en", mix_sports=False
-    )
+    result = await sport_data_store.search_events(q="game", language_code="en", mix_sports=False)
     assert result == {}
 
 
@@ -214,6 +200,4 @@ async def test_search_event_raise_exception(
     """Test Sport Data Store search event raises exception."""
     es_client.search.side_effect = Exception("oops")
     with pytest.raises(BackendError):
-        await sport_data_store.search_events(
-            q="oops", language_code="en", mix_sports=False
-        )
+        await sport_data_store.search_events(q="oops", language_code="en", mix_sports=False)
