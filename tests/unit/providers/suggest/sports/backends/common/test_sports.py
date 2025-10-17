@@ -209,7 +209,6 @@ async def test_get_team_lookup(cls: type[Sport]) -> None:
     sport.teams = {"PIT": t}
     assert await sport.get_team("PIT") is None
 
-
     sport.teams = {sport.gen_key("PIT"): t}
     found = await sport.get_team("PIT")
     assert isinstance(found, Team) and found.name == "Pittsburgh Steelers"
