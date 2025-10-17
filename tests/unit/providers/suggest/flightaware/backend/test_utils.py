@@ -11,6 +11,7 @@ from pydantic import HttpUrl
 import pytest
 
 from merino.providers.suggest.flightaware.backends.protocol import (
+    AirlineDetails,
     AirportDetails,
     FlightStatus,
     FlightSummary,
@@ -18,6 +19,7 @@ from merino.providers.suggest.flightaware.backends.protocol import (
 from merino.providers.suggest.flightaware.backends.utils import (
     build_flight_summary,
     calculate_time_left,
+    get_airline_details,
     get_flight_number_from_query_if_valid,
     get_live_url,
     is_delayed,
@@ -246,6 +248,10 @@ def test_build_flight_summary_valid(flight_with_codeshare):
     assert summary.status == "Scheduled"
     assert summary.progress_percent == 50
     assert summary.url == HttpUrl("https://www.flightaware.com/live/flight/UAL123")
+
+    assert summary.airline.code == "UA"
+    assert summary.airline.name == "united airlines"
+    assert summary.airline.color == "#005DAA"
 
 
 def test_build_flight_summary_with_codeshare(flight_with_codeshare):
@@ -873,3 +879,51 @@ def test_get_flight_number_from_query_if_valid(description, query, mapping, expe
     ):
         result = get_flight_number_from_query_if_valid(query)
         assert result == expected, f"Failed: {description} (input: '{query}')"
+
+
+@pytest.mark.parametrize(
+    "description, flight_number, expected_code, expected_name, expected_color",
+    [
+        ("valid 2-letter IATA code", "AA123", "AA", "american airlines", "#cc0000"),
+        (
+            "valid 3-letter ICAO code fallback when IATA not matched",
+            "UAL789",
+            "UAL",
+            "united airlines",
+            "#003366",
+        ),
+        ("unknown airline code returns None values", "ZZ999", None, None, None),
+        ("invalid short flight number", "A123", None, None, None),
+        ("nonexistent airline code in valid format", "XY123", None, None, None),
+        ("name and code not in set/map", "TS123", None, None, None),
+    ],
+)
+def test_get_airline_details(
+    description, flight_number, expected_code, expected_name, expected_color
+):
+    """Verify get_airline_details correctly extracts valid IATA/ICAO codes and returns correct airline details."""
+    mock_valid_codes = {"AA", "BA", "UAL", "AF"}
+    mock_code_to_name = {
+        "AA": {"name": "american airlines", "color": "#cc0000"},
+        "BA": {"name": "british airways", "color": "#ABCDEF"},
+        "UAL": {"name": "united airlines", "color": "#003366"},
+        "AF": {"name": "air france", "color": "#ff5000"},
+    }
+
+    with (
+        patch(
+            "merino.providers.suggest.flightaware.backends.utils.VALID_AIRLINE_CODES",
+            mock_valid_codes,
+        ),
+        patch(
+            "merino.providers.suggest.flightaware.backends.utils.AIRLINE_CODE_TO_NAME_MAPPING",
+            mock_code_to_name,
+        ),
+    ):
+        result = get_airline_details(flight_number)
+
+    assert isinstance(result, AirlineDetails)
+    assert result.code == expected_code, f"Failed code match: {description}"
+    assert result.name == expected_name, f"Failed name match: {description}"
+    assert result.color == expected_color
+    assert result.icon is None
