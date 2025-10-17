@@ -33,14 +33,14 @@ async def test_get_data():
                 client=mock_client,
                 url="http://example.org",
                 ttl=ttl,
-                cache_dir="/tmp",
+                cache_dir="/tmp",  # nosec
             )
             # was the URL called?
             mock_client.get.assert_called_with("http://example.org")
             # see if it tried to write the file to the cache dir...
             assert (
                 mock_json.call_args_list[0].args[1].buffer.name
-                == "/tmp/ff7c1f10ab54968058fdcfaadf1b2457cd5d1a3f.json"
+                == "/tmp/ff7c1f10ab54968058fdcfaadf1b2457cd5d1a3f.json"  # nosec
             )
             # TODO: check for TTL.
 
@@ -112,7 +112,9 @@ async def test_team():
         "GlobalTeamId": 90000694,
     }
     ttl = timedelta(seconds=300)
-    team = Team.from_data(team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl)
+    team = Team.from_data(
+        team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl
+    )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
     assert team.colors == ["FF0000", "FFFFFF"]
