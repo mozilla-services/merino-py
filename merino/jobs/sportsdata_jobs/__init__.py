@@ -73,14 +73,20 @@ class SportDataUpdater:
     # Copy of the general configuration
     # settings: LazySettings
 
-    def __init__(self, settings: LazySettings, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        settings: LazySettings,
+        *args,
+        store: SportsDataStore | None = None,
+        **kwargs,
+    ) -> None:
         if not settings.sports:
             raise SportsDataError("No sports defined")
         active_sports = [sport.strip().upper() for sport in settings.sports.split(",")]
         sport: Sport | None = None
         sports: dict[str, Sport] = {}
         platform = settings.get("platform", "sports")
-        store = SportsDataStore(
+        store = store or SportsDataStore(
             dsn=settings.es.dsn,
             api_key=settings.es.api_key,
             languages=[
@@ -129,7 +135,7 @@ class SportDataUpdater:
         self.read_timeout = settings.sportsdata.get("read_timeout", 1)
         logging.debug(f"{LOGGING_TAG}: Starting up...")
 
-    async def update(self, include_teams: bool = True) -> bool:
+    async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
         """Perform sport specific updates."""
         metrics = get_metrics_client()
         timeout = Timeout(
@@ -137,7 +143,8 @@ class SportDataUpdater:
             connect=self.connect_timeout,
             read=self.read_timeout,
         )
-        client = AsyncClient(timeout=timeout)
+
+        client = client or AsyncClient(timeout=timeout)
 
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
@@ -154,12 +161,12 @@ class SportDataUpdater:
         await self.store.shutdown()
         return True
 
-    async def nightly(self) -> None:
+    async def nightly(self, client: AsyncClient | None = None) -> None:
         """Perform the nightly maintenance tasks"""
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
         logging.debug(f"{LOGGING_TAG} Nightly update...")
-        await self.update(include_teams=True)
+        await self.update(include_teams=True, client=client)
         await self.store.prune()
 
 
