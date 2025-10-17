@@ -70,6 +70,18 @@ class GameStatus(StrEnum):
             return GameStatus.Scheduled
         return GameStatus.Unknown
 
+    def as_ui_status(self) -> str:
+        """Return the UI preferred status label"""
+        match self.status_type():
+            case GameStatus.Final:
+                return "past"
+            case GameStatus.InProgress:
+                return "live"
+            case GameStatus.Scheduled:
+                return "scheduled"
+            case _:
+                return "unknown"
+
     def as_str(self) -> str:
         """Return self as a somewhat prettier formatted string
         NOTE: For int'l this should probably return a lookup code.

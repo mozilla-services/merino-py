@@ -4,6 +4,7 @@ from typing import Any
 from datetime import datetime, timezone
 
 from merino.providers.suggest.base import BaseModel
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 
 
 class SportTeamDetails(BaseModel):
@@ -38,7 +39,7 @@ class SportEventDetail(BaseModel):
 
         This presumes that it's reading a json loaded sport Event that was returned by elastic search.
         """
-        status = event["event_status"]
+        status: GameStatus = event["event_status"]
         return cls(
             sport=event["sport"],
             query=build_query(event),
@@ -56,7 +57,7 @@ class SportEventDetail(BaseModel):
                 score=event.get("away_score"),
             ),
             event_status=event["status"],
-            status=str(status.status_type()),
+            status=str(status.as_ui_status()),
         )
 
 
