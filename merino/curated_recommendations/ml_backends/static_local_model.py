@@ -147,9 +147,7 @@ THRESHOLDS_V1_B = [0.005, 0.010, 0.015]
 
 # Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
-class LimitedTopicV1Model(
-    LocalModelBackend
-):  ## TODO rename ## TODO normalization ## everything in US is OHTTP
+class SuperTopicModel(LocalModelBackend):  ## TODO normalization
     """Class that provides various versions a limited topic models that supports coarse interest vector
     This has with vetted p/q privacy value for the first experiment.
     """

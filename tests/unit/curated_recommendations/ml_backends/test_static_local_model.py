@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
     FakeLocalModelSections,
-    LimitedTopicV1Model,
+    SuperTopicModel,
     CTR_SECTION_MODEL_ID,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
@@ -33,13 +33,13 @@ TEST_SURFACE = "test_surface"
 @pytest.fixture
 def model_limited():
     """Create static model"""
-    return LimitedTopicV1Model()
+    return SuperTopicModel()
 
 
 @pytest.fixture
 def local_model_backend():
     """Create static model  - used for more generic tests than model_limited"""
-    return LimitedTopicV1Model()
+    return SuperTopicModel()
 
 
 @pytest.fixture
@@ -386,7 +386,7 @@ def test_model_matches_interests_param(model_limited, input_id, expected):
 @pytest.fixture
 def inferred_model():
     """Build a concrete InferredLocalModel for tests."""
-    backend = LimitedTopicV1Model()
+    backend = SuperTopicModel()
     return backend.get("surface")
 
 
