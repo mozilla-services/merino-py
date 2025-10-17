@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 
 import freezegun
 import pytest
@@ -20,7 +20,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import NF
 @pytest.fixture
 def mock_client(mocker: MockerFixture) -> AsyncClient:
     """Mock Async Client."""
-    return mocker.Mock(spec=AsyncClient)
+    return cast(AsyncClient, mocker.Mock(spec=AsyncClient))
 
 
 @pytest.fixture

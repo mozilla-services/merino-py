@@ -35,7 +35,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 
     client.delete_by_query = mocker.AsyncMock()
     client.search = mocker.AsyncMock()
-    return client
+    return cast(MagicMock, client)
 
 
 @pytest.fixture(name="sport_data_store")
@@ -47,7 +47,6 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events"},
-        settings=settings,
     )
     s.client = es_client
     return s
