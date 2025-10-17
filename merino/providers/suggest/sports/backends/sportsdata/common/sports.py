@@ -155,8 +155,8 @@ class NFL(Sport):
             team = self.teams.get(self.gen_key(name))
         return team
 
-    async def update_teams(self, client: AsyncClient):
-        """NFL requires a nightly "Timeframe" lookup."""
+    async def get_season(self, client: AsyncClient):
+        """Get the current season"""
         # see: https://sportsdata.io/developers/api-documentation/nfl#timeframesepl
         logging.debug(f"{LOGGING_TAG} Getting timeframe for {self.name} ")
         url = f"{self.base_url}/Timeframes/current?key={self.api_key}"
@@ -192,6 +192,9 @@ class NFL(Sport):
         start = response[0].get("StartDate")
         end = response[0].get("EndDate")
         logging.debug(f"{LOGGING_TAG} {self.name} week {self.week} {start} to {end}")
+
+    async def update_teams(self, client: AsyncClient):
+        """NFL requires a nightly "Timeframe" lookup."""
         # Now get the team information:
         url = f"{self.base_url}/Teams?key={self.api_key}"
         response = await get_data(
@@ -206,6 +209,7 @@ class NFL(Sport):
 
     async def update_events(self, client: AsyncClient):
         """Update the events for this sport in the elastic search database"""
+        await self.get_season(client=client)
         logging.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
         local_timezone = ZoneInfo("US/Eastern")
         # get this week and next week
@@ -250,8 +254,8 @@ class NHL(Sport):
         async with self._lock:
             return self.teams.get(self.gen_key(name))
 
-    async def update_teams(self, client: AsyncClient):
-        """Fetch active team information"""
+    async def get_season(self, client: AsyncClient):
+        """Get the current season"""
         logging.debug(f"{LOGGING_TAG} Getting {self.name} season ")
         url = f"{self.base_url}/CurrentSeason?key={self.api_key}"
         response = await get_data(
@@ -273,6 +277,11 @@ class NHL(Sport):
         }
         """
         self.season = response.get("ApiSeason")
+        return self
+
+    async def update_teams(self, client: AsyncClient):
+        """Fetch active team information"""
+        await self.get_season(client)
         if self.season is None:
             logging.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
             return self
@@ -329,9 +338,11 @@ class NBA(Sport):
         async with self._lock:
             return self.teams.get(self.gen_key(name))
 
-    async def update_teams(self, client: AsyncClient):
-        """Fetch active team information"""
+    async def get_season(self, client: AsyncClient):
+        """Get the current season"""
         logging.debug(f"{LOGGING_TAG} Getting {self.name} season ")
+        if self.season:
+            return self
         url = f"{self.base_url}/CurrentSeason?key={self.api_key}"
         response = await get_data(
             client=client,
@@ -352,9 +363,10 @@ class NBA(Sport):
         }
         """
         self.season = response.get("ApiSeason")
-        if self.season is None:
-            logging.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
-            return self
+        return self
+
+    async def update_teams(self, client: AsyncClient):
+        """Fetch active team information"""
         logging.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
         url = f"{self.base_url}/teams?key={self.api_key}"
         response = await get_data(
@@ -370,6 +382,9 @@ class NBA(Sport):
     async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         """Update the schedules for games"""
+        await self.get_season(client=client)
+        if self.season is None:
+            logging.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
         logging.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         local_timezone = ZoneInfo("US/Eastern")
         url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
@@ -405,6 +420,11 @@ class UCL(Sport):
         )
         self._lock = asyncio.Lock()
 
+    async def get_season(self, client: AsyncClient):
+        """Get the current season (which is just the current year)"""
+        self.season = str(datetime.now(tz=timezone.utc).year)
+        return self
+
     async def get_team(self, name: str) -> Team | None:
         """Fetch a team from the thread locked source"""
         async with self._lock:
@@ -412,7 +432,6 @@ class UCL(Sport):
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
-        self.season = str(datetime.now(tz=timezone.utc).year)
         logging.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
         url = f"{self.base_url}/Teams/{self.name.lower()}?key={self.api_key}"
         response = await get_data(
@@ -467,7 +486,7 @@ class UCL(Sport):
 
     async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
-        """Update the schedules for games"""
+        await self.get_season(client=client)
         logging.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}?key={self.api_key}"
         local_timezone = ZoneInfo("UTC")

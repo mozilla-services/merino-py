@@ -22,7 +22,6 @@ import logging
 import typer
 from httpx import AsyncClient, Timeout
 from dynaconf.base import LazySettings
-from pydantic import BaseModel
 from typing import cast
 
 from aiodogstatsd import Client
@@ -52,7 +51,6 @@ class Options:
 
     def __init__(self, base_settings: LazySettings):
         """Local options"""
-        logger.debug(f"{LOGGING_TAG} Defining Options")
         # Currently no options to define.
         pass
 
@@ -64,7 +62,7 @@ class Options:
         )
 
 
-class SportDataUpdater(BaseModel):
+class SportDataUpdater:
     """Fetch and update SportsData info"""
 
     # Collection of known sports
@@ -121,21 +119,17 @@ class SportDataUpdater(BaseModel):
                 # case "EPL":
                 #    sport = EPL(settings)
                 case _:
-                    logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
+                    logging.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue
             sports[sport_name] = sport
-        super().__init__(
-            metrics=get_metrics_client(),
-            sports=sports,
-            store=store,
-            connect_timeout=settings.sportsdata.get("connect_timeout", 1),
-            read_timeout=settings.sportsdata.get("read_timeout", 1),
-            *args,
-            **kwargs,
-        )
+        self.metrics = get_metrics_client()
+        self.sports = sports
+        self.store = store
+        self.connect_timeout = settings.sportsdata.get("connect_timeout", 1)
+        self.read_timeout = settings.sportsdata.get("read_timeout", 1)
         logging.debug(f"{LOGGING_TAG}: Starting up...")
 
-    async def update(self, include_teams: bool = False) -> bool:
+    async def update(self, include_teams: bool = True) -> bool:
         """Perform sport specific updates."""
         metrics = get_metrics_client()
         timeout = Timeout(
@@ -164,38 +158,36 @@ class SportDataUpdater(BaseModel):
         """Perform the nightly maintenance tasks"""
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
-
+        logging.debug(f"{LOGGING_TAG} Nightly update...")
         await self.update(include_teams=True)
         await self.store.prune()
 
 
-sports_settings = getattr(settings.providers, "sportsdata", None)
+sports_settings = getattr(settings.providers, "sports", None)
 if not sports_settings:
     raise SportsDataError(
-        "Missing project configuration for `sportsdata`. Did you create it under providers?"
+        "Missing project configuration for `sports`. Did you create it under providers?"
     )
 
 app = Options(sports_settings).get_command()
+cli = typer.Typer(
+    name="fetch_sports",
+    help="Commands to fetch and store sport information",
+)
 provider = SportDataUpdater(sports_settings)
 
 
-@app.command("nightly")
+@cli.command("nightly")
 def nightly():
     """Perform the general nightly operations"""
     asyncio.run(provider.nightly())
 
 
-@app.command("update")
+@cli.command("update")
 def update():
     """Perform the frequently required tasks (Approx once every 5 min)"""
-    asyncio.run(provider.update(include_teams=False))
+    asyncio.run(provider.update())
 
-
-cli = typer.Typer(
-    name="fetch_sports",
-    help="Commands to fetch and store sport information",
-)
 
 if __name__ == "__main__":
-    logger = init_logs()
-    app()
+    cli()

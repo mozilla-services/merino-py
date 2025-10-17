@@ -256,6 +256,10 @@ class Sport(BaseModel):
         """Return the team based on the key provided"""
 
     @abstractmethod
+    async def get_season(self, client: AsyncClient):
+        """Fetch the current season"""
+
+    @abstractmethod
     async def update_teams(self, client: AsyncClient):
         """Update team information and store in common storage (usually called nightly)"""
 
