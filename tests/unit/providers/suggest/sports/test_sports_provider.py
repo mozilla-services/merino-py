@@ -4,11 +4,31 @@ import pytest
 
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
+from httpx import AsyncClient
+from typing import cast
 
-# from merino.configs import settings
+from pytest_mock import MockerFixture
+from unittest.mock import AsyncMock
+
+from merino.middleware.geolocation import Location
+from merino.utils.metrics import get_metrics_client
+from merino.providers.suggest.base import SuggestionRequest
 from merino.providers.suggest.sports import utc_time_from_now, init_logs
+from merino.providers.suggest.sports.provider import SportsDataProvider
+from merino.providers.suggest.sports.backends.sportsdata.backend import (
+    SportsDataBackend,
+)
+from merino.providers.suggest.sports.backends.sportsdata.protocol import (
+    SportEventDetail,
+    SportTeamDetail,
+    SportSummary,
+)
 
-# from tests.unit.types import SuggestionRequestFixture
+
+@pytest.fixture
+def mock_client(mocker: MockerFixture) -> AsyncClient:
+    """Mock Async Client."""
+    return cast(AsyncClient, mocker.Mock(spec=AsyncClient))
 
 
 @pytest.mark.asyncio
@@ -33,3 +53,36 @@ async def test_sports_init_logger():
             logger.reset_mock()
             init_logs("warning")
             logger.assert_called_with(level=30)
+
+
+@pytest.mark.asyncio
+async def test_sports_provider(mock_client: AsyncClient, mocker: MockerFixture):
+    """Test the sports data provider"""
+    # we already test the backend.
+    home_team = SportTeamDetail(key="HOM", name="Home Team", colors=["000000"], score=None)
+    away_team = SportTeamDetail(key="AWY", name="Away Team", colors=["FFFFFF"], score=None)
+    event = SportEventDetail(
+        sport="test",
+        query="test query",
+        date="2025-10-01T00:00:00+00:00",
+        home_team=home_team,
+        away_team=away_team,
+        event_status="Final",
+        status="final",
+    )
+    summary = [SportSummary(sport="test", values=[event])]
+    backend = AsyncMock(spec=SportsDataBackend)
+    backend.base_score = 0
+    backend.query = AsyncMock(side_effect=[summary])
+    provider = SportsDataProvider(
+        metrics_client=get_metrics_client(),
+        backend=backend,
+        enabled_by_default=True,
+        trigger_words=["test"],
+    )
+    sreq = SuggestionRequest(query="test game jets", geolocation=Location())
+    res = await provider.query(sreq=sreq)
+    assert len(res) == 1
+    sum = res[0]
+    assert sum.custom_details.sports  # type: ignore
+    assert len(sum.custom_details.sports.values) == 1  # type: ignore

@@ -5,16 +5,28 @@ import json
 from datetime import datetime, timedelta, timezone
 
 
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
+
 import httpx
 
-# from merino.configs import settings
+from unittest.mock import MagicMock
+from pytest_mock import MockerFixture
+from typing import cast
+
+from merino.configs import settings
 from merino.providers.suggest.sports.backends import get_data
+from merino.providers.suggest.sports.backends.sportsdata.backend import (
+    SportsDataBackend,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     SportDate,
     Team,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    SportsDataStore,
+)
+
 
 VALID_TEST_RESPONSE: dict = {}
 
@@ -123,3 +135,98 @@ async def test_team():
         "name": "Chicago Fire Football Club",
         "colors": ["FF0000", "FFFFFF"],
     }
+
+
+@pytest.fixture(name="es_client")
+def fixture_es_client(mocker: MockerFixture) -> MagicMock:
+    """Test ElasticSearch client instance."""
+    client = mocker.MagicMock()
+    client.close = mocker.AsyncMock()
+
+    indices = mocker.MagicMock()
+    indices.create = mocker.AsyncMock()
+    indices.delete = mocker.AsyncMock()
+    indices.refresh = mocker.AsyncMock()
+    client.indices = indices
+
+    client.delete_by_query = mocker.AsyncMock()
+    client.search = mocker.AsyncMock()
+    return cast(MagicMock, client)
+
+
+@pytest.fixture(name="sport_data_store")
+def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
+    """Test Sport Data Store instance"""
+    s = SportsDataStore(
+        dsn="http://es.test:9200",
+        api_key="test-key",
+        languages=["en"],
+        platform="test",
+        index_map={"event": "sports-en-events-test"},
+    )
+    s.client = es_client
+    return s
+
+
+@pytest.mark.asyncio
+async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
+    """Test the backend"""
+    sport_data_store.search_events = AsyncMock(  # type: ignore
+        side_effect=[
+            {
+                "all": {
+                    "previous": {
+                        "sport": "NHL",
+                        "id": 30024036,
+                        "date": 1760655600,
+                        "home_team": {
+                            "key": "PHI",
+                            "name": "Philadelphia Flyers",
+                            "colors": ["D24303", "000000", "FFFFFF"],
+                        },
+                        "away_team": {
+                            "key": "WPG",
+                            "name": "Winnipeg Jets",
+                            "colors": ["041E42", "004A98", "A2AAAD", "A6192E"],
+                        },
+                        "home_score": 2,
+                        "away_score": 5,
+                        "status": "Final",
+                        "expiry": 1760921459,
+                        "es_score": 3.3510802,
+                        "event_status": GameStatus.Final,
+                    },
+                    "next": {
+                        "sport": "NFL",
+                        "id": 19175,
+                        "date": 1761498000,
+                        "home_team": {
+                            "key": "CIN",
+                            "name": "Cincinnati Bengals",
+                            "colors": ["000000", "FB4F14", "FFFFFF"],
+                        },
+                        "away_team": {
+                            "key": "NYJ",
+                            "name": "New York Jets",
+                            "colors": ["115740", "FFFFFF", "000000"],
+                        },
+                        "home_score": None,
+                        "away_score": None,
+                        "status": "Scheduled",
+                        "expiry": 1761958258,
+                        "es_score": 3.0596066,
+                        "event_status": GameStatus.Scheduled,
+                    },
+                }
+            }
+        ]
+    )
+
+    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
+    res = await backend.query(
+        query_string="Some Search String",
+    )
+    assert len(res) == 1
+    summary = res[0]
+    assert summary.sport == "all"
+    assert len(summary.values) == 2

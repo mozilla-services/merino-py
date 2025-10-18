@@ -30,11 +30,17 @@ class SportsDataBackend(SportsDataProtocol):
     data_store: SportsDataStore
     base_score: float
 
-    def __init__(self, settings: LazySettings, *args, **kwargs):
+    def __init__(
+        self,
+        settings: LazySettings,
+        *args,
+        store: SportsDataStore | None = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         platform = settings.get("platform", "sports")
         event_map = settings.get("event_index", f"{platform}_event")
-        self.data_store = SportsDataStore(
+        self.data_store = store or SportsDataStore(
             dsn=settings.es.dsn,
             api_key=settings.es.api_key,
             languages=str_to_list(settings.get("languages", "en").lower()),

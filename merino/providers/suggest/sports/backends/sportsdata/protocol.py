@@ -7,7 +7,7 @@ from merino.providers.suggest.base import BaseModel
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 
 
-class SportTeamDetails(BaseModel):
+class SportTeamDetail(BaseModel):
     """Data about the specific Sport team."""
 
     key: str  # Sport unique abbreviated identifier (e.g. "SFG", "DAL", etc)
@@ -28,8 +28,8 @@ class SportEventDetail(BaseModel):
     sport: str  # Sport Name ("NFL", "NHL", "NBA", etc.)
     query: str  # Click search query for this event.
     date: str  # UTC timestamp for the game
-    home_team: SportTeamDetails  # Home Team details
-    away_team: SportTeamDetails  # Away Team details
+    home_team: SportTeamDetail  # Home Team details
+    away_team: SportTeamDetail  # Away Team details
     event_status: str  # Long form event status. ("Scheduled", "Final - Overtime", etc.)
     status: str  # UI display status ("past", "live", "scheduled")
 
@@ -44,13 +44,13 @@ class SportEventDetail(BaseModel):
             sport=event["sport"],
             query=build_query(event),
             date=datetime.fromtimestamp(event["date"], tz=timezone.utc).isoformat(),
-            home_team=SportTeamDetails(
+            home_team=SportTeamDetail(
                 key=event.get("home_team", {}).get("key"),
                 name=event.get("home_team", {}).get("name"),
                 colors=event.get("home_team", {}).get("colors"),
                 score=event.get("home_score"),
             ),
-            away_team=SportTeamDetails(
+            away_team=SportTeamDetail(
                 key=event.get("away_team", {}).get("key"),
                 name=event.get("away_team", {}).get("name"),
                 colors=event.get("away_team", {}).get("colors"),
