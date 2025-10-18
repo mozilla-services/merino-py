@@ -139,9 +139,7 @@ async def test_team():
         "GlobalTeamId": 90000694,
     }
     ttl = timedelta(seconds=300)
-    team = Team.from_data(
-        team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl
-    )
+    team = Team.from_data(team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl)
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
     assert team.colors == ["FF0000", "FFFFFF"]
@@ -186,9 +184,7 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
 
 
 @pytest.mark.asyncio
-async def test_sportsdata_backend(
-    sport_data_store: SportsDataStore, mocker: MockerFixture
-):
+async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
     """Test the backend"""
     sport_data_store.search_events = AsyncMock(  # type: ignore
         side_effect=[
@@ -241,9 +237,7 @@ async def test_sportsdata_backend(
         ]
     )
 
-    backend = SportsDataBackend(
-        settings=settings.providers.sports, store=sport_data_store
-    )
+    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
     res = await backend.query(
         query_string="Some Search String",
     )
