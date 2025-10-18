@@ -7,8 +7,16 @@ import pytest
 
 from merino.configs import settings
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Team, Sport
-from merino.providers.suggest.sports.backends.sportsdata.common.sports import NFL, NHL, NBA
+from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+    Team,
+    Sport,
+    SportDate,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
+    NFL,
+    NHL,
+    NBA,
+)
 
 
 @pytest.fixture
@@ -197,3 +205,11 @@ def test_load_teams_from_source(
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {"AWA", "HOM"}
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+def test_sportdate():
+    """Test the SportDate stuff."""
+    test = SportDate()
+    assert str(test) == "2025-Sep-22"
+    assert str(SportDate.parse("2025-Oct-01")) == "2025-Oct-01"
