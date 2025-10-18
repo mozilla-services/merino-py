@@ -67,16 +67,31 @@ async def test_build_suggestion():
 async def test_gamestatus():
     """Test the GameStatus enum"""
     assert GameStatus.parse("final") == GameStatus.Final
+    assert GameStatus.parse("in progress") == GameStatus.InProgress
+    assert GameStatus.parse("final - over time") == GameStatus.F_OT
     assert GameStatus.parse("final - shoot out") == GameStatus.F_SO
-    assert GameStatus.parse("F/OT") == GameStatus.F_OT
+    assert GameStatus.parse("not necessary") == GameStatus.NotNecessary
     assert GameStatus.parse("Banana") == GameStatus.Unknown
 
     assert GameStatus.Final.is_final()
     assert GameStatus.parse("scheduled").is_scheduled()
     assert GameStatus.parse("suspended").is_in_progress()
-    assert GameStatus.F_OT.status_type() == GameStatus.Final
     assert GameStatus.parse("In Progress").status_type() == GameStatus.InProgress
     assert GameStatus.NotNecessary.as_str() == "Not Necessary"
+    assert GameStatus.Final.status_type() == GameStatus.Final
+    assert GameStatus.F_OT.status_type() == GameStatus.Final
+    assert GameStatus.Scheduled.status_type() == GameStatus.Scheduled
+
+    assert GameStatus.Final.as_ui_status() == "past"
+    assert GameStatus.InProgress.as_ui_status() == "live"
+    assert GameStatus.Scheduled.as_ui_status() == "scheduled"
+    assert GameStatus.Unknown.as_ui_status() == "unknown"
+
+    assert GameStatus.InProgress.as_str() == "In Progress"
+    assert GameStatus.F_OT.as_str() == "Final - Over Time"
+    assert GameStatus.F_SO.as_str() == "Final - Shoot Out"
+    assert GameStatus.NotNecessary.as_str() == "Not Necessary"
+    assert GameStatus.Unknown.as_str() == ""
 
 
 # sports/backends/sportsdata/common/data.py
@@ -124,7 +139,9 @@ async def test_team():
         "GlobalTeamId": 90000694,
     }
     ttl = timedelta(seconds=300)
-    team = Team.from_data(team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl)
+    team = Team.from_data(
+        team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl
+    )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
     assert team.colors == ["FF0000", "FFFFFF"]
@@ -169,7 +186,9 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
 
 
 @pytest.mark.asyncio
-async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
+async def test_sportsdata_backend(
+    sport_data_store: SportsDataStore, mocker: MockerFixture
+):
     """Test the backend"""
     sport_data_store.search_events = AsyncMock(  # type: ignore
         side_effect=[
@@ -222,7 +241,9 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
         ]
     )
 
-    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store
+    )
     res = await backend.query(
         query_string="Some Search String",
     )
