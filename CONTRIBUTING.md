@@ -6,6 +6,12 @@ GitHub.
 
 [matrix]: https://chat.mozilla.org
 
+## Getting Started
+
+Merino uses `uv` as its python configuration management system. To initialize a new developer
+environment, please refer to
+[Developer documentation for working on Merino](https://mozilla-services.github.io/merino-py/dev/index.html)
+
 ## Bug Reports
 
 You can file issues here on GitHub. Please try to include as much information as
