@@ -96,7 +96,7 @@ async def test_get_data_handles_permission_error():
                 client=mock_client,
                 url="http://example.org",
                 ttl=ttl,
-                cache_dir="/tmp",
+                cache_dir="/tmp",  # nosec
             )
             # Permission Error file not read, request need to be made
             mock_client.get.assert_called_with("http://example.org")
@@ -121,7 +121,7 @@ async def test_get_data_cache_file_exists():
                 client=mock_client,
                 url="http://example.org",
                 ttl=ttl,
-                cache_dir="/tmp",
+                cache_dir="/tmp",  # nosec
             )
             mock_client.get.assert_not_called()
             assert data == {"bar": "foo"}
