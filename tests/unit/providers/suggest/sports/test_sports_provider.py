@@ -7,12 +7,15 @@ from unittest.mock import patch
 from httpx import AsyncClient
 from typing import cast
 
+from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 from unittest.mock import AsyncMock
 
 from merino.middleware.geolocation import Location
+from merino.providers.suggest.custom_details import CustomDetails
+from merino.utils.domain_categories.models import Category
 from merino.utils.metrics import get_metrics_client
-from merino.providers.suggest.base import SuggestionRequest
+from merino.providers.suggest.base import SuggestionRequest, BaseSuggestion
 from merino.providers.suggest.sports import utc_time_from_now, init_logs
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
@@ -22,6 +25,7 @@ from merino.providers.suggest.sports.backends.sportsdata.protocol import (
     SportEventDetail,
     SportTeamDetail,
     SportSummary,
+    SportEventDetails,
 )
 
 
@@ -56,7 +60,7 @@ async def test_sports_init_logger():
 
 
 @pytest.mark.asyncio
-async def test_sports_provider(mock_client: AsyncClient, mocker: MockerFixture):
+async def test_sports_provider(mock_client: AsyncClient):
     """Test the sports data provider"""
     # we already test the backend.
     home_team = SportTeamDetail(key="HOM", name="Home Team", colors=["000000"], score=None)
@@ -86,3 +90,30 @@ async def test_sports_provider(mock_client: AsyncClient, mocker: MockerFixture):
     sum = res[0]
     assert sum.custom_details.sports  # type: ignore
     assert len(sum.custom_details.sports.values) == 1  # type: ignore
+    assert sum == BaseSuggestion(
+        title="All Sport",
+        description="All Sport report for test game jets",
+        url=HttpUrl("https://sportsdata.io/"),
+        provider="sportsdata_io",
+        is_sponsored=False,
+        custom_details=CustomDetails(
+            sports=SportEventDetails(summary=SportSummary(sport="test", values=[event]))
+        ),
+        categories=[Category.Sports],
+        score=0,
+    )
+
+
+@pytest.mark.asyncio
+async def test_provider_query_non_trigger_word():
+    """Test non-trigger word returns no suggestions."""
+    backend = AsyncMock(spec=SportsDataBackend)
+    provider = SportsDataProvider(
+        metrics_client=get_metrics_client(),
+        backend=backend,
+        enabled_by_default=True,
+        trigger_words=["trigger word"],
+    )
+    sreq = SuggestionRequest(query="something else", geolocation=Location())
+    res = await provider.query(sreq=sreq)
+    assert len(res) == 0

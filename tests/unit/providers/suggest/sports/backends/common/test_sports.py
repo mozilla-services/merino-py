@@ -365,6 +365,32 @@ async def test_nfl_update_events(
     assert get_data.call_count == 2
 
 
+@pytest.mark.asyncio
+async def test_nfl_update_events_with_bad_date_time(
+    nfl_teams_payload: list[dict],
+    nfl_scores_payload: list[dict[str, Any]],
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Test NFL event updates."""
+    nfl = NFL(settings=settings.providers.sports)
+    nfl.load_teams_from_source(nfl_teams_payload)
+    nfl.season = "2025REG"
+    nfl.week = 3
+    nfl.event_ttl = timedelta(weeks=2)
+    nfl_scores_payload_copy = nfl_scores_payload.copy()
+    for payload in nfl_scores_payload_copy:
+        payload["DateTimeUTC"] = 20250101
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[nfl_scores_payload_copy, nfl_scores_payload_copy[:0]],
+    )
+
+    await nfl.update_events(client=mock_client)
+    assert len(list(nfl.events)) == 0
+    assert get_data.call_count == 2
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_nhl_update_events(

@@ -1,9 +1,11 @@
 """Test Gauntlet for SportsData.io"""
 
+import os
+
+import freezegun
 import pytest
 import json
 from datetime import datetime, timedelta, timezone
-
 
 from unittest.mock import patch, AsyncMock
 
@@ -55,6 +57,74 @@ async def test_get_data():
                 == "/tmp/ff7c1f10ab54968058fdcfaadf1b2457cd5d1a3f.json"  # nosec
             )
             # TODO: check for TTL.
+
+
+@pytest.mark.asyncio
+async def test_get_data_with_no_cache_dir():
+    """Test for `get_data` with no cache dir."""
+    ttl = timedelta(seconds=5)
+    with patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=httpx.Response(status_code=200, json=dict(foo="bar")),
+    ) as mock_client:
+        with patch.object(json, "dump") as mock_json:
+            await get_data(
+                client=mock_client,
+                url="http://example.org",
+                ttl=ttl,
+            )
+            mock_client.get.assert_called_with("http://example.org")
+            mock_json.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_data_handles_permission_error():
+    """Test for `get_data` handles permission error."""
+    ttl = timedelta(seconds=5)
+    with patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=httpx.Response(status_code=200, json=dict(foo="bar")),
+    ) as mock_client:
+        with (
+            patch.object(os.path, "exists", return_value=True),
+            patch.object(os.path, "getctime", side_effect=PermissionError),
+            patch.object(json, "dump"),
+        ):
+            await get_data(
+                client=mock_client,
+                url="http://example.org",
+                ttl=ttl,
+                cache_dir="/tmp",
+            )
+            # Permission Error file not read, request need to be made
+            mock_client.get.assert_called_with("http://example.org")
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+async def test_get_data_cache_file_exists():
+    """Test for `get_data` handles cache file exists."""
+    ttl = timedelta(days=1)
+    with patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=httpx.Response(status_code=200, json=dict(foo="bar")),
+    ) as mock_client:
+        with (
+            patch.object(os.path, "exists", return_value=True),
+            patch.object(os.path, "getctime", return_value=datetime.now().timestamp()),
+            patch.object(json, "load", return_value={"bar": "foo"}),
+        ):
+            data = await get_data(
+                client=mock_client,
+                url="http://example.org",
+                ttl=ttl,
+                cache_dir="/tmp",
+            )
+            mock_client.get.assert_not_called()
+            assert data == {"bar": "foo"}
 
 
 @pytest.mark.asyncio
