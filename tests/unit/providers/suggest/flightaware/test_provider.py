@@ -29,6 +29,7 @@ def backend_mock():
     backend = MagicMock()
     backend.fetch_flight_details = AsyncMock()
     backend.get_flight_summaries = MagicMock()
+    backend.fetch_flight_numbers = AsyncMock()
     return backend
 
 
