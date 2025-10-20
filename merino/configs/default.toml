@@ -805,7 +805,7 @@ enabled_by_default = false
 
 # MERINO_PROVIDERS__FLIGHTAWARE__SCORE
 # The ranking score for this provider as a floating point number.
-score = 0 # TODO
+score = 0.29
 
 # MERINO_PROVIDERS__FLIGHTAWARE__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
