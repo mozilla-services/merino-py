@@ -468,6 +468,7 @@ async def test_fetch_with_icon_processing_errors():
                 "iab_category": "5 - Education",
                 "icon": icon_id,
                 "impression_url": "test",
+                "serp_categories": [],
                 "keywords": [],
                 "title": "Test Suggestion",
                 "url": "https://example.org/test",

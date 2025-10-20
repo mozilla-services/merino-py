@@ -30,7 +30,7 @@ dependencies = [
     "ua-parser>=1.0,<2.0",
     "redis[hiredis]>=5.2.1,<6",
     "circuitbreaker>=2.1.3",
-    "mozilla-merino-ext>=0.1.0",
+    "mozilla-merino-ext>=0.2.0",
 ]
 
 [project.scripts]
