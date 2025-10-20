@@ -10,7 +10,6 @@ from moz_merino_ext.amp import AmpIndexManager
 
 from pydantic import HttpUrl
 
-from merino.utils.domain_categories.domain_category_mapping import DOMAIN_MAPPING
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
