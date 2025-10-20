@@ -7,13 +7,15 @@ broken out into `nightly`, and `update`, with a number of "plug-in"
 elements to fetch and process the data appropriately. These three tasks are meant to be
 called from a `cron` like function.
 
+Per the recommendation of the team, these jobs will be invoked by AirFlow
+(See `telemetry-airflow/dags/merino_jobs.py`). Per the documents, it is presumed that
+AirFlow job manager will use the latest `merino` image (see
+`docs/operations/jobs/dynamic-wiki-indexer.md`), and as such, the `merino.config.settings`
+will be constructed and imported using the defined Environment and config file settings.
+
 NOTE: `sport.update_teams(...)` will attempt to read a locally cached file (see
 `settings.sportsdata.cache_dir`). The cache time on these files is
 hardcoded in the calling function for now, but is based on the file creation time.
-
-    * Add tests (unit and integration)
-    * Document
-
 
 """
 
@@ -94,12 +96,6 @@ class SportDataUpdater:
             ],
             platform=f"{{lang}}_{platform}",
             index_map={
-                # "meta": settings.get(
-                #     "meta_index", f"{self.platform}_meta"
-                # ),
-                # "team": settings.get(
-                #     "team_index", f"{self.platform}_team"
-                # ),
                 "event": cast(
                     str,
                     settings.get("event_index", f"{platform}_event"),
@@ -175,7 +171,15 @@ if not sports_settings:
     raise SportsDataError(
         "Missing project configuration for `sports`. Did you create it under providers?"
     )
-
+else:
+    if not sports_settings.get("es"):
+        sports_settings["es"] = {}
+    if not sports_settings.es.get("api_key"):
+        logging.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
+        sports_settings.es["api_key"] = settings.providers.wikipedia.es_api_key
+    if not sports_settings.es.get("dsn"):
+        logging.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, using alternative")
+        sports_settings.es["dsn"] = settings.providers.wikipedia.es_url
 app = Options(sports_settings).get_command()
 cli = typer.Typer(
     name="fetch_sports",

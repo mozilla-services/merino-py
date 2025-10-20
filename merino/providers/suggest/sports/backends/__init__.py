@@ -23,6 +23,7 @@ async def get_data(
 
     """
     cache_file = None
+    # TODO: Convert to using a GCS bucket?
     if cache_dir:
         # painfully stupid cacher.
         # does not have to be super secure.
