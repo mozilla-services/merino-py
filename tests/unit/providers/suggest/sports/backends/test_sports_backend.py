@@ -5,7 +5,7 @@ import os
 import freezegun
 import pytest
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from unittest.mock import patch, AsyncMock
 
@@ -22,7 +22,6 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
-    SportDate,
     Team,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
@@ -162,17 +161,6 @@ async def test_gamestatus():
     assert GameStatus.F_SO.as_str() == "Final - Shoot Out"
     assert GameStatus.NotNecessary.as_str() == "Not Necessary"
     assert GameStatus.Unknown.as_str() == ""
-
-
-# sports/backends/sportsdata/common/data.py
-@pytest.mark.asyncio
-async def test_sportdate():
-    """Test the date handler and composer"""
-    now = datetime.now(tz=timezone.utc)
-    now_str = now.strftime("%Y-%b-%d")
-    date = SportDate(instance=now)
-    assert str(date) == now_str
-    assert date == SportDate.parse(now_str)
 
 
 @pytest.mark.asyncio

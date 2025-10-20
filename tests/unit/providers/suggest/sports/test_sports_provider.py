@@ -16,7 +16,12 @@ from merino.providers.suggest.custom_details import CustomDetails
 from merino.utils.domain_categories.models import Category
 from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.base import SuggestionRequest, BaseSuggestion
-from merino.providers.suggest.sports import utc_time_from_now, init_logs
+from merino.providers.suggest.sports import (
+    utc_time_from_now,
+    init_logs,
+    IGNORED_SUGGESTION_URL,
+    PROVIDER_ID,
+)
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
@@ -93,8 +98,8 @@ async def test_sports_provider(mock_client: AsyncClient):
     assert sum == BaseSuggestion(
         title="All Sport",
         description="All Sport report for test game jets",
-        url=HttpUrl("https://sportsdata.io/"),
-        provider="sportsdata_io",
+        url=HttpUrl(IGNORED_SUGGESTION_URL),
+        provider=PROVIDER_ID,
         is_sponsored=False,
         custom_details=CustomDetails(
             sports=SportEventDetails(summary=SportSummary(sport="test", values=[event]))

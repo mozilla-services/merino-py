@@ -351,6 +351,9 @@ class Sport(BaseModel):
                     date = datetime.fromisoformat(event_description["DateTime"]).replace(
                         tzinfo=event_timezone
                     )
+            # There have been incidents where an event returns "None" as a date value.
+            # We should ignore that event, and allow processing to continue, but note
+            # the error in case we need to escalate the problem.
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.

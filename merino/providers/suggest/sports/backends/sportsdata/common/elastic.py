@@ -24,7 +24,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
 
-# TODO: Put this into a separate file?
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
 
 EN_INDEX_SETTINGS: dict = {
@@ -135,7 +134,6 @@ INDEX_SETTINGS: dict[str, Any] = {
 }
 
 
-# TODO: break this into it's own file?
 class ElasticBackendError(BackendError):
     """General error with Elastic Search"""
 

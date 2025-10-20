@@ -11,6 +11,13 @@ LOGGING_TAG: Final[str] = "⚾"
 DEFAULT_LOGGING_LEVEL = "DEBUG"
 UPDATE_PERIOD_SECS = 60 * 60 * 4  # Four hours
 
+# The URL field in the returned suggestion is ignored. Use
+# a generic space-holder for this value for this provider.
+IGNORED_SUGGESTION_URL: Final[str] = "https://merino.services.mozilla.com"
+BASE_SUGGEST_SCORE: float = 0.5
+PROVIDER_ID: Final[str] = "sportsdata_io"
+
+
 # Retain team information for 2 years
 # DeltaTime only understands weeks, so use 52*2
 TEAM_TTL_WEEKS = 52 * 2

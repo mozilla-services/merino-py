@@ -14,6 +14,7 @@ from merino.providers.suggest.base import (
     SuggestionRequest,
 )
 from merino.providers.suggest.base import Category
+from merino.providers.suggest.sports import PROVIDER_ID, IGNORED_SUGGESTION_URL
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
@@ -46,7 +47,7 @@ class SportsDataProvider(BaseProvider):
         self,
         metrics_client: aiodogstatsd.Client,
         backend: SportsDataBackend,
-        name: str = "SportsData",
+        name: str = PROVIDER_ID,
         enabled_by_default: bool = False,
         trigger_words: list[str] = [],
         *args,
@@ -55,10 +56,9 @@ class SportsDataProvider(BaseProvider):
         self.metrics_client = metrics_client
         self.backend = backend
         self._name = name
-        self.url = HttpUrl("https://merino.services.mozilla.com/")
+        self.url = HttpUrl(IGNORED_SUGGESTION_URL)
         self._enabled_by_default = enabled_by_default
         self.trigger_words = trigger_words + TEAM_NAMES
-        # TODO: Add all teams, sports to trigger_words ?
         super().__init__()
 
     def initialize(self):
@@ -114,18 +114,24 @@ class SportsDataProvider(BaseProvider):
         score_adj: float = 0,
     ) -> BaseSuggestion:
         """Build a base suggestion with the sport data results"""
+        # "All" returns all sport events that match the search criteria.
+        # Further work would be required to return results collated to their
+        # respective sports. Each would be returned based on the `SportSummary.sport`.
         if sport_name == "all":
             sport_name = "All Sport"
             details = SportEventDetails(events[0])
         else:
-            # TODO, construct a collated detail set.
+            # Return an error because we shouldn't currently be returning anything
+            # other than "mixed" results.
             raise SportsDataError("Multiple Sports Returned")
-        self.metrics_client.increment("sports.suggestions.result", tags={"sport": sport_name})
+        self.metrics_client.increment(
+            "sports.suggestions.result", tags={"sport": sport_name}
+        )
         return BaseSuggestion(
             title=f"{sport_name}",  # IGNORED
-            url=HttpUrl("https://SportsData.io"),  # IGNORED
+            url=HttpUrl(IGNORED_SUGGESTION_URL),  # IGNORED
             description=f"{sport_name} report for {query}",
-            provider="sportsdata_io",
+            provider=PROVIDER_ID,
             is_sponsored=False,
             custom_details=CustomDetails(sports=details),
             categories=[Category.Sports],
