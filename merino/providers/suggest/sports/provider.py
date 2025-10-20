@@ -124,9 +124,7 @@ class SportsDataProvider(BaseProvider):
             # Return an error because we shouldn't currently be returning anything
             # other than "mixed" results.
             raise SportsDataError("Multiple Sports Returned")
-        self.metrics_client.increment(
-            "sports.suggestions.result", tags={"sport": sport_name}
-        )
+        self.metrics_client.increment("sports.suggestions.result", tags={"sport": sport_name})
         return BaseSuggestion(
             title=f"{sport_name}",  # IGNORED
             url=HttpUrl(IGNORED_SUGGESTION_URL),  # IGNORED
