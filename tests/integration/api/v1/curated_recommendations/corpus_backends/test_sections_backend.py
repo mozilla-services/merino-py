@@ -23,7 +23,7 @@ async def test_fetch(sections_backend: SectionsBackend):
     nfl = next(s for s in sections if s.externalId == "nfl")
     assert nfl.title == "NFL"
     assert nfl.iab.taxonomy == "IAB-3.0"  # IAB v3.0 is used
-    assert nfl.iab.categories[0] == "483"  # IAB v3.0 code for American Football
+    assert nfl.iab.categories[0] == "484"  # IAB v3.0 code for American Football
     # The number of items may vary based on test data
     assert len(nfl.sectionItems) >= 15
 
