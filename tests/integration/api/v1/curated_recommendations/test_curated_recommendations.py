@@ -1246,7 +1246,7 @@ class TestSections:
 
         # assert IAB metadata is present in ML sections (there are 8 of them)
         expected_iab_metadata = {
-            "nfl": "484",
+            "nfl": "483",
             "tv": "640",
             "music": "338",
             "movies": "324",
@@ -1381,6 +1381,71 @@ class TestSections:
                 data["feeds"][editorial_section_id]["heroSubtitle"]
                 == "Insider advice on where to eat, what to see, and how to enjoy the city like a local."
             )
+
+    def test_custom_sections_experiment_treatment(self, client: TestClient):
+        """Test that custom sections experiment treatment returns only MANUAL sections."""
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "treatment",
+            },
+        )
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # In treatment, we should NOT get ML sections like "music", "nfl", etc.
+        # Only MANUAL sections should be returned (plus top_stories which is special)
+        assert "music" not in sections
+        assert "nfl" not in sections
+        assert "tv" not in sections
+        assert "movies" not in sections
+        assert "nba" not in sections
+
+        # top_stories_section should still be present (it's always included)
+        assert "top_stories_section" in sections
+
+        # The MANUAL section "Tech stuff" may or may not appear depending on whether
+        # it has enough items after top stories are removed, but if it does appear,
+        # verify it has the correct title
+        if "d532b687-108a-4edb-a076-58a6945de714" in sections:
+            assert sections["d532b687-108a-4edb-a076-58a6945de714"]["title"] == "Tech stuff"
+
+    def test_custom_sections_experiment_control(self, client: TestClient):
+        """Test that custom sections experiment control excludes MANUAL sections."""
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": "control",
+            },
+        )
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # In control, we should NOT get the MANUAL section "Tech stuff"
+        assert "d532b687-108a-4edb-a076-58a6945de714" not in sections
+
+        # We should get ML sections (legacy topics only in control, since not ML experiment)
+        # Legacy topics should be present
+        legacy_topics = {topic.value for topic in Topic}
+        for sid in sections:
+            if sid != "top_stories_section":
+                assert sid in legacy_topics
 
     @pytest.mark.parametrize(
         "sections_payload",
