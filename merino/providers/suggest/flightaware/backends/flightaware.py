@@ -2,6 +2,7 @@
 
 import datetime
 from typing import Any
+import aiodogstatsd
 from httpx import AsyncClient, HTTPStatusError
 
 import logging
@@ -31,12 +32,14 @@ class FlightAwareBackend(FlightBackendProtocol):
     http_client: AsyncClient
     ident_url: str
     filemanager: FlightawareFilemanager
+    metrics_client: aiodogstatsd.Client
 
     def __init__(
         self,
         api_key: str,
         http_client: AsyncClient,
         ident_url: str,
+        metrics_client: aiodogstatsd.Client,
     ) -> None:
         """Initialize the flight aware backend."""
         self.api_key = api_key
@@ -46,10 +49,13 @@ class FlightAwareBackend(FlightBackendProtocol):
             gcs_bucket_path=settings.image_gcs.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
         )
+        self.metrics_client = metrics_client
 
     async def fetch_flight_details(self, flight_num: str) -> Any | None:
         """Fetch flight details through aeroAPI"""
         try:
+            metric_base = "flightaware.request.summary.get"
+            self.metrics_client.increment(f"{metric_base}.count")
             header = {
                 "x-apikey": self.api_key,
                 "Accept": "application/json",
@@ -61,16 +67,23 @@ class FlightAwareBackend(FlightBackendProtocol):
 
             formatted_url = self.ident_url.format(ident=flight_num, start=start, end=end)
 
-            response = await self.http_client.get(formatted_url, headers=header)
-            response.raise_for_status()
+            with self.metrics_client.timeit(f"{metric_base}.latency"):
+                response = await self.http_client.get(formatted_url, headers=header)
+                response.raise_for_status()
+                self.metrics_client.increment(
+                    f"{metric_base}.status", tags={"status_code": response.status_code}
+                )
+            return response.json()
 
         except HTTPStatusError as ex:
+            status_code = ex.response.status_code
+            self.metrics_client.increment(
+                f"{metric_base}.status", tags={"status_code": status_code}
+            )
             logger.warning(
-                f"Flightware request error for flight details: {ex.response.status_code} {ex.response.reason_phrase}"
+                f"Flightware request error for flight details for {flight_num}: {status_code} {ex.response.reason_phrase}"
             )
             return None
-
-        return response.json()
 
     def get_flight_summaries(
         self, flight_response: dict | None, query: str
