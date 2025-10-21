@@ -97,7 +97,10 @@ class InferredLocalModel(BaseModel):
 
     def get_interest_keys(self) -> set[str]:
         """Return set of keys, each representing an interest computed by the model"""
-        return set(self.model_data.interest_vector.keys())
+        if self.model_data.private_features is None:
+            return set(self.model_data.interest_vector.keys())
+        else:
+            return set(self.model_data.private_features)
 
     def decode_dp_interests(
         self, dp_values: list[str], interest_key: float | str | None, support_two: bool = True
@@ -121,7 +124,6 @@ class InferredLocalModel(BaseModel):
             If model IDs do not match, or there is a mismatch in length and format of the
             values
         """
-
         def interpret_index(index: int) -> float:
             feature_result: float = 0.0
             if index > 0:

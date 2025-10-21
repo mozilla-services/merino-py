@@ -191,6 +191,13 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
                 diff_p=MODEL_P_VALUE_V1,
                 diff_q=MODEL_Q_VALUE_V1,
             )
+        def get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
+            return InterestVectorConfig(
+                features={f"s_{section_name}": 1},
+                thresholds=thresholds,
+                diff_p=MODEL_P_VALUE_V1,
+                diff_q=MODEL_Q_VALUE_V1,
+            )
 
         if model_id is not None:
             """ If model is specified we only return if supported. """
@@ -212,15 +219,15 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
                     "arts",
                     "health",
                     "business",
-                    "entertainment",
-                ]  ## TODO entertainment?
+                    "education-science",
+                ]  ## TODO "education-science"?
                 model_id = LOCAL_AND_SERVER_V1
             else:  ## includes (experiment_branch == LOCAL_ONLY_BRANCH_NAME)
                 ## nothing sent to merino
                 private_features = []
                 model_id = LOCAL_ONLY_V1
             category_fields = {
-                a: get_topic(a, model_thresholds) for a in BASE_SECTIONS
+                a: get_section(a, model_thresholds) for a in BASE_SECTIONS
             }  ## all sections
         else:
             private_features = None  ## private features null on frontend
