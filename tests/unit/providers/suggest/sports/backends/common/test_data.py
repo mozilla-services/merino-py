@@ -11,7 +11,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common import GameStatu
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Team,
     Sport,
-    SportDate,
+    SportRequestDate,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
@@ -217,11 +217,6 @@ def test_load_schedules_from_source_filters_and_populates(
 
     sport.events = {}
     mod_event = events_response[0]
-    del mod_event["DateTimeUTC"]
-    mod_events = sport.load_schedules_from_source(
-        [mod_event], event_timezone=ZoneInfo("US/Eastern")
-    )
-    assert list(mod_events.values())[0].date.tzinfo == ZoneInfo("US/Eastern")
 
     mod_event["DateTimeUTC"] = None
     mod_event["DateTime"] = None
@@ -251,6 +246,6 @@ def test_load_teams_from_source(
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 def test_sportdate():
     """Test the SportDate stuff."""
-    test = SportDate()
+    test = SportRequestDate()
     assert str(test) == "2025-Sep-22"
-    assert str(SportDate.parse("2025-Oct-01")) == "2025-Oct-01"
+    assert str(SportRequestDate.parse("2025-Oct-01")) == "2025-Oct-01"

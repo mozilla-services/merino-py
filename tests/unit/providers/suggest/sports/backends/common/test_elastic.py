@@ -99,7 +99,7 @@ async def test_store_event_fail_and_metrics_captured(
         sport="football",
         id=0,
         terms="test",
-        date=datetime.datetime.now(),
+        date=int(datetime.datetime.now().timestamp()),
         original_date="2025-09-22",
         home_team={"key": "home"},
         home_score=0,

@@ -86,8 +86,7 @@ TEAM_NAMES = [
     "oilers",
     "pacers",
     "packers",
-    "panthers",
-    # "panthers",
+    "panthers",  # Note: "Panthers" exists in both NFL and NHL
     "patriots",
     "pelicans",
     "penguins",
@@ -316,7 +315,7 @@ class NHL(Sport):
 
 
 class NBA(Sport):
-    """Major Hockey League"""
+    """National Basketball Association"""
 
     season: str | None
     _lock: asyncio.Lock
@@ -571,7 +570,7 @@ class UCL(Sport):
 #            },
 #        ...]
 #        """
-#        date = SportDate()
+#        date = SportRequestDate()
 #        season = str(date)
 #        url = f"{self.base_url}/ScoresBasic/{season}?key={self.api_key}"
 #        await get_data(client, url)

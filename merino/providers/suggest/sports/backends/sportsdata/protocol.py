@@ -19,7 +19,7 @@ class SportTeamDetail(BaseModel):
 def build_query(event: dict[str, Any]) -> str:
     """Build the search query from the event information"""
     date = datetime.fromtimestamp(event["date"]).strftime("%d %b %Y")
-    return f"{event.get("sport")} {event.get("away_team",{}).get("name","")} at {event.get("home_team", {}).get("name", "")} {date}"
+    return f"""{event.get("sport")} {event.get("away_team",{}).get("name","")} at {event.get("home_team", {}).get("name", "")} {date}"""
 
 
 class SportEventDetail(BaseModel):

@@ -2,7 +2,6 @@
 
 # from __future__ import annotations
 
-import json
 import logging
 
 from abc import abstractmethod
@@ -27,33 +26,39 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
 )
 
 
-class SportDate(BaseModel):
+class SportRequestDate(BaseModel):
     """Return the current date in SportsData compliant format.
 
     Some requests to SportsData use a Y-M-D formatted timestamp as a URL parameter.
     """
 
-    instance: datetime
+    _instance: datetime | None = None
 
-    def __init__(self, *args, **kwargs):
-        """Instantiate using an optional instance time.
+    @property
+    def instance(self) -> datetime:
+        """Return the request instance, setting if not already available."""
+        if not self._instance:
+            self._instance = datetime.now(tz=timezone.utc)
+        return self._instance
 
-        mypy will fail to recognize `__init__()` as typed, see
-        https://github.com/python/mypy/issues/5502
-        """
-        instance = kwargs.get("instance", datetime.now(tz=timezone.utc))
-        kwargs["instance"] = instance.replace(
+    @instance.setter
+    def instance(self, instance: datetime = datetime.now(tz=timezone.utc)):
+        """Set the instance"""
+        self._instance = instance.replace(
             hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc
         )
-        super().__init__(*args, **kwargs)
 
     def __str__(self) -> str:
+        """Return the instance as a formatted time string"""
         return self.instance.strftime("%Y-%b-%d")
 
     @classmethod
-    def parse(cls, parse: str):
+    def parse(cls, parse: str) -> "SportRequestDate":
         """Convert string into self."""
-        return cls(instance=datetime.strptime(parse, "%Y-%b-%d"))
+        instance = datetime.strptime(parse, "%Y-%b-%d")
+        self = cls()
+        self.instance = instance
+        return self
 
 
 class Team(BaseModel):
@@ -97,7 +102,7 @@ class Team(BaseModel):
         ]:
             candidate = team_data.get(item)
             if candidate:
-                for word in list(candidate.split(" ")):
+                for word in candidate.split(" "):
                     lword = word.lower()
                     if word not in term_filter:
                         terms.add(lword)
@@ -154,7 +159,7 @@ class Event(BaseModel):
     # list of searchable terms for this event.
     terms: str
     # Event UTC start time
-    date: datetime
+    date: int
     # The original date string (used for debugging)
     original_date: str | None
     # minimal team info for home
@@ -173,23 +178,6 @@ class Event(BaseModel):
     def suggest_title(self) -> str:
         """Event suggest title"""
         return f"{self.away_team["name"]} at {self.home_team["name"]}"
-
-    def as_json(self) -> str:
-        """Provide the data as a minimal JSON structure without the terms"""
-        return json.dumps(
-            dict(
-                # terms=self.terms,
-                sport=self.sport,
-                id=self.id,
-                date=int(self.date.timestamp()),
-                home_team=self.home_team,
-                away_team=self.away_team,
-                home_score=self.home_score,
-                away_score=self.away_score,
-                status=self.status.as_str(),
-                expiry=self.expiry,
-            )
-        )
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
@@ -339,14 +327,19 @@ class Sport(BaseModel):
             # There have been incidents where an event returns "None" as a date value.
             # We should ignore that event, and allow processing to continue, but note
             # the error in case we need to escalate the problem.
-            except TypeError as ex:
+            except TypeError:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
                 # note: declaring a `self.metrics_client` causes a circular dependency.
-                get_metrics_client().increment("sports.error.no_date", tags={"sport": self.name})
-                logging.debug(
-                    f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
-                )
+                try:
+                    get_metrics_client().increment(
+                        "sports.error.no_date", tags={"sport": self.name}
+                    )
+                except Exception as ex:
+                    # Metrics failed, probably because no metric client.
+                    logging.debug(
+                        f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
+                    )
                 continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
@@ -356,7 +349,7 @@ class Sport(BaseModel):
                 sport=self.name,
                 id=event_description["GlobalGameID"],
                 terms=terms,
-                date=date,
+                date=int(date.timestamp()),
                 original_date=event_description["DateTimeUTC"],
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
@@ -440,7 +433,13 @@ class Sport(BaseModel):
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
                 # note: declaring a `self.metrics_client` causes a circular dependency.
-                get_metrics_client().increment("sports.error.no_date", tags={"sport": self.name})
+                try:
+                    get_metrics_client().increment(
+                        "sports.error.no_date", tags={"sport": self.name}
+                    )
+                except Exception as ex2:
+                    # Metrics failed, probably because no metrics client.
+                    logging.debug(f"{LOGGING_TAG} No metrics: {ex2}")
                 logging.debug(
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
@@ -453,7 +452,7 @@ class Sport(BaseModel):
                 sport=self.name,
                 id=id,
                 terms=terms,
-                date=date,
+                date=int(date.timestamp()),
                 original_date=event_description.get(
                     "DateTimeUTC", event_description.get("DateTime")
                 ),

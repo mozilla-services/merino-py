@@ -79,7 +79,7 @@ async def test_updater(
             sport=mock_sport.name,
             id=0,
             terms="",
-            date=now,
+            date=int(now.timestamp()),
             original_date="",
             home_team=dict(key="HOM"),
             away_team=dict(key="AWY"),

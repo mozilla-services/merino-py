@@ -21,6 +21,7 @@ from merino.providers.suggest.sports import (
     init_logs,
     IGNORED_SUGGESTION_URL,
     PROVIDER_ID,
+    BASE_SUGGEST_SCORE,
 )
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
@@ -105,7 +106,7 @@ async def test_sports_provider(mock_client: AsyncClient):
             sports=SportEventDetails(summary=SportSummary(sport="test", values=[event]))
         ),
         categories=[Category.Sports],
-        score=0,
+        score=BASE_SUGGEST_SCORE,
     )
 
 

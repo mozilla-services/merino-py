@@ -22,6 +22,7 @@ hardcoded in the calling function for now, but is based on the file creation tim
 import asyncio
 import logging
 import typer
+from time import time
 from httpx import AsyncClient, Timeout
 from dynaconf.base import LazySettings
 from typing import cast
@@ -29,7 +30,6 @@ from typing import cast
 from aiodogstatsd import Client
 
 from merino.configs import settings
-from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.sports import init_logs, LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
@@ -46,6 +46,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     # MLB,
     # EPL,
 )
+from merino.utils.http_client import create_http_client
 
 
 class Options:
@@ -82,8 +83,6 @@ class SportDataUpdater:
         store: SportsDataStore | None = None,
         **kwargs,
     ) -> None:
-        if not settings.sports:
-            raise SportsDataError("No sports defined")
         active_sports = [sport.strip().upper() for sport in settings.sports.split(",")]
         sport: Sport | None = None
         sports: dict[str, Sport] = {}
@@ -124,7 +123,6 @@ class SportDataUpdater:
                     logging.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue
             sports[sport_name] = sport
-        self.metrics = get_metrics_client()
         self.sports = sports
         self.store = store
         self.connect_timeout = settings.sportsdata.get("connect_timeout", 1)
@@ -133,27 +131,31 @@ class SportDataUpdater:
 
     async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
         """Perform sport specific updates."""
-        metrics = get_metrics_client()
-        timeout = Timeout(
-            3,
-            connect=self.connect_timeout,
-            read=self.read_timeout,
+        client = create_http_client(
+            connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
         )
-
-        client = client or AsyncClient(timeout=timeout)
 
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
             # which matches the recommended query period for SportsData.
             if include_teams:  # pragma: no cover
-                with metrics.timeit("sports.time.load.team", tags={"sport": sport.name}):
-                    await sport.update_teams(client=client)
+                start = time()
+                await sport.update_teams(client=client)
+                logging.info(
+                    f"""{LOGGING_TAG} sports.time.update.team: ["sport": {sport.name}] = {time() - start}"""
+                )
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)
-            with metrics.timeit("sports.time.update.events", tags={"sport": sport.name}):
-                await sport.update_events(client=client)
+            start = time()
+            await sport.update_events(client=client)
+            logging.info(
+                f"""{LOGGING_TAG} sports.time.update.event: ["sport": {sport.name}] = {time() - start}"""
+            )
             # Put the data in the shared storage for the live query.
-            with metrics.timeit("sports.time.load.events", tags={"sport": sport.name}):
-                await self.store.store_events(sport, language_code="en")
+            start = time()
+            await self.store.store_events(sport, language_code="en")
+            logging.info(
+                f"""{LOGGING_TAG} sports.time.load.events ["sport": {sport.name}] = {time() - start}"""
+            )
         await self.store.shutdown()
         return True
 
@@ -166,20 +168,17 @@ class SportDataUpdater:
         await self.store.prune()
 
 
-sports_settings = getattr(settings.providers, "sports", None)
-if not sports_settings:
-    raise SportsDataError(
-        "Missing project configuration for `sports`. Did you create it under providers?"
-    )
-else:
-    if not sports_settings.get("es"):
-        sports_settings["es"] = {}
-    if not sports_settings.es.get("api_key"):
-        logging.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
-        sports_settings.es["api_key"] = settings.providers.wikipedia.es_api_key
-    if not sports_settings.es.get("dsn"):
-        logging.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, using alternative")
-        sports_settings.es["dsn"] = settings.providers.wikipedia.es_url
+sports_settings = settings.providers.sports
+# If there are no explicit elastic search values defined for sports,
+# use the existing wikipedia values.
+# NOTE: eventually, this will be replaced when the elasticsearch code
+# is moved to `/utils`
+if not sports_settings.es.get("api_key"):
+    logging.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
+    sports_settings.es["api_key"] = settings.providers.wikipedia.es_api_key
+if not sports_settings.es.get("dsn"):
+    logging.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, using alternative")
+    sports_settings.es["dsn"] = settings.providers.wikipedia.es_url
 app = Options(sports_settings).get_command()
 cli = typer.Typer(
     name="fetch_sports",

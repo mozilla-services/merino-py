@@ -14,7 +14,11 @@ from merino.providers.suggest.base import (
     SuggestionRequest,
 )
 from merino.providers.suggest.base import Category
-from merino.providers.suggest.sports import PROVIDER_ID, IGNORED_SUGGESTION_URL
+from merino.providers.suggest.sports import (
+    BASE_SUGGEST_SCORE,
+    PROVIDER_ID,
+    IGNORED_SUGGESTION_URL,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
@@ -42,6 +46,7 @@ class SportsDataProvider(BaseProvider):
     url: HttpUrl
     enabled_by_default: bool
     trigger_words: list[str]
+    score: float
 
     def __init__(
         self,
@@ -50,6 +55,7 @@ class SportsDataProvider(BaseProvider):
         name: str = PROVIDER_ID,
         enabled_by_default: bool = False,
         trigger_words: list[str] = [],
+        score: float = BASE_SUGGEST_SCORE,
         *args,
         **kwargs,
     ):
@@ -59,9 +65,10 @@ class SportsDataProvider(BaseProvider):
         self.url = HttpUrl(IGNORED_SUGGESTION_URL)
         self._enabled_by_default = enabled_by_default
         self.trigger_words = trigger_words + TEAM_NAMES
+        self.score = score
         super().__init__()
 
-    def initialize(self):
+    async def initialize(self):
         """Create connections, components and other actions needed when starting up"""
         pass
 
@@ -81,9 +88,7 @@ class SportsDataProvider(BaseProvider):
                 # Both query and build suggestion have the ability to differentiate
                 # and collate by sport. Product and UI do not want that, so
                 # we will always return only one sport.
-                results = await self.backend.query(
-                    sreq.query, score=self.backend.base_score, url=self.url
-                )
+                results = await self.backend.query(sreq.query, score=self.score, url=self.url)
                 return [
                     self.build_suggestion(
                         # If we are collating, this should be the sport group.
@@ -133,5 +138,5 @@ class SportsDataProvider(BaseProvider):
             is_sponsored=False,
             custom_details=CustomDetails(sports=details),
             categories=[Category.Sports],
-            score=self.backend.base_score + score_adj,
+            score=self.score + score_adj,
         )

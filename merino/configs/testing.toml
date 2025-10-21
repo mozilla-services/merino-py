@@ -10,7 +10,7 @@ dynaconf_merge = true
 [testing.runtime]
 # Use a larger timeout for testing
 query_timeout_sec = 0.5
-disabled_providers = ["disabled_provider", "amo", "sports"]
+disabled_providers = ["disabled_provider", "amo"]
 
 
 [testing.metrics]
@@ -57,7 +57,6 @@ circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
 
 [testing.providers.sports]
-type = "sports"
 enabled_by_default = false
 max_suggestions = 5
 score = 0.5

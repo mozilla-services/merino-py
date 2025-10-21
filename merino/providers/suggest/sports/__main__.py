@@ -8,7 +8,6 @@ from datetime import datetime
 from logging import Logger
 
 from dynaconf.base import LazySettings
-from httpx import AsyncClient, Timeout
 
 # Reminder: this will instantiate `settings`
 from merino.configs import settings
@@ -28,6 +27,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     FORCE_IMPORT,
 )
 from merino.utils.metrics import get_metrics_client
+from merino.utils.http_client import create_http_client
 
 # fool ruff into understanding that we really are importing this package.
 _ = FORCE_IMPORT
@@ -79,12 +79,10 @@ async def main_loader(
             print(f"Skipping {sport_name}")
             continue
     # Sadly, we can't instantiate the AsyncClient lower.
-    timeout = Timeout(
-        3,
-        connect=settings.sportsdata.get("connect_timeout", 1),
-        read=settings.sportsdata.get("read_timeout", 1),
+    client = create_http_client(
+        connect_timeout=settings.sportsdata.get("connect_timeout", 1),
+        request_timeout=settings.sportsdata.get("read_timeout", 1),
     )
-    client = AsyncClient(timeout=timeout)
     log.info(f"{LOGGING_TAG} Pruning data...")
     await event_store.prune()
     team_names: set[str] = set()
@@ -112,7 +110,6 @@ async def main_query(log: Logger, settings: LazySettings):
     provider = SportsDataProvider(
         backend=SportsDataBackend(settings=settings),
         metrics_client=get_metrics_client(),
-        base_score=settings.score,
         name="test_sports_provider_id",
         trigger_words=trigger_words,
         enabled_by_default=True,

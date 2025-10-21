@@ -368,12 +368,12 @@ class SportsDataStore(ElasticDataStore):
                 # concluded game and the next scheduled game. As for current, we just grab the last
                 # "inprogress" game that is reported.
                 if status.is_final():
-                    if filter[sport].get("previous", {}).get("date", 0) < event["date"]:
+                    if filter[sport].get("previous", {}).get("date", 0) < int(event["date"]):
                         filter[sport]["previous"] = event
                 # If only show the next upcoming game.
                 if status.is_scheduled():
                     now = int(datetime.now(tz=timezone.utc).timestamp())
-                    if filter[sport].get("next", {}).get("date", now + 86400) < event["date"]:
+                    if filter[sport].get("next", {}).get("date", now + 86400) < int(event["date"]):
                         filter[sport]["next"] = event
                 if status.is_in_progress():
                     # remove the previous game info because we have a current one.
@@ -402,12 +402,12 @@ class SportsDataStore(ElasticDataStore):
                 "_source": {
                     "sport": event.sport,
                     "terms": event.terms,
-                    "date": event.date.timestamp(),
+                    "date": event.date,
                     "expiry": event.expiry,
                     "id": event.id,
                     "event_key": event.key(),
                     "status_type": event.status.status_type(),
-                    "event": event.as_json(),
+                    "event": event.model_dump_json(),
                 },
             }
             actions.append(action)

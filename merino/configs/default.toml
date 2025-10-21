@@ -321,6 +321,7 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 forecast_ttl_sec = 3600 # 1 hr
 
 [default.providers.sports]
+type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
 # Comma delimited list of active sports to use
 # e.g. "NFL,NBA,NHL"

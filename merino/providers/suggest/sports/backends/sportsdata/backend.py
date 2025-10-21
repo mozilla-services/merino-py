@@ -5,7 +5,7 @@ from dynaconf.base import LazySettings
 from pydantic import HttpUrl
 from typing import Protocol, cast
 
-from merino.providers.suggest.sports import BASE_SUGGEST_SCORE
+
 from merino.providers.suggest.sports.backends.sportsdata.protocol import SportSummary
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
@@ -29,7 +29,6 @@ class SportsDataBackend(SportsDataProtocol):
     """Provide the methods specific to this provider for fulfilling the request"""
 
     data_store: SportsDataStore
-    base_score: float
 
     def __init__(
         self,
@@ -50,7 +49,6 @@ class SportsDataBackend(SportsDataProtocol):
                 "event": cast(str, event_map),
             },
         )
-        self.base_score = settings.get("score", BASE_SUGGEST_SCORE)
         self.max_suggestions = settings.get("max_suggestions", 10)
         self.mix_sports = settings.get("mix_sports", True)
 

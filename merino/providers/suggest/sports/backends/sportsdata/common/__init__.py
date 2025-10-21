@@ -25,7 +25,7 @@ class GameStatus(StrEnum):
     # other states can be ignored?
 
     @classmethod
-    def parse(cls, state: str):
+    def parse(cls, state: str) -> "GameStatus":
         """Instantiate from a string"""
         try:
             return cls(state.lower())
