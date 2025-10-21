@@ -81,10 +81,6 @@ class Team(BaseModel):
     # Team Data expiration date:
     expiry: int
 
-    def as_str(self) -> str:
-        """Serialize to JSON string"""
-        return json.dumps(self)
-
     @classmethod
     def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
         """Convert the rich SportsData.io information set to the reduced info we need."""
@@ -160,7 +156,7 @@ class Event(BaseModel):
     # Event UTC start time
     date: datetime
     # The original date string (used for debugging)
-    original_date: str
+    original_date: str | None
     # minimal team info for home
     home_team: dict[str, Any]
     # minimal team info for home
@@ -177,17 +173,6 @@ class Event(BaseModel):
     def suggest_title(self) -> str:
         """Event suggest title"""
         return f"{self.away_team["name"]} at {self.home_team["name"]}"
-
-    def suggest_description(self) -> str:
-        """Return a formatted description text for the suggestion result."""
-        match self.status:
-            case GameStatus.Scheduled | GameStatus.Delayed:
-                text = f"starts at {self.date}"
-            case GameStatus.Final | GameStatus.F_OT:
-                text = f"Final score: {self.away_score} - {self.home_score}"
-            case _:
-                text = f"{self.status.as_str()}: {self.away_score} - {self.home_score}"
-        return text
 
     def as_json(self) -> str:
         """Provide the data as a minimal JSON structure without the terms"""
@@ -437,6 +422,11 @@ class Sport(BaseModel):
                 event_description.get("AwayTeamKey") or event_description["AwayTeam"]
             ]
             id = event_description.get("GlobalGameID") or event_description["GameId"]
+            status = GameStatus.parse(event_description["Status"])
+            # Ignore cancelled games.
+            if status == GameStatus.Canceled:
+                # Cancelled games have no UTC time stamp, so we can't know how recent they were.
+                continue
             try:
                 if "DateTimeUTC" in event_description:
                     date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
@@ -455,11 +445,6 @@ class Sport(BaseModel):
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
                 continue
-            status = GameStatus.parse(event_description["Status"])
-            # Ignore cancelled games.
-            if status == GameStatus.Canceled:
-                # Cancelled games have no UTC time stamp, so we can't know how recent they were.
-                continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
                 continue
@@ -468,8 +453,10 @@ class Sport(BaseModel):
                 sport=self.name,
                 id=id,
                 terms=terms,
-                date=datetime.strptime(event_description["DateTimeUTC"], "%Y-%m-%dT%H:%M:%S"),
-                original_date=event_description["DateTimeUTC"],
+                date=date,
+                original_date=event_description.get(
+                    "DateTimeUTC", event_description.get("DateTime")
+                ),
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
                 home_score=event_description["HomeTeamScore"],  # Differs

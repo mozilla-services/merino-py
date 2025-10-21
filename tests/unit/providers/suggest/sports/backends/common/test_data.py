@@ -1,6 +1,7 @@
 """Unit Test for Sports Data models."""
 
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import freezegun
 import pytest
@@ -98,6 +99,30 @@ def events_response():
             "HomeTeamID": 19,
             "SeriesInfo": None,
         },
+        {
+            "GameID": 000000,
+            "Season": 2000,
+            "SeasonType": 2,
+            "Status": "Canceled",
+            "Day": None,
+            "DateTime": None,
+            "Updated": "2025-01-02T04:10:57",
+            "IsClosed": True,
+            "AwayTeam": "AWA",
+            "HomeTeam": "HOM",
+            "StadiumID": 9,
+            "AwayTeamScore": 0,
+            "HomeTeamScore": 0,
+            "GlobalGameID": 12345678,
+            "GlobalAwayTeamID": 30000041,
+            "GlobalHomeTeamID": 30000019,
+            "GameEndDateTime": None,
+            "NeutralVenue": False,
+            "DateTimeUTC": None,
+            "AwayTeamID": 41,
+            "HomeTeamID": 19,
+            "SeriesInfo": None,
+        },
     ]
 
 
@@ -178,6 +203,7 @@ def test_load_schedules_from_source_filters_and_populates(
 
     assert 30023869 in events
     assert 12312312 not in events
+    assert 12345678 not in events
 
     ev = events[30023869]
 
@@ -188,7 +214,22 @@ def test_load_schedules_from_source_filters_and_populates(
     assert ev.away_score == 2
 
     assert ev.suggest_title() == "The Away Team at The Home Team"
-    assert ev.suggest_description() == "Final score: 2 - 3"
+
+    sport.events = {}
+    mod_event = events_response[0]
+    del mod_event["DateTimeUTC"]
+    mod_events = sport.load_schedules_from_source(
+        [mod_event], event_timezone=ZoneInfo("US/Eastern")
+    )
+    assert list(mod_events.values())[0].date.tzinfo == ZoneInfo("US/Eastern")
+
+    mod_event["DateTimeUTC"] = None
+    mod_event["DateTime"] = None
+    sport.events = {}
+    mod_events = sport.load_schedules_from_source(
+        [mod_event], event_timezone=ZoneInfo("US/Eastern")
+    )
+    assert len(mod_events) == 0
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
