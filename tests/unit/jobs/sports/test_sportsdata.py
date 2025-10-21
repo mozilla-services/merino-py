@@ -104,5 +104,3 @@ async def test_updater(
     assert mock_sport.update_teams.called
     assert sport_data_store.client.delete_by_query.called  # type: ignore
     assert not sport_data_store.client.store_events.called  # type: ignore
-
-    print("here")

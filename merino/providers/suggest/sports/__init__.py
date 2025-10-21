@@ -37,6 +37,7 @@ def utc_time_from_now(delta: timedelta) -> int:
 
 def init_logs(level: str | None = None) -> logging.Logger:
     """Initialize logging based on `PYTHON_LOG` environ)"""
+    #
     # be very verbose because `mypy` does not understand
     # `None or x.get(label, CONST_STR_VALUE)` does not produce a None value.
     if not level:

@@ -112,9 +112,9 @@ class Team(BaseModel):
         return cls(
             terms=" ".join(terms),
             key=team_data["Key"],
-            fullname=fullname.encode("utf8"),
-            name=name.encode("utf8"),
-            locale=locale.encode("utf8"),
+            fullname=fullname,
+            name=name,
+            locale=locale,
             aliases=list(
                 filter(
                     lambda x: x is not None,

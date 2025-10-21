@@ -70,10 +70,8 @@ TEAM_NAMES = [
     "islanders",
     "jaguars",
     "jazz",
-    "jets",
-    # "jets",
-    "kings",
-    # "kings",
+    "jets",  # Note: "Jets" exists in both NFL and NHL
+    "kings",  # Note: "Kings" exists in both NBA and NHL
     "knicks",
     "kraken",
     "lakers",
@@ -388,7 +386,6 @@ class NBA(Sport):
 
     async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
-        """Update the schedules for games"""
         await self.get_season(client=client)
         if self.season is None:
             logging.info(f"{LOGGING_TAG} Skipping out of season {self.name}")

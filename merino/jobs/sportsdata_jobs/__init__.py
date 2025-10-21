@@ -145,7 +145,7 @@ class SportDataUpdater:
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
             # which matches the recommended query period for SportsData.
-            if include_teams:
+            if include_teams:  # pragma: no cover
                 with metrics.timeit("sports.time.load.team", tags={"sport": sport.name}):
                     await sport.update_teams(client=client)
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)

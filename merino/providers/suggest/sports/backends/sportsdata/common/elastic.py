@@ -377,7 +377,8 @@ class SportsDataStore(ElasticDataStore):
                         filter[sport]["next"] = event
                 if status.is_in_progress():
                     # remove the previous game info because we have a current one.
-                    del filter[sport]["previous"]
+                    if "previous" in filter[sport]:
+                        del filter[sport]["previous"]
                     filter[sport]["current"] = event
             return filter
         else:
