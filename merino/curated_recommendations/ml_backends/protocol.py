@@ -124,6 +124,7 @@ class InferredLocalModel(BaseModel):
             If model IDs do not match, or there is a mismatch in length and format of the
             values
         """
+
         def interpret_index(index: int) -> float:
             feature_result: float = 0.0
             if index > 0:

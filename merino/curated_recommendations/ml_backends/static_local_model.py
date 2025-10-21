@@ -191,6 +191,7 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
                 diff_p=MODEL_P_VALUE_V1,
                 diff_q=MODEL_Q_VALUE_V1,
             )
+
         def get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
             return InterestVectorConfig(
                 features={f"s_{section_name}": 1},
