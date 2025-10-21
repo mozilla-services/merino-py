@@ -3,7 +3,7 @@
 import pytest
 
 from merino.curated_recommendations import SectionsBackend
-from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import CreateSource, SurfaceId
 
 
 @pytest.mark.asyncio
@@ -22,6 +22,11 @@ async def test_fetch(sections_backend: SectionsBackend):
     assert (
         len(non_crawl_sections) >= 10
     ), f"Expected at least 10 non-_crawl sections, got {len(non_crawl_sections)}"
+
+    # Check that we have exactly 1 section with createSource == "MANUAL"
+    manual_sections = [s for s in sections if s.createSource == CreateSource.MANUAL]
+    assert len(manual_sections) == 1, f"Expected 1 MANUAL section, got {len(manual_sections)}"
+    assert manual_sections[0].title == "Tech stuff"
 
     # Lookup the NFL section by its externalId.
     nfl = next(s for s in sections if s.externalId == "nfl")
