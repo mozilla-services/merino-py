@@ -229,3 +229,54 @@ suggest/google_suggest:
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
+suggest/flightaware:
+  flightaware_request_summary_get:
+    description: |
+      A counter to measure the total number of API requests made to AeroAPI
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+  flightaware_request_summary_get_latency:
+    description: |
+      A histogram to measure the latency of API requests to AeroAPI
+    type: histogram
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+  flightaware_request_summary_get_status:
+    description: |
+      A counter to measure the number of AeroAPI responses, labeled by HTTP status code.
+    type: counter
+    labels:
+      - name: status_code
+        description: |
+          The HTTP status code returned by the API request (e.g., 200, 400, 500).
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+  providers_flightaware_flight_no_pattern_match_count:
+    description: |
+      A counter to measure how many user queries matched a valid flight number pattern
+      and successfully triggered a FlightAware lookup.
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint
+    alert_policy: []
+  providers_flightaware_query_exception:
+    description: |
+      A counter to track unexpected errors raised during the FlightAware provider query flow.
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint
+    alert_policy: []
+
+
+
+
+
+

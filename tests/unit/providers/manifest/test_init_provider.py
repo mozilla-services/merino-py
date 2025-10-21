@@ -4,10 +4,24 @@
 
 """Unit tests for the __init__ manifest provider module."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 import pytest
 
-from merino.providers.manifest import get_provider, init_provider, Provider as ManifestProvider
+from merino.providers.manifest import (
+    get_provider,
+    init_provider,
+    Provider as ManifestProvider,
+)
+
+
+@pytest.fixture(autouse=True)
+def patch_manifest_fetch_data():
+    """Patch Manifest Provider._fetch_data to prevent real GCS calls during tests."""
+    with patch(
+        "merino.providers.manifest.provider.Provider._fetch_data",
+        new_callable=AsyncMock,
+    ) as mock_fetch_data:
+        yield mock_fetch_data
 
 
 @pytest.mark.asyncio

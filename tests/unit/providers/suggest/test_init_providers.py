@@ -5,6 +5,7 @@
 """Unit tests for the __init__ suggest provider module."""
 
 import logging
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pytest import LogCaptureFixture
@@ -22,6 +23,26 @@ from merino.providers.suggest.manager import ProviderType
 from tests.types import FilterCaplogFixture
 
 DISABLED_PROVIDERS = settings.runtime.disabled_providers
+
+
+@pytest.fixture(autouse=True)
+def patch_flightaware_fetch_data():
+    """Patch FlightAware Provider._fetch_data to prevent real GCS calls."""
+    with patch(
+        "merino.providers.suggest.flightaware.provider.Provider._fetch_data",
+        new_callable=AsyncMock,
+    ) as mock_fetch_data:
+        yield mock_fetch_data
+
+
+@pytest.fixture(autouse=True)
+def patch_finance_fetch_manifest():
+    """Patch Finance Provider._fetch_manifest to prevent real GCS  calls."""
+    with patch(
+        "merino.providers.suggest.finance.provider.Provider._fetch_manifest",
+        new_callable=AsyncMock,
+    ) as mock_fetch_manifest:
+        yield mock_fetch_manifest
 
 
 @pytest.mark.asyncio
