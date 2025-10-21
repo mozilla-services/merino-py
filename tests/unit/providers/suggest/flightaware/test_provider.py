@@ -205,6 +205,10 @@ async def test_query_fetches_and_builds_suggestion_from_cached_numbers(
     assert suggestion.provider == "flightaware"
     assert suggestion.custom_details.flightaware.values[0].flight_number == "UA3711"
 
+    provider.metrics_client.increment.assert_any_call(
+        "providers.flightaware.flight_no_pattern.match_count"
+    )
+
 
 @pytest.mark.asyncio
 async def test_query_handles_backend_exception(provider, backend_mock, caplog, geolocation):
@@ -218,6 +222,7 @@ async def test_query_handles_backend_exception(provider, backend_mock, caplog, g
 
     assert results == []
     assert "Exception occurred for FlightAware provider" in caplog.text
+    provider.metrics_client.increment.assert_any_call("providers.flightaware.query.exception")
 
 
 def test_build_suggestion_creates_expected_object(provider):

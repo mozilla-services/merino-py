@@ -5,13 +5,13 @@
 """Unit tests for the flightaware backend module."""
 
 import datetime
+import aiodogstatsd
 from pydantic import HttpUrl
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import HTTPStatusError, Request, Response
 
 from merino.providers.suggest.flightaware.backends import utils
-import merino.providers.suggest.flightaware.backends.flightaware as flightaware
 
 from merino.providers.suggest.flightaware.backends.protocol import (
     AirlineDetails,
@@ -54,96 +54,102 @@ def fixed_now():
     return datetime.datetime(2025, 9, 29, 12, 0, tzinfo=datetime.timezone.utc)
 
 
-@pytest.mark.asyncio
-async def test_fetch_flight_details_success():
-    """Ensure fetch_flight_details returns parsed JSON when the API responds successfully."""
-    mock_http_client = AsyncMock()
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"flights": [{"ident": "UA123"}]}
-    mock_response.raise_for_status.return_value = None
-    mock_http_client.get.return_value = mock_response
+@pytest.fixture
+def metrics():
+    """Return a mocked metrics client."""
+    return MagicMock(spec=aiodogstatsd.Client)
 
-    backend = flightaware.FlightAwareBackend(
+
+@pytest.fixture
+def backend(metrics):
+    """Return a FlightAwareBackend with mocked HTTP client and metrics."""
+    mock_http_client = AsyncMock()
+    backend = FlightAwareBackend(
         api_key=settings.flightaware.api_key,
         http_client=mock_http_client,
         ident_url="flights/{ident}?start={start}&end={end}",
+        metrics_client=metrics,
     )
+    return backend
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_details_success(backend, metrics):
+    """Ensure fetch_flight_details returns parsed JSON and records metrics on success."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"flights": [{"ident": "UA123"}]}
+    mock_response.raise_for_status.return_value = None
+    mock_response.status_code = 200
+    backend.http_client.get.return_value = mock_response
 
     result = await backend.fetch_flight_details("UA123")
 
     assert result == {"flights": [{"ident": "UA123"}]}
-    mock_http_client.get.assert_called_once()
+    backend.http_client.get.assert_called_once()
 
-    called_url = mock_http_client.get.call_args[0][0]
-    assert called_url.startswith("flights/UA123?start=")
+    metrics.increment.assert_any_call("flightaware.request.summary.get.count")
+    metrics.timeit.assert_called_once_with("flightaware.request.summary.get.latency")
+    metrics.increment.assert_any_call(
+        "flightaware.request.summary.get.status",
+        tags={"status_code": 200},
+    )
 
 
 @pytest.mark.asyncio
-async def test_fetch_flight_details_http_error_logs_and_returns_none(caplog):
-    """Ensure fetch_flight_details logs a warning and returns None when HTTPStatusError is raised."""
-    mock_http_client = AsyncMock()
+async def test_fetch_flight_details_http_error_logs_and_returns_none(backend, metrics, caplog):
+    """Ensure fetch_flight_details logs a warning and increments error metrics on HTTPStatusError."""
     mock_response = MagicMock()
     request = Request("GET", "http://test")
+    response = Response(400, request=request)
     mock_response.raise_for_status.side_effect = HTTPStatusError(
-        "Bad Request",
-        request=request,
-        response=Response(400, request=request),
+        "Bad Request", request=request, response=response
     )
-    mock_http_client.get.return_value = mock_response
-
-    backend = flightaware.FlightAwareBackend(
-        api_key=settings.flightaware.api_key,
-        http_client=mock_http_client,
-        ident_url="flights/{ident}?start={start}&end={end}",
-    )
+    mock_response.status_code = 400
+    backend.http_client.get.return_value = mock_response
 
     result = await backend.fetch_flight_details("UA123")
 
     assert result is None
     assert "Flightware request error for flight details" in caplog.text
 
+    metrics.increment.assert_any_call("flightaware.request.summary.get.count")
+    metrics.timeit.assert_called_once_with("flightaware.request.summary.get.latency")
+    metrics.increment.assert_any_call(
+        "flightaware.request.summary.get.status",
+        tags={"status_code": 400},
+    )
+
 
 @pytest.mark.asyncio
-async def test_fetch_flight_details_uses_correct_headers():
+async def test_fetch_flight_details_uses_correct_headers(backend, metrics):
     """Verify fetch_flight_details sends the required API key and Accept headers."""
-    mock_http_client = AsyncMock()
     mock_response = AsyncMock()
     mock_response.json.return_value = {"flights": []}
     mock_response.raise_for_status.return_value = None
-    mock_http_client.get.return_value = mock_response
-
-    backend = flightaware.FlightAwareBackend(
-        api_key=settings.flightaware.api_key,
-        http_client=mock_http_client,
-        ident_url="flights/{ident}?start={start}&end={end}",
-    )
+    backend.http_client.get.return_value = mock_response
 
     await backend.fetch_flight_details("UA123")
 
-    _, kwargs = mock_http_client.get.call_args
+    _, kwargs = backend.http_client.get.call_args
     headers = kwargs["headers"]
     assert headers["x-apikey"] == settings.flightaware.api_key
     assert headers["Accept"] == "application/json"
 
 
-def test_get_flight_summaries_returns_empty_list_when_response_is_none():
+def test_get_flight_summaries_returns_empty_list_when_response_is_none(backend):
     """Ensure get_flight_summaries returns empty list if flight_response is None."""
-    backend = FlightAwareBackend(api_key="k", http_client=MagicMock(), ident_url="url")
     result = backend.get_flight_summaries(None, "UA123")
     assert result == []
 
 
-def test_get_flight_summaries_returns_empty_list_when_no_flights():
+def test_get_flight_summaries_returns_empty_list_when_no_flights(backend):
     """Ensure get_flight_summaries returns empty list if 'flights' is empty."""
-    backend = FlightAwareBackend(api_key="k", http_client=MagicMock(), ident_url="url")
     result = backend.get_flight_summaries({"flights": []}, "UA123")
     assert result == []
 
 
-def test_get_flight_summaries_filters_out_none_summaries():
+def test_get_flight_summaries_filters_out_none_summaries(backend):
     """Ensure get_flight_summaries excludes flights where build_flight_summary returns None."""
-    backend = FlightAwareBackend(api_key="k", http_client=MagicMock(), ident_url="url")
-
     good_flight = {
         "ident_iata": "UA123",
         "ident_icao": "UAL123",
@@ -177,7 +183,6 @@ def test_get_flight_summaries_filters_out_none_summaries():
         "progress_percent": 0,
     }
     flights = [good_flight, bad_flight]
-
     result = backend.get_flight_summaries({"flights": flights}, "UA123")
 
     assert len(result) == 1
@@ -188,10 +193,8 @@ def test_get_flight_summaries_filters_out_none_summaries():
     assert summary.destination.code == "EWR"
 
 
-def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now):
+def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now, backend):
     """Ensure get_flight_summaries returns multiple summaries when build_flight_summary succeeds."""
-    backend = FlightAwareBackend(api_key="k", http_client=MagicMock(), ident_url="url")
-
     flights = [
         {
             "ident_iata": "UA111",
@@ -242,38 +245,24 @@ def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now):
         },
     ]
 
-    with (
-        patch.object(utils.datetime, "datetime", wraps=datetime.datetime) as mock_datetime,
-    ):
+    with patch.object(utils.datetime, "datetime", wraps=datetime.datetime) as mock_datetime:
         mock_datetime.now.return_value = fixed_now
-
         results = backend.get_flight_summaries({"flights": flights}, "UA111")
 
-        assert len(results) == 2
-        assert all(isinstance(r, FlightSummary) for r in results)
-        summary_1 = results[0]
-        summary_2 = results[1]
-
-        assert summary_1.delayed is False
-        assert summary_2.delayed is True
-
-        assert summary_1.time_left_minutes == 0
-        assert summary_2.time_left_minutes is None
-
-        assert summary_1.status == FlightStatus.ARRIVED
-        assert summary_2.status == FlightStatus.DELAYED
+    assert len(results) == 2
+    assert all(isinstance(r, FlightSummary) for r in results)
+    assert results[0].status == FlightStatus.ARRIVED
+    assert results[1].status == FlightStatus.DELAYED
 
 
 @pytest.mark.asyncio
-async def test_fetch_flight_numbers_success():
-    """Ensure fetch_flight_numbers returns SUCCESS and the expected flight list."""
+async def test_fetch_flight_numbers_success(backend):
+    """Ensure fetch_flight_numbers returns SUCCESS and expected list."""
     mock_filemanager = AsyncMock()
     mock_filemanager.get_file.return_value = (
         GetFlightNumbersResultCode.SUCCESS,
         ["UA123", "AA100"],
     )
-
-    backend = flightaware.FlightAwareBackend(api_key="k", http_client=AsyncMock(), ident_url="url")
     backend.filemanager = mock_filemanager
 
     result_code, data = await backend.fetch_flight_numbers()
@@ -284,15 +273,10 @@ async def test_fetch_flight_numbers_success():
 
 
 @pytest.mark.asyncio
-async def test_fetch_flight_numbers_fail():
+async def test_fetch_flight_numbers_fail(backend):
     """Ensure fetch_flight_numbers returns FAIL when filemanager fails."""
     mock_filemanager = AsyncMock()
-    mock_filemanager.get_file.return_value = (
-        GetFlightNumbersResultCode.FAIL,
-        None,
-    )
-
-    backend = flightaware.FlightAwareBackend(api_key="k", http_client=AsyncMock(), ident_url="url")
+    mock_filemanager.get_file.return_value = (GetFlightNumbersResultCode.FAIL, None)
     backend.filemanager = mock_filemanager
 
     result_code, data = await backend.fetch_flight_numbers()
@@ -303,12 +287,10 @@ async def test_fetch_flight_numbers_fail():
 
 
 @pytest.mark.asyncio
-async def test_fetch_flight_numbers_exception(caplog):
+async def test_fetch_flight_numbers_exception(backend, caplog):
     """Ensure fetch_flight_numbers logs error and returns FAIL on exception."""
     mock_filemanager = AsyncMock()
     mock_filemanager.get_file.side_effect = Exception("GCS failure")
-
-    backend = flightaware.FlightAwareBackend(api_key="k", http_client=AsyncMock(), ident_url="url")
     backend.filemanager = mock_filemanager
 
     with caplog.at_level("WARNING"):

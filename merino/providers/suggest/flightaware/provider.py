@@ -115,7 +115,14 @@ class Provider(BaseProvider):
         """Retrieve flight suggestions"""
         try:
             flight_number = get_flight_number_from_query_if_valid(request.query)
-            if flight_number is not None and flight_number in self.flight_numbers:
+
+            if flight_number is None:
+                return []
+            if flight_number in self.flight_numbers:
+                self.metrics_client.increment(
+                    f"providers.{self.name}.flight_no_pattern.match_count"
+                )
+
                 result = await self.backend.fetch_flight_details(flight_number)
 
                 if result:
@@ -126,6 +133,7 @@ class Provider(BaseProvider):
             return []
         except Exception as e:
             logger.warning(f"Exception occurred for FlightAware provider: {e}")
+            self.metrics_client.increment(f"providers.{self.name}.query.exception")
             return []
 
     def build_suggestion(self, relevant_flights: list[FlightSummary]) -> BaseSuggestion:

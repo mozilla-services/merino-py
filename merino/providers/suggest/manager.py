@@ -300,6 +300,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     api_key=settings.flightaware.api_key,
                     http_client=create_http_client(base_url=settings.flightaware.base_url),
                     ident_url=settings.flightaware.ident_url_path,
+                    metrics_client=get_metrics_client(),
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
