@@ -52,7 +52,7 @@ class ModelData(BaseModel):
     interest_vector: dict[str, InterestVectorConfig]
     noise_scale: float
     private_features: list | None = (
-        None  ## TODO confirm manually that None here keeps original experiment happy by not blocking features
+        None  
     )
 
 
