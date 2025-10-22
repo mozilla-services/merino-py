@@ -256,7 +256,6 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
             interest_vector=category_fields,
             private_features=private_features,
         )
-        print("output model_id", model_id)
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
