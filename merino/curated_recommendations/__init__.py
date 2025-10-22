@@ -5,8 +5,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import logging
 
-from google.cloud.storage import Client
-
 from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
     ScheduledSurfaceBackend,

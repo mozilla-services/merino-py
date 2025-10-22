@@ -14,6 +14,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusSection,
     CorpusItem,
     IABMetadata,
+    CreateSource,
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
@@ -34,6 +35,7 @@ from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
+    is_custom_sections_experiment,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
@@ -83,6 +85,7 @@ def sample_backend_data() -> list[CorpusSection]:
             title=f"Title_{sec_id}",
             externalId=sec_id,
             iab=IABMetadata(categories=["324"]),
+            createSource=CreateSource.ML,
         )
         for sec_id, count in [("business", 2), ("sports", 1), ("tech", 3)]
     ]
@@ -297,6 +300,24 @@ class TestMlSectionsExperiment:
             experimentBranch=CrawlExperimentBranchName.CONTROL.value,
         )
         assert is_subtopics_experiment(req_neither) is False
+
+
+class TestCustomSectionsExperiment:
+    """Tests covering is_custom_sections_experiment"""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment", True),
+            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "control", False),
+            ("other", "treatment", False),
+            (None, None, False),
+        ],
+    )
+    def test_custom_sections_experiment_flag(self, name, branch, expected):
+        """Test that custom sections experiment flag logic matches expected behavior."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert is_custom_sections_experiment(req) is expected
 
 
 class TestCrawlExperiment:
@@ -524,23 +545,23 @@ class TestCrawlExperiment:
 
     def test_filter_sections_treatment_crawl(self):
         """Test that treatment-crawl branch gets only crawl legacy sections"""
-        from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
 
         # Create test sections with legacy topics and subtopics
         sections = [
-            MagicMock(externalId="health"),  # legacy
-            MagicMock(externalId="health_crawl"),  # legacy crawl
-            MagicMock(externalId="tech"),  # legacy
-            MagicMock(externalId="tech_crawl"),  # legacy crawl
-            MagicMock(externalId="business"),  # legacy
-            MagicMock(externalId="ai-trends"),  # subtopic
+            MagicMock(externalId="health", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="tech", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="business", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="ai-trends", createSource=CreateSource.ML),  # subtopic
             MagicMock(
-                externalId="ai-trends_crawl"
+                externalId="ai-trends_crawl", createSource=CreateSource.ML
             ),  # subtopic crawl (shouldn't exist but testing)
         ]
 
         # treatment-crawl should get only crawl legacy sections
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
         )
 
@@ -554,19 +575,19 @@ class TestCrawlExperiment:
 
     def test_filter_sections_treatment_crawl_plus_subtopics(self):
         """Test that treatment-crawl-plus-subtopics gets crawl legacy + regular subtopics"""
-        from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
 
         # Create test sections
         sections = [
-            MagicMock(externalId="health"),  # legacy
-            MagicMock(externalId="health_crawl"),  # legacy crawl
-            MagicMock(externalId="tech_crawl"),  # legacy crawl
-            MagicMock(externalId="ai-trends"),  # subtopic
-            MagicMock(externalId="ml-research"),  # subtopic
+            MagicMock(externalId="health", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="ai-trends", createSource=CreateSource.ML),  # subtopic
+            MagicMock(externalId="ml-research", createSource=CreateSource.ML),  # subtopic
         ]
 
         # treatment-crawl-plus-subtopics should get crawl legacy + regular subtopics
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
         )
 
@@ -582,19 +603,19 @@ class TestCrawlExperiment:
 
     def test_filter_sections_control(self):
         """Test that control branch gets only non-crawl sections"""
-        from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
 
         # Create test sections with and without _crawl suffix
         sections = [
-            MagicMock(externalId="health"),
-            MagicMock(externalId="health_crawl"),
-            MagicMock(externalId="tech"),
-            MagicMock(externalId="tech_crawl"),
-            MagicMock(externalId="business"),
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="business", createSource=CreateSource.ML),
         ]
 
         # Control branch should get only non-crawl sections
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             sections, crawl_branch=CrawlExperimentBranchName.CONTROL.value, include_subtopics=True
         )
 
@@ -605,39 +626,39 @@ class TestCrawlExperiment:
         assert "health_crawl" not in result
         assert "tech_crawl" not in result
 
-    def test_filter_sections_by_crawl_experiment_empty_input(self):
+    def test_filter_sections_by_experiment_empty_input(self):
         """Test that empty corpus sections return empty result"""
-        from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
         from merino.curated_recommendations.protocol import CrawlExperimentBranchName
 
         # Empty input should return empty output
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             [], crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
         )
         assert result == {}
 
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             [], crawl_branch=CrawlExperimentBranchName.CONTROL.value
         )
         assert result == {}
 
-    def test_filter_sections_by_crawl_experiment_mixed_sections(self):
+    def test_filter_sections_by_experiment_mixed_sections(self):
         """Test that sections with mixed _crawl and non-_crawl for same topic are handled correctly"""
-        from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
         from merino.curated_recommendations.protocol import CrawlExperimentBranchName
 
         # Create sections with mixed _crawl and non-_crawl for same topic
         sections = [
-            MagicMock(externalId="health"),
-            MagicMock(externalId="health_crawl"),
-            MagicMock(externalId="tech"),
-            MagicMock(externalId="tech_crawl"),
-            MagicMock(externalId="business"),
-            MagicMock(externalId="business_crawl"),
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="business", createSource=CreateSource.ML),
+            MagicMock(externalId="business_crawl", createSource=CreateSource.ML),
         ]
 
         # Treatment branch should get only crawl sections
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
         )
         assert len(result) == 3
@@ -650,7 +671,7 @@ class TestCrawlExperiment:
         assert result["business"].externalId == "business_crawl"
 
         # Control branch should get only non-crawl sections
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             sections, crawl_branch=CrawlExperimentBranchName.CONTROL.value, include_subtopics=True
         )
         assert len(result) == 3
@@ -662,23 +683,25 @@ class TestCrawlExperiment:
         assert result["tech"].externalId == "tech"
         assert result["business"].externalId == "business"
 
-    def test_filter_sections_by_crawl_experiment_malformed_ids(self):
+    def test_filter_sections_by_experiment_malformed_ids(self):
         """Test that malformed section IDs are handled gracefully"""
-        from merino.curated_recommendations.sections import filter_sections_by_crawl_experiment
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
         from merino.curated_recommendations.protocol import CrawlExperimentBranchName
 
         # Create sections with potentially malformed IDs
         sections = [
-            MagicMock(externalId="health"),
-            MagicMock(externalId="health_crawl"),
-            MagicMock(externalId="health_crawl_extra"),  # Extra suffix
-            MagicMock(externalId="_crawl"),  # Just the suffix
-            MagicMock(externalId="crawl_health"),  # Suffix in middle
-            MagicMock(externalId=""),  # Empty ID
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(
+                externalId="health_crawl_extra", createSource=CreateSource.ML
+            ),  # Extra suffix
+            MagicMock(externalId="_crawl", createSource=CreateSource.ML),  # Just the suffix
+            MagicMock(externalId="crawl_health", createSource=CreateSource.ML),  # Suffix in middle
+            MagicMock(externalId="", createSource=CreateSource.ML),  # Empty ID
         ]
 
         # Treatment branch should get only sections ending with _crawl that are legacy topics
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
         )
         assert len(result) == 1
@@ -686,7 +709,7 @@ class TestCrawlExperiment:
         # _crawl -> "" is not included because "" is not a legacy topic
 
         # Control branch should get only sections NOT ending with _crawl that are legacy topics
-        result = filter_sections_by_crawl_experiment(
+        result = filter_sections_by_experiment(
             sections, crawl_branch=CrawlExperimentBranchName.CONTROL.value
         )
         assert len(result) == 1
@@ -695,6 +718,83 @@ class TestCrawlExperiment:
         assert "health_extra" not in result
         assert "crawl_health" not in result
         assert "" not in result  # Empty string is not a legacy topic
+
+    def test_filter_sections_custom_sections_treatment(self):
+        """Test that custom sections experiment treatment only includes MANUAL sections"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.corpus_backends.protocol import CreateSource
+
+        # Create test sections with different createSource values
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
+        ]
+
+        # Custom sections experiment treatment: should only get MANUAL sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=None, is_custom_sections_experiment=True
+        )
+
+        assert len(result) == 2
+        assert "custom-section-1" in result
+        assert "custom-section-2" in result
+        assert result["custom-section-1"].createSource == CreateSource.MANUAL
+        assert result["custom-section-2"].createSource == CreateSource.MANUAL
+        assert "health" not in result
+        assert "tech" not in result
+
+    def test_filter_sections_custom_sections_control(self):
+        """Test that custom sections experiment control excludes MANUAL sections"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.corpus_backends.protocol import CreateSource
+
+        # Create test sections with different createSource values
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
+        ]
+
+        # Custom sections experiment control: should exclude MANUAL sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=None, is_custom_sections_experiment=False
+        )
+
+        assert len(result) == 2
+        assert "health" in result
+        assert "tech" in result
+        assert result["health"].createSource == CreateSource.ML
+        assert result["tech"].createSource == CreateSource.ML
+        assert "custom-section-1" not in result
+        assert "custom-section-2" not in result
+
+    def test_filter_sections_custom_sections_with_crawl_experiment(self):
+        """Test that custom sections experiment takes precedence over crawl experiment"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.corpus_backends.protocol import CreateSource
+
+        # Create test sections with different createSource values
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
+        ]
+
+        # Custom sections experiment treatment should ignore crawl_branch
+        result = filter_sections_by_experiment(
+            sections,
+            crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            is_custom_sections_experiment=True,
+        )
+
+        # Only MANUAL sections should be returned
+        assert len(result) == 1
+        assert "custom-section-1" in result
+        assert result["custom-section-1"].createSource == CreateSource.MANUAL
+        assert "health" not in result
 
 
 class TestUpdateReceivedFeedRank:
@@ -793,7 +893,9 @@ class TestMapCorpusSectionToSection:
 
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
-        empty_cs = CorpusSection(sectionItems=[], title="Empty", externalId="empty")
+        empty_cs = CorpusSection(
+            sectionItems=[], title="Empty", externalId="empty", createSource=CreateSource.ML
+        )
         sec = map_corpus_section_to_section(empty_cs, 7)
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
@@ -1183,6 +1285,7 @@ class TestGetCorpusSections:
         health_crawl.heroSubtitle = None
         health_crawl.sectionItems = []
         health_crawl.iab = None
+        health_crawl.createSource = CreateSource.ML
 
         tech_crawl = MagicMock()
         tech_crawl.externalId = "tech_crawl"
@@ -1192,6 +1295,7 @@ class TestGetCorpusSections:
         tech_crawl.heroSubtitle = None
         tech_crawl.sectionItems = []
         tech_crawl.iab = None
+        tech_crawl.createSource = CreateSource.ML
 
         sports = MagicMock()
         sports.externalId = "sports"
@@ -1201,6 +1305,7 @@ class TestGetCorpusSections:
         sports.heroSubtitle = None
         sports.sectionItems = []
         sports.iab = None
+        sports.createSource = CreateSource.ML
 
         arts = MagicMock()
         arts.externalId = "arts"
@@ -1210,6 +1315,7 @@ class TestGetCorpusSections:
         arts.heroSubtitle = None
         arts.sectionItems = []
         arts.iab = None
+        arts.createSource = CreateSource.ML
 
         crawl_data = [health_crawl, tech_crawl, sports, arts]
 
@@ -1231,6 +1337,7 @@ class TestGetCorpusSections:
         tech_crawl.heroSubtitle = None
         tech_crawl.sectionItems = []
         tech_crawl.iab = None
+        tech_crawl.createSource = CreateSource.ML
 
         sports = MagicMock()
         sports.externalId = "sports"
@@ -1240,6 +1347,7 @@ class TestGetCorpusSections:
         sports.heroSubtitle = None
         sports.sectionItems = []
         sports.iab = None
+        sports.createSource = CreateSource.ML
 
         # headlines_section -- to be split out from the rest of the sections
         headlines_crawl = MagicMock()
@@ -1250,6 +1358,7 @@ class TestGetCorpusSections:
         headlines_crawl.heroSubtitle = None
         headlines_crawl.sectionItems = []
         headlines_crawl.iab = {"taxonomy": "IAB-3.0", "categories": ["386", "JLBCU7"]}
+        headlines_crawl.createSource = CreateSource.ML
 
         crawl_data = [tech_crawl, sports, headlines_crawl]
 

@@ -81,6 +81,7 @@ class SectionsBackend(SectionsProtocol):
         query = """
             query GetSections($filters: SectionFilters!) {
               getSections(filters: $filters) {
+                createSource
                 externalId
                 active
                 title
@@ -136,6 +137,7 @@ class SectionsBackend(SectionsProtocol):
                 heroTitle=section.get("heroTitle"),
                 heroSubtitle=section.get("heroDescription"),
                 iab=section["iab"],
+                createSource=section["createSource"],
                 sectionItems=[
                     build_corpus_item(
                         section_item["corpusItem"], self.manifest_provider, utm_source
