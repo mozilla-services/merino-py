@@ -200,6 +200,7 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
                 diff_q=MODEL_Q_VALUE_V1,
             )
 
+        print("input model_id", model_id)
         if model_id is not None:
             """ If model is specified we only return if supported. """
             if model_id not in SUPPORTED_LIVE_MODELS:
@@ -255,6 +256,7 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
             interest_vector=category_fields,
             private_features=private_features,
         )
+        print("output model_id", model_id)
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,

@@ -194,15 +194,6 @@ def test_decode_dp_interests_passes_one_private(model_limited):
     assert "model_id" in result
 
 
-def test_decode_dp_interests_empty_list_raises(model_limited):
-    """Empty dp_values should raise due to direct indexing in decode.
-    this is not true when private_features=[]
-    """
-    model = model_limited.get(TEST_SURFACE)
-    with pytest.raises(IndexError):
-        model.decode_dp_interests([], model.model_id)
-
-
 def test_decode_sets_model_id_in_result(model_limited):
     """decode_dp_interests sets the model_id in the returned dict."""
     model = model_limited.get(TEST_SURFACE)

@@ -148,7 +148,6 @@ class CuratedRecommendationsProvider:
             )
         else:
             general_feed = self.rank_recommendations(recommendations, request)
-        print("PROVIDER", request)
         response = CuratedRecommendationsResponse(
             recommendedAt=get_millisecond_epoch_time(),
             surfaceId=surface_id,
