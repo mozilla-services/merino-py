@@ -10,7 +10,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     DayTimeWeightingConfig,
 )
 
-LOCAL_EXPERIMENT_NAME = "optin-new-tab-automated-personalization-local-ranking"
+INFERRED_LOCAL_EXPERIMENT_NAME = "optin-new-tab-automated-personalization-local-ranking"
 LOCAL_AND_SERVER_V1 = "local-and-server"
 LOCAL_ONLY_V1 = "local-only"
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1
@@ -212,7 +212,7 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
             model_id = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
         category_fields: dict[str, InterestVectorConfig]
         private_features: list[str] | None
-        if experiment_name is not None and experiment_name == LOCAL_EXPERIMENT_NAME:
+        if experiment_name is not None and experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME:
             if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:
                 ## private features are sent to merino, "private" from differentially private
                 private_features = [

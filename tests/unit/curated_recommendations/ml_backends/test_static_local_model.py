@@ -12,7 +12,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CTR_SECTION_MODEL_ID,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
-    LOCAL_EXPERIMENT_NAME,
+    INFERRED_LOCAL_EXPERIMENT_NAME,
     LOCAL_AND_SERVER_V1,
     LOCAL_ONLY_V1,
 )
@@ -143,14 +143,16 @@ def test_model_defaults_v1b(model_limited):
 def test_model_experiment_name_and_branch_name(model_limited):
     """Caller should not decode when the model id doesn't match."""
     model = model_limited.get(
-        "surface", experiment_name=LOCAL_EXPERIMENT_NAME, experiment_branch=LOCAL_AND_SERVER_V1
+        "surface",
+        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_branch=LOCAL_AND_SERVER_V1,
     )
     assert model.model_matches_interests(LOCAL_AND_SERVER_V1)
     assert (
         len(model.model_data.private_features) > 0 and len(model.model_data.private_features) <= 6
     )
     model = model_limited.get(
-        "surface", experiment_name=LOCAL_EXPERIMENT_NAME, experiment_branch=LOCAL_ONLY_V1
+        "surface", experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME, experiment_branch=LOCAL_ONLY_V1
     )
     assert model.model_matches_interests(LOCAL_ONLY_V1)
     assert len(model.model_data.private_features) == 0
