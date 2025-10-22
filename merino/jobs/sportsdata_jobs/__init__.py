@@ -35,9 +35,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Spor
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common.error import (
-    SportsDataError,
-)
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
     NBA,
@@ -83,16 +80,14 @@ class SportDataUpdater:
         store: SportsDataStore | None = None,
         **kwargs,
     ) -> None:
-        active_sports = [sport.strip().upper() for sport in settings.sports.split(",")]
+        active_sports = [sport.strip().upper() for sport in settings.sports]
         sport: Sport | None = None
         sports: dict[str, Sport] = {}
         platform = settings.get("platform", "sports")
         store = store or SportsDataStore(
             dsn=settings.es.dsn,
             api_key=settings.es.api_key,
-            languages=[
-                lang.strip().lower() for lang in settings.get("languages", "en").split(",")
-            ],
+            languages=[lang.strip().lower() for lang in settings.get("languages", ["en"])],
             platform=f"{{lang}}_{platform}",
             index_map={
                 "event": cast(

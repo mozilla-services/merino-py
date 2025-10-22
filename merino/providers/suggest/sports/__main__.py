@@ -11,13 +11,17 @@ from dynaconf.base import LazySettings
 
 # Reminder: this will instantiate `settings`
 from merino.configs import settings
+
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import SuggestionRequest
-from merino.providers.suggest.sports import init_logs, LOGGING_TAG
+from merino.providers.suggest.sports import (
+    init_logs,
+    LOGGING_TAG,
+    DEFAULT_TRIGGER_WORDS,
+)
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
-    str_to_list,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
@@ -45,7 +49,7 @@ async def main_loader(
     event_store = SportsDataStore(
         dsn=settings.es.dsn,
         api_key=settings.es.api_key,
-        languages=str_to_list(settings.get("languages", "en").lower()),
+        languages=[lang.lower().strip() for lang in settings.get("languages", ["en"])],
         platform=f"{{lang}}_{platform}",
         index_map={
             # "meta": settings.get(
@@ -67,7 +71,7 @@ async def main_loader(
 
     log.debug(f"{LOGGING_TAG}: Starting up...")
     my_sports: list[Sport] = []
-    active_sports = str_to_list(settings.sports.upper())
+    active_sports = [sport.upper().strip() for sport in settings.sports]
     for sport_name in active_sports:
         try:
             sport = getattr(
@@ -83,7 +87,6 @@ async def main_loader(
         connect_timeout=settings.sportsdata.get("connect_timeout", 1),
         request_timeout=settings.sportsdata.get("read_timeout", 1),
     )
-    log.info(f"{LOGGING_TAG} Pruning data...")
     await event_store.prune()
     team_names: set[str] = set()
     for sport in my_sports:
@@ -100,12 +103,9 @@ async def main_loader(
 
 async def main_query(log: Logger, settings: LazySettings):
     """Pretend we're a query function"""
-    trigger_words = str_to_list(
-        settings.get(
-            "trigger_words",
-            "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
-        ).lower()
-    )
+    trigger_words = [
+        word.lower().strip() for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
+    ]
 
     provider = SportsDataProvider(
         backend=SportsDataBackend(settings=settings),
@@ -117,7 +117,7 @@ async def main_query(log: Logger, settings: LazySettings):
     sreq = SuggestionRequest(query="Jets game", geolocation=Location())
     start = datetime.now()
     res = await provider.query(sreq=sreq)
-    log.debug(f"{LOGGING_TAG}⏰ query: {datetime.now()-start}")
+    log.debug(f"{LOGGING_TAG}⏱ query [{(datetime.now()-start).microseconds}μs]")
     print("## Output >>> ")
 
     print("===\n".join([rr.model_dump_json(indent=2) for rr in res]))

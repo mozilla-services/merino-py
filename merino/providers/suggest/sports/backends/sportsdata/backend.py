@@ -12,11 +12,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
 )
 
 
-def str_to_list(source: str) -> list[str]:
-    """Convert a comma delimited string into a list"""
-    return [item.strip() for item in source.split(",")]
-
-
 class SportsDataProtocol(Protocol):
     """Protocol functions for Sports"""
 
@@ -43,7 +38,7 @@ class SportsDataBackend(SportsDataProtocol):
         self.data_store = store or SportsDataStore(
             dsn=settings.es.dsn,
             api_key=settings.es.api_key,
-            languages=str_to_list(settings.get("languages", "en").lower()),
+            languages=[lang for lang in settings.get("languages", ["en"])],
             platform=f"{{lang}}_{platform}",
             index_map={
                 "event": cast(str, event_map),

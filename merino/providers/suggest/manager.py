@@ -38,10 +38,13 @@ from merino.providers.suggest.flightaware.provider import (
     Provider as FlightAwareProvider,
 )
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
+from merino.providers.suggest.sports import (
+    DEFAULT_TRIGGER_WORDS as SPORT_DEFAULT_TRIGGER_WORDS,
+    BASE_SUGGEST_SCORE as SPORT_BASE_SUGGEST_SCORE,
+)
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
-    str_to_list,
 )
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.providers.suggest.google_suggest.provider import (
@@ -317,18 +320,14 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.SPORTS:
-            trigger_words = str_to_list(
-                setting.get(
-                    "trigger_words",
-                    "vs,game,match,fixtures,schedule,play,upcoming,score,result,final,live,today,v",
-                ).lower()
-            )
-            # TODO: Add cached team names, active sports to trigger_words?
-            # TODO: Refactor to use `setting` as
+            trigger_words = [
+                word.lower().strip()
+                for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
+            ]
             return SportsDataProvider(
                 backend=SportsDataBackend(settings=setting),
                 metrics_client=get_metrics_client(),
-                score=setting.get("score", 0.5),
+                score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 trigger_words=trigger_words,

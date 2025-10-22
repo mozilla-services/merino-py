@@ -17,6 +17,22 @@ IGNORED_SUGGESTION_URL: Final[str] = "https://merino.services.mozilla.com"
 BASE_SUGGEST_SCORE: float = 0.5
 PROVIDER_ID: Final[str] = "sportsdata_io"
 
+DEFAULT_TRIGGER_WORDS = [
+    "vs",
+    "game",
+    "match",
+    "fixtures",
+    "schedule",
+    "play",
+    "upcoming",
+    "score",
+    "result",
+    "final",
+    "live",
+    "today",
+    "v",
+]
+
 
 # Retain team information for 2 years
 # DeltaTime only understands weeks, so use 52*2

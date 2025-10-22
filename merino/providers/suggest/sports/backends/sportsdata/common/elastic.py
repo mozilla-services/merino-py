@@ -2,16 +2,14 @@
 
 import json
 import logging
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from datetime import datetime, timezone
 from typing import Any, Final
 
-from aiodogstatsd import Client
 from dynaconf.base import LazySettings
 from elasticsearch import AsyncElasticsearch, BadRequestError, ConflictError, helpers
 
 from merino.configs import settings
-from merino.utils.metrics import get_metrics_client
 from merino.exceptions import BackendError
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
@@ -30,7 +28,7 @@ EN_INDEX_SETTINGS: dict = {
     "number_of_replicas": "1",
     "refresh_interval": "-1",
     "number_of_shards": "2",
-    "index.lifecycle.name": "enwiki_policy",
+    "index.lifecycle.name": "ensports_policy",
     "analysis": {
         "filter": {
             "stop_filter": {
@@ -40,19 +38,17 @@ EN_INDEX_SETTINGS: dict = {
             },
             "token_limit": {"type": "limit", "max_token_count": "20"},
             # local_elastic does not understand.
-            # "lowercase": {
-            #   "name": "nfkc_cf",
-            #   "type": "icu_normalizer"},
+            "lowercase": {"name": "nfkc_cf", "type": "icu_normalizer"},
             "remove_empty": {"type": "length", "min": "1"},
             # local_elastic does not understand.
-            # "accentfolding": {"type": "icu_folding"},
+            "accentfolding": {"type": "icu_folding"},
         },
         "analyzer": {
             "stop_analyzer_en": {
                 "filter": [
-                    # "icu_normalizer",
+                    "icu_normalizer",
                     "stop_filter",
-                    # "accentfolding",
+                    "accentfolding",
                     "remove_empty",
                     "token_limit",
                 ],
@@ -73,8 +69,8 @@ EN_INDEX_SETTINGS: dict = {
             },
             "stop_analyzer_search_en": {
                 "filter": [
-                    # "icu_normalizer",
-                    # "accentfolding",
+                    "icu_normalizer",
+                    "accentfolding",
                     "remove_empty",
                     "token_limit",
                 ],
@@ -126,6 +122,26 @@ EN_INDEX_SETTINGS: dict = {
     },
 }
 
+# remove the elements that the dev es environment does not handle:
+if "localhost" in settings.providers.sports.es.dsn:
+    del EN_INDEX_SETTINGS["analysis"]["filter"]["lowercase"]
+    del EN_INDEX_SETTINGS["analysis"]["filter"]["accentfolding"]
+    filters = EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
+    EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_en"]["filter"] = list(
+        filter(
+            lambda x: x not in ["icu_normalizer", "accentfolding"],
+            filters,
+        )
+    )
+    filters = EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
+    EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"] = list(
+        filter(
+            lambda x: x not in ["icu_normalizer", "accentfolding"],
+            filters,
+        )
+    )
+
+
 SUGGEST_ID: Final[str] = "suggest-on-title"
 MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
 TIMEOUT_MS: Final[str] = f"{settings.providers.sports.es.request_timeout_ms}ms"
@@ -138,7 +154,7 @@ class ElasticBackendError(BackendError):
     """General error with Elastic Search"""
 
 
-class ElasticDataStore:
+class ElasticDataStore(ABC):
     """General Elastic Data Store"""
 
     client: AsyncElasticsearch
@@ -260,7 +276,7 @@ class SportsDataStore(ElasticDataStore):
                 except BadRequestError as ex:
                     if ex.error == "resource_already_exists_exception":
                         logging.debug(
-                            f"{LOGGING_TAG}🐜 {index.format(lang=language_code)} already exists, skipping"
+                            f"{LOGGING_TAG} {index.format(lang=language_code)} already exists, skipping"
                         )
                         continue
                     raise SportsDataError(f"Could not create {index}") from ex
@@ -301,7 +317,6 @@ class SportsDataStore(ElasticDataStore):
         self,
         expiry: int | None = None,
         language_code: str = "en",
-        metrics_client: Client = get_metrics_client(),
     ) -> bool:
         """Remove data that has expired."""
         utc_now = expiry or int(datetime.now(tz=timezone.utc).timestamp())
@@ -309,11 +324,13 @@ class SportsDataStore(ElasticDataStore):
             index = index_pattern.format(lang=language_code)
             query = {"range": {"expiry": {"lte": utc_now}}}
             try:
-                with metrics_client.timeit("sports.time.prune"):
-                    res = await self.client.delete_by_query(
-                        index=index, query=query, timeout=TIMEOUT_MS
-                    )
-                    logging.info(f"{LOGGING_TAG}✂️ Deleted {res.get("deleted")}")
+                start = datetime.now()
+                res = await self.client.delete_by_query(
+                    index=index, query=query, timeout=TIMEOUT_MS
+                )
+                logging.info(
+                    f"{LOGGING_TAG}⏱ sports.time.prune [{res.get("deleted")} records] in [{(datetime.now()-start).microseconds}μs]"
+                )
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
@@ -388,7 +405,6 @@ class SportsDataStore(ElasticDataStore):
         self,
         sport: "Sport",
         language_code: str,
-        metrics_client: Client = get_metrics_client(),
     ):
         """Store the events using the calculated terms"""
         actions = []
@@ -413,11 +429,17 @@ class SportsDataStore(ElasticDataStore):
             actions.append(action)
 
             try:
-                with metrics_client.timeit("sports.time.load.events", tags={"sport": sport.name}):
-                    await helpers.async_bulk(client=self.client, actions=actions)
+                start = datetime.now()
+                await helpers.async_bulk(client=self.client, actions=actions)
+                logging.info(
+                    f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
+                )
             except Exception as ex:
                 raise SportsDataError(
                     f"Could not load data into elasticSearch for {sport.name}"
                 ) from ex
-        with metrics_client.timeit("sports.time.load.refresh_indexes"):
-            await self.client.indices.refresh(index=index)
+        start = datetime.now()
+        await self.client.indices.refresh(index=index)
+        logging.info(
+            f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"
+        )

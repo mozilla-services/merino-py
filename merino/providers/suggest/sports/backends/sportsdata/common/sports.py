@@ -6,6 +6,7 @@ This contains the sport specific calls and data formats which are normalized.
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from zoneinfo import ZoneInfo
 
 
@@ -123,7 +124,7 @@ TEAM_NAMES = [
 class NFL(Sport):
     """National Football League"""
 
-    season: str | None
+    season: str | None = None
     week: int = 0
     _lock: asyncio.Lock
 
@@ -142,7 +143,6 @@ class NFL(Sport):
             cache_dir=settings.sportsdata.get("cache_dir"),
             team_ttl=timedelta(weeks=4),
             lock=asyncio.Lock(),
-            **kwargs,
         )
         self._lock = asyncio.Lock()
 
@@ -229,7 +229,8 @@ class NFL(Sport):
 class NHL(Sport):
     """National Hockey League"""
 
-    season: str | None
+    season: str | None = None
+    teams: dict[str, Any] = {}
     _lock: asyncio.Lock
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
@@ -245,7 +246,6 @@ class NHL(Sport):
             cache_dir=settings.sportsdata.get("cache_dir"),
             event_ttl=timedelta(hours=48),
             team_ttl=timedelta(weeks=4),
-            **kwargs,
         )
         self._lock = asyncio.Lock()
 
@@ -317,7 +317,7 @@ class NHL(Sport):
 class NBA(Sport):
     """National Basketball Association"""
 
-    season: str | None
+    season: str | None = None
     _lock: asyncio.Lock
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
@@ -329,10 +329,8 @@ class NBA(Sport):
                 f"base_url.{name.lower()}",
                 default=f"https://api.sportsdata.io/v3/{name.lower()}/scores/json",
             ),
-            season=None,
             cache_dir=settings.sportsdata.get("cache_dir"),
             team_ttl=timedelta(weeks=4),
-            **kwargs,
         )
         self._lock = asyncio.Lock()
 
@@ -404,7 +402,7 @@ class NBA(Sport):
 class UCL(Sport):
     """Soccer: United Champions League"""
 
-    season: str | None
+    season: str | None = None
     _lock: asyncio.Lock
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
@@ -416,10 +414,8 @@ class UCL(Sport):
                 f"base_url.{name.lower()}",
                 default="https://api.sportsdata.io/v4/soccer/scores/json",
             ),
-            season=None,
             cache_dir=settings.sportsdata.get("cache_dir"),
             team_ttl=timedelta(weeks=4),
-            **kwargs,
         )
         self._lock = asyncio.Lock()
 
@@ -570,7 +566,7 @@ class UCL(Sport):
 #            },
 #        ...]
 #        """
-#        date = SportRequestDate()
+#        date = datetime.now(tz=ZoneInfo("US/Eastern")).strftime("%Y-%b-%d")
 #        season = str(date)
 #        url = f"{self.base_url}/ScoresBasic/{season}?key={self.api_key}"
 #        await get_data(client, url)

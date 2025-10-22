@@ -211,7 +211,7 @@ def _mk_team(key: str, name: str, locale: str) -> Team:
 @pytest.mark.asyncio
 async def test_get_team_lookup(cls: type[Sport]) -> None:
     """Test team lookups."""
-    sport: Sport = cls(settings=settings.providers.sports)
+    sport: Sport = cls(settings=settings.providers.sports, base_url="", name="")
 
     t = _mk_team("PIT", "Pittsburgh Steelers", "Pittsburgh PA")
 
@@ -284,6 +284,7 @@ async def test_nhl_update_teams(
 ) -> None:
     """Test NHL team updates."""
     nhl = NHL(settings=settings.providers.sports)
+
     current_season = {"ApiSeason": "2026PRE"}
     get_data = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",

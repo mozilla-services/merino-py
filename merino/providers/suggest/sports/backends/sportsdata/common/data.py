@@ -13,7 +13,6 @@ from dynaconf.base import LazySettings
 from httpx import AsyncClient
 from pydantic import BaseModel
 
-from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
     TEAM_TTL_WEEKS,
@@ -24,41 +23,6 @@ from merino.providers.suggest.sports import (
 from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
 )
-
-
-class SportRequestDate(BaseModel):
-    """Return the current date in SportsData compliant format.
-
-    Some requests to SportsData use a Y-M-D formatted timestamp as a URL parameter.
-    """
-
-    _instance: datetime | None = None
-
-    @property
-    def instance(self) -> datetime:
-        """Return the request instance, setting if not already available."""
-        if not self._instance:
-            self._instance = datetime.now(tz=timezone.utc)
-        return self._instance
-
-    @instance.setter
-    def instance(self, instance: datetime = datetime.now(tz=timezone.utc)):
-        """Set the instance"""
-        self._instance = instance.replace(
-            hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc
-        )
-
-    def __str__(self) -> str:
-        """Return the instance as a formatted time string"""
-        return self.instance.strftime("%Y-%b-%d")
-
-    @classmethod
-    def parse(cls, parse: str) -> "SportRequestDate":
-        """Convert string into self."""
-        instance = datetime.strptime(parse, "%Y-%b-%d")
-        self = cls()
-        self.instance = instance
-        return self
 
 
 class Team(BaseModel):
@@ -184,7 +148,7 @@ class Event(BaseModel):
         return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
 
 
-class Sport(BaseModel):
+class Sport:
     """Root Model for Sport data"""
 
     api_key: str
@@ -194,31 +158,37 @@ class Sport(BaseModel):
     base_url: str
     event_ttl: timedelta
     team_ttl: timedelta
-    # Commented because Pydantic does not know how to generate a core schema
-    # client: AsyncClient
-    # _lock: asyncio.Lock = asyncio.Lock() # Used for local cache management
+    # While it's possible to include `AsyncClient` as a property of this
+    # class, I prefer passing it as a discrete parameter to the calls for mocking
+    # and ownership reasons.
     term_filter: list[str] = []
     cache_dir: str | None
 
-    def __init__(self, settings: LazySettings, *args, **kwargs):
+    def __init__(
+        self,
+        settings: LazySettings,
+        base_url: str,
+        name: str,
+        cache_dir: str | None = None,
+        api_key: str | None = None,
+        event_ttl: timedelta | None = None,
+        team_ttl: timedelta | None = None,
+        term_filter: list[str] = [],
+        **kwargs,
+    ):
         logging.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
-        if "api_key" not in kwargs:
-            kwargs.update({"api_key": settings.sportsdata.get("api_key")})
-        if "event_ttl" not in kwargs:
-            kwargs.update(
-                {"event_ttl": timedelta(weeks=settings.get("event_ttl_weeks", EVENT_TTL_WEEKS))}
-            )
-        if "team_ttl" not in kwargs:
-            kwargs.update(
-                {"team_ttl": timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))}
-            )
-        if "term_filter" not in kwargs:
-            kwargs.update({"term_filter": []})
-        super().__init__(
-            *args,
-            **kwargs,
+        self.api_key = api_key or settings.sportsdata.get("api_key")
+        self.base_url = base_url
+        self.name = name
+        self.teams = {}
+        self.events = {}
+        self.event_ttl = event_ttl or timedelta(
+            weeks=settings.sportsdata.get("event_ttl_weeks", EVENT_TTL_WEEKS)
         )
+        self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
+        self.term_filter = term_filter
+        self.cache_dir = cache_dir
 
     def gen_key(self, key: str) -> str:
         """Generate the internal sport:team key for unique lookup and storage."""
@@ -330,10 +300,9 @@ class Sport(BaseModel):
             except TypeError:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                # note: declaring a `self.metrics_client` causes a circular dependency.
                 try:
-                    get_metrics_client().increment(
-                        "sports.error.no_date", tags={"sport": self.name}
+                    logging.info(
+                        f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
                     )
                 except Exception as ex:
                     # Metrics failed, probably because no metric client.
@@ -432,14 +401,7 @@ class Sport(BaseModel):
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                # note: declaring a `self.metrics_client` causes a circular dependency.
-                try:
-                    get_metrics_client().increment(
-                        "sports.error.no_date", tags={"sport": self.name}
-                    )
-                except Exception as ex2:
-                    # Metrics failed, probably because no metrics client.
-                    logging.debug(f"{LOGGING_TAG} No metrics: {ex2}")
+                logging.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
                 logging.debug(
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )

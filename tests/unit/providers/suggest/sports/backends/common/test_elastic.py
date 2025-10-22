@@ -68,18 +68,20 @@ async def test_create_raise_exception(
 
 
 @pytest.mark.asyncio
-async def test_prune_fail_and_metrics_captured(
+async def test_prune_fail_and_logging_captured(
     sport_data_store: SportsDataStore,
     es_client: AsyncMock,
-    statsd_mock: Any,
+    mocker: MockerFixture,
 ) -> None:
     """Test Sport Data Store fail prune and metrics captured."""
     es_client.delete_by_query.side_effect = ConflictError("oops", cast(Any, object()), {})
 
-    result = await sport_data_store.prune(metrics_client=statsd_mock)
+    mock_logger = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.logging"
+    )
+    result = await sport_data_store.prune()
     assert result is False
-    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
-    assert metrics_called == ["sports.time.prune"]
+    assert mock_logger.warning.called
 
 
 @pytest.mark.asyncio
@@ -87,7 +89,6 @@ async def test_store_event_fail_and_metrics_captured(
     sport_data_store: SportsDataStore,
     es_client: AsyncMock,
     mocker: MockerFixture,
-    statsd_mock: Any,
 ) -> None:
     """Test Sport Data Store store_event fail and metrics captured."""
     mocker.patch(
@@ -111,12 +112,14 @@ async def test_store_event_fail_and_metrics_captured(
     nfl = NFL(settings=settings.providers.sports)
     nfl.events = {0: event}
 
-    await sport_data_store.store_events(sport=nfl, language_code="en", metrics_client=statsd_mock)
-    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
-    assert metrics_called == [
-        "sports.time.load.events",
-        "sports.time.load.refresh_indexes",
-    ]
+    mock_logger = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.logging"
+    )
+
+    await sport_data_store.store_events(sport=nfl, language_code="en")
+    calls = [call.args[0] for call in mock_logger.info.call_args_list]
+    assert len(list(filter(lambda x: "sports.time.load.events" in x, calls))) == 1
+    assert len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")

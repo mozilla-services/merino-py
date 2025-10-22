@@ -11,7 +11,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common import GameStatu
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Team,
     Sport,
-    SportRequestDate,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
@@ -193,7 +192,7 @@ def test_load_schedules_from_source_filters_and_populates(
     away_team: Team,
 ):
     """Ensure Load scores from source filters and returns relevant events."""
-    sport = sport_cls(settings=settings.providers.sports)
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
     sport.teams = {
         "HOM": home_team,
         "AWA": away_team,
@@ -237,15 +236,7 @@ def test_load_teams_from_source(
     away_team: Team,
 ):
     """Ensure teams are loaded correctly."""
-    sport = sport_cls(settings=settings.providers.sports)
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {"AWA", "HOM"}
-
-
-@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
-def test_sportdate():
-    """Test the SportDate stuff."""
-    test = SportRequestDate()
-    assert str(test) == "2025-Sep-22"
-    assert str(SportRequestDate.parse("2025-Oct-01")) == "2025-Oct-01"

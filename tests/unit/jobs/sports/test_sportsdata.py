@@ -66,7 +66,7 @@ async def test_updater(
     sport_data_store: SportsDataStore, httpx_client: AsyncClient, mocker: MockerFixture
 ):
     """Test provider functions:"""
-    settings.providers.sports.sports = "nfl,NbA,NHL,NoneSuch"
+    settings.providers.sports.sports = ["nfl", "NbA", "NHL", "NoneSuch"]
     updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
     assert list(updater.sports.keys()) == ["NFL", "NBA", "NHL"]
     assert updater.store == sport_data_store

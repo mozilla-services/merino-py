@@ -323,9 +323,8 @@ forecast_ttl_sec = 3600 # 1 hr
 [default.providers.sports]
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
-# Comma delimited list of active sports to use
-# e.g. "NFL,NBA,NHL"
-sports="NFL,NBA,NHL"
+# e.g. ["NFL","NBA","NHL"]
+sports=["NFL","NBA","NHL"]
 # Index names for Elastic Search.
 event_index="sports_{lang}_event"
 team_index="sports_{lang}_team"
@@ -339,7 +338,11 @@ enabled_by_default = false
 dsn="http://localhost:9200"
 # MERINO_PROVIDERS__SPORTS__ES_dsn
 # API Key for Elastic Search database
-api_key=""
+# Using the "basic" key, which allows using locally served
+# versions of elasticsearch
+api_key="basic"
+# Timeout for an Elastic Search response in milliseconds.
+request_timeout_ms = 300
 
 [default.providers.sports.sportsdata]
 # MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
