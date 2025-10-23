@@ -167,84 +167,39 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
 
     default_model_id = DEFAULT_PRODUCTION_MODEL_ID
 
-    def get(
-        self,
-        surface_id: str | None = None,
-        model_id: str | None = None,
-        experiment_name: str | None = None,
-        experiment_branch: str | None = None,
-    ) -> InferredLocalModel | None:
-        """Fetch local model for the region and optional target experiment branch/name
+    @staticmethod
+    def _get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
+        return InterestVectorConfig(
+            features={f"t_{topic}": 1},
+            thresholds=thresholds,
+            diff_p=MODEL_P_VALUE_V1,
+            diff_q=MODEL_Q_VALUE_V1,
+        )
 
-        If model_id is not none, only return a model of id specified, otherwise return Null
-        If model is None, return default model for the surface and experiment.
+    @staticmethod
+    def _get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
+        return InterestVectorConfig(
+            features={f"s_{section_name}": 1},
+            thresholds=thresholds,
+            diff_p=MODEL_P_VALUE_V1,
+            diff_q=MODEL_Q_VALUE_V1,
+        )
 
-        A common use case may be to call this function with the model_id to get the model
-        information for decoding the interests sent, then calling again with model_id=None
-        to return the current default model for future interest calculations.
-        """
-
-        def get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
-            return InterestVectorConfig(
-                features={f"t_{topic}": 1},
-                thresholds=thresholds,
-                diff_p=MODEL_P_VALUE_V1,
-                diff_q=MODEL_Q_VALUE_V1,
-            )
-
-        def get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
-            return InterestVectorConfig(
-                features={f"s_{section_name}": 1},
-                thresholds=thresholds,
-                diff_p=MODEL_P_VALUE_V1,
-                diff_q=MODEL_Q_VALUE_V1,
-            )
-
-        print("input model_id", model_id)
-        if model_id is not None:
-            """ If model is specified we only return if supported. """
-            if model_id not in SUPPORTED_LIVE_MODELS:
-                return None
-        model_thresholds = THRESHOLDS_V1_B
+    def _build_ctr_limited(self, model_id, surface_id) -> InferredLocalModel | None:
         if model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_A:
             model_thresholds = THRESHOLDS_V1_A
-        if model_id is None:
-            model_id = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
-        category_fields: dict[str, InterestVectorConfig]
-        private_features: list[str] | None
-        if experiment_name is not None and experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME:
-            if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:
-                ## private features are sent to merino, "private" from differentially private
-                private_features = [
-                    "sports",
-                    "government",
-                    "arts",
-                    "health",
-                    "business",
-                    "education-science",
-                ]  ## TODO "education-science"?
-                model_id = LOCAL_AND_SERVER_V1
-            else:  ## includes (experiment_branch == LOCAL_ONLY_BRANCH_NAME)
-                ## nothing sent to merino
-                private_features = []
-                model_id = LOCAL_ONLY_V1
-            category_fields = {
-                a: get_section(a, model_thresholds) for a in BASE_SECTIONS
-            }  ## all sections
         else:
-            private_features = None  ## private features null on frontend
-            category_fields = {a: get_topic(a, model_thresholds) for a in self.limited_topics}
-            # Remainder of topics an interest
-            remainder_topic_list = [
-                topic for topic in Topic if topic not in self.limited_topics_set
-            ]
-            category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
-                features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
-                thresholds=model_thresholds,
-                diff_p=MODEL_P_VALUE_V1,
-                diff_q=MODEL_Q_VALUE_V1,
-            )
-
+            model_thresholds = THRESHOLDS_V1_B
+        private_features = None  ## private features null on frontend
+        category_fields = {a: self._get_topic(a, model_thresholds) for a in self.limited_topics}
+        # Remainder of topics an interest
+        remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
+        category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
+            features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
+            thresholds=model_thresholds,
+            diff_p=MODEL_P_VALUE_V1,
+            diff_q=MODEL_Q_VALUE_V1,
+        )
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,
@@ -262,3 +217,84 @@ class SuperTopicModel(LocalModelBackend):  ## TODO normalization
             model_data=model_data,
             model_version=0,
         )
+
+    def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
+        model_thresholds = THRESHOLDS_V1_B
+        if model_id == LOCAL_AND_SERVER_V1:
+            ## private features are sent to merino, "private" from differentially private
+            private_features = [
+                "sports",
+                "government",
+                "arts",
+                "health",
+                "business",
+                "education-science",
+            ]  ## TODO "education-science"?
+        elif model_id == LOCAL_ONLY_V1:  ## includes (experiment_branch == LOCAL_ONLY_BRANCH_NAME)
+            ## nothing sent to merino
+            private_features = []
+        else:
+            return None
+        category_fields = {
+            a: self._get_section(a, model_thresholds) for a in BASE_SECTIONS
+        }  ## all sections
+        model_data: ModelData = ModelData(
+            model_type=ModelType.CTR,
+            rescale=False,
+            noise_scale=0.0,
+            day_time_weighting=DayTimeWeightingConfig(
+                days=[3, 14, 45],
+                relative_weight=[1, 1, 1],
+            ),
+            interest_vector=category_fields,
+            private_features=private_features,
+        )
+        return InferredLocalModel(
+            model_id=model_id,
+            surface_id=surface_id,
+            model_data=model_data,
+            model_version=0,
+        )
+
+    def get(
+        self,
+        surface_id: str | None = None,
+        model_id: str | None = None,
+        experiment_name: str | None = None,
+        experiment_branch: str | None = None,
+    ) -> InferredLocalModel | None:
+        """Fetch local model for the region and optional target experiment branch/name
+
+        If model_id is not none, only return a model of id specified, otherwise return Null
+        If model is None, return default model for the surface and experiment.
+
+        A common use case may be to call this function with the model_id to get the model
+        information for decoding the interests sent, then calling again with model_id=None
+        to return the current default model for future interest calculations.
+        """
+        if model_id is not None and model_id not in SUPPORTED_LIVE_MODELS:
+            ## None here insures we don't parse the wrong model
+            ## the local model defintion will be reset by the response
+            ## there will be another call to "get" with model_id=None
+            ## where the next model is built+returned
+            return None
+        if model_id is None:  ## this is the "get" call for building the model sent in the response
+            ## switch on experiment name
+            if experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME:
+                ## switch on branch name
+                if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:
+                    return self._build_local(LOCAL_AND_SERVER_V1, surface_id)
+                elif experiment_branch == LOCAL_ONLY_BRANCH_NAME:
+                    return self._build_local(LOCAL_ONLY_V1, surface_id)
+                else:
+                    return None
+            else:
+                ## default to CTR_V1_B
+                return self._build_ctr_limited(CTR_LIMITED_TOPIC_MODEL_ID_V1_B, surface_id)
+        ## now switch on model_id that isnt None
+        if model_id in (CTR_LIMITED_TOPIC_MODEL_ID_V1_A, CTR_LIMITED_TOPIC_MODEL_ID_V1_B):
+            return self._build_ctr_limited(model_id, surface_id)
+        if model_id in (LOCAL_ONLY_V1, LOCAL_AND_SERVER_V1):
+            return self._build_local(model_id, surface_id)
+        ## no matches
+        return None

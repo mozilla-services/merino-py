@@ -51,9 +51,7 @@ class ModelData(BaseModel):
     # Output key, and inputs for how fields affect it
     interest_vector: dict[str, InterestVectorConfig]
     noise_scale: float
-    private_features: list | None = (
-        None  
-    )
+    private_features: list | None = None
 
 
 class InferredLocalModel(BaseModel):
@@ -143,19 +141,20 @@ class InferredLocalModel(BaseModel):
         for idx, (key, ivconfig) in enumerate(iv_items):
             ## guard against model/experiment becoming misaligned due to experiments and
             ## local inferred model possibly changing at different times
-            if idx <= len(dp_values) - 1:
-                decoded_values: list[float] = [
-                    interpret_index(a)
-                    for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
-                ]
-                if len(decoded_values) == 1:
-                    # For n thresholds there are n+1 dimensions in the dp string
-                    # This is because the 0 index means the values is less than the 0 threshold
-                    result[key] = decoded_values[0]
-                if len(decoded_values) == 2:
-                    # When there are two 1 values there is a high likelyhood that one of them
-                    # is correct, so we average just in case
-                    result[key] = 0.5 * (decoded_values[0] + decoded_values[1])
+            if idx >= len(dp_values):
+                continue
+            decoded_values: list[float] = [
+                interpret_index(a)
+                for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
+            ]
+            if len(decoded_values) == 1:
+                # For n thresholds there are n+1 dimensions in the dp string
+                # This is because the 0 index means the values is less than the 0 threshold
+                result[key] = decoded_values[0]
+            if len(decoded_values) == 2:
+                # When there are two 1 values there is a high likelyhood that one of them
+                # is correct, so we average just in case
+                result[key] = 0.5 * (decoded_values[0] + decoded_values[1])
         return result
 
 
