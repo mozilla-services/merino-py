@@ -5,6 +5,10 @@ from typing import Protocol, cast
 
 import numpy as np
 from pydantic import BaseModel
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 LOCAL_MODEL_MODEL_ID_KEY = "model_id"
 
@@ -142,6 +146,7 @@ class InferredLocalModel(BaseModel):
             ## guard against model/experiment becoming misaligned due to experiments and
             ## local inferred model possibly changing at different times
             if idx >= len(dp_values):
+                logger.error("Model DP incorrect length")
                 continue
             decoded_values: list[float] = [
                 interpret_index(a)

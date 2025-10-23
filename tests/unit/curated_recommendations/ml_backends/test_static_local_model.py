@@ -174,12 +174,12 @@ def test_unary_when_no_ones(model_limited):
 
 
 def test_decode_dp_interests_passes_no_private(model_limited):
-    """Empty dp_values should raise due to direct indexing in decode.
+    """Empty dp_values should not raise due to direct indexing in decode.
     this is not true when private_features=[]
     """
     model = model_limited.get(TEST_SURFACE)
     model.model_data.private_features = []
-    result = model.decode_dp_interests("1", model.model_id)
+    result = model.decode_dp_interests("1000", model.model_id)
     assert len(result.keys()) == 1  ## 1 key is model_id
     assert "model_id" in result
 
@@ -188,7 +188,7 @@ def test_decode_dp_interests_passes_one_private(model_limited):
     """If we set one private interest, we get one back"""
     model = model_limited.get(TEST_SURFACE)
     model.model_data.private_features = ["arts"]
-    result = model.decode_dp_interests("1", model.model_id)
+    result = model.decode_dp_interests("1000", model.model_id)
     ## if model changes to exclude arts, this should be changed in PR
     assert "arts" in model.model_data.interest_vector
     ## 1 key is model_id , second is arts
