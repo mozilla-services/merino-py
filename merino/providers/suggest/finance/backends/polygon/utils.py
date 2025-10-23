@@ -70,6 +70,7 @@ def get_tickers_for_query(query: str) -> list[str] | None:
 
     # If the query has the "stock(s)" keyword in it.
     if stock_query := STOCK_QUERY_PATTERN.match(
+        # Query normalized to support both $(stock) and $ (stock)
         query_upper.replace("$", "STOCK ").replace("  ", " ")
     ):
         keyword = stock_query.group("keyword1") or stock_query.group("keyword2")
