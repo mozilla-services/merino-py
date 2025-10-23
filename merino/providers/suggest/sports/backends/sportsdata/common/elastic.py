@@ -250,8 +250,6 @@ class SportsDataStore(ElasticDataStore):
         self.index_map = index_map
         logging.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
 
-    # === Less generic methods
-
     async def build_indexes(self, settings: LazySettings, clear: bool = False):
         """Build the indices here for stand-alone and testing reasons.
 
@@ -301,10 +299,6 @@ class SportsDataStore(ElasticDataStore):
                     "event_key": {"type": "keyword"},
                     # Specify that the terms
                     "terms": {
-                        # "type": "completion",
-                        # "max_input_length": 100,
-                        # "preserve_position_increments": True,
-                        # "preserve_separators": True,
                         "type": "text",
                         "analyzer": f"plain_{language_code}",
                         "search_analyzer": f"plain_search_{language_code}",
@@ -359,7 +353,6 @@ class SportsDataStore(ElasticDataStore):
 
             res = await self.client.search(
                 query=query,
-                # sort=["sport", "date"],
                 timeout=TIMEOUT_MS,
                 source_includes=["event"],
             )

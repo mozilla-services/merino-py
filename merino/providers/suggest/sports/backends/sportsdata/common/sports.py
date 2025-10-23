@@ -129,7 +129,6 @@ class NFL(Sport):
     _lock: asyncio.Lock
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
-        # for mypy
         name = self.__class__.__name__
         super().__init__(
             settings=settings,
@@ -165,27 +164,30 @@ class NFL(Sport):
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
         )
-        # [{
-        #     'SeasonType': 1,
-        #     'Season': 2025,
-        #     'Week': 3,
-        #     'Name': 'Week 3',
-        #     'ShortName': 'Week 3',
-        #     'StartDate': '2025-09-17T00:00:00',
-        #     'EndDate': '2025-09-23T23:59:59',
-        #     'FirstGameStart': '2025-09-18T20:15:00',
-        #     'FirstGameEnd': '2025-09-19T00:15:00',
-        #     'LastGameEnd': '2025-09-23T00:15:00',
-        #     'HasGames': True,
-        #     'HasStarted': True,
-        #     'HasEnded': False,
-        #     'HasFirstGameStarted': True,
-        #     'HasFirstGameEnded': True,
-        #     'HasLastGameEnded': True,
-        #     'ApiSeason': '2025REG',
-        #     'ApiWeek': '3'
-        # }]
-        # TODO: Store this info in meta
+        """
+        # Sample response:
+
+        [{
+            'SeasonType': 1,
+            'Season': 2025,
+            'Week': 3,
+            'Name': 'Week 3',
+            'ShortName': 'Week 3',
+            'StartDate': '2025-09-17T00:00:00',
+            'EndDate': '2025-09-23T23:59:59',
+            'FirstGameStart': '2025-09-18T20:15:00',
+            'FirstGameEnd': '2025-09-19T00:15:00',
+            'LastGameEnd': '2025-09-23T00:15:00',
+            'HasGames': True,
+            'HasStarted': True,
+            'HasEnded': False,
+            'HasFirstGameStarted': True,
+            'HasFirstGameEnded': True,
+            'HasLastGameEnded': True,
+            'ApiSeason': '2025REG',
+            'ApiWeek': '3'
+        }]
+        """
         self.season = response[0].get("ApiSeason")
         self.week = response[0].get("ApiWeek")
         start = response[0].get("StartDate")

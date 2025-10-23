@@ -420,8 +420,8 @@ class Sport:
                 ),
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
-                home_score=event_description["HomeTeamScore"],  # Differs
-                away_score=event_description["AwayTeamScore"],  # Differs
+                home_score=event_description["HomeTeamScore"],
+                away_score=event_description["AwayTeamScore"],
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
             )

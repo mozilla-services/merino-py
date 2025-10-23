@@ -21,8 +21,8 @@ class GameStatus(StrEnum):
     F_SO = "f/so"  # Equivalent to "final"
     Forfeit = "forfeit"
     NotNecessary = "notnecessary"
+    # Collector for unknown or undefined event states.
     Unknown = "unknown"
-    # other states can be ignored?
 
     @classmethod
     def parse(cls, state: str) -> "GameStatus":
@@ -56,11 +56,11 @@ class GameStatus(StrEnum):
         return self in [GameStatus.InProgress, GameStatus.Suspended]
 
     def status_type(self) -> "GameStatus":
-        """Minimal type of status
-        0 = Unknown
-        1 = Final
-        2 = Current
-        3 = Scheduled
+        """Return a simplified status for this event.
+
+        SportsData returns VERY detailed event statuses. This reduces to
+        a very simple set of statuses to allow us to quickly determine
+        state.
         """
         if self.is_final():
             return GameStatus.Final
@@ -84,6 +84,7 @@ class GameStatus(StrEnum):
 
     def as_str(self) -> str:
         """Return self as a somewhat prettier formatted string
+
         NOTE: For int'l this should probably return a lookup code.
         """
         match self:
