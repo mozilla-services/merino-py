@@ -1,5 +1,6 @@
 """A wrapper for Polygon API interactions."""
 
+import asyncio
 import itertools
 import hashlib
 import logging
@@ -92,6 +93,8 @@ class PolygonBackend:
     url_single_ticker_snapshot: str
     url_single_ticker_overview: str
     filemanager: PolygonFilemanager
+    cache_refresh_task: asyncio.Task
+    cache_refresh_task_queue: asyncio.Queue
 
     def __init__(
         self,
@@ -130,6 +133,9 @@ class PolygonBackend:
         self.cache.register_script(
             SCRIPT_ID_BULK_WRITE_TICKERS, LUA_SCRIPT_CACHE_BULK_WRITE_TICKERS
         )
+
+        self.cache_refresh_task_queue = asyncio.Queue()
+        self.cache_refresh_task = asyncio.create_task(self.refresh_ticker_cache_entries())
 
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
         """Get snapshots for the list of tickers."""
@@ -374,6 +380,28 @@ class PolygonBackend:
                 self.ticker_ttl_sec,  # the last value is the TTL used for all keys
             ],
         )
+
+    async def refresh_ticker_cache_entries(
+        self
+    ) -> None:
+        """Refresh ticker snapshot in cache. Fetches new snapshot from upstream API and
+        fires a background task to write it to the cache.
+        """
+        while True:
+            # Get the tickers list from the queue
+            # NOTE: get_nowait() can throw QueueEmpty exception
+            tickers: list[str] = self.cache_refresh_task_queue.get_nowait()
+            snapshots = await self.get_snapshots(tickers)
+
+            # Early exit if no snapshots returned.
+            # Although, the store method also has the same check.
+            if len(snapshots) == 0:
+                return
+
+            await self.store_snapshots_in_cache(snapshots)
+
+            # notify queue that the task is done
+            self.cache_refresh_task_queue.task_done()
 
     # TODO @herraj add unit tests for this
     def _parse_cached_data(
