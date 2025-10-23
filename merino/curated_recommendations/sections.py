@@ -23,9 +23,9 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    SubsectionsExperimentRescaler,
+    SchedulerHoldbackRescaler,
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-    CrawlerExperimentRescaler,
+    DefaultRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, ExperimentRescaler
 from merino.curated_recommendations.protocol import (
@@ -318,12 +318,18 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     )
 
 
+def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if in scheduler holdback expereiment.
+    """
+    return is_enrolled_in_experiment(
+        request, ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control"
+    )
+
 def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if custom sections should be included based on experiments."""
     return is_enrolled_in_experiment(
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
     )
-
 
 def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str | None:
     """Return the branch name for the RSS vs. Zyte experiment, or None if not enrolled.
@@ -363,13 +369,11 @@ def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> ExperimentRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
-    if is_crawl_experiment_treatment(request):
+    if is_scheduler_holdback_experiment(request):
         return (
-            CrawlerExperimentRescaler()
-        )  # note is_subtopics_experiment may also be true in this case
-    if is_subtopics_experiment(request):
-        return SubsectionsExperimentRescaler()
-    return None
+            SchedulerHoldbackRescaler()
+        )
+    return DefaultRescaler()
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
