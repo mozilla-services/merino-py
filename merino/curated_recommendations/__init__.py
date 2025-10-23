@@ -18,7 +18,7 @@ from merino.curated_recommendations.corpus_backends.sections_backend import (
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.ml_backends.static_local_model import SuperTopicModel
+from merino.curated_recommendations.ml_backends.static_local_model import SuperInferredModel
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
 from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend
@@ -44,7 +44,7 @@ def init_local_model_backend() -> LocalModelBackend:
     """Initialize the Local Model Backend. This will be repaced with GCSLocal model
     prior to production launch so we can dynamically update models.
     """
-    return SuperTopicModel()
+    return SuperInferredModel()
 
 
 def init_engagement_backend() -> EngagementBackend:

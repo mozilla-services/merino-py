@@ -8,13 +8,15 @@ from types import SimpleNamespace
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
     FakeLocalModelSections,
-    SuperTopicModel,
+    SuperInferredModel,
     CTR_SECTION_MODEL_ID,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
     INFERRED_LOCAL_EXPERIMENT_NAME,
     LOCAL_AND_SERVER_V1,
     LOCAL_ONLY_V1,
+    LOCAL_AND_SERVER_BRANCH_NAME,
+    LOCAL_ONLY_BRANCH_NAME,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -33,13 +35,13 @@ TEST_SURFACE = "test_surface"
 @pytest.fixture
 def model_limited():
     """Create static model"""
-    return SuperTopicModel()
+    return SuperInferredModel()
 
 
 @pytest.fixture
 def local_model_backend():
     """Create static model  - used for more generic tests than model_limited"""
-    return SuperTopicModel()
+    return SuperInferredModel()
 
 
 @pytest.fixture
@@ -379,7 +381,7 @@ def test_model_matches_interests_param(model_limited, input_id, expected):
 @pytest.fixture
 def inferred_model():
     """Build a concrete InferredLocalModel for tests."""
-    backend = SuperTopicModel()
+    backend = SuperInferredModel()
     return backend.get("surface")
 
 
@@ -505,3 +507,87 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
     assert "foo" not in out.normalized_scores
     assert "bar" not in out.normalized_scores  # String values are not included in scores
     assert "bar" not in out.scores  # String values are not included in scores
+
+
+@pytest.mark.parametrize(
+    "branch,model_id,expect_private_nonempty",
+    [
+        (LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
+        (LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+    ],
+    ids=["local_and_server_branch", "local_only_branch"],
+)
+def test_get_with_experiment_and_model_id_correct_branch_returns_model(
+    model_limited, branch, model_id, expect_private_nonempty
+):
+    """When passing a model_id for the experiment AND the correct branch, return that model."""
+    result = model_limited.get(
+        TEST_SURFACE,
+        model_id=model_id,
+        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_branch=branch,
+    )
+
+    assert isinstance(result, InferredLocalModel)
+    assert result.model_id == model_id
+    # sanity checks on payload
+    assert result.surface_id == TEST_SURFACE
+    assert result.model_data is not None
+    assert isinstance(result.model_data.interest_vector, dict)
+    # private features presence depends on branch
+    if expect_private_nonempty:
+        assert result.model_data.private_features and len(result.model_data.private_features) > 0
+    else:
+        assert result.model_data.private_features == []
+
+
+def test_no_model_id_correct_experiment(model_limited):
+    """Control check: no model_id but correct experiment returns expected local model"""
+    ## LOCAL AND SERVER
+    result = model_limited.get(
+        TEST_SURFACE,
+        model_id=None,
+        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
+    )
+    assert isinstance(result, InferredLocalModel)
+    assert result.model_id == LOCAL_AND_SERVER_V1
+    ## LOCAL ONLY
+    result = model_limited.get(
+        TEST_SURFACE,
+        model_id=None,
+        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_branch=LOCAL_ONLY_BRANCH_NAME,
+    )
+    assert isinstance(result, InferredLocalModel)
+    assert result.model_id == LOCAL_ONLY_V1
+
+
+def test_get_with_non_experiment_model_id_ignores_experiment_returns_ctr(model_limited):
+    """Control check: passing a non-local (CTR) model_id should build the CTR model, regardless of
+    experiment knobs. Ensures experiment switching applies only to local models.
+    """
+    result = model_limited.get(
+        TEST_SURFACE,
+        model_id=CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
+    )
+    assert isinstance(result, InferredLocalModel)
+    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    # basic payload sanity
+    assert Topic.SPORTS.value in result.model_data.interest_vector
+
+
+def test_get_dummy_experiment_name(model_limited):
+    """Control check: an unknown experiment name and no model_id defaults to ctr_v1_b"""
+    result = model_limited.get(
+        TEST_SURFACE,
+        model_id=None,
+        experiment_name="moo",
+        experiment_branch="cow",
+    )
+    assert isinstance(result, InferredLocalModel)
+    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    # basic payload sanity
+    assert Topic.SPORTS.value in result.model_data.interest_vector
