@@ -69,7 +69,9 @@ def get_tickers_for_query(query: str) -> list[str] | None:
         return tickers
 
     # If the query has the "stock(s)" keyword in it.
-    if stock_query := STOCK_QUERY_PATTERN.match(query_upper.replace("$", "STOCK ").replace("  ", " ")):
+    if stock_query := STOCK_QUERY_PATTERN.match(
+        query_upper.replace("$", "STOCK ").replace("  ", " ")
+    ):
         keyword = stock_query.group("keyword1") or stock_query.group("keyword2")
         if keyword in ALL_STOCK_TICKER_COMPANY_MAPPING:
             return [keyword]
