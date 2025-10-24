@@ -14,8 +14,8 @@ SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.25
 
 
-class DefaultRescaler(ExperimentRescaler):
-    """Scales based on overall percentage """
+class DefaultCrawlerRescaler(ExperimentRescaler):
+    """Scales based on overall percentage"""
 
     def __init__(self, **data: Any):
         super().__init__(**data)
@@ -52,4 +52,3 @@ class SchedulerHoldbackRescaler(ExperimentRescaler):
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Rescales priors based on content"""
         return alpha, beta
-

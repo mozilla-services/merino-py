@@ -25,7 +25,7 @@ from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SchedulerHoldbackRescaler,
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-    DefaultRescaler,
+    DefaultCrawlerRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, ExperimentRescaler
 from merino.curated_recommendations.protocol import (
@@ -304,26 +304,17 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     - ML sections experiment is enabled (treatment branch), OR
     - Crawl experiment is in the TREATMENT_CRAWL_PLUS_SUBTOPICS branch
     """
-    ml_sections_enabled = is_enrolled_in_experiment(
-        request, ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment"
-    )
-
-    # Get the crawl experiment branch to check if it includes subtopics
-    crawl_branch = get_crawl_experiment_branch(request)
-
-    # Include subtopics if ml_sections is enabled OR if in crawl-plus-subtopics branch
-    return (
-        ml_sections_enabled
-        or crawl_branch == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
-    )
+    in_holdback = is_scheduler_holdback_experiment(request)
+    # Subtopics only in the US
+    return not in_holdback and request.region == "US"
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if in scheduler holdback expereiment.
-    """
+    """Return True if in scheduler holdback expereiment."""
     return is_enrolled_in_experiment(
         request, ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control"
     )
+
 
 def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if custom sections should be included based on experiments."""
@@ -331,49 +322,31 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
     )
 
+
 def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str | None:
-    """Return the branch name for the RSS vs. Zyte experiment, or None if not enrolled.
+    """Return the branch name for the RSS vs. Zyte experiment
 
     Branches:
     - control: Non-crawl legacy topics only
     - treatment-crawl: Crawl legacy topics only
-    - treatment-crawl-plus-subtopics: Crawl legacy topics + non-crawl subtopics
+    - treatment-crawl-subtopics: Crawl legacy topics + non-crawl subtopics
 
-    Handles both the regular experiment name and the optin- prefixed version for forced enrollment.
     """
-    if not request.experimentName:
-        return None
+    if is_scheduler_holdback_experiment(request) or request.region != "US":
+        return CrawlExperimentBranchName.CONTROL.value
 
-    # Remove optin- prefix if present and check if it matches any crawl experiment
-    experiment_name = request.experimentName.removeprefix("optin-")
-    crawl_experiments = [
-        ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-        ExperimentName.NEW_TAB_CRAWLING_V2.value,
-    ]
-
-    if experiment_name in crawl_experiments:
-        return request.experimentBranch
-    return None
-
-
-def is_crawl_experiment_treatment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the user is in any treatment branch of the RSS vs. Zyte experiment."""
-    branch = get_crawl_experiment_branch(request)
-    return branch in [
-        CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-        CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-    ]
+    return CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
 
 
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> ExperimentRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
+    if request.region != "US":
+        return None
     if is_scheduler_holdback_experiment(request):
-        return (
-            SchedulerHoldbackRescaler()
-        )
-    return DefaultRescaler()
+        return SchedulerHoldbackRescaler()
+    return DefaultCrawlerRescaler()
 
 
 def update_received_feed_rank(sections: dict[str, Section]):

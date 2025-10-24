@@ -5,8 +5,7 @@ thompson sampling experiments
 from unittest.mock import Mock
 
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    DefaultRescaler,
-    CRAWLED_TOPIC_TOTAL_PERCENT,
+    DefaultCrawlerRescaler,
     SchedulerHoldbackRescaler,
     PESSIMISTIC_PRIOR_ALPHA_SCALE,
 )
@@ -20,12 +19,13 @@ class TestDefaultRescaler:
 
     def setup_method(self):
         """Set up test"""
-        self.rescaler = DefaultRescaler()
+        self.rescaler = DefaultCrawlerRescaler()
 
     def test_rescale_with_subtopic_item(self):
         """Test rescaling of priors for relative experiment size"""
         rec = Mock()
         rec.in_experiment.return_value = True  # Indicates subtopic for flag
+        rec.isTimeSensitive = False
         expected_opens = 100
         expected_no_opens = 50
         opens, no_opens = self.rescaler.rescale(rec, expected_opens, expected_no_opens)
@@ -40,6 +40,7 @@ class TestDefaultRescaler:
         """Test when no experiment in request"""
         rec = Mock()
         rec.in_experiment.return_value = False
+        rec.isTimeSensitive = False
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
         assert opens == 100
@@ -48,7 +49,6 @@ class TestDefaultRescaler:
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
         assert alpha == 10
         assert beta == 20
-
 
 
 class TestSchedulerHoldbackRescaler:

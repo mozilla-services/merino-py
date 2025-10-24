@@ -21,8 +21,8 @@ from merino.curated_recommendations.layouts import (
     layout_6_tiles,
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    CrawlerExperimentRescaler,
-    SubsectionsExperimentRescaler,
+    SchedulerHoldbackRescaler,
+    DefaultCrawlerRescaler,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -208,98 +208,19 @@ class TestMlSectionsExperiment:
     """Tests covering is_subtopics_experiment"""
 
     @pytest.mark.parametrize(
-        "name,branch,expected",
+        "name,branch,region,expected",
         [
-            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment", True),
-            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "control", False),
-            ("other", "treatment", False),
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control", "US", False),
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", False),
+            ("other", "treatment", "US", True),
+            ("other", "treatment", "ZZ", False),
         ],
     )
-    def test_flag_logic(self, name, branch, expected):
+    def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
         """Test that experiment flag logic matches expected behavior for both ML sections and crawl experiments."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         assert is_subtopics_experiment(req) is expected
-
-    def test_crawl_experiment_subtopics(self):
-        """Test that crawl experiment affects subtopics inclusion"""
-        # Control branch - should not include subtopics
-        req_control = SimpleNamespace(
-            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-            experimentBranch=CrawlExperimentBranchName.CONTROL.value,
-        )
-        assert is_subtopics_experiment(req_control) is False
-
-        # Treatment crawl (no subtopics) - should not include subtopics
-        req_treatment_no_subtopics = SimpleNamespace(
-            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-        )
-        assert is_subtopics_experiment(req_treatment_no_subtopics) is False
-
-        # Treatment crawl WITH subtopics - should include subtopics
-        req_treatment_with_subtopics = SimpleNamespace(
-            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        )
-        assert is_subtopics_experiment(req_treatment_with_subtopics) is True
-
-        # NEW_TAB_CRAWLING_V2 - Control branch - should not include subtopics
-        req_v2_control = SimpleNamespace(
-            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
-            experimentBranch=CrawlExperimentBranchName.CONTROL.value,
-        )
-        assert is_subtopics_experiment(req_v2_control) is False
-
-        # NEW_TAB_CRAWLING_V2 - Treatment crawl (no subtopics) - should not include subtopics
-        req_v2_treatment_no_subtopics = SimpleNamespace(
-            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
-            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-        )
-        assert is_subtopics_experiment(req_v2_treatment_no_subtopics) is False
-
-        # NEW_TAB_CRAWLING_V2 - Treatment crawl WITH subtopics - should include subtopics
-        req_v2_treatment_with_subtopics = SimpleNamespace(
-            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
-            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        )
-        assert is_subtopics_experiment(req_v2_treatment_with_subtopics) is True
-
-        # Not enrolled in crawl experiment - should return False
-        req_not_enrolled = SimpleNamespace(
-            experimentName="other",
-            experimentBranch="control",
-        )
-        assert is_subtopics_experiment(req_not_enrolled) is False
-
-    def test_both_experiments_interaction(self):
-        """Test that ML sections and crawl experiments work together correctly"""
-        # ML sections enabled - should include subtopics regardless of crawl experiment
-        req_ml_enabled = SimpleNamespace(
-            experimentName=ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-            experimentBranch="treatment",
-        )
-        assert is_subtopics_experiment(req_ml_enabled) is True
-
-        # Crawl subtopics enabled - should include subtopics regardless of ML sections
-        req_crawl_subtopics = SimpleNamespace(
-            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        )
-        assert is_subtopics_experiment(req_crawl_subtopics) is True
-
-        # NEW_TAB_CRAWLING_V2 Crawl subtopics enabled - should include subtopics regardless of ML sections
-        req_v2_crawl_subtopics = SimpleNamespace(
-            experimentName=ExperimentName.NEW_TAB_CRAWLING_V2.value,
-            experimentBranch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        )
-        assert is_subtopics_experiment(req_v2_crawl_subtopics) is True
-
-        # Neither enabled - should not include subtopics
-        req_neither = SimpleNamespace(
-            experimentName=ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-            experimentBranch=CrawlExperimentBranchName.CONTROL.value,
-        )
-        assert is_subtopics_experiment(req_neither) is False
 
 
 class TestCustomSectionsExperiment:
@@ -319,223 +240,78 @@ class TestCustomSectionsExperiment:
         req = SimpleNamespace(experimentName=name, experimentBranch=branch)
         assert is_custom_sections_experiment(req) is expected
 
-
-class TestCrawlExperiment:
-    """Tests covering RSS vs. Zyte experiment functionality"""
-
     @pytest.mark.parametrize(
-        "name,branch,expected",
+        "name,branch,region,expected_branch",
         [
             (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                True,
-            ),
-            (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                True,
-            ),
-            (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "control",
+                "US",
                 CrawlExperimentBranchName.CONTROL.value,
-                False,
-            ),
-            # Test with optin- prefix
-            (
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                True,
             ),
             (
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "other",
+                "US",
                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                True,
             ),
             (
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "other",
+                "CA",
                 CrawlExperimentBranchName.CONTROL.value,
-                False,
-            ),
-            # NEW_TAB_CRAWLING_V2 tests
-            (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                True,
             ),
             (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
+                "other-exp",
+                "other-branch",
+                "CA",
+                CrawlExperimentBranchName.CONTROL.value,
+            ),
+            (
+                "other-exp",
+                "other-branch",
+                "US",
                 CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                True,
             ),
-            (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.CONTROL.value,
-                False,
-            ),
-            # Test with optin- prefix for NEW_TAB_CRAWLING_V2
-            (
-                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                True,
-            ),
-            (
-                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                True,
-            ),
-            (
-                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                CrawlExperimentBranchName.CONTROL.value,
-                False,
-            ),
-            ("other", CrawlExperimentBranchName.TREATMENT_CRAWL.value, False),
         ],
     )
-    def test_crawl_experiment_flag_logic(self, name, branch, expected):
-        """Test that crawl experiment flag matches expected logic"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
-        from merino.curated_recommendations.sections import is_crawl_experiment_treatment
-
-        assert is_crawl_experiment_treatment(req) is expected
-
-    @pytest.mark.parametrize(
-        "name,branch,expected_branch",
-        [
-            (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.CONTROL.value,
-                CrawlExperimentBranchName.CONTROL.value,
-            ),
-            (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            ),
-            (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-            ),
-            # Test with optin- prefix
-            (
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-                CrawlExperimentBranchName.CONTROL.value,
-                CrawlExperimentBranchName.CONTROL.value,
-            ),
-            (
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            ),
-            (
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-            ),
-            # NEW_TAB_CRAWLING_V2 tests
-            (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.CONTROL.value,
-                CrawlExperimentBranchName.CONTROL.value,
-            ),
-            (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            ),
-            (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-            ),
-            # Test with optin- prefix for NEW_TAB_CRAWLING_V2
-            (
-                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                CrawlExperimentBranchName.CONTROL.value,
-                CrawlExperimentBranchName.CONTROL.value,
-            ),
-            (
-                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            ),
-            (
-                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-            ),
-            ("other", "treatment", None),
-        ],
-    )
-    def test_get_crawl_experiment_branch(self, name, branch, expected_branch):
+    def test_get_crawl_experiment_branch(self, name, branch, region, expected_branch):
         """Test that get_crawl_experiment_branch returns correct branch"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         from merino.curated_recommendations.sections import get_crawl_experiment_branch
 
         assert get_crawl_experiment_branch(req) == expected_branch
 
     @pytest.mark.parametrize(
-        "name,branch,expected_class",
+        "name,branch,region,expected_class",
         [
             (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.CONTROL.value,
                 None,
-            ),
-            (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                CrawlerExperimentRescaler,
-            ),
-            (
-                ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                CrawlerExperimentRescaler,
-            ),
-            (
-                f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-                CrawlExperimentBranchName.CONTROL.value,
                 None,
-            ),
-            # NEW_TAB_CRAWLING_V2 tests
-            (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.CONTROL.value,
-                None,
+                "US",
+                DefaultCrawlerRescaler,
             ),
             (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-                CrawlerExperimentRescaler,
-            ),
-            (
-                ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-                CrawlerExperimentRescaler,
-            ),
-            (
-                f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                CrawlExperimentBranchName.CONTROL.value,
-                None,
-            ),
-            (
-                ExperimentName.ML_SECTIONS_EXPERIMENT,
-                "treatment",
-                SubsectionsExperimentRescaler,
-            ),
-            (
-                ExperimentName.ML_SECTIONS_EXPERIMENT,
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT,
                 "control",
-                None,
+                "US",
+                SchedulerHoldbackRescaler,
             ),
-            ("other", "treatment", None),
-            (None, None, None),
+            (
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT,
+                "treatment-crawl-subtopics",
+                "US",
+                DefaultCrawlerRescaler,
+            ),
+            ("other", "treatment", "US", DefaultCrawlerRescaler),
+            ("other", "treatment", "CA", None),
+            (None, None, "US", DefaultCrawlerRescaler),
+            (None, None, "CA", None),
         ],
     )
-    def test_get_ranking_rescaler_for_branch(self, name, branch, expected_class):
+    def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
         """Test that we get the appropriate rescaler"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:
