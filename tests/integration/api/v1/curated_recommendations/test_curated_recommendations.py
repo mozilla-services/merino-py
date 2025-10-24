@@ -1383,6 +1383,66 @@ class TestSections:
             )
 
     @pytest.mark.parametrize(
+        "branch,should_have_manual,should_have_ml",
+        [
+            ("treatment", True, False),
+            ("control", False, True),
+        ],
+    )
+    def test_custom_sections_experiment(
+        self, branch: str, should_have_manual: bool, should_have_ml: bool, client: TestClient
+    ):
+        """Test custom sections experiment filters sections by createSource.
+
+        Treatment: Returns only MANUAL sections (createSource == "MANUAL")
+        Control: Excludes MANUAL sections (only ML sections returned)
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value,
+                "experimentBranch": branch,
+            },
+        )
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+
+        manual_section_id = "d532b687-108a-4edb-a076-58a6945de714"
+
+        if should_have_manual:
+            # Treatment: Should NOT have ML sections
+            assert "music" not in sections
+            assert "nfl" not in sections
+            assert "tv" not in sections
+            assert "movies" not in sections
+            assert "nba" not in sections
+
+            # The MANUAL section "Tech stuff" may or may not appear depending on whether
+            # it has enough items after top stories are removed, but if it does appear,
+            # verify it has the correct title
+            if manual_section_id in sections:
+                assert sections[manual_section_id]["title"] == "Tech stuff"
+        else:
+            # Control: Should NOT have the MANUAL section
+            assert manual_section_id not in sections
+
+            # Should have ML sections (legacy topics only since not ML experiment)
+            legacy_topics = {topic.value for topic in Topic}
+            for sid in sections:
+                if sid != "top_stories_section":
+                    assert sid in legacy_topics
+
+    @pytest.mark.parametrize(
         "sections_payload",
         [
             {},

@@ -13,6 +13,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
     Topic,
     ScheduledSurfaceProtocol,
+    CreateSource,
 )
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
@@ -172,6 +173,7 @@ async def get_corpus_sections(
     crawl_branch: str | None = None,
     include_subtopics: bool = False,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
+    is_custom_sections_experiment: bool = False,
 ) -> tuple[Section | None, dict[str, Section]]:
     """Fetch editorially curated sections with optional RSS vs. Zyte experiment filtering.
 
@@ -182,6 +184,7 @@ async def get_corpus_sections(
         crawl_branch: The crawl experiment branch name or None.
         include_subtopics: Whether to include subtopic sections.
         scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
+        is_custom_sections_experiment: Whether custom sections experiment is enabled.
 
     Returns:
         A tuple of headlines section (if present) & a mapping from section IDs to Section objects, each with a unique receivedFeedRank.
@@ -204,9 +207,12 @@ async def get_corpus_sections(
             is_legacy_section=False,
         )
 
-    # Apply RSS vs. Zyte experiment filtering
-    filtered_corpus_sections = filter_sections_by_crawl_experiment(
-        remaining_raw_corpus_sections, crawl_branch, include_subtopics
+    # Apply RSS vs. Zyte experiment filtering and custom sections filtering
+    filtered_corpus_sections = filter_sections_by_experiment(
+        remaining_raw_corpus_sections,
+        crawl_branch,
+        include_subtopics,
+        is_custom_sections_experiment,
     )
 
     # Process the sections using the shared logic, passing the dict directly
@@ -312,6 +318,13 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     )
 
 
+def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if custom sections should be included based on experiments."""
+    return is_enrolled_in_experiment(
+        request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
+    )
+
+
 def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str | None:
     """Return the branch name for the RSS vs. Zyte experiment, or None if not enrolled.
 
@@ -391,17 +404,19 @@ def is_crawl_section_id(section_id: str) -> bool:
     return section_id.endswith("_crawl")
 
 
-def filter_sections_by_crawl_experiment(
+def filter_sections_by_experiment(
     corpus_sections: list[CorpusSection],
     crawl_branch: str | None,
     include_subtopics: bool = False,
+    is_custom_sections_experiment: bool = False,
 ) -> dict[str, CorpusSection]:
-    """Filter sections based on RSS vs. Zyte experiment branch.
+    """Filter sections based on RSS vs. Zyte experiment branch and custom sections experiment.
 
     Args:
         corpus_sections: List of CorpusSection objects
         crawl_branch: The experiment branch name or None
         include_subtopics: Whether to include subtopic sections
+        is_custom_sections_experiment: Whether custom sections experiment is enabled
 
     Returns:
         Filtered sections with _crawl suffix removed from keys for crawl sections
@@ -414,6 +429,18 @@ def filter_sections_by_crawl_experiment(
         is_crawl_section = is_crawl_section_id(section_id)
         base_id = section_id.replace("_crawl", "") if is_crawl_section else section_id
         is_legacy = base_id in legacy_topics
+        is_manual_section = section.createSource == CreateSource.MANUAL
+
+        # Custom sections experiment: only include MANUAL sections in treatment, exclude them in control
+        if is_custom_sections_experiment:
+            # Treatment: only include MANUAL sections
+            if is_manual_section:
+                result[base_id] = section
+            continue
+
+        # Control/default: exclude MANUAL sections
+        if is_manual_section:
+            continue
 
         # Determine if we should include this section based on the branch
         if crawl_branch in [
@@ -616,6 +643,9 @@ async def get_sections(
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
+    # Determine if custom sections experiment is enabled
+    custom_sections_enabled = is_custom_sections_experiment(request)
+
     rescaler = get_ranking_rescaler_for_branch(request)
 
     headlines_corpus_section, corpus_sections_all = await get_corpus_sections(
@@ -625,6 +655,7 @@ async def get_sections(
         crawl_branch=crawl_branch,
         include_subtopics=include_subtopics,
         scheduled_surface_backend=scheduled_surface_backend,
+        is_custom_sections_experiment=custom_sections_enabled,
     )
 
     # Determine if we should include headlines section based on daily briefing experiment
