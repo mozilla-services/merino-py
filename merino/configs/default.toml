@@ -353,6 +353,16 @@ api_key=""
 # Directory to store JSON request responses
 cache_dir="/tmp"
 
+# SportsData may have different base_urls per sport (e.g.
+# NFL may use `https://api.sportsdata.io/v3/nfl/scores/json` where
+# UCL may use `https://api.sportsdata.io/v4/soccer/scores/json`
+# Generally, each sport will handle this, but if the URLs need to be
+# changed quickly, we can specify them here.
+# e.g.
+# base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
+# base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
+
+
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
 # The interval of the ManifestFilemanager cron job (in seconds)

@@ -120,6 +120,7 @@ async def test_provider_query_non_trigger_word():
         enabled_by_default=True,
         trigger_words=["trigger word"],
     )
+    backend.query.return_value = []
     sreq = SuggestionRequest(query="something else", geolocation=Location())
     res = await provider.query(sreq=sreq)
     assert len(res) == 0

@@ -64,7 +64,7 @@ async def test_create_raise_exception(
     es_client.indices.create.side_effect = BadRequestError("oops", cast(Any, object()), {})
 
     with pytest.raises(SportsDataError):
-        await sport_data_store.build_indexes(settings=settings)
+        await sport_data_store.build_indexes()
 
 
 @pytest.mark.asyncio

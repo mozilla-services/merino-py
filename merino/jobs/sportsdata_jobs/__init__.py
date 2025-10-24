@@ -162,6 +162,10 @@ class SportDataUpdater:
         await self.update(include_teams=True, client=client)
         await self.store.prune()
 
+    async def initialize(self, settings: LazySettings) -> None:
+        """Initialize the ElasticSearch data store"""
+        await self.store.build_indexes(clear=False)
+
 
 sports_settings = settings.providers.sports
 # If there are no explicit elastic search values defined for sports,
@@ -180,6 +184,12 @@ cli = typer.Typer(
     help="Commands to fetch and store sport information",
 )
 provider = SportDataUpdater(sports_settings)
+
+
+@cli.command("initialize")
+def initialize():
+    """Build the indexes and initialize the ES tables"""
+    asyncio.run(provider.initialize(sports_settings))
 
 
 @cli.command("nightly")

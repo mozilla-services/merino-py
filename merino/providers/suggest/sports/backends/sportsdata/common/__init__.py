@@ -1,5 +1,7 @@
 """Common data definitions for SportsData.io information"""
 
+from __future__ import annotations
+
 from enum import StrEnum
 
 
@@ -25,7 +27,7 @@ class GameStatus(StrEnum):
     Unknown = "unknown"
 
     @classmethod
-    def parse(cls, state: str) -> "GameStatus":
+    def parse(cls, state: str) -> GameStatus:
         """Instantiate from a string"""
         try:
             return cls(state.lower())
@@ -55,7 +57,7 @@ class GameStatus(StrEnum):
         """Return if the game is currently in progress in some form"""
         return self in [GameStatus.InProgress, GameStatus.Suspended]
 
-    def status_type(self) -> "GameStatus":
+    def status_type(self) -> GameStatus:
         """Return a simplified status for this event.
 
         SportsData returns VERY detailed event statuses. This reduces to

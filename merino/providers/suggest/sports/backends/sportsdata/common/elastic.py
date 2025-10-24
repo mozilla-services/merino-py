@@ -6,7 +6,6 @@ from abc import abstractmethod, ABC
 from datetime import datetime, timezone
 from typing import Any, Final
 
-from dynaconf.base import LazySettings
 from elasticsearch import AsyncElasticsearch, BadRequestError, ConflictError, helpers
 
 from merino.configs import settings
@@ -213,7 +212,7 @@ class ElasticDataStore(ABC):
         """
 
     @abstractmethod
-    async def build_indexes(self, settings: LazySettings, clear: bool = False):
+    async def build_indexes(self, clear: bool = False):
         """Build the local indexes required.
 
         The `index` contains the general settings and definitions that elastic
@@ -250,7 +249,7 @@ class SportsDataStore(ElasticDataStore):
         self.index_map = index_map
         logging.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
 
-    async def build_indexes(self, settings: LazySettings, clear: bool = False):
+    async def build_indexes(self, clear: bool = False):
         """Build the indices here for stand-alone and testing reasons.
 
         Normally, these are built using terraform.

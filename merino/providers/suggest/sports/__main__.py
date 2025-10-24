@@ -66,7 +66,7 @@ async def main_loader(
     if build_indices:
         # Only call for test or dev builds.
         log.debug(f"{LOGGING_TAG}: Building indices...")
-        await event_store.build_indexes(settings=settings, clear=False)
+        await event_store.build_indexes(clear=False)
         await event_store.prune(expiry=1760473106)
 
     log.debug(f"{LOGGING_TAG}: Starting up...")
