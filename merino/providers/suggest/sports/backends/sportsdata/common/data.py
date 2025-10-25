@@ -300,15 +300,7 @@ class Sport:
             except TypeError:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                try:
-                    logging.info(
-                        f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
-                    )
-                except Exception as ex:
-                    # Metrics failed, probably because no metric client.
-                    logging.debug(
-                        f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
-                    )
+                logging.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
                 continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
@@ -343,8 +335,7 @@ class Sport:
         `ScheduleBasic` Data dictionary (See https://sportsdata.io/developers/data-dictionary/nhl#schedulebasic)
 
         """
-        if not self.events:
-            self.events = {}
+        # Sample raw event
         """
         [
             {"GameID":23869,

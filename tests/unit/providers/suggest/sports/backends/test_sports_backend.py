@@ -161,6 +161,7 @@ async def test_gamestatus():
     assert GameStatus.F_SO.as_str() == "Final - Shoot Out"
     assert GameStatus.NotNecessary.as_str() == "Not Necessary"
     assert GameStatus.Unknown.as_str() == ""
+    assert GameStatus.Canceled.as_str() == "Canceled"
 
 
 @pytest.mark.asyncio

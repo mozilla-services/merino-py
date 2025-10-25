@@ -18,6 +18,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
+    get_index_settings,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -204,3 +205,22 @@ async def test_search_event_raise_exception(
     es_client.search.side_effect = Exception("oops")
     with pytest.raises(BackendError):
         await sport_data_store.search_events(q="oops", language_code="en", mix_sports=False)
+
+
+@pytest.mark.asyncio
+async def test_get_index_settings():
+    """Test that the settings are stripped if we're running local elastic search"""
+    settings = get_index_settings(dsn="normal")
+    assert "lowercase" in settings["analysis"]["filter"]
+    assert "accentfolding" in settings["analysis"]["filter"]
+    assert "accentfolding" in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
+    assert "accentfolding" in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
+
+    settings = get_index_settings(dsn="localhost")
+    assert "lowercase" not in settings["analysis"]["filter"]
+    assert "accentfolding" not in settings["analysis"]["filter"]
+    assert "accentfolding" not in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
+    assert (
+        "accentfolding"
+        not in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
+    )

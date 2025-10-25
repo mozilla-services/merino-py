@@ -198,6 +198,7 @@ def test_load_schedules_from_source_filters_and_populates(
         "AWA": away_team,
     }
 
+    sport.events = {}
     events = sport.load_schedules_from_source(events_response)
 
     assert 30023869 in events

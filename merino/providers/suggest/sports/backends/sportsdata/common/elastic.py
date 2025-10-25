@@ -1,5 +1,6 @@
 """Store and retrieve Sports information from ElasticSearch"""
 
+import copy
 import json
 import logging
 from abc import abstractmethod, ABC
@@ -121,31 +122,37 @@ EN_INDEX_SETTINGS: dict = {
     },
 }
 
-# remove the elements that the dev es environment does not handle:
-if "localhost" in settings.providers.sports.es.dsn:
-    del EN_INDEX_SETTINGS["analysis"]["filter"]["lowercase"]
-    del EN_INDEX_SETTINGS["analysis"]["filter"]["accentfolding"]
-    filters = EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
-    EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_en"]["filter"] = list(
-        filter(
-            lambda x: x not in ["icu_normalizer", "accentfolding"],
-            filters,
+
+def get_index_settings(dsn: str = settings.providers.sports.es.dsn) -> dict[str, Any]:
+    """Local installs of ElasticSearch don't support some filters. Strip those only if needed"""
+    settings = EN_INDEX_SETTINGS
+    if "localhost" in dsn:
+        settings = copy.deepcopy(EN_INDEX_SETTINGS)
+        # remove the elements that the dev es environment does not handle:
+        del settings["analysis"]["filter"]["lowercase"]
+        del settings["analysis"]["filter"]["accentfolding"]
+        filters = settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
+        settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"] = list(
+            filter(
+                lambda x: x not in ["icu_normalizer", "accentfolding"],
+                filters,
+            )
         )
-    )
-    filters = EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
-    EN_INDEX_SETTINGS["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"] = list(
-        filter(
-            lambda x: x not in ["icu_normalizer", "accentfolding"],
-            filters,
+        filters = settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
+        settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"] = list(
+            filter(
+                lambda x: x not in ["icu_normalizer", "accentfolding"],
+                filters,
+            )
         )
-    )
+    return settings
 
 
 SUGGEST_ID: Final[str] = "suggest-on-title"
 MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
 TIMEOUT_MS: Final[str] = f"{settings.providers.sports.es.request_timeout_ms}ms"
 INDEX_SETTINGS: dict[str, Any] = {
-    "en": EN_INDEX_SETTINGS,
+    "en": get_index_settings(),
 }
 
 
