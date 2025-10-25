@@ -131,8 +131,8 @@ class Provider(BaseProvider):
             )
 
     def normalize_query(self, query: str) -> str:
-        """Remove trailing spaces from the query string."""
-        return query.strip()
+        """Remove trailing spaces from the query string and support both $(stock) and $ (stock)"""
+        return query.strip().replace("$", "STOCK ").replace("  ", " ")
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
