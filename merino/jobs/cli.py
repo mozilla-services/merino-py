@@ -12,6 +12,7 @@ from merino.jobs.wikipedia_indexer import indexer_cmd
 from merino.jobs.wikipedia_offline_uploader import wiki_offline_uploader_cmd
 from merino.jobs.polygon import cli as polygon_ingestion_cmd
 from merino.jobs.flightaware import cli as flightaware_fetch_schedules_cmd
+from merino.jobs.sportsdata_jobs import cli as sportsdata_cmd
 
 # NOTE: `pretty_exceptions_show_locals` argument is set to False to avoid api_key and secrets exposure.
 cli = typer.Typer(no_args_is_help=True, add_completion=False, pretty_exceptions_show_locals=False)
@@ -39,6 +40,9 @@ cli.add_typer(polygon_ingestion_cmd, no_args_is_help=True)
 
 # Add the flightaware fetch schedules subcommand
 cli.add_typer(flightaware_fetch_schedules_cmd, no_args_is_help=True)
+
+# Add the sports fetch data subcommand
+cli.add_typer(sportsdata_cmd, no_args_is_help=True)
 
 
 @cli.callback()
