@@ -134,12 +134,12 @@ def test_normalize_query_returns_trimmed_query_string(provider: Provider) -> Non
 
 
 def test_normalize_query_normalizes_dollar_sign_without_space(provider: Provider) -> None:
-    """Test that normalize_query method normalizes '$(query)' to 'stock (query)'"""
+    """Test that normalize_query method normalizes '$(query)' to 'STOCK (query)'"""
     assert provider.normalize_query("$aapl") == "STOCK aapl"
 
 
 def test_normalize_query_normalizes_dollar_sign_with_space(provider: Provider) -> None:
-    """Test that normalizq_query method normalizes '$ (query)' to 'stock (query)'"""
+    """Test that normalizq_query method normalizes '$ (query)' to 'STOCK (query)'"""
     assert provider.normalize_query("$ aapl") == "STOCK aapl"
 
 
