@@ -292,13 +292,13 @@ class TestCustomSectionsExperiment:
                 DefaultCrawlerRescaler,
             ),
             (
-                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT,
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
                 "control",
                 "US",
                 SchedulerHoldbackRescaler,
             ),
             (
-                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT,
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
                 "treatment-crawl-subtopics",
                 "US",
                 DefaultCrawlerRescaler,
