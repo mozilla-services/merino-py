@@ -8,6 +8,7 @@ from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     DefaultCrawlerRescaler,
     SchedulerHoldbackRescaler,
     PESSIMISTIC_PRIOR_ALPHA_SCALE,
+    PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC,
 )
 
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
@@ -33,7 +34,7 @@ class TestDefaultRescaler:
         assert no_opens == expected_no_opens
 
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
-        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
         assert beta == 20
 
     def test_rescale_when_not_subtopic_item(self):
@@ -47,7 +48,7 @@ class TestDefaultRescaler:
         assert no_opens == 50
 
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
-        assert alpha == 10
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
         assert beta == 20
 
 

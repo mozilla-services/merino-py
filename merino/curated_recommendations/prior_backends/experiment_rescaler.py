@@ -11,7 +11,8 @@ SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 # Subtopic prior scaling is derived using data analysis on scores and existing priors
 # See more at:
 # https://mozilla-hub.atlassian.net/wiki/spaces/FAAMT/pages/1727725665/Thompson+Sampling+of+Subtopic+Sections
-PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.25
+PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
+PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.25
 
 
 class DefaultCrawlerRescaler(ExperimentRescaler):
@@ -33,10 +34,12 @@ class DefaultCrawlerRescaler(ExperimentRescaler):
         """Update priors values based on whether item is unique to the experiment.
         Scale of 4 puts an item with no activity just below the pack of common items that have good activity
         """
-        if self.is_subtopic_story(rec) and not rec.isTimeSensitive:
-            return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
-        else:
+        if rec.isTimeSensitive:
             return alpha, beta
+        if self.is_subtopic_story(rec):
+            return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC, beta
+        else:
+            return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
 
 
 class SchedulerHoldbackRescaler(ExperimentRescaler):
