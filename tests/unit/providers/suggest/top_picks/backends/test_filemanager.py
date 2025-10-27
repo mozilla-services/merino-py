@@ -119,9 +119,7 @@ def test_get_file(
 ) -> None:
     """Test that the Remote Filemanager get_file method returns domain data."""
     top_picks_remote_filemanager.gcs_client = MagicMock()
-    top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = (
-        gcs_blob_mock
-    )
+    top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
 
     caplog.set_level(logging.INFO)
     get_file_result_code, result = top_picks_remote_filemanager.get_file()
@@ -154,9 +152,7 @@ def test_get_file_error(
 ) -> None:
     """Test that the Remote Filemanager returns None and correct failure code."""
     top_picks_remote_filemanager.gcs_client = MagicMock()
-    top_picks_remote_filemanager.gcs_client.get_file_by_name.side_effect = Exception(
-        "Test error"
-    )
+    top_picks_remote_filemanager.gcs_client.get_file_by_name.side_effect = Exception("Test error")
 
     get_file_result_code, result = top_picks_remote_filemanager.get_file()
     assert result is None
