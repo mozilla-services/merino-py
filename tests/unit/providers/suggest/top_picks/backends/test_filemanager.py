@@ -106,11 +106,9 @@ def test_local_filemanager_get_file_invalid_path(
     """Test that read domain fails and raises TopPicksFilemanagerError
     exception with invalid file path.
     """
-    mocker.patch.object(
-        top_picks_local_filemanager, "static_file_path", return_value="./wrongfile.json"
-    )
+    test_path = TopPicksLocalFilemanager("./wrongfile.json")
     with pytest.raises(TopPicksFilemanagerError):
-        top_picks_local_filemanager.get_file()
+        test_path.get_file()
 
 
 def test_get_file(
@@ -121,7 +119,9 @@ def test_get_file(
 ) -> None:
     """Test that the Remote Filemanager get_file method returns domain data."""
     top_picks_remote_filemanager.gcs_client = MagicMock()
-    top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
+    top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = (
+        gcs_blob_mock
+    )
 
     caplog.set_level(logging.INFO)
     get_file_result_code, result = top_picks_remote_filemanager.get_file()
@@ -154,7 +154,9 @@ def test_get_file_error(
 ) -> None:
     """Test that the Remote Filemanager returns None and correct failure code."""
     top_picks_remote_filemanager.gcs_client = MagicMock()
-    top_picks_remote_filemanager.gcs_client.get_file_by_name.side_effect = Exception("Test error")
+    top_picks_remote_filemanager.gcs_client.get_file_by_name.side_effect = Exception(
+        "Test error"
+    )
 
     get_file_result_code, result = top_picks_remote_filemanager.get_file()
     assert result is None
