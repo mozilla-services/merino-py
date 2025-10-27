@@ -1,6 +1,7 @@
 """Tests the curated recommendation endpoint /api/v1/curated-recommendations"""
 
 import asyncio
+import json
 from datetime import timedelta, datetime
 import logging
 from typing import Any
@@ -48,11 +49,10 @@ from merino.curated_recommendations.ml_backends.protocol import (
     DayTimeWeightingConfig,
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    SUBTOPIC_TOTAL_PERCENT,
+    SECTIONS_HOLDBACK_TOTAL_PERCENT,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
-    CrawlExperimentBranchName,
     ExperimentName,
     Layout,
     Locale,
@@ -64,15 +64,19 @@ from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 from tests.types import FilterCaplogFixture
 
-ML_EXPERIMENT_SCALE = SUBTOPIC_TOTAL_PERCENT
-
 
 class MockEngagementBackend(EngagementBackend):
-    """Mock class implementing the protocol for EngagementBackend."""
+    """Mock class implementing the protocol for EngagementBackend.
+    experiment_traffic_fraction defines a fraction of traffic expected for an experiment
 
-    def __init__(self):
+    The merino service Rescaler class will scale the traffic up, so we must scale it down in terms
+    of what is estimated as the real-world traffic.
+    """
+
+    def __init__(self, experiment_traffic_fraction=1.0):
         # {corpusItemId: (reports, impressions)}
         self.metrics: dict[str, tuple[int, int]] = {}
+        self.experiment_traffic_fraction = experiment_traffic_fraction
 
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
@@ -88,30 +92,30 @@ class MockEngagementBackend(EngagementBackend):
 
         HIGH_CTR_ITEMS = {
             "b2c10703-5377-4fe8-89d3-32fbd7288187": (
-                1_000_000 * ML_EXPERIMENT_SCALE,
-                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
             ),  # ML music 100% CTR
             "f509393b-c1d6-4500-8ed2-29f8a23f39a7": (
-                1_000_000 * ML_EXPERIMENT_SCALE,
-                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
             ),  # ML NFL 100% CTR
             "2afcef43-4663-446e-9d69-69cbc6966162": (
-                1_000_000 * ML_EXPERIMENT_SCALE,
-                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
             ),  # ML Movies 100% CTR
             "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (
-                1_000_000 * ML_EXPERIMENT_SCALE,
-                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
             ),  # ML Soccer 100% CTR
             "9261e868-beff-4419-8071-7750d063d642": (
-                1_000_000 * ML_EXPERIMENT_SCALE,
-                1_000_000 * ML_EXPERIMENT_SCALE,
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
             ),  # ML NBA 100% CTR
             "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1": (1_000_000, 1_000_000),  # ML Food 100% CTR
             # The above 6 ML recs have the highest CTR & will be included in top_stories_section
             "41111154-ebb1-45d9-9799-a882f13cd8cc": (
-                990_000 * ML_EXPERIMENT_SCALE,
-                1_000_000 * ML_EXPERIMENT_SCALE,
+                990_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
             ),  # ML music 99% CTR (highest CTR in Music
             # feed)
             "4095b364-02ff-402c-b58a-792a067fccf2": (1_000_000, 1_000_000),  # Non-ML food 100% CTR
@@ -176,8 +180,14 @@ class MockLocalModelBackend(LocalModelBackend):
 
 @pytest.fixture
 def engagement_backend():
-    """Fixture for the MockEngagementBackend"""
+    """Fixture for the MockEngagementBackend for standard use case"""
     return MockEngagementBackend()
+
+
+@pytest.fixture
+def engagement_backend_legacy_sections_us():
+    """Fixture for the MockEngagementBackend for an experiment that has a fraction of traffic"""
+    return MockEngagementBackend(SECTIONS_HOLDBACK_TOTAL_PERCENT)
 
 
 @pytest.fixture
@@ -1220,8 +1230,9 @@ class TestSections:
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
+                "experimentName": None,
+                "experimentBranch": None,
+                "region": "US",
             },
         )
         data = response.json()
@@ -1268,16 +1279,18 @@ class TestSections:
     @pytest.mark.parametrize(
         "experiment_payload",
         [
-            {},  # No experiment
             {
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+                "experimentName": ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
                 "experimentBranch": "control",
+                "region": "BQ",
             },
+            {"experimentName": None, "experimentBranch": None, "region": "CA"},
         ],
     )
-    def test_corpus_sections_feed_content_control(self, experiment_payload, client: TestClient):
+    def test_sections_legacy_holdback(self, experiment_payload, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for different locales.
+        when requesting the 'sections' feed for different locales, using
+        crawled feeds. Note this also is sent in non-US countries
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1537,24 +1550,12 @@ class TestSections:
         [
             {},  # No experiment
             {
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
+                "experimentName": ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "experimentBranch": "control",
             },
             {
-                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
-            },
-            {
-                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            },
-            {
-                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
-            },
-            {
-                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                "experimentName": ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "experimentBranch": "other",
             },
         ],
     )
@@ -1627,12 +1628,11 @@ class TestSections:
 
         # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
         experiment_name = experiment_payload.get("experimentName")
-        if experiment_name in [
-            ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-            f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-            ExperimentName.NEW_TAB_CRAWLING_V2.value,
-            f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-        ]:
+        experiment_branch = experiment_payload.get("experimentBranch")
+        if not (
+            experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
+            and experiment_branch == "control"
+        ):
             for section_id in sections:
                 if section_id != "top_stories_section":
                     assert not section_id.endswith("_crawl"), (
@@ -1643,49 +1643,29 @@ class TestSections:
     @pytest.mark.parametrize(
         "experiment_payload",
         [
-            {},  # No experiment
+            {"region": "US"},
+            {"region": "CA"},
             {
-                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
+                "experimentName": ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "experimentBranch": "control",
+                "region": "US",
             },
             {
-                "experimentName": ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            },
-            {
-                "experimentName": f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
-            },
-            {
-                "experimentName": f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            },
-            {
-                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
-            },
-            {
-                "experimentName": ExperimentName.NEW_TAB_CRAWLING_V2.value,
-                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            },
-            {
-                "experimentName": f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                "experimentBranch": CrawlExperimentBranchName.CONTROL.value,
-            },
-            {
-                "experimentName": f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-                "experimentBranch": CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+                "experimentName": "other",
+                "experimentBranch": "other",
+                "region": "US",
             },
         ],
     )
     def test_rss_vs_zyte_experiment_sections_filtering(
         self, caplog, experiment_payload, sections_response_data, client: TestClient
     ):
-        """Test that the RSS vs. Zyte experiment correctly filters sections based on experiment branch.
+        """Test that the Crawled topics vs Scheduled holdback experiment correctly filters sections based on experiment branch.
 
         - Treatment: crawl-exclusive corpus items
         - Control/no-experiment: regular corpus items only
         """
+        print(json.dumps(experiment_payload))
         response = client.post(
             "/api/v1/curated-recommendations",
             json={"locale": "en-US", "feeds": ["sections"]} | experiment_payload,
@@ -1726,33 +1706,29 @@ class TestSections:
         }
 
         experiment_name = experiment_payload.get("experimentName")
-        is_crawl_treatment = experiment_name in [
-            ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value,
-            f"optin-{ExperimentName.RSS_VS_ZYTE_EXPERIMENT.value}",
-            ExperimentName.NEW_TAB_CRAWLING_V2.value,
-            f"optin-{ExperimentName.NEW_TAB_CRAWLING_V2.value}",
-        ] and experiment_payload.get("experimentBranch") in [
-            CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        ]
+        is_crawl_data = (
+            not (
+                experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
+                and experiment_payload.get("experimentBranch") == "control"
+            )
+        ) and experiment_payload.get("region") == "US"
 
         crawl_count = len(response_ids & crawl_only)
         regular_count = len(response_ids & regular_only)
 
-        if is_crawl_treatment:
-            assert crawl_count >= 50, f"Treatment needs 50+ crawl items, got {crawl_count}"
-            assert (
-                regular_count == 0
-            ), f"Treatment shouldn't have regular items, got {regular_count}"
+        if is_crawl_data:
+            assert crawl_count >= 50, f"Crawled conetnet needs 50+ crawl items, got {crawl_count}"
+            assert regular_count >= 0, "Treatment missing regular items from subtopics"
         else:
-            assert regular_count >= 50, f"Control needs 50+ regular items, got {regular_count}"
-            assert crawl_count == 0, f"Control shouldn't have crawl items, got {crawl_count}"
+            assert (
+                regular_count >= 50
+            ), f"Legacy sections needs 50+ regular items, got {regular_count}"
+            assert (
+                crawl_count == 0
+            ), f"Legacy sections shouldn't have crawl items, got {crawl_count}"
 
         legacy_topics = {topic.value for topic in Topic}
-        is_expected_to_have_subtopics = (
-            experiment_payload.get("experimentBranch")
-            == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
-        )
+        is_expected_to_have_subtopics = is_crawl_data  # all crawl data has subtopics
 
         if is_expected_to_have_subtopics:
             non_legacy = [
@@ -1778,6 +1754,7 @@ class TestSections:
                 "feeds": ["sections"],
                 "experimentName": ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
                 "experimentBranch": "treatment",
+                "region": "US",
             },
         )
 
