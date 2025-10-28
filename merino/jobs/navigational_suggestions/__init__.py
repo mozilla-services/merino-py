@@ -455,7 +455,7 @@ def _run_normal_mode(
     )
 
     if old_top_picks is None:
-        old_top_picks = {}
+        old_top_picks = {"domains": []}
 
     domain_diff = DomainDiff(latest_domain_data=final_top_picks, old_domain_data=old_top_picks)
     (
