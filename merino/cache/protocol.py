@@ -63,7 +63,7 @@ class CacheAdapter(Protocol):
         """
         ...
 
-    async def sadd(self, key: str, *values: str) -> int:
+    async def sadd(self, key: str, *values: str) -> int:  # pragma: no cover
         """Add one or more values to a Redis set.
 
         Returns:
@@ -71,10 +71,79 @@ class CacheAdapter(Protocol):
         """
         ...
 
-    async def sismember(self, key: str, value: str) -> bool:
+    async def sismember(self, key: str, value: str) -> bool:  # pragma: no cover
         """Check if a value is a member of a Redis set."""
         ...
 
-    async def scard(self, key: str) -> int:
+    async def scard(self, key: str) -> int:  # pragma: no cover
         """Get the number of members in a Redis set."""
         ...
+
+    async def ttl(self, key: str) -> int:  # pragma: no cover
+        """Return the remaining time-to-live (TTL) in seconds for a given key.
+
+        Args:
+            key: The Redis key whose TTL should be retrieved.
+
+        Returns:
+            The TTL of the key in seconds. Returns -1 if the key exists but has no
+            associated expiration, and -2 if the key does not exist.
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error when fetching TTL.
+        """
+        ...
+
+    async def zadd(self, key: str, mapping: dict[str, float]) -> int:  # pragma: no cover
+        """Add one or more members with scores to a sorted set.
+
+        Each member in the mapping is added to the sorted set with its score.
+        If a member already exists, its score is updated. The score must be a
+        numeric value (float or int).
+
+        Args:
+            key: The name of the sorted set.
+            mapping: A dictionary where keys are members and values are scores.
+
+        Returns:
+            The number of new elements added to the sorted set (excluding updated ones).
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error while adding members.
+        """
+        ...
+
+    async def zrangebyscore(
+        self, key: str, min: float, max: float
+    ) -> list[bytes]:  # pragma: no cover
+        """Retrieve all members in a sorted set whose scores fall within a given range.
+
+        The returned members are ordered from lowest to highest score.
+
+        Args:
+            key: The name of the sorted set.
+            min: The minimum score (inclusive).
+            max: The maximum score (inclusive).
+
+        Returns:
+            A list of members (as bytes) whose scores fall within the specified range.
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error during the query.
+        """
+        ...
+
+    async def zremrangebyscore(self, key: str, min: float, max: float) -> int:  # pragma: no cover
+        """Remove all members in a sorted set whose scores fall within a given range.
+
+        Args:
+            key: The name of the sorted set.
+            min: The minimum score (inclusive).
+            max: The maximum score (inclusive).
+
+        Returns:
+            The number of members removed from the sorted set.
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error during removal.
+        """

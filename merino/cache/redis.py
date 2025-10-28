@@ -127,6 +127,86 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to SCARD {key} with error: {exc}") from exc
 
+    async def ttl(self, key: str) -> int:
+        """Return the remaining time-to-live (TTL) in seconds for a given key.
+
+        Args:
+            key: The Redis key whose TTL should be retrieved.
+
+        Returns:
+            The TTL of the key in seconds. Returns -1 if the key exists but has no
+            associated expiration, and -2 if the key does not exist.
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error when fetching TTL.
+        """
+        try:
+            return await self.replica.ttl(key)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to TTL {key}: {exc}") from exc
+
+    async def zadd(self, key: str, mapping: dict[str, float]) -> int:
+        """Add one or more members with scores to a sorted set.
+
+        Each member in the mapping is added to the sorted set with its score.
+        If a member already exists, its score is updated. The score must be a
+        numeric value (float or int).
+
+        Args:
+            key: The name of the sorted set.
+            mapping: A dictionary where keys are members and values are scores.
+
+        Returns:
+            The number of new elements added to the sorted set (excluding updated ones).
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error while adding members.
+        """
+        try:
+            return await self.primary.zadd(key, mapping)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to ZADD {key}: {exc}") from exc
+
+    async def zrangebyscore(self, key: str, min: float, max: float) -> list[bytes]:
+        """Retrieve all members in a sorted set whose scores fall within a given range.
+
+        The returned members are ordered from lowest to highest score.
+
+        Args:
+            key: The name of the sorted set.
+            min: The minimum score (inclusive).
+            max: The maximum score (inclusive).
+
+        Returns:
+            A list of members (as bytes) whose scores fall within the specified range.
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error during the query.
+        """
+        try:
+            return await self.replica.zrangebyscore(key, min=min, max=max)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to ZRANGEBYSCORE {key}: {exc}") from exc
+
+    async def zremrangebyscore(self, key: str, min: float, max: float) -> int:
+        """Remove all members in a sorted set whose scores fall within a given range.
+
+        Args:
+            key: The name of the sorted set.
+            min: The minimum score (inclusive).
+            max: The maximum score (inclusive).
+
+        Returns:
+            The number of members removed from the sorted set.
+
+        Raises:
+            CacheAdapterError: If Redis encounters an error during removal.
+        """
+        try:
+            return await self.primary.zremrangebyscore(key, min=min, max=max)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to ZREMRANGEBYSCORE {key}: {exc}") from exc
+
     async def close(self) -> None:
         """Close the Redis connection."""
         if self.primary is self.replica:

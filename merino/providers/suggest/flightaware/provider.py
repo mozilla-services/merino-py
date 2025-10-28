@@ -72,6 +72,14 @@ class Provider(BaseProvider):
         )
         self.cron_task = asyncio.create_task(cron_job())
 
+        refresh_job = cron.Job(
+            name="refresh_recent_flights",
+            interval=300,  # every 5 min
+            condition=self._refresh_flight_summaries,
+            task=self.backend.refresh_recent_flights,
+        )
+        self.refresh_task = asyncio.create_task(refresh_job())
+
     async def _fetch_data(self) -> None:
         """Cron fetch method to re-run after set interval.
         Does not set flight_numbers if non-success code passed with None.
@@ -95,9 +103,27 @@ class Provider(BaseProvider):
         finally:
             self.data_fetched_event.set()
 
+    async def _refresh_flight_summaries(self) -> None:
+        """Cron fetch method to re-run after set interval.
+        Does not set flight_numbers if non-success code passed with None.
+        """
+        try:
+            await self.backend.refresh_recent_flights
+
+            self.last_refresh_at = time.time()
+        except Exception as err:
+            logger.error(f"Failed to fetch data from flightaware backend: {err}")
+
+        finally:
+            self.data_fetched_event.set()
+
     def _should_fetch(self) -> bool:
         """Determine if we should fetch new data based on time elapsed."""
         return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
+
+    def _should_refresh(self) -> bool:
+        """Determine if we should fetch new data based on time elapsed."""
+        return (time.time() - self.last_refresh_at) >= self.resync_interval_sec
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""
@@ -116,12 +142,11 @@ class Provider(BaseProvider):
         try:
             flight_number = get_flight_number_from_query_if_valid(request.query)
             if flight_number is not None and flight_number in self.flight_numbers:
-                result = await self.backend.fetch_flight_details(flight_number)
+                flight_summaries: list[FlightSummary] = await self.backend.fetch_flight_details(
+                    flight_number
+                )
 
-                if result:
-                    flight_summaries: list[FlightSummary] = self.backend.get_flight_summaries(
-                        result, flight_number
-                    )
+                if flight_summaries:
                     return [self.build_suggestion(flight_summaries)]
             return []
         except Exception as e:

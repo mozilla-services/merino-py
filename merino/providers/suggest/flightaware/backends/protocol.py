@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum, StrEnum
-from typing import Any, Protocol
+from typing import Protocol
 
 from pydantic import BaseModel, HttpUrl
 
@@ -72,17 +72,30 @@ class FlightBackendProtocol(Protocol):
     directly depend on.
     """
 
-    def get_flight_summaries(self, flight_response: dict, query: str) -> list[FlightSummary]:
+    def get_flight_summaries(self, flight_number: str) -> list[FlightSummary]:
         """Return a prioritized list of summaries of a flight instance."""
         ...
 
-    async def fetch_flight_details(self, flight_num: str) -> Any | None:
-        """Fetch flight details by flight number through aeroAPI"""
+    async def fetch_flight_details(self, flight_num: str) -> list[FlightSummary]:
+        """Fetch flight summaries for a given flight number.
+
+        Checks Redis cache first. On cache miss, fetches from AeroAPI,
+        builds flight summaries, caches the result,
+        and returns the summaries.
+        """
 
     async def fetch_flight_numbers(
         self,
     ) -> tuple[GetFlightNumbersResultCode, list[str] | None]:
         """Fetch flight numbers file from GCS through the filemanager."""
+
+    async def refresh_recent_flights(self, window_sec: int = 600, max_refresh: int = 100):
+        """Background job to refresh recently accessed flights that are soft-stale.
+
+        Args:
+            window_sec: Lookback window in seconds for recently searched flights (default 10 min).
+            max_refresh: Maximum number of flights to refresh per run.
+        """
 
     async def shutdown(self) -> None:  # pragma: no cover
         """Close http client connections."""

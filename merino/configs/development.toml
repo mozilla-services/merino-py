@@ -29,3 +29,4 @@ gcp_project = "contextual-services-dev"
 [development.jobs.navigational_suggestions]
 # GCP project name that contains domain data tables
 source_gcp_project = "mozdata"
+

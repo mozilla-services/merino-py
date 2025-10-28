@@ -354,3 +354,34 @@ def get_airline_details(flight_number: str) -> AirlineDetails:
         color=color,
         icon=None,
     )
+
+
+def derive_ttl_for_summaries(summaries: list[FlightSummary], dynamic_ttl: int) -> int:
+    """Return TTL in seconds based on the most active flight status."""
+    statuses = {s.status for s in summaries}
+
+    if FlightStatus.EN_ROUTE in statuses:
+        return 900  # 15 minutes
+    elif FlightStatus.SCHEDULED in statuses or FlightStatus.DELAYED in statuses:
+        return dynamic_ttl
+    return 6000
+
+
+def is_stale(summaries: list[FlightSummary]) -> bool:
+    """Return True if cached flight data should be refreshed in the background.
+
+    A flight is considered soft-stale if it is SCHEDULED/DELAYED
+    but its estimated or scheduled departure time has already passed (missed transition).
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    for s in summaries:
+        # departure time already passed but status not updated yet
+        if s.status in (FlightStatus.SCHEDULED, FlightStatus.DELAYED) and (
+            s.departure.estimated_time or s.departure.scheduled_time
+        ):
+            dep = s.departure.estimated_time or s.departure.scheduled_time
+            if dep < now:
+                return True
+
+    return False
