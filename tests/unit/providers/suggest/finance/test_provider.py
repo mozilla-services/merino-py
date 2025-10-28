@@ -128,24 +128,21 @@ def test_not_hidden_by_default(provider: Provider) -> None:
     assert provider.hidden() is False
 
 
-def test_normalize_query_returns_trimmed_query_string(provider: Provider) -> None:
-    """Test that normalize_query method returns a string with no trailing spaces."""
-    assert provider.normalize_query("   aapl stock   ") == "aapl stock"
-
-
 @pytest.mark.parametrize(
     ["query", "expected"],
     [
+        ("   aapl stock   ", "aapl stock"),
         ("$aapl", "STOCK aapl"),
         ("$ aapl", "STOCK aapl"),
     ],
     ids=[
+        "surrounding whitespace",
         "with space",
         "without space",
     ],
 )
-def test_normalize_query_dollar_sign(provider: Provider, query: str, expected: str) -> None:
-    """Test for the query normalization method to normalize dollar signs."""
+def test_normalize_query(provider: Provider, query: str, expected: str) -> None:
+    """Test for the query normalization method to strip whitespace and replace dollar signs."""
     assert provider.normalize_query(query) == expected
 
 
