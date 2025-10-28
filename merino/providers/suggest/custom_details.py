@@ -4,9 +4,15 @@ from pydantic import BaseModel
 
 from merino.middleware.geolocation import Coordinates
 from merino.providers.suggest.finance.backends.protocol import TickerSummary
+from merino.providers.suggest.google_suggest.backends.protocol import (
+    GoogleSuggestResponse,
+)
 from merino.providers.suggest.flightaware.backends.protocol import FlightSummary
-from merino.providers.suggest.google_suggest.backends.protocol import GoogleSuggestResponse
 from merino.providers.suggest.yelp.backends.protocol import YelpBusinessDetails
+
+from merino.providers.suggest.sports.backends.sportsdata.protocol import (
+    SportEventDetails,
+)
 
 
 class AmoDetails(BaseModel):
@@ -70,4 +76,5 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     polygon: PolygonDetails | None = None
     yelp: YelpDetails | None = None
     google_suggest: GoogleSuggestDetails | None = None
+    sports: SportEventDetails | None = None
     flightaware: FlightAwareDetails | None = None

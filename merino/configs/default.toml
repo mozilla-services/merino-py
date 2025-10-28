@@ -320,6 +320,49 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
 forecast_ttl_sec = 3600 # 1 hr
 
+[default.providers.sports]
+type="sports"
+# MERINO_PROVIDERS__SPORTS__SPORTS
+# e.g. ["NFL","NBA","NHL"]
+sports=["NFL","NBA","NHL"]
+# Index names for Elastic Search.
+event_index="sports_{lang}_event"
+team_index="sports_{lang}_team"
+max_suggestions = 5
+# Disable this provider by default
+enabled_by_default = false
+
+[default.providers.sports.es]
+# MERINO_PROVIDERS__SPORTS__ES_dsn
+# DSN to Elastic Search database
+dsn="http://localhost:9200"
+# MERINO_PROVIDERS__SPORTS__ES_dsn
+# API Key for Elastic Search database
+# Using the "basic" key, which allows using locally served
+# versions of elasticsearch
+api_key="basic"
+# Timeout for an Elastic Search response in milliseconds.
+request_timeout_ms = 300
+
+[default.providers.sports.sportsdata]
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
+# The SportsData API key for local or remote access
+api_key=""
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA_CACHE_DIR
+# Directory to store JSON request responses
+cache_dir="/tmp"
+
+# SportsData may have different base_urls per sport (e.g.
+# NFL may use `https://api.sportsdata.io/v3/nfl/scores/json` where
+# UCL may use `https://api.sportsdata.io/v4/soccer/scores/json`
+# Generally, each sport will handle this, but if the URLs need to be
+# changed quickly, we can specify them here.
+# e.g.
+# base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
+# base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
+
+
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
 # The interval of the ManifestFilemanager cron job (in seconds)
