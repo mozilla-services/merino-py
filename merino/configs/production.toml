@@ -68,3 +68,9 @@ gcp_project = "moz-fx-merino-prod-1c2f"
 # The store used to finance data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "redis"
+
+[production.providers.flightaware]
+# MERINO_PROVIDERS__FLIGHTAWARE__CACHE
+# The store used for flightaware data. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
+cache = "redis"

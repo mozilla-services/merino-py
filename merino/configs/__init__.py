@@ -25,6 +25,7 @@ _validators = [
     Validator("metrics.port", gte=0, is_type_of=int),
     Validator("image_gcs.gcs_project", is_type_of=str),
     Validator("image_gcs.gcs_bucket", is_type_of=str),
+    Validator("image_gcs.gcs_enabled", is_type_of=bool),
     Validator("image_gcs.cdn_hostname", is_type_of=str),
     Validator("image_gcs_v2.gcs_project", is_type_of=str),
     Validator("image_gcs_v2.gcs_bucket", is_type_of=str),

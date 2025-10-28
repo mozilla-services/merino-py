@@ -1,22 +1,26 @@
 """A wrapper for Flight Aware API interactions."""
 
 import datetime
-from typing import Any
 import aiodogstatsd
 from httpx import AsyncClient, HTTPStatusError
 
 import logging
+from merino.cache.protocol import CacheAdapter
 from merino.configs import settings
+from merino.providers.suggest.flightaware.backends.cache import FlightCache
 from merino.providers.suggest.flightaware.backends.filemanager import (
     FlightawareFilemanager,
 )
 from merino.providers.suggest.flightaware.backends.protocol import (
     FlightBackendProtocol,
+    FlightStatus,
     FlightSummary,
     GetFlightNumbersResultCode,
 )
 from merino.providers.suggest.flightaware.backends.utils import (
     build_flight_summary,
+    compute_enroute_progress,
+    derive_ttl_for_summaries,
     pick_best_flights,
 )
 
@@ -33,6 +37,7 @@ class FlightAwareBackend(FlightBackendProtocol):
     ident_url: str
     filemanager: FlightawareFilemanager
     metrics_client: aiodogstatsd.Client
+    cache: FlightCache
 
     def __init__(
         self,
@@ -40,6 +45,7 @@ class FlightAwareBackend(FlightBackendProtocol):
         http_client: AsyncClient,
         ident_url: str,
         metrics_client: aiodogstatsd.Client,
+        cache: CacheAdapter,
     ) -> None:
         """Initialize the flight aware backend."""
         self.api_key = api_key
@@ -50,12 +56,37 @@ class FlightAwareBackend(FlightBackendProtocol):
             blob_name=GCS_BLOB_NAME,
         )
         self.metrics_client = metrics_client
+        self.cache = FlightCache(cache)
 
-    async def fetch_flight_details(self, flight_num: str) -> Any | None:
-        """Fetch flight details through aeroAPI"""
+    async def fetch_flight_details(self, flight_num: str) -> list[FlightSummary] | None:
+        """Fetch flight summaries for a given flight number.
+
+        Checks Redis cache first. On cache miss, fetches from AeroAPI,
+        builds flight summaries, caches the result,
+        and returns the summaries.
+        """
         try:
-            metric_base = "flightaware.request.summary.get"
-            self.metrics_client.increment(f"{metric_base}.count")
+            metric_base = "flightaware.request.summary"
+            self.metrics_client.increment(f"{metric_base}.get.count")
+
+            cached = await self.cache.get_flight(flight_num)
+
+            if cached:
+                self.metrics_client.increment(f"{metric_base}.cache.hit")
+                summaries = cached.summaries
+
+                if summaries:
+                    # update progress/time left for the first flight if enroute
+                    first = summaries[0]
+                    if first.status == FlightStatus.EN_ROUTE:
+                        progress, time_left = compute_enroute_progress(first)
+                        first.progress_percent = progress
+                        first.time_left_minutes = time_left
+                        summaries[0] = first
+
+                return summaries
+
+            self.metrics_client.increment(f"{metric_base}.cache.miss")
             header = {
                 "x-apikey": self.api_key,
                 "Accept": "application/json",
@@ -67,18 +98,26 @@ class FlightAwareBackend(FlightBackendProtocol):
 
             formatted_url = self.ident_url.format(ident=flight_num, start=start, end=end)
 
-            with self.metrics_client.timeit(f"{metric_base}.latency"):
+            with self.metrics_client.timeit(f"{metric_base}.get.latency"):
                 response = await self.http_client.get(formatted_url, headers=header)
                 response.raise_for_status()
                 self.metrics_client.increment(
-                    f"{metric_base}.status", tags={"status_code": response.status_code}
+                    f"{metric_base}.get.status",
+                    tags={"status_code": response.status_code},
                 )
-            return response.json()
+            summaries = self.get_flight_summaries(response.json(), flight_num)
+
+            if summaries:
+                ttl = derive_ttl_for_summaries(summaries)
+                await self.cache.set_flight(flight_num, summaries, ttl)
+
+                return summaries
+            return []
 
         except HTTPStatusError as ex:
             status_code = ex.response.status_code
             self.metrics_client.increment(
-                f"{metric_base}.status", tags={"status_code": status_code}
+                f"{metric_base}.get.status", tags={"status_code": status_code}
             )
             logger.warning(
                 f"Flightware request error for flight details for {flight_num}: {status_code} {ex.response.reason_phrase}"

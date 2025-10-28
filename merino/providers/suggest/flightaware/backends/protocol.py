@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum, StrEnum
-from typing import Any, Protocol
+from typing import Protocol
 
 from pydantic import BaseModel, HttpUrl
 
@@ -76,8 +76,13 @@ class FlightBackendProtocol(Protocol):
         """Return a prioritized list of summaries of a flight instance."""
         ...
 
-    async def fetch_flight_details(self, flight_num: str) -> Any | None:
-        """Fetch flight details by flight number through aeroAPI"""
+    async def fetch_flight_details(self, flight_num: str) -> list[FlightSummary] | None:
+        """Fetch flight summaries for a given flight number.
+
+        Checks Redis cache first. On cache miss, fetches from AeroAPI,
+        builds flight summaries, caches the result,
+        and returns the summaries.
+        """
 
     async def fetch_flight_numbers(
         self,

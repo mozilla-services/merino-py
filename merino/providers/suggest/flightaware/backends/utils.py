@@ -355,3 +355,88 @@ def get_airline_details(flight_number: str) -> AirlineDetails:
         color=color,
         icon=None,
     )
+
+
+def derive_ttl_for_summaries(summaries: list[FlightSummary]) -> int:
+    """Return TTL in seconds based on the flight status and timestamps.
+
+    TTL adapts to the lifecycle of the most relevant flight:
+      - SCHEDULED/DELAYED: until scheduled/estimated departure or 12h from now (whichever is sooner).
+      - EN_ROUTE: until estimated arrival + 2-minute buffer.
+      - ARRIVED/CANCELLED: 1h15m (4500s) post-arrival/departure.
+      - Fallback: 10m
+    """
+    statuses = {s.status for s in summaries}
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    if FlightStatus.EN_ROUTE in statuses:
+        enroute_summary = next(s for s in summaries if s.status == FlightStatus.EN_ROUTE)
+        eta = (
+            enroute_summary.arrival.estimated_time or enroute_summary.arrival.scheduled_time
+        ).astimezone(datetime.timezone.utc)
+        remaining = max((eta - now).total_seconds(), 0)
+        return int(remaining + 120)
+
+    elif FlightStatus.ARRIVED in statuses:
+        arrived_summary = next(s for s in summaries if s.status == FlightStatus.ARRIVED)
+        arrived_time = (
+            arrived_summary.arrival.estimated_time or arrived_summary.arrival.scheduled_time
+        ).astimezone(datetime.timezone.utc)
+        seconds_since_arrival = max((now - arrived_time).total_seconds(), 0)
+        remaining_ttl = max(4500 - seconds_since_arrival, 300)
+        return int(remaining_ttl)
+
+    elif FlightStatus.CANCELLED in statuses:
+        cancelled_summary = next(s for s in summaries if s.status == FlightStatus.CANCELLED)
+        cancelled_time = cancelled_summary.departure.scheduled_time.astimezone(
+            datetime.timezone.utc
+        )
+        seconds_since_scheduled = max((now - cancelled_time).total_seconds(), 0)
+        remaining_ttl = max(4500 - seconds_since_scheduled, 300)
+        return int(remaining_ttl)
+
+    elif FlightStatus.SCHEDULED in statuses or FlightStatus.DELAYED in statuses:
+        scheduled_summary = next(
+            s for s in summaries if s.status in (FlightStatus.SCHEDULED, FlightStatus.DELAYED)
+        )
+        dep = (
+            scheduled_summary.departure.estimated_time
+            or scheduled_summary.departure.scheduled_time
+        ).astimezone(datetime.timezone.utc)
+        until_departure = max((dep - now).total_seconds(), 0)
+        ttl = max(min(until_departure, 43200), 300)
+        return int(ttl)
+
+    return 600
+
+
+def compute_enroute_progress(summary: FlightSummary) -> tuple[int, int | None]:
+    """Compute progress_percent and time_left_minutes for an en-route flight.
+
+    Both values are calculated from the estimated or scheduled departure/arrival times:
+      - progress_percent: proportion of flight time elapsed (0-100).
+      - time_left_minutes: minutes remaining until estimated arrival (>=0).
+
+    Returns:
+        A tuple of (progress_percent, time_left_minutes).
+        time_left_minutes may be None if timestamps are invalid.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # normalize timestamps to UTC
+    dep = (summary.departure.estimated_time or summary.departure.scheduled_time).astimezone(
+        datetime.timezone.utc
+    )
+    eta = (summary.arrival.estimated_time or summary.arrival.scheduled_time).astimezone(
+        datetime.timezone.utc
+    )
+
+    total_duration = max((eta - dep).total_seconds(), 1)
+    elapsed = max((now - dep).total_seconds(), 0)
+
+    progress_percent = int(min((elapsed / total_duration) * 100, 100))
+
+    remaining = (eta - now).total_seconds()
+    time_left_minutes = max(int(remaining // 60), 0) if remaining > 0 else 0
+
+    return progress_percent, time_left_minutes
