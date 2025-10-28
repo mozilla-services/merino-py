@@ -566,12 +566,15 @@ def get_top_story_list(
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
 
+    Depending on the rescaler settings, there may be a target limit percentage of items that
+    are 'fresh' (i.e have small number of impressions) to balance the initial list.
+
     Args:
      items: Ordered list of stories
      top_count: Number of most popular top stories to extract from the top of the list
      extra_count: Number of extra stories to extract from further down
      extra_source_depth: How deep to search after top stories when finding extras
-
+     rescaler: Optional rescaler associated with the experiment or surface
     Returns: A list of top stories
     """
     max_per_topic = 1
@@ -582,7 +585,7 @@ def get_top_story_list(
     if rescaler is None or fresh_story_prob <= 0:
         top_stories = items[:top_count]
     else:
-        for story in top_stories:
+        for story in items:
             if story.ranking_data.is_fresh or len(fresh_backlog) > 0:
                 can_add_fresh_story = random() < fresh_story_prob
                 if can_add_fresh_story:
@@ -594,6 +597,10 @@ def get_top_story_list(
                     fresh_backlog.append(story)
             if len(top_stories) >= top_count:
                 break
+        if len(top_stories) < top_count:  # Rare case when most items are fresh or few total items
+            fresh_pull_count = top_count - len(top_stories)
+            top_stories.append(fresh_backlog[:fresh_pull_count])
+            fresh_backlog = fresh_backlog[fresh_pull_count:]
     stories_consumed = len(top_stories) + len(fresh_backlog)
     topic_counts: DefaultDict[Topic | None, int] = defaultdict(int)
     extra_items: list[CuratedRecommendation] = []

@@ -245,7 +245,7 @@ def thompson_sampling(
             alpha=alpha_val,
             beta=beta_val,
         )
-        if (fresh_items_limit_prior_threshold_multiplier > 0) and (
+        if (fresh_items_limit_prior_threshold_multiplier > 0) and not rec.isTimeSensitive and (
             no_opens < a_prior * fresh_items_limit_prior_threshold_multiplier
         ):
             rec.ranking_data.is_fresh = True
