@@ -1,6 +1,6 @@
 """Protocol and Pydantic models for the Thompson sampling prior backend."""
 
-from typing import Protocol
+from typing import Protocol, Any
 from pydantic import BaseModel
 
 from merino.curated_recommendations.protocol import CuratedRecommendation
@@ -38,7 +38,24 @@ class PriorBackend(Protocol):
 class ExperimentRescaler(BaseModel):
     """Used to scale priors based on relative experiment size, when an experiment
     include content that is not in other test branches.
+
+    Also contains parameters for limiting the number of unscored items in most popular
     """
+
+    fresh_items_limit_prior_threshold_multiplier: float  # mult * prior limit to determine whether item is fresh
+    fresh_items_max: (
+        int  # Max number of fresh items highly ranked fresh items. Affects section ranking indirectly.
+        # This can be kept higher than desired because top_stories_max_percentage acts as a guard
+    )
+    fresh_items_top_stories_max_percentage: (
+        float  # Max number of fresh percentage of items in top stories
+    )
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        data.setdefault("fresh_items_max", 0)
+        data.setdefault("fresh_items_top_stories_max_percentage", 0)
+        data.setdefault("fresh_items_limit_prior_threshold_multiplier", 0)
 
     def rescale(self, rec: CuratedRecommendation, opens, no_opens):
         """Update open and non-open values based on whether item is unique to the experiment. Note that

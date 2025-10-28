@@ -1,5 +1,7 @@
 """Algorithms for ranking curated recommendations."""
 
+from random import random, sample as random_sample
+
 import sentry_sdk
 import logging
 import math
@@ -20,6 +22,7 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     Section,
     ProcessedInterests,
+    RankingData,
 )
 from scipy.stats import beta
 import numpy as np
@@ -189,6 +192,10 @@ def thompson_sampling(
     [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
     """
     fallback_prior = ConstantPrior().get()
+    fresh_items_max: int = rescaler.fresh_items_max if rescaler else 0
+    fresh_items_limit_prior_threshold_multiplier: float = (
+        rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
+    )
 
     def get_opens_no_opens(
         rec: CuratedRecommendation, region_query: str | None = None
@@ -210,7 +217,7 @@ def thompson_sampling(
             )
         return personal_interests.normalized_scores[rec.topic.value] * INFERRED_SCORE_WEIGHT
 
-    def sample_score(rec: CuratedRecommendation) -> float:
+    def compute_ranking_scores(rec: CuratedRecommendation):
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
         opens, no_opens = get_opens_no_opens(rec)
 
@@ -226,20 +233,40 @@ def thompson_sampling(
             no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
             a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
             b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
-
         if rescaler is not None:
             # rescale for content associated exclusively with an experiment in a specific region
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)
             a_prior, b_prior = rescaler.rescale_prior(rec, a_prior, b_prior)
         # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
-        opens += max(a_prior, 1e-18)
-        no_opens += max(b_prior, 1e-18)
+        alpha_val = opens + max(a_prior, 1e-18)
+        beta_val = no_opens + max(b_prior, 1e-18)
+        rec.ranking_data = RankingData(
+            score=float(beta.rvs(alpha_val, beta_val)) + boost_interest(rec),
+            alpha=alpha_val,
+            beta=beta_val,
+        )
+        if (fresh_items_limit_prior_threshold_multiplier > 0) and (
+            no_opens < a_prior * fresh_items_limit_prior_threshold_multiplier
+        ):
+            rec.ranking_data.is_fresh = True
 
-        return float(beta.rvs(opens, no_opens)) + boost_interest(rec)
+    def suppress_fresh_items(scored_recs):
+        if fresh_items_max > 0:
+            fresh_items = list(filter(lambda r: r.ranking_data.is_fresh, scored_recs))
+            num_to_remove = len(fresh_items) - fresh_items_max
+            if num_to_remove > 0:
+                items_to_suppress = random_sample(fresh_items, k=num_to_remove)
+                for item in items_to_suppress:
+                    item.ranking_data.score *= 0.5
 
+    for rec in recs:
+        compute_ranking_scores(rec)
+    suppress_fresh_items(recs)
     # Sort the recommendations from best to worst sampled score & renumber
-    sorted_recs = sorted(recs, key=sample_score, reverse=True)
-    renumber_recommendations(sorted_recs)
+    sorted_recs = sorted(recs, key=lambda r: r.ranking_data.score, reverse=True)
+    for rec in sorted_recs:
+        d = rec.ranking_data
+        print(f"{d.alpha},{d.beta},{d.score},{d.is_fresh}")
     return sorted_recs
 
 
