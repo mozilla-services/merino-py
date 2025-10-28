@@ -133,14 +133,20 @@ def test_normalize_query_returns_trimmed_query_string(provider: Provider) -> Non
     assert provider.normalize_query("   aapl stock   ") == "aapl stock"
 
 
-def test_normalize_query_normalizes_dollar_sign_without_space(provider: Provider) -> None:
-    """Test that normalize_query method normalizes '$(query)' to 'STOCK (query)'"""
-    assert provider.normalize_query("$aapl") == "STOCK aapl"
-
-
-def test_normalize_query_normalizes_dollar_sign_with_space(provider: Provider) -> None:
-    """Test that normalizq_query method normalizes '$ (query)' to 'STOCK (query)'"""
-    assert provider.normalize_query("$ aapl") == "STOCK aapl"
+@pytest.mark.parametrize(
+    ["query", "expected"],
+    [
+        ("$aapl", "STOCK aapl"),
+        ("$ aapl", "STOCK aapl"),
+    ],
+    ids=[
+        "with space",
+        "without space",
+    ],
+)
+def test_normalize_query_dollar_sign(provider: Provider, query: str, expected: str) -> None:
+    """Test for the query normalization method to normalize dollar signs."""
+    assert provider.normalize_query(query) == expected
 
 
 def test_validate_fails_on_missing_query_param(
