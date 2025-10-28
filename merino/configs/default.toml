@@ -331,6 +331,8 @@ team_index="sports_{lang}_team"
 max_suggestions = 5
 # Disable this provider by default
 enabled_by_default = false
+# General timeout
+query_timeout_sec = 3.0
 
 [default.providers.sports.es]
 # MERINO_PROVIDERS__SPORTS__ES_dsn
