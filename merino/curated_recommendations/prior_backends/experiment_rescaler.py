@@ -11,7 +11,7 @@ SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 # Subtopic prior scaling is derived using data analysis on scores and existing priors
 # See more at:
 # https://mozilla-hub.atlassian.net/wiki/spaces/FAAMT/pages/1727725665/Thompson+Sampling+of+Subtopic+Sections
-PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
+PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.3
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.25
 
 
