@@ -16,8 +16,8 @@ from datetime import datetime, timedelta, timezone
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
-    NHL,
-    NBA,
+    # NHL,
+    # NBA,
 )
 from merino.utils.http_client import create_http_client
 
@@ -109,9 +109,7 @@ class SportsDataBackend(SportsDataProtocol):
         # do we need to update the data?
         if await self.data_store.startup():
             updating = await self.data_store.query_meta("update")
-            timestamp = (
-                datetime.now(tz=timezone.utc) + timedelta(minutes=5)
-            ).timestamp()
+            timestamp = (datetime.now(tz=timezone.utc) + timedelta(minutes=5)).timestamp()
             if not updating or float(updating) < timestamp:
                 await self.data_store.store_meta("update", str(timestamp))
                 verify = await self.data_store.query_meta("update")
