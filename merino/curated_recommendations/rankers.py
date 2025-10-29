@@ -1,6 +1,7 @@
 """Algorithms for ranking curated recommendations."""
 
 from random import sample as random_sample
+import re
 
 import sentry_sdk
 import logging
@@ -233,6 +234,7 @@ def thompson_sampling(
             no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
             a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
             b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
+        non_rescaled_b_prior = b_prior
         if rescaler is not None:
             # rescale for content associated exclusively with an experiment in a specific region
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)
@@ -248,9 +250,10 @@ def thompson_sampling(
         if (
             (fresh_items_limit_prior_threshold_multiplier > 0)
             and not rec.isTimeSensitive
-            and (no_opens < a_prior * fresh_items_limit_prior_threshold_multiplier)
+            and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
         ):
             rec.ranking_data.is_fresh = True
+        print(f"{alpha_val},{beta_val},{opens},{no_opens},{rec.ranking_data.score},{rec.topic},{rec.ranking_data.is_fresh},{re.sub(r'[^a-zA-Z ]', '', rec.title)},{non_rescaled_b_prior}")
 
     def suppress_fresh_items(scored_recs: list[CuratedRecommendation]) -> None:
         if fresh_items_max <= 0:
