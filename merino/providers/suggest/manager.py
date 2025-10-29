@@ -157,6 +157,14 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         server=settings.remote_settings.server,
                         collection=settings.remote_settings.collection_amp,
                         bucket=settings.remote_settings.bucket,
+                        icon_processor_v1=IconProcessor(
+                            gcs_project=settings.image_gcs_v1.gcs_project,
+                            gcs_bucket=settings.image_gcs_v1.gcs_bucket,
+                            cdn_hostname=settings.image_gcs_v1.cdn_hostname,
+                            http_client=create_http_client(
+                                request_timeout=settings.icon.http_timeout,
+                            ),
+                        ),
                         icon_processor=IconProcessor(
                             gcs_project=settings.image_gcs.gcs_project,
                             gcs_bucket=settings.image_gcs.gcs_bucket,
@@ -240,6 +248,11 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         settings.image_gcs.gcs_project,
                         settings.image_gcs.gcs_bucket,
                         settings.image_gcs.cdn_hostname,
+                    ),
+                    gcs_uploader_v1=GcsUploader(
+                        settings.image_gcs_v1.gcs_project,
+                        settings.image_gcs_v1.gcs_bucket,
+                        settings.image_gcs_v1.cdn_hostname,
                     ),
                     ticker_ttl_sec=settings.providers.polygon.cache_ttls.ticker_ttl_sec,
                     cache=cache,
