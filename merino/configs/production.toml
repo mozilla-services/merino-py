@@ -45,7 +45,7 @@ gcs_bucket = "merino-images-prod"
 
 # MERINO_IMAGE_GCS__CDN_HOSTNAME
 # CDN hostname used for public URLs of stored images
-cdn_hostname = "merino-images.services.mozilla.com"
+cdn_hostname = "prod-images.merino.prod.webservices.mozgcp.net"
 
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
