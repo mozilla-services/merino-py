@@ -39,6 +39,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
     client.indices = indices
 
     client.delete_by_query = mocker.AsyncMock()
+    client.delete = mocker.AsyncMock()
     client.search = mocker.AsyncMock()
     return cast(MagicMock, client)
 
@@ -224,3 +225,42 @@ async def test_get_index_settings():
         "accentfolding"
         not in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
     )
+
+
+@pytest.mark.asyncio
+async def test_meta_store(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test storing data to meta"""
+    es_client.create.side_effect = ConflictError("oops", cast(Any, object()), {})
+    await sport_data_store.store_meta("foo", "bar")
+    assert es_client.create.called
+    assert es_client.update.called
+
+
+@pytest.mark.asyncio
+async def test_meta_query(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test query data to meta"""
+    es_client.search.return_value = {"hits": {}}
+    res = await sport_data_store.query_meta("foo")
+    assert res is None
+
+    es_client.search.return_value = {"hits": {"hits": [{"_source": {"meta_value": "bar"}}]}}
+    res = await sport_data_store.query_meta("foo")
+    assert res == "bar"
+
+
+@pytest.mark.asyncio
+async def test_meta_del(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test deleting data to meta"""
+    await sport_data_store.del_meta("foo")
+
+    assert es_client.delete.called
+    assert es_client.indices.refresh.called
+
+
+@pytest.mark.asyncio
+async def test_meta_build(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test building indexes for meta"""
+    await sport_data_store.build_meta()
+
+    assert es_client.indices.create.called
+    assert es_client.indices.refresh.called

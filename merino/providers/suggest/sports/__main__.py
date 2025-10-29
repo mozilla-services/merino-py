@@ -106,9 +106,11 @@ async def main_query(log: Logger, settings: LazySettings):
     trigger_words = [
         word.lower().strip() for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
     ]
+    backend = SportsDataBackend(settings=settings)
+    await backend.startup()
 
     provider = SportsDataProvider(
-        backend=SportsDataBackend(settings=settings),
+        backend=backend,
         metrics_client=get_metrics_client(),
         name="test_sports_provider_id",
         trigger_words=trigger_words,

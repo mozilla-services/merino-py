@@ -7,7 +7,12 @@ from abc import abstractmethod, ABC
 from datetime import datetime, timezone
 from typing import Any, Final
 
-from elasticsearch import AsyncElasticsearch, BadRequestError, ConflictError, helpers
+from elasticsearch import (
+    AsyncElasticsearch,
+    BadRequestError,
+    ConflictError,
+    helpers,
+)
 
 from merino.configs import settings
 from merino.exceptions import BackendError
@@ -23,6 +28,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 )
 
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
+
+META_INDEX: str = "sports_meta"
 
 EN_INDEX_SETTINGS: dict = {
     "number_of_replicas": "1",
@@ -174,6 +181,13 @@ class ElasticDataStore(ABC):
         """Create a core instance of elastic search"""
         self.client = AsyncElasticsearch(dsn, api_key=api_key)
 
+    @abstractmethod
+    async def startup(self) -> bool:
+        """Kickstart the data store and fetch a round of data from the supplier.
+
+        This is used in case the airflow system is not yet operational.
+        """
+
     async def shutdown(self) -> None:
         """Politely close the data connection. Not strictly required, but python
         may complain.
@@ -255,6 +269,89 @@ class SportsDataStore(ElasticDataStore):
         # build the index based on the platform.
         self.index_map = index_map
         logging.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
+
+    async def startup(self) -> bool:
+        """Kick start the data store for Sports"""
+        await self.build_meta()
+        await self.build_indexes()
+
+        val = await self.query_meta("update")
+        if val is None or (float(val) or 0 < datetime.now(tz=timezone.utc).timestamp()):
+            logging.info(f"{LOGGING_TAG} fetching data")
+            return True
+        return False
+
+    async def query_meta(self, key: str) -> None | str:
+        """Get value from meta table"""
+        try:
+            res = await self.client.search(
+                index=META_INDEX,
+                query={"term": {"_id": key.lower()}},
+                # query={"term": {"key": key.lower()}},
+                # query={"match_all": {}},
+                source_includes=["meta_value"],
+                size=1,
+            )
+            hits = res["hits"]["hits"]
+            if not len(hits):
+                return None
+            return hits[0]["_source"].get("meta_value") or None
+        except Exception as ex:
+            logging.error(f"{LOGGING_TAG} meta query failed: {ex}")
+            return None
+
+    async def store_meta(self, key: str, value: str):
+        """Store value into meta table"""
+        try:
+            try:
+                await self.client.create(
+                    index=META_INDEX,
+                    id=key.lower(),
+                    document={"meta_key": key, "meta_value": value},
+                )
+            except ConflictError:
+                await self.client.update(
+                    index=META_INDEX,
+                    id=key.lower(),
+                    doc={"meta_key": key, "meta_value": value},
+                )
+        except Exception as ex:
+            logging.error(f"{LOGGING_TAG} Error: storing meta {key}:{value} {ex}")
+        await self.client.indices.refresh(index=META_INDEX)
+
+    async def del_meta(self, key) -> None:
+        """Remove data from the meta table"""
+        try:
+            await self.client.delete(index=META_INDEX, id=key.lower())
+            await self.client.indices.refresh(index=META_INDEX)
+        except Exception as ex:
+            logging.error(f"{LOGGING_TAG} Error: delete meta {key} {ex}")
+
+    async def build_meta(self) -> None:
+        """Create the meta data index. This is a very simple
+        table that stores a non-searchable value under a key.
+        """
+        try:
+            # await self.client.indices.delete(index=META_INDEX)
+            await self.client.indices.create(
+                index=META_INDEX,
+                settings={
+                    "number_of_replicas": "1",
+                    "refresh_interval": "-1",
+                    "number_of_shards": "2",
+                },
+                mappings={
+                    "dynamic": False,
+                    "properties": {
+                        "meta_key": {"type": "keyword", "index": True},
+                        "meta_value": {"type": "keyword", "index": False},
+                    },
+                },
+            )
+            await self.client.indices.refresh(index=META_INDEX)
+        except BadRequestError as ex:
+            if ex.error != "resource_already_exists_exception":
+                raise ex
 
     async def build_indexes(self, clear: bool = False):
         """Build the indices here for stand-alone and testing reasons.
@@ -358,6 +455,7 @@ class SportsDataStore(ElasticDataStore):
             logging.debug(f"{LOGGING_TAG} Searching {index_id} for `{q}`")
 
             res = await self.client.search(
+                index=index_id,
                 query=query,
                 timeout=TIMEOUT_MS,
                 source_includes=["event"],
@@ -402,7 +500,7 @@ class SportsDataStore(ElasticDataStore):
 
     async def store_events(
         self,
-        sport: "Sport",
+        sport: Sport,
         language_code: str,
     ):
         """Store the events using the calculated terms"""
@@ -438,6 +536,7 @@ class SportsDataStore(ElasticDataStore):
                     f"Could not load data into elasticSearch for {sport.name}"
                 ) from ex
         start = datetime.now()
+        await self.store_meta("update", str(start.timestamp()))
         await self.client.indices.refresh(index=index)
         logging.info(
             f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"
