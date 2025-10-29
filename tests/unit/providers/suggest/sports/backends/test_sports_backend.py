@@ -196,7 +196,9 @@ async def test_team():
         "GlobalTeamId": 90000694,
     }
     ttl = timedelta(seconds=300)
-    team = Team.from_data(team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl)
+    team = Team.from_data(
+        team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl
+    )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
     assert team.colors == ["FF0000", "FFFFFF"]
@@ -241,7 +243,9 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
 
 
 @pytest.mark.asyncio
-async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
+async def test_sportsdata_backend(
+    sport_data_store: SportsDataStore, mocker: MockerFixture
+):
     """Test the backend"""
     sport_data_store.search_events = AsyncMock(  # type: ignore
         side_effect=[
@@ -294,7 +298,9 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
         ]
     )
 
-    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store
+    )
     res = await backend.query(
         query_string="Some Search String",
     )
@@ -306,15 +312,17 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
-async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker: MockerFixture):
+async def test_sports_backend_startup(
+    sport_data_store: SportsDataStore, mocker: MockerFixture
+):
     """Test the sports backend startup process with mocked sports classes."""
     # Patch the sport classes
-    mock_nba_class = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.backend.NBA"
-    )
-    mock_nfl_class = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.backend.NFL"
-    )
+    # mock_nba_class = mocker.patch(
+    #    "merino.providers.suggest.sports.backends.sportsdata.backend.NBA"
+    # )
+    # mock_nfl_class = mocker.patch(
+    #   "merino.providers.suggest.sports.backends.sportsdata.backend.NFL"
+    # )
     mock_nhl_class = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.backend.NHL"
     )
@@ -328,8 +336,8 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
     mock_nhl_instance.name = "NHL"
 
     # Configure the class constructors to return the mock instances
-    mock_nba_class.return_value = mock_nba_instance
-    mock_nfl_class.return_value = mock_nfl_instance
+    # mock_nba_class.return_value = mock_nba_instance
+    # mock_nfl_class.return_value = mock_nfl_instance
     mock_nhl_class.return_value = mock_nhl_instance
 
     # Setup async methods on the instances
@@ -360,25 +368,27 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
     mocker.patch.object(sport_data_store, "store_events", new=mock_store_events)
 
     # Create and test the backend
-    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store
+    )
     await backend.startup()
 
     # Verify the mocked classes were instantiated
     # mock_nba_class.assert_called_once_with(settings=settings.providers.sports)
-    mock_nfl_class.assert_called_once_with(settings=settings.providers.sports)
-    # mock_nhl_class.assert_called_once_with(settings=settings.providers.sports)
+    # mock_nfl_class.assert_called_once_with(settings=settings.providers.sports)
+    mock_nhl_class.assert_called_once_with(settings=settings.providers.sports)
 
     # Verify async methods were called on each sport instance
     # mock_nba_instance.update_teams.assert_called_once_with(client=mock_client)
-    mock_nfl_instance.update_teams.assert_called_once_with(client=mock_client)
-    # mock_nhl_instance.update_teams.assert_called_once_with(client=mock_client)
+    # mock_nfl_instance.update_teams.assert_called_once_with(client=mock_client)
+    mock_nhl_instance.update_teams.assert_called_once_with(client=mock_client)
     # mock_nba_instance.update_events.assert_called_once_with(client=mock_client)
-    mock_nfl_instance.update_events.assert_called_once_with(client=mock_client)
-    # mock_nhl_instance.update_events.assert_called_once_with(client=mock_client)
+    # mock_nfl_instance.update_events.assert_called_once_with(client=mock_client)
+    mock_nhl_instance.update_events.assert_called_once_with(client=mock_client)
 
     # Verify store_events was called for each sport
     # assert mock_store_events.call_count == 3
     assert mock_store_events.call_count == 1
     # mock_store_events.assert_any_call(mock_nba_instance, language_code="en")
-    mock_store_events.assert_any_call(mock_nfl_instance, language_code="en")
-    # mock_store_events.assert_any_call(mock_nhl_instance, language_code="en")
+    # mock_store_events.assert_any_call(mock_nfl_instance, language_code="en")
+    mock_store_events.assert_any_call(mock_nhl_instance, language_code="en")
