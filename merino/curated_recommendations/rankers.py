@@ -1,7 +1,6 @@
 """Algorithms for ranking curated recommendations."""
 
 from random import sample as random_sample
-import re
 
 import sentry_sdk
 import logging
@@ -253,7 +252,6 @@ def thompson_sampling(
             and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
         ):
             rec.ranking_data.is_fresh = True
-        print(f"{alpha_val},{beta_val},{opens},{no_opens},{rec.ranking_data.score},{rec.topic},{rec.ranking_data.is_fresh},{re.sub(r'[^a-zA-Z ]', '', rec.title)},{non_rescaled_b_prior}")
 
     def suppress_fresh_items(scored_recs: list[CuratedRecommendation]) -> None:
         if fresh_items_max <= 0:

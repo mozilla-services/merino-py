@@ -239,13 +239,13 @@ class TestThompsonSampling:
         for rec in recs:
             rec.isTimeSensitive = False
 
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
         engagement_backend = StubEngagementBackend(
             {
                 "fresh": (0, 4),  # impressions -> no_opens = 4
-                "stale": (0, 12),  # impressions -> no_opens = 12
+                "stale": (0, 12),  # impressions -> no_opens = 12 - greater than beta
             }
         )
-        prior_backend = StubPriorBackend(Prior(alpha=10, beta=10))
         rescaler = DefaultCrawlerRescaler()
 
         # Make beta sampling deterministic to avoid flakiness.
