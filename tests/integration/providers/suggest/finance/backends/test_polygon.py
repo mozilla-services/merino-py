@@ -77,6 +77,7 @@ def fixture_polygon_parameters(
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
         "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
         "gcs_uploader": mocker.MagicMock(),
+        "gcs_uploader_v1": mocker.MagicMock(),
         "cache": RedisAdapter(redis_client),
         "ticker_ttl_sec": TICKER_TTL_SEC,
     }
@@ -126,7 +127,10 @@ async def test_get_snapshots_from_cache_success(
     ticker_snapshot_NFLX,
 ) -> None:
     """Test that get_snapshots_from_cache method successfully returns the correct snapshots with TTLs."""
-    expected = [(ticker_snapshot_AAPL, TICKER_TTL_SEC), (ticker_snapshot_NFLX, TICKER_TTL_SEC)]
+    expected = [
+        (ticker_snapshot_AAPL, TICKER_TTL_SEC),
+        (ticker_snapshot_NFLX, TICKER_TTL_SEC),
+    ]
 
     # write to cache
     await polygon.store_snapshots_in_cache([ticker_snapshot_AAPL, ticker_snapshot_NFLX])

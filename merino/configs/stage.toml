@@ -27,6 +27,14 @@ gcs_project = "moz-fx-merino-nonprod-ee93"
 # MERINO_IMAGE_GCS__GCS_BUCKET
 gcs_bucket = "merino-images-stagepy"
 
+
+[stage.image_gcs_v1]
+# MERINO_IMAGE_GCS__GCS_PROJECT
+gcs_project = "moz-fx-merino-nonprod-ee93"
+
+# MERINO_IMAGE_GCS__GCS_BUCKET
+gcs_bucket = "merino-images-stagepy"
+
 [stage.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 domain_data_source = "remote"

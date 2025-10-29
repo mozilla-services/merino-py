@@ -10,7 +10,9 @@ from pydantic import HttpUrl, ValidationError
 from merino.configs import settings
 from typing import Any, Tuple, Optional
 
-from merino.providers.suggest.finance.backends.polygon.filemanager import PolygonFilemanager
+from merino.providers.suggest.finance.backends.polygon.filemanager import (
+    PolygonFilemanager,
+)
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceManifest,
     GetManifestResultCode,
@@ -87,6 +89,7 @@ class PolygonBackend:
     metrics_client: aiodogstatsd.Client
     http_client: AsyncClient
     metrics_sample_rate: float
+    gcs_uploader_v1: GcsUploader
     gcs_uploader: GcsUploader
     url_param_api_key: str
     url_single_ticker_snapshot: str
@@ -103,6 +106,7 @@ class PolygonBackend:
         url_single_ticker_overview: str,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
+        gcs_uploader_v1: GcsUploader,
         gcs_uploader: GcsUploader,
         metrics_sample_rate: float,
     ) -> None:
@@ -114,11 +118,12 @@ class PolygonBackend:
         self.http_client = http_client
         self.metrics_sample_rate = metrics_sample_rate
         self.url_param_api_key = url_param_api_key
+        self.gcs_uploader_v1 = gcs_uploader_v1
         self.gcs_uploader = gcs_uploader
         self.url_single_ticker_snapshot = url_single_ticker_snapshot
         self.url_single_ticker_overview = url_single_ticker_overview
         self.filemanager = PolygonFilemanager(
-            gcs_bucket_path=settings.image_gcs.gcs_bucket,
+            gcs_bucket_path=settings.image_gcs_v1.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
         )
         # This registration is lazy (i.e. no interaction with Redis) and infallible.
@@ -270,7 +275,7 @@ class PolygonBackend:
         """Download and upload images for a list of ticker symbols.
         Uses content hash to deduplicate and skips upload if destination blob already exists.
         """
-        uploaded_urls = {}
+        uploaded_urls_v1 = {}
 
         for ticker in tickers:
             try:
@@ -287,19 +292,26 @@ class PolygonBackend:
                 destination_name = f"{prefix}/{content_hash}_{content_len}.svg"
 
                 try:
-                    public_url = self.gcs_uploader.upload_image(
+                    public_url_v1 = self.gcs_uploader_v1.upload_image(
                         image=logo,
                         destination_name=destination_name,
                         forced_upload=False,
                     )
-                    uploaded_urls[ticker] = public_url
+
+                    # upload to v2
+                    self.gcs_uploader.upload_image(
+                        image=logo,
+                        destination_name=destination_name,
+                        forced_upload=False,
+                    )
+                    uploaded_urls_v1[ticker] = public_url_v1
 
                 except Exception as e:
                     logger.error(f"Failed to upload logo for {ticker}: {e}")
             except Exception as e:
                 logger.error(f"Error processing ticker {ticker}: {e}")
 
-        return uploaded_urls
+        return uploaded_urls_v1
 
     @staticmethod
     def build_finance_manifest(gcs_image_urls: dict[str, str]) -> FinanceManifest:
@@ -337,14 +349,23 @@ class PolygonBackend:
             manifest = self.build_finance_manifest(url_map)
             manifest_bytes = orjson.dumps(manifest.model_dump(mode="json"))
 
+            blob_v1 = self.gcs_uploader_v1.upload_content(
+                content=manifest_bytes,
+                destination_name=GCS_BLOB_NAME,
+                content_type="application/json",
+                forced_upload=True,
+            )
+
             blob = self.gcs_uploader.upload_content(
                 content=manifest_bytes,
                 destination_name=GCS_BLOB_NAME,
                 content_type="application/json",
                 forced_upload=True,
             )
-            if blob is None:
+            if blob_v1 is None:
                 logger.error("polygon manifest upload failed.")
+            if blob is None:
+                logger.error("polygon manifest upload failed for v2.")
         except Exception as e:
             logger.error(f"Error building/uploading manifest: {e}")
             return None

@@ -46,7 +46,7 @@ class FlightAwareBackend(FlightBackendProtocol):
         self.http_client = http_client
         self.ident_url = ident_url
         self.filemanager = FlightawareFilemanager(
-            gcs_bucket_path=settings.image_gcs.gcs_bucket,
+            gcs_bucket_path=settings.image_gcs_v1.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
         )
         self.metrics_client = metrics_client

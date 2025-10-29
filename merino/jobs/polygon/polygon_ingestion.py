@@ -40,6 +40,11 @@ class PolygonIngestion:
                     settings.image_gcs.gcs_bucket,
                     settings.image_gcs.cdn_hostname,
                 ),
+                gcs_uploader_v1=GcsUploader(
+                    settings.image_gcs_v1.gcs_project,
+                    settings.image_gcs_v1.gcs_bucket,
+                    settings.image_gcs_v1.cdn_hostname,
+                ),
                 cache=NoCacheAdapter(),
             ),
             metrics_client=get_metrics_client(),
