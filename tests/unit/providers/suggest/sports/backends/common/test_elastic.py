@@ -63,7 +63,9 @@ async def test_create_raise_exception(
     sport_data_store: SportsDataStore, es_client: AsyncMock
 ) -> None:
     """Test Sport Data Store create raises exception."""
-    es_client.indices.create.side_effect = BadRequestError("oops", cast(Any, object()), {})
+    es_client.indices.create.side_effect = BadRequestError(
+        "oops", cast(Any, object()), {}
+    )
 
     with pytest.raises(SportsDataError):
         await sport_data_store.build_indexes()
@@ -76,7 +78,9 @@ async def test_prune_fail_and_logging_captured(
     mocker: MockerFixture,
 ) -> None:
     """Test Sport Data Store fail prune and metrics captured."""
-    es_client.delete_by_query.side_effect = ConflictError("oops", cast(Any, object()), {})
+    es_client.delete_by_query.side_effect = ConflictError(
+        "oops", cast(Any, object()), {}
+    )
 
     mock_logger = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.elastic.logging"
@@ -121,7 +125,9 @@ async def test_store_event_fail_and_metrics_captured(
     await sport_data_store.store_events(sport=nfl, language_code="en")
     calls = [call.args[0] for call in mock_logger.info.call_args_list]
     assert len(list(filter(lambda x: "sports.time.load.events" in x, calls))) == 1
-    assert len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
+    assert (
+        len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
+    )
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")
@@ -136,13 +142,17 @@ async def test_search_event_hits(
         {
             "_score": 1.0,
             "_source": {
-                "event": json.dumps({"sport": "NFL", "status": "Final", "date": now - 3600})
+                "event": json.dumps(
+                    {"sport": "NFL", "status": "Final", "date": now - 3600}
+                )
             },
         },
         {
             "_score": 0.9,
             "_source": {
-                "event": json.dumps({"sport": "NFL", "status": "InProgress", "date": now - 100})
+                "event": json.dumps(
+                    {"sport": "NFL", "status": "InProgress", "date": now - 100}
+                )
             },
         },
         {
@@ -164,7 +174,9 @@ async def test_search_event_hits(
     ]
     es_client.search.return_value = {"hits": {"total": {"value": 1}, "hits": hits}}
 
-    result = await sport_data_store.search_events(q="game", language_code="en", mix_sports=False)
+    result = await sport_data_store.search_events(
+        q="game", language_code="en", mix_sports=False
+    )
     expected_result = {
         "NFL": {
             "current": {
@@ -194,7 +206,9 @@ async def test_search_event_bad_hit_data(
 ):
     """Test Sport Data Store search event with a bad hit."""
     es_client.search.return_value = {"hits": {}}
-    result = await sport_data_store.search_events(q="game", language_code="en", mix_sports=False)
+    result = await sport_data_store.search_events(
+        q="game", language_code="en", mix_sports=False
+    )
     assert result == {}
 
 
@@ -205,7 +219,9 @@ async def test_search_event_raise_exception(
     """Test Sport Data Store search event raises exception."""
     es_client.search.side_effect = Exception("oops")
     with pytest.raises(BackendError):
-        await sport_data_store.search_events(q="oops", language_code="en", mix_sports=False)
+        await sport_data_store.search_events(
+            q="oops", language_code="en", mix_sports=False
+        )
 
 
 @pytest.mark.asyncio
@@ -214,13 +230,22 @@ async def test_get_index_settings():
     settings = get_index_settings(dsn="normal")
     assert "lowercase" in settings["analysis"]["filter"]
     assert "accentfolding" in settings["analysis"]["filter"]
-    assert "accentfolding" in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
-    assert "accentfolding" in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
+    assert (
+        "accentfolding"
+        in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
+    )
+    assert (
+        "accentfolding"
+        in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
+    )
 
     settings = get_index_settings(dsn="localhost")
     assert "lowercase" not in settings["analysis"]["filter"]
     assert "accentfolding" not in settings["analysis"]["filter"]
-    assert "accentfolding" not in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
+    assert (
+        "accentfolding"
+        not in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
+    )
     assert (
         "accentfolding"
         not in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
@@ -243,7 +268,9 @@ async def test_meta_query(sport_data_store: SportsDataStore, es_client: AsyncMoc
     res = await sport_data_store.query_meta("foo")
     assert res is None
 
-    es_client.search.return_value = {"hits": {"hits": [{"_source": {"meta_value": "bar"}}]}}
+    es_client.search.return_value = {
+        "hits": {"hits": [{"_source": {"meta_value": "bar"}}]}
+    }
     res = await sport_data_store.query_meta("foo")
     assert res == "bar"
 
@@ -264,3 +291,18 @@ async def test_meta_build(sport_data_store: SportsDataStore, es_client: AsyncMoc
 
     assert es_client.indices.create.called
     assert es_client.indices.refresh.called
+
+
+@pytest.mark.asyncio
+async def test_build_indexes(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test the index builder"""
+    await sport_data_store.build_indexes(clear=True)
+    assert sport_data_store.client.indices.delete.called
+    assert sport_data_store.client.indices.create.called
+
+
+@pytest.mark.asyncio
+async def test_build_meta(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test the index builder"""
+    await sport_data_store.build_meta()
+    assert sport_data_store.client.indices.create.called
