@@ -55,9 +55,6 @@ class ExperimentRescaler(BaseModel):
 
     def __init__(self, **data: Any):
         super().__init__(**data)
-        data.setdefault("fresh_items_max", 0)
-        data.setdefault("fresh_items_top_stories_max_percentage", 0)
-        data.setdefault("fresh_items_limit_prior_threshold_multiplier", 0)
 
     def rescale(self, rec: CuratedRecommendation, opens, no_opens):
         """Update open and non-open values based on whether item is unique to the experiment. Note that

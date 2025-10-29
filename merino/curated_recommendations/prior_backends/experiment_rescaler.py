@@ -11,15 +11,15 @@ SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 # Subtopic prior scaling is derived using data analysis on scores and existing priors
 # See more at:
 # https://mozilla-hub.atlassian.net/wiki/spaces/FAAMT/pages/1727725665/Thompson+Sampling+of+Subtopic+Sections
-PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.5
-PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.45
+PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
+PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 
 class DefaultCrawlerRescaler(ExperimentRescaler):
     """Scales based on overall percentage"""
 
     def __init__(self, **data: Any):
-        data.setdefault("fresh_items_max", 5)
+        data.setdefault("fresh_items_max", 18)
         data.setdefault("fresh_items_top_stories_max_percentage", 0.15)
         data.setdefault("fresh_items_limit_prior_threshold_multiplier", 1)
         super().__init__(**data)
