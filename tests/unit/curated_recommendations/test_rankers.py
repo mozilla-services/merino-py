@@ -22,6 +22,10 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ProcessedInterests,
 )
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    DefaultCrawlerRescaler,
+)
+from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
     spread_publishers,
     boost_preferred_topic,
@@ -31,6 +35,7 @@ from merino.curated_recommendations.rankers import (
     put_top_stories_first,
     greedy_personalized_section_rank,
     takedown_reported_recommendations,
+    thompson_sampling,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -163,6 +168,48 @@ class TestTakedownReportedRecommendations:
         assert [rec.corpusItemId for rec in remaining_recs] == ["1"]
 
 
+class StubPriorBackend(PriorBackend):
+    """Simple PriorBackend stub returning a fixed Prior."""
+
+    def __init__(self, prior: Prior):
+        self._prior = prior
+
+    def get(self, region: str | None = None) -> Prior:
+        """Return prior"""
+        return self._prior
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
+
+
+class StubEngagementBackend(EngagementBackend):
+    """Engagement backend returning pre-set click and impression tuples."""
+
+    def __init__(self, metrics: dict[str, tuple[int, int]]):
+        """Create engagement"""
+        self._metrics = metrics
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return engagement"""
+        if corpus_item_id not in self._metrics:
+            return None
+        clicks, impressions = self._metrics[corpus_item_id]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=clicks,
+            impression_count=impressions,
+            report_count=0,
+        )
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
+
+
 class TestRenumberRecommendations:
     """Tests for the renumber_recommendations function."""
 
@@ -177,6 +224,47 @@ class TestRenumberRecommendations:
         recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5"])
         renumber_recommendations(recs)
         assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
+
+
+class TestThompsonSampling:
+    """Tests for the thompson_sampling ranker."""
+
+    def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
+        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        recs = generate_recommendations(
+            item_ids=["fresh", "stale"],
+            topics=[Topic.BUSINESS.value, Topic.SCIENCE.value],
+            time_sensitive_count=0,
+        )
+        for rec in recs:
+            rec.isTimeSensitive = False
+
+        engagement_backend = StubEngagementBackend(
+            {
+                "fresh": (0, 4),  # impressions -> no_opens = 4
+                "stale": (0, 12),  # impressions -> no_opens = 12
+            }
+        )
+        prior_backend = StubPriorBackend(Prior(alpha=10, beta=10))
+        rescaler = DefaultCrawlerRescaler()
+
+        # Make beta sampling deterministic to avoid flakiness.
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
+
+        ranked = thompson_sampling(
+            recs,
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            rescaler=rescaler,
+        )
+
+        assert len(ranked) == 2
+        by_id = {rec.corpusItemId: rec for rec in ranked}
+
+        assert by_id["fresh"].ranking_data is not None
+        assert by_id["stale"].ranking_data is not None
+        assert by_id["fresh"].ranking_data.is_fresh is True
+        assert by_id["stale"].ranking_data.is_fresh is False
 
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""

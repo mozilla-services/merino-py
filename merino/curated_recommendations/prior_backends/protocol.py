@@ -42,7 +42,9 @@ class ExperimentRescaler(BaseModel):
     Also contains parameters for limiting the number of unscored items in most popular
     """
 
-    fresh_items_limit_prior_threshold_multiplier: float = 0  # mult * prior limit to determine whether item is fresh
+    fresh_items_limit_prior_threshold_multiplier: float = (
+        0  # mult * prior limit to determine whether item is fresh
+    )
     fresh_items_max: (
         int  # Max number of fresh items highly ranked fresh items. Affects section ranking indirectly.
         # This can be kept higher than desired because top_stories_max_percentage acts as a guard

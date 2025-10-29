@@ -1,6 +1,6 @@
 """Algorithms for ranking curated recommendations."""
 
-from random import random, sample as random_sample
+from random import sample as random_sample
 
 import sentry_sdk
 import logging
@@ -245,28 +245,38 @@ def thompson_sampling(
             alpha=alpha_val,
             beta=beta_val,
         )
-        if (fresh_items_limit_prior_threshold_multiplier > 0) and not rec.isTimeSensitive and (
-            no_opens < a_prior * fresh_items_limit_prior_threshold_multiplier
+        if (
+            (fresh_items_limit_prior_threshold_multiplier > 0)
+            and not rec.isTimeSensitive
+            and (no_opens < a_prior * fresh_items_limit_prior_threshold_multiplier)
         ):
             rec.ranking_data.is_fresh = True
 
-    def suppress_fresh_items(scored_recs):
-        if fresh_items_max > 0:
-            fresh_items = list(filter(lambda r: r.ranking_data.is_fresh, scored_recs))
-            num_to_remove = len(fresh_items) - fresh_items_max
-            if num_to_remove > 0:
-                items_to_suppress = random_sample(fresh_items, k=num_to_remove)
-                for item in items_to_suppress:
+    def suppress_fresh_items(scored_recs: list[CuratedRecommendation]) -> None:
+        if fresh_items_max <= 0:
+            return
+
+        fresh_items = [
+            rec
+            for rec in scored_recs
+            if rec.ranking_data is not None and rec.ranking_data.is_fresh
+        ]
+        num_to_remove = len(fresh_items) - fresh_items_max
+        if num_to_remove > 0:
+            items_to_suppress = random_sample(fresh_items, k=num_to_remove)
+            for item in items_to_suppress:
+                if item.ranking_data is not None:
                     item.ranking_data.score *= 0.5
 
     for rec in recs:
         compute_ranking_scores(rec)
     suppress_fresh_items(recs)
     # Sort the recommendations from best to worst sampled score & renumber
-    sorted_recs = sorted(recs, key=lambda r: r.ranking_data.score, reverse=True)
-    for rec in sorted_recs:
-        d = rec.ranking_data
-        print(f"{d.alpha},{d.beta},{d.score},{d.is_fresh}")
+    sorted_recs = sorted(
+        recs,
+        key=lambda r: r.ranking_data.score if r.ranking_data is not None else float("-inf"),
+        reverse=True,
+    )
     return sorted_recs
 
 

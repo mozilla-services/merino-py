@@ -221,7 +221,7 @@ class RankingData(BaseModel):
     alpha: float
     beta: float
     score: float
-    is_fresh: bool = False # Indicates it has relatively little impressions
+    is_fresh: bool = False  # Indicates it has relatively little impressions
 
 
 class CuratedRecommendation(CorpusItem):
@@ -230,7 +230,7 @@ class CuratedRecommendation(CorpusItem):
     __typename: TypeName = TypeName.RECOMMENDATION
 
     experiment_flags: Annotated[set[str] | None, Field(default_factory=set, exclude=True)] = None
-    ranking_data: Annotated[RankingData | None, Field(exclude=True)] = (None,)
+    ranking_data: Annotated[RankingData | None, Field(exclude=True)] = None
     tileId: Annotated[int | None, Field(strict=True, ge=MIN_TILE_ID, le=MAX_TILE_ID)] = None
     receivedRank: int
     features: dict[str, float] = Field(
