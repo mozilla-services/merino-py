@@ -109,9 +109,7 @@ class SportsDataBackend(SportsDataProtocol):
         # do we need to update the data?
         if await self.data_store.startup():
             updating = await self.data_store.query_meta("update")
-            timestamp = (
-                datetime.now(tz=timezone.utc) + timedelta(minutes=5)
-            ).timestamp()
+            timestamp = (datetime.now(tz=timezone.utc) + timedelta(minutes=5)).timestamp()
             if not updating or float(updating) < timestamp:
                 await self.data_store.store_meta("update", str(timestamp))
                 verify = await self.data_store.query_meta("update")
@@ -124,9 +122,7 @@ class SportsDataBackend(SportsDataProtocol):
                 for sport in [
                     # NFL(settings=self.settings),
                     # NBA(settings=self.settings),
-                    NHL(
-                        settings=self.settings
-                    ),  # why NHL? Because the team is mostly Canadian.
+                    NHL(settings=self.settings),  # why NHL? Because the team is mostly Canadian.
                 ]:
                     logging.info(f"{LOGGING_TAG} fetching {sport.name} teams...")
                     await sport.update_teams(client=client)
