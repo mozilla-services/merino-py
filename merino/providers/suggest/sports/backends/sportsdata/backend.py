@@ -116,6 +116,7 @@ class SportsDataBackend(SportsDataProtocol):
                 # validate that we're the one doing the update.
                 if float(verify or "0") != timestamp:
                     logging.info(f"{LOGGING_TAG} Update already in progress")
+                    return
                 logging.info(f"{LOGGING_TAG}Pre-populating data")
                 client = create_http_client()
                 # hardcode the sports for now:
