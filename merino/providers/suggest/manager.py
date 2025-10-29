@@ -240,6 +240,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     http_client=create_http_client(
                         base_url=settings.polygon.url_base,
                         connect_timeout=settings.providers.polygon.connect_timeout_sec,
+                        follow_redirects=True,
                     ),
                     url_param_api_key=settings.polygon.url_param_api_key,
                     url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
