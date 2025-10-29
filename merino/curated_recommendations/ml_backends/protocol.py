@@ -5,6 +5,10 @@ from typing import Protocol, cast
 
 import numpy as np
 from pydantic import BaseModel
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 LOCAL_MODEL_MODEL_ID_KEY = "model_id"
 
@@ -51,6 +55,7 @@ class ModelData(BaseModel):
     # Output key, and inputs for how fields affect it
     interest_vector: dict[str, InterestVectorConfig]
     noise_scale: float
+    private_features: list | None = None
 
 
 class InferredLocalModel(BaseModel):
@@ -94,7 +99,10 @@ class InferredLocalModel(BaseModel):
 
     def get_interest_keys(self) -> set[str]:
         """Return set of keys, each representing an interest computed by the model"""
-        return set(self.model_data.interest_vector.keys())
+        if self.model_data.private_features is None:
+            return set(self.model_data.interest_vector.keys())
+        else:
+            return set(self.model_data.private_features)
 
     def decode_dp_interests(
         self, dp_values: list[str], interest_key: float | str | None, support_two: bool = True
@@ -126,7 +134,20 @@ class InferredLocalModel(BaseModel):
             return feature_result
 
         result: dict[str, float | str] = {LOCAL_MODEL_MODEL_ID_KEY: cast(str, interest_key)}
-        for idx, (key, ivconfig) in enumerate(self.model_data.interest_vector.items()):
+        if self.model_data.private_features is None:
+            iv_items = list(self.model_data.interest_vector.items())
+        else:
+            iv_items = [
+                item
+                for item in self.model_data.interest_vector.items()
+                if item[0] in self.model_data.private_features
+            ]
+        for idx, (key, ivconfig) in enumerate(iv_items):
+            ## guard against model/experiment becoming misaligned due to experiments and
+            ## local inferred model possibly changing at different times
+            if idx >= len(dp_values):
+                logger.error("Model DP incorrect length")
+                continue
             decoded_values: list[float] = [
                 interpret_index(a)
                 for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
