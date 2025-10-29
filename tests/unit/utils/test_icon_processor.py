@@ -29,9 +29,9 @@ def icon_processor(mocker):
     mock_http_client = AsyncMock()
 
     processor = IconProcessor(
-        gcs_project=settings.image_gcs.gcs_project,
-        gcs_bucket=settings.image_gcs.gcs_bucket,
-        cdn_hostname=settings.image_gcs.cdn_hostname,
+        gcs_project=settings.image_gcs_v1.gcs_project,
+        gcs_bucket=settings.image_gcs_v1.gcs_bucket,
+        cdn_hostname=settings.image_gcs_v1.cdn_hostname,
         http_client=mock_http_client,
     )
 
@@ -57,15 +57,15 @@ def test_init(mocker):
     mock_client = AsyncMock()
 
     processor = IconProcessor(
-        gcs_project=settings.image_gcs.gcs_project,
-        gcs_bucket=settings.image_gcs.gcs_bucket,
-        cdn_hostname=settings.image_gcs.cdn_hostname,
+        gcs_project=settings.image_gcs_v1.gcs_project,
+        gcs_bucket=settings.image_gcs_v1.gcs_bucket,
+        cdn_hostname=settings.image_gcs_v1.cdn_hostname,
         http_client=mock_client,
     )
 
     assert processor.uploader is not None
     assert processor.content_hash_cache == {}
-    assert processor.uploader.cdn_hostname == settings.image_gcs.cdn_hostname
+    assert processor.uploader.cdn_hostname == settings.image_gcs_v1.cdn_hostname
     assert processor.http_client is mock_client
 
 
@@ -481,7 +481,9 @@ async def test_fetch_with_icon_processing_errors():
 
     # Create instance with mock icon processor
     icon_processor_mock = MagicMock(spec=IconProcessor)
-    backend = RemoteSettingsBackend("server", "collection", "bucket", icon_processor_mock)
+    backend = RemoteSettingsBackend(
+        "server", "collection", "bucket", icon_processor_mock, icon_processor_mock
+    )
 
     # Mock the methods directly on the instance
     backend.get_records = AsyncMock(return_value=mock_records)
