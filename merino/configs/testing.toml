@@ -27,6 +27,11 @@ gcs_project = "test_gcp_uploader_project"
 gcs_bucket = "test_gcp_uploader_bucket"
 cdn_hostname = "test-cdn.mozilla.net"
 
+[testing.image_gcs_v1]
+gcs_project = "test_gcp_uploader_project"
+gcs_bucket = "test_gcp_uploader_bucket"
+cdn_hostname = "test-cdn.mozilla.net"
+
 [testing.web.api.v1]
 # Setting to contol the limit on optional client variants passed
 # to suggest endpoint as part of experiments or rollouts.

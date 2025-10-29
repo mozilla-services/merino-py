@@ -61,6 +61,7 @@ def fixture_rs_backend(
         collection=rs_parameters["collection"],
         bucket=rs_parameters["bucket"],
         icon_processor=mock_icon_processor,
+        icon_processor_v1=mock_icon_processor,
     )
 
 
@@ -267,6 +268,7 @@ def test_init_invalid_remote_settings_parameter_error(
             collection=rs_parameters.get("collection"),
             bucket=rs_parameters.get("bucket"),
             icon_processor=mock_icon_processor,
+            icon_processor_v1=mock_icon_processor,
         )
 
     assert str(error.value) == expected_error_value
@@ -349,7 +351,9 @@ async def test_fetch_with_index_build_fail(
         return_value=rs_attachment_response,
     )
     mocker.patch.object(
-        moz_merino_ext.amp.AmpIndexManager, "build", side_effect=Exception("Build Index Error")
+        moz_merino_ext.amp.AmpIndexManager,
+        "build",
+        side_effect=Exception("Build Index Error"),
     )
 
     _ = await rs_backend.fetch()
@@ -524,7 +528,10 @@ async def test_get_suggestions(
                 "id": 2,
                 "advertiser": "Example.org",
                 "click_url": "https://example.org/click/mozilla",
-                "full_keywords": [["firefox accounts", 3], ["mozilla firefox accounts", 4]],
+                "full_keywords": [
+                    ["firefox accounts", 3],
+                    ["mozilla firefox accounts", 4],
+                ],
                 "iab_category": "5 - Education",
                 "serp_categories": [],
                 "icon": "01",

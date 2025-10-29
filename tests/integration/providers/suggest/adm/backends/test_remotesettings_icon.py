@@ -197,6 +197,7 @@ async def test_remotesettings_with_icon_processor(
         collection=rs_parameters["collection"],
         bucket=rs_parameters["bucket"],
         icon_processor=mock_processor,
+        icon_processor_v1=mock_processor,
     )
 
     # Mock the Remote Settings client methods
@@ -246,6 +247,7 @@ async def test_remotesettings_icon_processor_error_handling(
         collection=rs_parameters["collection"],
         bucket=rs_parameters["bucket"],
         icon_processor=mock_processor,
+        icon_processor_v1=mock_processor,
     )
 
     # Mock the Remote Settings client methods
@@ -295,7 +297,7 @@ async def test_remotesettings_with_gcs_integration(
         icon_processor = IconProcessor(
             gcs_project=gcs_storage_client.project,
             gcs_bucket=gcs_storage_bucket.name,
-            cdn_hostname=settings.image_gcs.cdn_hostname,
+            cdn_hostname=settings.image_gcs_v1.cdn_hostname,
             http_client=mock_http_client,
         )
 
@@ -315,6 +317,7 @@ async def test_remotesettings_with_gcs_integration(
             collection=rs_parameters["collection"],
             bucket=rs_parameters["bucket"],
             icon_processor=icon_processor,
+            icon_processor_v1=icon_processor,
         )
 
         # Mock the Remote Settings client methods

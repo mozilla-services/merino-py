@@ -33,7 +33,10 @@ from merino.providers.suggest.adm.backends.remotesettings import (
 )
 from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS
 from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
-from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
+from merino.providers.suggest.top_picks.backends.top_picks import (
+    TopPicksBackend,
+    TopPicksError,
+)
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
@@ -191,13 +194,17 @@ async def get_adm_queries(
     )
 
     icon_processor = IconProcessor(
-        gcs_project=settings.image_gcs.gcs_project,
-        gcs_bucket=settings.image_gcs.gcs_bucket,
-        cdn_hostname=settings.image_gcs.cdn_hostname,
+        gcs_project=settings.image_gcs_v1.gcs_project,
+        gcs_bucket=settings.image_gcs_v1.gcs_bucket,
+        cdn_hostname=settings.image_gcs_v1.cdn_hostname,
         http_client=http_client,
     )
     backend: RemoteSettingsBackend = RemoteSettingsBackend(
-        server, collection, bucket, icon_processor
+        server=server,
+        collection=collection,
+        bucket=bucket,
+        icon_processor=icon_processor,
+        icon_processor_v1=icon_processor,
     )
     records: list[dict[str, Any]] = await backend.get_records()
     amp_records: list[dict[str, Any]] = backend.filter_records("amp", records)
