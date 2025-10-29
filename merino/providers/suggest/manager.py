@@ -3,8 +3,6 @@
 from enum import Enum, unique
 
 from dynaconf.base import Settings
-from dynaconf.vendor.box.exceptions import BoxKeyError
-import logging
 
 from merino.cache.none import NoCacheAdapter
 from merino.cache.redis import RedisAdapter, create_redis_clients
@@ -159,14 +157,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         server=settings.remote_settings.server,
                         collection=settings.remote_settings.collection_amp,
                         bucket=settings.remote_settings.bucket,
-                        icon_processor_v1=IconProcessor(
-                            gcs_project=settings.image_gcs_v1.gcs_project,
-                            gcs_bucket=settings.image_gcs_v1.gcs_bucket,
-                            cdn_hostname=settings.image_gcs_v1.cdn_hostname,
-                            http_client=create_http_client(
-                                request_timeout=settings.icon.http_timeout,
-                            ),
-                        ),
                         icon_processor=IconProcessor(
                             gcs_project=settings.image_gcs.gcs_project,
                             gcs_bucket=settings.image_gcs.gcs_bucket,
@@ -211,43 +201,32 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                             url=setting.es_url,
                         )
                     )
-                    if setting.cache == "redis"
-                    else NoCacheAdapter()
+                    if setting.backend == "elasticsearch"
+                    else FakeWikipediaBackend()
+                ),
+                title_block_list=WIKIPEDIA_TITLE_BLOCKLIST,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.POLYGON:
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                        settings.providers.polygon.cache_db,
+                    )
                 )
-                return WeatherProvider(
-                    backend=(
-                        AccuweatherBackend(
-                            api_key=settings.accuweather.api_key,
-                            cache=cache,  # type: ignore [arg-type]
-                            cached_location_key_ttl_sec=setting.cache_ttls.location_key_ttl_sec,
-                            cached_current_condition_ttl_sec=(
-                                setting.cache_ttls.current_condition_ttl_sec
-                            ),
-                            cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
-                            metrics_client=get_metrics_client(),
-                            metrics_sample_rate=settings.accuweather.metrics_sampling_rate,
-                            http_client=create_http_client(
-                                base_url=settings.accuweather.url_base,
-                                connect_timeout=settings.providers.accuweather.connect_timeout_sec,
-                            ),
-                            url_param_api_key=settings.accuweather.url_param_api_key,
-                            url_cities_admin_path=settings.accuweather.url_cities_admin_path,
-                            url_cities_path=settings.accuweather.url_cities_path,
-                            url_cities_param_query=settings.accuweather.url_cities_param_query,
-                            url_current_conditions_path=(
-                                settings.accuweather.url_current_conditions_path
-                            ),
-                            url_forecasts_path=settings.accuweather.url_forecasts_path,
-                            url_location_completion_path=(
-                                settings.accuweather.url_location_completion_path
-                            ),
-                            url_location_key_placeholder=(
-                                settings.accuweather.url_location_key_placeholder
-                            ),
-                        )
-                        if setting.backend == "accuweather"
-                        else FakeWeatherBackend()
-                    ),
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
+            return PolygonProvider(
+                backend=PolygonBackend(
+                    api_key=settings.polygon.api_key,
                     metrics_client=get_metrics_client(),
                     metrics_sample_rate=settings.polygon.metrics_sampling_rate,
                     http_client=create_http_client(
@@ -261,11 +240,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         settings.image_gcs.gcs_project,
                         settings.image_gcs.gcs_bucket,
                         settings.image_gcs.cdn_hostname,
-                    ),
-                    gcs_uploader_v1=GcsUploader(
-                        settings.image_gcs_v1.gcs_project,
-                        settings.image_gcs_v1.gcs_bucket,
-                        settings.image_gcs_v1.cdn_hostname,
                     ),
                     ticker_ttl_sec=settings.providers.polygon.cache_ttls.ticker_ttl_sec,
                     cache=cache,
@@ -289,207 +263,78 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         settings.redis.socket_timeout_sec,
                     )
                 )
-            case ProviderType.AMO:
-                return AmoProvider(
-                    backend=(
-                        DynamicAmoBackend(api_url=settings.amo.dynamic.api_url)
-                        if setting.backend == "dynamic"
-                        else StaticAmoBackend()
-                    ),
-                    score=setting.score,
-                    name=provider_id,
-                    min_chars=settings.providers.amo.min_chars,
-                    keywords=ADDON_KEYWORDS,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.ADM:
-                return AdmProvider(
-                    backend=(
-                        RemoteSettingsBackend(
-                            server=settings.remote_settings.server,
-                            collection=settings.remote_settings.collection_amp,
-                            bucket=settings.remote_settings.bucket,
-                            icon_processor=IconProcessor(
-                                gcs_project=settings.image_gcs.gcs_project,
-                                gcs_bucket=settings.image_gcs.gcs_bucket,
-                                cdn_hostname=settings.image_gcs.cdn_hostname,
-                                http_client=create_http_client(
-                                    request_timeout=settings.icon.http_timeout,
-                                ),
-                            ),
-                        )
-                        if setting.backend == "remote-settings"
-                        else FakeAdmBackend()
-                    ),
-                    score=setting.score,
-                    name=provider_id,
-                    resync_interval_sec=setting.resync_interval_sec,
-                    cron_interval_sec=setting.cron_interval_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.GEOLOCATION:
-                return GeolocationProvider(
-                    name=provider_id,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.TOP_PICKS:
-                return TopPicksProvider(
-                    backend=TopPicksBackend(
-                        top_picks_file_path=setting.top_picks_file_path,
-                        query_char_limit=setting.query_char_limit,
-                        firefox_char_limit=setting.firefox_char_limit,
-                        domain_blocklist=TOP_PICKS_BLOCKLIST,
-                    ),  # type: ignore [arg-type]
-                    score=setting.score,
-                    name=provider_id,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.WIKIPEDIA:
-                return WikipediaProvider(
-                    backend=(
-                        (
-                            ElasticBackend(
-                                api_key=setting.es_api_key,
-                                url=setting.es_url,
-                            )
-                        )
-                        if setting.backend == "elasticsearch"
-                        else FakeWikipediaBackend()
-                    ),
-                    title_block_list=WIKIPEDIA_TITLE_BLOCKLIST,
-                    name=provider_id,
-                    query_timeout_sec=setting.query_timeout_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.POLYGON:
-                cache = (
-                    RedisAdapter(
-                        *create_redis_clients(
-                            settings.redis.server,
-                            settings.redis.replica,
-                            settings.redis.max_connections,
-                            settings.redis.socket_connect_timeout_sec,
-                            settings.redis.socket_timeout_sec,
-                            settings.providers.polygon.cache_db,
-                        )
-                    )
-                    if setting.cache == "redis"
-                    else NoCacheAdapter()
-                )
-                return PolygonProvider(
-                    backend=PolygonBackend(
-                        api_key=settings.polygon.api_key,
-                        metrics_client=get_metrics_client(),
-                        metrics_sample_rate=settings.polygon.metrics_sampling_rate,
-                        http_client=create_http_client(
-                            base_url=settings.polygon.url_base,
-                            connect_timeout=settings.providers.polygon.connect_timeout_sec,
-                        ),
-                        url_param_api_key=settings.polygon.url_param_api_key,
-                        url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
-                        url_single_ticker_overview=settings.polygon.url_single_ticker_overview,
-                        gcs_uploader=GcsUploader(
-                            settings.image_gcs.gcs_project,
-                            settings.image_gcs.gcs_bucket,
-                            settings.image_gcs.cdn_hostname,
-                        ),
-                        ticker_ttl_sec=settings.providers.polygon.cache_ttls.ticker_ttl_sec,
-                        cache=cache,
-                    ),
-                    metrics_client=get_metrics_client(),
-                    score=setting.score,
-                    name=provider_id,
-                    query_timeout_sec=setting.query_timeout_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                    resync_interval_sec=setting.resync_interval_sec,
-                    cron_interval_sec=setting.cron_interval_sec,
-                )
-            case ProviderType.YELP:
-                cache = (
-                    RedisAdapter(
-                        *create_redis_clients(
-                            settings.redis.server,
-                            settings.redis.replica,
-                            settings.redis.max_connections,
-                            settings.redis.socket_connect_timeout_sec,
-                            settings.redis.socket_timeout_sec,
-                        )
-                    )
-                    if setting.cache == "redis"
-                    else NoCacheAdapter()
-                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
 
-                return YelpProvider(
-                    backend=YelpBackend(
-                        api_key=settings.yelp.api_key,
-                        http_client=create_http_client(
-                            base_url=settings.yelp.url_base,
-                            connect_timeout=settings.providers.yelp.connect_timeout_sec,
+            return YelpProvider(
+                backend=YelpBackend(
+                    api_key=settings.yelp.api_key,
+                    http_client=create_http_client(
+                        base_url=settings.yelp.url_base,
+                        connect_timeout=settings.providers.yelp.connect_timeout_sec,
+                    ),
+                    url_business_search=settings.yelp.url_business_search,
+                    cache_ttl_sec=setting.cache_ttls.business_search_ttl_sec,
+                    metrics_client=get_metrics_client(),
+                    cache=cache,
+                ),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.GOOGLE_SUGGEST:
+            return GoogleSuggestProvider(
+                backend=GoogleSuggestBackend(
+                    http_client=create_http_client(
+                        base_url=settings.google_suggest.url_base,
+                        proxy=(
+                            settings.google_suggest.proxy_url
+                            if settings.google_suggest.proxy_url
+                            else None  # no proxying
                         ),
-                        url_business_search=settings.yelp.url_business_search,
-                        cache_ttl_sec=setting.cache_ttls.business_search_ttl_sec,
-                        metrics_client=get_metrics_client(),
-                        cache=cache,
                     ),
+                    url_suggest_path=settings.google_suggest.url_suggest_path,
                     metrics_client=get_metrics_client(),
-                    score=setting.score,
-                    name=provider_id,
-                    query_timeout_sec=setting.query_timeout_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.GOOGLE_SUGGEST:
-                return GoogleSuggestProvider(
-                    backend=GoogleSuggestBackend(
-                        http_client=create_http_client(
-                            base_url=settings.google_suggest.url_base,
-                            proxy=(
-                                settings.google_suggest.proxy_url
-                                if settings.google_suggest.proxy_url
-                                else None  # no proxying
-                            ),
-                        ),
-                        url_suggest_path=settings.google_suggest.url_suggest_path,
-                        metrics_client=get_metrics_client(),
-                    ),
-                    score=setting.score,
-                    name=provider_id,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case ProviderType.FLIGHTAWARE:
-                return FlightAwareProvider(
-                    backend=FlightAwareBackend(
-                        api_key=settings.flightaware.api_key,
-                        http_client=create_http_client(base_url=settings.flightaware.base_url),
-                        ident_url=settings.flightaware.ident_url_path,
-                        metrics_client=get_metrics_client(),
-                    ),
+                ),
+                score=setting.score,
+                name=provider_id,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case ProviderType.FLIGHTAWARE:
+            return FlightAwareProvider(
+                backend=FlightAwareBackend(
+                    api_key=settings.flightaware.api_key,
+                    http_client=create_http_client(base_url=settings.flightaware.base_url),
+                    ident_url=settings.flightaware.ident_url_path,
                     metrics_client=get_metrics_client(),
-                    score=setting.score,
-                    name=provider_id,
-                    query_timeout_sec=setting.query_timeout_sec,
-                    enabled_by_default=setting.enabled_by_default,
-                    resync_interval_sec=setting.resync_interval_sec,
-                    cron_interval_sec=setting.cron_interval_sec,
-                )
-            case ProviderType.SPORTS:
-                trigger_words = [
-                    word.lower().strip()
-                    for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
-                ]
-                return SportsDataProvider(
-                    backend=SportsDataBackend(settings=setting),
-                    metrics_client=get_metrics_client(),
-                    score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
-                    name=provider_id,
-                    query_timeout_sec=setting.query_timeout_sec,
-                    trigger_words=trigger_words,
-                    enabled_by_default=setting.enabled_by_default,
-                )
-            case _:
-                raise InvalidProviderError(f"Unknown provider type: {setting.type}")
-    except BoxKeyError as ex:
-        logging.error(f'⛔ Error with {provider_id}: Config missing value for "{ex.name}"')
-        raise ex
+                ),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+                resync_interval_sec=setting.resync_interval_sec,
+                cron_interval_sec=setting.cron_interval_sec,
+            )
+        case ProviderType.SPORTS:
+            trigger_words = [
+                word.lower().strip()
+                for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
+            ]
+            return SportsDataProvider(
+                backend=SportsDataBackend(settings=setting),
+                metrics_client=get_metrics_client(),
+                score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                trigger_words=trigger_words,
+                enabled_by_default=setting.enabled_by_default,
+            )
+        case _:
+            raise InvalidProviderError(f"Unknown provider type: {setting.type}")
 
 
 def load_providers(disabled_providers_list: list[str]) -> dict[str, BaseProvider]:
