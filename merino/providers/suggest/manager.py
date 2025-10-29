@@ -83,21 +83,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
     Exceptions:
       - `InvalidProviderError` if the provider type is unknown.
     """
-<<<<<<< HEAD
-    if "type" not in setting:
-        raise InvalidProviderError(f"No `type` found for {provider_id} definitions")
-    try:
-        match setting.type:
-            case ProviderType.ACCUWEATHER:
-                cache = (
-                    RedisAdapter(
-                        *create_redis_clients(
-                            settings.redis.server,
-                            settings.redis.replica,
-                            settings.redis.max_connections,
-                            settings.redis.socket_connect_timeout_sec,
-                            settings.redis.socket_timeout_sec,
-=======
     match setting.type:
         case ProviderType.ACCUWEATHER:
             cache = (
@@ -224,7 +209,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         ElasticBackend(
                             api_key=setting.es_api_key,
                             url=setting.es_url,
->>>>>>> 8c02cf6c3f5ccad90cb5a5e9cc48f026082afdf6
                         )
                     )
                     if setting.cache == "redis"
