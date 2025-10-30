@@ -8,6 +8,9 @@ from rich.console import Console
 from rich.table import Table
 from pydantic import BaseModel
 from google.cloud.storage import Blob
+import ast
+import re
+from pprint import pformat
 
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
@@ -206,6 +209,34 @@ async def probe_domains(domains: list[str], min_width: int) -> list[DomainTestRe
     return results
 
 
+def update_custom_favicons(title, url) -> None:
+    """Update the custom favicons dictionary with a given title and url."""
+    dic = {title.lower(): url}
+    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
+        content = f.read()
+    pattern = r"(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})"
+    match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+    if not match:
+        print("Error finding custom favicons dictionary")
+        return
+    dict_str = match.group(1)
+    try:
+        dict_part = dict_str.split("=", 1)[1].strip()
+        parsed_dict = ast.literal_eval(dict_part)
+    except Exception as e:
+        print(f"Error parsing dictionary: {e}")
+        return
+    parsed_dict.update(dic)
+    updated_dict_str = "\nCUSTOM_FAVICONS: dict[str, str] = {\n "
+    updated_dict_str += (
+        pformat(parsed_dict, indent=4).replace("{", "").replace("}", "").replace("'", '"')
+    )
+    updated_dict_str += "\n}"
+    updated_content = content.replace(dict_str, updated_dict_str)
+    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "w") as f:
+        f.write(updated_content)
+
+
 @cli.command()
 def test_domains(
     domains: list[str] = typer.Argument(..., help="List of domains to test"),
@@ -223,6 +254,11 @@ def test_domains(
             table.add_row("Title", result.metadata.get("title", "N/A"))
             table.add_row("Best Icon", result.metadata.get("icon", "N/A"))
             table.add_row("Total Favicons", str(result.details.get("favicons_found", 0)))
+
+            title = result.metadata.get("title")
+            best_icon = result.metadata.get("icon")
+            if title and best_icon:
+                update_custom_favicons(title, best_icon)
 
             console.print("✅ Success!")
             console.print(table)
