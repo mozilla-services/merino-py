@@ -21,7 +21,12 @@ from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ProcessedInterests,
+    RankingData,
 )
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    DefaultCrawlerRescaler,
+)
+from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
     spread_publishers,
     boost_preferred_topic,
@@ -31,6 +36,8 @@ from merino.curated_recommendations.rankers import (
     put_top_stories_first,
     greedy_personalized_section_rank,
     takedown_reported_recommendations,
+    thompson_sampling,
+    filter_fresh_items_with_probability,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -163,6 +170,48 @@ class TestTakedownReportedRecommendations:
         assert [rec.corpusItemId for rec in remaining_recs] == ["1"]
 
 
+class StubPriorBackend(PriorBackend):
+    """Simple PriorBackend stub returning a fixed Prior."""
+
+    def __init__(self, prior: Prior):
+        self._prior = prior
+
+    def get(self, region: str | None = None) -> Prior:
+        """Return prior"""
+        return self._prior
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
+
+
+class StubEngagementBackend(EngagementBackend):
+    """Engagement backend returning pre-set click and impression tuples."""
+
+    def __init__(self, metrics: dict[str, tuple[int, int]]):
+        """Create engagement"""
+        self._metrics = metrics
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return engagement"""
+        if corpus_item_id not in self._metrics:
+            return None
+        clicks, impressions = self._metrics[corpus_item_id]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=clicks,
+            impression_count=impressions,
+            report_count=0,
+        )
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
+
+
 class TestRenumberRecommendations:
     """Tests for the renumber_recommendations function."""
 
@@ -177,6 +226,190 @@ class TestRenumberRecommendations:
         recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5"])
         renumber_recommendations(recs)
         assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
+
+
+class TestFilterFreshItemsWithProbability:
+    """Tests for filter_fresh_items_with_probability helper."""
+
+    def test_returns_slice_when_probability_zero(self):
+        """When probability is zero, simply take the first max_items without a backlog."""
+        recs = generate_recommendations(item_ids=["a", "b", "c"])
+        for rec in recs:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.0, max_items=2
+        )
+
+        assert [rec.corpusItemId for rec in filtered] == ["a", "b"]
+        assert backlog == []
+
+    def test_respects_probability_and_uses_backlog(self, monkeypatch):
+        """Fresh items are deferred to backlog when the probability check fails, then consumed after"""
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "stale1", "fresh3"], time_sensitive_count=0
+        )
+        recs[0].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        recs[1].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
+        recs[2].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        recs[3].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        random_values = iter([0.9, 0.6, 0.2, 0.6, 0.3, 0.1])
+
+        def fake_random():
+            try:
+                return next(random_values)
+            except StopIteration:
+                return 0.0
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.5, max_items=3
+        )
+
+        filtered_ids = [rec.corpusItemId for rec in filtered]
+        filtered_ids = ["fresh1", "stale1", "fresh2"]
+        assert len(filtered_ids) == 3
+        assert [rec.corpusItemId for rec in backlog] == ["fresh3"]
+
+    def test_backlog_returned_when_not_enough_items_selected(self, monkeypatch):
+        """When filtered list is short, items from backlog fill the gap and remainder is returned."""
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "fresh3"], time_sensitive_count=0
+        )
+        for rec in recs:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        random_values = iter([0.9, 0.9, 0.9, 0.9, 0.9])
+
+        def fake_random():
+            try:
+                return next(random_values)
+            except StopIteration:
+                return 0.9
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.1, max_items=1
+        )
+
+        assert [rec.corpusItemId for rec in filtered] == ["fresh1"]
+        assert [rec.corpusItemId for rec in backlog] == ["fresh2", "fresh3"]
+
+    def test_preserves_rank_order_for_filtered_and_backlog(self, monkeypatch):
+        """Randomized lists should always come back sorted by receivedRank."""
+
+        def is_fresh(item):
+            """Return if item is fresh"""
+            return item.ranking_data.is_fresh
+
+        for length in range(0, 5):
+            recs = generate_recommendations(length=length, time_sensitive_count=0)
+            for rec in recs:
+                rec.ranking_data = RankingData(
+                    alpha=1,
+                    beta=1,
+                    score=1,
+                    is_fresh=random.random() < 0.5,
+                )
+            for max_items in (0, length + 3):
+                filtered, _backlog = filter_fresh_items_with_probability(
+                    recs, fresh_story_prob=0.5, max_items=max_items
+                )
+                assert len(filtered) <= max_items
+                filtered_ranks_fresh = [rec.receivedRank for rec in filter(is_fresh, filtered)]
+                filtered_ranks_not_fresh = [
+                    rec.receivedRank for rec in filter(lambda a: not is_fresh(a), filtered)
+                ]
+                assert filtered_ranks_fresh == sorted(filtered_ranks_fresh)
+                assert filtered_ranks_not_fresh == sorted(filtered_ranks_not_fresh)
+
+
+class TestThompsonSampling:
+    """Tests for the thompson_sampling ranker."""
+
+    def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
+        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        recs = generate_recommendations(
+            item_ids=["fresh", "stale"],
+            topics=[Topic.BUSINESS.value, Topic.SCIENCE.value],
+            time_sensitive_count=0,
+        )
+        for rec in recs:
+            rec.isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend(
+            {
+                "fresh": (0, 4),  # impressions -> no_opens = 4
+                "stale": (0, 12),  # impressions -> no_opens = 12 - greater than beta
+            }
+        )
+        rescaler = DefaultCrawlerRescaler()
+
+        # Make beta sampling deterministic to avoid flakiness.
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
+
+        ranked = thompson_sampling(
+            recs,
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            rescaler=rescaler,
+        )
+
+        assert len(ranked) == 2
+        by_id = {rec.corpusItemId: rec for rec in ranked}
+
+        assert by_id["fresh"].ranking_data is not None
+        assert by_id["stale"].ranking_data is not None
+        assert by_id["fresh"].ranking_data.is_fresh is True
+        assert by_id["stale"].ranking_data.is_fresh is False
+
+    def test_ranking_data_and_fresh_flag_set_with_downranked_items(self, monkeypatch):
+        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        recs = generate_recommendations(
+            item_ids=["fresh1", "stale", "fresh2"],
+            topics=[Topic.BUSINESS.value, Topic.SCIENCE.value, Topic.SCIENCE.value],
+            time_sensitive_count=0,
+        )
+        for rec in recs:
+            rec.isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend(
+            {
+                "fresh1": (2, 4),
+                "stale": (0, 12),
+                "fresh2": (2, 4),
+            }
+        )
+        rescaler = DefaultCrawlerRescaler()
+        rescaler.fresh_items_max = 1
+        rescaler.fresh_items_limit_prior_threshold_multiplier = 1
+        rescaler.fresh_items_section_ranking_max_percentage = 0
+        rescaler.fresh_items_top_stories_max_percentage = 0
+
+        # Make beta sampling deterministic to avoid flakiness.
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
+
+        ranked = thompson_sampling(
+            recs,
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            rescaler=rescaler,
+        )
+
+        assert len(ranked) == 3
+        by_id = {rec.corpusItemId: rec for rec in ranked}
+
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
 
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""

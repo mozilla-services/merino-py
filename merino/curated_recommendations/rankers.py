@@ -1,5 +1,8 @@
 """Algorithms for ranking curated recommendations."""
 
+from collections import deque
+from random import random, sample as random_sample
+
 import sentry_sdk
 import logging
 import math
@@ -20,6 +23,7 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     Section,
     ProcessedInterests,
+    RankingData,
 )
 from scipy.stats import beta
 import numpy as np
@@ -164,6 +168,66 @@ def takedown_reported_recommendations(
     return remaining_recs
 
 
+def filter_fresh_items_with_probability(
+    items: list[CuratedRecommendation],
+    fresh_story_prob: float,
+    max_items: int,
+) -> tuple[list[CuratedRecommendation], list[CuratedRecommendation]]:
+    """Filter recommendations while probabilistically limiting fresh items.
+
+    The function processes ``items`` in order, maintaining a backlog of deferred entries. Before
+    evaluating each new item it repeatedly drains that backlog while random draws are below
+    ``fresh_story_prob`` so that previously deferred content gets a chance to surface. Fresh
+    recommendations (``ranking_data.is_fresh`` truthy) are only admitted when a random draw falls
+    below ``fresh_story_prob``; otherwise they are appended to the backlog.
+
+    Args:
+        items: Ordered recommendations to evaluate.
+        fresh_story_prob: Probability in ``[0, 1]`` controlling how often fresh items are emitted on
+            the first pass. Values ``<= 0`` disable probabilistic filtering.
+        max_items: Maximum number of recommendations to return in the filtered list.
+
+    Returns:
+        tuple[list[CuratedRecommendation], list[CuratedRecommendation]]: The first element contains
+        up to ``max_items`` recommendations selected under the probabilistic policy. The second
+        element contains the remaining deferred items that were examined but not used.
+    """
+    filtered_items: list[CuratedRecommendation] = []
+    fresh_backlog: deque[CuratedRecommendation] = deque()
+
+    if max_items == 0:
+        return [], []
+    if fresh_story_prob <= 0:
+        return items[:max_items], []
+
+    for story in items:
+        # Probabilistically surface previously deferred fresh items first
+        while fresh_backlog and random() < fresh_story_prob:
+            filtered_items.append(fresh_backlog.popleft())
+            if len(filtered_items) >= max_items:
+                return filtered_items, list(fresh_backlog)
+
+        if len(filtered_items) >= max_items:
+            return filtered_items, list(fresh_backlog)
+
+        ranking_data = getattr(story, "ranking_data", None)
+        is_fresh = bool(getattr(ranking_data, "is_fresh", False))
+
+        if is_fresh:
+            # Always defer fresh items to preserve their original order
+            fresh_backlog.append(story)
+        else:
+            filtered_items.append(story)
+            if len(filtered_items) >= max_items:
+                return filtered_items, list(fresh_backlog)
+
+    # If capacity remains, drain backlog in order
+    while fresh_backlog and len(filtered_items) < max_items:
+        filtered_items.append(fresh_backlog.popleft())
+
+    return filtered_items, list(fresh_backlog)
+
+
 def thompson_sampling(
     recs: list[CuratedRecommendation],
     engagement_backend: EngagementBackend,
@@ -189,6 +253,10 @@ def thompson_sampling(
     [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
     """
     fallback_prior = ConstantPrior().get()
+    fresh_items_max: int = rescaler.fresh_items_max if rescaler else 0
+    fresh_items_limit_prior_threshold_multiplier: float = (
+        rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
+    )
 
     def get_opens_no_opens(
         rec: CuratedRecommendation, region_query: str | None = None
@@ -210,7 +278,7 @@ def thompson_sampling(
             )
         return personal_interests.normalized_scores[rec.topic.value] * INFERRED_SCORE_WEIGHT
 
-    def sample_score(rec: CuratedRecommendation) -> float:
+    def compute_ranking_scores(rec: CuratedRecommendation):
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
         opens, no_opens = get_opens_no_opens(rec)
 
@@ -226,20 +294,51 @@ def thompson_sampling(
             no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
             a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
             b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
-
+        non_rescaled_b_prior = b_prior
         if rescaler is not None:
             # rescale for content associated exclusively with an experiment in a specific region
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)
             a_prior, b_prior = rescaler.rescale_prior(rec, a_prior, b_prior)
         # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
-        opens += max(a_prior, 1e-18)
-        no_opens += max(b_prior, 1e-18)
+        alpha_val = opens + max(a_prior, 1e-18)
+        beta_val = no_opens + max(b_prior, 1e-18)
+        rec.ranking_data = RankingData(
+            score=float(beta.rvs(alpha_val, beta_val)) + boost_interest(rec),
+            alpha=alpha_val,
+            beta=beta_val,
+        )
+        if (
+            (fresh_items_limit_prior_threshold_multiplier > 0)
+            and not rec.isTimeSensitive
+            and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
+        ):
+            rec.ranking_data.is_fresh = True
 
-        return float(beta.rvs(opens, no_opens)) + boost_interest(rec)
+    def suppress_fresh_items(scored_recs: list[CuratedRecommendation]) -> None:
+        if fresh_items_max <= 0:
+            return
 
+        fresh_items = [
+            rec
+            for rec in scored_recs
+            if rec.ranking_data is not None and rec.ranking_data.is_fresh
+        ]
+        num_to_remove = len(fresh_items) - fresh_items_max
+        if num_to_remove > 0:
+            items_to_suppress = random_sample(fresh_items, k=num_to_remove)
+            for item in items_to_suppress:
+                if item.ranking_data is not None:
+                    item.ranking_data.score *= 0.5
+
+    for rec in recs:
+        compute_ranking_scores(rec)
+    suppress_fresh_items(recs)
     # Sort the recommendations from best to worst sampled score & renumber
-    sorted_recs = sorted(recs, key=sample_score, reverse=True)
-    renumber_recommendations(sorted_recs)
+    sorted_recs = sorted(
+        recs,
+        key=lambda r: r.ranking_data.score if r.ranking_data is not None else float("-inf"),
+        reverse=True,
+    )
     return sorted_recs
 
 
@@ -264,7 +363,14 @@ def section_thompson_sampling(
     def sample_score(sec: Section) -> float:
         """Sample beta distribution for the combined engagement of the top _n_ items."""
         # sum clicks and impressions over top_n items
-        recs = sec.recommendations[:top_n]
+
+        fresh_retain_likelyhood = (
+            rescaler.fresh_items_section_ranking_max_percentage if rescaler is not None else 0.0
+        )
+        recs, _ = filter_fresh_items_with_probability(
+            sec.recommendations, fresh_story_prob=fresh_retain_likelyhood, max_items=top_n
+        )
+
         total_clicks = 0
         total_imps = 0
         a_prior_total = 0.0

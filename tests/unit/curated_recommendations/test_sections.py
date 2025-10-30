@@ -16,6 +16,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     IABMetadata,
     CreateSource,
 )
+from merino.curated_recommendations.engagement_backends.protocol import Engagement
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
@@ -30,7 +31,9 @@ from merino.curated_recommendations.protocol import (
     ExperimentName,
     CrawlExperimentBranchName,
     CuratedRecommendation,
+    RankingData,
 )
+from merino.curated_recommendations.rankers import section_thompson_sampling
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
@@ -882,6 +885,131 @@ class TestGetTopStoryList:
         for ix, item in enumerate(result):
             assert item.receivedRank == ix
         assert [i.corpusItemId for i in result] == ["a", "b", "d", "e"]  # skip one item "c"
+
+    # Below tests are for rate-limiting on fresh content with no impressions yet
+
+    def test_returns_top_count_items_when_none_fresh(self):
+        """Should return exactly `top_count` items from start of list, not using
+        rescaler because no items have fresh label
+        """
+        rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
+        items = generate_recommendations(item_ids=["a", "b", "c", "d", "e"])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
+        result = get_top_story_list(items, top_count=3, extra_count=0, rescaler=rescaler)
+        assert len(result) == 3
+        assert [i.corpusItemId for i in result] == ["a", "b", "c"]
+
+    def test_all_fresh_items_without_rescaler_returns_top_slice(self):
+        """No special handling of fresh items when there is no rescalar."""
+        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        result = get_top_story_list(items, top_count=3, extra_count=0, extra_source_depth=0)
+
+        assert [rec.corpusItemId for rec in result] == ["a", "b", "c"]
+        assert [rec.receivedRank for rec in result] == [0, 1, 2]
+
+    def test_rescaler_keeps_probability_capped_fresh_items(self, monkeypatch):
+        """Ensure rescaler-controlled fresh limit passes through fresh items."""
+        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.1)
+
+        result = get_top_story_list(
+            items, top_count=3, extra_count=0, extra_source_depth=0, rescaler=rescaler
+        )
+        assert [rec.corpusItemId for rec in result] == ["a", "b", "c"]
+        assert [rec.receivedRank for rec in result] == [0, 1, 2]
+
+    def test_rescaler_backfills_fresh_when_random_never_allows(self, monkeypatch):
+        """When probability never allows fresh picks, backlog of fresh picks fill the quota
+        See - filter_fresh_items_with_probability for additional tests
+        """
+        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.9)
+
+        result = get_top_story_list(
+            items, top_count=2, extra_count=0, extra_source_depth=0, rescaler=rescaler
+        )
+
+        assert [rec.corpusItemId for rec in result] == ["a", "b"]
+        assert [rec.receivedRank for rec in result] == [0, 1]
+
+
+class DummyTrackingEngagementBackend:
+    """Simple engagement backend that records which items were requested."""
+
+    def __init__(self, metrics: dict[str, tuple[int, int]]):
+        self._metrics = metrics
+        self.requests: list[str] = []
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return engagement"""
+        self.requests.append(corpus_item_id)
+        if corpus_item_id not in self._metrics:
+            return None
+        clicks, impressions = self._metrics[corpus_item_id]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=clicks,
+            impression_count=impressions,
+            report_count=0,
+        )
+
+    @property
+    def update_count(self) -> int:
+        """Dummy function"""
+        return 0
+
+
+class TestSectionThompsonSampling:
+    """Tests for section_thompson_sampling fresh item handling."""
+
+    def test_limits_fresh_items_when_rescaler_cap_active(self, monkeypatch):
+        """Only allow fresh items up to cap when enough non-fresh content exists."""
+        rescaler = DefaultCrawlerRescaler(fresh_items_section_ranking_max_percentage=0.1)
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "fresh3", "stale1", "stale2"],
+            time_sensitive_count=0,
+            topics=list(Topic)[:5],
+        )
+        for idx, rec in enumerate(recs):
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=idx < 3)
+
+        metrics = {rec.corpusItemId: (idx + 1, (idx + 1) * 10) for idx, rec in enumerate(recs)}
+        backend = DummyTrackingEngagementBackend(metrics)
+
+        sections = {
+            "sec": Section(
+                receivedFeedRank=0,
+                recommendations=recs,
+                title="Section",
+                layout=copy.deepcopy(layout_4_medium),
+            )
+        }
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.5)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.8)
+
+        section_thompson_sampling(sections, backend, top_n=4, rescaler=rescaler)
+
+        expected_ids = [
+            recs[3].corpusItemId,
+            recs[4].corpusItemId,
+            recs[0].corpusItemId,
+            recs[1].corpusItemId,
+        ]
+        assert backend.requests == expected_ids
 
 
 class TestCycleLayoutsForRankedSections:
