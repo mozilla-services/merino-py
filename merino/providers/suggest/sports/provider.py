@@ -67,6 +67,7 @@ class SportsDataProvider(BaseProvider):
         self.trigger_words = trigger_words + TEAM_NAMES
         self.score = score
         self.kickstart = kickstart
+        super().__init__()
 
     async def initialize(self):
         """Create connections, components and other actions needed when starting up"""

@@ -30,8 +30,8 @@ class SportEventDetail(BaseModel):
     date: str  # UTC timestamp for the game
     home_team: SportTeamDetail  # Home Team details
     away_team: SportTeamDetail  # Away Team details
-    event_status: str  # Long form event status. ("Scheduled", "Final - Overtime", etc.)
-    status: str  # UI display status ("past", "live", "scheduled")
+    status: str  # Long form event status. ("Scheduled", "Final - Overtime", etc.)
+    status_type: str  # UI display status ("past", "live", "scheduled")
 
     @classmethod
     def from_event_dict(cls, event: dict[str, Any]):
@@ -56,8 +56,8 @@ class SportEventDetail(BaseModel):
                 colors=event.get("away_team", {}).get("colors"),
                 score=event.get("away_score"),
             ),
-            event_status=event["status"],
-            status=str(status.as_ui_status()),
+            status=str(status.as_str()),
+            status_type=str(status.as_ui_status()),
         )
 
 

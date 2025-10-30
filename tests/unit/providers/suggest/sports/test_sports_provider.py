@@ -77,8 +77,8 @@ async def test_sports_provider(mock_client: AsyncClient):
         date="2025-10-01T00:00:00+00:00",
         home_team=home_team,
         away_team=away_team,
-        event_status="Final",
-        status="final",
+        status_type="final",
+        status="Final",
     )
     summary = [SportSummary(sport="test", values=[event])]
     backend = AsyncMock(spec=SportsDataBackend)
