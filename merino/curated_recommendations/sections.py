@@ -4,7 +4,6 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from typing import DefaultDict
-from random import random as _random
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -52,9 +51,6 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
-
-# Re-export random() for tests that monkeypatch merino.curated_recommendations.sections.random.
-random = _random
 
 LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
 TOP_STORIES_COUNT = 6
@@ -584,7 +580,7 @@ def get_top_story_list(
     max_per_topic = 1
     fresh_story_prob = rescaler.fresh_items_top_stories_max_percentage if rescaler else 0
     top_stories, fresh_backlog = filter_fresh_items_with_probability(
-        items, fresh_story_prob, top_count
+        items, fresh_story_prob=fresh_story_prob, max_items=top_count
     )
     num_stories_consumed = len(top_stories) + len(fresh_backlog)
 
