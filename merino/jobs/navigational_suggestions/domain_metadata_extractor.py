@@ -4,6 +4,9 @@ import asyncio
 import logging
 import contextvars
 import tldextract
+import ast
+import re
+from pprint import pformat
 
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
@@ -156,6 +159,31 @@ class Scraper:
         except Exception as ex:
             logger.warning(f"Error occurred when closing scraper session: {ex}")
 
+
+def update_custom_favicons(scraper, url) -> None:
+    title = scraper.scrape_title()
+    dic = {title.lower(): url}
+    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
+        content = f.read()
+    pattern = r'(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})'
+    match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+    if not match:
+        logger.warning("Error finding custom favicons dictionary")
+        return
+    dict_str = match.group(1)
+    try:
+        dict_part = dict_str.split('=', 1)[1].strip()
+        parsed_dict = ast.literal_eval(dict_part)
+    except Exception as e:
+        logger.warning(f"Error parsing dictionary: {e}")
+        return
+    parsed_dict.update(dic)
+    updated_dict_str = "\nCUSTOM_FAVICONS: dict[str, str] = {\n "
+    updated_dict_str += pformat(parsed_dict, indent=4).replace("{", "").replace("}", "").replace("\'", "\"")
+    updated_dict_str += "\n}"
+    updated_content = content.replace(dict_str, updated_dict_str)
+    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "w") as f:
+        f.write(updated_content)
 
 # Create a context variable for the current scraper
 current_scraper: contextvars.ContextVar[Scraper] = contextvars.ContextVar("current_scraper")
@@ -531,7 +559,12 @@ class DomainMetadataExtractor:
                     logger.error(f"Error during bitmap favicon processing: {e}")
 
                 # Return the best favicon URL if it meets the minimum width requirement
-                return best_favicon_url if best_favicon_width >= min_width else ""
+                # TODO
+                if best_favicon_width >= min_width:
+                    update_custom_favicons(current_scraper.get(), best_favicon_url)
+                    return best_favicon_url
+                return ""
+                # return best_favicon_url if best_favicon_width >= min_width else ""
             return ""
         except Exception as e:
             logger.error(f"Unexpected error in _upload_best_favicon: {e}")
