@@ -8,6 +8,7 @@ from typing import cast, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import freezegun
+import logging
 import orjson
 import pytest
 from freezegun import freeze_time
@@ -182,6 +183,8 @@ async def test_get_business_bad_response(
     filter_caplog: FilterCaplogFixture,
 ) -> None:
     """Test get_businesses method returns a bad response and records metrics."""
+    caplog.set_level(logging.DEBUG)
+
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"
@@ -220,6 +223,8 @@ async def test_get_business_failure_for_http_500(
     filter_caplog: FilterCaplogFixture,
 ) -> None:
     """Test get_businesses method raises a HTTPStatusError 500 and records metrics."""
+    caplog.set_level(logging.DEBUG)
+
     client_mock: AsyncMock = cast(AsyncMock, yelp.http_client)
 
     base_url = "https://api.yelp.com/v3"

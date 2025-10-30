@@ -35,7 +35,7 @@ def get_provider_factory(
     return provider_factory
 
 
-@pytest_asyncio.fixture(name="setup_providers")
+@pytest_asyncio.fixture(name="setup_providers")  # type: ignore # (due to pytest_asyncio type wrapping)
 def fixture_setup_providers() -> SetupProvidersFixture:
     """Return a function that sets application provider dependency overrides"""
 
@@ -46,7 +46,7 @@ def fixture_setup_providers() -> SetupProvidersFixture:
     return setup_providers
 
 
-@pytest_asyncio.fixture(name="teardown_providers")
+@pytest_asyncio.fixture(name="teardown_providers")  # type: ignore # (due to pytest_asyncio type wrapping)
 def fixture_teardown_providers() -> TeardownProvidersFixture:
     """Return a function that resets application provider dependency overrides"""
 
