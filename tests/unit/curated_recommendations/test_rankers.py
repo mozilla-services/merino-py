@@ -298,6 +298,34 @@ class TestFilterFreshItemsWithProbability:
         assert [rec.corpusItemId for rec in filtered] == ["fresh1"]
         assert [rec.corpusItemId for rec in backlog] == ["fresh2", "fresh3"]
 
+    def test_preserves_rank_order_for_filtered_and_backlog(self, monkeypatch):
+        """Randomized lists should always come back sorted by receivedRank."""
+
+        def is_fresh(item):
+            """Return if item is fresh"""
+            return item.ranking_data.is_fresh
+
+        for length in range(0, 4):
+            recs = generate_recommendations(length=length, time_sensitive_count=0)
+            for rec in recs:
+                rec.ranking_data = RankingData(
+                    alpha=1,
+                    beta=1,
+                    score=1,
+                    is_fresh=random.random() < 0.5,
+                )
+            for max_items in (length, max(1, length - 2)):
+                filtered, backlog = filter_fresh_items_with_probability(
+                    recs, fresh_story_prob=0.5, max_items=max_items
+                )
+                assert len(filtered) <= max_items
+                filtered_ranks_fresh = [rec.receivedRank for rec in filter(is_fresh, filtered)]
+                filtered_ranks_not_fresh = [
+                    rec.receivedRank for rec in filter(lambda a: not is_fresh(a), filtered)
+                ]
+                assert filtered_ranks_fresh == sorted(filtered_ranks_fresh)
+                assert filtered_ranks_not_fresh == sorted(filtered_ranks_not_fresh)
+
 
 class TestThompsonSampling:
     """Tests for the thompson_sampling ranker."""
