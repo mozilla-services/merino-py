@@ -193,8 +193,8 @@ def filter_fresh_items_with_probability(
         element contains the remaining deferred items (all fresh items that were not surfaced and
         any non-fresh items still queued) in their original order.
     """
-    filtered_items: list[CuratedRecommendation] = []
-    fresh_backlog: deque = deque()
+    filtered_items = []
+    fresh_backlog = deque()
 
     if max_items == 0:
         return [], []
@@ -202,34 +202,29 @@ def filter_fresh_items_with_probability(
         return items[:max_items], []
 
     for story in items:
+        # Probabilistically surface previously deferred fresh items first
         while fresh_backlog and random() < fresh_story_prob:
             filtered_items.append(fresh_backlog.popleft())
             if len(filtered_items) >= max_items:
-                break
+                return filtered_items, list(fresh_backlog)
 
         if len(filtered_items) >= max_items:
-            break
+            return filtered_items, list(fresh_backlog)
 
         ranking_data = getattr(story, "ranking_data", None)
         is_fresh = bool(getattr(ranking_data, "is_fresh", False))
 
-        if not is_fresh:
-            filtered_items.append(story)
+        if is_fresh:
+            # Always defer fresh items to preserve their original order
+            fresh_backlog.append(story)
         else:
-            if random() < fresh_story_prob:
-                filtered_items.append(story)
-            else:
-                fresh_backlog.append(story)
+            filtered_items.append(story)
+            if len(filtered_items) >= max_items:
+                return filtered_items, list(fresh_backlog)
 
-        if len(filtered_items) >= max_items:
-            break
-
-    if len(filtered_items) < max_items and fresh_backlog:
-        items_needed = max_items - len(filtered_items)
-        for _ in range(items_needed):
-            if not fresh_backlog:
-                break
-            filtered_items.append(fresh_backlog.popleft())
+    # If capacity remains, drain backlog in order
+    while fresh_backlog and len(filtered_items) < max_items:
+        filtered_items.append(fresh_backlog.popleft())
 
     return filtered_items, list(fresh_backlog)
 

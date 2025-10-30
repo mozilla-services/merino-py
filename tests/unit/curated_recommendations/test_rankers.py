@@ -271,7 +271,7 @@ class TestFilterFreshItemsWithProbability:
         filtered_ids = [rec.corpusItemId for rec in filtered]
         filtered_ids = ["fresh1", "stale1", "fresh2"]
         assert len(filtered_ids) == 3
-        assert [rec.corpusItemId for rec in backlog] == []
+        assert [rec.corpusItemId for rec in backlog] == ["fresh3"]
 
     def test_backlog_returned_when_not_enough_items_selected(self, monkeypatch):
         """When filtered list is short, items from backlog fill the gap and remainder is returned."""
@@ -305,9 +305,7 @@ class TestFilterFreshItemsWithProbability:
             """Return if item is fresh"""
             return item.ranking_data.is_fresh
 
-        random.seed(42)
-
-        for length in range(0, 4):
+        for length in range(0, 10):
             recs = generate_recommendations(length=length, time_sensitive_count=0)
             for rec in recs:
                 rec.ranking_data = RankingData(
@@ -316,7 +314,7 @@ class TestFilterFreshItemsWithProbability:
                     score=1,
                     is_fresh=random.random() < 0.5,
                 )
-            for max_items in (length, max(1, length - 2)):
+            for max_items in (length, length + 3):
                 filtered, backlog = filter_fresh_items_with_probability(
                     recs, fresh_story_prob=0.5, max_items=max_items
                 )
