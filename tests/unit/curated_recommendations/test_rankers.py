@@ -305,6 +305,8 @@ class TestFilterFreshItemsWithProbability:
             """Return if item is fresh"""
             return item.ranking_data.is_fresh
 
+        random.seed(42)
+
         for length in range(0, 4):
             recs = generate_recommendations(length=length, time_sensitive_count=0)
             for rec in recs:

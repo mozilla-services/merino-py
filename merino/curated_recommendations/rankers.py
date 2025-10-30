@@ -191,7 +191,7 @@ def filter_fresh_items_with_probability(
         tuple[list[CuratedRecommendation], list[CuratedRecommendation]]: The first element contains
         up to ``max_items`` recommendations selected under the probabilistic policy. The second
         element contains the remaining deferred items (all fresh items that were not surfaced and
-        any non-fresh items still queued) in their original encounter order.
+        any non-fresh items still queued) in their original order.
     """
     filtered_items: list[CuratedRecommendation] = []
     fresh_backlog: deque = deque()
@@ -202,6 +202,11 @@ def filter_fresh_items_with_probability(
         return items[:max_items], []
 
     for story in items:
+        while fresh_backlog and random() < fresh_story_prob:
+            filtered_items.append(fresh_backlog.popleft())
+            if len(filtered_items) >= max_items:
+                break
+
         if len(filtered_items) >= max_items:
             break
 
@@ -218,11 +223,6 @@ def filter_fresh_items_with_probability(
 
         if len(filtered_items) >= max_items:
             break
-
-        while fresh_backlog and random() < fresh_story_prob:
-            filtered_items.append(fresh_backlog.popleft())
-            if len(filtered_items) >= max_items:
-                break
 
     if len(filtered_items) < max_items and fresh_backlog:
         items_needed = max_items - len(filtered_items)
