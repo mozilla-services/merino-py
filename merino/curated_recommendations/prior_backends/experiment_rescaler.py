@@ -19,8 +19,9 @@ class DefaultCrawlerRescaler(ExperimentRescaler):
     """Scales based on overall percentage"""
 
     def __init__(self, **data: Any):
-        data.setdefault("fresh_items_max", 18)
+        data.setdefault("fresh_items_max", 0)
         data.setdefault("fresh_items_top_stories_max_percentage", 0.15)
+        data.setdefault("fresh_items_section_ranking_max_percentage", 0.15)
         data.setdefault("fresh_items_limit_prior_threshold_multiplier", 1)
         super().__init__(**data)
 

@@ -1,6 +1,7 @@
 """Algorithms for ranking curated recommendations."""
 
-from random import sample as random_sample
+from collections import deque
+from random import random, sample as random_sample
 
 import sentry_sdk
 import logging
@@ -167,6 +168,72 @@ def takedown_reported_recommendations(
     return remaining_recs
 
 
+def filter_fresh_items_with_probability(
+    items: list[CuratedRecommendation],
+    fresh_story_prob: float,
+    max_items: int,
+) -> tuple[list[CuratedRecommendation], list[CuratedRecommendation]]:
+    """Filter recommendations while probabilistically limiting fresh items.
+
+    The function processes ``items`` in order, maintaining a backlog of deferred entries. Before
+    evaluating each new item it repeatedly drains that backlog while random draws are below
+    ``fresh_story_prob`` so that previously deferred content gets a chance to surface. Fresh
+    recommendations (``ranking_data.is_fresh`` truthy) are only admitted when a random draw falls
+    below ``fresh_story_prob``; otherwise they are appended to the backlog.
+
+    Args:
+        items: Ordered recommendations to evaluate.
+        fresh_story_prob: Probability in ``[0, 1]`` controlling how often fresh items are emitted on
+            the first pass. Values ``<= 0`` disable probabilistic filtering.
+        max_items: Maximum number of recommendations to return in the filtered list.
+
+    Returns:
+        tuple[list[CuratedRecommendation], list[CuratedRecommendation]]: The first element contains
+        up to ``max_items`` recommendations selected under the probabilistic policy. The second
+        element contains the remaining deferred items (all fresh items that were not surfaced and
+        any non-fresh items still queued) in their original encounter order.
+    """
+    filtered_items: list[CuratedRecommendation] = []
+    fresh_backlog: deque = deque()
+
+    if max_items == 0:
+        return [], []
+    if fresh_story_prob <= 0:
+        return items[:max_items], []
+
+    for story in items:
+        if len(filtered_items) >= max_items:
+            break
+
+        ranking_data = getattr(story, "ranking_data", None)
+        is_fresh = bool(getattr(ranking_data, "is_fresh", False))
+
+        if not is_fresh:
+            filtered_items.append(story)
+        else:
+            if random() < fresh_story_prob:
+                filtered_items.append(story)
+            else:
+                fresh_backlog.append(story)
+
+        if len(filtered_items) >= max_items:
+            break
+
+        while fresh_backlog and random() < fresh_story_prob:
+            filtered_items.append(fresh_backlog.popleft())
+            if len(filtered_items) >= max_items:
+                break
+
+    if len(filtered_items) < max_items and fresh_backlog:
+        items_needed = max_items - len(filtered_items)
+        for _ in range(items_needed):
+            if not fresh_backlog:
+                break
+            filtered_items.append(fresh_backlog.popleft())
+
+    return filtered_items, list(fresh_backlog)
+
+
 def thompson_sampling(
     recs: list[CuratedRecommendation],
     engagement_backend: EngagementBackend,
@@ -302,7 +369,13 @@ def section_thompson_sampling(
     def sample_score(sec: Section) -> float:
         """Sample beta distribution for the combined engagement of the top _n_ items."""
         # sum clicks and impressions over top_n items
-        recs = sec.recommendations[:top_n]
+        rec_pool = sec.recommendations
+
+        fresh_retain_likelyhood = rescaler.fresh_items_section_ranking_max_percentage if rescaler is not None else 0.
+        recs, _removed_recs = filter_fresh_items_with_probability(
+            sec.recommendations, fresh_story_prob=fresh_retain_likelyhood, max_items=top_n
+        )
+
         total_clicks = 0
         total_imps = 0
         a_prior_total = 0.0

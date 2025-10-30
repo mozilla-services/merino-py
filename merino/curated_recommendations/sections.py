@@ -3,8 +3,8 @@
 import logging
 from collections import defaultdict
 from copy import deepcopy
-from random import random
 from typing import DefaultDict
+from random import random as _random
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -40,6 +40,7 @@ from merino.curated_recommendations.protocol import (
     Layout,
 )
 from merino.curated_recommendations.rankers import (
+    filter_fresh_items_with_probability,
     thompson_sampling,
     boost_followed_sections,
     section_thompson_sampling,
@@ -51,6 +52,9 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
+
+# Re-export random() for tests that monkeypatch merino.curated_recommendations.sections.random.
+random = _random
 
 LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
 TOP_STORIES_COUNT = 6
@@ -578,45 +582,16 @@ def get_top_story_list(
     Returns: A list of top stories
     """
     max_per_topic = 1
-    top_stories: list[CuratedRecommendation] = []
-    fresh_backlog: list[CuratedRecommendation] = []
     fresh_story_prob = rescaler.fresh_items_top_stories_max_percentage if rescaler else 0
+    top_stories, fresh_backlog = filter_fresh_items_with_probability(
+        items, fresh_story_prob, top_count
+    )
+    num_stories_consumed = len(top_stories) + len(fresh_backlog)
 
-    if rescaler is None or fresh_story_prob <= 0:
-        top_stories = items[:top_count]
-    else:
-        for story in items:
-            ranking_data = story.ranking_data
-            is_fresh = ranking_data.is_fresh if ranking_data is not None else False
-            if is_fresh or len(fresh_backlog) > 0:
-                # If we have a fresh story available to add.
-                # For initial stories with no impressions these thompson sampling will
-                # likely have them on the top.  Note we are picking among the a set of stories
-                # with is_fresh set to true that has been pared done by the thompson_sampling
-                # function. This is an additional reduction for better distribution
-                can_add_fresh_story = random() < fresh_story_prob
-                if can_add_fresh_story:
-                    # Add fresh story if we can
-                    if len(fresh_backlog) > 0:
-                        top_stories.append(fresh_backlog.pop(0))
-                    else:
-                        top_stories.append(story)
-                else:
-                    # Don't add to top stories. Save for adding later
-                    fresh_backlog.append(story)
-            else:
-                top_stories.append(story)
-            if len(top_stories) >= top_count:
-                break
-        if len(top_stories) < top_count:  # Rare case when most items are fresh or few total items
-            fresh_pull_count = top_count - len(top_stories)
-            top_stories.extend(fresh_backlog[:fresh_pull_count])
-            fresh_backlog = fresh_backlog[fresh_pull_count:]
-    stories_consumed = len(top_stories) + len(fresh_backlog)
     topic_counts: DefaultDict[Topic | None, int] = defaultdict(int)
     extra_items: list[CuratedRecommendation] = []
     for rec in items[
-        stories_consumed + extra_source_depth :
+        num_stories_consumed + extra_source_depth :
     ]:  # Skip some of the top items which we can leave in sections
         if len(extra_items) >= extra_count:
             break

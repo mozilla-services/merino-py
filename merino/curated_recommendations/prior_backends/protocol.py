@@ -52,6 +52,9 @@ class ExperimentRescaler(BaseModel):
     fresh_items_top_stories_max_percentage: (
         float  # Max number of fresh percentage of items in top stories
     ) = 0
+    fresh_items_section_ranking_max_percentage: (
+        float  # Max number of fresh items to use when considering section rank
+    ) = 0
 
     def __init__(self, **data: Any):
         super().__init__(**data)

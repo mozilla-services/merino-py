@@ -21,6 +21,7 @@ from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ProcessedInterests,
+    RankingData,
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     DefaultCrawlerRescaler,
@@ -36,6 +37,7 @@ from merino.curated_recommendations.rankers import (
     greedy_personalized_section_rank,
     takedown_reported_recommendations,
     thompson_sampling,
+    filter_fresh_items_with_probability,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -224,6 +226,69 @@ class TestRenumberRecommendations:
         recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5"])
         renumber_recommendations(recs)
         assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
+
+
+class TestFilterFreshItemsWithProbability:
+    """Tests for filter_fresh_items_with_probability helper."""
+
+    def test_returns_slice_when_probability_zero(self):
+        """When probability is zero, simply take the first max_items without a backlog."""
+        recs = generate_recommendations(item_ids=["a", "b", "c"])
+        for rec in recs:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        filtered, backlog = filter_fresh_items_with_probability(recs, fresh_story_prob=0.0, max_items=2)
+
+        assert [rec.corpusItemId for rec in filtered] == ["a", "b"]
+        assert backlog == []
+
+    def test_respects_probability_and_uses_backlog(self, monkeypatch):
+        """Fresh items are deferred to backlog when the probability check fails, then consumed after"""
+        recs = generate_recommendations(item_ids=["fresh1", "fresh2", "stale1", "fresh3"], time_sensitive_count=0)
+        recs[0].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        recs[1].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
+        recs[2].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        recs[3].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        random_values = iter([0.9, 0.6, 0.2, 0.6, 0.3, 0.1])
+
+        def fake_random():
+            try:
+                return next(random_values)
+            except StopIteration:
+                return 0.0
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.5, max_items=3
+        )
+
+        filtered_ids = [rec.corpusItemId for rec in filtered]
+        filtered_ids = ["fresh1", "stale1", "fresh2"]
+        assert len(filtered_ids) == 3
+        assert [rec.corpusItemId for rec in backlog] == []
+
+    def test_backlog_returned_when_not_enough_items_selected(self, monkeypatch):
+        """When filtered list is short, items from backlog fill the gap and remainder is returned."""
+        recs = generate_recommendations(item_ids=["fresh1", "fresh2", "fresh3"], time_sensitive_count=0)
+        for rec in recs:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        random_values = iter([0.9, 0.9, 0.9, 0.9, 0.9])
+
+        def fake_random():
+            try:
+                return next(random_values)
+            except StopIteration:
+                return 0.9
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+
+        filtered, backlog = filter_fresh_items_with_probability(recs, fresh_story_prob=0.1, max_items=1)
+
+        assert [rec.corpusItemId for rec in filtered] == ["fresh1"]
+        assert [rec.corpusItemId for rec in backlog] == ["fresh2", "fresh3"]
 
 
 class TestThompsonSampling:
