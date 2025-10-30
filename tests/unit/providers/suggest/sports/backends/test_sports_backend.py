@@ -39,6 +39,7 @@ async def test_get_data():
         "get",
         return_value=httpx.Response(status_code=200, json=dict(foo="bar")),
     ) as mock_client:
+        mock_res = {"foo": "bar"}
         with patch.object(json, "dump") as mock_json:
             await get_data(
                 client=mock_client,
@@ -53,7 +54,17 @@ async def test_get_data():
                 mock_json.call_args_list[0].args[1].buffer.name
                 == "/tmp/ff7c1f10ab54968058fdcfaadf1b2457cd5d1a3f.json"  # nosec
             )
-            # TODO: check for TTL.
+            with patch.object(json, "load") as mock_load:
+                mock_load.return_value = mock_res
+                ttl = timedelta(days=5)
+                res = await get_data(
+                    client=mock_client,
+                    url="http://example.org",
+                    ttl=ttl,
+                    cache_dir="/tmp",  # nosec
+                )
+                assert mock_load.call_count == 1
+                assert res == mock_res
 
 
 @pytest.mark.asyncio
@@ -318,13 +329,13 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
     mock_nhl_class = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.backend.NHL"
     )
-    mock_nba_instance = AsyncMock()
-    mock_nfl_instance = AsyncMock()
+    # mock_nba_instance = AsyncMock()
+    # mock_nfl_instance = AsyncMock()
     mock_nhl_instance = AsyncMock()
 
     # Set the name attribute for each mock instance
-    mock_nba_instance.name = "NBA"
-    mock_nfl_instance.name = "NFL"
+    # mock_nba_instance.name = "NBA"
+    # mock_nfl_instance.name = "NFL"
     mock_nhl_instance.name = "NHL"
 
     # Configure the class constructors to return the mock instances
@@ -333,12 +344,12 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
     mock_nhl_class.return_value = mock_nhl_instance
 
     # Setup async methods on the instances
-    mock_nba_instance.update_teams = AsyncMock()
-    mock_nfl_instance.update_teams = AsyncMock()
+    # mock_nba_instance.update_teams = AsyncMock()
+    # mock_nfl_instance.update_teams = AsyncMock()
     mock_nhl_instance.update_teams = AsyncMock()
-    mock_nba_instance.update_events = AsyncMock()
+    # mock_nba_instance.update_events = AsyncMock()
+    # mock_nfl_instance.update_events = AsyncMock()
     mock_nhl_instance.update_events = AsyncMock()
-    mock_nfl_instance.update_events = AsyncMock()
 
     # Mock the HTTP client
     mock_client = AsyncMock()
