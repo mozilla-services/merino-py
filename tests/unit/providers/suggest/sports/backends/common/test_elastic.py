@@ -2,7 +2,9 @@
 
 import datetime
 import json
+import logging
 from typing import cast, Any
+from unittest import mock
 from unittest.mock import AsyncMock, MagicMock
 
 import freezegun
@@ -79,13 +81,13 @@ async def test_prune_fail_and_logging_captured(
 ) -> None:
     """Test Sport Data Store fail prune and metrics captured."""
     es_client.delete_by_query.side_effect = ConflictError("oops", cast(Any, object()), {})
-
-    mock_logger = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.logging"
+    logger = logging.getLogger(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic"
     )
-    result = await sport_data_store.prune()
-    assert result is False
-    assert mock_logger.warning.called
+    with mock.patch.object(logger, "warning") as mock_logger:
+        result = await sport_data_store.prune()
+        assert result is False
+        assert mock_logger.called
 
 
 @pytest.mark.asyncio
@@ -116,14 +118,14 @@ async def test_store_event_fail_and_metrics_captured(
     nfl = NFL(settings=settings.providers.sports)
     nfl.events = {0: event}
 
-    mock_logger = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.logging"
+    logger = logging.getLogger(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic"
     )
-
-    await sport_data_store.store_events(sport=nfl, language_code="en")
-    calls = [call.args[0] for call in mock_logger.info.call_args_list]
-    assert len(list(filter(lambda x: "sports.time.load.events" in x, calls))) == 1
-    assert len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
+    with mock.patch.object(logger, "info") as mock_logger:
+        await sport_data_store.store_events(sport=nfl, language_code="en")
+        calls = [call.args[0] for call in mock_logger.call_args_list]
+        assert len(list(filter(lambda x: "sports.time.load.events" in x, calls))) == 1
+        assert len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")

@@ -106,6 +106,7 @@ class SportsDataBackend(SportsDataProtocol):
         This is a bandage function that should be removed when the AirFlow jobs have
         landed.
         """
+        logger = logging.getLogger(__name__)
         # do we need to update the data?
         if await self.data_store.startup():
             updating = await self.data_store.query_meta("update")
@@ -115,9 +116,9 @@ class SportsDataBackend(SportsDataProtocol):
                 verify = await self.data_store.query_meta("update")
                 # validate that we're the one doing the update.
                 if float(verify or "0") != timestamp:
-                    logging.info(f"{LOGGING_TAG} Update already in progress")
+                    logger.info(f"{LOGGING_TAG} Update already in progress")
                     return
-                logging.info(f"{LOGGING_TAG}Pre-populating data")
+                logger.info(f"{LOGGING_TAG}Pre-populating data")
                 client = create_http_client()
                 # hardcode the sports for now:
                 for sport in [
@@ -125,9 +126,9 @@ class SportsDataBackend(SportsDataProtocol):
                     # NBA(settings=self.settings),
                     NHL(settings=self.settings),  # why NHL? Because the team is mostly Canadian.
                 ]:
-                    logging.info(f"{LOGGING_TAG} fetching {sport.name} teams...")
+                    logger.info(f"{LOGGING_TAG} fetching {sport.name} teams...")
                     await sport.update_teams(client=client)
-                    logging.info(f"{LOGGING_TAG} fetching {sport.name} events...")
+                    logger.info(f"{LOGGING_TAG} fetching {sport.name} events...")
                     await sport.update_events(client=client)
-                    logging.info(f"{LOGGING_TAG} storing events for {sport.name}")
+                    logger.info(f"{LOGGING_TAG} storing events for {sport.name}")
                     await self.data_store.store_events(sport, language_code="en")
