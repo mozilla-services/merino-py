@@ -161,29 +161,33 @@ class Scraper:
 
 
 def update_custom_favicons(scraper, url) -> None:
+    """Update the custom favicons dictionary using the best available icon."""
     title = scraper.scrape_title()
     dic = {title.lower(): url}
     with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
         content = f.read()
-    pattern = r'(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})'
+    pattern = r"(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})"
     match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
     if not match:
         logger.warning("Error finding custom favicons dictionary")
         return
     dict_str = match.group(1)
     try:
-        dict_part = dict_str.split('=', 1)[1].strip()
+        dict_part = dict_str.split("=", 1)[1].strip()
         parsed_dict = ast.literal_eval(dict_part)
     except Exception as e:
         logger.warning(f"Error parsing dictionary: {e}")
         return
     parsed_dict.update(dic)
     updated_dict_str = "\nCUSTOM_FAVICONS: dict[str, str] = {\n "
-    updated_dict_str += pformat(parsed_dict, indent=4).replace("{", "").replace("}", "").replace("\'", "\"")
+    updated_dict_str += (
+        pformat(parsed_dict, indent=4).replace("{", "").replace("}", "").replace("'", '"')
+    )
     updated_dict_str += "\n}"
     updated_content = content.replace(dict_str, updated_dict_str)
     with open("merino/jobs/navigational_suggestions/custom_favicons.py", "w") as f:
         f.write(updated_content)
+
 
 # Create a context variable for the current scraper
 current_scraper: contextvars.ContextVar[Scraper] = contextvars.ContextVar("current_scraper")
