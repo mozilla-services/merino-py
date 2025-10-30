@@ -5,7 +5,6 @@ import logging
 import contextvars
 import tldextract
 
-
 from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
 
