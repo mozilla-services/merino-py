@@ -9,6 +9,7 @@ import freezegun
 import pytest
 
 from elasticsearch import BadRequestError, ConflictError
+from elastic_transport import ApiResponseMeta, HttpHeaders, NodeConfig
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
@@ -19,6 +20,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     get_index_settings,
+    META_INDEX,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -278,4 +280,41 @@ async def test_build_indexes(sport_data_store: SportsDataStore, es_client: Async
 async def test_build_meta(sport_data_store: SportsDataStore, es_client: AsyncMock):
     """Test the index builder"""
     await sport_data_store.build_meta()
+    assert es_client.indices.create.called
+
+
+@pytest.mark.asyncio
+async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test startup initializer"""
+    # Check for initial case.
+    es_client.search.return_value = {"hits": {"hits": []}}
+    res = await sport_data_store.startup()
+    assert res
+    assert es_client.indices.create.call_count == 2
+    assert any(
+        [
+            arg_list.kwargs.get("index") == META_INDEX
+            for arg_list in es_client.indices.create.call_args_list
+        ]
+    )
+
+
+@pytest.mark.asyncio
+async def test_build_index_exception(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test failed create"""
+    br = BadRequestError(
+        message="resource_already_exists_exception",
+        meta=ApiResponseMeta(
+            status=400,
+            http_version="",
+            headers=HttpHeaders(),
+            duration=0.0,
+            node=NodeConfig(scheme="", host="", port=0),
+        ),
+        body="oops",
+        errors=(),
+    )
+    es_client.indices.create.side_effect = [br]
+    await sport_data_store.build_indexes(clear=True)
+    assert es_client.indices.delete.called
     assert es_client.indices.create.called
