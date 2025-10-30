@@ -559,12 +559,11 @@ class DomainMetadataExtractor:
                     logger.error(f"Error during bitmap favicon processing: {e}")
 
                 # Return the best favicon URL if it meets the minimum width requirement
-                # TODO
                 if best_favicon_width >= min_width:
                     update_custom_favicons(current_scraper.get(), best_favicon_url)
                     return best_favicon_url
-                return ""
-                # return best_favicon_url if best_favicon_width >= min_width else ""
+                else:
+                    return ""
             return ""
         except Exception as e:
             logger.error(f"Unexpected error in _upload_best_favicon: {e}")
