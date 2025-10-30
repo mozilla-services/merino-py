@@ -12,6 +12,7 @@ def create_http_client(
     request_timeout: float = 5.0,
     pool_timeout: float = 1.0,
     proxy: str | None = None,
+    follow_redirects: bool = False,
 ) -> AsyncClient:
     """Crete a new `httpx.AsyncClient` with common configurations.
 
@@ -31,4 +32,5 @@ def create_http_client(
         limits=Limits(max_connections=max_connections),
         timeout=Timeout(request_timeout, connect=connect_timeout, pool=pool_timeout),
         proxy=Proxy(proxy) if proxy else None,
+        follow_redirects=follow_redirects,
     )

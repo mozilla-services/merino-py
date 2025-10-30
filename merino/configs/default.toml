@@ -604,7 +604,7 @@ type = "top_picks"
 
 # MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default. Defaults to true.
-enabled_by_default = true
+enabled_by_default = false
 
 # MERINO_PROVIDERS__TOP_PICKS__SCORE
 # Ranking score for this provider as a floating point number with a default of 0.25.

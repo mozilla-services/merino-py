@@ -39,6 +39,7 @@ from merino.curated_recommendations.protocol import (
     Layout,
 )
 from merino.curated_recommendations.rankers import (
+    filter_fresh_items_with_probability,
     thompson_sampling,
     boost_followed_sections,
     section_thompson_sampling,
@@ -560,25 +561,33 @@ def get_top_story_list(
     top_count: int,
     extra_count: int = 0,
     extra_source_depth: int = 10,
-):
+    rescaler: ExperimentRescaler | None = None,
+) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
+
+    Depending on the rescaler settings, there may be a target limit percentage of items that
+    are 'fresh' (i.e have small number of impressions) to balance the initial list.
 
     Args:
      items: Ordered list of stories
      top_count: Number of most popular top stories to extract from the top of the list
      extra_count: Number of extra stories to extract from further down
      extra_source_depth: How deep to search after top stories when finding extras
-
+     rescaler: Optional rescaler associated with the experiment or surface
     Returns: A list of top stories
     """
     max_per_topic = 1
+    fresh_story_prob = rescaler.fresh_items_top_stories_max_percentage if rescaler else 0
+    top_stories, fresh_backlog = filter_fresh_items_with_probability(
+        items, fresh_story_prob=fresh_story_prob, max_items=top_count
+    )
+    num_stories_consumed = len(top_stories) + len(fresh_backlog)
 
-    top_stories = items[:top_count]
     topic_counts: DefaultDict[Topic | None, int] = defaultdict(int)
     extra_items: list[CuratedRecommendation] = []
     for rec in items[
-        top_count + extra_source_depth :
+        num_stories_consumed + extra_source_depth :
     ]:  # Skip some of the top items which we can leave in sections
         if len(extra_items) >= extra_count:
             break
@@ -686,7 +695,10 @@ async def get_sections(
         popular_today_layout = layout_4_large
 
     top_stories = get_top_story_list(
-        all_ranked_corpus_recommendations, top_stories_count, TOP_STORIES_SECTION_EXTRA_COUNT
+        all_ranked_corpus_recommendations,
+        top_stories_count,
+        TOP_STORIES_SECTION_EXTRA_COUNT,
+        rescaler=rescaler,
     )
 
     # Get the story ids in top_stories section
