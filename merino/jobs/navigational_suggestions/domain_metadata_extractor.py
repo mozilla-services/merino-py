@@ -334,8 +334,9 @@ class DomainMetadataExtractor:
 
         return favicons
 
-    def _is_better_favicon(
-        self, favicon: dict[str, Any], width: int, best_width: int, best_source: str
+    @staticmethod
+    def is_better_favicon(
+        favicon: dict[str, Any], width: int, best_width: int, best_source: str
     ) -> bool:
         """Check if this favicon is better than the current best using Firefox prioritization"""
         source = favicon.get("_source", "default")
@@ -481,7 +482,7 @@ class DomainMetadataExtractor:
                                         continue
 
                                     # Check if this is a better favicon than what we've seen so far
-                                    if self._is_better_favicon(
+                                    if self.is_better_favicon(
                                         favicons[original_idx],
                                         width_val,
                                         best_favicon_width,
@@ -502,7 +503,7 @@ class DomainMetadataExtractor:
                                         except Exception as e:
                                             logger.warning(f"Failed to upload bitmap favicon: {e}")
                                             # Fallback to original URL if upload fails
-                                            if self._is_better_favicon(
+                                            if self.is_better_favicon(
                                                 favicons[original_idx],
                                                 width_val,
                                                 best_favicon_width,

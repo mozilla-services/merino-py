@@ -612,7 +612,7 @@ class TestDomainMetadataExtractorIntegration:
         ):
             """Test the Firefox-style favicon prioritization with _source tracking.
 
-            Firefox prioritization rules (implemented in _is_better_favicon):
+            Firefox prioritization rules (implemented in is_better_favicon):
             1. Source priority: link > meta > manifest > default
             2. Within same source: larger size wins
             3. SVGs are handled during the early SVG processing phase
@@ -1179,7 +1179,7 @@ class TestCustomFavicons:
             assert res["url"].startswith("https://espn")
 
     def test_is_better_favicon_prioritization_rules(self):
-        """Test the _is_better_favicon method that implements Firefox prioritization logic.
+        """Test the is_better_favicon method that implements Firefox prioritization logic.
 
         This tests the core prioritization algorithm:
         1. Source priority (most important): link(1) > meta(2) > manifest(3) > default(4)
@@ -1195,17 +1195,17 @@ class TestCustomFavicons:
 
         # Link source should win even with smaller size
         assert (
-            extractor._is_better_favicon(link_small, width=16, best_width=512, best_source="meta")
+            extractor.is_better_favicon(link_small, width=16, best_width=512, best_source="meta")
             is True
         )
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 link_small, width=16, best_width=512, best_source="manifest"
             )
             is True
         )
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 link_small, width=16, best_width=512, best_source="default"
             )
             is True
@@ -1213,37 +1213,37 @@ class TestCustomFavicons:
 
         # Test 2: Meta beats manifest and default, loses to link
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 meta_large, width=16, best_width=512, best_source="manifest"
             )
             is True
         )
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 meta_large, width=16, best_width=512, best_source="default"
             )
             is True
         )
         assert (
-            extractor._is_better_favicon(meta_large, width=512, best_width=16, best_source="link")
+            extractor.is_better_favicon(meta_large, width=512, best_width=16, best_source="link")
             is False
         )
 
         # Test 3: Manifest beats default, loses to meta and link
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 manifest_huge, width=512, best_width=16, best_source="default"
             )
             is True
         )
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 manifest_huge, width=512, best_width=16, best_source="meta"
             )
             is False
         )
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 manifest_huge, width=512, best_width=16, best_source="link"
             )
             is False
@@ -1252,36 +1252,36 @@ class TestCustomFavicons:
         # Test 4: Within same source, size matters
         link_large = {"_source": "link"}
         assert (
-            extractor._is_better_favicon(link_large, width=64, best_width=32, best_source="link")
+            extractor.is_better_favicon(link_large, width=64, best_width=32, best_source="link")
             is True
         )
         assert (
-            extractor._is_better_favicon(link_large, width=32, best_width=64, best_source="link")
+            extractor.is_better_favicon(link_large, width=32, best_width=64, best_source="link")
             is False
         )
         assert (
-            extractor._is_better_favicon(link_large, width=32, best_width=32, best_source="link")
+            extractor.is_better_favicon(link_large, width=32, best_width=32, best_source="link")
             is False
         )
 
         # Test 5: Missing _source defaults to "default" priority (lowest)
         no_source = {}  # No _source field
         assert (
-            extractor._is_better_favicon(no_source, width=512, best_width=16, best_source="link")
+            extractor.is_better_favicon(no_source, width=512, best_width=16, best_source="link")
             is False
         )
         assert (
-            extractor._is_better_favicon(no_source, width=512, best_width=16, best_source="meta")
+            extractor.is_better_favicon(no_source, width=512, best_width=16, best_source="meta")
             is False
         )
         assert (
-            extractor._is_better_favicon(
+            extractor.is_better_favicon(
                 no_source, width=512, best_width=16, best_source="manifest"
             )
             is False
         )
         # But should win against another default with larger size
         assert (
-            extractor._is_better_favicon(no_source, width=64, best_width=32, best_source="default")
+            extractor.is_better_favicon(no_source, width=64, best_width=32, best_source="default")
             is True
         )
