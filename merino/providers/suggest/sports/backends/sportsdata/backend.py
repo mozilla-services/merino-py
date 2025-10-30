@@ -110,7 +110,7 @@ class SportsDataBackend(SportsDataProtocol):
         if await self.data_store.startup():
             updating = await self.data_store.query_meta("update")
             timestamp = (datetime.now(tz=timezone.utc) + timedelta(minutes=5)).timestamp()
-            if not updating or float(updating) < timestamp:
+            if not updating or (float(updating) < timestamp):
                 await self.data_store.store_meta("update", str(timestamp))
                 verify = await self.data_store.query_meta("update")
                 # validate that we're the one doing the update.

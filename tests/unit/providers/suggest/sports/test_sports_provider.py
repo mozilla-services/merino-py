@@ -69,12 +69,8 @@ async def test_sports_init_logger():
 async def test_sports_provider(mock_client: AsyncClient):
     """Test the sports data provider"""
     # we already test the backend.
-    home_team = SportTeamDetail(
-        key="HOM", name="Home Team", colors=["000000"], score=None
-    )
-    away_team = SportTeamDetail(
-        key="AWY", name="Away Team", colors=["FFFFFF"], score=None
-    )
+    home_team = SportTeamDetail(key="HOM", name="Home Team", colors=["000000"], score=None)
+    away_team = SportTeamDetail(key="AWY", name="Away Team", colors=["FFFFFF"], score=None)
     event = SportEventDetail(
         sport="test",
         query="test query",
@@ -132,6 +128,7 @@ async def test_provider_query_non_trigger_word():
 
 @pytest.mark.asyncio
 async def test_provider_normalize_query():
+    """Force test normalize_query"""
     backend = AsyncMock(spec=SportsDataBackend)
     provider = SportsDataProvider(
         metrics_client=get_metrics_client(),

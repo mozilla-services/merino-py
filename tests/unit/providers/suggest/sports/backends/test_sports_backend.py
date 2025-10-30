@@ -135,11 +135,6 @@ async def test_get_data_cache_file_exists():
             assert data == {"bar": "foo"}
 
 
-@pytest.mark.asyncio
-async def test_build_suggestion():
-    """Simple test that the suggestion can be built from a sample event response"""
-
-
 # sports/backends/sportsdata/common:
 @pytest.mark.asyncio
 async def test_gamestatus():
