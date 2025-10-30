@@ -55,6 +55,7 @@ class SportsDataProvider(BaseProvider):
         enabled_by_default: bool = False,
         trigger_words: list[str] = [],
         score: float = BASE_SUGGEST_SCORE,
+        kickstart: bool = False,
         *args,
         **kwargs,
     ):
@@ -65,10 +66,12 @@ class SportsDataProvider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.trigger_words = trigger_words + TEAM_NAMES
         self.score = score
-        super().__init__()
+        self.kickstart = kickstart
 
     async def initialize(self):
         """Create connections, components and other actions needed when starting up"""
+        if self.kickstart:
+            
         pass
 
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
@@ -142,7 +145,9 @@ class SportsDataProvider(BaseProvider):
                 f"{LOGGING_TAG} Multiple Sports provided to build_suggestion: {query}: {sport_name}"
             )
             return None
-        self.metrics_client.increment("sports.suggestions.result", tags={"sport": sport_name})
+        self.metrics_client.increment(
+            "sports.suggestions.result", tags={"sport": sport_name}
+        )
         return BaseSuggestion(
             title=f"{sport_name}",  # IGNORED
             url=HttpUrl(IGNORED_SUGGESTION_URL),  # IGNORED

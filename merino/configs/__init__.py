@@ -102,6 +102,7 @@ _validators = [
     Validator("providers.sports.sports", is_type_of=list),
     # base score for sport.
     Validator("providers.sports.score", is_type_of=float),
+    Validator("providers.sports.kickstart", is_type_of=bool)
     Validator("providers.sports.enabled_by_default", is_type_of=bool),
     Validator("providers.sports.sportsdata.api_key", is_type_of=str),
     Validator("providers.sports.sportsdata.cache_dir", is_type_of=str),

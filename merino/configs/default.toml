@@ -346,6 +346,8 @@ max_suggestions = 5
 enabled_by_default = false
 # General timeout
 query_timeout_sec = 3.0
+# Temporary value to enable data pre-load "kickstart"
+kickstart = true
 
 [default.providers.sports.es]
 # MERINO_PROVIDERS__SPORTS__ES_dsn

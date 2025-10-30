@@ -320,7 +320,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return FlightAwareProvider(
                 backend=FlightAwareBackend(
                     api_key=settings.flightaware.api_key,
-                    http_client=create_http_client(base_url=settings.flightaware.base_url),
+                    http_client=create_http_client(
+                        base_url=settings.flightaware.base_url
+                    ),
                     ident_url=settings.flightaware.ident_url_path,
                     metrics_client=get_metrics_client(),
                 ),
@@ -345,6 +347,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 query_timeout_sec=setting.query_timeout_sec,
                 trigger_words=trigger_words,
                 enabled_by_default=setting.enabled_by_default,
+                kickstart=setting.kickstart or False,
             )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")
