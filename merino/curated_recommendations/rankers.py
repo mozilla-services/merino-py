@@ -190,11 +190,10 @@ def filter_fresh_items_with_probability(
     Returns:
         tuple[list[CuratedRecommendation], list[CuratedRecommendation]]: The first element contains
         up to ``max_items`` recommendations selected under the probabilistic policy. The second
-        element contains the remaining deferred items (all fresh items that were not surfaced and
-        any non-fresh items still queued) in their original order.
+        element contains the remaining deferred items that were examined but not used.
     """
-    filtered_items = []
-    fresh_backlog = deque()
+    filtered_items: list[CuratedRecommendation] = []
+    fresh_backlog: deque[CuratedRecommendation] = deque()
 
     if max_items == 0:
         return [], []

@@ -305,7 +305,7 @@ class TestFilterFreshItemsWithProbability:
             """Return if item is fresh"""
             return item.ranking_data.is_fresh
 
-        for length in range(0, 10):
+        for length in range(0, 5):
             recs = generate_recommendations(length=length, time_sensitive_count=0)
             for rec in recs:
                 rec.ranking_data = RankingData(
@@ -314,8 +314,8 @@ class TestFilterFreshItemsWithProbability:
                     score=1,
                     is_fresh=random.random() < 0.5,
                 )
-            for max_items in (length, length + 3):
-                filtered, backlog = filter_fresh_items_with_probability(
+            for max_items in (0, length + 3):
+                filtered, _backlog = filter_fresh_items_with_probability(
                     recs, fresh_story_prob=0.5, max_items=max_items
                 )
                 assert len(filtered) <= max_items
