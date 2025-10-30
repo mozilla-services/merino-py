@@ -928,7 +928,7 @@ class TestGetTopStoryList:
 
     def test_rescaler_backfills_fresh_when_random_never_allows(self, monkeypatch):
         """When probability never allows fresh picks, backlog of fresh picks fill the quota
-            See - filter_fresh_items_with_probability for additional tests
+        See - filter_fresh_items_with_probability for additional tests
         """
         items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
         for rec in items:
@@ -945,7 +945,7 @@ class TestGetTopStoryList:
         assert [rec.receivedRank for rec in result] == [0, 1]
 
 
-class TrackingEngagementBackend:
+class DummyTrackingEngagementBackend:
     """Simple engagement backend that records which items were requested."""
 
     def __init__(self, metrics: dict[str, tuple[int, int]]):
@@ -953,6 +953,7 @@ class TrackingEngagementBackend:
         self.requests: list[str] = []
 
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return engagement"""
         self.requests.append(corpus_item_id)
         if corpus_item_id not in self._metrics:
             return None
@@ -967,6 +968,7 @@ class TrackingEngagementBackend:
 
     @property
     def update_count(self) -> int:
+        """Dummy function"""
         return 0
 
 
@@ -985,7 +987,7 @@ class TestSectionThompsonSampling:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=idx < 3)
 
         metrics = {rec.corpusItemId: (idx + 1, (idx + 1) * 10) for idx, rec in enumerate(recs)}
-        backend = TrackingEngagementBackend(metrics)
+        backend = DummyTrackingEngagementBackend(metrics)
 
         sections = {
             "sec": Section(

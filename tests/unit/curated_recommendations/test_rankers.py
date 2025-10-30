@@ -237,14 +237,18 @@ class TestFilterFreshItemsWithProbability:
         for rec in recs:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
 
-        filtered, backlog = filter_fresh_items_with_probability(recs, fresh_story_prob=0.0, max_items=2)
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.0, max_items=2
+        )
 
         assert [rec.corpusItemId for rec in filtered] == ["a", "b"]
         assert backlog == []
 
     def test_respects_probability_and_uses_backlog(self, monkeypatch):
         """Fresh items are deferred to backlog when the probability check fails, then consumed after"""
-        recs = generate_recommendations(item_ids=["fresh1", "fresh2", "stale1", "fresh3"], time_sensitive_count=0)
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "stale1", "fresh3"], time_sensitive_count=0
+        )
         recs[0].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
         recs[1].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
         recs[2].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
@@ -271,7 +275,9 @@ class TestFilterFreshItemsWithProbability:
 
     def test_backlog_returned_when_not_enough_items_selected(self, monkeypatch):
         """When filtered list is short, items from backlog fill the gap and remainder is returned."""
-        recs = generate_recommendations(item_ids=["fresh1", "fresh2", "fresh3"], time_sensitive_count=0)
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "fresh3"], time_sensitive_count=0
+        )
         for rec in recs:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
 
@@ -285,7 +291,9 @@ class TestFilterFreshItemsWithProbability:
 
         monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
 
-        filtered, backlog = filter_fresh_items_with_probability(recs, fresh_story_prob=0.1, max_items=1)
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.1, max_items=1
+        )
 
         assert [rec.corpusItemId for rec in filtered] == ["fresh1"]
         assert [rec.corpusItemId for rec in backlog] == ["fresh2", "fresh3"]

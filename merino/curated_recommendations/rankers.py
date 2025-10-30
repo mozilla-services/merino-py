@@ -369,10 +369,11 @@ def section_thompson_sampling(
     def sample_score(sec: Section) -> float:
         """Sample beta distribution for the combined engagement of the top _n_ items."""
         # sum clicks and impressions over top_n items
-        rec_pool = sec.recommendations
 
-        fresh_retain_likelyhood = rescaler.fresh_items_section_ranking_max_percentage if rescaler is not None else 0.
-        recs, _removed_recs = filter_fresh_items_with_probability(
+        fresh_retain_likelyhood = (
+            rescaler.fresh_items_section_ranking_max_percentage if rescaler is not None else 0.0
+        )
+        recs, _ = filter_fresh_items_with_probability(
             sec.recommendations, fresh_story_prob=fresh_retain_likelyhood, max_items=top_n
         )
 
