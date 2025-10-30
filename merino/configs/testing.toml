@@ -67,6 +67,7 @@ max_suggestions = 5
 score = 0.5
 query_timeout_sec = 100
 api_key = "test"
+kickstart = false
 
 [testing.providers.sports.es]
 dsn = "http://localhost:9200"

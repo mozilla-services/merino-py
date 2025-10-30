@@ -71,8 +71,7 @@ class SportsDataProvider(BaseProvider):
     async def initialize(self):
         """Create connections, components and other actions needed when starting up"""
         if self.kickstart:
-            
-        pass
+            await self.backend.startup()
 
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Query elastic search with the provided user terms and return relevant sport event information."""
