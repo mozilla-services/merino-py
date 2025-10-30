@@ -144,9 +144,7 @@ class SportsDataProvider(BaseProvider):
                 f"{LOGGING_TAG} Multiple Sports provided to build_suggestion: {query}: {sport_name}"
             )
             return None
-        self.metrics_client.increment(
-            "sports.suggestions.result", tags={"sport": sport_name}
-        )
+        self.metrics_client.increment("sports.suggestions.result", tags={"sport": sport_name})
         return BaseSuggestion(
             title=f"{sport_name}",  # IGNORED
             url=HttpUrl(IGNORED_SUGGESTION_URL),  # IGNORED
