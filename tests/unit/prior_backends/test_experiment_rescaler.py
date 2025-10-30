@@ -37,6 +37,10 @@ class TestDefaultRescaler:
         assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
         assert beta == 20
 
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
     def test_rescale_when_not_subtopic_item(self):
         """Test when no experiment in request"""
         rec = Mock()
@@ -73,6 +77,10 @@ class TestSchedulerHoldbackRescaler:
         assert alpha == 40
         assert beta == 20
 
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage == 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier == 0
+
     def test_rescale_regular_item(self):
         """Test when no experiment in request"""
         rec = Mock()
@@ -87,3 +95,7 @@ class TestSchedulerHoldbackRescaler:
         alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
         assert alpha == 40
         assert beta == 20
+
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage == 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier == 0
