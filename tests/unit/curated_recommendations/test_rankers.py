@@ -367,6 +367,50 @@ class TestThompsonSampling:
         assert by_id["fresh"].ranking_data.is_fresh is True
         assert by_id["stale"].ranking_data.is_fresh is False
 
+    def test_ranking_data_and_fresh_flag_set_with_downranked_items(self, monkeypatch):
+        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        recs = generate_recommendations(
+            item_ids=["fresh1", "stale", "fresh2"],
+            topics=[Topic.BUSINESS.value, Topic.SCIENCE.value, Topic.SCIENCE.value],
+            time_sensitive_count=0,
+        )
+        for rec in recs:
+            rec.isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend(
+            {
+                "fresh1": (2, 4),
+                "stale": (0, 12),
+                "fresh2": (2, 4),
+            }
+        )
+        rescaler = DefaultCrawlerRescaler()
+        rescaler.fresh_items_max = 1
+        rescaler.fresh_items_limit_prior_threshold_multiplier = 1
+        rescaler.fresh_items_section_ranking_max_percentage = 0
+        rescaler.fresh_items_top_stories_max_percentage = 0
+
+        # Make beta sampling deterministic to avoid flakiness.
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
+
+        ranked = thompson_sampling(
+            recs,
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            rescaler=rescaler,
+        )
+
+        assert len(ranked) == 3
+        by_id = {rec.corpusItemId: rec for rec in ranked}
+
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
+
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""
         recs = generate_recommendations(item_ids=["1", "2", "3", "4"])
