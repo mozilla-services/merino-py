@@ -241,6 +241,7 @@ def update_custom_favicons(title, url) -> None:
 def test_domains(
     domains: list[str] = typer.Argument(..., help="List of domains to test"),
     min_width: int = typer.Option(32, help="Minimum favicon width", show_default=True),
+    save_favicon: bool = typer.Option(False, "--save", help="Save custom favicon", is_flag=True),
 ):
     """Test domain metadata extraction for multiple domains"""
     with console.status("Testing domains concurrently..."):
@@ -255,13 +256,15 @@ def test_domains(
             table.add_row("Best Icon", result.metadata.get("icon", "N/A"))
             table.add_row("Total Favicons", str(result.details.get("favicons_found", 0)))
 
-            title = result.metadata.get("title")
-            best_icon = result.metadata.get("icon")
-            if title and best_icon:
-                update_custom_favicons(title, best_icon)
-
             console.print("✅ Success!")
             console.print(table)
+            
+            if save_favicon:
+                title = result.metadata.get("title")
+                best_icon = result.metadata.get("icon")
+                if title and best_icon:
+                    update_custom_favicons(title, best_icon)
+                    console.print("Custom favicon saved!")
 
             if result.favicon_data:
                 console.print("\nAll favicons found:")
