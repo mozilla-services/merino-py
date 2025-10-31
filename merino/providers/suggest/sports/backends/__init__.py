@@ -22,6 +22,7 @@ async def get_data(
     `ttl` for the local cache.
 
     """
+    logger = logging.getLogger(__name__)
     cache_file = None
     # TODO: Convert to using a GCS bucket?
     if cache_dir:
@@ -35,26 +36,26 @@ async def get_data(
             try:
                 if ttl:
                     if os.path.getctime(cache_file) > (datetime.now() - ttl).timestamp():
-                        logging.debug(f"{LOGGING_TAG}💾 Reading cache for {url}")
+                        logger.debug(f"{LOGGING_TAG}💾 Reading cache for {url}")
                         with open(cache_file, "r") as cache:
                             return json.load(cache)
                 else:
-                    logging.debug(f"{LOGGING_TAG}💾 Reading perma-cache for {url}")
+                    logger.debug(f"{LOGGING_TAG}💾 Reading perma-cache for {url}")
                     with open(cache_file, "r") as cache:
                         return json.load(cache)
             except PermissionError:
-                logging.warning(f"{LOGGING_TAG} Unable to read cache {cache_file}")
+                logger.warning(f"{LOGGING_TAG} Unable to read cache {cache_file}")
                 pass
-    logging.debug(f"{LOGGING_TAG} fetching data from {url}")
+    logger.debug(f"{LOGGING_TAG} fetching data from {url}")
     response = await client.get(url)
     response.raise_for_status()
     response = response.json()
     if cache_file:
-        logging.debug(f"{LOGGING_TAG}💾 Writing cache for {url}")
+        logger.debug(f"{LOGGING_TAG}💾 Writing cache for {url}")
         try:
             with open(cache_file, "w") as cache:
                 json.dump(response, cache)
         except PermissionError:
-            logging.warning(f"{LOGGING_TAG} Unable to write cache {cache_file}")
+            logger.warning(f"{LOGGING_TAG} Unable to write cache {cache_file}")
             pass
     return response

@@ -55,6 +55,7 @@ class SportsDataProvider(BaseProvider):
         enabled_by_default: bool = False,
         trigger_words: list[str] = [],
         score: float = BASE_SUGGEST_SCORE,
+        kickstart: bool = False,
         *args,
         **kwargs,
     ):
@@ -65,11 +66,16 @@ class SportsDataProvider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.trigger_words = trigger_words + TEAM_NAMES
         self.score = score
-        super().__init__()
+        self.kickstart = kickstart
 
     async def initialize(self):
         """Create connections, components and other actions needed when starting up"""
-        pass
+        logger = logging.getLogger(__name__)
+        if self.kickstart:
+            try:
+                await self.backend.startup()
+            except Exception as ex:
+                logger.error(f"{LOGGING_TAG} Could not kickstart data: {ex}")
 
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Query elastic search with the provided user terms and return relevant sport event information."""
@@ -127,6 +133,7 @@ class SportsDataProvider(BaseProvider):
         # score_adj: float = 0,
     ) -> BaseSuggestion | None:
         """Build a base suggestion with the sport data results"""
+        logger = logging.getLogger(__name__)
         # "All" returns all sport events that match the search criteria.
         # Further work would be required to return results collated to their
         # respective sports. Each would be returned based on the `SportSummary.sport`.
@@ -138,7 +145,7 @@ class SportsDataProvider(BaseProvider):
         else:
             # Return an error because we shouldn't currently be returning anything
             # other than "mixed" results.
-            logging.warning(
+            logger.warning(
                 f"{LOGGING_TAG} Multiple Sports provided to build_suggestion: {query}: {sport_name}"
             )
             return None

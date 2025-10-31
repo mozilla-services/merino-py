@@ -53,6 +53,7 @@ class Team(BaseModel):
     @classmethod
     def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
         """Convert the rich SportsData.io information set to the reduced info we need."""
+        logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
         terms = set()
         for item in [
@@ -73,7 +74,7 @@ class Team(BaseModel):
         locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
-        logging.debug(f"{LOGGING_TAG} - Team: {fullname}")
+        logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
         return cls(
             terms=" ".join(terms),
             key=team_data["Key"],
@@ -176,7 +177,8 @@ class Sport:
         term_filter: list[str] = [],
         **kwargs,
     ):
-        logging.debug(f"{LOGGING_TAG} In sport")
+        logger = logging.getLogger(__name__)
+        logger.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
         self.api_key = api_key or settings.sportsdata.get("api_key")
         self.base_url = base_url
@@ -240,6 +242,7 @@ class Sport:
         SportData provider class.
 
         """
+        logger = logging.getLogger(__name__)
         if not self.events:
             self.events = {}
         """
@@ -300,7 +303,7 @@ class Sport:
             except TypeError:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                logging.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
+                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
                 continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
@@ -364,6 +367,7 @@ class Sport:
              ...
              ]
         ]"""
+        logger = logging.getLogger(__name__)
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
@@ -392,8 +396,8 @@ class Sport:
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                logging.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
-                logging.debug(
+                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
+                logger.debug(
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
                 continue

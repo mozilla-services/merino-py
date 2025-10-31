@@ -7,7 +7,12 @@ from abc import abstractmethod, ABC
 from datetime import datetime, timezone
 from typing import Any, Final
 
-from elasticsearch import AsyncElasticsearch, BadRequestError, ConflictError, helpers
+from elasticsearch import (
+    AsyncElasticsearch,
+    BadRequestError,
+    ConflictError,
+    helpers,
+)
 
 from merino.configs import settings
 from merino.exceptions import BackendError
@@ -23,6 +28,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 )
 
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
+
+META_INDEX: str = "sports_meta"
 
 EN_INDEX_SETTINGS: dict = {
     "number_of_replicas": "1",
@@ -174,11 +181,18 @@ class ElasticDataStore(ABC):
         """Create a core instance of elastic search"""
         self.client = AsyncElasticsearch(dsn, api_key=api_key)
 
+    @abstractmethod
+    async def startup(self) -> bool:
+        """Kickstart the data store and fetch a round of data from the supplier.
+
+        This is used in case the airflow system is not yet operational.
+        """
+
     async def shutdown(self) -> None:
         """Politely close the data connection. Not strictly required, but python
         may complain.
         """
-        logging.info(f"{LOGGING_TAG} closing...")
+        logging.getLogger(__name__).info(f"{LOGGING_TAG} closing...")
         await self.client.close()
 
     @abstractmethod
@@ -254,13 +268,100 @@ class SportsDataStore(ElasticDataStore):
         self.platform = platform
         # build the index based on the platform.
         self.index_map = index_map
-        logging.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
+        logging.getLogger(__name__).info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
+
+    async def startup(self) -> bool:
+        """Kick start the data store for Sports"""
+        logger = logging.getLogger(__name__)
+        await self.build_meta()
+        await self.build_indexes()
+
+        val = await self.query_meta("update")
+        if val is None or (float(val) or 0 < datetime.now(tz=timezone.utc).timestamp()):
+            logger.info(f"{LOGGING_TAG} fetching data")
+            return True
+        return False
+
+    async def query_meta(self, key: str) -> None | str:
+        """Get value from meta table"""
+        try:
+            res = await self.client.search(
+                index=META_INDEX,
+                query={"term": {"_id": key.lower()}},
+                # query={"term": {"key": key.lower()}},
+                # query={"match_all": {}},
+                source_includes=["meta_value"],
+                size=1,
+            )
+            hits = res["hits"]["hits"]
+            if not len(hits):
+                return None
+            return hits[0]["_source"].get("meta_value") or None
+        except Exception as ex:
+            logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
+            return None
+
+    async def store_meta(self, key: str, value: str):
+        """Store value into meta table"""
+        try:
+            try:
+                await self.client.create(
+                    index=META_INDEX,
+                    id=key.lower(),
+                    document={"meta_key": key, "meta_value": value},
+                )
+            except ConflictError:
+                await self.client.update(
+                    index=META_INDEX,
+                    id=key.lower(),
+                    doc={"meta_key": key, "meta_value": value},
+                )
+        except Exception as ex:
+            logging.getLogger(__name__).error(
+                f"{LOGGING_TAG} Error: storing meta {key}:{value} {ex}"
+            )
+        await self.client.indices.refresh(index=META_INDEX)
+
+    async def del_meta(self, key) -> None:
+        """Remove data from the meta table"""
+        try:
+            await self.client.delete(index=META_INDEX, id=key.lower())
+            await self.client.indices.refresh(index=META_INDEX)
+        except Exception as ex:
+            logging.getLogger(__name__).error(f"{LOGGING_TAG} Error: delete meta {key} {ex}")
+
+    async def build_meta(self) -> None:
+        """Create the meta data index. This is a very simple
+        table that stores a non-searchable value under a key.
+        """
+        try:
+            # await self.client.indices.delete(index=META_INDEX)
+            await self.client.indices.create(
+                index=META_INDEX,
+                settings={
+                    "number_of_replicas": "1",
+                    "refresh_interval": "-1",
+                    "number_of_shards": "2",
+                },
+                mappings={
+                    "dynamic": False,
+                    "properties": {
+                        "meta_key": {"type": "keyword", "index": True},
+                        "meta_value": {"type": "keyword", "index": False},
+                    },
+                },
+            )
+            await self.client.indices.refresh(index=META_INDEX)
+        except BadRequestError as ex:
+            if ex.error != "resource_already_exists_exception":
+                raise ex
 
     async def build_indexes(self, clear: bool = False):
         """Build the indices here for stand-alone and testing reasons.
 
         Normally, these are built using terraform.
         """
+        logger = logging.getLogger(__name__)
         for language_code in self.languages:
             mappings = self.build_mappings(language_code=language_code)
             for idx, index in self.index_map.items():
@@ -271,7 +372,7 @@ class SportsDataStore(ElasticDataStore):
                             ignore_unavailable=True,
                         )
                     index = index.format(lang=language_code)
-                    logging.debug(f"{LOGGING_TAG} Building index: {index}")
+                    logger.debug(f"{LOGGING_TAG} Building index: {index}")
                     await self.client.indices.create(
                         index=index,
                         mappings=mappings[idx],
@@ -279,7 +380,7 @@ class SportsDataStore(ElasticDataStore):
                     )
                 except BadRequestError as ex:
                     if ex.error == "resource_already_exists_exception":
-                        logging.debug(
+                        logger.debug(
                             f"{LOGGING_TAG} {index.format(lang=language_code)} already exists, skipping"
                         )
                         continue
@@ -320,6 +421,7 @@ class SportsDataStore(ElasticDataStore):
     ) -> bool:
         """Remove data that has expired."""
         utc_now = expiry or int(datetime.now(tz=timezone.utc).timestamp())
+        logger = logging.getLogger(__name__)
         for index_pattern in self.index_map.values():
             index = index_pattern.format(lang=language_code)
             query = {"range": {"expiry": {"lte": utc_now}}}
@@ -328,13 +430,13 @@ class SportsDataStore(ElasticDataStore):
                 res = await self.client.delete_by_query(
                     index=index, query=query, timeout=TIMEOUT_MS
                 )
-                logging.info(
+                logger.info(
                     f"{LOGGING_TAG}⏱ sports.time.prune [{res.get("deleted")} records] in [{(datetime.now()-start).microseconds}μs]"
                 )
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logging.warning(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
+                logger.warning(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
                 return False
         return True
 
@@ -344,9 +446,10 @@ class SportsDataStore(ElasticDataStore):
         """Search based on the language and platform template"""
         index_id = self.index_map["event"].format(lang=language_code)
         utc_now = int(datetime.now(tz=timezone.utc).timestamp())
+        logger = logging.getLogger(__name__)
 
         if mix_sports:
-            logging.debug(f"{LOGGING_TAG} Mixing sports...")
+            logger.debug(f"{LOGGING_TAG} Mixing sports...")
         try:
             query = {
                 "bool": {
@@ -355,16 +458,17 @@ class SportsDataStore(ElasticDataStore):
                 }
             }
 
-            logging.debug(f"{LOGGING_TAG} Searching {index_id} for `{q}`")
+            logger.debug(f"{LOGGING_TAG} Searching {index_id} for `{q}`")
 
             res = await self.client.search(
+                index=index_id,
                 query=query,
                 timeout=TIMEOUT_MS,
                 source_includes=["event"],
             )
         except Exception as ex:
             raise BackendError(f"Elasticsearch error for {index_id}") from ex
-        logging.debug(f"{LOGGING_TAG} found {res} for `{q}`")
+        logger.debug(f"{LOGGING_TAG} found {res} for `{q}`")
         if res.get("hits", {}).get("total", {}).get("value", 0) > 0:
             # filter sport for prev, current, next
             filter: dict[str, dict] = {}
@@ -402,11 +506,12 @@ class SportsDataStore(ElasticDataStore):
 
     async def store_events(
         self,
-        sport: "Sport",
+        sport: Sport,
         language_code: str,
     ):
         """Store the events using the calculated terms"""
         actions = []
+        logger = logging.getLogger(__name__)
 
         index = (self.index_map["event"]).format(lang=language_code)
 
@@ -430,7 +535,7 @@ class SportsDataStore(ElasticDataStore):
             try:
                 start = datetime.now()
                 await helpers.async_bulk(client=self.client, actions=actions)
-                logging.info(
+                logger.info(
                     f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
                 )
             except Exception as ex:
@@ -438,7 +543,8 @@ class SportsDataStore(ElasticDataStore):
                     f"Could not load data into elasticSearch for {sport.name}"
                 ) from ex
         start = datetime.now()
+        await self.store_meta("update", str(start.timestamp()))
         await self.client.indices.refresh(index=index)
-        logging.info(
+        logger.info(
             f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"
         )

@@ -80,6 +80,7 @@ class SportDataUpdater:
         store: SportsDataStore | None = None,
         **kwargs,
     ) -> None:
+        logger = logging.getLogger(__name__)
         active_sports = [sport.strip().upper() for sport in settings.sports]
         sport: Sport | None = None
         sports: dict[str, Sport] = {}
@@ -115,17 +116,18 @@ class SportDataUpdater:
                 # case "EPL":
                 #    sport = EPL(settings)
                 case _:
-                    logging.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
+                    logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue
             sports[sport_name] = sport
         self.sports = sports
         self.store = store
         self.connect_timeout = settings.sportsdata.get("connect_timeout", 1)
         self.read_timeout = settings.sportsdata.get("read_timeout", 1)
-        logging.debug(f"{LOGGING_TAG}: Starting up...")
+        logger.debug(f"{LOGGING_TAG}: Starting up...")
 
     async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
         """Perform sport specific updates."""
+        logger = logging.getLogger(__name__)
         client = create_http_client(
             connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
         )
@@ -136,19 +138,19 @@ class SportDataUpdater:
             if include_teams:  # pragma: no cover
                 start = time()
                 await sport.update_teams(client=client)
-                logging.info(
+                logger.info(
                     f"""{LOGGING_TAG} sports.time.update.team: ["sport": {sport.name}] = {time() - start}"""
                 )
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)
             start = time()
             await sport.update_events(client=client)
-            logging.info(
+            logger.info(
                 f"""{LOGGING_TAG} sports.time.update.event: ["sport": {sport.name}] = {time() - start}"""
             )
             # Put the data in the shared storage for the live query.
             start = time()
             await self.store.store_events(sport, language_code="en")
-            logging.info(
+            logger.info(
                 f"""{LOGGING_TAG} sports.time.load.events ["sport": {sport.name}] = {time() - start}"""
             )
         await self.store.shutdown()
@@ -156,9 +158,10 @@ class SportDataUpdater:
 
     async def nightly(self, client: AsyncClient | None = None) -> None:
         """Perform the nightly maintenance tasks"""
+        logger = logging.getLogger(__name__)
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
-        logging.debug(f"{LOGGING_TAG} Nightly update...")
+        logger.debug(f"{LOGGING_TAG} Nightly update...")
         await self.update(include_teams=True, client=client)
         await self.store.prune()
 
@@ -167,16 +170,17 @@ class SportDataUpdater:
         await self.store.build_indexes(clear=False)
 
 
+logger = logging.getLogger(__name__)
 sports_settings = settings.providers.sports
 # If there are no explicit elastic search values defined for sports,
 # use the existing wikipedia values.
 # NOTE: eventually, this will be replaced when the elasticsearch code
 # is moved to `/utils`
 if not sports_settings.es.get("api_key"):
-    logging.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
+    logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
     sports_settings.es["api_key"] = settings.providers.wikipedia.es_api_key
 if not sports_settings.es.get("dsn"):
-    logging.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, using alternative")
+    logger.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, using alternative")
     sports_settings.es["dsn"] = settings.providers.wikipedia.es_url
 app = Options(sports_settings).get_command()
 cli = typer.Typer(

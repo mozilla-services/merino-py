@@ -2,13 +2,16 @@
 
 import datetime
 import json
+import logging
 from typing import cast, Any
+from unittest import mock
 from unittest.mock import AsyncMock, MagicMock
 
 import freezegun
 import pytest
 
 from elasticsearch import BadRequestError, ConflictError
+from elastic_transport import ApiResponseMeta, HttpHeaders, NodeConfig
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
@@ -19,6 +22,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     get_index_settings,
+    META_INDEX,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -39,6 +43,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
     client.indices = indices
 
     client.delete_by_query = mocker.AsyncMock()
+    client.delete = mocker.AsyncMock()
     client.search = mocker.AsyncMock()
     return cast(MagicMock, client)
 
@@ -76,13 +81,13 @@ async def test_prune_fail_and_logging_captured(
 ) -> None:
     """Test Sport Data Store fail prune and metrics captured."""
     es_client.delete_by_query.side_effect = ConflictError("oops", cast(Any, object()), {})
-
-    mock_logger = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.logging"
+    logger = logging.getLogger(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic"
     )
-    result = await sport_data_store.prune()
-    assert result is False
-    assert mock_logger.warning.called
+    with mock.patch.object(logger, "warning") as mock_logger:
+        result = await sport_data_store.prune()
+        assert result is False
+        assert mock_logger.called
 
 
 @pytest.mark.asyncio
@@ -113,14 +118,14 @@ async def test_store_event_fail_and_metrics_captured(
     nfl = NFL(settings=settings.providers.sports)
     nfl.events = {0: event}
 
-    mock_logger = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.logging"
+    logger = logging.getLogger(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic"
     )
-
-    await sport_data_store.store_events(sport=nfl, language_code="en")
-    calls = [call.args[0] for call in mock_logger.info.call_args_list]
-    assert len(list(filter(lambda x: "sports.time.load.events" in x, calls))) == 1
-    assert len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
+    with mock.patch.object(logger, "info") as mock_logger:
+        await sport_data_store.store_events(sport=nfl, language_code="en")
+        calls = [call.args[0] for call in mock_logger.call_args_list]
+        assert len(list(filter(lambda x: "sports.time.load.events" in x, calls))) == 1
+        assert len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")
@@ -224,3 +229,94 @@ async def test_get_index_settings():
         "accentfolding"
         not in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
     )
+
+
+@pytest.mark.asyncio
+async def test_meta_store(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test storing data to meta"""
+    es_client.create.side_effect = ConflictError("oops", cast(Any, object()), {})
+    await sport_data_store.store_meta("foo", "bar")
+    assert es_client.create.called
+    assert es_client.update.called
+
+
+@pytest.mark.asyncio
+async def test_meta_query(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test query data to meta"""
+    es_client.search.return_value = {"hits": {}}
+    res = await sport_data_store.query_meta("foo")
+    assert res is None
+
+    es_client.search.return_value = {"hits": {"hits": [{"_source": {"meta_value": "bar"}}]}}
+    res = await sport_data_store.query_meta("foo")
+    assert res == "bar"
+
+
+@pytest.mark.asyncio
+async def test_meta_del(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test deleting data to meta"""
+    await sport_data_store.del_meta("foo")
+
+    assert es_client.delete.called
+    assert es_client.indices.refresh.called
+
+
+@pytest.mark.asyncio
+async def test_meta_build(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test building indexes for meta"""
+    await sport_data_store.build_meta()
+
+    assert es_client.indices.create.called
+    assert es_client.indices.refresh.called
+
+
+@pytest.mark.asyncio
+async def test_build_indexes(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test the index builder"""
+    await sport_data_store.build_indexes(clear=True)
+    assert es_client.indices.delete.called
+    assert es_client.indices.create.called
+
+
+@pytest.mark.asyncio
+async def test_build_meta(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test the index builder"""
+    await sport_data_store.build_meta()
+    assert es_client.indices.create.called
+
+
+@pytest.mark.asyncio
+async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test startup initializer"""
+    # Check for initial case.
+    es_client.search.return_value = {"hits": {"hits": []}}
+    res = await sport_data_store.startup()
+    assert res
+    assert es_client.indices.create.call_count == 2
+    assert any(
+        [
+            arg_list.kwargs.get("index") == META_INDEX
+            for arg_list in es_client.indices.create.call_args_list
+        ]
+    )
+
+
+@pytest.mark.asyncio
+async def test_build_index_exception(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test failed create"""
+    br = BadRequestError(
+        message="resource_already_exists_exception",
+        meta=ApiResponseMeta(
+            status=400,
+            http_version="",
+            headers=HttpHeaders(),
+            duration=0.0,
+            node=NodeConfig(scheme="", host="", port=0),
+        ),
+        body="oops",
+        errors=(),
+    )
+    es_client.indices.create.side_effect = [br]
+    await sport_data_store.build_indexes(clear=True)
+    assert es_client.indices.delete.called
+    assert es_client.indices.create.called
