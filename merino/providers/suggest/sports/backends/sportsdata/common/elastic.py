@@ -486,6 +486,13 @@ class SportsDataStore(ElasticDataStore):
                     sport = event["sport"]
                 if sport not in filter:
                     filter[sport] = {}
+
+                # This may be a bit confusing.
+                # There are four "status" fields.
+                # `event_status`, used here, is the parsed `GameStatus` enum.
+                # `status` (used internally) is the provided event's status
+                # `status` (reported externally) is the string version of the `event_status`
+                # `status_type` (reported externally) is the simplified type requested by the UI team.
                 status = GameStatus.parse(event["status"])
                 event["event_status"] = status
                 # Because we may be collecting "all" sports, we want to find the most recently
