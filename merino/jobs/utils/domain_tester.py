@@ -258,7 +258,7 @@ def test_domains(
 
             console.print("✅ Success!")
             console.print(table)
-            
+
             if save_favicon:
                 title = result.metadata.get("title")
                 best_icon = result.metadata.get("icon")
