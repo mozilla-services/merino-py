@@ -179,6 +179,10 @@ class ElasticDataStore(ABC):
         api_key: str,
     ):
         """Create a core instance of elastic search"""
+        if not dsn:
+            dsn = settings.providers.wikipedia.es_url
+        if not api_key:
+            api_key = settings.providers.wikipedia.es_api_key
         self.client = AsyncElasticsearch(dsn, api_key=api_key)
 
     @abstractmethod
