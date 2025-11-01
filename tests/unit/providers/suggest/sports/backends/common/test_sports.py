@@ -330,9 +330,9 @@ async def test_ucl_update_teams(
     await ucl.update_teams(client=mock_client)
     assert ucl.season == "2025"
     assert set(ucl.teams.keys()) == {"VAN", "TOR"}
-    assert get_data.call_count == 2
+    assert get_data.call_count == 1
 
-    assert "/Teams/ucl?key=" in get_data.call_args_list[1].kwargs["url"]
+    assert "/Teams/ucl?key=" in get_data.call_args_list[0].kwargs["url"]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
