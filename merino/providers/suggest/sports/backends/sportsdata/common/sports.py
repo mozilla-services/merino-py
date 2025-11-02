@@ -445,12 +445,6 @@ class UCL(Sport):
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
         url = f"{self.base_url}/Teams/{self.name.lower()}?key={self.api_key}"
-        response = await get_data(
-            client=client,
-            url=url,
-            ttl=timedelta(hours=4),
-            cache_dir=self.cache_dir,
-        )
         """
         [{
             "TeamId": 509,
