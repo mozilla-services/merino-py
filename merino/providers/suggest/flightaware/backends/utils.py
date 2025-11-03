@@ -346,6 +346,7 @@ def get_airline_details(flight_number: str) -> AirlineDetails:
     airline_data = AIRLINE_CODE_TO_NAME_MAPPING.get(code, {}) if code else {}
 
     name = airline_data.get("name")
+    name = name.title() if name else None
     color = airline_data.get("color")
 
     return AirlineDetails(

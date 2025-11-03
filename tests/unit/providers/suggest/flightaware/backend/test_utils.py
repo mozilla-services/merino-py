@@ -250,7 +250,7 @@ def test_build_flight_summary_valid(flight_with_codeshare):
     assert summary.url == HttpUrl("https://www.flightaware.com/live/flight/UAL123")
 
     assert summary.airline.code == "UA"
-    assert summary.airline.name == "united airlines"
+    assert summary.airline.name == "United Airlines"
     assert summary.airline.color == "#005DAA"
 
 
@@ -884,12 +884,12 @@ def test_get_flight_number_from_query_if_valid(description, query, mapping, expe
 @pytest.mark.parametrize(
     "description, flight_number, expected_code, expected_name, expected_color",
     [
-        ("valid 2-letter IATA code", "AA123", "AA", "american airlines", "#cc0000"),
+        ("valid 2-letter IATA code", "AA123", "AA", "American Airlines", "#cc0000"),
         (
             "valid 3-letter ICAO code fallback when IATA not matched",
             "UAL789",
             "UAL",
-            "united airlines",
+            "United Airlines",
             "#003366",
         ),
         ("unknown airline code returns None values", "ZZ999", None, None, None),
