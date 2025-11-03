@@ -282,7 +282,7 @@ class SuperInferredModel(LocalModelBackend):
             ## switch on experiment name, not using util becuase we have string name instead of request object
             if (
                 experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME
-                or experiment_name == f"optin-{experiment_name}"
+                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME}"
             ):
                 ## switch on branch name
                 if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:

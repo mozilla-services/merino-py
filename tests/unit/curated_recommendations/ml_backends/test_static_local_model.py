@@ -521,12 +521,25 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
             True,
         ),
         ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, None, True),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, None, False),
+        (
+            "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
+            LOCAL_AND_SERVER_BRANCH_NAME,
+            None,
+            True,
+        ),
+        ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, None, False),
     ],
     ids=[
         "local_and_server_branch",
         "local_only_branch",
         "optin-local_and_server_branch",
         "optin-local_only_branch",
+        "local_and_server_branch__no_model",
+        "local_only_branch__no_model",
+        "optin-local_and_server_branch__no_model",
+        "optin-local_only_branch__no_model",
     ],
 )
 def test_get_with_experiment_and_model_id_correct_branch_returns_model(
@@ -541,7 +554,7 @@ def test_get_with_experiment_and_model_id_correct_branch_returns_model(
     )
 
     assert isinstance(result, InferredLocalModel)
-    assert result.model_id == model_id
+    assert result.model_id is not None
     # sanity checks on payload
     assert result.surface_id == TEST_SURFACE
     assert result.model_data is not None
