@@ -71,8 +71,10 @@ class SportsDataProvider(BaseProvider):
     async def initialize(self):
         """Create connections, components and other actions needed when starting up"""
         logger = logging.getLogger(__name__)
+        logger.info(f"{LOGGING_TAG} Starting sports...")
         if self.kickstart:
             try:
+                logger.info(f"{LOGGING_TAG} Kickstarting sports...")
                 await self.backend.startup()
             except Exception as ex:
                 logger.error(f"{LOGGING_TAG} Could not kickstart data: {ex}")

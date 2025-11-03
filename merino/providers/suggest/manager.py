@@ -2,6 +2,7 @@
 
 from enum import Enum, unique
 
+import logging
 from dynaconf.base import Settings
 
 from merino.cache.none import NoCacheAdapter
@@ -338,6 +339,13 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 word.lower().strip()
                 for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
             ]
+            logger = logging.getLogger(__name__)
+            if not setting.es.get("api_key") or setting.es.api_key.lower() == "none":
+                logger.warning("No sport elasticsearch API key found, using alternate")
+                setting.es["api_key"] = settings.providers.wikipedia.es_api_key
+            if not setting.es.get("dsn") or setting.es.dsn.lower() == "none":
+                logger.warning("No sport elasticsearch DSN found, using alternative")
+                setting.es["dsn"] = settings.providers.wikipedia.es_url
             return SportsDataProvider(
                 backend=SportsDataBackend(settings=setting),
                 metrics_client=get_metrics_client(),
