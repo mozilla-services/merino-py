@@ -9,8 +9,9 @@ from merino.curated_recommendations.ml_backends.protocol import (
     ModelType,
     DayTimeWeightingConfig,
 )
+from merino.curated_recommendations.protocol import ExperimentName
 
-INFERRED_LOCAL_EXPERIMENT_NAME = "new-tab-automated-personalization-local-ranking"
+INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
 LOCAL_AND_SERVER_V1 = "local-and-server"
 LOCAL_ONLY_V1 = "local-only"
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1

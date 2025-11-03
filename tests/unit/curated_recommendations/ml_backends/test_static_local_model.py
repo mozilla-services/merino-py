@@ -12,7 +12,6 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CTR_SECTION_MODEL_ID,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
-    INFERRED_LOCAL_EXPERIMENT_NAME,
     LOCAL_AND_SERVER_V1,
     LOCAL_ONLY_V1,
     LOCAL_AND_SERVER_BRANCH_NAME,
@@ -28,6 +27,10 @@ from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
     LOCAL_MODEL_DB_VALUES_KEY,
 )
+
+from merino.curated_recommendations.protocol import ExperimentName
+
+INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
 
 TEST_SURFACE = "test_surface"
 
