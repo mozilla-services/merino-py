@@ -352,12 +352,12 @@ kickstart = true
 [default.providers.sports.es]
 # MERINO_PROVIDERS__SPORTS__ES_dsn
 # DSN to Elastic Search database
-dsn="http://localhost:9200"
+dsn=""
 # MERINO_PROVIDERS__SPORTS__ES_dsn
 # API Key for Elastic Search database
 # Using the "basic" key, which allows using locally served
 # versions of elasticsearch
-api_key="basic"
+api_key=""
 # Timeout for an Elastic Search response in milliseconds.
 request_timeout_ms = 300
 
