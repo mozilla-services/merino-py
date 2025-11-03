@@ -2066,7 +2066,7 @@ AIRLINE_CODE_TO_NAME_MAPPING = {
     "PA": {"name": "parmiss airlines", "color": "#003B5C"},
     "PB": {"name": "pal airlines", "color": "#003366"},
     "PC": {"name": "pegasus airlines", "color": "#D71920"},
-    "PD": {"name": "porter airlines", "color": "#E4002B"},
+    "PD": {"name": "porter airlines", "color": "#112855"},
     "PE": {"name": "air europe", "color": "#003366"},
     "PF": {"name": "primera air", "color": "#D71920"},
     "PFL": {"name": "pacific flier", "color": "#003B5C"},
