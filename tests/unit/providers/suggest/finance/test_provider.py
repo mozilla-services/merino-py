@@ -4,8 +4,10 @@
 
 """Unit tests for the finance provider module."""
 
+import asyncio
 import time
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import HttpUrl
@@ -396,3 +398,54 @@ async def test_fetch_manifest_sets_last_failure_on_error(provider, mocker):
 
     await provider._fetch_manifest()
     assert provider.last_fetch_failure_at is not None
+
+
+@pytest.mark.asyncio
+async def test_initialize_runs_cron_and_fetch_when_gcs_enabled(provider):
+    """Initialize should call _fetch_manifest and create cron job when GCS is enabled."""
+    with (
+        patch("merino.providers.suggest.finance.provider.settings") as mock_settings,
+        patch.object(provider, "_fetch_manifest", new=AsyncMock()) as mock_fetch_manifest,
+        patch("asyncio.create_task", wraps=asyncio.create_task) as mock_create_task,
+        patch("merino.providers.suggest.finance.provider.cron.Job") as mock_job,
+    ):
+        mock_settings.image_gcs.gcs_enabled = True
+
+        mock_job_instance = AsyncMock(name="mock_cron_job")
+        mock_job.return_value = mock_job_instance
+
+        await provider.initialize()
+
+        mock_fetch_manifest.assert_awaited_once()
+
+        mock_job.assert_called_once_with(
+            name="fetch_polygon_manifest",
+            interval=provider.cron_interval_sec,
+            condition=provider._should_fetch,
+            task=provider._fetch_manifest,
+        )
+
+        mock_create_task.assert_called_once()
+        args, _ = mock_create_task.call_args
+        called_arg = args[0]
+        assert asyncio.iscoroutine(called_arg)
+        assert hasattr(provider, "cron_task_fetch")
+
+
+@pytest.mark.asyncio
+async def test_initialize_does_not_run_when_gcs_disabled(provider):
+    """Initialize should skip _fetch_manifest and cron creation when GCS is disabled."""
+    with (
+        patch("merino.providers.suggest.finance.provider.settings") as mock_settings,
+        patch.object(provider, "_fetch_manifest", new=AsyncMock()) as mock_fetch_manifest,
+        patch("asyncio.create_task", wraps=asyncio.create_task) as mock_create_task,
+        patch("merino.providers.suggest.finance.provider.cron.Job") as mock_job,
+    ):
+        mock_settings.image_gcs.gcs_enabled = False
+
+        await provider.initialize()
+
+        mock_fetch_manifest.assert_not_awaited()
+        mock_create_task.assert_not_called()
+        mock_job.assert_not_called()
+        assert not hasattr(provider, "cron_task_fetch")

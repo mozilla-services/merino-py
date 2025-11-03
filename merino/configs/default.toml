@@ -269,6 +269,11 @@ gcs_bucket = ""
 # CDN hostname used for public URLs of stored images
 cdn_hostname = ""
 
+# MERINO_IMAGE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = true
+
 
 [default.icon]
 # Subdirectory within bucket for favicons

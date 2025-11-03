@@ -21,6 +21,7 @@ from merino.providers.suggest.flightaware.backends.utils import (
     get_flight_number_from_query_if_valid,
 )
 from merino.utils import cron
+from merino.configs import settings
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +63,16 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize flight aware provider."""
-        await self._fetch_data()
+        if settings.image_gcs.gcs_enabled:
+            await self._fetch_data()
 
-        cron_job = cron.Job(
-            name="resync_flightaware",
-            interval=self.cron_interval_sec,
-            condition=self._should_fetch,
-            task=self._fetch_data,
-        )
-        self.cron_task = asyncio.create_task(cron_job())
+            cron_job = cron.Job(
+                name="resync_flightaware",
+                interval=self.cron_interval_sec,
+                condition=self._should_fetch,
+                task=self._fetch_data,
+            )
+            self.cron_task = asyncio.create_task(cron_job())
 
     async def _fetch_data(self) -> None:
         """Cron fetch method to re-run after set interval.
