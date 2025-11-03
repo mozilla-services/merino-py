@@ -408,5 +408,3 @@ async def test_set_sports_es_creds(sport_data_store: SportsDataStore, mocker: Mo
     set_sports_es_creds(s2, sports)
     assert sports.es.api_key == wiki_key
     assert sports.es.dsn == wiki_url
-
-    print(sports)
