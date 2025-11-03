@@ -510,21 +510,33 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
 
 
 @pytest.mark.parametrize(
-    "branch,model_id,expect_private_nonempty",
+    "experiment,branch,model_id,expect_private_nonempty",
     [
-        (LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
-        (LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (
+            "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
+            LOCAL_AND_SERVER_BRANCH_NAME,
+            LOCAL_AND_SERVER_V1,
+            True,
+        ),
+        ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
     ],
-    ids=["local_and_server_branch", "local_only_branch"],
+    ids=[
+        "local_and_server_branch",
+        "local_only_branch",
+        "optin-local_and_server_branch",
+        "optin-local_only_branch",
+    ],
 )
 def test_get_with_experiment_and_model_id_correct_branch_returns_model(
-    model_limited, branch, model_id, expect_private_nonempty
+    model_limited, experiment, branch, model_id, expect_private_nonempty
 ):
     """When passing a model_id for the experiment AND the correct branch, return that model."""
     result = model_limited.get(
         TEST_SURFACE,
         model_id=model_id,
-        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_name=experiment,
         experiment_branch=branch,
     )
 

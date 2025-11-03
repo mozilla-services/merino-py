@@ -10,7 +10,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     DayTimeWeightingConfig,
 )
 
-INFERRED_LOCAL_EXPERIMENT_NAME = "optin-new-tab-automated-personalization-local-ranking"
+INFERRED_LOCAL_EXPERIMENT_NAME = "new-tab-automated-personalization-local-ranking"
 LOCAL_AND_SERVER_V1 = "local-and-server"
 LOCAL_ONLY_V1 = "local-only"
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1
@@ -279,8 +279,11 @@ class SuperInferredModel(LocalModelBackend):
             ## where the next model is built+returned
             return None
         if model_id is None:  ## this is the "get" call for building the model sent in the response
-            ## switch on experiment name
-            if experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME:
+            ## switch on experiment name, not using util becuase we have string name instead of request object
+            if (
+                experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME
+                or experiment_name == f"optin-{experiment_name}"
+            ):
                 ## switch on branch name
                 if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:
                     return self._build_local(LOCAL_AND_SERVER_V1, surface_id)
