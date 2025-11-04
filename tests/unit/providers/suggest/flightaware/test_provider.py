@@ -4,6 +4,7 @@
 
 """Unit tests for the flightaware provider module."""
 
+import asyncio
 import logging
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -321,3 +322,52 @@ def test_should_fetch_returns_false_when_interval_not_exceeded(provider):
         provider.last_fetch_at = 1700
         provider.resync_interval_sec = 500
         assert provider._should_fetch() is False
+
+
+@pytest.mark.asyncio
+async def test_initialize_runs_cron_and_fetch_when_gcs_enabled(provider):
+    """Initialize should call _fetch_data and create cron job when GCS is enabled."""
+    with (
+        patch("merino.providers.suggest.flightaware.provider.settings") as mock_settings,
+        patch.object(provider, "_fetch_data", new=AsyncMock()) as mock_fetch,
+        patch("asyncio.create_task", wraps=asyncio.create_task) as mock_create_task,
+        patch("merino.providers.suggest.flightaware.provider.cron.Job") as mock_job,
+    ):
+        mock_settings.image_gcs.gcs_enabled = True
+
+        mock_job_instance = AsyncMock(name="mock_cron_job")
+        mock_job.return_value = mock_job_instance
+
+        await provider.initialize()
+
+        mock_fetch.assert_awaited_once()
+
+        mock_job.assert_called_once_with(
+            name="resync_flightaware",
+            interval=provider.cron_interval_sec,
+            condition=provider._should_fetch,
+            task=provider._fetch_data,
+        )
+
+        mock_create_task.assert_called_once()
+
+        args, _ = mock_create_task.call_args
+        called_arg = args[0]
+        assert asyncio.iscoroutine(called_arg)
+
+
+@pytest.mark.asyncio
+async def test_initialize_does_not_run_when_gcs_disabled(provider):
+    """Initialize should skip _fetch_data and cron job creation when GCS is disabled."""
+    with (
+        patch("merino.providers.suggest.flightaware.provider.settings") as mock_settings,
+        patch.object(provider, "_fetch_data", new=AsyncMock()) as mock_fetch,
+        patch("asyncio.create_task", wraps=asyncio.create_task) as mock_create_task,
+    ):
+        mock_settings.image_gcs.gcs_enabled = False
+
+        await provider.initialize()
+
+        mock_fetch.assert_not_awaited()
+        mock_create_task.assert_not_called()
+        assert not hasattr(provider, "cron_task")

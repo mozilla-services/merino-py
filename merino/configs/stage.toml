@@ -27,12 +27,17 @@ gcs_project = "moz-fx-merino-nonprod-ee93"
 # MERINO_IMAGE_GCS__GCS_BUCKET
 gcs_bucket = "merino-images-stagepy"
 
+# MERINO_IMAGE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = false
+
 
 [stage.image_gcs_v1]
-# MERINO_IMAGE_GCS__GCS_PROJECT
+# MERINO_IMAGE_GCS_V1__GCS_PROJECT
 gcs_project = "moz-fx-merino-nonprod-ee93"
 
-# MERINO_IMAGE_GCS__GCS_BUCKET
+# MERINO_IMAGE_GCS_V1__GCS_BUCKET
 gcs_bucket = "merino-images-stagepy"
 
 [stage.providers.top_picks]
