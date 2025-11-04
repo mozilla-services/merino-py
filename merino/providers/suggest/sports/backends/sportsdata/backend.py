@@ -115,10 +115,11 @@ class SportsDataBackend(SportsDataProtocol):
         await self.data_store.shutdown()
 
     async def startup(self) -> None:
-        """Kickstart the datastore if needed.
+        """Perform any initialization functions here.
 
-        This is a bandage function that should be removed when the AirFlow jobs have
-        landed.
+        NOTE: The Merino elastic search account is READ_ONLY
+        The Airflow elastic search is READ_WRITE.
+
         """
         logger = logging.getLogger(__name__)
         # do we need to update the data?

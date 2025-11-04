@@ -187,9 +187,10 @@ class ElasticDataStore(ABC):
 
     @abstractmethod
     async def startup(self) -> bool:
-        """Kickstart the data store and fetch a round of data from the supplier.
+        """Perform start-up functions.
 
-        This is used in case the airflow system is not yet operational.
+        NOTE: The Merino elastic search account is READ_ONLY
+        The Airflow elastic search is READ_WRITE.
         """
 
     async def shutdown(self) -> None:
@@ -362,6 +363,9 @@ class SportsDataStore(ElasticDataStore):
 
     async def build_indexes(self, clear: bool = False):
         """Build the indices here for stand-alone and testing reasons.
+
+        NOTE: The Merino elastic search account is READ_ONLY
+        The Airflow elastic search is READ_WRITE.
 
         Normally, these are built using terraform.
         """
