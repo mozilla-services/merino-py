@@ -55,7 +55,6 @@ class SportsDataProvider(BaseProvider):
         enabled_by_default: bool = False,
         trigger_words: list[str] = [],
         score: float = BASE_SUGGEST_SCORE,
-        kickstart: bool = False,
         *args,
         **kwargs,
     ):
@@ -66,16 +65,11 @@ class SportsDataProvider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.trigger_words = trigger_words + TEAM_NAMES
         self.score = score
-        self.kickstart = kickstart
 
     async def initialize(self):
         """Create connections, components and other actions needed when starting up"""
         logger = logging.getLogger(__name__)
-        if self.kickstart:
-            try:
-                await self.backend.startup()
-            except Exception as ex:
-                logger.error(f"{LOGGING_TAG} Could not kickstart data: {ex}")
+        logger.info(f"{LOGGING_TAG} Starting sports...")
 
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Query elastic search with the provided user terms and return relevant sport event information."""
