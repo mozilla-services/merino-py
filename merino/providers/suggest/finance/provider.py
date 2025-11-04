@@ -8,7 +8,11 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
@@ -68,7 +72,7 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        if settings.current_env.lower() == "production":
+        if settings.image_gcs.gcs_enabled:
             await self._fetch_manifest()
 
             cron_job_fetch = cron.Job(

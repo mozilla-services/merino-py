@@ -30,6 +30,20 @@ class SportsDataProtocol(Protocol):
         """Perform the shutdown steps"""
 
 
+def set_sports_es_creds(settings: LazySettings, sport_setting: LazySettings):
+    """Fetch the api_key and dsn from the settings, using wikipedia as the backup.
+    This is broken out mostly for testing coverage.
+    """
+    if not sport_setting.get("es"):
+        sport_setting["es"] = LazySettings()
+    es = settings.providers.sports.es
+    source = settings.providers.wikipedia
+    if not es.get("api_key") or es.api_key.lower() == "none":
+        es.api_key = source.es_api_key
+    if not es.get("dsn") or es.dsn.lower() == "none":
+        es.dsn = source.es_url
+
+
 class SportsDataBackend(SportsDataProtocol):
     """Provide the methods specific to this provider for fulfilling the request"""
 

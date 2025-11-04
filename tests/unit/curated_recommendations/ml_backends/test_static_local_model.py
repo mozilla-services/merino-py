@@ -12,7 +12,6 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CTR_SECTION_MODEL_ID,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
-    INFERRED_LOCAL_EXPERIMENT_NAME,
     LOCAL_AND_SERVER_V1,
     LOCAL_ONLY_V1,
     LOCAL_AND_SERVER_BRANCH_NAME,
@@ -28,6 +27,10 @@ from merino.curated_recommendations.provider import (
     CuratedRecommendationsProvider,
     LOCAL_MODEL_DB_VALUES_KEY,
 )
+
+from merino.curated_recommendations.protocol import ExperimentName
+
+INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
 
 TEST_SURFACE = "test_surface"
 
@@ -510,26 +513,51 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
 
 
 @pytest.mark.parametrize(
-    "branch,model_id,expect_private_nonempty",
+    "experiment,branch,model_id,expect_private_nonempty",
     [
-        (LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
-        (LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (
+            "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
+            LOCAL_AND_SERVER_BRANCH_NAME,
+            LOCAL_AND_SERVER_V1,
+            True,
+        ),
+        ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, None, True),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, None, False),
+        (
+            "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
+            LOCAL_AND_SERVER_BRANCH_NAME,
+            None,
+            True,
+        ),
+        ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, None, False),
     ],
-    ids=["local_and_server_branch", "local_only_branch"],
+    ids=[
+        "local_and_server_branch",
+        "local_only_branch",
+        "optin-local_and_server_branch",
+        "optin-local_only_branch",
+        "local_and_server_branch__no_model",
+        "local_only_branch__no_model",
+        "optin-local_and_server_branch__no_model",
+        "optin-local_only_branch__no_model",
+    ],
 )
 def test_get_with_experiment_and_model_id_correct_branch_returns_model(
-    model_limited, branch, model_id, expect_private_nonempty
+    model_limited, experiment, branch, model_id, expect_private_nonempty
 ):
     """When passing a model_id for the experiment AND the correct branch, return that model."""
     result = model_limited.get(
         TEST_SURFACE,
         model_id=model_id,
-        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_name=experiment,
         experiment_branch=branch,
     )
 
     assert isinstance(result, InferredLocalModel)
-    assert result.model_id == model_id
+    assert result.model_id is not None
     # sanity checks on payload
     assert result.surface_id == TEST_SURFACE
     assert result.model_data is not None

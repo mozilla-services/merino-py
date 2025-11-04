@@ -4,7 +4,8 @@
 
 """Unit tests for the manifest provider module."""
 
-from unittest.mock import patch
+import asyncio
+from unittest.mock import AsyncMock, patch
 import pytest
 
 from merino.providers.manifest.backends.protocol import (
@@ -18,7 +19,10 @@ from merino.providers.manifest.backends.manifest import ManifestBackend
 
 @pytest.mark.asyncio
 async def test_initialize(
-    manifest_provider: Provider, backend: ManifestBackend, manifest_data: ManifestData, cleanup
+    manifest_provider: Provider,
+    backend: ManifestBackend,
+    manifest_data: ManifestData,
+    cleanup,
 ) -> None:
     """Test initialization of manifest provider"""
     with patch(
@@ -64,7 +68,8 @@ async def test_should_fetch_true(
     ):
         # difference between last fetch and current time is 100000 (greater than 86400)
         with patch(
-            "merino.providers.manifest.provider.time.time", side_effect=[100000, 200000, 300000]
+            "merino.providers.manifest.provider.time.time",
+            side_effect=[100000, 200000, 300000],
         ):
             await manifest_provider.initialize()
             await cleanup(manifest_provider)
@@ -84,7 +89,8 @@ async def test_should_fetch_false(
         return_value=(GetManifestResultCode.SUCCESS, manifest_data),
     ):
         with patch(
-            "merino.providers.manifest.provider.time.time", side_effect=[100000, 101000, 101500]
+            "merino.providers.manifest.provider.time.time",
+            side_effect=[100000, 101000, 101500],
         ):
             await manifest_provider.initialize()
             await cleanup(manifest_provider)
@@ -144,3 +150,55 @@ async def test_fetch_data_error(manifest_provider: Provider, cleanup) -> None:
         # manifest data remains empty ManifestData instance after initialization
         assert manifest_provider.manifest_data is not None
         assert manifest_provider.manifest_data.domains == []
+
+
+@pytest.mark.asyncio
+async def test_initialize_runs_cron_and_fetch_when_gcs_enabled(manifest_provider):
+    """Initialize should call _fetch_data and create cron job when GCS is enabled."""
+    with (
+        patch("merino.providers.manifest.provider.settings") as mock_settings,
+        patch.object(manifest_provider, "_fetch_data", new=AsyncMock()) as mock_fetch_data,
+        patch("asyncio.create_task", wraps=asyncio.create_task) as mock_create_task,
+        patch("merino.providers.manifest.provider.cron.Job") as mock_job,
+    ):
+        mock_settings.image_gcs.gcs_enabled = True
+
+        mock_job_instance = AsyncMock(name="mock_cron_job")
+        mock_job.return_value = mock_job_instance
+
+        await manifest_provider.initialize()
+
+        mock_fetch_data.assert_awaited_once()
+
+        mock_job.assert_called_once_with(
+            name="resync_manifest",
+            interval=manifest_provider.cron_interval_sec,
+            condition=manifest_provider._should_fetch,
+            task=manifest_provider._fetch_data,
+        )
+
+        mock_create_task.assert_called_once()
+        args, _ = mock_create_task.call_args
+        called_arg = args[0]
+        assert asyncio.iscoroutine(called_arg)
+        assert hasattr(manifest_provider, "cron_task")
+
+
+@pytest.mark.asyncio
+async def test_initialize_does_not_run_when_gcs_disabled(manifest_provider):
+    """Initialize should skip _fetch_data and cron job creation when GCS is disabled."""
+    with (
+        patch("merino.providers.manifest.provider.settings") as mock_settings,
+        patch.object(manifest_provider, "_fetch_data", new=AsyncMock()) as mock_fetch_data,
+        patch("asyncio.create_task", wraps=asyncio.create_task) as mock_create_task,
+        patch("merino.providers.manifest.provider.cron.Job") as mock_job,
+    ):
+        mock_settings.image_gcs.gcs_enabled = False
+
+        await manifest_provider.initialize()
+
+        mock_fetch_data.assert_not_awaited()
+
+        mock_job.assert_not_called()
+        mock_create_task.assert_not_called()
+        assert not hasattr(manifest_provider, "cron_task")
