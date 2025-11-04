@@ -45,6 +45,7 @@ from merino.providers.suggest.sports import (
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
+    set_sports_es_creds,
 )
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.providers.suggest.google_suggest.provider import (
@@ -338,6 +339,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 word.lower().strip()
                 for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
             ]
+            set_sports_es_creds(settings, setting)
             return SportsDataProvider(
                 backend=SportsDataBackend(settings=setting),
                 metrics_client=get_metrics_client(),
