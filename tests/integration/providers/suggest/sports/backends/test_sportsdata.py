@@ -95,7 +95,7 @@ def fixture_sportsdata(
     )
 
 
-@pytest.fixture(name="sports_team")
+@pytest.fixture(name="sports_league")
 def fixture_nfl() -> NFL:
     """Create a NFL instance for Testing."""
     frozen_time_int = int(FROZEN_TIME.timestamp())
@@ -145,18 +145,19 @@ def fixture_nfl() -> NFL:
 @pytest.mark.asyncio
 async def test_sportsdata_query_empty_store(sportsdata: SportsDataBackend):
     """Test query of empty store."""
+    await sportsdata.data_store.build_indexes(clear=True)
     response = await sportsdata.query("fakehome")
     assert len(response) == 0
 
 
 @freezegun.freeze_time("2025-10-26")
 @pytest.mark.asyncio
-async def test_sportsdata_query(sportsdata: SportsDataBackend, sports_team: NFL):
+async def test_sportsdata_na_query(sportsdata: SportsDataBackend, sports_league: NFL):
     """Test query of sportsdata."""
     # build indexes
     await sportsdata.data_store.build_indexes(clear=True)
 
-    await sportsdata.data_store.store_events(sport=sports_team, language_code="en")
+    await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
     result = await sportsdata.query("fakehome")
 
     expected_result = SportSummary(
@@ -172,8 +173,8 @@ async def test_sportsdata_query(sportsdata: SportsDataBackend, sports_team: NFL)
                 away_team=SportTeamDetail(
                     key="AWA", name="Fake Away", colors=["000000", "FFFFFF"], score=None
                 ),
-                event_status="scheduled",
-                status="scheduled",
+                status_type="scheduled",
+                status="Scheduled",
             )
         ],
     )
@@ -184,31 +185,31 @@ async def test_sportsdata_query(sportsdata: SportsDataBackend, sports_team: NFL)
 
 @freezegun.freeze_time("2025-10-26")
 @pytest.mark.asyncio
-async def test_sportsdata_query_with_no_result(sportsdata: SportsDataBackend, sports_team: NFL):
+async def test_sportsdata_query_with_no_result(sportsdata: SportsDataBackend, sports_league: NFL):
     """Test query of sportsdata."""
     # build indexes
     await sportsdata.data_store.build_indexes(clear=True)
 
-    await sportsdata.data_store.store_events(sport=sports_team, language_code="en")
+    await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
     response = await sportsdata.query("something else")
     assert len(response) == 0
 
 
 @freezegun.freeze_time("2025-10-26")
 @pytest.mark.asyncio
-async def test_sportsdata_query_post_prune(sportsdata, sports_team: NFL):
+async def test_sportsdata_query_post_prune(sportsdata, sports_league: NFL):
     """Test query of sportsdata after pruning."""
     await sportsdata.data_store.build_indexes(clear=True)
 
-    await sportsdata.data_store.store_events(sport=sports_team, language_code="en")
+    await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
     results = await sportsdata.data_store.search_events("fakehome", "en")
     assert len(results) == 1
 
     now = int(datetime.now(tz=timezone.utc).timestamp())
-    for ev in sports_team.events.values():
+    for ev in sports_league.events.values():
         ev.expiry = now - 5
 
-    await sportsdata.data_store.store_events(sport=sports_team, language_code="en")
+    await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
 
     pruned = await sportsdata.data_store.prune(language_code="en")
     assert pruned is True
