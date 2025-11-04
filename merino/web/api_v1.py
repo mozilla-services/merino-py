@@ -95,7 +95,11 @@ async def suggest(
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    request_type: Annotated[
+        str | None, Query(pattern="^(location|weather|weather_forecast)$")
+    ] = None,
+    # Number of hourly points to return when request_type=weather_forecast
+    hours: Annotated[int | None, Query(ge=5, le=24)] = 5,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -134,9 +138,19 @@ async def suggest(
         You can then pass other providers that are not enabled after `default`,
         allowing for customization of the suggestion request.
     - `request_type`: [Optional] For AccuWeather provider, the request type should be either a
+<<<<<<< HEAD
         "location" or "weather" string. For "location" it will get location completion
         suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
         to weather suggestions.
+=======
+        "location" or "weather" or "weather_forecast" string. For "location" it will get location completion
+        suggestion. For "weather" it will return weather suggestions. For "weather_forecast" it will return current
+        + daily + **hourly** forecast If omitted, it defaults to weather suggestions.
+    - `google_suggest_params`: [Optional] For the `google_suggest` provider only, use it to send
+        all client specified query params over to the Google Suggest endpont.
+    - `sid`: [Optional] A unique identifier for each search/suggest session. Note that this not a UUID for a user.
+    - `hours`: [Optional] Integer number of hourly points to return when `request_type=weather_forecast`. Default: `5`. Min: `5`. Max: `24`.
+>>>>>>> 66cd9a4d (init: accuweather hourly forecast)
 
     **Headers:**
 
@@ -223,6 +237,7 @@ async def suggest(
             languages=languages,
             user_agent=user_agent,
             source=source,
+            forecast_hours=hours if request_type == "weather_forecast" else None,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")

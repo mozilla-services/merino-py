@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Literal
 
 import aiodogstatsd
 from fastapi import HTTPException
@@ -41,6 +41,8 @@ logger = logging.getLogger(__name__)
 class Suggestion(BaseSuggestion):
     """Model for weather suggestions."""
 
+    # Only set when hourly_forecast is requested
+    type: Optional[Literal["weather_forecast"]] = None
     city_name: str
     region_code: str
     current_conditions: CurrentConditions
@@ -193,6 +195,8 @@ class Provider(BaseProvider):
         self, data: WeatherReport | list[LocationCompletion]
     ) -> Suggestion | LocationCompletionSuggestion:
         """Build either a weather suggestion or a location completion suggestion."""
+        is_hourly_forecast = getattr(data, "hourly", None) is not None
+
         if isinstance(data, WeatherReport):
             return Suggestion(
                 title=f"Weather for {data.city_name}",
@@ -205,6 +209,7 @@ class Provider(BaseProvider):
                 region_code=data.region_code,
                 current_conditions=data.current_conditions,
                 forecast=data.forecast,
+                type="weather_forecast" if is_hourly_forecast else None,
                 custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=data.ttl)),
             )
         else:
