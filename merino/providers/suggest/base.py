@@ -25,6 +25,13 @@ class SuggestionRequest(BaseModel):
     source: str | None = None
     google_suggest_params: str | None = None
     session_id: str | None = None
+    # Only for request_type="weather_forecast"
+    forecast_hours: int | None = Field(
+        default=5,
+        ge=5,
+        le=24,
+        description="Number of hourly forecast points to return (only for request_type=weather_forecast).",
+    )
 
 
 class BaseSuggestion(BaseModel):

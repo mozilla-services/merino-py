@@ -54,6 +54,27 @@ class Forecast(BaseModel):
     low: Temperature
 
 
+class HourlyForecastReport(BaseModel):
+    """Represents a single hourly forecast datapoint from AccuWeather"""
+
+    # Time of forecast hour in ISO 8601 UTC
+    time: str
+    temperature: Temperature
+    # Weather icon + text summary
+    icon_id: int
+    summary: str
+    # Core precip info
+    precip_probability: int | None = None
+    precip_type: str | None = None
+    precip_intensity_text: str | None = None
+
+
+class HourlyForecast(BaseModel):
+    """Hourly weather forecast data returned from AccuWeather"""
+
+    hours: list[HourlyForecastReport]
+
+
 class WeatherReport(BaseModel):
     """Model for weather conditions."""
 
@@ -62,6 +83,8 @@ class WeatherReport(BaseModel):
     forecast: Forecast
     ttl: int
     region_code: str
+    # Optional hourly forecast data when request_type=weather_forecast
+    hourly: HourlyForecast | None = None
 
 
 class LocationCompletion(BaseModel):
