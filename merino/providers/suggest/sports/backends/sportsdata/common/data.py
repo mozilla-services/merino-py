@@ -3,6 +3,7 @@
 # from __future__ import annotations
 
 import logging
+import os
 
 from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
@@ -180,7 +181,9 @@ class Sport:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
-        self.api_key = api_key or settings.sportsdata.get("api_key")
+        self.api_key = api_key or settings.sportsdata.get(
+            "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
+        )
         self.base_url = base_url
         self.name = name
         self.teams = {}

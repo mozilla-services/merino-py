@@ -46,6 +46,9 @@ async def get_data(
             except PermissionError:
                 logger.warning(f"{LOGGING_TAG} Unable to read cache {cache_file}")
                 pass
+            except ValueError:
+                # possible read on a closed file.
+                pass
     logger.debug(f"{LOGGING_TAG} fetching data from {url}")
     response = await client.get(url)
     response.raise_for_status()
@@ -57,5 +60,9 @@ async def get_data(
                 json.dump(response, cache)
         except PermissionError:
             logger.warning(f"{LOGGING_TAG} Unable to write cache {cache_file}")
+            pass
+        except TypeError:
+            # Could not serialize the response, possibly due to it being a mock.
+            logger.warning(f"{LOGGING_TAG} Unable to serialize response for {url}")
             pass
     return response

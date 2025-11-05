@@ -15,9 +15,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
-    # NFL,
+    NFL,
     NHL,
-    # NBA,
+    NBA,
 )
 from merino.utils.http_client import create_http_client
 
@@ -137,9 +137,9 @@ class SportsDataBackend(SportsDataProtocol):
                 client = create_http_client()
                 # hardcode the sports for now:
                 for sport in [
-                    # NFL(settings=self.settings),
-                    # NBA(settings=self.settings),
-                    NHL(settings=self.settings),  # why NHL? Because the team is mostly Canadian.
+                    NFL(settings=self.settings),
+                    NBA(settings=self.settings),
+                    NHL(settings=self.settings),
                 ]:
                     logger.info(f"{LOGGING_TAG} fetching {sport.name} teams...")
                     await sport.update_teams(client=client)
