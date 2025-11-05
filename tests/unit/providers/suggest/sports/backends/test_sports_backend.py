@@ -317,37 +317,27 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
 async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker: MockerFixture):
     """Test the sports backend startup process with mocked sports classes."""
     # Patch the sport classes
-    mock_nba_class = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.backend.NBA"
-    )
-    mock_nfl_class = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.backend.NFL"
-    )
-    mock_nhl_class = mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.backend.NHL"
-    )
-    mock_nba_instance = AsyncMock()
-    mock_nfl_instance = AsyncMock()
-    mock_nhl_instance = AsyncMock()
-
-    # Set the name attribute for each mock instance
-    mock_nba_instance.name = "NBA"
-    mock_nfl_instance.name = "NFL"
-    mock_nhl_instance.name = "NHL"
-
-    # Configure the class constructors to return the mock instances
-    mock_nba_class.return_value = mock_nba_instance
-    mock_nfl_class.return_value = mock_nfl_instance
-    mock_nhl_class.return_value = mock_nhl_instance
-
-    # Setup async methods on the instances
-    mock_nba_instance.update_teams = AsyncMock()
-    mock_nfl_instance.update_teams = AsyncMock()
-    mock_nhl_instance.update_teams = AsyncMock()
-    mock_nba_instance.update_events = AsyncMock()
-    mock_nfl_instance.update_events = AsyncMock()
-    mock_nhl_instance.update_events = AsyncMock()
-
+    # Remember, we alter the `settings` so we can't rely on them being correct. This list will
+    # need to be manually updated whenever we add a new sport (or we can be super clever and
+    # look any component of sportsdata.backend that a subclass of `Sport`, but that seems VERY
+    # clever, and probably prone to breaking.
+    sports = ["nba", "nfl", "nhl"]
+    mocks = {}
+    for sport_name in sports:
+        mock_class = mocker.patch(
+            f"merino.providers.suggest.sports.backends.sportsdata.backend.{sport_name.upper()}"
+        )
+        mock_instance = AsyncMock()
+        mock_instance.name = sport_name.upper()
+        mock_instance.update_teams = AsyncMock()
+        mock_instance.update_events = AsyncMock()
+        mock_class.return_value = mock_instance
+        mock_class.return_value
+        mock_set = dict(
+            mock_class=mock_class,
+            mock_instance=mock_instance,
+        )
+        mocks[sport_name] = mock_set
     # Mock the HTTP client
     mock_client = AsyncMock()
     mocker.patch(
@@ -372,23 +362,11 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
     await backend.startup()
 
     # Verify the mocked classes were instantiated
-    mock_nba_class.assert_called_once_with(settings=settings.providers.sports)
-    mock_nfl_class.assert_called_once_with(settings=settings.providers.sports)
-    mock_nhl_class.assert_called_once_with(settings=settings.providers.sports)
-
-    # Verify async methods were called on each sport instance
-    mock_nba_instance.update_teams.assert_called_once_with(client=mock_client)
-    mock_nfl_instance.update_teams.assert_called_once_with(client=mock_client)
-    mock_nhl_instance.update_teams.assert_called_once_with(client=mock_client)
-    mock_nba_instance.update_events.assert_called_once_with(client=mock_client)
-    mock_nfl_instance.update_events.assert_called_once_with(client=mock_client)
-    mock_nhl_instance.update_events.assert_called_once_with(client=mock_client)
-
-    # Verify store_events was called for each sport
-    assert mock_store_events.call_count == 3
-    mock_store_events.assert_any_call(mock_nba_instance, language_code="en")
-    mock_store_events.assert_any_call(mock_nfl_instance, language_code="en")
-    mock_store_events.assert_any_call(mock_nhl_instance, language_code="en")
+    for mock in mocks.values():
+        mock["mock_class"].assert_called_once_with(settings=settings.providers.sports)
+        mock["mock_instance"].update_teams.assert_called_once_with(client=mock_client)
+        mock["mock_instance"].update_events.assert_called_once_with(client=mock_client)
+        mock_store_events.assert_any_call(mock["mock_instance"], language_code="en")
 
 
 @pytest.mark.asyncio
