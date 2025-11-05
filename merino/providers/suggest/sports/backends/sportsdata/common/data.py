@@ -181,6 +181,8 @@ class Sport:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
+        # NOTE: This also handles a potential typo in the AirFlow environment variable name.
+        # See https://mozilla-hub.atlassian.net/browse/DISCO-3802
         self.api_key = api_key or settings.sportsdata.get(
             "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
         )
