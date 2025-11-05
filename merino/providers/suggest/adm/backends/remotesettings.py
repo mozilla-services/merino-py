@@ -61,7 +61,6 @@ class RemoteSettingsBackend:
     """Backend that connects to a live Remote Settings server."""
 
     kinto_http_client: kinto_http.AsyncClient
-    icon_processor_v1: IconProcessor
     icon_processor: IconProcessor
     # A map to record the last modified timestamp for each "amp" type record.
     # The key stores the record ID and the value stores the "last_modified" field
@@ -75,7 +74,6 @@ class RemoteSettingsBackend:
         server: str | None,
         collection: str | None,
         bucket: str | None,
-        icon_processor_v1: IconProcessor,
         icon_processor: IconProcessor,
     ) -> None:
         """Init the Remote Settings backend and create a new client.
@@ -99,7 +97,6 @@ class RemoteSettingsBackend:
             server_url=server, bucket=bucket, collection=collection
         )
 
-        self.icon_processor_v1 = icon_processor_v1
         self.icon_processor = icon_processor
         self.last_modified_timestamps = dict()
         self.suggestion_content = SuggestionContent(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
@@ -168,22 +165,12 @@ class RemoteSettingsBackend:
 
         # Process all icons concurrently using TaskGroup
         try:
-            async with asyncio.TaskGroup() as task_group_v1:
-                for _, url in icon_data:
-                    tasks.append(
-                        task_group_v1.create_task(self.icon_processor_v1.process_icon_url(url))
-                    )
-        except ExceptionGroup as eg:
-            # If an unhandled exception occurs in TaskGroup
-            logger.error(f"Errors during icon processing (v1): {eg}")
-
-        try:
             async with asyncio.TaskGroup() as task_group:
                 for _, url in icon_data:
-                    task_group.create_task(self.icon_processor.process_icon_url(url))
+                    tasks.append(task_group.create_task(self.icon_processor.process_icon_url(url)))
         except ExceptionGroup as eg:
             # If an unhandled exception occurs in TaskGroup
-            logger.error(f"Errors during icon processing (v2): {eg}")
+            logger.error(f"Errors during icon processing: {eg}")
 
         # Map results back to their IDs, handling any exceptions
         for (id, original_url), task in zip(icon_data, tasks):

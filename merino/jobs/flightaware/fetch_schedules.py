@@ -142,20 +142,20 @@ async def store_flight_numbers_in_redis(flight_number_set: set[str]) -> None:
 async def store_flight_numbers_in_gcs(flight_number_set: set[str]) -> None:
     """Add new unique flight numbers in GCS and log additions."""
     try:
-        uploader_v1 = GcsUploader(
-            settings.image_gcs_v1.gcs_project,
-            settings.image_gcs_v1.gcs_bucket,
-            settings.image_gcs_v1.cdn_hostname,
-        )
-
-        # upload file to GCPV2
         uploader = GcsUploader(
             settings.image_gcs.gcs_project,
             settings.image_gcs.gcs_bucket,
             settings.image_gcs.cdn_hostname,
         )
 
-        existing_blob = uploader_v1.get_most_recent_file(
+        # upload file to GCPV2
+        uploader_v2 = GcsUploader(
+            settings.image_gcs_v2.gcs_project,
+            settings.image_gcs_v2.gcs_bucket,
+            settings.image_gcs_v2.cdn_hostname,
+        )
+
+        existing_blob = uploader.get_most_recent_file(
             match="flight_numbers",
             sort_key=lambda b: b.updated,
         )
@@ -170,7 +170,7 @@ async def store_flight_numbers_in_gcs(flight_number_set: set[str]) -> None:
         newly_added = combined - existing_numbers
         content = json.dumps(sorted(combined), indent=2)
 
-        uploader_v1.upload_content(
+        uploader.upload_content(
             content=content,
             destination_name="flight_numbers_latest.json",
             content_type="application/json",
@@ -178,7 +178,7 @@ async def store_flight_numbers_in_gcs(flight_number_set: set[str]) -> None:
         )
 
         # upload file to GCPV2
-        uploader.upload_content(
+        uploader_v2.upload_content(
             content=content,
             destination_name="flight_numbers_latest.json",
             content_type="application/json",

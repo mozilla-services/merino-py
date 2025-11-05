@@ -77,7 +77,7 @@ def fixture_polygon_parameters(
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
         "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
         "gcs_uploader": mocker.MagicMock(),
-        "gcs_uploader_v1": mocker.MagicMock(),
+        "gcs_uploader_v2": mocker.MagicMock(),
         "cache": RedisAdapter(redis_client),
         "ticker_ttl_sec": TICKER_TTL_SEC,
     }

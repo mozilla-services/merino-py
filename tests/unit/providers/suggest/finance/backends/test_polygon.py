@@ -96,7 +96,7 @@ def fixture_polygon_parameters(
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
         "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
         "gcs_uploader": mock_gcs_uploader,
-        "gcs_uploader_v1": mock_gcs_uploader,
+        "gcs_uploader_v2": mock_gcs_uploader,
         "cache": RedisAdapter(redis_mock_cache_miss),
         "ticker_ttl_sec": TICKER_TTL_SEC,
     }
@@ -605,7 +605,10 @@ async def test_upload_ticker_images_skips_none_image_and_uploads_other(
         [ticker_skipped, ticker_uploaded],
     )
 
-    assert result == {ticker_uploaded: expected_url}
+    assert result == {
+        "v1": {ticker_uploaded: expected_url},
+        "v2": {ticker_uploaded: expected_url},
+    }
     assert polygon_mock_download.call_count == 2
     polygon_mock_download.assert_any_await(ticker_skipped)
     polygon_mock_download.assert_any_await(ticker_uploaded)
@@ -635,7 +638,7 @@ async def test_upload_ticker_images_uploads_if_not_exists(
 
     result = await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
 
-    assert result == {"AAPL": expected_url}
+    assert result == {"v1": {"AAPL": expected_url}, "v2": {"AAPL": expected_url}}
     # TODO check called once after migration
     assert upload_image_mock.called
 
@@ -655,7 +658,7 @@ async def test_upload_ticker_images_upload_fails(
 
     result = await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
 
-    assert result == {}
+    assert result == {"v1": {}, "v2": {}}
     # TODO check called once after migration
     assert upload_image_mock.called
 
@@ -757,7 +760,10 @@ async def test_build_and_upload_manifest_file_success(polygon: PolygonBackend, m
     polygon_upload_mock = mocker.patch.object(
         polygon,
         "bulk_download_and_upload_ticker_images",
-        return_value={"AAPL": "https://cdn.example.com/aapl.png"},
+        return_value={
+            "v1": {"AAPL": "https://cdn.example.com/aapl.png"},
+            "v2": {"AAPL": "https://cdn.example.com/aapl.png"},
+        },
     )
 
     upload_content_mock = mocker.patch.object(
@@ -781,7 +787,10 @@ async def test_build_and_upload_manifest_file_upload_fails(
     mocker.patch.object(
         polygon,
         "bulk_download_and_upload_ticker_images",
-        return_value={"AAPL": "https://cdn.example.com/aapl.png"},
+        return_value={
+            "v1": {"AAPL": "https://cdn.example.com/aapl.png"},
+            "v2": {"AAPL": "https://cdn.example.com/aapl.png"},
+        },
     )
 
     upload_content_mock = mocker.patch.object(
