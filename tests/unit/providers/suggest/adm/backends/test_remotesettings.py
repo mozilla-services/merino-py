@@ -61,7 +61,6 @@ def fixture_rs_backend(
         collection=rs_parameters["collection"],
         bucket=rs_parameters["bucket"],
         icon_processor=mock_icon_processor,
-        icon_processor_v1=mock_icon_processor,
     )
 
 
@@ -268,7 +267,6 @@ def test_init_invalid_remote_settings_parameter_error(
             collection=rs_parameters.get("collection"),
             bucket=rs_parameters.get("bucket"),
             icon_processor=mock_icon_processor,
-            icon_processor_v1=mock_icon_processor,
         )
 
     assert str(error.value) == expected_error_value

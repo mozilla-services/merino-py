@@ -243,16 +243,16 @@ env = "dev"
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry,
 # and extra output will be included in the logs.
 
-[default.image_gcs_v1]
-# MERINO_IMAGE_GCS_V1__GCS_PROJECT
+[default.image_gcs_v2]
+# MERINO_IMAGE_GCS_V2__GCS_PROJECT
 # GCS project name that contains domain data
 gcs_project = ""
 
-# MERINO_IMAGE_GCS_V1__GCS_BUCKET
+# MERINO_IMAGE_GCS_V2__GCS_BUCKET
 # GCS bucket that contains domain data files
 gcs_bucket = ""
 
-# MERINO_IMAGE_GCS_V1__CDN_HOSTNAME
+# MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
 # CDN hostname used for public URLs of stored images
 cdn_hostname = ""
 

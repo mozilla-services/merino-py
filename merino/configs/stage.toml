@@ -33,11 +33,11 @@ gcs_bucket = "merino-images-stagepy"
 gcs_enabled = false
 
 
-[stage.image_gcs_v1]
-# MERINO_IMAGE_GCS_V1__GCS_PROJECT
+[stage.image_gcs_v2]
+# MERINO_IMAGE_GCS_V2__GCS_PROJECT
 gcs_project = "moz-fx-merino-nonprod-ee93"
 
-# MERINO_IMAGE_GCS_V1__GCS_BUCKET
+# MERINO_IMAGE_GCS_V2__GCS_BUCKET
 gcs_bucket = "merino-images-stagepy"
 
 [stage.providers.top_picks]

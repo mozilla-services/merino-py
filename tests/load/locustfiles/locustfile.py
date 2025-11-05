@@ -194,9 +194,9 @@ async def get_adm_queries(
     )
 
     icon_processor = IconProcessor(
-        gcs_project=settings.image_gcs_v1.gcs_project,
-        gcs_bucket=settings.image_gcs_v1.gcs_bucket,
-        cdn_hostname=settings.image_gcs_v1.cdn_hostname,
+        gcs_project=settings.image_gcs.gcs_project,
+        gcs_bucket=settings.image_gcs.gcs_bucket,
+        cdn_hostname=settings.image_gcs.cdn_hostname,
         http_client=http_client,
     )
     backend: RemoteSettingsBackend = RemoteSettingsBackend(
@@ -204,7 +204,6 @@ async def get_adm_queries(
         collection=collection,
         bucket=bucket,
         icon_processor=icon_processor,
-        icon_processor_v1=icon_processor,
     )
     records: list[dict[str, Any]] = await backend.get_records()
     amp_records: list[dict[str, Any]] = backend.filter_records("amp", records)
