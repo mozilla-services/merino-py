@@ -22,8 +22,9 @@ hardcoded in the calling function for now, but is based on the file creation tim
 import asyncio
 import logging
 import typer
+import sys
 from time import time
-from httpx import AsyncClient, Timeout
+from httpx import AsyncClient
 from dynaconf.base import LazySettings
 from typing import cast
 
@@ -81,6 +82,7 @@ class SportDataUpdater:
         **kwargs,
     ) -> None:
         logger = logging.getLogger(__name__)
+        logger.info(f"{LOGGING_TAG} Python: {sys.version}")
         active_sports = [sport.strip().upper() for sport in settings.sports]
         sport: Sport | None = None
         sports: dict[str, Sport] = {}

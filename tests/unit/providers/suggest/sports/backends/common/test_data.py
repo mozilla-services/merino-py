@@ -222,7 +222,7 @@ def test_load_schedules_from_source_filters_and_populates(
     mod_event["DateTime"] = None
     sport.events = {}
     mod_events = sport.load_schedules_from_source(
-        [mod_event], event_timezone=ZoneInfo("US/Eastern")
+        [mod_event], event_timezone=ZoneInfo("America/New_York")
     )
     assert len(mod_events) == 0
 
