@@ -215,7 +215,7 @@ class NFL(Sport):
         logger = logging.getLogger(__name__)
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
-        local_timezone = ZoneInfo("US/Eastern")
+        local_timezone = ZoneInfo("America/New_York")
         # get this week and next week
         for week in [int(self.week), int(self.week) + 1]:
             url = f"{self.base_url}/ScoresBasic/{self.season}/{week}?key={self.api_key}"
@@ -310,7 +310,7 @@ class NHL(Sport):
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
-        local_timezone = ZoneInfo("US/Eastern")
+        local_timezone = ZoneInfo("America/New_York")
         response = await get_data(
             client=client,
             url=url,
@@ -397,7 +397,7 @@ class NBA(Sport):
         if self.season is None:
             logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
-        local_timezone = ZoneInfo("US/Eastern")
+        local_timezone = ZoneInfo("America/New_York")
         url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
         response = await get_data(
             client=client,
@@ -572,7 +572,7 @@ class UCL(Sport):
 #            },
 #        ...]
 #        """
-#        date = datetime.now(tz=ZoneInfo("US/Eastern")).strftime("%Y-%b-%d")
+#        date = datetime.now(tz=ZoneInfo("America/New_York")).strftime("%Y-%b-%d")
 #        season = str(date)
 #        url = f"{self.base_url}/ScoresBasic/{season}?key={self.api_key}"
 #        await get_data(client, url)
