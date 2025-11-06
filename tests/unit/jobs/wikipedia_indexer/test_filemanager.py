@@ -319,7 +319,7 @@ def test_get_latest_dump_uses_fallback_when_current_has_no_match(mock_get):
     resp_fallback = MagicMock()
     resp_fallback.content = """
     <html><body>
-      <a href="frwiki-20250818-cirrussearch-content.json.gz">frwiki-20250818-cirrussearch-content.json.gz</a>
+      <a href="frwiki-20251027-cirrussearch-content.json.gz">frwiki-20251027-cirrussearch-content.json.gz</a>
     </body></html>
     """
 
@@ -339,7 +339,7 @@ def test_get_latest_dump_uses_fallback_when_current_has_no_match(mock_get):
 
     assert (
         result
-        == "https://dumps.wikimedia.org/other/cirrussearch/20250818/frwiki-20250818-cirrussearch-content.json.gz"
+        == "https://dumps.wikimedia.org/other/cirrussearch/20251027/frwiki-20251027-cirrussearch-content.json.gz"
     )
 
 
