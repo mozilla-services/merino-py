@@ -43,7 +43,7 @@ async def es_client(es_url):
     """Elasticsearch client fixture."""
     client = AsyncElasticsearch(es_url, verify_certs=False, ssl_show_warn=False)
     try:
-        await client.cluster.health(wait_for_status="yellow", timeout="10s")
+        await client.cluster.health(wait_for_status="green", timeout="30s")
         yield client
     finally:
         await client.close()
