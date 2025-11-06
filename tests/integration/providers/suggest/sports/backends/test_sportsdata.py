@@ -9,6 +9,7 @@ import freezegun
 import pytest
 import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
+from testcontainers.core.waiting_utils import wait_for_logs
 from testcontainers.elasticsearch import ElasticSearchContainer
 
 from merino.configs import settings
@@ -43,7 +44,7 @@ async def es_client(es_url):
     """Elasticsearch client fixture."""
     client = AsyncElasticsearch(es_url, verify_certs=False, ssl_show_warn=False)
     try:
-        await client.cluster.health(wait_for_status="yellow", timeout="10s")
+        await client.ping()
         yield client
     finally:
         await client.close()
