@@ -116,9 +116,13 @@ class SportDataUpdater:
         self.read_timeout = read_timeout
         logger.debug(f"{LOGGING_TAG}: Starting up...")
 
-    async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
+    async def update(
+        self, include_teams: bool = True, client: AsyncClient | None = None
+    ) -> bool:
         """Perform sport specific updates."""
         logger = logging.getLogger(__name__)
+        logger.debug(f"{LOGGING_TAG} Initializing database")
+        await self.store.startup()
         client = create_http_client(
             connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
         )
@@ -150,13 +154,15 @@ class SportDataUpdater:
     async def nightly(self, client: AsyncClient | None = None) -> None:
         """Perform the nightly maintenance tasks"""
         logger = logging.getLogger(__name__)
+        logger.debug(f"{LOGGING_TAG} Initializing database")
+        await self.store.startup()
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
         logger.debug(f"{LOGGING_TAG} Nightly update...")
         await self.update(include_teams=True, client=client)
         await self.store.prune()
 
-    async def initialize(self, settings: LazySettings) -> None:
+    async def initialize(self) -> None:
         """Initialize the ElasticSearch data store"""
         await self.store.build_indexes(clear=False)
 
@@ -168,7 +174,9 @@ sports_settings = settings.providers.sports
 # NOTE: eventually, this will be replaced when the elasticsearch code
 # is moved to `/utils`
 if not sports_settings.es.get("api_key"):
-    logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
+    logger.warning(
+        f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate"
+    )
     sports_settings.es["api_key"] = settings.jobs.wikipedia_indexer.get(
         "es_api_key", settings.providers.wikipedia.get("es_api_key")
     )
@@ -185,9 +193,6 @@ cli = typer.Typer(
 name = sports_settings.get("platform", "sports")
 platform = f"{{lang}}_{name}"
 event_map = sports_settings.get("event_index", f"{platform}_event")
-dsn = sports_settings.es.get(
-    "dsn",
-)
 store = SportsDataStore(
     dsn=sports_settings.es.dsn,
     api_key=sports_settings.es.api_key,
