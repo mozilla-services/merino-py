@@ -263,13 +263,22 @@ class SportsDataStore(ElasticDataStore):
         index_map: dict[str, str],
         **kwargs,
     ) -> None:
+        logger = logging.getLogger(__name__)
+        if not dsn or not api_key:
+            missing = []
+            if not dsn:
+                missing.append("DSN")
+            if not api_key:
+                missing.append("API_KEY")
+            logger.error(f"{LOGGING_TAG} NO ES CREDENTIAL INFO FOUND! {",".join(missing)}")
+            raise SportsDataError("Missing Elasticsearch Credentials")
         """Initialize a connection to ElasticSearch"""
         super().__init__(dsn=dsn, api_key=api_key)
         self.languages = languages
         self.platform = platform
         # build the index based on the platform.
         self.index_map = index_map
-        logging.getLogger(__name__).info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
+        logger.info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
 
     async def startup(self) -> bool:
         """Kick start the data store for Sports"""
