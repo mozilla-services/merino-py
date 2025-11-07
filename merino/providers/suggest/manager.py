@@ -45,7 +45,9 @@ from merino.providers.suggest.sports import (
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
-    set_sports_es_creds,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    SportsDataStore,
 )
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.providers.suggest.google_suggest.provider import (
@@ -331,9 +333,30 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 word.lower().strip()
                 for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
             ]
-            set_sports_es_creds(settings, setting)
+            # Use wikipedia as a backup for the Elasticsearch credentials.
+            # TODO, use a central Elasticsearch credential set.
+            if not setting.es.dsn or setting.es.dsn.lower() in ["", "none"]:
+                setting.es.dsn = settings.providers.wikipedia.es_url
+            if not setting.es.api_key or setting.es.api_key.lower() in ["", "none"]:
+                setting.es.api_key = settings.providers.wikipedia.es_api_key
+            name = setting.get("platform", setting.type)
+            platform = f"{{lang}}_{name}"
+            event_map = setting.get("event_index", f"{platform}_event")
+
+            store = SportsDataStore(
+                dsn=setting.es.dsn,
+                api_key=setting.es.api_key,
+                platform=platform,
+                languages=[lang for lang in setting.get("languages", ["en"])],
+                index_map={"event": event_map},
+            )
             return SportsDataProvider(
-                backend=SportsDataBackend(settings=setting),
+                backend=SportsDataBackend(
+                    store=store,
+                    settings=setting,
+                    max_suggestions=setting.max_suggestions,
+                    mix_sports=setting.get("mix_sports", True),
+                ),
                 metrics_client=get_metrics_client(),
                 score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
                 name=provider_id,

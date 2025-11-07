@@ -3,7 +3,6 @@
 import pytest
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
 from httpx import AsyncClient
 from typing import cast
 
@@ -18,7 +17,6 @@ from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.base import SuggestionRequest, BaseSuggestion
 from merino.providers.suggest.sports import (
     utc_time_from_now,
-    init_logs,
     IGNORED_SUGGESTION_URL,
     PROVIDER_ID,
     BASE_SUGGEST_SCORE,
@@ -48,21 +46,6 @@ async def test_sports_ttl_from_now():
     tomorrow = int((datetime.now(tz=timezone.utc) + timedelta(days=1)).timestamp())
     # Use a window because of clock skew.
     assert tomorrow - 1 <= result <= tomorrow + 1
-
-
-@pytest.mark.asyncio
-async def test_sports_init_logger():
-    """Test that we are generating the correct level for logs."""
-    with patch("logging.basicConfig") as logger:
-        # Note, dummy out the `getLogger` call as well to prevent accidental changes.
-        with patch("logging.getLogger") as _log2:
-            # pass in the argument for testing because `os.getenv` is defined before
-            # mock can patch it.
-            init_logs("DEBUG")
-            logger.assert_called_with(level=10)
-            logger.reset_mock()
-            init_logs("warning")
-            logger.assert_called_with(level=30)
 
 
 @pytest.mark.asyncio

@@ -31,7 +31,7 @@ from typing import cast
 from aiodogstatsd import Client
 
 from merino.configs import settings
-from merino.providers.suggest.sports import init_logs, LOGGING_TAG
+from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
@@ -77,8 +77,10 @@ class SportDataUpdater:
     def __init__(
         self,
         settings: LazySettings,
+        store: SportsDataStore,
+        connect_timeout: int = 1,
+        read_timeout: int = 1,
         *args,
-        store: SportsDataStore | None = None,
         **kwargs,
     ) -> None:
         logger = logging.getLogger(__name__)
@@ -86,19 +88,6 @@ class SportDataUpdater:
         active_sports = [sport.strip().upper() for sport in settings.sports]
         sport: Sport | None = None
         sports: dict[str, Sport] = {}
-        platform = settings.get("platform", "sports")
-        store = store or SportsDataStore(
-            dsn=settings.es.dsn,
-            api_key=settings.es.api_key,
-            languages=[lang.strip().lower() for lang in settings.get("languages", ["en"])],
-            platform=f"{{lang}}_{platform}",
-            index_map={
-                "event": cast(
-                    str,
-                    settings.get("event_index", f"{platform}_event"),
-                ),
-            },
-        )
         # We could be clever here, but we'd have to fight the style and type checkers.
         # Basically, you import the merino...sports module, then
         # `getattr[sys.modules["merino...sports"],sport_name](settings,api_key)`
@@ -123,8 +112,8 @@ class SportDataUpdater:
             sports[sport_name] = sport
         self.sports = sports
         self.store = store
-        self.connect_timeout = settings.sportsdata.get("connect_timeout", 1)
-        self.read_timeout = settings.sportsdata.get("read_timeout", 1)
+        self.connect_timeout = connect_timeout
+        self.read_timeout = read_timeout
         logger.debug(f"{LOGGING_TAG}: Starting up...")
 
     async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
@@ -180,16 +169,38 @@ sports_settings = settings.providers.sports
 # is moved to `/utils`
 if not sports_settings.es.get("api_key"):
     logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
-    sports_settings.es["api_key"] = settings.providers.wikipedia.es_api_key
+    sports_settings.es["api_key"] = settings.jobs.wikipedia_indexer.get(
+        "es_api_key", settings.providers.wikipedia.get("es_api_key")
+    )
 if not sports_settings.es.get("dsn"):
     logger.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, using alternative")
-    sports_settings.es["dsn"] = settings.providers.wikipedia.es_url
+    sports_settings.es["dsn"] = settings.jobs.wikipedia_indexer.get(
+        "es_url", settings.providers.wikipedia.get("es_url")
+    )
 app = Options(sports_settings).get_command()
 cli = typer.Typer(
     name="fetch_sports",
     help="Commands to fetch and store sport information",
 )
-provider = SportDataUpdater(sports_settings)
+name = sports_settings.get("platform", "sports")
+platform = f"{{lang}}_{name}"
+event_map = sports_settings.get("event_index", f"{platform}_event")
+dsn = sports_settings.es.get(
+    "dsn",
+)
+store = SportsDataStore(
+    dsn=sports_settings.es.dsn,
+    api_key=sports_settings.es.api_key,
+    platform=platform,
+    languages=[lang for lang in sports_settings.get("languages", ["en"])],
+    index_map={"event": event_map},
+)
+provider = SportDataUpdater(
+    settings=sports_settings,
+    store=store,
+    connect_timeout=sports_settings.get("connect_timeout"),
+    read_timeout=sports_settings.get("read_timeout"),
+)
 
 
 @cli.command("initialize")

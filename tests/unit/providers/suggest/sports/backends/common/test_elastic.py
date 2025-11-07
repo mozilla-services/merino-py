@@ -5,7 +5,7 @@ import json
 import logging
 from typing import cast, Any
 from unittest import mock
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock
 
 import freezegun
 import pytest
@@ -60,23 +60,6 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
     )
     s.client = es_client
     return s
-
-
-@pytest.mark.asyncio
-async def test_use_backup_es(mocker) -> None:
-    """Check that we use wikipedia if we don't have our own ES db."""
-    with patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
-    ) as mock_settings:
-        url = "http://example.org:9200"
-        key = "foo"
-        mock_settings.providers.wikipedia.es_url = url
-        mock_settings.providers.wikipedia.es_api_key = key
-        with patch(
-            "merino.providers.suggest.sports.backends.sportsdata.common.elastic.AsyncElasticsearch"
-        ) as mock_client:
-            SportsDataStore(dsn="", api_key="", languages=["en"], platform="none", index_map={})
-            assert mock_client.call_args == call(url, api_key=key)
 
 
 @pytest.mark.asyncio

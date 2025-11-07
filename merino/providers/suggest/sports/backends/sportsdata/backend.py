@@ -3,7 +3,7 @@
 from abc import abstractmethod
 from dynaconf.base import LazySettings
 from pydantic import HttpUrl
-from typing import Protocol, cast
+from typing import Protocol
 
 
 from merino.providers.suggest.sports.backends.sportsdata.protocol import SportSummary
@@ -30,20 +30,6 @@ class SportsDataProtocol(Protocol):
         """Perform the shutdown steps"""
 
 
-def set_sports_es_creds(settings: LazySettings, sport_setting: LazySettings):
-    """Fetch the api_key and dsn from the settings, using wikipedia as the backup.
-    This is broken out mostly for testing coverage.
-    """
-    if not sport_setting.get("es"):
-        sport_setting["es"] = LazySettings()
-    es = settings.providers.sports.es
-    source = settings.providers.wikipedia
-    if not es.get("api_key") or es.api_key.lower() == "none":
-        es.api_key = source.es_api_key
-    if not es.get("dsn") or es.dsn.lower() == "none":
-        es.dsn = source.es_url
-
-
 class SportsDataBackend(SportsDataProtocol):
     """Provide the methods specific to this provider for fulfilling the request"""
 
@@ -51,25 +37,17 @@ class SportsDataBackend(SportsDataProtocol):
 
     def __init__(
         self,
+        store: SportsDataStore,
         settings: LazySettings,
+        max_suggestions: int = 10,
+        mix_sports: bool = True,
         *args,
-        store: SportsDataStore | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        platform = settings.get("platform", "sports")
-        event_map = settings.get("event_index", f"{platform}_event")
-        self.data_store = store or SportsDataStore(
-            dsn=settings.es.dsn,
-            api_key=settings.es.api_key,
-            languages=[lang for lang in settings.get("languages", ["en"])],
-            platform=f"{{lang}}_{platform}",
-            index_map={
-                "event": cast(str, event_map),
-            },
-        )
-        self.max_suggestions = settings.get("max_suggestions", 10)
-        self.mix_sports = settings.get("mix_sports", True)
+        self.data_store = store
+        self.max_suggestions = max_suggestions
+        self.mix_sports = mix_sports
         self.settings = settings
 
     async def query(
