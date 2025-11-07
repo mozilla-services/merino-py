@@ -365,28 +365,6 @@ async def test_aa_get_credentials(sport_data_store: SportsDataStore, es_client: 
     with patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
     ) as mock_settings:
-        mock_settings.providers.sports.es.dsn = "http://set1.example.com"
-        mock_settings.providers.sports.es.api_key = "set1_abc123"
-
-        test2 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test2["dsn"] == "http://set1.example.com"
-        assert test2["api_key"] == "set1_abc123"
-
-    with patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
-    ) as mock_settings:
-        mock_settings.providers.sports.es.dsn = None
-        mock_settings.providers.sports.es.api_key = None
-        mock_settings.providers.wikipedia.es_url = "http://set2.example.com"
-        mock_settings.providers.wikipedia.es_api_key = "set2_abc123"
-
-        test2 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test2["dsn"] == "http://set2.example.com"
-        assert test2["api_key"] == "set2_abc123"
-
-    with patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
-    ) as mock_settings:
         import os
 
         mock_settings.providers.sports.es.dsn = None
@@ -419,10 +397,35 @@ async def test_aa_get_credentials(sport_data_store: SportsDataStore, es_client: 
         assert test5["dsn"] == "http://es4.example.com"
         assert test5["api_key"] == "es4_sport123"
 
+        del os.environ["MERINO_PROVIDERS__SPORTS__ES__DSN"]
         del os.environ["MERINO_PROVIDERS__SPORTS__ES__API_KEY"]
+
+    with patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
+    ) as mock_settings:
+        mock_settings.providers.sports.es.dsn = "http://set1.example.com"
+        mock_settings.providers.sports.es.api_key = "set1_abc123"
+
+        test2 = sport_data_store.get_credentials(dsn=None, api_key=None)
+        assert test2["dsn"] == "http://set1.example.com"
+        assert test2["api_key"] == "set1_abc123"
+
+    with patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
+    ) as mock_settings:
+        mock_settings.providers.sports.es.dsn = None
+        mock_settings.providers.sports.es.api_key = None
+        mock_settings.providers.wikipedia.es_url = "http://set2.example.com"
+        mock_settings.providers.wikipedia.es_api_key = "set2_abc123"
+
+        test2 = sport_data_store.get_credentials(dsn=None, api_key=None)
+        assert test2["dsn"] == "http://set2.example.com"
+        assert test2["api_key"] == "set2_abc123"
+
+        mock_settings.providers.wikipedia.es_url = None
         with pytest.raises(ElasticBackendError):
             sport_data_store.get_credentials(dsn=None, api_key=None)
 
-        del os.environ["MERINO_PROVIDERS__SPORTS__ES__DSN"]
+        mock_settings.providers.wikipedia.es_api_key = None
         with pytest.raises(ElasticBackendError):
             sport_data_store.get_credentials(dsn=None, api_key=None)

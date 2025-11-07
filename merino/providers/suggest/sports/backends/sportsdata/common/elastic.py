@@ -198,21 +198,25 @@ class ElasticDataStore(ABC):
             lsettings = settings
         if not dsn:
             dsn = (
-                lsettings.providers.sports.es.dsn
-                or lsettings.providers.wikipedia.es_url
-                or os.environ.get("MERINO_ELASTICSEARCH_DSN")
+                # Use the environment vars first, since the toml file may have
+                # "http://localhost:9200"
+                os.environ.get("MERINO_ELASTICSEARCH_DSN")
                 or os.environ.get("MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL")
                 or os.environ.get("MERINO_PROVIDERS__WIKIPEDIA__ES_URL")
                 or os.environ.get("MERINO_PROVIDERS__SPORTS__ES__DSN")
+                or lsettings.providers.sports.es.dsn
+                or lsettings.providers.wikipedia.es_url
             )
         if not api_key:
             api_key = (
-                settings.providers.sports.es.api_key
-                or settings.providers.wikipedia.es_api_key
-                or os.environ.get("MERINO_ELASTICSEARCH_API_KEY")
+                # Use the environment vars first, since the toml file may have
+                # ""
+                os.environ.get("MERINO_ELASTICSEARCH_API_KEY")
                 or os.environ.get("MERINO_JOBS__WIKIPEDIA_INDEXER__ES_API_KEY")
                 or os.environ.get("MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY")
                 or os.environ.get("MERINO_PROVIDERS__SPORTS__ES__API_KEY")
+                or settings.providers.sports.es.api_key
+                or settings.providers.wikipedia.es_api_key
             )
         logger = logging.getLogger(__name__)
         if not dsn:
