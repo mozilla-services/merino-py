@@ -116,9 +116,7 @@ class SportDataUpdater:
         self.read_timeout = read_timeout
         logger.debug(f"{LOGGING_TAG}: Starting up...")
 
-    async def update(
-        self, include_teams: bool = True, client: AsyncClient | None = None
-    ) -> bool:
+    async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
         """Perform sport specific updates."""
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
@@ -174,9 +172,7 @@ sports_settings = settings.providers.sports
 # NOTE: eventually, this will be replaced when the elasticsearch code
 # is moved to `/utils`
 if not sports_settings.es.get("api_key"):
-    logger.warning(
-        f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate"
-    )
+    logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
     sports_settings.es["api_key"] = settings.jobs.wikipedia_indexer.get(
         "es_api_key", settings.providers.wikipedia.get("es_api_key")
     )
