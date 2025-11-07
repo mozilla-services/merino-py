@@ -376,7 +376,7 @@ class SportsDataStore(ElasticDataStore):
                             ignore_unavailable=True,
                         )
                     index = index.format(lang=language_code)
-                    logger.debug(f"{LOGGING_TAG} Building index: {index}")
+                    logger.info(f"{LOGGING_TAG} Building index: {index}")
                     await self.client.indices.create(
                         index=index,
                         mappings=mappings[idx],
@@ -384,7 +384,7 @@ class SportsDataStore(ElasticDataStore):
                     )
                 except BadRequestError as ex:
                     if ex.error == "resource_already_exists_exception":
-                        logger.debug(
+                        logger.info(
                             f"{LOGGING_TAG} {index.format(lang=language_code)} already exists, skipping"
                         )
                         continue
@@ -545,13 +545,13 @@ class SportsDataStore(ElasticDataStore):
 
             try:
                 start = datetime.now()
-                await helpers.async_bulk(client=self.client, actions=actions)
+                await helpers.async_bulk(client=self.client, actions=actions, stats_only=False)
                 logger.info(
                     f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
                 )
             except Exception as ex:
                 raise SportsDataError(
-                    f"Could not load data into elasticSearch for {sport.name}"
+                    f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
                 ) from ex
         start = datetime.now()
         await self.store_meta("update", str(start.timestamp()))
