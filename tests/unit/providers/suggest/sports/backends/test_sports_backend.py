@@ -11,7 +11,6 @@ from unittest.mock import patch, AsyncMock
 
 import httpx
 
-from dynaconf.base import LazySettings
 from unittest.mock import MagicMock
 from pytest_mock import MockerFixture
 from typing import cast
@@ -20,7 +19,6 @@ from merino.configs import settings
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
-    set_sports_es_creds,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
@@ -367,21 +365,3 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
         mock["mock_instance"].update_teams.assert_called_once_with(client=mock_client)
         mock["mock_instance"].update_events.assert_called_once_with(client=mock_client)
         mock_store_events.assert_any_call(mock["mock_instance"], language_code="en")
-
-
-@pytest.mark.asyncio
-async def test_set_sports_es_creds(sport_data_store: SportsDataStore, mocker: MockerFixture):
-    """Test that we draw the API and DSN from the backup source if not defined"""
-    wiki_key = "WIKI_API_KEY"
-    wiki_url = "http://wiki_es_host.local:9200"
-
-    s2 = LazySettings()
-    s2.providers = LazySettings()
-    s2.providers.wikipedia = LazySettings()
-    s2.providers.wikipedia.es_api_key = wiki_key
-    s2.providers.wikipedia.es_url = wiki_url
-    s2.providers.sports = LazySettings()
-    sports = s2.providers.sports
-    set_sports_es_creds(s2, sports)
-    assert sports.es.api_key == wiki_key
-    assert sports.es.dsn == wiki_url

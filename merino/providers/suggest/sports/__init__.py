@@ -49,15 +49,3 @@ FOUR_HOURS = ONE_HOUR * 4  # For Team Profiles
 def utc_time_from_now(delta: timedelta) -> int:
     """Return the timestamp of the period from now"""
     return int((datetime.now(tz=timezone.utc) + delta).timestamp())
-
-
-def init_logs(level: str | None = None) -> logging.Logger:
-    """Initialize logging based on `PYTHON_LOG` environ)"""
-    #
-    # be very verbose because `mypy` does not understand
-    # `None or x.get(label, CONST_STR_VALUE)` does not produce a None value.
-    if not level:
-        level = os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL)
-    level = getattr(logging, level.upper())
-    logging.basicConfig(level=level)
-    return logging.getLogger(__name__)

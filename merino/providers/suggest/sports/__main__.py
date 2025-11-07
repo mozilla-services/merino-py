@@ -3,6 +3,7 @@
 import asyncio
 
 import os
+import logging
 import sys
 from datetime import datetime
 from logging import Logger
@@ -15,7 +16,6 @@ from merino.configs import settings
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import SuggestionRequest
 from merino.providers.suggest.sports import (
-    init_logs,
     LOGGING_TAG,
     DEFAULT_TRIGGER_WORDS,
 )
@@ -40,34 +40,18 @@ _ = FORCE_IMPORT
 async def main_loader(
     log: Logger,
     settings: LazySettings,
+    store: SportsDataStore,
     build_indices: bool = False,
 ) -> list[str]:
     """Be a simple "stunt" main process that fetches data to ensure that the load and retrieval
     functions work the way you'd expect
     """
-    platform = settings.get("platform", "sports")
-    event_store = SportsDataStore(
-        dsn=settings.es.dsn,
-        api_key=settings.es.api_key,
-        languages=[lang.lower().strip() for lang in settings.get("languages", ["en"])],
-        platform=f"{{lang}}_{platform}",
-        index_map={
-            # "meta": settings.get(
-            #     "meta_index", f"{self.platform}_meta"
-            # ),
-            # "team": settings.get(
-            #     "team_index", f"{self.platform}_team"
-            # ),
-            "event": settings.get("event_index", f"{platform}_event"),
-        },
-    )
-
     log.debug(f"{LOGGING_TAG}: Building storage...")
     if build_indices:
         # Only call for test or dev builds.
         log.debug(f"{LOGGING_TAG}: Building indices...")
-        await event_store.build_indexes(clear=False)
-        await event_store.prune(expiry=1760473106)
+        await store.build_indexes(clear=False)
+        await store.prune(expiry=1760473106)
 
     log.debug(f"{LOGGING_TAG}: Starting up...")
     my_sports: list[Sport] = []
@@ -87,26 +71,26 @@ async def main_loader(
         connect_timeout=settings.sportsdata.get("connect_timeout", 1),
         request_timeout=settings.sportsdata.get("read_timeout", 1),
     )
-    await event_store.prune()
+    await store.prune()
     team_names: set[str] = set()
     for sport in my_sports:
         await sport.update_teams(client=client)
         for team in sport.teams.values():
             team_names.add(team.name.lower())
         await sport.update_events(client=client)
-        await event_store.store_events(sport, language_code="en")
-    await event_store.shutdown()
+        await store.store_events(sport, language_code="en")
+    await store.shutdown()
     reply: list[str] = list(team_names)
     reply.sort()
     return reply
 
 
-async def main_query(log: Logger, settings: LazySettings):
+async def main_query(log: Logger, store: SportsDataStore, settings: LazySettings):
     """Pretend we're a query function"""
     trigger_words = [
         word.lower().strip() for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
     ]
-    backend = SportsDataBackend(settings=settings)
+    backend = SportsDataBackend(store=store, settings=settings)
     await backend.startup()
 
     provider = SportsDataProvider(
@@ -128,16 +112,41 @@ async def main_query(log: Logger, settings: LazySettings):
 
 
 if __name__ == "__main__":
-    log = init_logs()
+    logging.basicConfig(level=getattr(logging, os.environ.get("PYTHON_LOG", "info").upper()))
+    log = logging.getLogger(__name__)
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
+    name = "sports"
+    platform = f"{{lang}}_{name}"
+    event_map = settings.providers.sports.get("event_index", f"{platform}_event")
+    meta_map = settings.providers.sports.get("meta_index", f"{platform}_meta")
+    store = SportsDataStore(
+        dsn=settings.providers.sports.es.get(
+            "dsn",
+            settings.providers.wikipedia.get("es_url", settings.wikipedia_indexer.get("es_url")),
+        ),
+        api_key=settings.providers.sports.es.get(
+            "api_key",
+            settings.providers.wikipedia.get(
+                "es_api_key", settings.wikipedia_indexer.get("es_api_key")
+            ),
+        ),
+        platform=platform,
+        languages=[lang for lang in settings.providers.sports.get("languages", ["en"])],
+        index_map={"event": event_map, "meta": meta_map},
+    )
 
     team_names = asyncio.run(
-        main_loader(log=log, settings=settings.providers.sports, build_indices=True)
+        main_loader(
+            log=log,
+            store=store,
+            build_indices=True,
+            settings=settings.providers.sports,
+        )
     )
 
     # Perform a query and return the results.
-    asyncio.run(main_query(log=log, settings=settings.providers.sports))
+    asyncio.run(main_query(log=log, store=store, settings=settings.providers.sports))
 
     # Dump out the accumulated team names
     # Ideal World: This should go into some common data storage engine and be pulled regularly by

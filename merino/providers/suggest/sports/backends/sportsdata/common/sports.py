@@ -9,7 +9,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
-
+# We use this for each Sport subclass, so that there's some flexibility for what config
+# values are used and passed.
 from dynaconf.base import LazySettings
 from httpx import AsyncClient
 

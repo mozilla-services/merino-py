@@ -5,7 +5,7 @@ import json
 import logging
 from typing import cast, Any
 from unittest import mock
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock
 
 import freezegun
 import pytest
@@ -21,7 +21,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
-    ElasticBackendError,
     get_index_settings,
     META_INDEX,
 )
@@ -61,25 +60,6 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
     )
     s.client = es_client
     return s
-
-
-@pytest.mark.asyncio
-async def test_use_backup_es(mocker) -> None:
-    """Check that we use wikipedia if we don't have our own ES db."""
-    with patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
-    ) as mock_settings:
-        url = "http://example.org:9200"
-        key = "foo"
-        mock_settings.providers.sports.es.dsn = None
-        mock_settings.providers.sports.es.api_key = None
-        mock_settings.providers.wikipedia.es_url = url
-        mock_settings.providers.wikipedia.es_api_key = key
-        with patch(
-            "merino.providers.suggest.sports.backends.sportsdata.common.elastic.AsyncElasticsearch"
-        ) as mock_client:
-            SportsDataStore(dsn="", api_key="", languages=["en"], platform="none", index_map={})
-            assert mock_client.call_args == call(url, api_key=key)
 
 
 @pytest.mark.asyncio
@@ -340,92 +320,3 @@ async def test_build_index_exception(sport_data_store: SportsDataStore, es_clien
     await sport_data_store.build_indexes(clear=True)
     assert es_client.indices.delete.called
     assert es_client.indices.create.called
-
-
-@patch.dict(
-    "os.environ",
-    {
-        "MERINO_ELASTICSEARCH_DSN": "http://es1.example.com",
-        "MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL": "http://es2.example.com",
-        "MERINO_PROVIDERS__WIKIPEDIA__ES_URL": "http://es3.example.com",
-        "MERINO_PROVIDERS__SPORTS__ES__DSN": "http://es4.example.com",
-        "MERINO_ELASTICSEARCH_API_KEY": "es1_abc123",
-        "MERINO_JOBS__WIKIPEDIA_INDEXER__ES_API_KEY": "es2_job123",
-        "MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY": "es3_wiki123",
-        "MERINO_PROVIDERS__SPORTS__ES__API_KEY": "es4_sport123",
-    },
-)
-@pytest.mark.asyncio
-async def test_aa_get_credentials(sport_data_store: SportsDataStore, es_client: AsyncMock, mocker):
-    """Test the gauntlet of potential places where elasticsearch credentials might live"""
-    test1 = sport_data_store.get_credentials(dsn="http://example.com", api_key="example123")
-    assert test1.get("dsn") == "http://example.com"
-    assert test1.get("api_key") == "example123"
-
-    with patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
-    ) as mock_settings:
-        import os
-
-        mock_settings.providers.sports.es.dsn = None
-        mock_settings.providers.sports.es.api_key = None
-        mock_settings.providers.wikipedia.es_url = None
-        mock_settings.providers.wikipedia.es_api_key = None
-
-        test3 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test3["dsn"] == "http://es1.example.com"
-        assert test3["api_key"] == "es1_abc123"
-
-        del os.environ["MERINO_ELASTICSEARCH_DSN"]
-        del os.environ["MERINO_ELASTICSEARCH_API_KEY"]
-
-        test4 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test4["dsn"] == "http://es2.example.com"
-        assert test4["api_key"] == "es2_job123"
-
-        del os.environ["MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL"]
-        del os.environ["MERINO_JOBS__WIKIPEDIA_INDEXER__ES_API_KEY"]
-
-        test5 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test5["dsn"] == "http://es3.example.com"
-        assert test5["api_key"] == "es3_wiki123"
-
-        del os.environ["MERINO_PROVIDERS__WIKIPEDIA__ES_URL"]
-        del os.environ["MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY"]
-
-        test5 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test5["dsn"] == "http://es4.example.com"
-        assert test5["api_key"] == "es4_sport123"
-
-        del os.environ["MERINO_PROVIDERS__SPORTS__ES__DSN"]
-        del os.environ["MERINO_PROVIDERS__SPORTS__ES__API_KEY"]
-
-    with patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
-    ) as mock_settings:
-        mock_settings.providers.sports.es.dsn = "http://set1.example.com"
-        mock_settings.providers.sports.es.api_key = "set1_abc123"
-
-        test2 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test2["dsn"] == "http://set1.example.com"
-        assert test2["api_key"] == "set1_abc123"
-
-    with patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.elastic.settings"
-    ) as mock_settings:
-        mock_settings.providers.sports.es.dsn = None
-        mock_settings.providers.sports.es.api_key = None
-        mock_settings.providers.wikipedia.es_url = "http://set2.example.com"
-        mock_settings.providers.wikipedia.es_api_key = "set2_abc123"
-
-        test2 = sport_data_store.get_credentials(dsn=None, api_key=None)
-        assert test2["dsn"] == "http://set2.example.com"
-        assert test2["api_key"] == "set2_abc123"
-
-        mock_settings.providers.wikipedia.es_url = None
-        with pytest.raises(ElasticBackendError):
-            sport_data_store.get_credentials(dsn=None, api_key=None)
-
-        mock_settings.providers.wikipedia.es_api_key = None
-        with pytest.raises(ElasticBackendError):
-            sport_data_store.get_credentials(dsn=None, api_key=None)
