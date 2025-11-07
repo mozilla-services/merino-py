@@ -3,10 +3,12 @@
 import copy
 import json
 import logging
+import os
 from abc import abstractmethod, ABC
 from datetime import datetime, timezone
 from typing import Any, Final
 
+from dynaconf.base import LazySettings
 from elasticsearch import (
     AsyncElasticsearch,
     BadRequestError,
@@ -179,11 +181,47 @@ class ElasticDataStore(ABC):
         api_key: str,
     ):
         """Create a core instance of elastic search"""
+        credentials = self.get_credentials(dsn, api_key)
+        self.client = AsyncElasticsearch(credentials["dsn"], api_key=credentials["api_key"])
+
+    def get_credentials(
+        self,
+        dsn: str | None = None,
+        api_key: str | None = None,
+        lsettings: LazySettings | None = None,
+    ) -> dict[str, str]:
+        """Try and fetch the API key and DSN from all the known sources.
+        Remember, this code is shared between suggest and jobs, so the credentials
+        can hide in lots of places.
+        """
+        if not lsettings:
+            lsettings = settings
         if not dsn:
-            dsn = settings.providers.wikipedia.es_url
+            dsn = (
+                lsettings.providers.sports.es.dsn
+                or lsettings.providers.wikipedia.es_url
+                or os.environ.get("MERINO_ELASTICSEARCH_DSN")
+                or os.environ.get("MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL")
+                or os.environ.get("MERINO_PROVIDERS__WIKIPEDIA__ES_URL")
+                or os.environ.get("MERINO_PROVIDERS__SPORTS__ES__DSN")
+            )
         if not api_key:
-            api_key = settings.providers.wikipedia.es_api_key
-        self.client = AsyncElasticsearch(dsn, api_key=api_key)
+            api_key = (
+                settings.providers.sports.es.api_key
+                or settings.providers.wikipedia.es_api_key
+                or os.environ.get("MERINO_ELASTICSEARCH_API_KEY")
+                or os.environ.get("MERINO_JOBS__WIKIPEDIA_INDEXER__ES_API_KEY")
+                or os.environ.get("MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY")
+                or os.environ.get("MERINO_PROVIDERS__SPORTS__ES__API_KEY")
+            )
+        logger = logging.getLogger(__name__)
+        if not dsn:
+            logger.error("No Elasticsearch DSN found!")
+            raise ElasticBackendError("No Elasticsearch DSN")
+        if not api_key:
+            logger.error("No Elasticsearch API Key found!")
+            raise ElasticBackendError("No Elasticsearch API Key")
+        return dict(dsn=dsn, api_key=api_key)
 
     @abstractmethod
     async def startup(self) -> bool:
