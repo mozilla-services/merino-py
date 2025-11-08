@@ -12,7 +12,9 @@ from elasticsearch import AsyncElasticsearch
 from testcontainers.elasticsearch import ElasticSearchContainer
 
 from merino.configs import settings
-from merino.providers.suggest.sports.backends.sportsdata.backend import SportsDataBackend
+from merino.providers.suggest.sports.backends.sportsdata.backend import (
+    SportsDataBackend,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team, Event
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
@@ -33,7 +35,9 @@ FROZEN_TIME = datetime(2025, 10, 27, tzinfo=timezone.utc)
 @pytest.fixture(scope="session")
 def es_url():
     """ElasticSearch URL fixture."""
-    with ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4") as es:
+    with ElasticSearchContainer(
+        "docker.elastic.co/elasticsearch/elasticsearch:8.13.4"
+    ) as es:
         url = es.get_url()
         yield url
 
@@ -65,8 +69,8 @@ def fixture_sportsdata_parameters(
 def fixture_sport_data_store_parameters(es_client) -> dict[str, Any]:
     """SportsDataStore constructor parameters."""
     return {
-        "dsn": "",
-        "api_key": "",
+        "dsn": "http://localhost",
+        "api_key": "abc123",
         "languages": ["en"],
         "platform": "en_sports",
         "index_map": {
@@ -185,7 +189,9 @@ async def test_sportsdata_na_query(sportsdata: SportsDataBackend, sports_league:
 
 @freezegun.freeze_time("2025-10-26")
 @pytest.mark.asyncio
-async def test_sportsdata_query_with_no_result(sportsdata: SportsDataBackend, sports_league: NFL):
+async def test_sportsdata_query_with_no_result(
+    sportsdata: SportsDataBackend, sports_league: NFL
+):
     """Test query of sportsdata."""
     # build indexes
     await sportsdata.data_store.build_indexes(clear=True)
