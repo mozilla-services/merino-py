@@ -55,7 +55,7 @@ BASE_TOPICS = [
 ]
 
 
-BASE_SECTIONS = [
+BASE_SECTIONS_FOR_LOCAL_MODEL = [
     "nfl",
     "nba",
     "mlb",
@@ -64,24 +64,23 @@ BASE_SECTIONS = [
     "tv",
     "movies",
     "music",
-    "celebrity news",
     "books",
-    "business",
-    "career",
-    "arts",
-    "food",
-    "health",
-    "home",
-    "finance",
-    "government",
-    "sports",
-    "tech",
-    "travel",
-    "education",
-    "hobbies",
-    "society-parenting",
-    "education-science",
-    "society",
+    "business_crawl",
+    "career_crawl",
+    "arts_crawl",
+    "food_crawl",
+    "health_crawl",
+    "home_crawl",
+    "finance_crawl",
+    "government_crawl",
+    "sports_crawl",
+    "tech_crawl",
+    "travel_crawl",
+    "education_crawl",
+    "hobbies_crawl",
+    "society-parenting_crawl",
+    "education-science_crawl",
+    "society_crawl",
 ]
 
 
@@ -119,7 +118,9 @@ class FakeLocalModelSections(LocalModelBackend):
                 diff_q=0.25,
             )
 
-        category_fields: dict[str, InterestVectorConfig] = {a: get_topic(a) for a in BASE_SECTIONS}
+        category_fields: dict[str, InterestVectorConfig] = {
+            a: get_topic(a) for a in BASE_SECTIONS_FOR_LOCAL_MODEL
+        }
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,
@@ -145,6 +146,8 @@ MODEL_Q_VALUE_V1 = 0.030
 THRESHOLDS_V1_A = [0.008, 0.016, 0.024]
 THRESHOLDS_V1_B = [0.005, 0.010, 0.015]
 
+CRAWL_SUFFIX = "_crawl"
+
 
 # Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
@@ -167,6 +170,10 @@ class SuperInferredModel(LocalModelBackend):
     limited_topics_set = set(limited_topics)
 
     default_model_id = DEFAULT_PRODUCTION_MODEL_ID
+
+    @staticmethod
+    def _clean_section(section_name: str):
+        return section_name.replace(CRAWL_SUFFIX, "")
 
     @staticmethod
     def _get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
@@ -237,7 +244,8 @@ class SuperInferredModel(LocalModelBackend):
         else:
             return None
         category_fields = {
-            a: self._get_section(a, model_thresholds) for a in BASE_SECTIONS
+            self._clean_section(a): self._get_section(a, model_thresholds)
+            for a in BASE_SECTIONS_FOR_LOCAL_MODEL
         }  ## all sections
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
