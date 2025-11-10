@@ -119,7 +119,9 @@ class SportDataUpdater:
         self.read_timeout = read_timeout
         logger.debug(f"{LOGGING_TAG}: Starting up...")
 
-    async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
+    async def update(
+        self, include_teams: bool = True, client: AsyncClient | None = None
+    ) -> bool:
         """Perform sport specific updates."""
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
@@ -175,7 +177,9 @@ sports_settings = settings.providers.sports
 # NOTE: eventually, this will be replaced when the elasticsearch code
 # is moved to `/utils`
 if not sports_settings.es.get("api_key"):
-    logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
+    logger.warning(
+        f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate"
+    )
     sports_settings.es["api_key"] = settings.jobs.wikipedia_indexer.get(
         "es_api_key", settings.providers.wikipedia.get("es_api_key")
     )
@@ -215,6 +219,8 @@ def initialize():
     """Build the indexes and initialize the ES tables"""
     if provider:
         asyncio.run(provider.initialize(sports_settings))
+    else:
+        logger.error("Sports provider unavailable.")
 
 
 @cli.command("nightly")
@@ -222,6 +228,8 @@ def nightly():
     """Perform the general nightly operations"""
     if provider:
         asyncio.run(provider.nightly())
+    else:
+        logger.error("Sports provider unavailable.")
 
 
 @cli.command("update")
@@ -229,6 +237,8 @@ def update():
     """Perform the frequently required tasks (Approx once every 5 min)"""
     if provider:
         asyncio.run(provider.update())
+    else:
+        logger.error("Sports provider unavailable.")
 
 
 if __name__ == "__main__":
