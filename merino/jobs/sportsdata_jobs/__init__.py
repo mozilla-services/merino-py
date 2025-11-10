@@ -33,6 +33,9 @@ from aiodogstatsd import Client
 from merino.configs import settings
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
@@ -189,37 +192,43 @@ cli = typer.Typer(
 name = sports_settings.get("platform", "sports")
 platform = f"{{lang}}_{name}"
 event_map = sports_settings.get("event_index", f"{platform}_event")
-store = SportsDataStore(
-    dsn=sports_settings.es.dsn,
-    api_key=sports_settings.es.api_key,
-    platform=platform,
-    languages=[lang for lang in sports_settings.get("languages", ["en"])],
-    index_map={"event": event_map},
-)
-provider = SportDataUpdater(
-    settings=sports_settings,
-    store=store,
-    connect_timeout=sports_settings.get("connect_timeout"),
-    read_timeout=sports_settings.get("read_timeout"),
-)
+try:
+    store = SportsDataStore(
+        dsn=sports_settings.es.dsn,
+        api_key=sports_settings.es.api_key,
+        platform=platform,
+        languages=[lang for lang in sports_settings.get("languages", ["en"])],
+        index_map={"event": event_map},
+    )
+    provider = SportDataUpdater(
+        settings=sports_settings,
+        store=store,
+        connect_timeout=sports_settings.get("connect_timeout"),
+        read_timeout=sports_settings.get("read_timeout"),
+    )
+except SportsDataError as ex:
+    logger.error(f"{LOGGING_TAG} Sports Unavailable: {ex}")
 
 
 @cli.command("initialize")
 def initialize():
     """Build the indexes and initialize the ES tables"""
-    asyncio.run(provider.initialize(sports_settings))
+    if provider:
+        asyncio.run(provider.initialize(sports_settings))
 
 
 @cli.command("nightly")
 def nightly():
     """Perform the general nightly operations"""
-    asyncio.run(provider.nightly())
+    if provider:
+        asyncio.run(provider.nightly())
 
 
 @cli.command("update")
 def update():
     """Perform the frequently required tasks (Approx once every 5 min)"""
-    asyncio.run(provider.update())
+    if provider:
+        asyncio.run(provider.update())
 
 
 if __name__ == "__main__":
