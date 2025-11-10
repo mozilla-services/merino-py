@@ -112,8 +112,6 @@ async def test_query_validates_keyword_pattern_and_fetches(provider, backend_moc
         provider.flight_numbers = {"AC250"}
         request = SuggestionRequest(query="Air Canada 250", geolocation=geolocation)
 
-        backend_mock.fetch_flight_details.return_value = {"flights": [{"ident": "AC250"}]}
-
         fake_summary = FlightSummary(
             flight_number="AC250",
             destination={"code": "YYZ", "city": "Toronto"},
@@ -132,7 +130,8 @@ async def test_query_validates_keyword_pattern_and_fetches(provider, backend_moc
             delayed=False,
             url="https://www.flightaware.com/live/flight/AC250",
         )
-        backend_mock.get_flight_summaries.return_value = [fake_summary]
+
+        backend_mock.fetch_flight_details.return_value = [fake_summary]
 
         results = await provider.query(request)
 
@@ -175,7 +174,6 @@ async def test_query_fetches_and_builds_suggestion_from_cached_numbers(
     provider.flight_numbers = {"UA3711", "AA100", "AC701"}
 
     request = SuggestionRequest(query="UA3711", geolocation=geolocation)
-    backend_mock.fetch_flight_details.return_value = {"flights": [{"ident": "UA3711"}]}
 
     fake_summary = FlightSummary(
         flight_number="UA3711",
@@ -195,7 +193,7 @@ async def test_query_fetches_and_builds_suggestion_from_cached_numbers(
         delayed=False,
         url="https://www.flightaware.com/live/flight/UA3711",
     )
-    backend_mock.get_flight_summaries.return_value = [fake_summary]
+    backend_mock.fetch_flight_details.return_value = [fake_summary]
 
     results = await provider.query(request)
 

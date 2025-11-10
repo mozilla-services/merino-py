@@ -860,7 +860,7 @@ type = "flightaware"
 backend = "flightaware"
 
 # MERINO_PROVIDERS__FLIGHTAWARE__CACHE
-# The store used to flightaware data. Either `redis` or `none`.
+# The store used for flightaware data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "none"
 

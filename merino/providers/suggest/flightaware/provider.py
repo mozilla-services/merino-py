@@ -128,10 +128,7 @@ class Provider(BaseProvider):
                 result = await self.backend.fetch_flight_details(flight_number)
 
                 if result:
-                    flight_summaries: list[FlightSummary] = self.backend.get_flight_summaries(
-                        result, flight_number
-                    )
-                    return [self.build_suggestion(flight_summaries)]
+                    return [self.build_suggestion(result)]
             return []
         except Exception as e:
             logger.warning(f"Exception occurred for FlightAware provider: {e}")

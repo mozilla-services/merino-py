@@ -6,11 +6,11 @@
 
 import datetime
 import aiodogstatsd
-from pydantic import HttpUrl
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from httpx import HTTPStatusError, Request, Response
 
+from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.flightaware.backends import utils
 
 from merino.providers.suggest.flightaware.backends.protocol import (
@@ -25,27 +25,32 @@ from merino.providers.suggest.flightaware.backends.flightaware import FlightAwar
 from merino.configs import settings
 
 
-def make_summary(flight_number: str) -> FlightSummary:
-    """Construct a minimal valid FlightSummary."""
-    return FlightSummary(
-        flight_number=flight_number,
-        destination=AirportDetails(code="EWR", city="Newark"),
-        origin=AirportDetails(code="SFO", city="San Francisco"),
-        departure=FlightScheduleSegment(
-            scheduled_time="2025-10-03T16:40:00-04:00",
-            estimated_time="2025-10-03T16:40:00-04:00",
-        ),
-        arrival=FlightScheduleSegment(
-            scheduled_time="2025-10-03T18:40:00-04:00",
-            estimated_time="2025-10-03T18:40:00-04:00",
-        ),
-        status="En Route",
-        delayed=False,
-        airline=AirlineDetails(code=None, name=None, icon=None),
-        time_left_minutes=60,
-        progress_percent=50,
-        url=HttpUrl(f"https://www.flightaware.com/live/flight/{flight_number}"),
-    )
+@pytest.fixture
+def make_summary():
+    """Return a function that builds a minimal valid FlightSummary."""
+
+    def _make(flight_number: str = "UA123", status: FlightStatus = FlightStatus.SCHEDULED):
+        return FlightSummary(
+            flight_number=flight_number,
+            destination=AirportDetails(code="EWR", city="Newark"),
+            origin=AirportDetails(code="SFO", city="San Francisco"),
+            departure=FlightScheduleSegment(
+                scheduled_time="2025-09-29T12:00:00Z",
+                estimated_time="2025-09-29T12:05:00Z",
+            ),
+            arrival=FlightScheduleSegment(
+                scheduled_time="2025-09-29T16:00:00Z",
+                estimated_time="2025-09-29T16:05:00Z",
+            ),
+            status=status,
+            delayed=False,
+            airline=AirlineDetails(code=None, name=None, icon=None),
+            time_left_minutes=None,
+            progress_percent=0,
+            url=f"https://www.flightaware.com/live/flight/{flight_number}",
+        )
+
+    return _make
 
 
 @pytest.fixture
@@ -61,7 +66,13 @@ def metrics():
 
 
 @pytest.fixture
-def backend(metrics):
+def cache_adapter():
+    """Return a fake CacheAdapter."""
+    return NoCacheAdapter()
+
+
+@pytest.fixture
+def backend(metrics, cache_adapter):
     """Return a FlightAwareBackend with mocked HTTP client and metrics."""
     mock_http_client = AsyncMock()
     backend = FlightAwareBackend(
@@ -69,22 +80,29 @@ def backend(metrics):
         http_client=mock_http_client,
         ident_url="flights/{ident}?start={start}&end={end}",
         metrics_client=metrics,
+        cache=cache_adapter,
     )
     return backend
 
 
 @pytest.mark.asyncio
-async def test_fetch_flight_details_success(backend, metrics):
-    """Ensure fetch_flight_details returns parsed JSON and records metrics on success."""
+async def test_fetch_flight_details_success(backend, metrics, make_summary):
+    """Ensure fetch_flight_details returns summaries and records metrics on success."""
     mock_response = MagicMock()
     mock_response.json.return_value = {"flights": [{"ident": "UA123"}]}
     mock_response.raise_for_status.return_value = None
     mock_response.status_code = 200
     backend.http_client.get.return_value = mock_response
 
-    result = await backend.fetch_flight_details("UA123")
+    fake_summary = make_summary("UA123", FlightStatus.SCHEDULED)
 
-    assert result == {"flights": [{"ident": "UA123"}]}
+    with patch.object(backend, "get_flight_summaries", return_value=[fake_summary]):
+        result = await backend.fetch_flight_details("UA123")
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].flight_number == "UA123"
+
     backend.http_client.get.assert_called_once()
 
     metrics.increment.assert_any_call("flightaware.request.summary.get.count")
@@ -97,10 +115,12 @@ async def test_fetch_flight_details_success(backend, metrics):
 
 @pytest.mark.asyncio
 async def test_fetch_flight_details_http_error_logs_and_returns_none(backend, metrics, caplog):
-    """Ensure fetch_flight_details logs a warning and increments error metrics on HTTPStatusError."""
-    mock_response = MagicMock()
+    """If API raises HTTPStatusError, log and return None."""
+    backend.cache.get_flight = AsyncMock(return_value=None)
+
     request = Request("GET", "http://test")
     response = Response(400, request=request)
+    mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = HTTPStatusError(
         "Bad Request", request=request, response=response
     )
@@ -123,7 +143,7 @@ async def test_fetch_flight_details_http_error_logs_and_returns_none(backend, me
 @pytest.mark.asyncio
 async def test_fetch_flight_details_uses_correct_headers(backend, metrics):
     """Verify fetch_flight_details sends the required API key and Accept headers."""
-    mock_response = AsyncMock()
+    mock_response = MagicMock()
     mock_response.json.return_value = {"flights": []}
     mock_response.raise_for_status.return_value = None
     backend.http_client.get.return_value = mock_response
@@ -134,6 +154,82 @@ async def test_fetch_flight_details_uses_correct_headers(backend, metrics):
     headers = kwargs["headers"]
     assert headers["x-apikey"] == settings.flightaware.api_key
     assert headers["Accept"] == "application/json"
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_details_cache_hit_returns_summaries_and_updates_progress(
+    backend, metrics, make_summary
+):
+    """If cache hit, should return cached summaries and recompute progress for EN_ROUTE flight."""
+    cached_summary = make_summary("UA123", FlightStatus.EN_ROUTE)
+
+    cached_data = MagicMock()
+    cached_data.summaries = [cached_summary]
+    backend.cache.get_flight = AsyncMock(return_value=cached_data)
+
+    with patch(
+        "merino.providers.suggest.flightaware.backends.flightaware.compute_enroute_progress",
+        return_value=(75, 90),
+    ) as mock_compute:
+        result = await backend.fetch_flight_details("UA123")
+
+    backend.cache.get_flight.assert_awaited_once_with("UA123")
+    metrics.increment.assert_any_call("flightaware.request.summary.cache.hit")
+    mock_compute.assert_called_once_with(cached_summary)
+
+    assert isinstance(result, list)
+    assert result[0].flight_number == "UA123"
+    assert result[0].progress_percent == 75
+    assert result[0].time_left_minutes == 90
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_details_cache_miss_fetches_and_caches(backend, metrics, make_summary):
+    """If cache miss, should fetch from API, cache summaries, and return them."""
+    backend.cache.get_flight = AsyncMock(return_value=None)
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"flights": [{"ident": "UA123"}]}
+    mock_response.raise_for_status.return_value = None
+    mock_response.status_code = 200
+    backend.http_client.get.return_value = mock_response
+
+    fake_summary = make_summary("UA123", FlightStatus.SCHEDULED)
+
+    with (
+        patch.object(backend, "get_flight_summaries", return_value=[fake_summary]),
+        patch(
+            "merino.providers.suggest.flightaware.backends.flightaware.derive_ttl_for_summaries",
+            return_value=600,
+        ) as mock_ttl,
+    ):
+        backend.cache.set_flight = AsyncMock()
+        result = await backend.fetch_flight_details("UA123")
+
+    backend.cache.get_flight.assert_awaited_once_with("UA123")
+    metrics.increment.assert_any_call("flightaware.request.summary.cache.miss")
+    mock_ttl.assert_called_once_with([fake_summary])
+    backend.cache.set_flight.assert_awaited_once_with("UA123", [fake_summary], 600)
+
+    assert isinstance(result, list)
+    assert result[0].flight_number == "UA123"
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_details_cache_miss_empty_response_returns_empty(backend, metrics):
+    """Return empty list if cache miss and API response has no flights."""
+    backend.cache.get_flight = AsyncMock(return_value=None)
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"flights": []}
+    mock_response.raise_for_status.return_value = None
+    mock_response.status_code = 200
+    backend.http_client.get.return_value = mock_response
+
+    result = await backend.fetch_flight_details("UA123")
+
+    metrics.increment.assert_any_call("flightaware.request.summary.cache.miss")
+    assert result == []
 
 
 def test_get_flight_summaries_returns_empty_list_when_response_is_none(backend):

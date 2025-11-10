@@ -19,6 +19,8 @@ from merino.providers.suggest.flightaware.backends.protocol import (
 from merino.providers.suggest.flightaware.backends.utils import (
     build_flight_summary,
     calculate_time_left,
+    compute_enroute_progress,
+    derive_ttl_for_summaries,
     get_airline_details,
     get_flight_number_from_query_if_valid,
     get_live_url,
@@ -927,3 +929,167 @@ def test_get_airline_details(
     assert result.name == expected_name, f"Failed name match: {description}"
     assert result.color == expected_color
     assert result.icon is None
+
+
+@pytest.mark.parametrize(
+    "description, status,dep_offset,arr_offset,expected_range",
+    [
+        (
+            "EN_ROUTE — ETA 1h ahead -> 3600s + 120 buffer",
+            FlightStatus.EN_ROUTE,
+            0,
+            3600,
+            (3719, 3721),
+        ),
+        (
+            "ARRIVED — arrived 15min ago -> TTL ≈ 4500 - 900 = 3600",
+            FlightStatus.ARRIVED,
+            -900,
+            -900,
+            (3599, 3601),
+        ),
+        (
+            "CANCELLED — scheduled 10min ago -> TTL ≈ 4500 - 600 = 3900",
+            FlightStatus.CANCELLED,
+            -600,
+            -600,
+            (3899, 3901),
+        ),
+        (
+            "SCHEDULED — departs in 4h -> TTL ≈ 14400",
+            FlightStatus.SCHEDULED,
+            14400,
+            14400,
+            (14399, 14401),
+        ),
+        (
+            "DELAYED — departs in 13h -> TTL capped at 12h (43200)",
+            FlightStatus.DELAYED,
+            46800,
+            46800,
+            (43199, 43201),
+        ),
+        ("UNKNOWN / fallback -> fixed 600s", FlightStatus.UNKNOWN, 0, 0, (599, 601)),
+    ],
+)
+def test_derive_ttl_for_summaries(
+    description, status, dep_offset, arr_offset, expected_range, fixed_now
+):
+    """Test derive_ttl_for_summaries across all flight statuses."""
+    with patch.object(utils.datetime, "datetime", wraps=datetime.datetime) as mock_datetime:
+        mock_datetime.now.return_value = fixed_now
+
+        dep_time = fixed_now + datetime.timedelta(seconds=dep_offset)
+        arr_time = fixed_now + datetime.timedelta(seconds=arr_offset)
+        summary = FlightSummary(
+            flight_number="TEST123",
+            destination=AirportDetails(code="LAX", city="Los Angeles"),
+            origin=AirportDetails(code="JFK", city="New York"),
+            departure=utils.FlightScheduleSegment(
+                scheduled_time=dep_time, estimated_time=dep_time
+            ),
+            arrival=utils.FlightScheduleSegment(scheduled_time=arr_time, estimated_time=arr_time),
+            status=status,
+            delayed=False,
+            airline=AirlineDetails(code="XX", name="TestAir", icon=None),
+            progress_percent=0,
+            time_left_minutes=None,
+            url="https://example.com/flight/TEST123",
+        )
+
+        ttl = derive_ttl_for_summaries([summary])
+
+    assert (
+        expected_range[0] <= ttl <= expected_range[1]
+    ), f"Status {status}: expected TTL in {expected_range}, got {ttl} for {description}"
+
+
+@pytest.mark.parametrize(
+    "description, dep_offset, eta_offset, now_offset, expected_progress, expected_time_left",
+    [
+        (
+            "Flight halfway through (progress 50%)",
+            -1800,
+            1800,
+            0,
+            50,
+            30,
+        ),
+        (
+            "Flight just departed (progress near 0%)",
+            -60,
+            3600,
+            0,
+            1,
+            60,
+        ),
+        (
+            "Flight almost arrived (progress near 100%)",
+            -3540,
+            60,
+            0,
+            98,
+            1,
+        ),
+        (
+            "Flight already arrived (progress capped at 100%, 0 time left)",
+            -7200,
+            -60,
+            0,
+            100,
+            0,
+        ),
+        (
+            "Zero duration edge case (same dep & arr time -> progress=0, left=0)",
+            0,
+            0,
+            0,
+            0,
+            0,
+        ),
+    ],
+)
+def test_compute_enroute_progress(
+    description,
+    dep_offset,
+    eta_offset,
+    now_offset,
+    expected_progress,
+    expected_time_left,
+    fixed_now,
+):
+    """Test that compute_enroute_progress correctly computes progress and remaining time calculations."""
+    with patch.object(utils.datetime, "datetime", wraps=datetime.datetime) as mock_datetime:
+        mock_datetime.now.return_value = fixed_now + datetime.timedelta(seconds=now_offset)
+
+        dep_time = fixed_now + datetime.timedelta(seconds=dep_offset)
+        eta_time = fixed_now + datetime.timedelta(seconds=eta_offset)
+
+        summary = FlightSummary(
+            flight_number="TEST123",
+            destination=AirportDetails(code="LAX", city="Los Angeles"),
+            origin=AirportDetails(code="JFK", city="New York"),
+            departure=utils.FlightScheduleSegment(
+                scheduled_time=dep_time,
+                estimated_time=dep_time,
+            ),
+            arrival=utils.FlightScheduleSegment(
+                scheduled_time=eta_time,
+                estimated_time=eta_time,
+            ),
+            status=FlightStatus.EN_ROUTE,
+            delayed=False,
+            airline=AirlineDetails(code="XX", name="TestAir", icon=None),
+            progress_percent=0,
+            time_left_minutes=None,
+            url="https://example.com/flight/TEST123",
+        )
+
+        progress, time_left = compute_enroute_progress(summary)
+
+    assert (
+        progress == expected_progress
+    ), f"Failed: {description} — expected {expected_progress}, got {progress}"
+    assert (
+        time_left == expected_time_left
+    ), f"Failed: {description} — expected {expected_time_left}, got {time_left}"

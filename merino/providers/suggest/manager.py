@@ -313,12 +313,26 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.FLIGHTAWARE:
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                    )
+                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
             return FlightAwareProvider(
                 backend=FlightAwareBackend(
                     api_key=settings.flightaware.api_key,
                     http_client=create_http_client(base_url=settings.flightaware.base_url),
                     ident_url=settings.flightaware.ident_url_path,
                     metrics_client=get_metrics_client(),
+                    cache=cache,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
