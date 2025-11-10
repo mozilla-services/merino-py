@@ -55,7 +55,7 @@ BASE_TOPICS = [
 ]
 
 
-BASE_SECTIONS = [
+BASE_SECTIONS_FOR_LOCAL_MODEL = [
     "nfl",
     "nba",
     "mlb",
@@ -64,24 +64,23 @@ BASE_SECTIONS = [
     "tv",
     "movies",
     "music",
-    "celebrity news",
     "books",
-    "business",
-    "career",
-    "arts",
-    "food",
-    "health",
-    "home",
-    "finance",
-    "government",
-    "sports",
-    "tech",
-    "travel",
-    "education",
-    "hobbies",
-    "society-parenting",
-    "education-science",
-    "society",
+    "business_crawl",
+    "career_crawl",
+    "arts_crawl",
+    "food_crawl",
+    "health_crawl",
+    "home_crawl",
+    "finance_crawl",
+    "government_crawl",
+    "sports_crawl",
+    "tech_crawl",
+    "travel_crawl",
+    "education_crawl",
+    "hobbies_crawl",
+    "society-parenting_crawl",
+    "education-science_crawl",
+    "society_crawl",
 ]
 
 
@@ -119,7 +118,9 @@ class FakeLocalModelSections(LocalModelBackend):
                 diff_q=0.25,
             )
 
-        category_fields: dict[str, InterestVectorConfig] = {a: get_topic(a) for a in BASE_SECTIONS}
+        category_fields: dict[str, InterestVectorConfig] = {
+            a: get_topic(a) for a in BASE_SECTIONS_FOR_LOCAL_MODEL
+        }
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=False,
@@ -237,7 +238,7 @@ class SuperInferredModel(LocalModelBackend):
         else:
             return None
         category_fields = {
-            a: self._get_section(a, model_thresholds) for a in BASE_SECTIONS
+            a: self._get_section(a, model_thresholds) for a in BASE_SECTIONS_FOR_LOCAL_MODEL
         }  ## all sections
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
