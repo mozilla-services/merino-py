@@ -38,6 +38,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
+    ElasticCredentials,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
@@ -175,16 +176,7 @@ sports_settings = settings.providers.sports
 # use the existing wikipedia values.
 # NOTE: eventually, this will be replaced when the elasticsearch code
 # is moved to `/utils`
-if not sports_settings.es.get("api_key"):
-    logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, trying alternate")
-    sports_settings.es["api_key"] = settings.jobs.wikipedia_indexer.get(
-        "es_api_key", settings.providers.wikipedia.get("es_api_key")
-    )
-if not sports_settings.es.get("dsn"):
-    logger.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, trying alternative")
-    sports_settings.es["dsn"] = settings.jobs.wikipedia_indexer.get(
-        "es_url", settings.providers.wikipedia.get("es_url")
-    )
+elastic_credentials = ElasticCredentials(settings=settings)
 app = Options(sports_settings).get_command()
 cli = typer.Typer(
     name="fetch_sports",
@@ -195,8 +187,7 @@ platform = f"{{lang}}_{name}"
 event_map = sports_settings.get("event_index", f"{platform}_event")
 try:
     store = SportsDataStore(
-        dsn=sports_settings.es.dsn,
-        api_key=sports_settings.es.api_key,
+        credentials=elastic_credentials,
         platform=platform,
         languages=[lang for lang in sports_settings.get("languages", ["en"])],
         index_map={"event": event_map},

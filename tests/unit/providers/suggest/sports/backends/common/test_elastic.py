@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import freezegun
 import pytest
 
+from dynaconf import LazySettings
 from elasticsearch import BadRequestError, ConflictError
 from elastic_transport import ApiResponseMeta, HttpHeaders, NodeConfig
 from pytest_mock import MockerFixture
@@ -21,6 +22,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
+    ElasticCredentials,
     get_index_settings,
     META_INDEX,
 )
@@ -51,15 +53,47 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 @pytest.fixture(name="sport_data_store")
 def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
     """Test Sport Data Store instance."""
+    creds = ElasticCredentials(dsn="http://es.test:9200", api_key="test-key")
     s = SportsDataStore(
-        dsn="http://es.test:9200",
-        api_key="test-key",
+        credentials=creds,
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events"},
     )
     s.client = es_client
     return s
+
+
+@pytest.mark.asyncio
+async def test_credentials():
+    """Try all paths for known settings"""
+    test_settings = LazySettings()
+    test = ElasticCredentials(settings=test_settings)
+    assert not test.validate()
+    test_settings.wikipedia_indexer = LazySettings()
+    test_settings.wikipedia_indexer.es_url = "http://localhost:9200"
+    test = ElasticCredentials(settings=test_settings)
+    assert not test.validate()
+    test_settings.wikipedia_indexer.es_api_key = "test_key"
+    test = ElasticCredentials(settings=test_settings)
+    assert test.validate()
+    test_settings = LazySettings()
+    test = ElasticCredentials(settings=test_settings)
+    assert not test.validate()
+    test_settings.providers = LazySettings()
+    test_settings.providers.wikipedia = LazySettings()
+    test_settings.providers.wikipedia.es_url = "http://127.0.0.1:9200"
+    test_settings.providers.wikipedia.es_api_key = "test_key"
+    test = ElasticCredentials(settings=test_settings)
+    assert test.validate()
+    test_settings = LazySettings()
+    test_settings.providers = LazySettings()
+    test_settings.providers.sports = LazySettings()
+    test_settings.providers.sports.es = LazySettings()
+    test_settings.providers.sports.es.dsn = "http://localhost:9200"
+    test_settings.providers.sports.es.api_key = "test-key"
+    test = ElasticCredentials(settings=test_settings)
+    assert test.validate()
 
 
 @pytest.mark.asyncio
@@ -303,12 +337,12 @@ async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
 @pytest.mark.asyncio
 async def test_bad_creds():
     """Test failure if credentials are not present"""
-    store = SportsDataStore(dsn="", api_key="", languages=["en"], platform="sports", index_map={})
+    creds = ElasticCredentials(dsn="", api_key="")
+    store = SportsDataStore(credentials=creds, languages=["en"], platform="sports", index_map={})
     with pytest.raises(SportsDataError):
         await store.startup()
-    store = SportsDataStore(
-        dsn="bogus", api_key="", languages=["en"], platform="sports", index_map={}
-    )
+    creds = ElasticCredentials(dsn="bogus", api_key="")
+    store = SportsDataStore(credentials=creds, languages=["en"], platform="sports", index_map={})
     with pytest.raises(SportsDataError):
         await store.startup()
 

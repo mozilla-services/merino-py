@@ -40,7 +40,7 @@ class SportsDataProvider(BaseProvider):
 
     """
 
-    backend: SportsDataBackend
+    backend: SportsDataBackend | None
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     enabled_by_default: bool
@@ -66,14 +66,24 @@ class SportsDataProvider(BaseProvider):
         self.trigger_words = trigger_words + TEAM_NAMES
         self.score = score
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Create connections, components and other actions needed when starting up"""
         logger = logging.getLogger(__name__)
         logger.info(f"{LOGGING_TAG} Starting sports...")
+        try:
+            if self.backend:
+                await self.backend.startup()
+        except (Exception, BaseException) as ex:
+            logger.error(f"{LOGGING_TAG} Could not start sports backend: {ex}")
+            self.backend = None
 
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Query elastic search with the provided user terms and return relevant sport event information."""
+        logger = logging.getLogger(__name__)
         if not sreq.query:
+            return []
+        if not self.backend:
+            logger.error(f"{LOGGING_TAG} Sports backend unavailable due to configuration error")
             return []
         self.metrics_client.increment("sports.suggestions.count")
         # Both query and build suggestion have the ability to differentiate

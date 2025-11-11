@@ -24,6 +24,7 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    ElasticCredentials,
     SportsDataStore,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
@@ -40,18 +41,20 @@ _ = FORCE_IMPORT
 async def main_loader(
     log: Logger,
     settings: LazySettings,
-    store: SportsDataStore,
-    build_indices: bool = False,
+    credentials: ElasticCredentials,
 ) -> list[str]:
     """Be a simple "stunt" main process that fetches data to ensure that the load and retrieval
     functions work the way you'd expect
     """
     log.debug(f"{LOGGING_TAG}: Building storage...")
-    if build_indices:
-        # Only call for test or dev builds.
-        log.debug(f"{LOGGING_TAG}: Building indices...")
-        await store.build_indexes(clear=False)
-        await store.prune(expiry=1760473106)
+    store = SportsDataStore(
+        credentials=credentials,
+        platform=platform,
+        languages=[lang for lang in settings.get("languages", ["en"])],
+        index_map={"event": event_map, "meta": meta_map},
+    )
+    await store.startup()
+    await store.prune()
 
     log.debug(f"{LOGGING_TAG}: Starting up...")
     my_sports: list[Sport] = []
@@ -85,14 +88,20 @@ async def main_loader(
     return reply
 
 
-async def main_query(log: Logger, store: SportsDataStore, settings: LazySettings):
+async def main_query(log: Logger, credentials: ElasticCredentials, settings: LazySettings):
     """Pretend we're a query function"""
     trigger_words = [
         word.lower().strip() for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
     ]
+    if not credentials.validate():
+        print("Failure")
+    store = SportsDataStore(
+        credentials=credentials,
+        platform=platform,
+        languages=[lang for lang in settings.get("languages", ["en"])],
+        index_map={"event": event_map, "meta": meta_map},
+    )
     backend = SportsDataBackend(store=store, settings=settings)
-    await backend.startup()
-
     provider = SportsDataProvider(
         backend=backend,
         metrics_client=get_metrics_client(),
@@ -100,6 +109,7 @@ async def main_query(log: Logger, store: SportsDataStore, settings: LazySettings
         trigger_words=trigger_words,
         enabled_by_default=True,
     )
+    await provider.initialize()
     sreq = SuggestionRequest(query="Jets game", geolocation=Location())
     start = datetime.now()
     res = await provider.query(sreq=sreq)
@@ -117,36 +127,25 @@ if __name__ == "__main__":
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
     name = "sports"
-    platform = f"{{lang}}_{name}"
+    platform = f"{name}_{{lang}}"
     event_map = settings.providers.sports.get("event_index", f"{platform}_event")
     meta_map = settings.providers.sports.get("meta_index", f"{platform}_meta")
-    store = SportsDataStore(
-        dsn=settings.providers.sports.es.get(
-            "dsn",
-            settings.providers.wikipedia.get("es_url", settings.wikipedia_indexer.get("es_url")),
-        ),
-        api_key=settings.providers.sports.es.get(
-            "api_key",
-            settings.providers.wikipedia.get(
-                "es_api_key", settings.wikipedia_indexer.get("es_api_key")
-            ),
-        ),
-        platform=platform,
-        languages=[lang for lang in settings.providers.sports.get("languages", ["en"])],
-        index_map={"event": event_map, "meta": meta_map},
-    )
+    try:
+        credentials = ElasticCredentials(settings=settings)
+    except (Exception, BaseException) as ex:
+        log.error(f"Could not get credentials {ex}")
+        raise ex
 
     team_names = asyncio.run(
         main_loader(
             log=log,
-            store=store,
-            build_indices=True,
+            credentials=credentials,
             settings=settings.providers.sports,
         )
     )
 
     # Perform a query and return the results.
-    asyncio.run(main_query(log=log, store=store, settings=settings.providers.sports))
+    asyncio.run(main_query(log=log, credentials=credentials, settings=settings.providers.sports))
 
     # Dump out the accumulated team names
     # Ideal World: This should go into some common data storage engine and be pulled regularly by

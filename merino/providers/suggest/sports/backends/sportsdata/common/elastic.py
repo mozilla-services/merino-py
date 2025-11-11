@@ -7,6 +7,7 @@ from abc import abstractmethod, ABC
 from datetime import datetime, timezone
 from typing import Any, Final
 
+from dynaconf import LazySettings
 from elasticsearch import (
     AsyncElasticsearch,
     BadRequestError,
@@ -29,7 +30,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
 
-META_INDEX: str = "sports_meta"
+META_INDEX: str = "sports_{lang}_meta"
 
 EN_INDEX_SETTINGS: dict = {
     "number_of_replicas": "1",
@@ -163,6 +164,68 @@ INDEX_SETTINGS: dict[str, Any] = {
 }
 
 
+class ElasticCredentials:
+    """The set of Elasticsearch credentials drawn from common locations in settings.
+
+    Until these are centralized, the credentials are store in a number of different locations,
+    based on the settings, application, and other factors. This class scans the full settings
+    looking for all candidate locations.
+    """
+
+    dsn: str | None
+    api_key: str | None
+
+    def __init__(
+        self,
+        dsn: str | None = None,
+        api_key: str | None = None,
+        settings: LazySettings | None = None,
+    ):
+        """Scan the settings for the credentials. DO NOT RAISE AN EXCEPTION as this
+        function may be called during general startup and could kill the application
+        pre-maturely. Instead, make sure to call `.validate()` to ensure that the
+        credentials are properly set.
+        """
+        self.dsn = dsn
+        self.api_key = api_key
+        if not settings:
+            return
+        try:
+            self.dsn = settings.providers.sports.es.dsn
+        except AttributeError:
+            pass
+        if not self.dsn:
+            try:
+                self.dsn = settings.providers.wikipedia.es_url
+            except AttributeError:
+                pass
+        if not self.dsn:
+            try:
+                self.dsn = settings.wikipedia_indexer.es_url
+            except AttributeError:
+                pass
+        try:
+            self.api_key = settings.providers.sports.es.api_key
+        except AttributeError:
+            pass
+        if not self.api_key:
+            try:
+                self.api_key = settings.providers.wikipedia.es_api_key
+            except AttributeError:
+                pass
+        if not self.api_key:
+            try:
+                self.api_key = settings.wikipedia_indexer.es_api_key
+            except AttributeError:
+                pass
+
+    def validate(self) -> bool:
+        """Return if the credentials were located and valid."""
+        return (self.api_key is not None and len(self.api_key) > 0) and (
+            self.dsn is not None and len(self.dsn) > 0
+        )
+
+
 class ElasticBackendError(BackendError):
     """General error with Elastic Search"""
 
@@ -170,15 +233,12 @@ class ElasticBackendError(BackendError):
 class ElasticDataStore(ABC):
     """General Elastic Data Store"""
 
-    dsn: str
-    api_key: str
-    client: AsyncElasticsearch
+    credentials: ElasticCredentials
+    client: AsyncElasticsearch | None
 
     def __init__(
         self,
-        *,
-        dsn: str,
-        api_key: str,
+        credentials: ElasticCredentials,
     ):
         """Create a core instance of elastic search.
         NOTE: You need to call `.startup()` BEFORE performing any
@@ -188,12 +248,12 @@ class ElasticDataStore(ABC):
         into provider exclusive function.
         """
         logger = logging.getLogger(__name__)
-        if not dsn:
+        if not credentials.dsn:
             logger.error(f"{LOGGING_TAG} Missing DSN")
-        self.dsn = dsn
-        if not api_key:
+        if not credentials.api_key:
             logger.error(f"{LOGGING_TAG} Missing API Key")
-        self.api_key = api_key
+        self.credentials = credentials
+        self.client = None
 
     @abstractmethod
     async def startup(self) -> None:
@@ -205,17 +265,20 @@ class ElasticDataStore(ABC):
         NOTE: The Merino elastic search account is READ_ONLY
         The Airflow elastic search is READ_WRITE.
         """
-        if not self.dsn or not self.api_key:
+        if not self.credentials.validate():
             raise SportsDataError("Missing credentials for storage")
         if not self.client:
-            self.client = AsyncElasticsearch(self.dsn, api_key=self.api_key)
+            self.client = AsyncElasticsearch(
+                self.credentials.dsn, api_key=self.credentials.api_key
+            )
 
     async def shutdown(self) -> None:
         """Politely close the data connection. Not strictly required, but python
         may complain.
         """
         logging.getLogger(__name__).info(f"{LOGGING_TAG} closing...")
-        await self.client.close()
+        if self.client:
+            await self.client.close()
 
     @abstractmethod
     def build_mappings(self, language_code: str) -> dict[str, Any]:
@@ -277,20 +340,21 @@ class SportsDataStore(ElasticDataStore):
     def __init__(
         self,
         *,
-        dsn: str,
-        api_key: str,
+        credentials: ElasticCredentials,
         languages: list[str],
         platform: str,
         index_map: dict[str, str],
         **kwargs,
     ) -> None:
         """Initialize a connection to ElasticSearch"""
-        super().__init__(dsn=dsn, api_key=api_key)
+        super().__init__(credentials=credentials)
         self.languages = languages
         self.platform = platform
         # build the index based on the platform.
         self.index_map = index_map
-        logging.getLogger(__name__).info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
+        logging.getLogger(__name__).info(
+            f"{LOGGING_TAG} Initialized Elastic search at {credentials.dsn}"
+        )
 
     async def startup(self) -> None:
         """Kick start the data store for Sports"""
@@ -305,6 +369,8 @@ class SportsDataStore(ElasticDataStore):
 
     async def query_meta(self, key: str) -> None | str:
         """Get value from meta table"""
+        if not self.client:
+            return None
         try:
             res = await self.client.search(
                 index=META_INDEX,
@@ -324,6 +390,8 @@ class SportsDataStore(ElasticDataStore):
 
     async def store_meta(self, key: str, value: str):
         """Store value into meta table"""
+        if not self.client:
+            return
         try:
             try:
                 await self.client.create(
@@ -345,6 +413,8 @@ class SportsDataStore(ElasticDataStore):
 
     async def del_meta(self, key) -> None:
         """Remove data from the meta table"""
+        if not self.client:
+            return
         try:
             await self.client.delete(index=META_INDEX, id=key.lower())
             await self.client.indices.refresh(index=META_INDEX)
@@ -355,6 +425,8 @@ class SportsDataStore(ElasticDataStore):
         """Create the meta data index. This is a very simple
         table that stores a non-searchable value under a key.
         """
+        if not self.client:
+            return
         try:
             # await self.client.indices.delete(index=META_INDEX)
             await self.client.indices.create(
@@ -386,6 +458,8 @@ class SportsDataStore(ElasticDataStore):
         Normally, these are built using terraform.
         """
         logger = logging.getLogger(__name__)
+        if not self.client:
+            return
         for language_code in self.languages:
             mappings = self.build_mappings(language_code=language_code)
             for idx, index in self.index_map.items():
@@ -428,14 +502,21 @@ class SportsDataStore(ElasticDataStore):
                     "date": {"type": "integer"},
                     # The non-unique event designator "sport:home:away"
                     "event_key": {"type": "keyword"},
-                    # Specify that the terms
+                    # Specify the terms
                     "terms": {
                         "type": "text",
                         "analyzer": f"plain_{language_code}",
                         "search_analyzer": f"plain_search_{language_code}",
                     },
                 },
-            }
+            },
+            "meta": {
+                "dynamic": False,
+                "properties": {
+                    "key": {"type": "keyword"},
+                    "value": {"type": "keyword", "index": False},
+                },
+            },
         }
 
     async def prune(
@@ -446,6 +527,8 @@ class SportsDataStore(ElasticDataStore):
         """Remove data that has expired."""
         utc_now = expiry or int(datetime.now(tz=timezone.utc).timestamp())
         logger = logging.getLogger(__name__)
+        if not self.client:
+            return False
         for index_pattern in self.index_map.values():
             index = index_pattern.format(lang=language_code)
             query = {"range": {"expiry": {"lte": utc_now}}}
@@ -471,6 +554,8 @@ class SportsDataStore(ElasticDataStore):
         index_id = self.index_map["event"].format(lang=language_code)
         utc_now = int(datetime.now(tz=timezone.utc).timestamp())
         logger = logging.getLogger(__name__)
+        if not self.client:
+            return {}
 
         if mix_sports:
             logger.debug(f"{LOGGING_TAG} Mixing sports...")
@@ -543,6 +628,8 @@ class SportsDataStore(ElasticDataStore):
         """Store the events using the calculated terms"""
         actions = []
         logger = logging.getLogger(__name__)
+        if not self.client:
+            return
 
         index = (self.index_map["event"]).format(lang=language_code)
 
