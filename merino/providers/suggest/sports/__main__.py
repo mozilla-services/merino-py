@@ -51,7 +51,7 @@ async def main_loader(
         credentials=credentials,
         platform=platform,
         languages=[lang for lang in settings.get("languages", ["en"])],
-        index_map={"event": event_map, "meta": meta_map},
+        index_map={"event": event_map},
     )
     await store.startup()
     await store.prune()
@@ -99,7 +99,7 @@ async def main_query(log: Logger, credentials: ElasticCredentials, settings: Laz
         credentials=credentials,
         platform=platform,
         languages=[lang for lang in settings.get("languages", ["en"])],
-        index_map={"event": event_map, "meta": meta_map},
+        index_map={"event": event_map},
     )
     backend = SportsDataBackend(store=store, settings=settings)
     provider = SportsDataProvider(
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     name = "sports"
     platform = f"{name}_{{lang}}"
     event_map = settings.providers.sports.get("event_index", f"{platform}_event")
-    meta_map = settings.providers.sports.get("meta_index", f"{platform}_meta")
+    meta_map = settings.providers.sports.get("meta_index", f"{name}_meta")
     try:
         credentials = ElasticCredentials(settings=settings)
     except (Exception, BaseException) as ex:

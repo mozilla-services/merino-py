@@ -30,7 +30,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
 
-META_INDEX: str = "sports_{lang}_meta"
+# the "meta" index contains general information about the sports provider. It can be used to store
+# values between fetches, update intervals, etc. This is not language specific.
+META_INDEX: str = "sports_meta"
 
 EN_INDEX_SETTINGS: dict = {
     "number_of_replicas": "1",
@@ -281,7 +283,7 @@ class ElasticDataStore(ABC):
             await self.client.close()
 
     @abstractmethod
-    def build_mappings(self, language_code: str) -> dict[str, Any]:
+    def build_event_mappings(self, language_code: str) -> dict[str, Any]:
         """Construct the mappings to be used by Elastic search.
         This should be done by the package that is storing data to Elastic search.
         See: https://www.elastic.co/docs/manage-data/data-store/mapping
@@ -460,8 +462,30 @@ class SportsDataStore(ElasticDataStore):
         logger = logging.getLogger(__name__)
         if not self.client:
             return
+        # Build the meta index
+        try:
+            if clear:
+                await self.client.indices.delete(
+                    index=META_INDEX,
+                    ignore_unavailable=True,
+                )
+            await self.client.indices.create(
+                index=META_INDEX,
+                mappings={
+                    "dynamic": False,
+                    "properties": {
+                        "key": {"type": "keyword"},
+                        "value": {"type": "keyword", "index": False},
+                    },
+                },
+            )
+        except BadRequestError as ex:
+            if ex.error != "resource_already_exists_exception":
+                raise SportsDataError(f"Could not create {META_INDEX}") from ex
+            else:
+                logger.info(f"{LOGGING_TAG} {META_INDEX} already exists, skipping")
         for language_code in self.languages:
-            mappings = self.build_mappings(language_code=language_code)
+            mappings = self.build_event_mappings(language_code=language_code)
             for idx, index in self.index_map.items():
                 try:
                     if clear:
@@ -484,8 +508,8 @@ class SportsDataStore(ElasticDataStore):
                         continue
                     raise SportsDataError(f"Could not create {index}") from ex
 
-    def build_mappings(self, language_code: str) -> dict[str, Any]:
-        """Construct the mappings to be used by Elastic search.
+    def build_event_mappings(self, language_code: str) -> dict[str, Any]:
+        """Construct the event mappings to be used by Elastic search.
         This should be done by the package that is storing data to Elastic search.
         """
         # Note: Since "stop words" are more sport specific, filter these from
@@ -508,13 +532,6 @@ class SportsDataStore(ElasticDataStore):
                         "analyzer": f"plain_{language_code}",
                         "search_analyzer": f"plain_search_{language_code}",
                     },
-                },
-            },
-            "meta": {
-                "dynamic": False,
-                "properties": {
-                    "key": {"type": "keyword"},
-                    "value": {"type": "keyword", "index": False},
                 },
             },
         }

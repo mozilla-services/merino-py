@@ -185,12 +185,13 @@ cli = typer.Typer(
 name = sports_settings.get("platform", "sports")
 platform = f"{{lang}}_{name}"
 event_map = sports_settings.get("event_index", f"{platform}_event")
+meta_map = sports_settings.get("meta_index", f"{name}_meta")
 try:
     store = SportsDataStore(
         credentials=elastic_credentials,
         platform=platform,
         languages=[lang for lang in sports_settings.get("languages", ["en"])],
-        index_map={"event": event_map},
+        index_map={"event": event_map, "meta": meta_map},
     )
     provider = SportDataUpdater(
         settings=sports_settings,

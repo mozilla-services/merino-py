@@ -73,7 +73,7 @@ class SportsDataProvider(BaseProvider):
         try:
             if self.backend:
                 await self.backend.startup()
-        except (Exception, BaseException) as ex:
+        except Exception as ex:
             logger.error(f"{LOGGING_TAG} Could not start sports backend: {ex}")
             self.backend = None
 

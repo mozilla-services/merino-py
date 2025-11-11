@@ -325,7 +325,7 @@ async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
     # Check for initial case.
     es_client.search.return_value = {"hits": {"hits": []}}
     await sport_data_store.startup()
-    assert es_client.indices.create.call_count == 2
+    assert es_client.indices.create.call_count == 3
     assert any(
         [
             arg_list.kwargs.get("index") == META_INDEX
@@ -362,7 +362,7 @@ async def test_build_index_exception(sport_data_store: SportsDataStore, es_clien
         body="oops",
         errors=(),
     )
-    es_client.indices.create.side_effect = [br]
+    es_client.indices.create.side_effect = [br, br]
     await sport_data_store.build_indexes(clear=True)
     assert es_client.indices.delete.called
     assert es_client.indices.create.called
