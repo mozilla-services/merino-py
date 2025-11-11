@@ -170,6 +170,8 @@ class ElasticBackendError(BackendError):
 class ElasticDataStore(ABC):
     """General Elastic Data Store"""
 
+    dsn: str
+    api_key: str
     client: AsyncElasticsearch
 
     def __init__(
@@ -178,16 +180,35 @@ class ElasticDataStore(ABC):
         dsn: str,
         api_key: str,
     ):
-        """Create a core instance of elastic search"""
-        self.client = AsyncElasticsearch(dsn, api_key=api_key)
+        """Create a core instance of elastic search.
+        NOTE: You need to call `.startup()` BEFORE performing any
+        functions with ElasticDataStore. `startup()` may raise an exception
+        if the credentials are not present or if there is any other connection
+        issue, so it needs to be protected by exception handling or isolated
+        into provider exclusive function.
+        """
+        logger = logging.getLogger(__name__)
+        if not dsn:
+            logger.error(f"{LOGGING_TAG} Missing DSN")
+        self.dsn = dsn
+        if not api_key:
+            logger.error(f"{LOGGING_TAG} Missing API Key")
+        self.api_key = api_key
 
     @abstractmethod
-    async def startup(self) -> bool:
+    async def startup(self) -> None:
         """Perform start-up functions.
+
+        This should handle the actual connection since the client
+        may raise an exception!
 
         NOTE: The Merino elastic search account is READ_ONLY
         The Airflow elastic search is READ_WRITE.
         """
+        if not self.dsn or not self.api_key:
+            raise SportsDataError("Missing credentials for storage")
+        if not self.client:
+            self.client = AsyncElasticsearch(self.dsn, api_key=self.api_key)
 
     async def shutdown(self) -> None:
         """Politely close the data connection. Not strictly required, but python
@@ -271,8 +292,9 @@ class SportsDataStore(ElasticDataStore):
         self.index_map = index_map
         logging.getLogger(__name__).info(f"{LOGGING_TAG} Initialized Elastic search at {dsn}")
 
-    async def startup(self) -> bool:
+    async def startup(self) -> None:
         """Kick start the data store for Sports"""
+        await super().startup()
         logger = logging.getLogger(__name__)
         await self.build_meta()
         await self.build_indexes()
@@ -280,8 +302,6 @@ class SportsDataStore(ElasticDataStore):
         val = await self.query_meta("update")
         if val is None or (float(val) or 0 < datetime.now(tz=timezone.utc).timestamp()):
             logger.info(f"{LOGGING_TAG} fetching data")
-            return True
-        return False
 
     async def query_meta(self, key: str) -> None | str:
         """Get value from meta table"""

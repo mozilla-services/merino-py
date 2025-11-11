@@ -290,8 +290,7 @@ async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
     """Test startup initializer"""
     # Check for initial case.
     es_client.search.return_value = {"hits": {"hits": []}}
-    res = await sport_data_store.startup()
-    assert res
+    await sport_data_store.startup()
     assert es_client.indices.create.call_count == 2
     assert any(
         [
@@ -299,6 +298,19 @@ async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
             for arg_list in es_client.indices.create.call_args_list
         ]
     )
+
+
+@pytest.mark.asyncio
+async def test_bad_creds():
+    """Test failure if credentials are not present"""
+    store = SportsDataStore(dsn="", api_key="", languages=["en"], platform="sports", index_map={})
+    with pytest.raises(SportsDataError):
+        await store.startup()
+    store = SportsDataStore(
+        dsn="bogus", api_key="", languages=["en"], platform="sports", index_map={}
+    )
+    with pytest.raises(SportsDataError):
+        await store.startup()
 
 
 @pytest.mark.asyncio

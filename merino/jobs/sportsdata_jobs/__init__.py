@@ -165,6 +165,7 @@ class SportDataUpdater:
 
     async def initialize(self) -> None:
         """Initialize the ElasticSearch data store"""
+        await self.store.startup()
         await self.store.build_indexes(clear=False)
 
 
@@ -175,12 +176,12 @@ sports_settings = settings.providers.sports
 # NOTE: eventually, this will be replaced when the elasticsearch code
 # is moved to `/utils`
 if not sports_settings.es.get("api_key"):
-    logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, using alternate")
+    logger.warning(f"{LOGGING_TAG} No sport elasticsearch API key found, trying alternate")
     sports_settings.es["api_key"] = settings.jobs.wikipedia_indexer.get(
         "es_api_key", settings.providers.wikipedia.get("es_api_key")
     )
 if not sports_settings.es.get("dsn"):
-    logger.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, using alternative")
+    logger.warning(f"{LOGGING_TAG} No sport elasticsearch DSN found, trying alternative")
     sports_settings.es["dsn"] = settings.jobs.wikipedia_indexer.get(
         "es_url", settings.providers.wikipedia.get("es_url")
     )
