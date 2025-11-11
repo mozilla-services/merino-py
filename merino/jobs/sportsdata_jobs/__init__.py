@@ -206,7 +206,8 @@ try:
         connect_timeout=sports_settings.get("connect_timeout"),
         read_timeout=sports_settings.get("read_timeout"),
     )
-except SportsDataError as ex:
+except Exception as ex:
+    # except SportsDataError as ex:
     logger.error(f"{LOGGING_TAG} Sports Unavailable: {ex}")
 
 
