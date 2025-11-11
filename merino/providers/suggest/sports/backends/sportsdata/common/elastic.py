@@ -343,6 +343,7 @@ class SportsDataStore(ElasticDataStore):
 
     platform: str
     index_map: dict[str, str]
+    meta_map: str
     languages: list[str]
 
     def __init__(
@@ -352,6 +353,7 @@ class SportsDataStore(ElasticDataStore):
         languages: list[str],
         platform: str,
         index_map: dict[str, str],
+        meta_map: str = META_INDEX,
         **kwargs,
     ) -> None:
         """Initialize a connection to ElasticSearch"""
@@ -360,6 +362,7 @@ class SportsDataStore(ElasticDataStore):
         self.platform = platform
         # build the index based on the platform.
         self.index_map = index_map
+        self.meta_map = meta_map
         logging.getLogger(__name__).info(
             f"{LOGGING_TAG} Initialized Elastic search at {credentials.dsn}"
         )
@@ -381,7 +384,7 @@ class SportsDataStore(ElasticDataStore):
             return None
         try:
             res = await self.client.search(
-                index=META_INDEX,
+                index=self.meta_map,
                 query={"term": {"_id": key.lower()}},
                 # query={"term": {"key": key.lower()}},
                 # query={"match_all": {}},
@@ -403,7 +406,7 @@ class SportsDataStore(ElasticDataStore):
         try:
             try:
                 await self.client.create(
-                    index=META_INDEX,
+                    index=self.meta_map,
                     id=key.lower(),
                     document={"meta_key": key, "meta_value": value},
                 )

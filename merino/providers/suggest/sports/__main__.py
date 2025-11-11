@@ -42,6 +42,8 @@ async def main_loader(
     log: Logger,
     settings: LazySettings,
     credentials: ElasticCredentials,
+    platform: str,
+    event_map: str,
 ) -> list[str]:
     """Be a simple "stunt" main process that fetches data to ensure that the load and retrieval
     functions work the way you'd expect
@@ -88,7 +90,13 @@ async def main_loader(
     return reply
 
 
-async def main_query(log: Logger, credentials: ElasticCredentials, settings: LazySettings):
+async def main_query(
+    log: Logger,
+    credentials: ElasticCredentials,
+    platform: str,
+    event_map: str,
+    settings: LazySettings,
+):
     """Pretend we're a query function"""
     trigger_words = [
         word.lower().strip() for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
@@ -141,11 +149,21 @@ if __name__ == "__main__":
             log=log,
             credentials=credentials,
             settings=settings.providers.sports,
+            platform=platform,
+            event_map=event_map,
         )
     )
 
     # Perform a query and return the results.
-    asyncio.run(main_query(log=log, credentials=credentials, settings=settings.providers.sports))
+    asyncio.run(
+        main_query(
+            log=log,
+            credentials=credentials,
+            platform=platform,
+            event_map=event_map,
+            settings=settings.providers.sports,
+        )
+    )
 
     # Dump out the accumulated team names
     # Ideal World: This should go into some common data storage engine and be pulled regularly by
