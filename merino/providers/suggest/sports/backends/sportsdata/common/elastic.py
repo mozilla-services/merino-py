@@ -188,41 +188,60 @@ class ElasticCredentials:
         pre-maturely. Instead, make sure to call `.validate()` to ensure that the
         credentials are properly set.
         """
+        logger = logging.getLogger(__name__)
         self.dsn = dsn
         self.api_key = api_key
         if not settings:
             return
         try:
+            logger.info(
+                f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or "None"}"
+            )
             self.dsn = settings.providers.sports.es.dsn
         except AttributeError:
             # fail to next candidate
             pass
         if not self.dsn:
             try:
+                logger.info(
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or "None"}"
+                )
                 self.dsn = settings.providers.wikipedia.es_url
             except AttributeError:
                 # fail to next candidate
                 pass
         if not self.dsn:
             try:
-                self.dsn = settings.wikipedia_indexer.es_url
+                logger.info(
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or "None"}"
+                )
+                self.dsn = settings.jobs.wikipedia_indexer.es_url
             except AttributeError:
                 # remember to call `.validate()` to ensure valid
                 pass
         try:
+            logger.info(
+                f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or "None"}"
+            )
             self.api_key = settings.providers.sports.es.api_key
         except AttributeError:
             # fail to next candidate
             pass
         if not self.api_key:
             try:
+                logger.info(
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or "None"}"
+                )
                 self.api_key = settings.providers.wikipedia.es_api_key
             except AttributeError:
                 # fail to next candidate
                 pass
         if not self.api_key:
             try:
-                self.api_key = settings.wikipedia_indexer.es_api_key
+                logger.info(
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or "None"}"
+                )
+                self.api_key = settings.jobs.wikipedia_indexer.es_api_key
             except AttributeError:
                 # remember to call `.validate()` to ensure valid
                 pass

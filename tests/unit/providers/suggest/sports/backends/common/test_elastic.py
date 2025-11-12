@@ -70,11 +70,12 @@ async def test_credentials():
     test_settings = LazySettings()
     test = ElasticCredentials(settings=test_settings)
     assert not test.validate()
-    test_settings.wikipedia_indexer = LazySettings()
-    test_settings.wikipedia_indexer.es_url = "http://localhost:9200"
+    test_settings.jobs = LazySettings()
+    test_settings.jobs.wikipedia_indexer = LazySettings()
+    test_settings.jobs.wikipedia_indexer.es_url = "http://localhost:9200"
     test = ElasticCredentials(settings=test_settings)
     assert not test.validate()
-    test_settings.wikipedia_indexer.es_api_key = "test_key"
+    test_settings.jobs.wikipedia_indexer.es_api_key = "test_key"
     test = ElasticCredentials(settings=test_settings)
     assert test.validate()
     test_settings = LazySettings()
