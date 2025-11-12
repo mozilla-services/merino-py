@@ -81,6 +81,9 @@ return result
 """
 SCRIPT_ID_BULK_FETCH_TICKERS: str = "bulk_fetch_tickers"
 
+# Type alias for parsed cached data
+ParsedCachedData = list[Optional[Tuple[TickerSnapshot, int]]]
+
 
 class PolygonBackend:
     """Backend that connects to the Polygon API."""
@@ -175,9 +178,7 @@ class PolygonBackend:
         """
         return build_ticker_summary(snapshot, image_url)
 
-    async def get_snapshots_from_cache(
-        self, tickers: list[str]
-    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
+    async def get_snapshots_from_cache(self, tickers: list[str]) -> ParsedCachedData:
         """Return snapshots from the cache with their respective TTLs in a list of tuples format."""
         parsed_cached_data = []
         cache_keys = []
@@ -448,9 +449,7 @@ class PolygonBackend:
                 logger.warning(f"Error occerred while refreshing ticker snapshots: {exc}")
 
     # TODO @herraj add unit tests for this
-    def _parse_cached_data(
-        self, cached_data: list[bytes | None]
-    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
+    def _parse_cached_data(self, cached_data: list[bytes | None]) -> ParsedCachedData:
         """Parse Redis output of the form [snapshot_json, ttl, snapshot_json, ttl, ...].
         Each snapshot is JSON-decoded and validated into a `TickerSnapshot`,
         and each TTL is converted to an int.
@@ -464,7 +463,7 @@ class PolygonBackend:
         if (len(cached_data) % 2) != 0:
             return []
 
-        result: list[Optional[Tuple[TickerSnapshot, int]]] = []
+        result: ParsedCachedData = []
 
         # every even index is a snapshot and odd index is its TTL
         for snapshot, ttl in itertools.batched(cached_data, 2):
@@ -487,10 +486,10 @@ class PolygonBackend:
 
         return result
 
-    def _tickers_to_refresh(
-        self, parsed_cached_data: list[Optional[Tuple[TickerSnapshot, int]]]
-    ) -> list[str]:
-        """TODO"""
+    def _tickers_to_refresh(self, parsed_cached_data: ParsedCachedData) -> list[str]:
+        """Loop through the parsed cached data (list of tuples) and
+        return a list of tickers whose snapshots need to be refreshed.
+        """
         tickers_to_refresh = []
 
         for snaphot_ttl_tuple in parsed_cached_data:
