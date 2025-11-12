@@ -50,12 +50,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
-from merino.providers.suggest.google_suggest.provider import (
-    Provider as GoogleSuggestProvider,
-)
-from merino.providers.suggest.google_suggest.backends.google_suggest import (
-    GoogleSuggestBackend,
-)
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
@@ -74,7 +68,6 @@ class ProviderType(str, Enum):
     POLYGON = "polygon"
     YELP = "yelp"
     FLIGHTAWARE = "flightaware"
-    GOOGLE_SUGGEST = "google_suggest"
     SPORTS = "sports"
 
 
@@ -292,24 +285,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 score=setting.score,
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
-                enabled_by_default=setting.enabled_by_default,
-            )
-        case ProviderType.GOOGLE_SUGGEST:
-            return GoogleSuggestProvider(
-                backend=GoogleSuggestBackend(
-                    http_client=create_http_client(
-                        base_url=settings.google_suggest.url_base,
-                        proxy=(
-                            settings.google_suggest.proxy_url
-                            if settings.google_suggest.proxy_url
-                            else None  # no proxying
-                        ),
-                    ),
-                    url_suggest_path=settings.google_suggest.url_suggest_path,
-                    metrics_client=get_metrics_client(),
-                ),
-                score=setting.score,
-                name=provider_id,
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.FLIGHTAWARE:

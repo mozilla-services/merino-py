@@ -14,7 +14,6 @@ from merino.utils.version import fetch_app_version_from_file
 logger = logging.getLogger(__name__)
 
 REDACTED_TEXT = "[REDACTED]"
-GOOGLE_SUGGEST_PARAMS = "google_suggest_params"
 
 
 def configure_sentry() -> None:  # pragma: no cover
@@ -51,8 +50,6 @@ def strip_sensitive_data(event: Event, hint: Hint) -> Event | None:
             for entry in event_exception_values[0].get("stacktrace", {}).get("frames", []):
                 vars = entry.get("vars", {})
 
-                # Just delete it if any
-                vars.pop(GOOGLE_SUGGEST_PARAMS, None)
                 match vars:
                     case {"q": _}:
                         vars["q"] = REDACTED_TEXT
@@ -63,16 +60,10 @@ def strip_sensitive_data(event: Event, hint: Hint) -> Event | None:
                         vars["query"] = REDACTED_TEXT
                     case {"values": {"q": _}, "solved_result": [{"q": _}, *_]}:
                         vars["values"]["q"] = REDACTED_TEXT  # type: ignore
-                        # Just delete it if any
-                        vars["values"].pop(GOOGLE_SUGGEST_PARAMS, None)
                         # https://github.com/python/mypy/issues/12770
                         vars["solved_result"][0]["q"] = REDACTED_TEXT
-                        # Just delete it if any
-                        vars["solved_result"][0].pop(GOOGLE_SUGGEST_PARAMS, None)
                     case {"values": {"q": _}}:
                         vars["values"]["q"] = REDACTED_TEXT
-                        # Just delete it if any
-                        vars["values"].pop(GOOGLE_SUGGEST_PARAMS, None)
                     case _:
                         pass
 
