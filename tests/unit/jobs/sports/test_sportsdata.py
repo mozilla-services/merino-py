@@ -16,6 +16,7 @@ from merino.jobs.sportsdata_jobs import SportDataUpdater
 
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
+    ElasticCredentials,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
@@ -50,9 +51,9 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 @pytest.fixture(name="sport_data_store")
 def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
     """Test Sport Data Store instance"""
+    creds = ElasticCredentials(dsn="http://es.test:9200", api_key="test-key")
     s = SportsDataStore(
-        dsn="http://es.test:9200",
-        api_key="test-key",
+        credentials=creds,
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events-test"},

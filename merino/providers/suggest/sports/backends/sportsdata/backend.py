@@ -11,16 +11,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
 
-import logging
-from datetime import datetime, timedelta, timezone
-from merino.providers.suggest.sports import LOGGING_TAG
-from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
-    NFL,
-    NHL,
-    NBA,
-)
-from merino.utils.http_client import create_http_client
-
 
 class SportsDataProtocol(Protocol):
     """Protocol functions for Sports"""
@@ -99,29 +89,4 @@ class SportsDataBackend(SportsDataProtocol):
         The Airflow elastic search is READ_WRITE.
 
         """
-        logger = logging.getLogger(__name__)
-        # do we need to update the data?
-        if await self.data_store.startup():
-            updating = await self.data_store.query_meta("update")
-            timestamp = (datetime.now(tz=timezone.utc) + timedelta(minutes=5)).timestamp()
-            if not updating or (float(updating) < timestamp):
-                await self.data_store.store_meta("update", str(timestamp))
-                verify = await self.data_store.query_meta("update")
-                # validate that we're the one doing the update.
-                if float(verify or "0") != timestamp:
-                    logger.info(f"{LOGGING_TAG} Update already in progress")
-                    return
-                logger.info(f"{LOGGING_TAG}Pre-populating data")
-                client = create_http_client()
-                # hardcode the sports for now:
-                for sport in [
-                    NFL(settings=self.settings),
-                    NBA(settings=self.settings),
-                    NHL(settings=self.settings),
-                ]:
-                    logger.info(f"{LOGGING_TAG} fetching {sport.name} teams...")
-                    await sport.update_teams(client=client)
-                    logger.info(f"{LOGGING_TAG} fetching {sport.name} events...")
-                    await sport.update_events(client=client)
-                    logger.info(f"{LOGGING_TAG} storing events for {sport.name}")
-                    await self.data_store.store_events(sport, language_code="en")
+        await self.data_store.startup()
