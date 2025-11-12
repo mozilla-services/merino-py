@@ -229,6 +229,10 @@ class ElasticCredentials:
 
     def validate(self) -> bool:
         """Return if the credentials were located and valid."""
+        logger = logging.getLogger(__name__)
+        api_key = self.api_key or "None"
+        dsn = self.dsn or "None"
+        logger.info(f"{LOGGING_TAG} Elastic API key: [{api_key[:4]}...] DSN:[{dsn[:10]}]")
         return (self.api_key is not None and len(self.api_key) > 0) and (
             self.dsn is not None and len(self.dsn) > 0
         )
