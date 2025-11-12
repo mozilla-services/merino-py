@@ -412,7 +412,7 @@ class SportsDataStore(ElasticDataStore):
                 )
             except ConflictError:
                 await self.client.update(
-                    index=META_INDEX,
+                    index=self.meta_map,
                     id=key.lower(),
                     doc={"meta_key": key, "meta_value": value},
                 )
@@ -420,15 +420,15 @@ class SportsDataStore(ElasticDataStore):
             logging.getLogger(__name__).error(
                 f"{LOGGING_TAG} Error: storing meta {key}:{value} {ex}"
             )
-        await self.client.indices.refresh(index=META_INDEX)
+        await self.client.indices.refresh(index=self.meta_map)
 
     async def del_meta(self, key) -> None:
         """Remove data from the meta table"""
         if not self.client:
             return
         try:
-            await self.client.delete(index=META_INDEX, id=key.lower())
-            await self.client.indices.refresh(index=META_INDEX)
+            await self.client.delete(index=self.meta_map, id=key.lower())
+            await self.client.indices.refresh(index=self.meta_map)
         except Exception as ex:
             logging.getLogger(__name__).error(f"{LOGGING_TAG} Error: delete meta {key} {ex}")
 
@@ -439,9 +439,9 @@ class SportsDataStore(ElasticDataStore):
         if not self.client:
             return
         try:
-            # await self.client.indices.delete(index=META_INDEX)
+            # await self.client.indices.delete(index=self.meta_map)
             await self.client.indices.create(
-                index=META_INDEX,
+                index=self.meta_map,
                 settings={
                     "number_of_replicas": "1",
                     "refresh_interval": "-1",
@@ -455,7 +455,7 @@ class SportsDataStore(ElasticDataStore):
                     },
                 },
             )
-            await self.client.indices.refresh(index=META_INDEX)
+            await self.client.indices.refresh(index=self.meta_map)
         except BadRequestError as ex:
             if ex.error != "resource_already_exists_exception":
                 raise ex
@@ -475,11 +475,11 @@ class SportsDataStore(ElasticDataStore):
         try:
             if clear:
                 await self.client.indices.delete(
-                    index=META_INDEX,
+                    index=self.meta_map,
                     ignore_unavailable=True,
                 )
             await self.client.indices.create(
-                index=META_INDEX,
+                index=self.meta_map,
                 mappings={
                     "dynamic": False,
                     "properties": {
@@ -490,9 +490,9 @@ class SportsDataStore(ElasticDataStore):
             )
         except BadRequestError as ex:
             if ex.error != "resource_already_exists_exception":
-                raise SportsDataError(f"Could not create {META_INDEX}") from ex
+                raise SportsDataError(f"Could not create {self.meta_map}") from ex
             else:
-                logger.info(f"{LOGGING_TAG} {META_INDEX} already exists, skipping")
+                logger.info(f"{LOGGING_TAG} {self.meta_map} already exists, skipping")
         for language_code in self.languages:
             mappings = self.build_event_mappings(language_code=language_code)
             for idx, index in self.index_map.items():
