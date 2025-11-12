@@ -135,9 +135,9 @@ if __name__ == "__main__":
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
     name = "sports"
-    platform = f"{name}_{{lang}}"
-    event_map = settings.providers.sports.get("event_index", f"{platform}_event")
-    meta_map = settings.providers.sports.get("meta_index", f"{name}_meta")
+    platform = f"{name}-{{lang}}"
+    event_map = settings.providers.sports.get("event_index", f"{platform}-event")
+    meta_map = settings.providers.sports.get("meta_index", f"{name}-meta")
     try:
         credentials = ElasticCredentials(settings=settings)
     except (Exception, BaseException) as ex:

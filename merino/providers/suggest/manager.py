@@ -328,8 +328,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             credentials = ElasticCredentials(settings=settings)
 
             name = setting.get("platform", setting.type)
-            platform = f"{{lang}}_{name}"
-            event_map = setting.get("event_index", f"{platform}_event")
+            platform = f"{name}-{{lang}}"
+            event_map = setting.get("event_index", f"{platform}-event")
 
             store = SportsDataStore(
                 credentials=credentials,

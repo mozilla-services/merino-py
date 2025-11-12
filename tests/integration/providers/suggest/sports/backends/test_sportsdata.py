@@ -72,7 +72,7 @@ def fixture_sport_data_store_parameters(es_client) -> dict[str, Any]:
         "languages": ["en"],
         "platform": "en_sports",
         "index_map": {
-            "event": "{lang}_sports_event",
+            "event": "sports-{lang}-event",
         },
     }
 

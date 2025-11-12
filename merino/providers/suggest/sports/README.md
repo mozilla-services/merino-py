@@ -47,7 +47,7 @@ The Sports provider has a number of configuration options:
 # See `jobs.sportsdata_jobs.common` for list of supported sports
 sports = "NBA,NFL,NHL"
 # `{lang}` will be inline replaced with the supported languages. Currently only `en`
-event_index = "sports_{lang}_event"
-team_index = "sports_{lang}_team"
+event_index = "sports-{lang}-event"
+team_index = "sports-{lang}-team"
 max_suggestions = 5
 ```

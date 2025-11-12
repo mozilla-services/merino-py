@@ -183,9 +183,9 @@ cli = typer.Typer(
     help="Commands to fetch and store sport information",
 )
 name = sports_settings.get("platform", "sports")
-platform = f"{{lang}}_{name}"
-event_map = sports_settings.get("event_index", f"{platform}_event")
-meta_map = sports_settings.get("meta_index", f"{name}_meta")
+platform = f"{name}-{{lang}}"
+event_map = sports_settings.get("event_index", f"{platform}-event")
+meta_map = sports_settings.get("meta_index", f"{name}-meta")
 try:
     store = SportsDataStore(
         credentials=elastic_credentials,
