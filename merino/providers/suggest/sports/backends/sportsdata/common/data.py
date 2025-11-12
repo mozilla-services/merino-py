@@ -186,6 +186,7 @@ class Sport:
         self.api_key = api_key or settings.sportsdata.get(
             "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
         )
+        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or "None"}")
         self.base_url = base_url
         self.name = name
         self.teams = {}

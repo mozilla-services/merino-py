@@ -186,22 +186,26 @@ name = sports_settings.get("platform", "sports")
 platform = f"{name}-{{lang}}"
 event_map = sports_settings.get("event_index", f"{platform}-event")
 meta_map = sports_settings.get("meta_index", f"{name}-meta")
-try:
-    store = SportsDataStore(
-        credentials=elastic_credentials,
-        platform=platform,
-        languages=[lang for lang in sports_settings.get("languages", ["en"])],
-        index_map={"event": event_map, "meta": meta_map},
-    )
-    provider = SportDataUpdater(
-        settings=sports_settings,
-        store=store,
-        connect_timeout=sports_settings.get("connect_timeout"),
-        read_timeout=sports_settings.get("read_timeout"),
-    )
-except Exception as ex:
-    # except SportsDataError as ex:
-    logger.error(f"{LOGGING_TAG} Sports Unavailable: {ex}")
+provider = None
+if elastic_credentials.validate():
+    try:
+        store = SportsDataStore(
+            credentials=elastic_credentials,
+            platform=platform,
+            languages=[lang for lang in sports_settings.get("languages", ["en"])],
+            index_map={"event": event_map, "meta": meta_map},
+        )
+        provider = SportDataUpdater(
+            settings=sports_settings,
+            store=store,
+            connect_timeout=sports_settings.get("connect_timeout"),
+            read_timeout=sports_settings.get("read_timeout"),
+        )
+    except Exception as ex:
+        # except SportsDataError as ex:
+        logger.error(f"{LOGGING_TAG} Sports Unavailable: {ex}")
+else:
+    logger.error(f"{LOGGING_TAG} Sports Unavailable: Missing Elasticsearch Credentials:")
 
 
 @cli.command("initialize")
