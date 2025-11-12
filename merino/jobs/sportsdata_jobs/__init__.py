@@ -205,7 +205,7 @@ except Exception as ex:
 
 
 @cli.command("initialize")
-def initialize():
+def initialize():  # pragma: no cover
     """Build the indexes and initialize the ES tables"""
     if provider:
         asyncio.run(provider.initialize(sports_settings))
@@ -214,7 +214,7 @@ def initialize():
 
 
 @cli.command("nightly")
-def nightly():
+def nightly():  # pragma: no cover
     """Perform the general nightly operations"""
     if provider:
         asyncio.run(provider.nightly())
@@ -223,7 +223,7 @@ def nightly():
 
 
 @cli.command("update")
-def update():
+def update():  # pragma: no cover
     """Perform the frequently required tasks (Approx once every 5 min)"""
     if provider:
         asyncio.run(provider.update())

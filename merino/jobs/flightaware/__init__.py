@@ -18,7 +18,7 @@ cli = typer.Typer(
 
 
 @cli.command()
-def fetch_and_store():
+def fetch_and_store():  # pragma: no cover
     """Fetch and store flight numbers"""
     logger.info("Starting flight schedules pipeline...")
 

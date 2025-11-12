@@ -23,8 +23,6 @@ class SuggestionRequest(BaseModel):
     country: str | None = None
     user_agent: UserAgent | None = None
     source: str | None = None
-    google_suggest_params: str | None = None
-    session_id: str | None = None
 
 
 class BaseSuggestion(BaseModel):
