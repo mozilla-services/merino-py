@@ -354,7 +354,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             if not setting.es.api_key or setting.es.api_key.lower() in ["", "none"]:
                 setting.es.api_key = settings.providers.wikipedia.es_api_key
             name = setting.get("platform", setting.type)
-            platform = f"{{lang}}_{name}"
+            platform = f"{name}_{{lang}}"
             event_map = setting.get("event_index", f"{platform}_event")
 
             store = SportsDataStore(

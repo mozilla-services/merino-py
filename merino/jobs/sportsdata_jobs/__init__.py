@@ -190,7 +190,7 @@ cli = typer.Typer(
     help="Commands to fetch and store sport information",
 )
 name = sports_settings.get("platform", "sports")
-platform = f"{{lang}}_{name}"
+platform = f"{name}_{{lang}}"
 event_map = sports_settings.get("event_index", f"{platform}_event")
 try:
     store = SportsDataStore(

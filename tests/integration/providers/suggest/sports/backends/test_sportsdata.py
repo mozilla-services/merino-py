@@ -12,7 +12,9 @@ from elasticsearch import AsyncElasticsearch
 from testcontainers.elasticsearch import ElasticSearchContainer
 
 from merino.configs import settings
-from merino.providers.suggest.sports.backends.sportsdata.backend import SportsDataBackend
+from merino.providers.suggest.sports.backends.sportsdata.backend import (
+    SportsDataBackend,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team, Event
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
@@ -70,7 +72,7 @@ def fixture_sport_data_store_parameters(es_client) -> dict[str, Any]:
         "languages": ["en"],
         "platform": "en_sports",
         "index_map": {
-            "event": "{lang}_sports_event",
+            "event": "sports_{lang}_event",
         },
     }
 

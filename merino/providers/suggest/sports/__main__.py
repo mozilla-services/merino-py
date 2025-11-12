@@ -117,7 +117,7 @@ if __name__ == "__main__":
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
     name = "sports"
-    platform = f"{{lang}}_{name}"
+    platform = f"{name}_{{lang}}"
     event_map = settings.providers.sports.get("event_index", f"{platform}_event")
     meta_map = settings.providers.sports.get("meta_index", f"{platform}_meta")
     store = SportsDataStore(
