@@ -344,8 +344,8 @@ type="sports"
 # e.g. ["NFL","NBA","NHL"]
 sports=["NFL","NBA","NHL"]
 # Index names for Elastic Search.
-event_index="sports_{lang}_event"
-team_index="sports_{lang}_team"
+event_index="sports-{lang}-event"
+team_index="sports-{lang}-team"
 max_suggestions = 5
 # Disable this provider by default
 enabled_by_default = false

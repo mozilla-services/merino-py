@@ -38,7 +38,7 @@ EN_INDEX_SETTINGS: dict = {
     "number_of_replicas": "1",
     "refresh_interval": "-1",
     "number_of_shards": "2",
-    "index.lifecycle.name": "sports_en_policy",
+    "index.lifecycle.name": "sports-en-policy",
     "analysis": {
         "filter": {
             "stop_filter": {
