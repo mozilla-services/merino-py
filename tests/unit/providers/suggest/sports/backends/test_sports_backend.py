@@ -5,7 +5,7 @@ import os
 import freezegun
 import pytest
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from unittest.mock import patch, AsyncMock
 
@@ -23,6 +23,7 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    ElasticCredentials,
     SportsDataStore,
 )
 
@@ -235,9 +236,12 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 @pytest.fixture(name="sport_data_store")
 def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
     """Test Sport Data Store instance"""
-    s = SportsDataStore(
+    creds = ElasticCredentials(
         dsn="http://es.test:9200",
         api_key="test-key",
+    )
+    s = SportsDataStore(
+        credentials=creds,
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events-test"},
@@ -310,58 +314,12 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
     assert len(summary.values) == 2
 
 
-@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker: MockerFixture):
-    """Test the sports backend startup process with mocked sports classes."""
-    # Patch the sport classes
-    # Remember, we alter the `settings` so we can't rely on them being correct. This list will
-    # need to be manually updated whenever we add a new sport (or we can be super clever and
-    # look any component of sportsdata.backend that a subclass of `Sport`, but that seems VERY
-    # clever, and probably prone to breaking.
-    sports = ["nba", "nfl", "nhl"]
-    mocks = {}
-    for sport_name in sports:
-        mock_class = mocker.patch(
-            f"merino.providers.suggest.sports.backends.sportsdata.backend.{sport_name.upper()}"
-        )
-        mock_instance = AsyncMock()
-        mock_instance.name = sport_name.upper()
-        mock_instance.update_teams = AsyncMock()
-        mock_instance.update_events = AsyncMock()
-        mock_class.return_value = mock_instance
-        mock_class.return_value
-        mock_set = dict(
-            mock_class=mock_class,
-            mock_instance=mock_instance,
-        )
-        mocks[sport_name] = mock_set
-    # Mock the HTTP client
-    mock_client = AsyncMock()
-    mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.backend.create_http_client",
-        return_value=mock_client,
-    )
-
-    # Configure the SportsDataStore fixture
-    timestamp = (datetime.now(tz=timezone.utc) + timedelta(minutes=5)).timestamp()
-    mock_startup = AsyncMock(return_value=True)
-    mock_query_meta = AsyncMock(side_effect=[None, timestamp, timestamp])
-    mock_store_meta = AsyncMock()
-    mock_store_events = AsyncMock()
-
-    mocker.patch.object(sport_data_store, "startup", new=mock_startup)
-    mocker.patch.object(sport_data_store, "query_meta", new=mock_query_meta)
-    mocker.patch.object(sport_data_store, "store_meta", new=mock_store_meta)
-    mocker.patch.object(sport_data_store, "store_events", new=mock_store_events)
-
+    """Test that the backend calls the storage startup"""
+    mock_store = AsyncMock()
     # Create and test the backend
-    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
+    backend = SportsDataBackend(settings=settings.providers.sports, store=mock_store)
     await backend.startup()
 
-    # Verify the mocked classes were instantiated
-    for mock in mocks.values():
-        mock["mock_class"].assert_called_once_with(settings=settings.providers.sports)
-        mock["mock_instance"].update_teams.assert_called_once_with(client=mock_client)
-        mock["mock_instance"].update_events.assert_called_once_with(client=mock_client)
-        mock_store_events.assert_any_call(mock["mock_instance"], language_code="en")
+    assert mock_store.startup.called

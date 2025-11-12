@@ -12,12 +12,15 @@ from elasticsearch import AsyncElasticsearch
 from testcontainers.elasticsearch import ElasticSearchContainer
 
 from merino.configs import settings
-from merino.providers.suggest.sports.backends.sportsdata.backend import SportsDataBackend
+from merino.providers.suggest.sports.backends.sportsdata.backend import (
+    SportsDataBackend,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team, Event
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     ElasticDataStore,
+    ElasticCredentials,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import NFL
 from merino.providers.suggest.sports.backends.sportsdata.protocol import (
@@ -65,8 +68,7 @@ def fixture_sportsdata_parameters(
 def fixture_sport_data_store_parameters(es_client) -> dict[str, Any]:
     """SportsDataStore constructor parameters."""
     return {
-        "dsn": "",
-        "api_key": "",
+        "credentials": ElasticCredentials(dsn="", api_key=""),
         "languages": ["en"],
         "platform": "en_sports",
         "index_map": {
@@ -84,7 +86,7 @@ def fixture_sportsdata(
 ) -> SportsDataBackend:
     """Create a SportsDataBackend instance."""
 
-    def fake_init(self, *, dsn: str, api_key: str, **kwargs):
+    def fake_init(self, *, credentials: ElasticCredentials, **kwargs):
         self.client = es_client
 
     monkeypatch.setattr(ElasticDataStore, "__init__", fake_init)

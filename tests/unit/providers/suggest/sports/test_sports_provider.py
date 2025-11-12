@@ -73,6 +73,7 @@ async def test_sports_provider(mock_client: AsyncClient):
         enabled_by_default=True,
         trigger_words=["test"],
     )
+    await provider.initialize()
     sreq = SuggestionRequest(query="test game jets", geolocation=Location())
     res = await provider.query(sreq=sreq)
     assert len(res) == 1
@@ -103,6 +104,7 @@ async def test_provider_query_non_trigger_word():
         enabled_by_default=True,
         trigger_words=["trigger word"],
     )
+    await provider.initialize()
     backend.query.return_value = []
     sreq = SuggestionRequest(query="something else", geolocation=Location())
     res = await provider.query(sreq=sreq)
@@ -121,5 +123,21 @@ async def test_provider_normalize_query():
     )
     success = "Trigger is my horse"
     fail = "Hi-ho Silver!"
+    await provider.initialize()
     assert provider.normalize_query(success) == success
     assert provider.normalize_query(fail) == ""
+
+
+@pytest.mark.asyncio
+async def test_provider_backend_failure():
+    """Test that backend failures are not fatal"""
+    backend = AsyncMock(spec=SportsDataBackend)
+    backend.startup.side_effect = [ValueError("something")]
+    provider = SportsDataProvider(
+        metrics_client=get_metrics_client(),
+        backend=backend,
+        enabled_by_default=True,
+        trigger_words=["trigger", "word"],
+    )
+    await provider.initialize()
+    assert provider.backend is None
