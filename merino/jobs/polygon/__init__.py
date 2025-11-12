@@ -16,7 +16,7 @@ cli = typer.Typer(
 
 
 @cli.command()
-def ingest():
+def ingest():  # pragma: no cover
     """Download logos, upload to GCS, and generate manifest."""
     logger.info("Starting Polygon ingestion pipeline...")
 
