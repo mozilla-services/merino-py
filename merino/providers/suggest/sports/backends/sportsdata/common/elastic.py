@@ -635,6 +635,9 @@ class SportsDataStore(ElasticDataStore):
                 event = json.loads((doc["_source"]["event"]))
                 # Add the elastic search score as a baseline score for the return result.
                 event["es_score"] = doc.get("_score", 0)
+                if not event["date"]:
+                    logger.info(f"{LOGGING_TAG}Event has no date, skipping")
+                    continue
                 if mix_sports:
                     sport = "all"
                 else:
@@ -658,8 +661,11 @@ class SportsDataStore(ElasticDataStore):
                         filter[sport]["previous"] = event
                 # If only show the next upcoming game.
                 if status.is_scheduled():
-                    now = int(datetime.now(tz=timezone.utc).timestamp())
-                    if filter[sport].get("next", {}).get("date", now + 86400) < int(event["date"]):
+                    # if there is no "next" game, or if the "next" game is later than this one,
+                    # display the most immediate upcoming event. (if there's )
+                    if not filter[sport].get("next") or int(filter[sport]["next"]["date"]) > int(
+                        event["date"]
+                    ):
                         filter[sport]["next"] = event
                 if status.is_in_progress():
                     # remove the previous game info because we have a current one.

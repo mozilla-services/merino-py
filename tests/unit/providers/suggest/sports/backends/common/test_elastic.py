@@ -214,8 +214,8 @@ async def test_search_event_hits(
                 "status": "InProgress",
             },
             "next": {
-                "date": 1758801600,
-                "es_score": 0.8,
+                "date": 1758715200,
+                "es_score": 0.7,
                 "event_status": GameStatus.Scheduled,
                 "sport": "NFL",
                 "status": "Scheduled",
