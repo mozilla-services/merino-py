@@ -32,7 +32,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 
 # the "meta" index contains general information about the sports provider. It can be used to store
 # values between fetches, update intervals, etc. This is not language specific.
-META_INDEX: str = "sports_meta"
+META_INDEX: str = "sports-meta"
 
 EN_INDEX_SETTINGS: dict = {
     "number_of_replicas": "1",
