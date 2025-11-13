@@ -394,65 +394,72 @@ class SportsDataStore(ElasticDataStore):
     async def startup(self) -> None:
         """Kick start the data store for Sports"""
         await super().startup()
-        logger = logging.getLogger(__name__)
+        # logger = logging.getLogger(__name__)
+        # val = await self.query_meta("update")
+        # if val is None or (float(val) or 0 < datetime.now(tz=timezone.utc).timestamp()):
+        #    logger.info(f"{LOGGING_TAG} fetching data")
 
-        val = await self.query_meta("update")
-        if val is None or (float(val) or 0 < datetime.now(tz=timezone.utc).timestamp()):
-            logger.info(f"{LOGGING_TAG} fetching data")
-
-    async def query_meta(self, key: str) -> None | str:
-        """Get value from meta table"""
-        if not self.client:
-            return None
-        try:
-            res = await self.client.search(
-                index=self.meta_map,
-                query={"term": {"_id": key.lower()}},
-                # query={"term": {"key": key.lower()}},
-                # query={"match_all": {}},
-                source_includes=["meta_value"],
-                size=1,
-            )
-            hits = res["hits"]["hits"]
-            if not len(hits):
-                return None
-            return hits[0]["_source"].get("meta_value") or None
-        except Exception as ex:
-            logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
-            return None
-
-    async def store_meta(self, key: str, value: str):
-        """Store value into meta table"""
-        if not self.client:
-            return
-        try:
-            try:
-                await self.client.create(
-                    index=self.meta_map,
-                    id=key.lower(),
-                    document={"meta_key": key, "meta_value": value},
-                )
-            except ConflictError:
-                await self.client.update(
-                    index=self.meta_map,
-                    id=key.lower(),
-                    doc={"meta_key": key, "meta_value": value},
-                )
-        except Exception as ex:
-            logging.getLogger(__name__).error(
-                f"{LOGGING_TAG} Error: storing meta {key}:{value} {ex}"
-            )
-        await self.client.indices.refresh(index=self.meta_map)
-
-    async def del_meta(self, key) -> None:
-        """Remove data from the meta table"""
-        if not self.client:
-            return
-        try:
-            await self.client.delete(index=self.meta_map, id=key.lower())
-            await self.client.indices.refresh(index=self.meta_map)
-        except Exception as ex:
-            logging.getLogger(__name__).error(f"{LOGGING_TAG} Error: delete meta {key} {ex}")
+    # NOTE: While these work in dev, production is returning a permission
+    #       error when trying to read or search the `sports_meta` table.
+    #       We can mitigate some of this by relying on airflow, but this will
+    #       eventually impact how often we pull data. More investigation will
+    #       be needed.
+    #
+    #    async def query_meta(self, key: str) -> None | str:
+    #        """Get value from meta table"""
+    #        if not self.client:
+    #            return None
+    #        try:
+    #            res = await self.client.search(
+    #                index=self.meta_map,
+    #                query={"term": {"_id": key.lower()}},
+    #                # query={"term": {"key": key.lower()}},
+    #                # query={"match_all": {}},
+    #                source_includes=["meta_value"],
+    #                size=1,
+    #            )
+    #            hits = res["hits"]["hits"]
+    #            if not len(hits):
+    #                return None
+    #            return hits[0]["_source"].get("meta_value") or None
+    #        except Exception as ex:
+    #            logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
+    #            return None
+    #
+    #    async def store_meta(self, key: str, value: str):
+    #        """Store value into meta table"""
+    #        if not self.client:
+    #            return
+    #        try:
+    #            try:
+    #                await self.client.create(
+    #                    index=self.meta_map,
+    #                    id=key.lower(),
+    #                    document={"meta_key": key, "meta_value": value},
+    #                )
+    #            except ConflictError:
+    #                await self.client.update(
+    #                    index=self.meta_map,
+    #                    id=key.lower(),
+    #                    doc={"meta_key": key, "meta_value": value},
+    #                )
+    #        except Exception as ex:
+    #            logging.getLogger(__name__).error(
+    #                f"{LOGGING_TAG} Error: storing meta {key}:{value} {ex}"
+    #            )
+    #        await self.client.indices.refresh(index=self.meta_map)
+    #
+    #    async def del_meta(self, key) -> None:
+    #        """Remove data from the meta table"""
+    #        if not self.client:
+    #            return
+    #        try:
+    #            await self.client.delete(index=self.meta_map, id=key.lower())
+    #            await self.client.indices.refresh(index=self.meta_map)
+    #        except Exception as ex:
+    #            logging.getLogger(__name__).error(
+    #                f"{LOGGING_TAG} Error: delete meta {key} {ex}"
+    #            )
 
     async def build_meta(self) -> None:
         """Create the meta data index. This is a very simple
@@ -704,8 +711,8 @@ class SportsDataStore(ElasticDataStore):
                     f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
                 ) from ex
         start = datetime.now()
-        await self.store_meta("update", str(start.timestamp()))
         await self.client.indices.refresh(index=index)
+        # await self.store_meta("update", str(start.timestamp()))
         logger.info(
             f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"
         )

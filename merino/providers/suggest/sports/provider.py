@@ -28,6 +28,9 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
     SportSummary,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import TEAM_NAMES
 
 
@@ -73,7 +76,7 @@ class SportsDataProvider(BaseProvider):
         try:
             if self.backend:
                 await self.backend.startup()
-        except Exception as ex:
+        except (Exception, SportsDataError) as ex:
             logger.error(f"{LOGGING_TAG} Could not start sports backend: {ex}")
             self.backend = None
 
