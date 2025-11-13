@@ -579,6 +579,7 @@ def get_top_story_list(
     fresh_story_prob = rescaler.fresh_items_top_stories_max_percentage if rescaler else 0
     total_story_count = top_count + extra_count
 
+    # "Fresh" items are low-impression/new. We throttle (downsample) them to limit their share.
     items_throttled_fresh, unused_fresh = filter_fresh_items_with_probability(
         items,
         fresh_story_prob=fresh_story_prob,
