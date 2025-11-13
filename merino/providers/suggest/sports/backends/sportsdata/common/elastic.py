@@ -395,9 +395,6 @@ class SportsDataStore(ElasticDataStore):
         """Kick start the data store for Sports"""
         await super().startup()
         # logger = logging.getLogger(__name__)
-        await self.build_meta()
-        await self.build_indexes()
-
         # val = await self.query_meta("update")
         # if val is None or (float(val) or 0 < datetime.now(tz=timezone.utc).timestamp()):
         #    logger.info(f"{LOGGING_TAG} fetching data")
@@ -468,6 +465,7 @@ class SportsDataStore(ElasticDataStore):
         """Create the meta data index. This is a very simple
         table that stores a non-searchable value under a key.
         """
+        logger = logging.getLogger(__name__)
         if not self.client:
             return
         try:
@@ -490,7 +488,9 @@ class SportsDataStore(ElasticDataStore):
             await self.client.indices.refresh(index=self.meta_map)
         except BadRequestError as ex:
             if ex.error != "resource_already_exists_exception":
-                raise ex
+                raise SportsDataError(f"Could not create {self.meta_map}") from ex
+            else:
+                logger.info(f"{LOGGING_TAG} {self.meta_map} already exists, skipping")
 
     async def build_indexes(self, clear: bool = False):
         """Build the indices here for stand-alone and testing reasons.
@@ -510,21 +510,13 @@ class SportsDataStore(ElasticDataStore):
                     index=self.meta_map,
                     ignore_unavailable=True,
                 )
-            await self.client.indices.create(
-                index=self.meta_map,
-                mappings={
-                    "dynamic": False,
-                    "properties": {
-                        "key": {"type": "keyword"},
-                        "value": {"type": "keyword", "index": False},
-                    },
-                },
-            )
+            await self.build_meta()
         except BadRequestError as ex:
             if ex.error != "resource_already_exists_exception":
                 raise SportsDataError(f"Could not create {self.meta_map}") from ex
             else:
                 logger.info(f"{LOGGING_TAG} {self.meta_map} already exists, skipping")
+
         for language_code in self.languages:
             mappings = self.build_event_mappings(language_code=language_code)
             for idx, index in self.index_map.items():
