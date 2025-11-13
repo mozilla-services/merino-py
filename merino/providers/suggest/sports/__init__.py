@@ -15,7 +15,7 @@ UPDATE_PERIOD_SECS = 60 * 60 * 4  # Four hours
 # a generic space-holder for this value for this provider.
 IGNORED_SUGGESTION_URL: Final[str] = "https://merino.services.mozilla.com"
 BASE_SUGGEST_SCORE: float = 0.5
-PROVIDER_ID: Final[str] = "sportsdata_io"
+PROVIDER_ID: Final[str] = "sports"
 
 DEFAULT_TRIGGER_WORDS = [
     "vs",
