@@ -216,8 +216,10 @@ def update_custom_favicons(title, url) -> None:
     try:
         with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
             content = f.read()
-    except OSError:
-        print("Error saving custom favicon, please ensure you are running the command from the root directory")
+    except Exception:
+        print(
+            "Error saving custom favicon, please ensure you are running the command from the root directory"
+        )
         return
     pattern = r"(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})"
     match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
