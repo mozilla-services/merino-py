@@ -13,6 +13,8 @@ from dynaconf.base import LazySettings
 # Reminder: this will instantiate `settings`
 from merino.configs import settings
 
+# This line exists solely to jiggle the handle on the docker build. Delete as needed.
+
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import SuggestionRequest
 from merino.providers.suggest.sports import (
@@ -64,7 +66,9 @@ async def main_loader(
     for sport_name in active_sports:
         try:
             sport = getattr(
-                sys.modules["merino.providers.suggest.sports.backends.sportsdata.common.sports"],
+                sys.modules[
+                    "merino.providers.suggest.sports.backends.sportsdata.common.sports"
+                ],
                 sport_name.upper(),
             )(settings=settings)
             my_sports.append(sport)
@@ -99,7 +103,8 @@ async def main_query(
 ):
     """Pretend we're a query function"""
     trigger_words = [
-        word.lower().strip() for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
+        word.lower().strip()
+        for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
     ]
     if not credentials.validate():
         print("Failure")
@@ -130,7 +135,9 @@ async def main_query(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=getattr(logging, os.environ.get("PYTHON_LOG", "info").upper()))
+    logging.basicConfig(
+        level=getattr(logging, os.environ.get("PYTHON_LOG", "info").upper())
+    )
     log = logging.getLogger(__name__)
     # Perform the "load" job. This would normally be handled by a merino job function
     # This can be commented out once it's been run once, if you want to test query speed.
