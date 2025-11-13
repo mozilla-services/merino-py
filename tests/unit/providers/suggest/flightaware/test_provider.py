@@ -75,9 +75,26 @@ def test_validate_accepts_valid_query(provider, geolocation):
     provider.validate(req)
 
 
-def test_normalize_query_strips(provider):
-    """Normalize_query should strip spaces"""
-    assert provider.normalize_query(" ua123 ") == "ua123"
+@pytest.mark.parametrize(
+    "input_query,expected",
+    [
+        (" ua123 ", "ua123"),
+        ("Flight   AC100", "flight ac100"),
+        ("  flight status   AC100  ", "flight status ac100"),
+        ("AC100     flight", "ac100 flight"),
+        ("   AIR   CANADA   250   ", "air canada 250"),
+        (
+            "   fLiGhT    StAtUs   UnItEd   aIrLiNeS   300   ",
+            "flight status united airlines 300",
+        ),
+        ("    Multiple     Spaces     Here    ", "multiple spaces here"),
+        ("  Mixed   Case  And   Extra Spaces ", "mixed case and extra spaces"),
+        ("", ""),  # empty string stays empty
+    ],
+)
+def test_normalize_query_normalizes_spacing_and_case(provider, input_query, expected):
+    """Test that normalize_query lowercases text and collapses multiple spaces into single spaces."""
+    assert provider.normalize_query(input_query) == expected
 
 
 @pytest.mark.asyncio

@@ -23,12 +23,14 @@ from merino.configs import settings
 logger = logging.getLogger(__name__)
 
 LANDING_PAGE_URL: str = settings.flightaware.landing_page_url
-FLIGHT_NUM_PATTERN_1 = re.compile(
-    r"^[A-Za-z]{1,3}\s*\d{1,5}$", re.IGNORECASE
-)  # matches 1-3 letters followed by 1-5 digits e.g 'UAL101', 'A1234'.
-FLIGHT_NUM_PATTERN_2 = re.compile(
-    r"^\d\s*[A-Za-z]\s*\d{1,4}$", re.IGNORECASE
-)  # matches 1 digit, 1 letter, followed by 1-4 digits e.g '3U 1001'
+# matches 1–3 letters followed by 1–5 digits (e.g., 'UAL101', 'A1234'),
+# even when embedded in a longer string like "flight ac100 status".
+FLIGHT_NUM_PATTERN_1 = re.compile(r"\b[A-Za-z]{1,3}\s*\d{1,5}\b", re.IGNORECASE)
+
+# matches 1 digit, 1 letter, followed by 1–4 digits (e.g., '3U 1001'),
+# also matching if it occurs anywhere in the string.
+FLIGHT_NUM_PATTERN_2 = re.compile(r"\b\d\s*[A-Za-z]\s*\d{1,4}\b", re.IGNORECASE)
+
 FLIGHT_KEYWORD_PATTERN = pattern = re.compile(
     r"^[A-Za-z]+(?:\s+[a-z]+){0,4}\s+\d{1,5}$", re.IGNORECASE
 )
@@ -259,9 +261,9 @@ def get_live_url(query: str, flight: dict) -> HttpUrl:
     return HttpUrl(LANDING_PAGE_URL.format(ident=flight["ident_icao"]))
 
 
-def is_valid_flight_number_pattern(query: str) -> bool:
-    """Return true if the query matches either of the two valid flight regex patterns"""
-    return bool(FLIGHT_NUM_PATTERN_1.match(query) or FLIGHT_NUM_PATTERN_2.match(query))
+def is_valid_flight_number_pattern(query: str) -> re.Match | None:
+    """Return the match object if a flight number is found, else None."""
+    return FLIGHT_NUM_PATTERN_1.search(query) or FLIGHT_NUM_PATTERN_2.search(query)
 
 
 def is_valid_flight_keyword_pattern(query: str) -> bool:
@@ -270,21 +272,33 @@ def is_valid_flight_keyword_pattern(query: str) -> bool:
 
 
 def get_flight_number_from_query_if_valid(query: str) -> str | None:
-    """Return a processed flight number or None if a valid one doesn't exist"""
-    flight_number = None
-    if is_valid_flight_number_pattern(query):
-        flight_number = query.replace(" ", "").upper()
+    """Extract a valid flight number or airline keyword pattern from a user query.
+    Returns uppercase flight number (e.g. 'AC100') per AeroAPI requirements or None if no valid match exists.
+    """
+    # try to match a flight number pattern anywhere
+    match = is_valid_flight_number_pattern(query)
+    if match:
+        # extract the matched part (e.g ac100)
+        matched_part = str(match.group(0)).strip()
 
-    elif is_valid_flight_keyword_pattern(query):
-        query_list = query.lower().split()
+        # retrieve the remaining words in the query
+        before = query[: match.start()].strip()
+        after = query[match.end() :].strip()
+        remaining = " ".join(f"{before} {after}".split())
+
+        if not remaining or "flight status".startswith(remaining):
+            return matched_part.replace(" ", "").upper()
+
+    # if not a flight number pattern, check if the query is a valid keyword
+    if is_valid_flight_keyword_pattern(query):
+        query_list = query.split()
         digits = query_list[-1]
-        airline_name = " ".join(query_list[: len(query_list) - 1])
+        airline_name = " ".join(query_list[:-1])
         airline_code = NAME_TO_AIRLINE_CODE_MAPPING.get(airline_name)
-
         if airline_code:
-            flight_number = airline_code + digits
+            return airline_code + digits
 
-    return flight_number
+    return None
 
 
 def calculate_time_left(flight: dict) -> int | None:
