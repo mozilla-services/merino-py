@@ -14,6 +14,7 @@ from typing import cast
 from merino.configs import settings
 from merino.jobs.sportsdata_jobs import SportDataUpdater
 
+from merino.providers.suggest.sports import DEFAULT_TRIGGER_WORDS
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     ElasticCredentials,
@@ -57,6 +58,7 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events-test"},
+        strip_words=DEFAULT_TRIGGER_WORDS,
     )
     s.client = es_client
     return s

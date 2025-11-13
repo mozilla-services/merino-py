@@ -336,6 +336,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 platform=platform,
                 languages=[lang for lang in setting.get("languages", ["en"])],
                 index_map={"event": event_map},
+                strip_words=trigger_words,
             )
             return SportsDataProvider(
                 backend=SportsDataBackend(
