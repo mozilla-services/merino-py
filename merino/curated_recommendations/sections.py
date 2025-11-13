@@ -1,8 +1,6 @@
 """Module for building and ranking curated recommendation sections."""
 
 import logging
-import math
-from collections import defaultdict
 from copy import deepcopy
 
 from merino.curated_recommendations import EngagementBackend
@@ -39,6 +37,7 @@ from merino.curated_recommendations.protocol import (
     Layout,
 )
 from merino.curated_recommendations.rankers import (
+    ArticleBalancer,
     filter_fresh_items_with_probability,
     thompson_sampling,
     boost_followed_sections,
@@ -58,110 +57,6 @@ DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines_section"
 HEADLINES_CRAWL_SECTION_KEY = "headlines_crawl"
-
-BALANCER_MAX_TOPICAL = 0.65
-BALANCER_MAX_EVERGREEN = 0.65
-BALANCER_MAX_PER_TOPIC = 0.2
-BALANCER_MAX_SUBTOPIC = 0.2
-
-EVERGREEN_TOPICS = {
-    Topic.FOOD,
-    Topic.SELF_IMPROVEMENT,
-    Topic.PERSONAL_FINANCE,
-    Topic.PARENTING,
-    Topic.HOME,
-}
-
-EVERGREEN_LABEL = "evergreen"
-TOPICAL_LABEL = "topical"
-SUBTOPIC_LABEL = "is_subtopic"
-
-
-class ArticleBalancer:
-    """Balance articles by multiple criteria"""
-
-    def __init__(self, expected_num_articles: int) -> None:
-        """Initialize limits for target number of articles"""
-        self.article_list: list[CuratedRecommendation] = []
-        self.feature_counts: defaultdict[str, int] = defaultdict(int)
-        self.num_expected = 0
-        self.set_limits_for_expected_articles(expected_num_articles)
-
-    def set_limits_for_expected_articles(self, expected_num_articles: int):
-        """Update limits for expected number of articles"""
-        if self.num_expected == expected_num_articles:
-            return
-        if self.num_expected > expected_num_articles:
-            raise Exception("Limits can only be raised")
-        self.num_expected = expected_num_articles
-        self.max_topical = math.ceil(BALANCER_MAX_TOPICAL * expected_num_articles)
-        self.max_evergreen = math.ceil(BALANCER_MAX_EVERGREEN * expected_num_articles)
-        self.max_per_topic = max(2, math.ceil(BALANCER_MAX_PER_TOPIC * expected_num_articles))
-        self.max_subtopic = max(2, math.ceil(BALANCER_MAX_SUBTOPIC * expected_num_articles))
-
-    @staticmethod
-    def _is_evergreen(topic: Topic | None):
-        """Return true if topic is an Evergreen style topic"""
-        return topic in EVERGREEN_TOPICS
-
-    @staticmethod
-    def _is_subtopic(rec: CuratedRecommendation) -> bool:
-        """Return true if item is in a subtopic"""
-        return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
-
-    @staticmethod
-    def _update_stats(info_dict, rec: CuratedRecommendation):
-        """Update passed dictionary with new stats to reflect the article added"""
-        if (topic := rec.topic) is not None:
-            info_dict[topic.value] += 1
-        if ArticleBalancer._is_evergreen(rec.topic):
-            info_dict[EVERGREEN_LABEL] += 1
-        else:
-            info_dict[TOPICAL_LABEL] += 1
-        if ArticleBalancer._is_subtopic(rec):
-            info_dict[SUBTOPIC_LABEL] += 1
-
-    def _does_meet_spec(self, info_dict) -> bool:
-        """Return true if passed spec meets requirements of the balancer"""
-        if info_dict.get(EVERGREEN_LABEL, 0) > self.max_evergreen:
-            return False
-        if info_dict.get(TOPICAL_LABEL, 0) > self.max_topical:
-            return False
-        if info_dict.get(SUBTOPIC_LABEL, 0) > self.max_subtopic:
-            return False
-        for topic in Topic:
-            if info_dict.get(topic.value, 0) > self.max_per_topic:
-                return False
-        return True
-
-    def add_story(self, rec: CuratedRecommendation) -> bool:
-        """Add story if it meets requirements. Return strue if story added"""
-        provisional_stats = self.feature_counts.copy()
-        ArticleBalancer._update_stats(provisional_stats, rec)
-        if self._does_meet_spec(provisional_stats):
-            self.article_list.append(rec)
-            self.feature_counts = provisional_stats
-            return True
-        return False
-
-    def add_stories(self, stories_to_add: list[CuratedRecommendation], limit: int):
-        """Add additional stories from stories_to_add up to total limit
-        Return tuple with discarded stories and remaining ones. Selected stories
-        are added to the class.
-        """
-        discarded_stories = []
-        num_stories_consumed = 0
-        for story in stories_to_add:
-            if len(self.article_list) >= limit:
-                break
-            if not self.add_story(story):
-                discarded_stories.append(story)
-            num_stories_consumed += 1
-        return discarded_stories, stories_to_add[num_stories_consumed:]
-
-    def get_stories(self) -> list[CuratedRecommendation]:
-        """Get story list"""
-        return self.article_list
 
 
 def map_section_item_to_recommendation(

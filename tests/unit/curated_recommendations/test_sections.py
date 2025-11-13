@@ -25,7 +25,6 @@ from merino.curated_recommendations.layouts import (
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SchedulerHoldbackRescaler,
     DefaultCrawlerRescaler,
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -37,7 +36,6 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import section_thompson_sampling
 from merino.curated_recommendations.sections import (
-    ArticleBalancer,
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
@@ -95,103 +93,6 @@ def sample_backend_data() -> list[CorpusSection]:
         )
         for sec_id, count in [("business", 2), ("sports", 1), ("tech", 3)]
     ]
-
-
-class TestArticleBalancer:
-    """Tests covering ArticleBalancer balancing behavior."""
-
-    @staticmethod
-    def _build_recommendation(
-        suffix: str, topic: Topic, *, subtopic: bool = False
-    ) -> CuratedRecommendation:
-        """Construct a deterministic CuratedRecommendation for balancing tests."""
-        rec = generate_recommendations(
-            length=1,
-            item_ids=[f"rec-{suffix}"],
-            topics=[topic],
-            time_sensitive_count=0,
-        )[0]
-        rec.experiment_flags = rec.experiment_flags or set()
-        if subtopic:
-            rec.experiment_flags.add(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
-        return rec
-
-    def test_rejects_story_when_per_topic_limit_exceeded(self):
-        """Ensure adding beyond the per-topic maximum fails."""
-        balancer = ArticleBalancer(expected_num_articles=10)
-        stories = [self._build_recommendation(str(idx), Topic.BUSINESS) for idx in range(3)]
-
-        assert balancer.add_story(stories[0])
-        assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2]) is False
-        assert len(balancer.get_stories()) == 2
-
-    def test_rejects_story_when_subtopic_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=6)
-        stories = [
-            self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
-            self._build_recommendation("1", Topic.TECHNOLOGY, subtopic=True),
-            self._build_recommendation("2", Topic.SPORTS, subtopic=True),
-        ]
-
-        assert balancer.add_story(stories[0])
-        assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2]) is False
-        assert len(balancer.get_stories()) == 2
-
-    def test_rejects_story_when_evergreen_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=4)
-        stories = [
-            self._build_recommendation("0", Topic.FOOD, subtopic=False),
-            self._build_recommendation("1", Topic.SELF_IMPROVEMENT, subtopic=False),
-            self._build_recommendation("2", Topic.PARENTING, subtopic=False),
-            self._build_recommendation("3", Topic.HOME, subtopic=False),
-        ]
-
-        assert balancer.add_story(stories[0])
-        assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2])
-        assert balancer.add_story(stories[3]) is False
-        assert len(balancer.get_stories()) == 3
-
-    def test_rejects_story_when_topical_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=4)
-        stories = [
-            self._build_recommendation("0", Topic.SPORTS, subtopic=False),
-            self._build_recommendation("1", Topic.ARTS, subtopic=False),
-            self._build_recommendation("2", Topic.POLITICS, subtopic=False),
-            self._build_recommendation("3", Topic.GAMING, subtopic=False),
-        ]
-
-        assert balancer.add_story(stories[0])
-        assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2])
-        assert balancer.add_story(stories[3]) is False
-        assert len(balancer.get_stories()) == 3
-
-    def test_add_stories_supports_raising_limits_and_capacity(self):
-        """Add a second batch after increasing both limit and balancing constraints."""
-        balancer = ArticleBalancer(expected_num_articles=3)
-        batch_one = [
-            self._build_recommendation("0", Topic.BUSINESS),
-            self._build_recommendation("1", Topic.BUSINESS),
-            self._build_recommendation("2", Topic.BUSINESS),
-            self._build_recommendation("3", Topic.BUSINESS),
-            self._build_recommendation("4", Topic.BUSINESS),
-        ]
-        discarded, remaining = balancer.add_stories(batch_one, limit=3)
-        assert len(balancer.get_stories()) == 2
-        assert discarded == batch_one[2:]
-        assert len(remaining) == 0
-
-        balancer.set_limits_for_expected_articles(100)
-        discarded_second, remaining_second = balancer.add_stories(batch_one[2:], limit=4)
-        assert discarded_second == []
-        assert remaining_second == batch_one[4:]
-        assert len(balancer.get_stories()) == 4
 
 
 class TestExcludeRecommendationsFromBlockedSections:
