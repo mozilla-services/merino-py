@@ -192,6 +192,7 @@ class ElasticCredentials:
         self.dsn = dsn
         self.api_key = api_key
         if not settings:
+            logger.warning(f"{LOGGING_TAG} Empty settings.")
             return
         try:
             logger.info(

@@ -193,7 +193,7 @@ if elastic_credentials.validate():
             credentials=elastic_credentials,
             platform=platform,
             languages=[lang for lang in sports_settings.get("languages", ["en"])],
-            index_map={"event": event_map, "meta": meta_map},
+            index_map={"event": event_map},
         )
         provider = SportDataUpdater(
             settings=sports_settings,
