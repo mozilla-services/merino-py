@@ -662,7 +662,7 @@ class SportsDataStore(ElasticDataStore):
                 # If only show the next upcoming game.
                 if status.is_scheduled():
                     # if there is no "next" game, or if the "next" game is later than this one,
-                    # display the most immediate upcoming event. (if there's )
+                    # display the most immediate upcoming event.
                     if not filter[sport].get("next") or int(filter[sport]["next"]["date"]) > int(
                         event["date"]
                     ):
