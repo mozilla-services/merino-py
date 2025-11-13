@@ -664,7 +664,7 @@ def get_top_story_list(
     items: list[CuratedRecommendation],
     top_count: int,
     extra_count: int = 0,
-    extra_source_depth: int = 0,
+    extra_source_depth: int = 10,
     rescaler: ExperimentRescaler | None = None,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
