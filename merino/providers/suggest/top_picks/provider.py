@@ -13,9 +13,16 @@ from typing import Any
 from merino.utils import cron
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
-from merino.providers.suggest.top_picks.backends.protocol import TopPicksBackend, TopPicksData
+from merino.providers.suggest.top_picks.backends.protocol import (
+    TopPicksBackend,
+    TopPicksData,
+)
 from merino.providers.suggest.top_picks.backends.top_picks import DomainDataSource
 
 logger = logging.getLogger(__name__)
@@ -49,7 +56,7 @@ class Provider(BaseProvider):
     ) -> None:
         self.backend = backend
         self.score = score
-        self._name = name
+        self.provider_id = name
         self._enabled_by_default = enabled_by_default
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec

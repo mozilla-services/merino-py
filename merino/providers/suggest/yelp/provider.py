@@ -4,7 +4,11 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
-from merino.providers.suggest.base import BaseProvider, SuggestionRequest, BaseSuggestion
+from merino.providers.suggest.base import (
+    BaseProvider,
+    SuggestionRequest,
+    BaseSuggestion,
+)
 from merino.providers.suggest.custom_details import CustomDetails, YelpDetails
 from merino.providers.suggest.yelp.backends.keyword_mapping import LOCATION_KEYWORDS
 from merino.providers.suggest.yelp.backends.protocol import (
@@ -32,7 +36,7 @@ class Provider(BaseProvider):
         self.backend = backend
         self.metrics_client = metrics_client
         self.score = score
-        self._name = name
+        self.provider_id = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
         self.url = HttpUrl("https://merino.services.mozilla.com/")

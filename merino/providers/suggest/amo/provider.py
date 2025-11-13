@@ -10,8 +10,16 @@ from pydantic import HttpUrl
 from merino.utils import cron
 from merino.configs import settings
 from merino.providers.suggest.amo.addons_data import SupportedAddon
-from merino.providers.suggest.amo.backends.protocol import Addon, AmoBackend, AmoBackendError
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.amo.backends.protocol import (
+    Addon,
+    AmoBackend,
+    AmoBackendError,
+)
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 from merino.providers.suggest.custom_details import AmoDetails, CustomDetails
 
 logger = logging.getLogger(__name__)
@@ -73,7 +81,7 @@ class Provider(BaseProvider):
         **kwargs: Any,
     ):
         """Initialize Addon Provider"""
-        self._name = name
+        self.provider_id = name
         self.score = score
         self.backend = backend
         self.min_chars = min_chars

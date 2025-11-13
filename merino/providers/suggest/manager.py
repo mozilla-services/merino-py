@@ -346,7 +346,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
-                name=provider_id,
+                provider_id=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 trigger_words=trigger_words,
                 enabled_by_default=setting.enabled_by_default,

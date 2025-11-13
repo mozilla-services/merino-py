@@ -121,7 +121,7 @@ class BaseSuggestion(BaseModel):
 class BaseProvider(ABC):
     """Abstract class for suggestion providers."""
 
-    _name: str
+    provider_id: str
     _enabled_by_default: bool
     _query_timeout_sec: float = settings.runtime.query_timeout_sec
 
@@ -188,7 +188,7 @@ class BaseProvider(ABC):
     @property
     def name(self) -> str:
         """Return the name of the provider for use in logging and metrics"""
-        return self._name
+        return self.provider_id
 
     @property
     def query_timeout_sec(self) -> float:

@@ -13,7 +13,11 @@ from pydantic import HttpUrl
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +96,7 @@ class Provider(BaseProvider):
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.suggestion_content = SuggestionContent(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
-        self._name = name
+        self.provider_id = name
         self._enabled_by_default = enabled_by_default
         super().__init__(**kwargs)
 

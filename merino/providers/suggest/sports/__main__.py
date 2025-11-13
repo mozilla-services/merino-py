@@ -113,7 +113,7 @@ async def main_query(
     provider = SportsDataProvider(
         backend=backend,
         metrics_client=get_metrics_client(),
-        name="test_sports_provider_id",
+        provider_id="test_sports_provider_id",
         trigger_words=trigger_words,
         enabled_by_default=True,
     )

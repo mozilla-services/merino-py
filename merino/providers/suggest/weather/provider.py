@@ -8,11 +8,17 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
-from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
+from merino.providers.suggest.weather.backends.accuweather.errors import (
+    MissingLocationKeyError,
+)
 from merino.governance.circuitbreakers import WeatherCircuitBreaker
 from merino.utils import cron
 from merino.middleware.geolocation import Location
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     get_region_mapping_size,
@@ -98,7 +104,7 @@ class Provider(BaseProvider):
         self.backend = backend
         self.metrics_client = metrics_client
         self.score = score
-        self._name = name
+        self.provider_id = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
         self.dummy_url = HttpUrl(dummy_url)
