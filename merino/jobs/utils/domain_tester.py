@@ -213,8 +213,12 @@ async def probe_domains(domains: list[str], min_width: int) -> list[DomainTestRe
 def update_custom_favicons(title, url) -> None:
     """Update the custom favicons dictionary with a given title and url."""
     dic = {title.lower(): url}
-    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
-        content = f.read()
+    try:
+        with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
+            content = f.read()
+    except OSError:
+        print("Error saving custom favicon, please ensure you are running the command from the root directory")
+        return
     pattern = r"(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})"
     match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
     if not match:
@@ -272,32 +276,6 @@ def test_domains(
 
             if save_favicon and result.favicon_data:
                 title = tldextract.extract(result.domain).domain
-                best_icon = result.favicon_data["links"][0]
-                best_width = favicon_width_convertor(
-                    result.favicon_data["links"][0].get("sizes", "1x1")
-                )
-                for icon in result.favicon_data["links"]:
-                    if not best_icon:
-                        best_icon = icon
-                        best_width = favicon_width_convertor(icon.get("sizes", "1x1"))
-                        continue
-                    width = favicon_width_convertor(icon.get("sizes", "1x1"))
-                    if DomainMetadataExtractor.is_better_favicon(
-                        icon, width, best_width, best_icon["_source"]
-                    ):
-                        best_icon = icon
-                        best_width = width
-                if title and best_icon:
-                    update_custom_favicons(title, best_icon["href"])
-                    console.print("Custom favicon saved!")
-                else:
-                    console.print("Unable to save custom favicon")
-
-                domain = result.domain.split(".")
-                if len(domain) > 2:
-                    title = domain[1]
-                else:
-                    title = domain[0]
                 best_icon = result.favicon_data["links"][0]
                 best_width = favicon_width_convertor(
                     result.favicon_data["links"][0].get("sizes", "1x1")
