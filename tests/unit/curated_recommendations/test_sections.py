@@ -1,6 +1,7 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
+import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -24,6 +25,7 @@ from merino.curated_recommendations.layouts import (
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SchedulerHoldbackRescaler,
     DefaultCrawlerRescaler,
+    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -35,6 +37,7 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import section_thompson_sampling
 from merino.curated_recommendations.sections import (
+    ArticleBalancer,
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
@@ -92,6 +95,103 @@ def sample_backend_data() -> list[CorpusSection]:
         )
         for sec_id, count in [("business", 2), ("sports", 1), ("tech", 3)]
     ]
+
+
+class TestArticleBalancer:
+    """Tests covering ArticleBalancer balancing behavior."""
+
+    @staticmethod
+    def _build_recommendation(
+        suffix: str, topic: Topic, *, subtopic: bool = False
+    ) -> CuratedRecommendation:
+        """Construct a deterministic CuratedRecommendation for balancing tests."""
+        rec = generate_recommendations(
+            length=1,
+            item_ids=[f"rec-{suffix}"],
+            topics=[topic],
+            time_sensitive_count=0,
+        )[0]
+        rec.experiment_flags = rec.experiment_flags or set()
+        if subtopic:
+            rec.experiment_flags.add(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
+        return rec
+
+    def test_rejects_story_when_per_topic_limit_exceeded(self):
+        """Ensure adding beyond the per-topic maximum fails."""
+        balancer = ArticleBalancer(expected_num_articles=10)
+        stories = [self._build_recommendation(str(idx), Topic.BUSINESS) for idx in range(3)]
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1])
+        assert balancer.add_story(stories[2]) is False
+        assert len(balancer.get_stories()) == 2
+
+    def test_rejects_story_when_subtopic_limit_exceeded(self):
+        """Ensure subtopic quota caps additions when already full."""
+        balancer = ArticleBalancer(expected_num_articles=6)
+        stories = [
+            self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
+            self._build_recommendation("1", Topic.TECHNOLOGY, subtopic=True),
+            self._build_recommendation("2", Topic.SPORTS, subtopic=True),
+        ]
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1])
+        assert balancer.add_story(stories[2]) is False
+        assert len(balancer.get_stories()) == 2
+
+    def test_rejects_story_when_evergreen_limit_exceeded(self):
+        """Ensure subtopic quota caps additions when already full."""
+        balancer = ArticleBalancer(expected_num_articles=4)
+        stories = [
+            self._build_recommendation("0", Topic.FOOD, subtopic=False),
+            self._build_recommendation("1", Topic.SELF_IMPROVEMENT, subtopic=False),
+            self._build_recommendation("2", Topic.PARENTING, subtopic=False),
+            self._build_recommendation("3", Topic.HOME, subtopic=False),
+        ]
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1])
+        assert balancer.add_story(stories[2])
+        assert balancer.add_story(stories[3]) is False
+        assert len(balancer.get_stories()) == 3
+
+    def test_rejects_story_when_topical_limit_exceeded(self):
+        """Ensure subtopic quota caps additions when already full."""
+        balancer = ArticleBalancer(expected_num_articles=4)
+        stories = [
+            self._build_recommendation("0", Topic.SPORTS, subtopic=False),
+            self._build_recommendation("1", Topic.ARTS, subtopic=False),
+            self._build_recommendation("2", Topic.POLITICS, subtopic=False),
+            self._build_recommendation("3", Topic.GAMING, subtopic=False),
+        ]
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1])
+        assert balancer.add_story(stories[2])
+        assert balancer.add_story(stories[3]) is False
+        assert len(balancer.get_stories()) == 3
+
+    def test_add_stories_supports_raising_limits_and_capacity(self):
+        """Add a second batch after increasing both limit and balancing constraints."""
+        balancer = ArticleBalancer(expected_num_articles=3)
+        batch_one = [
+            self._build_recommendation("0", Topic.BUSINESS),
+            self._build_recommendation("1", Topic.BUSINESS),
+            self._build_recommendation("2", Topic.BUSINESS),
+            self._build_recommendation("3", Topic.BUSINESS),
+            self._build_recommendation("4", Topic.BUSINESS),
+        ]
+        discarded, remaining = balancer.add_stories(batch_one, limit=3)
+        assert len(balancer.get_stories()) == 2
+        assert discarded == batch_one[2:]
+        assert len(remaining) == 0
+
+        balancer.set_limits_for_expected_articles(100)
+        discarded_second, remaining_second = balancer.add_stories(batch_one[2:], limit=4)
+        assert discarded_second == []
+        assert remaining_second == batch_one[4:]
+        assert len(balancer.get_stories()) == 4
 
 
 class TestExcludeRecommendationsFromBlockedSections:
@@ -828,14 +928,36 @@ class TestRemoveStoryRecs:
 class TestGetTopStoryList:
     """Tests for get_top_story_list."""
 
+    non_dupe_topics = [Topic.CAREER, Topic.POLITICS, Topic.PERSONAL_FINANCE, Topic.ARTS]
+
     def test_returns_top_count_items(self):
         """Should return exactly `top_count` items from start of list if extra_count is 0."""
-        items = generate_recommendations(item_ids=["a", "b", "c", "d", "e"])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e"],
+            topics=["arts", "business", "food", "government", "food"],
+        )
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
 
-    def test_includes_extra_items_no_topic_overlap(self):
+    def test_basic_topic_limiting(self):
+        """Extra items should be chosen without repeating topics from top_count items."""
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e", "f"],
+            topics=["arts", "arts", "arts", "business", "food", "government"],
+        )
+        result = get_top_story_list(items, top_count=4, extra_count=0, extra_source_depth=0)
+
+        top_ids = [i.corpusItemId for i in result]
+
+        assert len(result) == 4
+        assert "c" not in top_ids
+        assert {"a", "b", "d", "e"}.issubset(set(top_ids))
+
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
+
+    def test_includes_extra_items_topic_limiting(self):
         """Extra items should be chosen without repeating topics from top_count items."""
         items = generate_recommendations(
             item_ids=["a", "b", "c", "d", "e", "f"],
@@ -870,7 +992,7 @@ class TestGetTopStoryList:
 
     def test_top_count_greater_than_items(self):
         """If top_count > len(items), should return all items without error."""
-        items = generate_recommendations(item_ids=["a", "b", "c"], topics=list(Topic)[:3])
+        items = generate_recommendations(item_ids=["a", "b", "c"], topics=self.non_dupe_topics[:3])
         result = get_top_story_list(items, top_count=5, extra_count=0, extra_source_depth=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
@@ -902,7 +1024,9 @@ class TestGetTopStoryList:
 
     def test_all_fresh_items_without_rescaler_returns_top_slice(self):
         """No special handling of fresh items when there is no rescalar."""
-        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"], topics=self.non_dupe_topics[:4]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
 
@@ -913,7 +1037,9 @@ class TestGetTopStoryList:
 
     def test_rescaler_keeps_probability_capped_fresh_items(self, monkeypatch):
         """Ensure rescaler-controlled fresh limit passes through fresh items."""
-        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"], topics=self.non_dupe_topics[:4]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
         rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
@@ -930,7 +1056,9 @@ class TestGetTopStoryList:
         """When probability never allows fresh picks, backlog of fresh picks fill the quota
         See - filter_fresh_items_with_probability for additional tests
         """
-        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"], topics=self.non_dupe_topics[:4]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
         rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
@@ -943,6 +1071,22 @@ class TestGetTopStoryList:
 
         assert [rec.corpusItemId for rec in result] == ["a", "b"]
         assert [rec.receivedRank for rec in result] == [0, 1]
+
+    def test_random_situations(self):
+        """Stress test and check to see that we return enough items, regardless of topic constraints"""
+        random.seed(42)
+        all_topics = list(Topic)
+        for num_items in range(40):
+            ids = [f"id-{k}" for k in range(num_items)]
+            topics = [random.choice(all_topics) for _k in range(num_items)]
+
+            items = generate_recommendations(item_ids=ids, topics=topics)
+            result = get_top_story_list(
+                items, top_count=10, extra_count=3, extra_source_depth=4, rescaler=None
+            )
+            assert len(result) == min(len(items), 10 + 3)
+            picked_ids = set([rec.corpusItemId for rec in result])
+            assert len(picked_ids) == len(result)  # Check no duplicates
 
 
 class DummyTrackingEngagementBackend:
