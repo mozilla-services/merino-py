@@ -355,10 +355,10 @@ query_timeout_sec = 3.0
 kickstart = true
 
 [default.providers.sports.es]
-# MERINO_PROVIDERS__SPORTS__ES_dsn
+# MERINO_PROVIDERS__SPORTS__ES__DSN
 # DSN to Elastic Search database
 dsn=""
-# MERINO_PROVIDERS__SPORTS__ES_dsn
+# MERINO_PROVIDERS__SPORTS__ES__API_KEY
 # API Key for Elastic Search database
 # Using the "basic" key, which allows using locally served
 # versions of elasticsearch
