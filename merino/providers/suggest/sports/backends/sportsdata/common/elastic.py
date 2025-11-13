@@ -250,9 +250,7 @@ class ElasticCredentials:
         logger = logging.getLogger(__name__)
         api_key = self.api_key or "None"
         dsn = self.dsn or "None"
-        logger.info(
-            f"{LOGGING_TAG} Elastic API key: [{api_key[:4]}...] DSN:[{dsn[:10]}]"
-        )
+        logger.info(f"{LOGGING_TAG} Elastic API key: [{api_key[:4]}...] DSN:[{dsn[:10]}]")
         return (self.api_key is not None and len(self.api_key) > 0) and (
             self.dsn is not None and len(self.dsn) > 0
         )
@@ -596,9 +594,7 @@ class SportsDataStore(ElasticDataStore):
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logger.warning(
-                    f"{LOGGING_TAG} Encountered conflict error, ignoring for now"
-                )
+                logger.warning(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
                 return False
         return True
 
@@ -612,17 +608,13 @@ class SportsDataStore(ElasticDataStore):
         if not self.client:
             return {}
         # quick filter out the non-team keywords:
-        search_words: str = " ".join(
-            filter(lambda word: word not in self.strip_words, q.split())
-        )
+        search_words: str = " ".join(filter(lambda word: word not in self.strip_words, q.split()))
         if mix_sports:
             logger.debug(f"{LOGGING_TAG} Mixing sports...{search_words}")
         try:
             query = {
                 "bool": {
-                    "must": [
-                        {"match": {"terms": {"query": search_words, "operator": "and"}}}
-                    ],
+                    "must": [{"match": {"terms": {"query": search_words, "operator": "and"}}}],
                     "must_not": [{"range": {"expiry": {"lt": utc_now}}}],
                 }
             }
@@ -664,9 +656,7 @@ class SportsDataStore(ElasticDataStore):
                 # concluded game and the next scheduled game. As for current, we just grab the last
                 # "inprogress" game that is reported.
                 if status.is_final():
-                    if event_list[sport].get("previous", {}).get("date", 0) < int(
-                        event["date"]
-                    ):
+                    if event_list[sport].get("previous", {}).get("date", 0) < int(event["date"]):
                         event_list[sport]["previous"] = event
                 # If only show the next upcoming game.
                 if status.is_scheduled():
@@ -717,9 +707,7 @@ class SportsDataStore(ElasticDataStore):
 
             try:
                 start = datetime.now()
-                await helpers.async_bulk(
-                    client=self.client, actions=actions, stats_only=False
-                )
+                await helpers.async_bulk(client=self.client, actions=actions, stats_only=False)
                 logger.info(
                     f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
                 )
