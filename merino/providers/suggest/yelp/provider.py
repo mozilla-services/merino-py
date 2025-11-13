@@ -36,7 +36,7 @@ class Provider(BaseProvider):
         self.backend = backend
         self.metrics_client = metrics_client
         self.score = score
-        self.provider_id = name
+        self._name = name
         self._query_timeout_sec = query_timeout_sec
         self._enabled_by_default = enabled_by_default
         self.url = HttpUrl("https://merino.services.mozilla.com/")

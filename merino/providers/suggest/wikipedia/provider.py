@@ -63,7 +63,7 @@ class Provider(BaseProvider):
         self.backend = backend
         # Ensures block list checks are case insensitive.
         self.title_block_list = {entry.lower() for entry in title_block_list}
-        self.provider_id = name
+        self._name = name
         self._enabled_by_default = enabled_by_default
         self._query_timeout_sec = query_timeout_sec
         self.score = score

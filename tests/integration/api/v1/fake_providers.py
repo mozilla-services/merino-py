@@ -121,7 +121,7 @@ class FakeProvider(BaseProvider):
         query_timeout_sec: float = settings.runtime.query_timeout_sec,
     ) -> None:
         super().__init__()
-        self.provider_id = name
+        self._name = name
         self._hidden = hidden
         self._query_callable = query_callable
         self._enabled_by_default = enabled_by_default

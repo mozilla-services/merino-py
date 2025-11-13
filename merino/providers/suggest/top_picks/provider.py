@@ -56,7 +56,7 @@ class Provider(BaseProvider):
     ) -> None:
         self.backend = backend
         self.score = score
-        self.provider_id = name
+        self._name = name
         self._enabled_by_default = enabled_by_default
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec

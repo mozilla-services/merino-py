@@ -8,11 +8,7 @@ from typing import Any
 
 from pydantic import HttpUrl
 
-from merino.providers.suggest.base import (
-    BaseProvider,
-    BaseSuggestion,
-    SuggestionRequest,
-)
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, GeolocationDetails
 
 logger = logging.getLogger(__name__)
@@ -36,7 +32,7 @@ class Provider(BaseProvider):
         dummy_title: str = "",
         **kwargs: Any,
     ) -> None:
-        self.provider_id = name
+        self._name = name
         self._enabled_by_default = enabled_by_default
         self.dummy_url = HttpUrl(dummy_url)
         self.dummy_title = dummy_title
@@ -61,16 +57,12 @@ class Provider(BaseProvider):
                 custom_details=CustomDetails(
                     geolocation=GeolocationDetails(
                         country=srequest.geolocation.country_name,
-                        region=(
-                            srequest.geolocation.region_names[0]
-                            if srequest.geolocation.region_names
-                            else None
-                        ),
-                        region_code=(
-                            srequest.geolocation.regions[0]
-                            if srequest.geolocation.regions
-                            else None
-                        ),
+                        region=srequest.geolocation.region_names[0]
+                        if srequest.geolocation.region_names
+                        else None,
+                        region_code=srequest.geolocation.regions[0]
+                        if srequest.geolocation.regions
+                        else None,
                         country_code=srequest.geolocation.country,
                         city=srequest.geolocation.city,
                         location=srequest.geolocation.coordinates,

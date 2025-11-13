@@ -49,7 +49,6 @@ class SportsDataProvider(BaseProvider):
     enabled_by_default: bool
     trigger_words: list[str]
     score: float
-    provider_id: str
 
     def __init__(
         self,
@@ -64,7 +63,7 @@ class SportsDataProvider(BaseProvider):
     ):
         self.metrics_client = metrics_client
         self.backend = backend
-        self.provider_id = name
+        self._name = name
         self.url = HttpUrl(IGNORED_SUGGESTION_URL)
         self._enabled_by_default = enabled_by_default
         self.trigger_words = trigger_words + TEAM_NAMES
@@ -162,7 +161,7 @@ class SportsDataProvider(BaseProvider):
             title=f"{sport_name}",  # IGNORED
             url=HttpUrl(IGNORED_SUGGESTION_URL),  # IGNORED
             description=f"{sport_name} report for {query}",
-            provider=self.provider_id,
+            provider=self.name,
             is_sponsored=False,
             custom_details=CustomDetails(sports=details),
             categories=[Category.Sports],
