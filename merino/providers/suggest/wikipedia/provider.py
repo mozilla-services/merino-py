@@ -7,7 +7,12 @@ from pydantic import HttpUrl
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest, Category
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+    Category,
+)
 from merino.providers.suggest.wikipedia.backends.protocol import WikipediaBackend
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
 

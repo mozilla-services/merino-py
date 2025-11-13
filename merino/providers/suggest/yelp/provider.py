@@ -4,7 +4,11 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
-from merino.providers.suggest.base import BaseProvider, SuggestionRequest, BaseSuggestion
+from merino.providers.suggest.base import (
+    BaseProvider,
+    SuggestionRequest,
+    BaseSuggestion,
+)
 from merino.providers.suggest.custom_details import CustomDetails, YelpDetails
 from merino.providers.suggest.yelp.backends.keyword_mapping import LOCATION_KEYWORDS
 from merino.providers.suggest.yelp.backends.protocol import (

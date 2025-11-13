@@ -161,7 +161,7 @@ class SportsDataProvider(BaseProvider):
             title=f"{sport_name}",  # IGNORED
             url=HttpUrl(IGNORED_SUGGESTION_URL),  # IGNORED
             description=f"{sport_name} report for {query}",
-            provider=PROVIDER_ID,
+            provider=self.name,
             is_sponsored=False,
             custom_details=CustomDetails(sports=details),
             categories=[Category.Sports],

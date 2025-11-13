@@ -1,11 +1,10 @@
 """Sport info provider"""
 
-import logging
 from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
-import os
 from typing import Final
 
+from merino.configs import settings
 
 LOGGING_TAG: Final[str] = "⚾"
 DEFAULT_LOGGING_LEVEL = "DEBUG"
@@ -15,7 +14,7 @@ UPDATE_PERIOD_SECS = 60 * 60 * 4  # Four hours
 # a generic space-holder for this value for this provider.
 IGNORED_SUGGESTION_URL: Final[str] = "https://merino.services.mozilla.com"
 BASE_SUGGEST_SCORE: float = 0.5
-PROVIDER_ID: Final[str] = "sportsdata_io"
+PROVIDER_ID: Final[str] = settings.providers.sports.type
 
 DEFAULT_TRIGGER_WORDS = [
     "vs",
