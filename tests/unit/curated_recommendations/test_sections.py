@@ -928,7 +928,14 @@ class TestRemoveStoryRecs:
 class TestGetTopStoryList:
     """Tests for get_top_story_list."""
 
-    non_dupe_topics = [Topic.CAREER, Topic.POLITICS, Topic.PERSONAL_FINANCE, Topic.ARTS]
+    # Mixed topical and evergreen topics to not trigger limiting code
+    non_dupe_topics = [
+        Topic.CAREER,
+        Topic.POLITICS,
+        Topic.PERSONAL_FINANCE,
+        Topic.ARTS,
+        Topic.ARTS,
+    ]
 
     def test_returns_top_count_items(self):
         """Should return exactly `top_count` items from start of list if extra_count is 0."""
@@ -1015,7 +1022,9 @@ class TestGetTopStoryList:
         rescaler because no items have fresh label
         """
         rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
-        items = generate_recommendations(item_ids=["a", "b", "c", "d", "e"])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e"], topics=self.non_dupe_topics[:5]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
         result = get_top_story_list(items, top_count=3, extra_count=0, rescaler=rescaler)
