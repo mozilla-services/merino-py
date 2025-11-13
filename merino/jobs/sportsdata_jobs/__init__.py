@@ -125,6 +125,7 @@ class SportDataUpdater:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
+        await self.store.build_indexes()
         client = create_http_client(
             connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
         )
@@ -158,6 +159,8 @@ class SportDataUpdater:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
+        await self.store.build_indexes()
+
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
         logger.debug(f"{LOGGING_TAG} Nightly update...")
@@ -167,7 +170,7 @@ class SportDataUpdater:
     async def initialize(self) -> None:
         """Initialize the ElasticSearch data store"""
         await self.store.startup()
-        await self.store.build_indexes(clear=False)
+        await self.store.build_indexes()
 
 
 logger = logging.getLogger(__name__)
