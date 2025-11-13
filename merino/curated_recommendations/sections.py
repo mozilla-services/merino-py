@@ -210,7 +210,6 @@ async def get_corpus_sections(
     # Apply RSS vs. Zyte experiment filtering and custom sections filtering
     filtered_corpus_sections = filter_sections_by_experiment(
         remaining_raw_corpus_sections,
-        crawl_branch,
         include_subtopics,
         is_custom_sections_experiment,
     )
@@ -383,7 +382,6 @@ def is_crawl_section_id(section_id: str) -> bool:
 
 def filter_sections_by_experiment(
     corpus_sections: list[CorpusSection],
-    crawl_branch: str | None,
     include_subtopics: bool = False,
     is_custom_sections_experiment: bool = False,
 ) -> dict[str, CorpusSection]:
@@ -419,27 +417,11 @@ def filter_sections_by_experiment(
         if is_manual_section:
             continue
 
-        # Determine if we should include this section based on the branch
-        if crawl_branch in [
-            CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        ]:
-            # Treatment branches: use _crawl for legacy, regular for subtopics
-            if is_legacy and is_crawl_section:
+        # Crawl sections now populate base name, ignore crawled to avoid duplicates
+        if not is_crawl_section:
+            # Include based on whether subtopics are enabled
+            if is_legacy or include_subtopics:
                 result[base_id] = section
-            elif (
-                not is_legacy
-                and not is_crawl_section
-                and crawl_branch == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
-            ):
-                # Include non-crawl subtopics only in crawl-plus-subtopics branch
-                result[base_id] = section
-        else:
-            # Control branch or no experiment: use non-_crawl sections
-            if not is_crawl_section:
-                # Include based on whether subtopics are enabled
-                if is_legacy or include_subtopics:
-                    result[base_id] = section
 
     return result
 
