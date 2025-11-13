@@ -11,6 +11,7 @@ from google.cloud.storage import Blob
 import ast
 import re
 from pprint import pformat
+import tldextract
 
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
@@ -240,10 +241,10 @@ def update_custom_favicons(title, url) -> None:
 def favicon_width_convertor(width: str) -> int:
     """Convert the width of a favicon to an integer."""
     size = width.split("x")
-    if len(size) < 2 or size[0] != size[1]:
+    if len(size) < 2:
         best_width = 1
     else:
-        best_width = int(size[0])
+        best_width = int(max(size))
     return best_width
 
 
@@ -270,11 +271,7 @@ def test_domains(
             console.print(table)
 
             if save_favicon and result.favicon_data:
-                domain = result.domain.split(".")
-                if len(domain) > 2:
-                    title = domain[1]
-                else:
-                    title = domain[0]
+                title = tldextract.extract(result.domain).domain
                 best_icon = result.favicon_data["links"][0]
                 best_width = favicon_width_convertor(
                     result.favicon_data["links"][0].get("sizes", "1x1")
@@ -296,7 +293,6 @@ def test_domains(
                 else:
                     console.print("Unable to save custom favicon")
 
-            if save_favicon and result.favicon_data:
                 domain = result.domain.split(".")
                 if len(domain) > 2:
                     title = domain[1]
