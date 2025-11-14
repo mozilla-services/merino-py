@@ -12,6 +12,7 @@ import ast
 import re
 from pprint import pformat
 import tldextract
+from pathlib import Path
 
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
@@ -212,15 +213,17 @@ async def probe_domains(domains: list[str], min_width: int) -> list[DomainTestRe
 
 def update_custom_favicons(title, url) -> None:
     """Update the custom favicons dictionary with a given title and url."""
-    dic = {title.lower(): url}
-    try:
-        with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
-            content = f.read()
-    except Exception:
+    if (
+        not Path("pyproject.toml").exists()
+        or not Path("merino/jobs/navigational_suggestions/custom_favicons.py").exists()
+    ):
         print(
             "Error saving custom favicon, please ensure you are running the command from the root directory"
         )
         return
+    dic = {title.lower(): url}
+    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
+        content = f.read()
     pattern = r"(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})"
     match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
     if not match:
