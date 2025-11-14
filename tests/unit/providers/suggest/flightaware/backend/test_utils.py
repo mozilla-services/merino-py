@@ -5,6 +5,7 @@
 """Unit tests for the Flightaware utils module."""
 
 import datetime
+import re
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 from pydantic import HttpUrl
@@ -561,7 +562,7 @@ def test_multiple_cancelled_only_most_recent_kept(fixed_now):
 
 
 @pytest.mark.parametrize(
-    "description, query, expected",
+    "description, query, expected_match",
     [
         # valid flight numbers
         ("2-letter code + 3-digit number", "UA123", True),
@@ -570,7 +571,7 @@ def test_multiple_cancelled_only_most_recent_kept(fixed_now):
         ("2-letter + space + 3-digit", "UA 123", True),
         ("2-letter + multiple spaces + 3-digit", "UA    123", True),
         ("2-char alphanumeric (3U) + 4-digit", "3U1001", True),
-        ("2-char alphanumeric + space + 4-digit", "3U 1001", True),
+        ("2-char alphanumeric + space + 4-digit", "3U  1001", True),
         ("mixed case + spacing", "aC 701", True),
         ("single letter code", "A3101", True),
         # invalid flight numbers
@@ -582,12 +583,23 @@ def test_multiple_cancelled_only_most_recent_kept(fixed_now):
         ("only code, no number", "UA", False),
         ("only number, no code", "1234", False),
         ("space only", "   ", False),
+        # embedded cases (should work anywhere in string)
+        ("flight prefix before number", "flight ac100", True),
+        ("flight status suffix after number", "ac100 flight status", True),
+        ("embedded inside phrase", "my flight is ua123 today", True),
     ],
 )
-def test_is_valid_flight_number_pattern(description, query, expected):
-    """Test the is_valid_flight_number_pattern function against a range of inputs."""
-    result = is_valid_flight_number_pattern(query)
-    assert result == expected, f"Failed: {description} (input: '{query}')"
+def test_is_valid_flight_number_pattern(description, query, expected_match):
+    """Verify is_valid_flight_number_pattern returns a Match object for valid patterns and None otherwise."""
+    match = is_valid_flight_number_pattern(query)
+
+    if expected_match:
+        # for valid patterns, assert a Match object is returned and it contains the expected substring.
+        assert isinstance(match, re.Match), f"Expected Match for: {description}"
+        assert str(match.group(0)).strip(), f"Match text empty for: {description}"
+    else:
+        # for invalid patterns, ensure None is returned.
+        assert match is None, f"Expected None for: {description}"
 
 
 @pytest.mark.parametrize(
@@ -818,7 +830,6 @@ def test_is_delayed(description, flight, expected):
         ("two words + digits", "United Airlines 101", True),
         ("three words + digits", "Air Canada Express 200", True),
         ("max five words + digits", "Lufthansa Cargo Regional Flight 12345", True),
-        ("mixed case words + digits", "aIr FrAnCe 789", True),
         ("extra spaces between words allowed", "British    Airways    555", True),
         ("lowercase airline + digits", "air canada 250", True),
         ("uppercase airline + digits", "AIR CANADA 250", True),
@@ -848,19 +859,13 @@ def test_is_valid_flight_keyword_pattern(description, query, expected):
         ("alphanumeric airline code pattern", "3U1001", {}, "3U1001"),
         (
             "airline keyword pattern with mapping",
-            "Air Canada 250",
+            "air canada 250",
             {"air canada": "AC"},
             "AC250",
         ),
         (
-            "mixed case keyword airline name",
-            "aIr FrAnCe 789",
-            {"air france": "AF"},
-            "AF789",
-        ),
-        (
             "keyword query with multiple spaces normalized",
-            "British   Airways   555",
+            "british   airways   555",
             {"british airways": "BA"},
             "BA555",
         ),
@@ -871,6 +876,13 @@ def test_is_valid_flight_keyword_pattern(description, query, expected):
         ("empty string", "", {}, None),
         ("spaces only", "   ", {}, None),
         ("garbage input", "@@@@", {}, None),
+        ("flight prefix before flight number", "flight ac100", {}, "AC100"),
+        ("flight suffix after number", "ac100 flight", {}, "AC100"),
+        ("partial 'flight' suffix (flig)", "aa 341 flig", {}, "AA341"),
+        ("partial 'flight' prefix (fl)", "fl ac341", {}, "AC341"),
+        ("flight status after number", "ac100 flight status", {}, "AC100"),
+        ("flight status before number", "flight status ac100", {}, "AC100"),
+        ("embedded in sentence", "my flight is ua123 today", {}, None),
     ],
 )
 def test_get_flight_number_from_query_if_valid(description, query, mapping, expected):

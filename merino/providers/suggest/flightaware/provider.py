@@ -110,8 +110,11 @@ class Provider(BaseProvider):
             )
 
     def normalize_query(self, query: str) -> str:
-        """Remove trailing spaces from query and convert to lowercase"""
-        return query.strip()
+        """Trim leading/trailing whitespace, converts to lowercase,
+        and normalizes multiple internal spaces to a single space.
+        """
+        query = " ".join(query.lower().split())
+        return query
 
     async def query(self, request: SuggestionRequest) -> list[BaseSuggestion]:
         """Retrieve flight suggestions"""
