@@ -8,6 +8,11 @@ from rich.console import Console
 from rich.table import Table
 from pydantic import BaseModel
 from google.cloud.storage import Blob
+import ast
+import re
+from pprint import pformat
+import tldextract
+from pathlib import Path
 
 from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
     DomainMetadataExtractor,
@@ -206,10 +211,57 @@ async def probe_domains(domains: list[str], min_width: int) -> list[DomainTestRe
     return results
 
 
+def update_custom_favicons(title, url) -> None:
+    """Update the custom favicons dictionary with a given title and url."""
+    if (
+        not Path("pyproject.toml").exists()
+        or not Path("merino/jobs/navigational_suggestions/custom_favicons.py").exists()
+    ):
+        print(
+            "Error saving custom favicon, please ensure you are running the command from the root directory"
+        )
+        return
+    dic = {title.lower(): url}
+    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "r") as f:
+        content = f.read()
+    pattern = r"(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})"
+    match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+    if not match:
+        print("Error finding custom favicons dictionary")
+        return
+    dict_str = match.group(1)
+    try:
+        dict_part = dict_str.split("=", 1)[1].strip()
+        parsed_dict = ast.literal_eval(dict_part)
+    except Exception as e:
+        print(f"Error parsing dictionary: {e}")
+        return
+    parsed_dict.update(dic)
+    updated_dict_str = "\nCUSTOM_FAVICONS: dict[str, str] = {\n "
+    updated_dict_str += (
+        pformat(parsed_dict, indent=4).replace("{", "").replace("}", "").replace("'", '"')
+    )
+    updated_dict_str += "\n}"
+    updated_content = content.replace(dict_str, updated_dict_str)
+    with open("merino/jobs/navigational_suggestions/custom_favicons.py", "w") as f:
+        f.write(updated_content)
+
+
+def favicon_width_convertor(width: str) -> int:
+    """Convert the width of a favicon to an integer."""
+    size = width.split("x")
+    if len(size) < 2:
+        best_width = 1
+    else:
+        best_width = int(max(size))
+    return best_width
+
+
 @cli.command()
 def test_domains(
     domains: list[str] = typer.Argument(..., help="List of domains to test"),
     min_width: int = typer.Option(32, help="Minimum favicon width", show_default=True),
+    save_favicon: bool = typer.Option(False, "--save", help="Save custom favicon", is_flag=True),
 ):
     """Test domain metadata extraction for multiple domains"""
     with console.status("Testing domains concurrently..."):
@@ -226,6 +278,29 @@ def test_domains(
 
             console.print("✅ Success!")
             console.print(table)
+
+            if save_favicon and result.favicon_data:
+                title = tldextract.extract(result.domain).domain
+                best_icon = result.favicon_data["links"][0]
+                best_width = favicon_width_convertor(
+                    result.favicon_data["links"][0].get("sizes", "1x1")
+                )
+                for icon in result.favicon_data["links"]:
+                    if not best_icon:
+                        best_icon = icon
+                        best_width = favicon_width_convertor(icon.get("sizes", "1x1"))
+                        continue
+                    width = favicon_width_convertor(icon.get("sizes", "1x1"))
+                    if DomainMetadataExtractor.is_better_favicon(
+                        icon, width, best_width, best_icon["_source"]
+                    ):
+                        best_icon = icon
+                        best_width = width
+                if title and best_icon:
+                    update_custom_favicons(title, best_icon["href"])
+                    console.print("Custom favicon saved!")
+                else:
+                    console.print("Unable to save custom favicon")
 
             if result.favicon_data:
                 console.print("\nAll favicons found:")
