@@ -1,6 +1,7 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
+import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -828,14 +829,43 @@ class TestRemoveStoryRecs:
 class TestGetTopStoryList:
     """Tests for get_top_story_list."""
 
+    # Mixed topical and evergreen topics to not trigger limiting code
+    non_dupe_topics = [
+        Topic.CAREER,
+        Topic.POLITICS,
+        Topic.PERSONAL_FINANCE,
+        Topic.ARTS,
+        Topic.ARTS,
+    ]
+
     def test_returns_top_count_items(self):
         """Should return exactly `top_count` items from start of list if extra_count is 0."""
-        items = generate_recommendations(item_ids=["a", "b", "c", "d", "e"])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e"],
+            topics=["arts", "business", "food", "government", "food"],
+        )
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
 
-    def test_includes_extra_items_no_topic_overlap(self):
+    def test_basic_topic_limiting(self):
+        """Extra items should be chosen without repeating topics from top_count items."""
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e", "f"],
+            topics=["arts", "arts", "arts", "business", "food", "government"],
+        )
+        result = get_top_story_list(items, top_count=4, extra_count=0, extra_source_depth=0)
+
+        top_ids = [i.corpusItemId for i in result]
+
+        assert len(result) == 4
+        assert "c" not in top_ids
+        assert {"a", "b", "d", "e"}.issubset(set(top_ids))
+
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
+
+    def test_includes_extra_items_topic_limiting(self):
         """Extra items should be chosen without repeating topics from top_count items."""
         items = generate_recommendations(
             item_ids=["a", "b", "c", "d", "e", "f"],
@@ -870,7 +900,7 @@ class TestGetTopStoryList:
 
     def test_top_count_greater_than_items(self):
         """If top_count > len(items), should return all items without error."""
-        items = generate_recommendations(item_ids=["a", "b", "c"], topics=list(Topic)[:3])
+        items = generate_recommendations(item_ids=["a", "b", "c"], topics=self.non_dupe_topics[:3])
         result = get_top_story_list(items, top_count=5, extra_count=0, extra_source_depth=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
@@ -893,7 +923,9 @@ class TestGetTopStoryList:
         rescaler because no items have fresh label
         """
         rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
-        items = generate_recommendations(item_ids=["a", "b", "c", "d", "e"])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e"], topics=self.non_dupe_topics[:5]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
         result = get_top_story_list(items, top_count=3, extra_count=0, rescaler=rescaler)
@@ -902,7 +934,9 @@ class TestGetTopStoryList:
 
     def test_all_fresh_items_without_rescaler_returns_top_slice(self):
         """No special handling of fresh items when there is no rescalar."""
-        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"], topics=self.non_dupe_topics[:4]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
 
@@ -913,7 +947,9 @@ class TestGetTopStoryList:
 
     def test_rescaler_keeps_probability_capped_fresh_items(self, monkeypatch):
         """Ensure rescaler-controlled fresh limit passes through fresh items."""
-        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"], topics=self.non_dupe_topics[:4]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
         rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
@@ -930,7 +966,9 @@ class TestGetTopStoryList:
         """When probability never allows fresh picks, backlog of fresh picks fill the quota
         See - filter_fresh_items_with_probability for additional tests
         """
-        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"], topics=self.non_dupe_topics[:4]
+        )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
         rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
@@ -943,6 +981,22 @@ class TestGetTopStoryList:
 
         assert [rec.corpusItemId for rec in result] == ["a", "b"]
         assert [rec.receivedRank for rec in result] == [0, 1]
+
+    def test_random_situations(self):
+        """Stress test and check to see that we return enough items, regardless of topic constraints"""
+        random.seed(42)
+        all_topics = list(Topic)
+        for num_items in range(40):
+            ids = [f"id-{k}" for k in range(num_items)]
+            topics = [random.choice(all_topics) for _k in range(num_items)]
+
+            items = generate_recommendations(item_ids=ids, topics=topics)
+            result = get_top_story_list(
+                items, top_count=10, extra_count=3, extra_source_depth=4, rescaler=None
+            )
+            assert len(result) == min(len(items), 10 + 3)
+            picked_ids = set([rec.corpusItemId for rec in result])
+            assert len(picked_ids) == len(result)  # Check no duplicates
 
 
 class DummyTrackingEngagementBackend:

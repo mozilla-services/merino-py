@@ -1,9 +1,7 @@
 """Module for building and ranking curated recommendation sections."""
 
 import logging
-from collections import defaultdict
 from copy import deepcopy
-from typing import DefaultDict
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -39,6 +37,7 @@ from merino.curated_recommendations.protocol import (
     Layout,
 )
 from merino.curated_recommendations.rankers import (
+    ArticleBalancer,
     filter_fresh_items_with_probability,
     thompson_sampling,
     boost_followed_sections,
@@ -573,28 +572,41 @@ def get_top_story_list(
      items: Ordered list of stories
      top_count: Number of most popular top stories to extract from the top of the list
      extra_count: Number of extra stories to extract from further down
-     extra_source_depth: How deep to search after top stories when finding extras
+     extra_source_depth: How far down to go when picking the extra stories
      rescaler: Optional rescaler associated with the experiment or surface
     Returns: A list of top stories
     """
-    max_per_topic = 1
     fresh_story_prob = rescaler.fresh_items_top_stories_max_percentage if rescaler else 0
-    top_stories, fresh_backlog = filter_fresh_items_with_probability(
-        items, fresh_story_prob=fresh_story_prob, max_items=top_count
-    )
-    num_stories_consumed = len(top_stories) + len(fresh_backlog)
+    total_story_count = top_count + extra_count
 
-    topic_counts: DefaultDict[Topic | None, int] = defaultdict(int)
-    extra_items: list[CuratedRecommendation] = []
-    for rec in items[
-        num_stories_consumed + extra_source_depth :
-    ]:  # Skip some of the top items which we can leave in sections
-        if len(extra_items) >= extra_count:
-            break
-        if topic_counts[rec.topic] < max_per_topic:
-            topic_counts[rec.topic] += 1
-            extra_items.append(rec)
-    top_stories.extend(extra_items)
+    # "Fresh" items are low-impression/new. We throttle (downsample) them to limit their share.
+    items_throttled_fresh, unused_fresh = filter_fresh_items_with_probability(
+        items,
+        fresh_story_prob=fresh_story_prob,
+        max_items=total_story_count + extra_source_depth + 10,
+        # Extra 10 items to help meet constraints
+    )
+    non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
+
+    balancer: ArticleBalancer = ArticleBalancer(top_count)
+    topic_limited_stories, remaining_stories = balancer.add_stories(
+        items_throttled_fresh, top_count
+    )
+    second_pass_candidates = topic_limited_stories + remaining_stories
+
+    if len(second_pass_candidates) > extra_source_depth * 2:
+        second_pass_candidates = second_pass_candidates[extra_source_depth:]
+
+    balancer.set_limits_for_expected_articles(total_story_count)
+    topic_limited_stories, remaining_stories = balancer.add_stories(
+        second_pass_candidates, total_story_count
+    )
+    top_stories = balancer.get_stories()
+    after_second_pass_candidates = topic_limited_stories + remaining_stories
+    # If constraints are constraining too much, drop remainder of stories in
+    if len(top_stories) < total_story_count:
+        remaining_items = after_second_pass_candidates + non_throttled + unused_fresh
+        top_stories = top_stories + remaining_items[: total_story_count - len(top_stories)]
     for idx, rec in enumerate(top_stories):
         rec.receivedRank = idx
     return top_stories
