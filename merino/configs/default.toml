@@ -39,7 +39,7 @@ query_timeout_sec = 0.2
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo", "yelp"]
+disabled_providers = ["amo"]
 
 # MERINO_RUNTIME__DEFAULT_SUGGESTIONS_RESPONSE_TTL_SEC
 default_suggestions_response_ttl_sec = 300 # 5 mins
@@ -191,7 +191,7 @@ score = 0.25
 
 # MERINO_REMOTE_SETTINGS__COUNTRIES
 # Default countries used to filter out records from remote settings.
-countries = ["US", "GB", "DE", "FR", "IT", "PL"]
+countries = ["US"]
 
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
 form_factors = ["desktop"]
@@ -243,6 +243,19 @@ env = "dev"
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry,
 # and extra output will be included in the logs.
 
+[default.image_gcs_v2]
+# MERINO_IMAGE_GCS_V2__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = ""
+
+# MERINO_IMAGE_GCS_V2__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = ""
+
+# MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
+# CDN hostname used for public URLs of stored images
+cdn_hostname = ""
+
 [default.image_gcs]
 # MERINO_IMAGE_GCS__GCS_PROJECT
 # GCS project name that contains domain data
@@ -255,6 +268,11 @@ gcs_bucket = ""
 # MERINO_IMAGE_GCS__CDN_HOSTNAME
 # CDN hostname used for public URLs of stored images
 cdn_hostname = ""
+
+# MERINO_IMAGE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = true
 
 
 [default.icon]
@@ -319,6 +337,53 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
 forecast_ttl_sec = 3600 # 1 hr
+
+[default.providers.sports]
+type="sports"
+# MERINO_PROVIDERS__SPORTS__SPORTS
+# e.g. ["NFL","NBA","NHL"]
+sports=["NFL","NBA","NHL"]
+# Index names for Elastic Search.
+event_index="sports-{lang}-event"
+team_index="sports-{lang}-team"
+max_suggestions = 5
+# Disable this provider by default
+enabled_by_default = false
+# General timeout
+query_timeout_sec = 3.0
+# Temporary value to enable data pre-load "kickstart"
+kickstart = true
+
+[default.providers.sports.es]
+# MERINO_PROVIDERS__SPORTS__ES__DSN
+# DSN to Elastic Search database
+dsn=""
+# MERINO_PROVIDERS__SPORTS__ES__API_KEY
+# API Key for Elastic Search database
+# Using the "basic" key, which allows using locally served
+# versions of elasticsearch
+api_key=""
+# Timeout for an Elastic Search response in milliseconds.
+request_timeout_ms = 300
+
+[default.providers.sports.sportsdata]
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
+# The SportsData API key for local or remote access
+api_key=""
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA_CACHE_DIR
+# Directory to store JSON request responses
+cache_dir="/tmp"
+
+# SportsData may have different base_urls per sport (e.g.
+# NFL may use `https://api.sportsdata.io/v3/nfl/scores/json` where
+# UCL may use `https://api.sportsdata.io/v4/soccer/scores/json`
+# Generally, each sport will handle this, but if the URLs need to be
+# changed quickly, we can specify them here.
+# e.g.
+# base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
+# base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
+
 
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
@@ -397,8 +462,12 @@ metrics_sampling_rate = 0.75
 # MERINO_ACCUWEATHER__DEFAULT_LANGUAGES
 default_languages = [
     "ar",
+    "bg",
     "bn",
+    "cs",
+    "da",
     "de",
+    "el",
     "en-CA",
     "en-GB",
     "en-US",
@@ -409,19 +478,31 @@ default_languages = [
     "es-EC",
     "es-ES",
     "es-MX",
+    "et",
+    "fi",
     "fr",
     "fr-CA",
     "hi-IN",
+    "hr",
+    "hu",
     "id",
+    "is",
     "it",
     "ja",
+    "lt",
+    "lv",
     "kn",
     "mr",
     "ms",
+    "nl",
     "pa-IN",
     "pl",
     "pt-BR",
+    "ro",
     "ru",
+    "sk",
+    "sl",
+    "sv-SE",
     "ta",
     "te",
     "th",
@@ -528,7 +609,7 @@ type = "top_picks"
 
 # MERINO_PROVIDERS__TOP_PICKS__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default. Defaults to true.
-enabled_by_default = true
+enabled_by_default = false
 
 # MERINO_PROVIDERS__TOP_PICKS__SCORE
 # Ranking score for this provider as a floating point number with a default of 0.25.
@@ -638,6 +719,11 @@ backend = "polygon"
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "none"
 
+# MERINO_PROVIDERS__POLYGON__CACHE_DB
+# The db within the redis instance that the clients should connect to.
+# Default is `0`. See redis.py.
+cache_db = 0
+
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
 enabled_by_default = true
@@ -676,13 +762,10 @@ circuit_breaker_failure_threshold = 10
 circuit_breaker_recover_timeout_sec = 30
 
 [default.providers.polygon.cache_ttls]
-# Cache TTLs for finance data.
+# Cache TTLs for Polygon ticker snapshots.
 
-# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__STOCK_TICKER_TTL_SEC
-stock_ticker_ttl_sec = 900 # 15 minutes
-
-# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__INDEX_TICKER_TTL_SEC
-index_ticker_ttl_sec = 900 # 15 minutes
+# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__TICKER_TTL_SEC
+ticker_ttl_sec = 300 # 5 minutes
 
 [default.polygon]
 # MERINO_POLYGON__API_KEY
@@ -694,7 +777,7 @@ api_key = "test"
 url_base = "https://api.polygon.io"
 
 # MERINO_POLYGON__URL_TICKER_SNAPSHOT
-url_single_ticker_snapshot = "/v2/snapshot/locale/us/markets/stocks/tickers/{ticker}"
+url_single_ticker_snapshot = "v3/snapshot"
 
 # MERINO_POLYGON__URL_TICKER_OVERVIEW
 url_single_ticker_overview = "/v3/reference/tickers/{ticker}"
@@ -719,11 +802,11 @@ backend = "yelp"
 # MERINO_PROVIDERS__YELP__CACHE
 # The store used to yelp data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
-cache = "none"
+cache = "redis"
 
 # MERINO_PROVIDERS__YELP__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = true
+enabled_by_default = false
 
 # MERINO_PROVIDERS__YELP__SCORE
 # The ranking score for this provider as a floating point number.
@@ -747,12 +830,103 @@ circuit_breaker_failure_threshold = 10
 # The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
 
+[default.providers.yelp.cache_ttls]
+# Cache TTLs for Yelp business data.
+
+# MERINO_PROVIDERS__YELP__CACHE_TTLS__BUSINESS_SEARCH_TTL_SEC
+business_search_ttl_sec = 86400 # 24 hours
+
 
 [default.yelp]
 # MERINO_YELP__API_KEY
 # The API key to Yelp's API endpoint.
 # In production, this should be set via environment variable as a secret.
 api_key = ""
+
+# MERINO_YELP__URL_BASE
+url_base = "https://api.yelp.com/v3"
+# MERINO_YELP__BUSINESS_SEARCH_URL
+# The endpoint that provides Yelp businesses
+url_business_search = "/businesses/search?location={location}&term={term}&limit={limit}&open_now=true"
+
+
+[default.providers.flightaware]
+# MERINO_PROVIDERS__FLIGHTAWARE__TYPE
+# The type of this provider, should be `flightaware`.
+type = "flightaware"
+
+# MERINO_PROVIDERS__FLIGHTAWARE__BACKEND
+#  The backend of the provider. Either `flightaware` or `test`.
+backend = "flightaware"
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CACHE
+# The store used for flightaware data. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
+cache = "none"
+
+# MERINO_PROVIDERS__FLIGHTAWARE__ENABLED_BY_DEFAULT
+# Whether this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_PROVIDERS__FLIGHTAWARE__SCORE
+# The ranking score for this provider as a floating point number.
+score = 0.29
+
+# MERINO_PROVIDERS__FLIGHTAWARE__QUERY_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period when Merino queries
+# for flightaware data. This will override the default global query timeout.
+query_timeout_sec = 5.0
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CONNECT_TIMEOUT_SEC
+# A floating point (in seconds) indicating the maximum waiting period for the
+# flightaware backend http client to establish a connection to the host.
+connect_timeout_sec = 3.0
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CRON_INTERVAL_SEC
+# The interval of the FlightawareFilemanager cron job (in seconds)
+# The cron job should tick more frequently than `resync_interval_sec` so that
+# the resync failure can be retried soon.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__FLIGHTAWARE__RESYNC_INTERVAL_SEC
+# Time between re-syncs of the flightaware flight numbers file, in seconds.
+# Set to daily.
+resync_interval_sec = 86400
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__FLIGHTAWARE__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
+
+[default.flightaware]
+# MERINO_FLIGHTAWARE__API_KEY
+# The API key to Flight Aware's API endpoint.
+# In production, this should be set via environment variable as a secret.
+api_key = ""
+
+# MERINO_FLIGHTAWARE__STORAGE
+# Storage for flight numbers. Should be either `gcs` or `redis`
+storage = "gcs"
+
+# MERINO_FLIGHTAWARE__BASE_URL
+# The base URL of FlightAware API endpoints.
+base_url = "https://aeroapi.flightaware.com/aeroapi/"
+
+# MERINO_FLIGHTAWARE__SCHEDULES_URL
+# The URL path of FlightAware schedules endpoint.
+schedules_url_path = "/schedules/{start}/{end}?max_pages=20"
+
+# MERINO_FLIGHTAWARE__IDENT_URL
+# The URL path of FlightAware ident endpoint.
+ident_url_path = "flights/{ident}?ident_type=designator&start={start}&end={end}&max_pages=1"
+
+# MERINO_FLIGHTAWARE__LANDING_PAGE_URL
+# The url to the live FlightAware landing page.
+landing_page_url = "https://www.flightaware.com/live/flight/{ident}"
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
@@ -762,7 +936,6 @@ bucket_name = ""
 # MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
-
 
 [default.curated_recommendations.gcs.local_model]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__LOCAL_MODEL__MAX_SIZE

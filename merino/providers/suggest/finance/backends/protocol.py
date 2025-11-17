@@ -18,8 +18,8 @@ class TickerSnapshot(BaseModel):
     """Ticker Snapshot."""
 
     ticker: str
-    todays_change_perc: str
-    last_price: str
+    todays_change_percent: str
+    last_trade_price: str
 
 
 class TickerSummary(BaseModel):
@@ -94,8 +94,8 @@ class FinanceBackend(Protocol):
         ...
 
     async def bulk_download_and_upload_ticker_images(
-        self, tickers: list[str], prefix: str = "tickers"
-    ) -> dict[str, str]:
+        self, tickers: list[str], prefix: str = "polygon"
+    ) -> dict[str, dict[str, str]]:
         """Download and upload images for a list of ticker symbols.
         Uses content hash to deduplicate and skips upload if destination blob already exists.
         """

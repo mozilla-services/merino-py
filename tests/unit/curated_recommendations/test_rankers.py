@@ -1,5 +1,6 @@
 """Unit test for ranker algorithms used to rank curated recommendations."""
 
+import logging
 import uuid
 
 import pytest
@@ -9,15 +10,23 @@ import freezegun
 from freezegun import freeze_time
 
 from pydantic import HttpUrl
+
+from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.engagement_backends.protocol import Engagement
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     MIN_TILE_ID,
     Section,
     SectionConfiguration,
-    InferredInterests,
+    ProcessedInterests,
+    RankingData,
 )
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    DefaultCrawlerRescaler,
+)
+from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
     spread_publishers,
     boost_preferred_topic,
@@ -26,11 +35,181 @@ from merino.curated_recommendations.rankers import (
     renumber_recommendations,
     put_top_stories_first,
     greedy_personalized_section_rank,
+    takedown_reported_recommendations,
+    thompson_sampling,
+    filter_fresh_items_with_probability,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
     generate_sections_feed,
 )
+
+
+class MockEngagementBackend(EngagementBackend):
+    """Mock class implementing the protocol for EngagementBackend."""
+
+    def __init__(self, metrics: dict[str, tuple[int, int]]):
+        # {corpusItemId: (reports, impressions)}
+        self.metrics = metrics
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return a mock Engagement object for a given corpusItemId."""
+        if corpus_item_id not in self.metrics:
+            return None
+        reports, impressions = self.metrics[corpus_item_id]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=0,
+            impression_count=impressions,
+            report_count=reports,
+        )
+
+
+class TestTakedownReportedRecommendations:
+    """Tests for the takedown_reported_recommendations function."""
+
+    def test_empty_list(self):
+        """Test that takedown_reported_recommendations works with an empty list."""
+        backend = MockEngagementBackend({})
+        assert takedown_reported_recommendations([], backend) == []
+
+    def test_no_engagement_data(self):
+        """Test that takedown_reported_recommendations keep all recommendations if no engagement data."""
+        recs = generate_recommendations(item_ids=["1", "2", "3"])
+        backend = MockEngagementBackend({})
+        remaining_recs = takedown_reported_recommendations(recs, backend)
+        assert remaining_recs == recs
+
+    def test_keep_recs_below_threshold(self):
+        """Test that takedown_reported_recommendations keeps reported recommendations with report_ratio <= threshold."""
+        recs = generate_recommendations(item_ids=["a"])
+        # 1 report / 200 impression = 0.005 < 0.01 threshold
+        backend = MockEngagementBackend({"a": (1, 200)})
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01
+        )
+        assert remaining_recs == recs
+
+    def test_remove_recs_above_threshold(self, caplog):
+        """Test that takedown_reported_recommendations removes recommendations with report_ratio > threshold
+        AND report_count > min threshold and logs a warning for the excluded recommendation.
+        """
+        recs = generate_recommendations(item_ids=["reported_rec", "good_rec"])
+
+        # report_ratio_threshold = 1%
+        # "bad" = 25 reports / 50 impressions = 0.50 report_ratio > 0.01 threshold, and 25 >= 20 reports
+        # "good" = 0 reports / 50 impressions = 0.0 report_ratio
+        backend = MockEngagementBackend({"reported_rec": (25, 50), "good_rec": (0, 50)})
+
+        caplog.set_level(logging.WARNING)
+
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01
+        )
+        # Assert only "good_rec" is returned in remaining_recs
+        assert [rec.corpusItemId for rec in remaining_recs] == ["good_rec"]
+
+        # Assert a warning was logged about excluding "reported_rec"
+        warnings = [r.message for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("Excluding reported recommendation" in msg for msg in warnings)
+        # Check extra fields logged for the excluded rec
+        rec = next(r for r in caplog.records if r.levelno == logging.WARNING)
+        assert rec.corpus_item_id == "reported_rec"
+        assert rec.reports == 25
+        assert rec.impressions == 50
+
+    def test_breached_report_ratio_but_low_report_count(self):
+        """Test that takedown_reported_recommendations does not remove a recommendation if report_ratio breaches threshold
+        but report_count < minimum report_count (20).
+        """
+        recs = generate_recommendations(item_ids=["low_reports_rec", "good_rec"])
+
+        # low_reports_rec = 10 report / 50 impressions = 0.2 report_ratio > 0.01 threshold, but report_count = 10 < 20
+        # "good" = 0 reports / 50 impressions = 0.0 report_ratio
+        backend = MockEngagementBackend(
+            {
+                "low_reports_rec": (10, 50),
+                "good_rec": (0, 50),
+            }
+        )
+
+        remaining_recs = takedown_reported_recommendations(
+            recs,
+            backend,
+            report_ratio_threshold=0.01,
+        )
+
+        # Both recommendations should remain because low_reports_rec report_count < 20
+        assert remaining_recs == recs
+
+    def test_safeguard_fraction_applied(self):
+        """Test that takedown_reported_recommendations should only remove up to safeguard fraction,
+        even if more recommendations breach threshold.
+        """
+        recs = generate_recommendations(item_ids=["1", "2", "3", "4"])
+        # All 4 recs breach: 25reports / 50 impressions = 0.5 (50%) report_ratio > 0.01, and 25 >= 20 reports
+        metrics = {corpus_id: (25, 50) for corpus_id in ["1", "2", "3", "4"]}
+        backend = MockEngagementBackend(metrics)
+        # safeguard_cap_takedown_fraction == 50% => ceil(4 recs * 0.5) = max 2 removals
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01, safeguard_cap_takedown_fraction=0.5
+        )
+        # Check that 2 recs were removed, 2 recs should be in the final result
+        assert len(remaining_recs) == 2
+
+    def test_zero_impressions_skipped(self):
+        """Test that takedown_reported_recommendations does not remove recommendations with 0 impressions."""
+        recs = generate_recommendations(item_ids=["1"])
+        # 5 reports / 0 impressions
+        backend = MockEngagementBackend({"1": (5, 0)})
+        remaining_recs = takedown_reported_recommendations(
+            recs, backend, report_ratio_threshold=0.01
+        )
+        # Rec should remain in final result because report_ratio cannot be computed
+        assert [rec.corpusItemId for rec in remaining_recs] == ["1"]
+
+
+class StubPriorBackend(PriorBackend):
+    """Simple PriorBackend stub returning a fixed Prior."""
+
+    def __init__(self, prior: Prior):
+        self._prior = prior
+
+    def get(self, region: str | None = None) -> Prior:
+        """Return prior"""
+        return self._prior
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
+
+
+class StubEngagementBackend(EngagementBackend):
+    """Engagement backend returning pre-set click and impression tuples."""
+
+    def __init__(self, metrics: dict[str, tuple[int, int]]):
+        """Create engagement"""
+        self._metrics = metrics
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return engagement"""
+        if corpus_item_id not in self._metrics:
+            return None
+        clicks, impressions = self._metrics[corpus_item_id]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=clicks,
+            impression_count=impressions,
+            report_count=0,
+        )
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
 
 
 class TestRenumberRecommendations:
@@ -47,6 +226,190 @@ class TestRenumberRecommendations:
         recs = generate_recommendations(item_ids=["1", "2", "3", "4", "5"])
         renumber_recommendations(recs)
         assert [rec.receivedRank for rec in recs] == list(range(len(recs)))
+
+
+class TestFilterFreshItemsWithProbability:
+    """Tests for filter_fresh_items_with_probability helper."""
+
+    def test_returns_slice_when_probability_zero(self):
+        """When probability is zero, simply take the first max_items without a backlog."""
+        recs = generate_recommendations(item_ids=["a", "b", "c"])
+        for rec in recs:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.0, max_items=2
+        )
+
+        assert [rec.corpusItemId for rec in filtered] == ["a", "b"]
+        assert backlog == []
+
+    def test_respects_probability_and_uses_backlog(self, monkeypatch):
+        """Fresh items are deferred to backlog when the probability check fails, then consumed after"""
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "stale1", "fresh3"], time_sensitive_count=0
+        )
+        recs[0].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        recs[1].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
+        recs[2].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        recs[3].ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        random_values = iter([0.9, 0.6, 0.2, 0.6, 0.3, 0.1])
+
+        def fake_random():
+            try:
+                return next(random_values)
+            except StopIteration:
+                return 0.0
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.5, max_items=3
+        )
+
+        filtered_ids = [rec.corpusItemId for rec in filtered]
+        filtered_ids = ["fresh1", "stale1", "fresh2"]
+        assert len(filtered_ids) == 3
+        assert [rec.corpusItemId for rec in backlog] == ["fresh3"]
+
+    def test_backlog_returned_when_not_enough_items_selected(self, monkeypatch):
+        """When filtered list is short, items from backlog fill the gap and remainder is returned."""
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "fresh3"], time_sensitive_count=0
+        )
+        for rec in recs:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        random_values = iter([0.9, 0.9, 0.9, 0.9, 0.9])
+
+        def fake_random():
+            try:
+                return next(random_values)
+            except StopIteration:
+                return 0.9
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+
+        filtered, backlog = filter_fresh_items_with_probability(
+            recs, fresh_story_prob=0.1, max_items=1
+        )
+
+        assert [rec.corpusItemId for rec in filtered] == ["fresh1"]
+        assert [rec.corpusItemId for rec in backlog] == ["fresh2", "fresh3"]
+
+    def test_preserves_rank_order_for_filtered_and_backlog(self, monkeypatch):
+        """Randomized lists should always come back sorted by receivedRank."""
+
+        def is_fresh(item):
+            """Return if item is fresh"""
+            return item.ranking_data.is_fresh
+
+        for length in range(0, 5):
+            recs = generate_recommendations(length=length, time_sensitive_count=0)
+            for rec in recs:
+                rec.ranking_data = RankingData(
+                    alpha=1,
+                    beta=1,
+                    score=1,
+                    is_fresh=random.random() < 0.5,
+                )
+            for max_items in (0, length + 3):
+                filtered, _backlog = filter_fresh_items_with_probability(
+                    recs, fresh_story_prob=0.5, max_items=max_items
+                )
+                assert len(filtered) <= max_items
+                filtered_ranks_fresh = [rec.receivedRank for rec in filter(is_fresh, filtered)]
+                filtered_ranks_not_fresh = [
+                    rec.receivedRank for rec in filter(lambda a: not is_fresh(a), filtered)
+                ]
+                assert filtered_ranks_fresh == sorted(filtered_ranks_fresh)
+                assert filtered_ranks_not_fresh == sorted(filtered_ranks_not_fresh)
+
+
+class TestThompsonSampling:
+    """Tests for the thompson_sampling ranker."""
+
+    def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
+        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        recs = generate_recommendations(
+            item_ids=["fresh", "stale"],
+            topics=[Topic.BUSINESS.value, Topic.SCIENCE.value],
+            time_sensitive_count=0,
+        )
+        for rec in recs:
+            rec.isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend(
+            {
+                "fresh": (0, 4),  # impressions -> no_opens = 4
+                "stale": (0, 12),  # impressions -> no_opens = 12 - greater than beta
+            }
+        )
+        rescaler = DefaultCrawlerRescaler()
+
+        # Make beta sampling deterministic to avoid flakiness.
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
+
+        ranked = thompson_sampling(
+            recs,
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            rescaler=rescaler,
+        )
+
+        assert len(ranked) == 2
+        by_id = {rec.corpusItemId: rec for rec in ranked}
+
+        assert by_id["fresh"].ranking_data is not None
+        assert by_id["stale"].ranking_data is not None
+        assert by_id["fresh"].ranking_data.is_fresh is True
+        assert by_id["stale"].ranking_data.is_fresh is False
+
+    def test_ranking_data_and_fresh_flag_set_with_downranked_items(self, monkeypatch):
+        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        recs = generate_recommendations(
+            item_ids=["fresh1", "stale", "fresh2"],
+            topics=[Topic.BUSINESS.value, Topic.SCIENCE.value, Topic.SCIENCE.value],
+            time_sensitive_count=0,
+        )
+        for rec in recs:
+            rec.isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend(
+            {
+                "fresh1": (2, 4),
+                "stale": (0, 12),
+                "fresh2": (2, 4),
+            }
+        )
+        rescaler = DefaultCrawlerRescaler()
+        rescaler.fresh_items_max = 1
+        rescaler.fresh_items_limit_prior_threshold_multiplier = 1
+        rescaler.fresh_items_section_ranking_max_percentage = 0
+        rescaler.fresh_items_top_stories_max_percentage = 0
+
+        # Make beta sampling deterministic to avoid flakiness.
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
+
+        ranked = thompson_sampling(
+            recs,
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            rescaler=rescaler,
+        )
+
+        assert len(ranked) == 3
+        by_id = {rec.corpusItemId: rec for rec in ranked}
+
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
+        assert by_id["fresh1"].ranking_data is not None
+        assert by_id["fresh2"].ranking_data.is_fresh is True
 
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""
@@ -648,13 +1011,15 @@ class TestGreedyPersonalizedSectionRanker:
         # extract titles and build InferredInterests
         sec_titles = [sec for sec in sections]
         personal_sections = [sec_titles[i] for i in [4, 10, 13, 15]]
-        personal_interests = InferredInterests({k: i for i, k in enumerate(personal_sections)})
+        personal_interests = ProcessedInterests(
+            scores={k: float(i) for i, k in enumerate(personal_sections)}
+        )
         # store original order of sections not in inferredInterests
         original_order = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
         original_order = [
             k
             for k in original_order
-            if k not in personal_sections or personal_interests.root[k] < 0.0092
+            if k not in personal_sections or personal_interests.scores.get(k, 0) < 0.0092
         ]
         # rerank the sections
         reranked_sections = greedy_personalized_section_rank(
@@ -679,7 +1044,7 @@ class TestGreedyPersonalizedSectionRanker:
         # store the original ranking
         original_ranking = {sec: sections[sec].receivedFeedRank for sec in sections}
         # inferredinterests is empty
-        personal_interests = InferredInterests({})
+        personal_interests = ProcessedInterests(scores={})
         # rerank the sections
         reranked_sections = greedy_personalized_section_rank(
             sections=sections, personal_interests=personal_interests, epsilon=0.0
@@ -694,7 +1059,7 @@ class TestGreedyPersonalizedSectionRanker:
         sections = generate_sections_feed(section_count=16)
         # inferredinterests is empty
         bogus = "asflkjdfoij"
-        personal_interests = InferredInterests({bogus: 1.0})
+        personal_interests = ProcessedInterests(scores={bogus: 1.0})
         # rerank the sections
         reranked_sections = greedy_personalized_section_rank(
             sections=sections, personal_interests=personal_interests, epsilon=0.0

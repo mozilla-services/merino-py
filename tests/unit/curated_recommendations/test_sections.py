@@ -14,31 +14,45 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusSection,
     CorpusItem,
     IABMetadata,
+    CreateSource,
 )
+from merino.curated_recommendations.engagement_backends.protocol import Engagement
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
+)
+from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    SchedulerHoldbackRescaler,
+    DefaultCrawlerRescaler,
 )
 from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ExperimentName,
+    CrawlExperimentBranchName,
     CuratedRecommendation,
+    RankingData,
 )
+from merino.curated_recommendations.rankers import section_thompson_sampling
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
-    is_ml_sections_experiment,
+    is_subtopics_experiment,
+    is_custom_sections_experiment,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
-    remove_top_story_recs,
+    remove_story_recs,
     get_corpus_sections_for_legacy_topic,
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
     get_top_story_list,
+    is_crawl_section_id,
+    get_legacy_topic_ids,
+    split_headlines_section,
+    put_headlines_first_then_top_stories,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -64,7 +78,7 @@ def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> Corp
 
 @pytest.fixture
 def sample_backend_data() -> list[CorpusSection]:
-    """Build three corpus sections: 'secA' with 2 items, 'secB' with 1 item, 'secC' with 3 items using the helper."""
+    """Build three corpus sections using legacy topic IDs: 'business' with 2 items, 'sports' with 1 item, 'tech' with 3 items."""
     return [
         CorpusSection(
             sectionItems=[
@@ -74,8 +88,9 @@ def sample_backend_data() -> list[CorpusSection]:
             title=f"Title_{sec_id}",
             externalId=sec_id,
             iab=IABMetadata(categories=["324"]),
+            createSource=CreateSource.ML,
         )
-        for sec_id, count in [("secA", 2), ("secB", 1), ("secC", 3)]
+        for sec_id, count in [("business", 2), ("sports", 1), ("tech", 3)]
     ]
 
 
@@ -193,20 +208,372 @@ class TestAdjustAdsInSections:
 
 
 class TestMlSectionsExperiment:
-    """Tests covering is_ml_sections_experiment"""
+    """Tests covering is_subtopics_experiment"""
+
+    @pytest.mark.parametrize(
+        "name,branch,region,expected",
+        [
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control", "US", False),
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", False),
+            ("other", "treatment", "US", True),
+            ("other", "treatment", "ZZ", False),
+        ],
+    )
+    def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
+        """Test that experiment flag logic matches expected behavior for both ML sections and crawl experiments."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
+        assert is_subtopics_experiment(req) is expected
+
+
+class TestCustomSectionsExperiment:
+    """Tests covering is_custom_sections_experiment"""
 
     @pytest.mark.parametrize(
         "name,branch,expected",
         [
-            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "treatment", True),
-            (ExperimentName.ML_SECTIONS_EXPERIMENT.value, "control", False),
+            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment", True),
+            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "control", False),
             ("other", "treatment", False),
+            (None, None, False),
         ],
     )
-    def test_flag_logic(self, name, branch, expected):
-        """Test that ML sections experiment flag matches expected logic"""
+    def test_custom_sections_experiment_flag(self, name, branch, expected):
+        """Test that custom sections experiment flag logic matches expected behavior."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch)
-        assert is_ml_sections_experiment(req) is expected
+        assert is_custom_sections_experiment(req) is expected
+
+    @pytest.mark.parametrize(
+        "name,branch,region,expected_branch",
+        [
+            (
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "control",
+                "US",
+                CrawlExperimentBranchName.CONTROL.value,
+            ),
+            (
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "other",
+                "US",
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+            ),
+            (
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "other",
+                "CA",
+                CrawlExperimentBranchName.CONTROL.value,
+            ),
+            (
+                "other-exp",
+                "other-branch",
+                "CA",
+                CrawlExperimentBranchName.CONTROL.value,
+            ),
+            (
+                "other-exp",
+                "other-branch",
+                "US",
+                CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
+            ),
+        ],
+    )
+    def test_get_crawl_experiment_branch(self, name, branch, region, expected_branch):
+        """Test that get_crawl_experiment_branch returns correct branch"""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
+        from merino.curated_recommendations.sections import get_crawl_experiment_branch
+
+        assert get_crawl_experiment_branch(req) == expected_branch
+
+    @pytest.mark.parametrize(
+        "name,branch,region,expected_class",
+        [
+            (
+                None,
+                None,
+                "US",
+                DefaultCrawlerRescaler,
+            ),
+            (
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "control",
+                "US",
+                SchedulerHoldbackRescaler,
+            ),
+            (
+                ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
+                "treatment-crawl-subtopics",
+                "US",
+                DefaultCrawlerRescaler,
+            ),
+            ("other", "treatment", "US", DefaultCrawlerRescaler),
+            ("other", "treatment", "CA", None),
+            (None, None, "US", DefaultCrawlerRescaler),
+            (None, None, "CA", None),
+        ],
+    )
+    def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
+        """Test that we get the appropriate rescaler"""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
+        from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
+
+        if expected_class is not None:
+            assert isinstance(get_ranking_rescaler_for_branch(req), expected_class)
+        else:
+            assert get_ranking_rescaler_for_branch(req) is None
+
+    def test_filter_sections_treatment_crawl(self):
+        """Test that treatment-crawl branch gets only crawl legacy sections"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+
+        # Create test sections with legacy topics and subtopics
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="tech", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="business", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="ai-trends", createSource=CreateSource.ML),  # subtopic
+            MagicMock(
+                externalId="ai-trends_crawl", createSource=CreateSource.ML
+            ),  # subtopic crawl (shouldn't exist but testing)
+        ]
+
+        # treatment-crawl should get only crawl legacy sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
+        )
+
+        assert len(result) == 2
+        assert "health" in result
+        assert "tech" in result
+        assert result["health"].externalId == "health_crawl"
+        assert result["tech"].externalId == "tech_crawl"
+        assert "business" not in result  # No crawl version available
+        assert "ai-trends" not in result  # Subtopic not included in treatment-crawl
+
+    def test_filter_sections_treatment_crawl_plus_subtopics(self):
+        """Test that treatment-crawl-plus-subtopics gets crawl legacy + regular subtopics"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+
+        # Create test sections
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),  # legacy
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),  # legacy crawl
+            MagicMock(externalId="ai-trends", createSource=CreateSource.ML),  # subtopic
+            MagicMock(externalId="ml-research", createSource=CreateSource.ML),  # subtopic
+        ]
+
+        # treatment-crawl-plus-subtopics should get crawl legacy + regular subtopics
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
+        )
+
+        assert len(result) == 4
+        assert "health" in result
+        assert result["health"].externalId == "health_crawl"
+        assert "tech" in result
+        assert result["tech"].externalId == "tech_crawl"
+        assert "ai-trends" in result
+        assert result["ai-trends"].externalId == "ai-trends"
+        assert "ml-research" in result
+        assert result["ml-research"].externalId == "ml-research"
+
+    def test_filter_sections_control(self):
+        """Test that control branch gets only non-crawl sections"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+
+        # Create test sections with and without _crawl suffix
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="business", createSource=CreateSource.ML),
+        ]
+
+        # Control branch should get only non-crawl sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.CONTROL.value, include_subtopics=True
+        )
+
+        assert len(result) == 3
+        assert "health" in result
+        assert "tech" in result
+        assert "business" in result
+        assert "health_crawl" not in result
+        assert "tech_crawl" not in result
+
+    def test_filter_sections_by_experiment_empty_input(self):
+        """Test that empty corpus sections return empty result"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
+        # Empty input should return empty output
+        result = filter_sections_by_experiment(
+            [], crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
+        )
+        assert result == {}
+
+        result = filter_sections_by_experiment(
+            [], crawl_branch=CrawlExperimentBranchName.CONTROL.value
+        )
+        assert result == {}
+
+    def test_filter_sections_by_experiment_mixed_sections(self):
+        """Test that sections with mixed _crawl and non-_crawl for same topic are handled correctly"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
+        # Create sections with mixed _crawl and non-_crawl for same topic
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="tech_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="business", createSource=CreateSource.ML),
+            MagicMock(externalId="business_crawl", createSource=CreateSource.ML),
+        ]
+
+        # Treatment branch should get only crawl sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
+        )
+        assert len(result) == 3
+        assert "health" in result
+        assert "tech" in result
+        assert "business" in result
+        # Verify externalId is preserved
+        assert result["health"].externalId == "health_crawl"
+        assert result["tech"].externalId == "tech_crawl"
+        assert result["business"].externalId == "business_crawl"
+
+        # Control branch should get only non-crawl sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.CONTROL.value, include_subtopics=True
+        )
+        assert len(result) == 3
+        assert "health" in result
+        assert "tech" in result
+        assert "business" in result
+        # Verify externalId is preserved
+        assert result["health"].externalId == "health"
+        assert result["tech"].externalId == "tech"
+        assert result["business"].externalId == "business"
+
+    def test_filter_sections_by_experiment_malformed_ids(self):
+        """Test that malformed section IDs are handled gracefully"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
+        # Create sections with potentially malformed IDs
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(
+                externalId="health_crawl_extra", createSource=CreateSource.ML
+            ),  # Extra suffix
+            MagicMock(externalId="_crawl", createSource=CreateSource.ML),  # Just the suffix
+            MagicMock(externalId="crawl_health", createSource=CreateSource.ML),  # Suffix in middle
+            MagicMock(externalId="", createSource=CreateSource.ML),  # Empty ID
+        ]
+
+        # Treatment branch should get only sections ending with _crawl that are legacy topics
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value
+        )
+        assert len(result) == 1
+        assert "health" in result  # health_crawl -> health
+        # _crawl -> "" is not included because "" is not a legacy topic
+
+        # Control branch should get only sections NOT ending with _crawl that are legacy topics
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=CrawlExperimentBranchName.CONTROL.value
+        )
+        assert len(result) == 1
+        assert "health" in result
+        # Other sections are not included because they're not legacy topics
+        assert "health_extra" not in result
+        assert "crawl_health" not in result
+        assert "" not in result  # Empty string is not a legacy topic
+
+    def test_filter_sections_custom_sections_treatment(self):
+        """Test that custom sections experiment treatment only includes MANUAL sections"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.corpus_backends.protocol import CreateSource
+
+        # Create test sections with different createSource values
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
+        ]
+
+        # Custom sections experiment treatment: should only get MANUAL sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=None, is_custom_sections_experiment=True
+        )
+
+        assert len(result) == 2
+        assert "custom-section-1" in result
+        assert "custom-section-2" in result
+        assert result["custom-section-1"].createSource == CreateSource.MANUAL
+        assert result["custom-section-2"].createSource == CreateSource.MANUAL
+        assert "health" not in result
+        assert "tech" not in result
+
+    def test_filter_sections_custom_sections_control(self):
+        """Test that custom sections experiment control excludes MANUAL sections"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.corpus_backends.protocol import CreateSource
+
+        # Create test sections with different createSource values
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
+            MagicMock(externalId="tech", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
+        ]
+
+        # Custom sections experiment control: should exclude MANUAL sections
+        result = filter_sections_by_experiment(
+            sections, crawl_branch=None, is_custom_sections_experiment=False
+        )
+
+        assert len(result) == 2
+        assert "health" in result
+        assert "tech" in result
+        assert result["health"].createSource == CreateSource.ML
+        assert result["tech"].createSource == CreateSource.ML
+        assert "custom-section-1" not in result
+        assert "custom-section-2" not in result
+
+    def test_filter_sections_custom_sections_with_crawl_experiment(self):
+        """Test that custom sections experiment takes precedence over crawl experiment"""
+        from merino.curated_recommendations.sections import filter_sections_by_experiment
+        from merino.curated_recommendations.corpus_backends.protocol import CreateSource
+
+        # Create test sections with different createSource values
+        sections = [
+            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health_crawl", createSource=CreateSource.ML),
+            MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
+        ]
+
+        # Custom sections experiment treatment should ignore crawl_branch
+        result = filter_sections_by_experiment(
+            sections,
+            crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+            is_custom_sections_experiment=True,
+        )
+
+        # Only MANUAL sections should be returned
+        assert len(result) == 1
+        assert "custom-section-1" in result
+        assert result["custom-section-1"].createSource == CreateSource.MANUAL
+        assert "health" not in result
 
 
 class TestUpdateReceivedFeedRank:
@@ -305,7 +672,9 @@ class TestMapCorpusSectionToSection:
 
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
-        empty_cs = CorpusSection(sectionItems=[], title="Empty", externalId="empty")
+        empty_cs = CorpusSection(
+            sectionItems=[], title="Empty", externalId="empty", createSource=CreateSource.ML
+        )
         sec = map_corpus_section_to_section(empty_cs, 7)
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
@@ -371,30 +740,77 @@ class TestGetCorpusSectionsForLegacyTopics:
         assert result == legacy_sections
 
 
-class TestRemoveTopStoryRecs:
-    """Tests for remove_top_story_recs."""
+class TestGetLegacyTopicIds:
+    """Tests for get_legacy_topic_ids."""
 
-    def test_remove_top_story_recs(self):
-        """Removes recommendations that are in the top_stories_section."""
+    def test_returns_all_legacy_topic_ids(self):
+        """Should return the set of all Topic enum values."""
+        expected = {
+            "business",
+            "career",
+            "arts",
+            "food",
+            "health",
+            "home",
+            "finance",
+            "government",
+            "sports",
+            "tech",
+            "travel",
+            "education",
+            "hobbies",
+            "society-parenting",
+            "education-science",
+            "society",
+        }
+        assert get_legacy_topic_ids() == expected
+
+
+class TestIsCrawlSectionId:
+    """Tests for is_crawl_section_id."""
+
+    def test_crawl_section_returns_true(self):
+        """Should return True for section IDs ending with '_crawl'."""
+        assert is_crawl_section_id("technology_crawl") is True
+        assert is_crawl_section_id("sports_crawl") is True
+        assert is_crawl_section_id("some_section_crawl") is True
+
+    def test_non_crawl_section_returns_false(self):
+        """Should return False for section IDs not ending with '_crawl'."""
+        assert is_crawl_section_id("technology") is False
+        assert is_crawl_section_id("sports") is False
+        assert is_crawl_section_id("crawl") is False
+        assert is_crawl_section_id("crawl_technology") is False
+
+    def test_empty_string_returns_false(self):
+        """Should return False for empty string."""
+        assert is_crawl_section_id("") is False
+
+
+class TestRemoveStoryRecs:
+    """Tests for remove_story_recs."""
+
+    def test_remove_story_recs(self):
+        """Removes certain recommendations."""
         # generate 5 recs
         recommendations = generate_recommendations(5, ["a", "b", "c", "d", "e"])
         # 3 recs in top_stories_section
-        top_story_ids = {"a", "d", "e"}
+        story_ids_to_remove = {"a", "d", "e"}
 
-        result = remove_top_story_recs(recommendations, top_story_ids)
+        result = remove_story_recs(recommendations, story_ids_to_remove)
 
-        # the 3 top story ids should not be present, result should have 2 recs
+        # the 3 story ids to remove should not be present, result should have 2 recs
         assert len(result) == 2
         assert result[0].corpusItemId == "b"
         assert result[1].corpusItemId == "c"
 
     def test_recs_unchanged_no_match_found(self):
-        """Return original list of recommendations if no corpus Ids match top_story_ids."""
+        """Return original list of recommendations if no corpus Ids match story_ids_to_remove."""
         # generate 3 recs
         recommendations = generate_recommendations(3, ["a", "b", "c"])
-        # rec ids for top stories, not found in recs list
-        top_story_ids = {"z", "xy"}
-        result = remove_top_story_recs(recommendations, top_story_ids)
+        # rec ids to remove, not found in recs list
+        story_ids_to_remove = {"z", "xy"}
+        result = remove_story_recs(recommendations, story_ids_to_remove)
 
         assert result == recommendations
 
@@ -402,9 +818,9 @@ class TestRemoveTopStoryRecs:
         """Return empty list if  all recommendations are top stories"""
         # generate 3 recs
         recommendations = generate_recommendations(3, ["a", "b", "c"])
-        # rec ids for top stories, all 3 ids match original recommendations list
-        top_story_ids = {"a", "b", "c"}
-        result = remove_top_story_recs(recommendations, top_story_ids)
+        # rec ids to remove, all 3 ids match original recommendations list
+        story_ids_to_remove = {"a", "b", "c"}
+        result = remove_story_recs(recommendations, story_ids_to_remove)
 
         assert result == []
 
@@ -470,6 +886,131 @@ class TestGetTopStoryList:
             assert item.receivedRank == ix
         assert [i.corpusItemId for i in result] == ["a", "b", "d", "e"]  # skip one item "c"
 
+    # Below tests are for rate-limiting on fresh content with no impressions yet
+
+    def test_returns_top_count_items_when_none_fresh(self):
+        """Should return exactly `top_count` items from start of list, not using
+        rescaler because no items have fresh label
+        """
+        rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
+        items = generate_recommendations(item_ids=["a", "b", "c", "d", "e"])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=False)
+        result = get_top_story_list(items, top_count=3, extra_count=0, rescaler=rescaler)
+        assert len(result) == 3
+        assert [i.corpusItemId for i in result] == ["a", "b", "c"]
+
+    def test_all_fresh_items_without_rescaler_returns_top_slice(self):
+        """No special handling of fresh items when there is no rescalar."""
+        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+
+        result = get_top_story_list(items, top_count=3, extra_count=0, extra_source_depth=0)
+
+        assert [rec.corpusItemId for rec in result] == ["a", "b", "c"]
+        assert [rec.receivedRank for rec in result] == [0, 1, 2]
+
+    def test_rescaler_keeps_probability_capped_fresh_items(self, monkeypatch):
+        """Ensure rescaler-controlled fresh limit passes through fresh items."""
+        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.1)
+
+        result = get_top_story_list(
+            items, top_count=3, extra_count=0, extra_source_depth=0, rescaler=rescaler
+        )
+        assert [rec.corpusItemId for rec in result] == ["a", "b", "c"]
+        assert [rec.receivedRank for rec in result] == [0, 1, 2]
+
+    def test_rescaler_backfills_fresh_when_random_never_allows(self, monkeypatch):
+        """When probability never allows fresh picks, backlog of fresh picks fill the quota
+        See - filter_fresh_items_with_probability for additional tests
+        """
+        items = generate_recommendations(item_ids=["a", "b", "c", "d"], topics=list(Topic)[:4])
+        for rec in items:
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
+        rescaler = DefaultCrawlerRescaler(fresh_items_top_stories_max_percentage=0.5)
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.9)
+
+        result = get_top_story_list(
+            items, top_count=2, extra_count=0, extra_source_depth=0, rescaler=rescaler
+        )
+
+        assert [rec.corpusItemId for rec in result] == ["a", "b"]
+        assert [rec.receivedRank for rec in result] == [0, 1]
+
+
+class DummyTrackingEngagementBackend:
+    """Simple engagement backend that records which items were requested."""
+
+    def __init__(self, metrics: dict[str, tuple[int, int]]):
+        self._metrics = metrics
+        self.requests: list[str] = []
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return engagement"""
+        self.requests.append(corpus_item_id)
+        if corpus_item_id not in self._metrics:
+            return None
+        clicks, impressions = self._metrics[corpus_item_id]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=clicks,
+            impression_count=impressions,
+            report_count=0,
+        )
+
+    @property
+    def update_count(self) -> int:
+        """Dummy function"""
+        return 0
+
+
+class TestSectionThompsonSampling:
+    """Tests for section_thompson_sampling fresh item handling."""
+
+    def test_limits_fresh_items_when_rescaler_cap_active(self, monkeypatch):
+        """Only allow fresh items up to cap when enough non-fresh content exists."""
+        rescaler = DefaultCrawlerRescaler(fresh_items_section_ranking_max_percentage=0.1)
+        recs = generate_recommendations(
+            item_ids=["fresh1", "fresh2", "fresh3", "stale1", "stale2"],
+            time_sensitive_count=0,
+            topics=list(Topic)[:5],
+        )
+        for idx, rec in enumerate(recs):
+            rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=idx < 3)
+
+        metrics = {rec.corpusItemId: (idx + 1, (idx + 1) * 10) for idx, rec in enumerate(recs)}
+        backend = DummyTrackingEngagementBackend(metrics)
+
+        sections = {
+            "sec": Section(
+                receivedFeedRank=0,
+                recommendations=recs,
+                title="Section",
+                layout=copy.deepcopy(layout_4_medium),
+            )
+        }
+
+        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.5)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.8)
+
+        section_thompson_sampling(sections, backend, top_n=4, rescaler=rescaler)
+
+        expected_ids = [
+            recs[3].corpusItemId,
+            recs[4].corpusItemId,
+            recs[0].corpusItemId,
+            recs[1].corpusItemId,
+        ]
+        assert backend.requests == expected_ids
+
 
 class TestCycleLayoutsForRankedSections:
     """Tests for cycle_layouts_for_ranked_sections."""
@@ -482,7 +1023,7 @@ class TestCycleLayoutsForRankedSections:
         assert all(s.layout == layout_4_medium for s in sections.values())
 
         # Apply layout cycling
-        cycle_layouts_for_ranked_sections(sections)
+        cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
         # Check layouts were cycled through LAYOUT_CYCLE
         for idx, section in enumerate(sections.values()):
@@ -497,7 +1038,7 @@ class TestCycleLayoutsForRankedSections:
         assert all(s.layout == layout_4_medium for s in sections.values())
 
         # Apply layout cycling
-        cycle_layouts_for_ranked_sections(sections)
+        cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
         # top_stories_section layout should remain layout_4_medium
         assert sections["top_stories_section"].layout == layout_4_medium
@@ -512,8 +1053,221 @@ class TestCycleLayoutsForRankedSections:
             assert section.layout == expected_layout
 
 
+class TestPutHeadlinesFirstThenTopStories:
+    """Tests for put_headlines_first_then_top_stories."""
+
+    def test_headlines_not_present(self):
+        """Test if headlines section is not present, ranks and order are unchanged for other sections."""
+        sections = generate_sections_feed(section_count=4, has_top_stories=True)
+
+        # Save original sectionId -> rank for comparison
+        original_sections = {sid: sec.receivedFeedRank for sid, sec in sections.items()}
+
+        result = put_headlines_first_then_top_stories(sections)
+
+        # Nothing should be changed
+        assert result is sections
+        new_sections = {sid: sec.receivedFeedRank for sid, sec in result.items()}
+        assert new_sections == original_sections
+
+    def test_with_headlines_and_top_stories(self):
+        """Test when headlines is put on top (0), top_stories right after (1) & other sections are rank=2...N and preserve relative order."""
+        feed = generate_sections_feed(section_count=6, has_top_stories=True)
+        top_stories_section = feed["top_stories_section"]
+        top_stories_section.receivedFeedRank = 0
+
+        # Insert headlines section at rank 3
+        feed["headlines_section"] = Section(
+            receivedFeedRank=3,
+            recommendations=[],
+            title="Your Briefing",
+            layout=copy.deepcopy(layout_4_medium),
+        )
+        headlines_section = feed["headlines_section"]
+
+        put_headlines_first_then_top_stories(feed)
+
+        # Check ranks for headlines & top_stories are updated
+        assert headlines_section.receivedFeedRank == 0
+        assert top_stories_section.receivedFeedRank == 1
+
+        # Get the other sections besides headlines & top_stories
+        remaining_sections = sorted(
+            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            key=lambda sid: feed[sid].receivedFeedRank,
+        )
+
+        # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
+        expected_order = ["headlines_section", "top_stories_section"] + remaining_sections
+
+        for idx, sid in enumerate(expected_order):
+            assert feed[sid].receivedFeedRank == idx
+
+    def test_with_headlines_and_no_top_stories(self):
+        """Test when no top_stories present, headlines is put on top & other sections are rank=1...N and preserve relative order."""
+        feed = generate_sections_feed(section_count=6, has_top_stories=False)
+
+        # Insert headlines section at rank 3
+        feed["headlines_section"] = Section(
+            receivedFeedRank=3,
+            recommendations=[],
+            title="Your Briefing",
+            layout=copy.deepcopy(layout_4_medium),
+        )
+        headlines_section = feed["headlines_section"]
+
+        # Get the other sections besides headlines & top_stories
+        remaining_sections = sorted(
+            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            key=lambda sid: feed[sid].receivedFeedRank,
+        )
+
+        put_headlines_first_then_top_stories(feed)
+
+        # Headlines should be on top rank==0
+        assert headlines_section.receivedFeedRank == 0
+
+        # Expected: headlines first -> then rest in keys order without headlines & top
+        expected_order = ["headlines_section"] + remaining_sections
+
+        for idx, sid in enumerate(expected_order):
+            assert feed[sid].receivedFeedRank == idx
+
+
+class TestSplitHeadlinesSection:
+    """Tests for split_headlines_section."""
+
+    def generate_corpus_section(self, external_id: str, title: str = "") -> CorpusSection:
+        """Generate a minimal corpus section."""
+        corpus_section = MagicMock()
+        corpus_section.externalId = external_id
+        corpus_section.title = title
+
+        return corpus_section
+
+    def test_returns_headlines_section_and_remaining_sections_when_present(self):
+        """Test if headlines_crawl exists, return it separately and exclude from remaining sections."""
+        headlines = self.generate_corpus_section("headlines_crawl", "Your Briefing")
+        sports = self.generate_corpus_section("sports")
+        tech = self.generate_corpus_section("tech")
+
+        headlines_section, remaining_sections = split_headlines_section([headlines, sports, tech])
+
+        # headlines should not be in the remaining sections
+        assert all(cs.externalId != "headlines_crawl" for cs in remaining_sections)
+
+        assert headlines_section is not None
+        assert headlines_section.title == headlines.title
+        assert remaining_sections == [sports, tech]
+
+    def test_returns_none_for_headlines_when_not_present(self):
+        """Test if headlines_crawl is not present, return None and original section list."""
+        sports = self.generate_corpus_section("sports")
+        tech = self.generate_corpus_section("tech")
+
+        headlines, remaining = split_headlines_section([sports, tech])
+
+        assert headlines is None
+        assert remaining == [sports, tech]
+
+
 class TestGetCorpusSections:
-    """Simplified tests for get_corpus_sections."""
+    """Tests for get_corpus_sections function."""
+
+    @pytest.fixture
+    def sections_backend_with_crawl_data(self):
+        """Fake SectionsProtocol returning data with both _crawl and non-_crawl sections."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
+
+        # Create test data with both _crawl and non-_crawl sections
+        # Mock the required attributes properly
+        health_crawl = MagicMock()
+        health_crawl.externalId = "health_crawl"
+        health_crawl.title = "Health (Crawl)"
+        health_crawl.description = None
+        health_crawl.heroTitle = None
+        health_crawl.heroSubtitle = None
+        health_crawl.sectionItems = []
+        health_crawl.iab = None
+        health_crawl.createSource = CreateSource.ML
+
+        tech_crawl = MagicMock()
+        tech_crawl.externalId = "tech_crawl"
+        tech_crawl.title = "Tech (Crawl)"
+        tech_crawl.description = None
+        tech_crawl.heroTitle = None
+        tech_crawl.heroSubtitle = None
+        tech_crawl.sectionItems = []
+        tech_crawl.iab = None
+        tech_crawl.createSource = CreateSource.ML
+
+        sports = MagicMock()
+        sports.externalId = "sports"
+        sports.title = "Sports"
+        sports.description = None
+        sports.heroTitle = None
+        sports.heroSubtitle = None
+        sports.sectionItems = []
+        sports.iab = None
+        sports.createSource = CreateSource.ML
+
+        arts = MagicMock()
+        arts.externalId = "arts"
+        arts.title = "Arts"
+        arts.description = None
+        arts.heroTitle = None
+        arts.heroSubtitle = None
+        arts.sectionItems = []
+        arts.iab = None
+        arts.createSource = CreateSource.ML
+
+        crawl_data = [health_crawl, tech_crawl, sports, arts]
+
+        mock_backend.fetch = AsyncMock(return_value=crawl_data)
+        return mock_backend
+
+    @pytest.fixture
+    def sections_backend_with_headlines_section_and_crawl_data(self):
+        """Fake SectionsProtocol returning data with both headlines, _crawl and non-_crawl sections."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
+
+        # Create test data with both _crawl and non-_crawl sections
+        # Mock the required attributes properly
+        tech_crawl = MagicMock()
+        tech_crawl.externalId = "tech_crawl"
+        tech_crawl.title = "Tech (Crawl)"
+        tech_crawl.description = None
+        tech_crawl.heroTitle = None
+        tech_crawl.heroSubtitle = None
+        tech_crawl.sectionItems = []
+        tech_crawl.iab = None
+        tech_crawl.createSource = CreateSource.ML
+
+        sports = MagicMock()
+        sports.externalId = "sports"
+        sports.title = "Sports"
+        sports.description = None
+        sports.heroTitle = None
+        sports.heroSubtitle = None
+        sports.sectionItems = []
+        sports.iab = None
+        sports.createSource = CreateSource.ML
+
+        # headlines_section -- to be split out from the rest of the sections
+        headlines_crawl = MagicMock()
+        headlines_crawl.externalId = "headlines_crawl"
+        headlines_crawl.title = "Headlines"
+        headlines_crawl.description = "Top Headlines today"
+        headlines_crawl.heroTitle = None
+        headlines_crawl.heroSubtitle = None
+        headlines_crawl.sectionItems = []
+        headlines_crawl.iab = {"taxonomy": "IAB-3.0", "categories": ["386", "JLBCU7"]}
+        headlines_crawl.createSource = CreateSource.ML
+
+        crawl_data = [tech_crawl, sports, headlines_crawl]
+
+        mock_backend.fetch = AsyncMock(return_value=crawl_data)
+        return mock_backend
 
     @pytest.fixture
     def sections_backend(self, sample_backend_data):
@@ -533,22 +1287,128 @@ class TestGetCorpusSections:
     @pytest.mark.asyncio
     async def test_section_transformation(self, sections_backend, sample_backend_data):
         """Verify mapping logic for get_corpus_sections."""
-        result = await get_corpus_sections(
+        headlines, result = await get_corpus_sections(
             sections_backend=sections_backend, surface_id=SurfaceId.NEW_TAB_EN_US, min_feed_rank=5
         )
 
+        # No headlines section present here
+        assert headlines is None
+
         assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
-        section_a = result["secA"]
+        section_a = result["business"]
         assert section_a.receivedFeedRank == 5
         assert len(section_a.recommendations) == 2
         assert section_a.layout == layout_6_tiles
 
-        section_b = result["secB"]
+        section_b = result["sports"]
         assert section_b.receivedFeedRank == 6
         assert len(section_b.recommendations) == 1
         assert section_b.layout == layout_6_tiles
 
-        section_c = result["secC"]
+        section_c = result["tech"]
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
         assert section_c.layout == layout_6_tiles
+
+    @pytest.mark.asyncio
+    async def test_crawl_treatment_filters_correctly(self, sections_backend_with_crawl_data):
+        """Test that treatment branch only gets _crawl sections."""
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
+        _, result = await get_corpus_sections(
+            sections_backend=sections_backend_with_crawl_data,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+            crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+        )
+
+        # Should only contain _crawl sections mapped to their base IDs
+        assert "health" in result  # health_crawl -> health
+        assert "tech" in result  # tech_crawl -> tech
+        assert "sports" not in result
+        assert "arts" not in result
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_control_branch_filters_correctly(self, sections_backend_with_crawl_data):
+        """Test that control branch only gets non-_crawl sections."""
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
+        _, result = await get_corpus_sections(
+            sections_backend=sections_backend_with_crawl_data,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+            crawl_branch=CrawlExperimentBranchName.CONTROL.value,
+        )
+
+        # Should only contain non-_crawl sections that are legacy topics
+        assert "health_crawl" not in result
+        assert "tech_crawl" not in result
+        assert "sports" in result
+        # arts is a legacy topic so it should be included
+        assert "arts" in result
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_default_parameter_filters_correctly(self, sections_backend_with_crawl_data):
+        """Test that default parameter (False) filters out _crawl sections."""
+        _, result = await get_corpus_sections(
+            sections_backend=sections_backend_with_crawl_data,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+            # is_crawl_treatment defaults to False
+        )
+
+        # Should only contain non-_crawl sections that are legacy topics (default behavior)
+        assert "health_crawl" not in result
+        assert "tech_crawl" not in result
+        assert "sports" in result
+        # arts is a legacy topic so it should be included
+        assert "arts" in result
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_headlines_split_and_returned_when_present(
+        self, sections_backend_with_headlines_section_and_crawl_data
+    ):
+        """Test when headlines_crawl exists, it is split out from the other sections & returned separately."""
+        headlines, result = await get_corpus_sections(
+            sections_backend=sections_backend_with_headlines_section_and_crawl_data,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+        )
+
+        # Headlines should be returned separately from the rest of the result
+        assert headlines is not None
+        assert headlines.title == "Headlines"
+        assert headlines.subtitle == "Top Headlines today"
+
+        # The remaining result should not contain headlines_section; should contain only non-crawl legacy topics
+        assert "headlines_crawl" not in result
+        assert "sports" in result
+        assert "tech_crawl" not in result  # no crawl branch selected
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_headlines_not_filtered_by_crawl_branch(
+        self, sections_backend_with_headlines_section_and_crawl_data
+    ):
+        """Test headlines_crawl is isolated from crawl/zyte filter."""
+        from merino.curated_recommendations.protocol import CrawlExperimentBranchName
+
+        headlines, result = await get_corpus_sections(
+            sections_backend=sections_backend_with_headlines_section_and_crawl_data,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+            crawl_branch=CrawlExperimentBranchName.TREATMENT_CRAWL.value,
+        )
+
+        # Headlines should be returned separately from the rest of the result
+        assert headlines is not None
+        assert headlines.title == "Headlines"
+        assert headlines.subtitle == "Top Headlines today"
+
+        # Remaining sections should only contain _crawl sections mapped to their base IDs
+        assert "sports" not in result
+        assert "tech" in result  # tech_crawl -> tech
+        assert len(result) == 1

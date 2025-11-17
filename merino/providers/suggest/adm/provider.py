@@ -1,25 +1,19 @@
 """AdM integration that uses the remote-settings provided data."""
 
 import asyncio
-import base64
 import logging
-import functools
-import hashlib
 import time
 from enum import Enum, unique
 from typing import Any, Final
 
-import tldextract
 from moz_merino_ext.amp import AmpIndexManager
 
 from pydantic import HttpUrl
-from tldextract.tldextract import ExtractResult
 
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.utils import cron
-from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, Category, SuggestionRequest
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -143,28 +137,6 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
-    @staticmethod
-    @functools.lru_cache(maxsize=100)
-    def serp_categories(domain: str) -> list[Category]:
-        """Query SERP categories for a given domain.
-
-        Note that to leverage caching and be consistent with SERP Categories,
-        passing in a domain instead of a URL. For example, for the URL
-        "https://www.foo.com/bar", you should pass in "foo.com".
-
-        This function is sped up via caching ("memoization"). The LRU cache
-        size is determined by the fact that there are normally no more than
-        100 unique domains for AMP suggestions.
-
-        Params:
-            `domain`: the domain of a URL.
-        Returns a list of SERP categories if any or else an empty list.
-        """
-        hash = base64.b64encode(
-            hashlib.md5(domain.encode(), usedforsecurity=False).digest()
-        ).decode()
-        return DOMAIN_MAPPING.get(hash, [])
-
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q: str = srequest.query
@@ -181,16 +153,13 @@ class Provider(BaseProvider):
                 is_sponsored = res.iab_category == IABCategory.SHOPPING
 
                 url: str = res.url
-                e: ExtractResult = tldextract.extract(url)
-                categories: list[Category] = Provider.serp_categories(
-                    domain=f"{e.domain}.{e.suffix}"
-                )
+
                 suggestion_dict: dict[str, Any] = {
                     "block_id": res.block_id,
                     "full_keyword": res.full_keyword,
                     "title": res.title,
                     "url": url,
-                    "categories": categories,
+                    "categories": res.serp_categories,
                     "impression_url": res.impression_url,
                     "click_url": res.click_url,
                     "provider": self.name,

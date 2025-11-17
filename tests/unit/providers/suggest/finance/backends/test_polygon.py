@@ -9,15 +9,17 @@ import orjson
 import logging
 from pydantic import HttpUrl
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, call
 from httpx import AsyncClient, HTTPStatusError, Request, Response
 from pytest_mock import MockerFixture
-from typing import Any, cast
+from typing import Any, Awaitable, Callable, cast
+from merino.cache.redis import RedisAdapter
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from tests.types import FilterCaplogFixture
 from pytest import LogCaptureFixture
 from merino.configs import settings
+from redis.asyncio import Redis
 
 from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
 from merino.providers.suggest.finance.backends.protocol import (
@@ -27,8 +29,10 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerSummary,
 )
 
+
 URL_SINGLE_TICKER_SNAPSHOT = settings.polygon.url_single_ticker_snapshot
 URL_SINGLE_TICKER_OVERVIEW = settings.polygon.url_single_ticker_overview
+TICKER_TTL_SEC = settings.providers.polygon.cache_ttls.ticker_ttl_sec
 
 
 @pytest.fixture(name="mock_gcs_uploader")
@@ -52,9 +56,35 @@ def fixture_mock_gcs_uploader(mocker) -> GcsUploader:
     return cast(GcsUploader, mock_uploader)
 
 
+@pytest.fixture(name="redis_mock_cache_miss")
+def fixture_redis_mock_cache_miss(mocker: MockerFixture) -> Any:
+    """Create a Redis client mock object for testing."""
+
+    async def mock_get(key) -> Any:
+        return None
+
+    async def mock_set(key, value, **kwargs) -> Any:
+        return None
+
+    async def script_callable(keys, args, readonly) -> list:
+        return []
+
+    def mock_register_script(script) -> Callable[[list, list, bool], Awaitable[list]]:
+        return script_callable
+
+    mock = mocker.AsyncMock(spec=Redis)
+    mock.get.side_effect = mock_get
+    mock.set.side_effect = mock_set
+    mock.register_script.side_effect = mock_register_script
+    return mock
+
+
 @pytest.fixture(name="polygon_parameters")
 def fixture_polygon_parameters(
-    mocker: MockerFixture, statsd_mock: Any, mock_gcs_uploader
+    mocker: MockerFixture,
+    statsd_mock: Any,
+    redis_mock_cache_miss: AsyncMock,
+    mock_gcs_uploader,
 ) -> dict[str, Any]:
     """Create constructor parameters for Polygon backend module."""
     return {
@@ -66,6 +96,9 @@ def fixture_polygon_parameters(
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
         "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
         "gcs_uploader": mock_gcs_uploader,
+        "gcs_uploader_v2": mock_gcs_uploader,
+        "cache": RedisAdapter(redis_mock_cache_miss),
+        "ticker_ttl_sec": TICKER_TTL_SEC,
     }
 
 
@@ -98,7 +131,13 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
                 "v": 28727868,
                 "vw": 119.725,
             },
-            "lastQuote": {"P": 120.47, "S": 4, "p": 120.46, "s": 8, "t": 1605195918507251700},
+            "lastQuote": {
+                "P": 120.47,
+                "S": 4,
+                "p": 120.46,
+                "s": 8,
+                "t": 1605195918507251700,
+            },
             "lastTrade": {
                 "c": [14, 41],
                 "i": "4046",
@@ -140,8 +179,8 @@ def fixture_ticker_snapshot() -> TickerSnapshot:
     # these values are based on the above single_ticker_snapshot_response fixture.
     return TickerSnapshot(
         ticker="AAPL",
-        last_price="120.47",
-        todays_change_perc="0.82",
+        last_trade_price="120.47",
+        todays_change_percent="0.82",
     )
 
 
@@ -177,6 +216,10 @@ async def test_fetch_ticker_snapshot_success(
     base_url = "https://api.polygon.io/apiKey=api_key"
     snapshot_endpoint = URL_SINGLE_TICKER_SNAPSHOT.format(ticker=ticker)
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    timeit_metric_mock = polygon.metrics_client.timeit
+
     client_mock.get.return_value = Response(
         status_code=200,
         content=orjson.dumps(single_ticker_snapshot_response),
@@ -189,6 +232,7 @@ async def test_fetch_ticker_snapshot_success(
     assert actual is not None
     assert actual == expected
     assert actual["ticker"]["ticker"] == "AAPL"
+    timeit_metric_mock.assert_called_once_with("polygon.request.snapshot.get")
 
 
 @pytest.mark.asyncio
@@ -206,6 +250,10 @@ async def test_fetch_ticker_snapshot_failure_for_http_500(
     base_url = "https://api.polygon.io/apiKey=api_key"
     snapshot_endpoint = URL_SINGLE_TICKER_SNAPSHOT.format(ticker=ticker)
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
     client_mock.get.return_value = Response(
         status_code=500,
         content=b"",
@@ -222,6 +270,7 @@ async def test_fetch_ticker_snapshot_failure_for_http_500(
 
     assert records[0].message.startswith("Polygon request error")
     assert "500 Internal Server Error" in records[0].message
+    increment_metric_mock.assert_called_once_with("polygon.request.snapshot.get.failed")
 
 
 @pytest.mark.asyncio
@@ -252,11 +301,111 @@ async def test_get_ticker_summary_success(
 
 
 @pytest.mark.asyncio
+async def test_get_snapshots_success(
+    mocker,
+    polygon: PolygonBackend,
+    single_ticker_snapshot_response: dict[str, Any],
+    ticker_snapshot: TickerSnapshot,
+) -> None:
+    """Test get_snapshots method. Mocks the fetch_ticker_snapshot and extract_snapshot_if_valid methods.
+    Asserts on all three valid snapshots. Also asserts on metric not emitted for invalid snapshot.
+    """
+    tickers = ["AAPL", "MSFT", "TSLA"]
+
+    # Mocking the fetch_ticker_snapshot method to return single_ticker_snapshot_response fixture for two of the calls.
+    # Returns None for one of the calls.
+    fetch_mock = mocker.patch.object(
+        polygon,
+        "fetch_ticker_snapshot",
+        side_effect=[
+            single_ticker_snapshot_response,  # -> valid
+            single_ticker_snapshot_response,  # -> valid
+            single_ticker_snapshot_response,  # -> valid
+        ],
+    )
+
+    # Patch extract_snapshot_if_valid to map payloads -> snapshots/None.
+    extract_mock = mocker.patch(
+        "merino.providers.suggest.finance.backends.polygon.backend.extract_snapshot_if_valid",
+        side_effect=[ticker_snapshot, ticker_snapshot, ticker_snapshot],
+    )
+
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
+    # Call the method being tested.
+    result = await polygon.get_snapshots(tickers)
+
+    # Asserts
+    assert result == [ticker_snapshot] * 3
+
+    assert fetch_mock.await_count == 3
+    assert fetch_mock.await_args_list == [call("AAPL"), call("MSFT"), call("TSLA")]
+
+    assert extract_mock.call_count == 3
+
+    increment_metric_mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_snapshots_success_and_fail(
+    mocker,
+    polygon: PolygonBackend,
+    single_ticker_snapshot_response: dict[str, Any],
+    ticker_snapshot: TickerSnapshot,
+) -> None:
+    """Test get_snapshots method. Mocks the fetch_ticker_snapshot and extract_snapshot_if_valid methods.
+    Asserts on two valid snapshots and one invalid. Also asserts on metric emitted for invalid.
+    """
+    tickers = ["AAPL", "MSFT", "TSLA"]
+
+    # Mocking the fetch_ticker_snapshot method to return single_ticker_snapshot_response fixture for two of the calls.
+    # Returns None for one of the calls.
+    fetch_mock = mocker.patch.object(
+        polygon,
+        "fetch_ticker_snapshot",
+        side_effect=[
+            single_ticker_snapshot_response,  # -> valid
+            None,  # -> invalid
+            single_ticker_snapshot_response,  # -> valid
+        ],
+    )
+
+    # Patch extract_snapshot_if_valid to map payloads -> snapshots/None.
+    extract_mock = mocker.patch(
+        "merino.providers.suggest.finance.backends.polygon.backend.extract_snapshot_if_valid",
+        side_effect=[ticker_snapshot, None, ticker_snapshot],
+    )
+
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
+    # Call the method being tested.
+    result = await polygon.get_snapshots(tickers)
+
+    # Asserts
+    assert result == [ticker_snapshot] * 2
+
+    assert fetch_mock.await_count == 3
+    assert fetch_mock.await_args_list == [call("AAPL"), call("MSFT"), call("TSLA")]
+
+    assert extract_mock.call_count == 3
+
+    increment_metric_mock.assert_called_once_with("polygon.snapshot.invalid")
+
+
+@pytest.mark.asyncio
 async def test_get_ticker_image_url_success(polygon: PolygonBackend) -> None:
     """Test get_ticker_image_url returns the logo_url when present in the response."""
     client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
     ticker = "AAPL"
     image_url = "https://example.com/logo.png"
+
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    timeit_metric_mock = polygon.metrics_client.timeit
 
     client_mock.get.return_value = Response(
         status_code=200,
@@ -266,6 +415,8 @@ async def test_get_ticker_image_url_success(polygon: PolygonBackend) -> None:
 
     result = await polygon.get_ticker_image_url(ticker)
     assert result == image_url
+
+    timeit_metric_mock.assert_called_once_with("polygon.request.ticker_overview.get")
 
 
 @pytest.mark.asyncio
@@ -305,6 +456,10 @@ async def test_get_ticker_image_url_http_error(polygon: PolygonBackend):
         request=Request("GET", f"https://api.polygon.io/v3/reference/tickers/{ticker}"),
     )
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
     client_mock.get.side_effect = HTTPStatusError(
         "Server Error", request=response.request, response=response
     )
@@ -312,9 +467,13 @@ async def test_get_ticker_image_url_http_error(polygon: PolygonBackend):
     result = await polygon.get_ticker_image_url(ticker)
     assert result is None
 
+    increment_metric_mock.assert_called_once_with("polygon.request.ticker_overview.get.failed")
+
 
 @pytest.mark.asyncio
-async def test_get_ticker_image_url_invalid_response_structure(polygon: PolygonBackend) -> None:
+async def test_get_ticker_image_url_invalid_response_structure(
+    polygon: PolygonBackend,
+) -> None:
     """Test get_ticker_image_url returns None when branding or results keys are missing."""
     client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
     ticker = "AAPL"
@@ -344,6 +503,10 @@ async def test_download_ticker_image_success(polygon: PolygonBackend, mocker):
         request=Request(method="GET", url=image_url),
     )
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    timeit_metric_mock = polygon.metrics_client.timeit
+
     client_mock = cast(AsyncMock, polygon.http_client)
     client_mock.get.return_value = mock_response
 
@@ -352,6 +515,7 @@ async def test_download_ticker_image_success(polygon: PolygonBackend, mocker):
     assert isinstance(image, Image)
     assert image.content == image_content
     assert image.content_type == "image/png"
+    timeit_metric_mock.assert_called_once_with("polygon.request.company_logo.get")
 
 
 @pytest.mark.asyncio
@@ -375,6 +539,10 @@ async def test_download_ticker_image_failure(polygon: PolygonBackend, mocker):
         request=Request("GET", image_url),
     )
 
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_metric_mock = polygon.metrics_client.increment
+
     client_mock = cast(AsyncMock, polygon.http_client)
     client_mock.get.side_effect = HTTPStatusError(
         "Image download failed", request=response.request, response=response
@@ -383,6 +551,7 @@ async def test_download_ticker_image_failure(polygon: PolygonBackend, mocker):
     result = await polygon.download_ticker_image("AAPL")
 
     assert result is None
+    increment_metric_mock.assert_called_once_with("polygon.request.company_logo.get.failed")
 
 
 @pytest.mark.asyncio
@@ -436,11 +605,16 @@ async def test_upload_ticker_images_skips_none_image_and_uploads_other(
         [ticker_skipped, ticker_uploaded],
     )
 
-    assert result == {ticker_uploaded: expected_url}
+    assert result == {
+        "v1": {ticker_uploaded: expected_url},
+        "v2": {ticker_uploaded: expected_url},
+    }
     assert polygon_mock_download.call_count == 2
     polygon_mock_download.assert_any_await(ticker_skipped)
     polygon_mock_download.assert_any_await(ticker_uploaded)
-    upload_image_mock.assert_called_once()
+
+    # TODO - check called once after migration
+    assert upload_image_mock.called
 
 
 @pytest.mark.asyncio
@@ -464,8 +638,9 @@ async def test_upload_ticker_images_uploads_if_not_exists(
 
     result = await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
 
-    assert result == {"AAPL": expected_url}
-    upload_image_mock.assert_called_once()
+    assert result == {"v1": {"AAPL": expected_url}, "v2": {"AAPL": expected_url}}
+    # TODO check called once after migration
+    assert upload_image_mock.called
 
 
 @pytest.mark.asyncio
@@ -483,8 +658,9 @@ async def test_upload_ticker_images_upload_fails(
 
     result = await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
 
-    assert result == {}
-    upload_image_mock.assert_called_once()
+    assert result == {"v1": {}, "v2": {}}
+    # TODO check called once after migration
+    assert upload_image_mock.called
 
 
 def test_build_finance_manifest_valid():
@@ -584,7 +760,10 @@ async def test_build_and_upload_manifest_file_success(polygon: PolygonBackend, m
     polygon_upload_mock = mocker.patch.object(
         polygon,
         "bulk_download_and_upload_ticker_images",
-        return_value={"AAPL": "https://cdn.example.com/aapl.png"},
+        return_value={
+            "v1": {"AAPL": "https://cdn.example.com/aapl.png"},
+            "v2": {"AAPL": "https://cdn.example.com/aapl.png"},
+        },
     )
 
     upload_content_mock = mocker.patch.object(
@@ -593,8 +772,9 @@ async def test_build_and_upload_manifest_file_success(polygon: PolygonBackend, m
 
     await polygon.build_and_upload_manifest_file()
 
-    polygon_upload_mock.assert_awaited_once()
-    upload_content_mock.assert_called_once()
+    # TODO check called/awaited once after migration
+    assert polygon_upload_mock.awaited
+    assert upload_content_mock.called
 
 
 @pytest.mark.asyncio
@@ -607,7 +787,10 @@ async def test_build_and_upload_manifest_file_upload_fails(
     mocker.patch.object(
         polygon,
         "bulk_download_and_upload_ticker_images",
-        return_value={"AAPL": "https://cdn.example.com/aapl.png"},
+        return_value={
+            "v1": {"AAPL": "https://cdn.example.com/aapl.png"},
+            "v2": {"AAPL": "https://cdn.example.com/aapl.png"},
+        },
     )
 
     upload_content_mock = mocker.patch.object(
@@ -616,5 +799,6 @@ async def test_build_and_upload_manifest_file_upload_fails(
 
     await polygon.build_and_upload_manifest_file()
 
-    upload_content_mock.assert_called_once()
+    # TODO check called once after migration
+    assert upload_content_mock.called
     assert "polygon manifest upload failed" in caplog.text

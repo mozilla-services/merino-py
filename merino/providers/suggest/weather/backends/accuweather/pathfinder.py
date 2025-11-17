@@ -28,6 +28,8 @@ SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {
 CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     # 3 km away
     "Adrogué": "José Marmol",
+    # Suburb of Athens
+    "Aigáleo": "Athens",
     "Aizu-wakamatsu Shi": "Aizu-wakamatsu",
     "Altona": "Hamburg-Altona",
     "Amealco": "Amealco de Bonfil",
@@ -38,26 +40,38 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Barishal": "Barisal",
     "Belem": "Belém",
     "Białołeka": "Bialoleka",
+    "Biel/Bienne": "Biel",
     "Boca del Rio": "Boca del Río",
     # Bochum is a borough of Hordel
     "Bochum-Hordel": "Hordel",
     "Bogota D.C.": "Bogota",
+    "Budapest XIII. kerület": "Budapest",
+    "Budapest IV. kerület": "Budapest",
+    "Budapest XVIII. kerület": "Budapest",
     "Ciudad de Huajuapan de León": "Heroica Ciudad de Huajuapan de León",
     "Changwat Sara Buri": "Saraburi",
     "Chilpancingo": "Chilpancingo de los Bravo",
     "Chiyayi County": "Chiayi",
+    "Dainava (Kaunas)": "Kaunas",
     "Derry": "Londonderry",
     "Délı̨ne": "Deline",
     "Điện Bàn": "Dien Ban",
     "Dokki": "Giza",
     "Dombivali": "Dombivli",
+    # District in Vienna
+    "Donaustadt": "Vienna",
     "Đông Hà": "Dong Ha",
     "Đồng Nại": "Dong Nai",
+    "East Helsinki": "Helsinki",
     "Ecatepec": "Ecatepec de Morelos",
     "Ejido Culiacán (Culiacancito)": "Ejido Culiacán",
     "Ellesmere Port Town": "Ellesmere",
+    # Suburb of Thessaloniki
+    "Evosmos": "Thessaloniki",
     "Faridpurāhāti": "Faridpur",
     "Fort Cavazos": "Killeen",
+    # Fuencarral-El Pardo is a district of Madrid
+    "Fuencarral-El Pardo": "Madrid",
     "Gaibandha": "Gaibanda",
     "Gharroli": "Gharoli",
     "Grajales": "Rafael Lara Grajales",
@@ -101,6 +115,8 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Magdalena Contreras": "La Magdalena Contreras",
     # Neighbourhood in Paris
     "Maison Blanche": "Paris",
+    # Suburb of Athens
+    "Marousi": "Athens",
     "Marseille 08": "Marseille",
     "Marseille 09": "Marseille",
     "Marseille 10": "Marseille",
@@ -136,6 +152,8 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Paris 12e Arrondissement": "Paris",
     "Paris 13e Arrondissement": "Paris",
     "Pasig-bo": "Lambunao",
+    # Suburb of Athens
+    "Petroúpolis": "Athens",
     "Pilāni": "Pilani",
     "Port Montt": "Puerto Montt",
     "Province of Pangasinan": "Pangasinan",
@@ -157,11 +175,20 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Santiago de Cali": "Cali",
     "Santiago Metropolitan": "Santiago",
     "San Pedro One": "San Pedro I",
+    "San Vicent del Raspeig": "San Vicente del Raspeig",
+    # Bucharest is comprised of 6 administrative sectors
+    "Sector 1": "Bucharest",
+    "Sector 2": "Bucharest",
+    "Sector 3": "Bucharest",
+    "Sector 4": "Bucharest",
+    "Sector 5": "Bucharest",
+    "Sector 6": "Bucharest",
     "Selat Panjang": "Selatpanjang",
     "Shikoku-chūō Shi": "Shikokuchuo",
     "Silao": "Silao de la Victoria",
     "Skudai": "Sekudai",
     "Sōsa": "Sosa-shi",
+    "South Dublin": "Dublin",
     # Mueang Sukhothai encompasses Sukhothai Thani
     "Sukhothai Thani": "Mueang Sukhothai",
     "Thành phố Trà Vinh": "Trà Vinh",
@@ -175,6 +202,7 @@ CITY_NAME_CORRECTION_MAPPING: dict[str, str] = {
     "Yunderup": "South Yunderup",
     "Zacoalco": "Zacoalco de Torres",
     "Zimapan": "Zimapán",
+    "Zürich (Kreis 11)": "Zürich",
 }
 
 SKIP_CITIES_MAPPING: dict[tuple[str, str | None, str], int] = {

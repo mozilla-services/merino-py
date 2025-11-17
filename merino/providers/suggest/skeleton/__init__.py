@@ -16,14 +16,9 @@ from merino.providers.suggest.base import (
 
 from merino.providers.manifest.backends.protocol import ManifestData
 
-
-class SkeletonBackend(Protocol):
-    """Root class for all Skeleton backends"""
-
-    # The set of site metadata associated with this provider.
-    # manifest_data: ManifestData
-
-    def __init__(self, manifest_data: ManifestData): ...
+# The base suggestion score for this provider expressed as a float value
+# ranging from 0.0 to 1.0.
+BASE_SUGGEST_SCORE = 0.1
 
 
 class SkeletonData(BaseModel):
@@ -35,7 +30,7 @@ class SkeletonData(BaseModel):
     # Where should the user go if they click on this?
     url: HttpUrl = HttpUrl(url="https://example.org")
     # What score should this result get when compared with other suggestions?
-    score: float = 0.5
+    score: float = BASE_SUGGEST_SCORE
 
     @abstractmethod
     def as_suggestion(self) -> BaseSuggestion:

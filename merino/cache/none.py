@@ -26,3 +26,12 @@ class NoCacheAdapter:  # pragma: no cover
 
     async def run_script(self, sid: str, keys: list, args: list, readonly: bool = False) -> Any:  # noqa: D102
         pass
+
+    async def sadd(self, key: str, *values: str) -> int:  # noqa: D102
+        return 0
+
+    async def sismember(self, key: str, value: str) -> bool:  # noqa: D102
+        return False
+
+    async def scard(self, key: str) -> int:  # noqa: D102
+        return 0

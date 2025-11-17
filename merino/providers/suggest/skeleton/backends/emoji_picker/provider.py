@@ -6,7 +6,7 @@ by Merino, when we get a request to process.
 import aiodogstatsd
 
 from merino.providers.manifest.backends.protocol import ManifestData
-from merino.providers.suggest.skeleton.provider import SkeletonBackend, SkeletonProvider
+from merino.providers.suggest.skeleton.provider import SkeletonProvider
 from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.skeleton.backends.emoji_picker.backend import (
     EmojiPickerBackend,
@@ -22,12 +22,12 @@ class EmojiProvider(SkeletonProvider):
 
     """
 
-    backend: SkeletonBackend
+    backend: EmojiPickerBackend
 
     def __init__(
         self,
         metrics_client: aiodogstatsd.Client,
-        backend: None | SkeletonBackend = None,
+        backend: EmojiPickerBackend,
         name: str = "EmojiPicker",
         score: float = 0.5,
         query_timeout_sec: float = 0.5,
@@ -36,7 +36,7 @@ class EmojiProvider(SkeletonProvider):
         # Define our manifest data here. It's fairly early, but we need that data defined
         # and included with the backend to ensure that types are properly set.
         self.manifest_data = ManifestData(domains=[], partners=[])
-        self.backend = backend or EmojiPickerBackend(manifest_data=self.manifest_data)
+        self.backend = backend
 
         super().__init__(
             backend=self.backend,
@@ -54,8 +54,8 @@ class EmojiProvider(SkeletonProvider):
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Fetch the appropriate emojis for the given request."""
         # TODO: Add metric call here.
-        picker: EmojiPickerBackend = EmojiPickerBackend(self.manifest_data)
-        return await picker.query(sreq.query)
+
+        return await self.backend.query(sreq.query)
 
     async def fetch_manifest_data(self) -> ManifestData:
         """Get the latest version of the site metadata and store it in GCS. This will generally
@@ -73,9 +73,10 @@ class EmojiProvider(SkeletonProvider):
         """
         pass
 
-    async def normalize_query(self, query: str) -> str:
-        """ """
+    def normalize_query(self, query: str) -> str:
+        """Format the query, replacing the `query` string in SuggestionRequest"""
         return super().normalize_query(query)
 
-    async def validate(self, srequest: SuggestionRequest) -> None:
+    def validate(self, srequest: SuggestionRequest) -> None:
+        """Validate that the SuggestionRequest is correct, this can involve values outside of the `query` string."""
         return super().validate(srequest)

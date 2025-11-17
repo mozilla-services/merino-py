@@ -19,17 +19,37 @@ from merino.providers.suggest.amo.backends.dynamic import DynamicAmoBackend
 from merino.providers.suggest.amo.backends.static import StaticAmoBackend
 from merino.providers.suggest.amo.provider import Provider as AmoProvider
 from merino.providers.suggest.base import BaseProvider
-from merino.providers.suggest.geolocation.provider import Provider as GeolocationProvider
+from merino.providers.suggest.geolocation.provider import (
+    Provider as GeolocationProvider,
+)
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.suggest.top_picks.provider import Provider as TopPicksProvider
 from merino.providers.suggest.weather.backends.accuweather import AccuweatherBackend
 from merino.providers.suggest.weather.backends.fake_backends import FakeWeatherBackend
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
 from merino.providers.suggest.wikipedia.backends.elastic import ElasticBackend
-from merino.providers.suggest.wikipedia.backends.fake_backends import FakeWikipediaBackend
+from merino.providers.suggest.wikipedia.backends.fake_backends import (
+    FakeWikipediaBackend,
+)
 from merino.providers.suggest.wikipedia.provider import Provider as WikipediaProvider
 from merino.providers.suggest.finance.provider import Provider as PolygonProvider
 from merino.providers.suggest.yelp.provider import Provider as YelpProvider
+from merino.providers.suggest.flightaware.provider import (
+    Provider as FlightAwareProvider,
+)
+from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
+from merino.providers.suggest.sports import (
+    DEFAULT_TRIGGER_WORDS as SPORT_DEFAULT_TRIGGER_WORDS,
+    BASE_SUGGEST_SCORE as SPORT_BASE_SUGGEST_SCORE,
+)
+from merino.providers.suggest.sports.provider import SportsDataProvider
+from merino.providers.suggest.sports.backends.sportsdata.backend import (
+    SportsDataBackend,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    SportsDataStore,
+    ElasticCredentials,
+)
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
 from merino.utils.http_client import create_http_client
@@ -48,6 +68,8 @@ class ProviderType(str, Enum):
     WIKIPEDIA = "wikipedia"
     POLYGON = "polygon"
     YELP = "yelp"
+    FLIGHTAWARE = "flightaware"
+    SPORTS = "sports"
 
 
 def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
@@ -185,6 +207,20 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.POLYGON:
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                        settings.providers.polygon.cache_db,
+                    )
+                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
             return PolygonProvider(
                 backend=PolygonBackend(
                     api_key=settings.polygon.api_key,
@@ -193,6 +229,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     http_client=create_http_client(
                         base_url=settings.polygon.url_base,
                         connect_timeout=settings.providers.polygon.connect_timeout_sec,
+                        follow_redirects=True,
                     ),
                     url_param_api_key=settings.polygon.url_param_api_key,
                     url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
@@ -202,6 +239,13 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         settings.image_gcs.gcs_bucket,
                         settings.image_gcs.cdn_hostname,
                     ),
+                    gcs_uploader_v2=GcsUploader(
+                        settings.image_gcs_v2.gcs_project,
+                        settings.image_gcs_v2.gcs_bucket,
+                        settings.image_gcs_v2.cdn_hostname,
+                    ),
+                    ticker_ttl_sec=settings.providers.polygon.cache_ttls.ticker_ttl_sec,
+                    cache=cache,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
@@ -212,9 +256,31 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.YELP:
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                    )
+                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
+
             return YelpProvider(
                 backend=YelpBackend(
                     api_key=settings.yelp.api_key,
+                    http_client=create_http_client(
+                        base_url=settings.yelp.url_base,
+                        connect_timeout=settings.providers.yelp.connect_timeout_sec,
+                    ),
+                    url_business_search=settings.yelp.url_business_search,
+                    cache_ttl_sec=setting.cache_ttls.business_search_ttl_sec,
+                    metrics_client=get_metrics_client(),
+                    cache=cache,
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
@@ -222,7 +288,69 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
             )
+        case ProviderType.FLIGHTAWARE:
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                    )
+                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
+            return FlightAwareProvider(
+                backend=FlightAwareBackend(
+                    api_key=settings.flightaware.api_key,
+                    http_client=create_http_client(base_url=settings.flightaware.base_url),
+                    ident_url=settings.flightaware.ident_url_path,
+                    metrics_client=get_metrics_client(),
+                    cache=cache,
+                ),
+                metrics_client=get_metrics_client(),
+                score=setting.score,
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                enabled_by_default=setting.enabled_by_default,
+                resync_interval_sec=setting.resync_interval_sec,
+                cron_interval_sec=setting.cron_interval_sec,
+            )
+        case ProviderType.SPORTS:
+            trigger_words = [
+                word.lower().strip()
+                for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
+            ]
+            # Use wikipedia as a backup for the Elasticsearch credentials.
+            # TODO, use a central Elasticsearch credential set.
+            credentials = ElasticCredentials(settings=settings)
 
+            name = setting.get("platform", setting.type)
+            platform = f"{name}-{{lang}}"
+            event_map = setting.get("event_index", f"{platform}-event")
+
+            store = SportsDataStore(
+                credentials=credentials,
+                platform=platform,
+                languages=[lang for lang in setting.get("languages", ["en"])],
+                index_map={"event": event_map},
+            )
+            return SportsDataProvider(
+                backend=SportsDataBackend(
+                    store=store,
+                    settings=setting,
+                    max_suggestions=setting.max_suggestions,
+                    mix_sports=setting.get("mix_sports", True),
+                ),
+                metrics_client=get_metrics_client(),
+                score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
+                name=provider_id,
+                query_timeout_sec=setting.query_timeout_sec,
+                trigger_words=trigger_words,
+                enabled_by_default=setting.enabled_by_default,
+            )
         case _:
             raise InvalidProviderError(f"Unknown provider type: {setting.type}")
 

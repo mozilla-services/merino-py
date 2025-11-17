@@ -106,11 +106,9 @@ def test_local_filemanager_get_file_invalid_path(
     """Test that read domain fails and raises TopPicksFilemanagerError
     exception with invalid file path.
     """
-    mocker.patch.object(
-        top_picks_local_filemanager, "static_file_path", return_value="./wrongfile.json"
-    )
+    test_path = TopPicksLocalFilemanager("./wrongfile.json")
     with pytest.raises(TopPicksFilemanagerError):
-        top_picks_local_filemanager.get_file()
+        test_path.get_file()
 
 
 def test_get_file(

@@ -1,6 +1,9 @@
-"""Module containing JSON object with ETF ticker symbol to company name mapping for the top indices."""
+"""Module containing JSON object with ETF ticker symbol to company and exchange name mapping for the top indices."""
 
-DOW_JONES_ETF_COMPANY: dict[str, dict[str, str]] = {
+ALL_ETF_TICKER_COMPANY_MAPPING = {
+    ###############
+    # DOW JONES   #
+    ###############
     "DIA": {"company": "SPDR Dow Jones Industrial Average ETF Trust", "exchange": "NYSE"},
     "DJD": {"company": "Invesco Dow Jones Industrial Average Dividend ETF", "exchange": "NYSE"},
     "FDM": {"company": "First Trust Dow Jones Select MicroCap Index Fund", "exchange": "NYSE"},
@@ -21,9 +24,9 @@ DOW_JONES_ETF_COMPANY: dict[str, dict[str, str]] = {
     "UMMA": {"company": "Wahed Dow Jones Islamic World ETF", "exchange": "NASDAQ"},
     "WEBL": {"company": "Direxion Daily Dow Jones Internet Bull 3X Shares", "exchange": "NYSE"},
     "WEBS": {"company": "Direxion Daily Dow Jones Internet Bear 3X Shares", "exchange": "NYSE"},
-}
-
-NASDAQ_ETF_COMPANY: dict[str, dict[str, str]] = {
+    ###############
+    # NASDAQ      #
+    ###############
     "BIB": {"company": "ProShares Ultra NASDAQ Biotechnology", "exchange": "NASDAQ"},
     "BIS": {"company": "ProShares UltraShort NASDAQ Biotechnology", "exchange": "NASDAQ"},
     "BLCN": {"company": "Siren ETF Trust Siren Nasdaq NexGen Economy ETF", "exchange": "NASDAQ"},
@@ -170,9 +173,9 @@ NASDAQ_ETF_COMPANY: dict[str, dict[str, str]] = {
         "exchange": "NASDAQ",
     },
     "UCYB": {"company": "ProShares Ultra Nasdaq Cybersecurity ETF", "exchange": "NASDAQ"},
-}
-
-SP500_ETF_COMPANY: dict[str, dict[str, str]] = {
+    ###############
+    # S&P 500     #
+    ###############
     "APRP": {"company": "PGIM S&P 500 Buffer 12 ETF - April", "exchange": "BATS"},
     "AUGP": {"company": "PGIM S&P 500 Buffer 12 ETF - August", "exchange": "BATS"},
     "BUFP": {"company": "PGIM Laddered S&P 500 Buffer 12 ETF", "exchange": "BATS"},
@@ -232,6 +235,7 @@ SP500_ETF_COMPANY: dict[str, dict[str, str]] = {
     "EFIV": {"company": "SPDR S&P 500 ESG ETF", "exchange": "NYSE"},
     "EGLE": {"company": "Global X S&P 500 U.S. Revenue Leaders ETF", "exchange": "NYSE"},
     "EMOT": {"company": "First Trust S&P 500 Economic Moat ETF", "exchange": "NYSE"},
+    "EQWL": {"company": "Invesco S&P 100 Equal Weight ETF", "exchange": "NYSE"},
     "FB": {"company": "ProShares S&P 500 Dynamic Buffer ETF", "exchange": "BATS"},
     "FCFY": {"company": "First Trust S&P 500 Diversified Free Cash Flow ETF", "exchange": "NYSE"},
     "FEBP": {"company": "PGIM S&P 500 Buffer 12 ETF - February", "exchange": "BATS"},
@@ -264,6 +268,7 @@ SP500_ETF_COMPANY: dict[str, dict[str, str]] = {
     "NOBL": {"company": "ProShares S&P 500 Dividend Aristocrats ETF", "exchange": "BATS"},
     "NOVP": {"company": "PGIM S&P 500 Buffer 12 ETF - November", "exchange": "BATS"},
     "OCTP": {"company": "PGIM S&P 500 Buffer 12 ETF - October", "exchange": "BATS"},
+    "OEF": {"company": "iShares S&P 100 ETF", "exchange": "NYSE"},
     "OOSB": {"company": "One One S&P 500 and Bitcoin ETF", "exchange": "NASDAQ"},
     "PBAP": {"company": "PGIM S&P 500 Buffer 20 ETF - April", "exchange": "BATS"},
     "PBAU": {"company": "PGIM S&P 500 Buffer 20 ETF - August", "exchange": "BATS"},
@@ -379,67 +384,59 @@ SP500_ETF_COMPANY: dict[str, dict[str, str]] = {
         "company": "Cyber Hornet S&P 500 and Bitcoin 75/25 Strategy ETF",
         "exchange": "NASDAQ",
     },
-}
-
-DOW_JONES_POPULAR_3_ETF_COMPANY: dict[str, dict[str, str]] = {
-    "DIA": {"company": "SPDR Dow Jones Industrial Average ETF Trust", "exchange": "NYSE"},
-    "DJD": {"company": "Invesco Dow Jones Industrial Average Dividend ETF", "exchange": "NYSE"},
-    "SCHD": {"company": "Schwab US Dividend Equity ETF", "exchange": "NYSE"},
-}
-
-NASDAQ_POPULAR_3_ETF_COMPANY: dict[str, dict[str, str]] = {
-    "QQQ": {"company": "Invesco QQQ Trust, Series 1", "exchange": "NASDAQ"},
-    "QQQM": {"company": "Invesco NASDAQ 100 ETF", "exchange": "NASDAQ"},
-    "ONEQ": {"company": "Fidelity Nasdaq Composite Index ETF", "exchange": "NASDAQ"},
-}
-
-SP500_POPULAR_3_ETF_COMPANY: dict[str, dict[str, str]] = {
-    "SPY": {"company": "SPDR S&P 500 ETF Trust", "exchange": "NYSE"},
-    "VOO": {"company": "Vanguard S&P 500 ETF", "exchange": "NYSE"},
-    "IVV": {"company": "iShares Core S&P 500 ETF", "exchange": "NYSE"},
-}
-
-SP100_POPULAR_3_ETF_COMPANY: dict[str, dict[str, str]] = {
-    "EQWL": {"company": "Invesco S&P 100 Equal Weight ETF", "exchange": "NYSE"},
-    "OEF": {"company": "iShares S&P 100 ETF", "exchange": "NYSE"},
-    "XOEF": {"company": "iShares S&P 500 ex S&P 100 ETF", "exchange": "NYSE"},
-}
-
-RUSSELL2000_POPULAR_3_ETF_COMPANY: dict[str, dict[str, str]] = {
+    ###############
+    # RUSSELL2000 #
+    ###############
     "IWM": {"company": "iShares Russell 2000 ETF", "exchange": "NYSE"},
     "SMMV": {"company": "iShares MSCI USA Small-Cap Min Vol Factor ETF", "exchange": "BATS"},
     "VTWO": {"company": "Vanguard Russell 2000 ETF", "exchange": "NASDAQ"},
-}
-
-# NOTE: This index only has 2 ETF tickers listed on the US market and supported by Polygon.
-HSI_POPULAR_2_ETF_COMPANY: dict[str, dict[str, str]] = {
+    ###############
+    # HSI         #
+    ###############
     "EWH": {"company": "iShares MSCI Hong Kong ETF", "exchange": "NYSE"},
     "KTEC": {"company": "KraneShares Hang Seng TECH Index ETF", "exchange": "NYSE"},
-}
-
-NI225_POPULAR_3_ETF_COMPANY: dict[str, dict[str, str]] = {
+    ###############
+    # NI225       #
+    ###############
     "DXJ": {"company": "WisdomTree Japan Hedged Equity Fund", "exchange": "NYSE"},
     "EWJ": {"company": "iShares MSCI Japan ETF", "exchange": "NYSE"},
     "FLJP": {"company": "Franklin FTSE Japan ETF", "exchange": "NYSE"},
 }
 
-ALL_ETF_TICKER_COMPANY_MAPPING: dict[str, dict[str, str]] = (
-    DOW_JONES_ETF_COMPANY
-    | DOW_JONES_ETF_COMPANY
-    | NASDAQ_ETF_COMPANY
-    | NASDAQ_POPULAR_3_ETF_COMPANY
-    | SP500_ETF_COMPANY
-    | SP500_POPULAR_3_ETF_COMPANY
-    | SP100_POPULAR_3_ETF_COMPANY
-    | RUSSELL2000_POPULAR_3_ETF_COMPANY
-    | HSI_POPULAR_2_ETF_COMPANY
-    | NI225_POPULAR_3_ETF_COMPANY
-)
+DOW_JONES_POPULAR_3_ETF = ["DIA", "DJD", "SCHD"]
+NASDAQ_POPULAR_3_ETF = ["QQQ", "QQQM", "ONEQ"]
+SP500_POPULAR_3_ETF = ["SPY", "VOO", "IVV"]
+SP100_POPULAR_3_ETF = ["EQWL", "OEF", "XOEF"]
+RUSSELL2000_POPULAR_3_ETF = ["IWM", "VTWO", "SMMV"]
+NI225_POPULAR_3_ETF = ["EWJ", "FLJP", "DXJ"]
+# NOTE: This index only has 2 ETF tickers listed on the US market and supported by Polygon.
+HSI_POPULAR_2_ETF = ["EWH", "KTEC"]
 
-DOW_JONES_POPULAR_3_ETF = frozenset(DOW_JONES_POPULAR_3_ETF_COMPANY.keys())
-NASDAQ_POPULAR_3_ETF = frozenset(NASDAQ_POPULAR_3_ETF_COMPANY.keys())
-SP500_POPULAR_3_ETF = frozenset(SP500_POPULAR_3_ETF_COMPANY.keys())
-SP100_POPULAR_3_ETF = frozenset(SP100_POPULAR_3_ETF_COMPANY.keys())
-RUSSELL2000_POPULAR_3_ETF = frozenset(RUSSELL2000_POPULAR_3_ETF_COMPANY.keys())
-HSI_POPULAR_2_ETF = frozenset(HSI_POPULAR_2_ETF_COMPANY.keys())
-NI225_POPULAR_3_ETF = frozenset(NI225_POPULAR_3_ETF_COMPANY.keys())
+
+# ETF Tickers prone to eager matches (company name-like or typos for common words); used to avoid
+# aggressive matches on partial queries.
+ETF_TICKER_EAGER_MATCH_BLOCKLIST = [
+    "BIB",
+    "EKG",
+    "WEBL",
+    "WEBS",
+    "GRID",
+    "FLAG",
+    "SPY",
+    "ISPY",
+    "RPG",
+    "TOPC",
+    "ROBT",
+    "RWX",
+    "ZZZ",
+    "EGLE",
+    "EMOT",
+    "KNG",
+    "KNGZ",
+    "HNDL",
+    "PUTD",
+    "XTR",
+    "XLG",
+    "FB",
+    "QB",
+]

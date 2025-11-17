@@ -47,6 +47,13 @@ class SurfaceId(str, Enum):
     NEW_TAB_IT_IT = "NEW_TAB_IT_IT"
 
 
+class CreateSource(str, Enum):
+    """Define createSource for custom sections"""
+
+    ML = "ML"  # Created by ML
+    MANUAL = "MANUAL"  # Manually entered through curation admin tool
+
+
 class IABMetadata(BaseModel):
     """IAB (v3.0) metadata for a Section."""
 
@@ -80,8 +87,12 @@ class CorpusSection(BaseModel):
 
     sectionItems: list[CorpusItem]
     title: str
+    description: str | None = None
+    heroTitle: str | None = None
+    heroSubtitle: str | None = None
     iab: IABMetadata | None = None
     externalId: str
+    createSource: CreateSource
 
 
 class SectionsProtocol(Protocol):

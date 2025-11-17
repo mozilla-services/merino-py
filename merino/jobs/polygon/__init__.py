@@ -2,11 +2,9 @@
 
 import asyncio
 import logging
-from typing import Annotated
 
 import typer
 
-from merino.configs import settings as config
 from merino.jobs.polygon.polygon_ingestion import PolygonIngestion
 
 logger = logging.getLogger(__name__)
@@ -18,7 +16,7 @@ cli = typer.Typer(
 
 
 @cli.command()
-def ingest():
+def ingest():  # pragma: no cover
     """Download logos, upload to GCS, and generate manifest."""
     logger.info("Starting Polygon ingestion pipeline...")
 

@@ -290,6 +290,7 @@ async def test_fetch(
             ["firefox accounts de", 3],
         ],
         iab_category="5 - Education",
+        serp_categories=[0],
         icon="01",
         keywords=[
             "firefox",
@@ -348,7 +349,9 @@ async def test_fetch_with_index_build_fail(
         return_value=rs_attachment_response,
     )
     mocker.patch.object(
-        moz_merino_ext.amp.AmpIndexManager, "build", side_effect=Exception("Build Index Error")
+        moz_merino_ext.amp.AmpIndexManager,
+        "build",
+        side_effect=Exception("Build Index Error"),
     )
 
     _ = await rs_backend.fetch()
@@ -523,8 +526,12 @@ async def test_get_suggestions(
                 "id": 2,
                 "advertiser": "Example.org",
                 "click_url": "https://example.org/click/mozilla",
-                "full_keywords": [["firefox accounts", 3], ["mozilla firefox accounts", 4]],
+                "full_keywords": [
+                    ["firefox accounts", 3],
+                    ["mozilla firefox accounts", 4],
+                ],
                 "iab_category": "5 - Education",
+                "serp_categories": [],
                 "icon": "01",
                 "impression_url": "https://example.org/impression/mozilla",
                 "keywords": [
@@ -539,7 +546,9 @@ async def test_get_suggestions(
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
             }
-        ]
+        ],
+        indent=None,
+        separators=(",", ":"),
     )
     for country, segment in expected_suggestion_info:
         assert country in suggestions.keys()
@@ -580,7 +589,9 @@ async def test_get_attachment(
     rs_attachment_response: httpx.Response,
 ) -> None:
     """Test that the method returns the proper attachment information."""
-    expected_attachment: str = json.dumps([dict(rs_attachment)])
+    expected_attachment: str = json.dumps(
+        [dict(rs_attachment)], indent=None, separators=(",", ":")
+    )
     url: str = urljoin(
         base="attachment-host",
         url="main-workspace/quicksuggest/6129d437-b3c1-48b5-b343-535e045d341a.json",

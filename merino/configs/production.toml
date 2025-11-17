@@ -20,6 +20,7 @@ skip_gcp_client_auth = true
 [production.accuweather]
 url_base = "https://api.accuweather.com"
 
+# TODO - update this to GCPV2 values before removing image_gcs_v2 below
 [production.image_gcs]
 # MERINO_IMAGE_GCS__GCS_PROJECT
 # GCS project name that contains domain data
@@ -32,6 +33,20 @@ gcs_bucket = "merino-images-prodpy"
 # MERINO_IMAGE_GCS__CDN_HOSTNAME
 # CDN hostname used for public URLs of stored images
 cdn_hostname = "merino-images.services.mozilla.com"
+
+
+[production.image_gcs_v2]
+# MERINO_IMAGE_GCS_V2__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = "moz-fx-merino-prod-5de4"
+
+# MERINO_IMAGE_GCS_V2__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = "merino-images-prod"
+
+# MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
+# CDN hostname used for public URLs of stored images
+cdn_hostname = "prod-images.merino.prod.webservices.mozgcp.net"
 
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
@@ -47,3 +62,15 @@ bucket_name = "merino-airflow-data-prodpy"
 # MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = "moz-fx-merino-prod-1c2f"
+
+[production.providers.polygon]
+# MERINO_PROVIDERS__POLYGON__CACHE
+# The store used to finance data. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
+cache = "redis"
+
+[production.providers.flightaware]
+# MERINO_PROVIDERS__FLIGHTAWARE__CACHE
+# The store used for flightaware data. Either `redis` or `none`.
+# If `redis`, the global Redis settings must be set. See redis.server.
+cache = "redis"

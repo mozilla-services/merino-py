@@ -17,10 +17,12 @@ from merino.jobs.navigational_suggestions import (
     _write_xcom_file,
 )
 from merino.jobs.navigational_suggestions.domain_metadata_diff import DomainDiff
-from merino.jobs.navigational_suggestions.domain_data_downloader import DomainDataDownloader
+from merino.jobs.navigational_suggestions.domain_data_downloader import (
+    DomainDataDownloader,
+)
 from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
-from merino.providers.suggest.base import Category
 from merino.jobs.utils.system_monitor import SystemMonitor
+from merino.utils.domain_categories.models import Category
 
 
 @pytest.fixture
@@ -247,7 +249,12 @@ class TestRunLocalMode:
         # Mock domain metadata extractor
         mock_extractor = mocker.MagicMock()
         mock_extractor.process_domain_metadata.return_value = [
-            {"domain": "test", "url": "https://test.com", "title": "Test", "icon": "icon.png"}
+            {
+                "domain": "test",
+                "url": "https://test.com",
+                "title": "Test",
+                "icon": "icon.png",
+            }
         ]
         mocker.patch(
             "merino.jobs.navigational_suggestions.DomainMetadataExtractor",
@@ -337,7 +344,12 @@ class TestRunLocalMode:
         # Mock domain metadata extractor
         mock_extractor = mocker.MagicMock()
         mock_extractor.process_domain_metadata.return_value = [
-            {"domain": "test", "url": "https://test.com", "title": "Test", "icon": "icon.png"}
+            {
+                "domain": "test",
+                "url": "https://test.com",
+                "title": "Test",
+                "icon": "icon.png",
+            }
         ]
         mocker.patch(
             "merino.jobs.navigational_suggestions.DomainMetadataExtractor",
@@ -359,7 +371,8 @@ class TestRunLocalMode:
         # Mock SystemMonitor
         mock_system_monitor = mocker.MagicMock(spec=SystemMonitor)
         mocker.patch(
-            "merino.jobs.utils.system_monitor.SystemMonitor", return_value=mock_system_monitor
+            "merino.jobs.utils.system_monitor.SystemMonitor",
+            return_value=mock_system_monitor,
         )
 
         # Mock logger
@@ -565,7 +578,8 @@ class TestRunNormalMode:
         # Mock SystemMonitor
         mock_system_monitor = mocker.MagicMock(spec=SystemMonitor)
         mocker.patch(
-            "merino.jobs.utils.system_monitor.SystemMonitor", return_value=mock_system_monitor
+            "merino.jobs.utils.system_monitor.SystemMonitor",
+            return_value=mock_system_monitor,
         )
 
         # Mock logger
@@ -796,7 +810,10 @@ class TestDomainDataDownloader:
         assert len(bq_domains) == 1
         assert len(custom_domains) == 2
         assert bq_domains[0]["domain"] == "example.com"
-        assert set(d["domain"] for d in custom_domains) == {"custom1.com", "custom2.com"}
+        assert set(d["domain"] for d in custom_domains) == {
+            "custom1.com",
+            "custom2.com",
+        }
 
     def test_download_data_with_duplicates(self, mocker):
         """Test handling of duplicate domains between BigQuery results and custom domains."""
@@ -1247,7 +1264,10 @@ class TestDomainMetadataDiff:
         assert result["total_domains_unchanged"] == 2
         assert result["newly_added_domains"] == 2
         assert result["newly_added_urls"] == 2
-        assert sorted(result["new_urls_summary"]) == ["https://domain3.com", "https://domain4.com"]
+        assert sorted(result["new_urls_summary"]) == [
+            "https://domain3.com",
+            "https://domain4.com",
+        ]
 
     def test_create_diff_empty(self):
         """Test the create_diff method with empty sets."""

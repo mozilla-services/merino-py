@@ -45,6 +45,7 @@ class KintoSuggestion(BaseModel):
     click_url: str | None = None
     full_keywords: list[list[Any]] = []
     iab_category: str
+    serp_categories: list[int] = []
     icon: str
     impression_url: str | None = None
     keywords: list[str] = []

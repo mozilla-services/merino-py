@@ -1,95 +1,126 @@
 """Utilities for the Polygon backend"""
 
 import logging
+import re
 from typing import Any
+import hashlib
 
 from pydantic import HttpUrl
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
+    STOCK_TICKER_EAGER_MATCH_BLOCKLIST,
 )
 from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
     ALL_ETF_TICKER_COMPANY_MAPPING,
+    ETF_TICKER_EAGER_MATCH_BLOCKLIST,
 )
 from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
-    ETF_TICKER_KEYWORDS,
-    STOCK_TICKER_KEYWORDS,
-    KEYWORD_TO_ETF_TICKER,
-    KEYWORD_TO_STOCK_TICKER,
+    KEYWORD_TO_STOCK_TICKER_MAPPING,
+    KEYWORD_TO_ETF_TICKER_MAPPING,
 )
 
 logger = logging.getLogger(__name__)
 
-# NOTE: Treat as read-only.
-# This is the comprehnsive list of all the tickers to company mapping
-# for all the tickers we support. Stock and ETF.
-STOCK_AND_ETF_TICKER_COMPANY_MAPPING = (
-    ALL_STOCK_TICKER_COMPANY_MAPPING | ALL_ETF_TICKER_COMPANY_MAPPING
+ALL_TICKER_COMPANY_MAPPING: dict[str, dict] = {
+    **ALL_STOCK_TICKER_COMPANY_MAPPING,
+    **ALL_ETF_TICKER_COMPANY_MAPPING,
+}
+
+# This match either "stock(s) ABC" or "ABC stock(s)". Case insensitive.
+STOCK_QUERY_PATTERN = re.compile(
+    r"^(?:(?P<keyword1>\w+)\s+stocks?)$|^(?:stocks?\s+(?P<keyword2>\w+))$", re.IGNORECASE
 )
-
-# NOTE: Treat as read-only.
-# This is the comprehnsive list of all the ticker symbols we support.
-ALL_TICKERS = frozenset(STOCK_AND_ETF_TICKER_COMPANY_MAPPING.keys())
-
-
-def _is_valid_ticker(symbol: str) -> bool:
-    """Check if the symbol provided is a valid and supported ticker."""
-    # Check if the symbol provided is a supported ticker. Stock or ETF.
-    return symbol.upper() in ALL_TICKERS
 
 
 def lookup_ticker_company(ticker: str) -> str:
-    """Get the ticker company for ticker symbol. Stock or ETF."""
-    return STOCK_AND_ETF_TICKER_COMPANY_MAPPING[ticker.upper()]["company"]
+    """Get the ticker company for a stock or ETF ticker symbol."""
+    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["company"])
 
 
 def lookup_ticker_exchange(ticker: str) -> str:
     """Get the ticker exchange for ticker symbol. Stock or ETF."""
-    return STOCK_AND_ETF_TICKER_COMPANY_MAPPING[ticker.upper()]["exchange"]
+    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["exchange"])
 
 
-def _is_valid_keyword_for_stock_ticker(keyword: str) -> bool:
-    """Check if the keyword provided is one of the supported keywords for stock tickers."""
-    return keyword in STOCK_TICKER_KEYWORDS
+def get_tickers_for_query(query: str) -> list[str] | None:
+    """Validate and return a list of tickers (1 to 3) or None."""
+    query_upper = query.upper()
 
+    # Early exit if the query is one of the eagerly matched tickers.
+    # NOTE: These lists are subsets of `ALL_STOCK_TICKER_COMPANY_MAPPING` and `ALL_ETF_TICKER_COMPANY_MAPPING` lists.
+    if (
+        query_upper in STOCK_TICKER_EAGER_MATCH_BLOCKLIST
+        or query_upper in ETF_TICKER_EAGER_MATCH_BLOCKLIST
+    ):
+        return None
 
-def _is_valid_keyword_for_etf_ticker(keyword: str) -> bool:
-    """Check if the keyword provided is one of the supported keywords for ETF tickers."""
-    return keyword in ETF_TICKER_KEYWORDS
+    # If the query is a ticker from either stocks or ETFs tickers.
+    # The above check prevents from eager matching for some tickers.
+    if query_upper in ALL_STOCK_TICKER_COMPANY_MAPPING:
+        return [query_upper]
+    if query_upper in ALL_ETF_TICKER_COMPANY_MAPPING:
+        return [query_upper]
 
+    # If the query is a keyword from either stock or ETF keywords.
+    if ticker := KEYWORD_TO_STOCK_TICKER_MAPPING.get(query):
+        return [ticker]
+    if tickers := KEYWORD_TO_ETF_TICKER_MAPPING.get(query):
+        return tickers
 
-def get_tickers_for_query(keyword: str) -> list[str] | None:
-    """Validate and return a ticker. Should return a ticker for stock keywords or ETF keywords or None."""
-    if _is_valid_ticker(keyword):
-        return [keyword.upper()]
-    if _is_valid_keyword_for_stock_ticker(keyword):
-        return [KEYWORD_TO_STOCK_TICKER[keyword]]
-    if _is_valid_keyword_for_etf_ticker(keyword):
-        return list(KEYWORD_TO_ETF_TICKER[keyword])
+    # If the query has the "stock(s)" keyword in it.
+    if stock_query := STOCK_QUERY_PATTERN.match(query_upper):
+        keyword = stock_query.group("keyword1") or stock_query.group("keyword2")
+        if keyword in ALL_STOCK_TICKER_COMPANY_MAPPING:
+            return [keyword]
+
+        if keyword in ALL_ETF_TICKER_COMPANY_MAPPING:
+            return [keyword]
 
     return None
 
 
 def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | None:
     """Extract the TickerSnapshot from the nested JSON response, if it has the valid json structure."""
-    match data:
-        case None:
+    if data is None:
+        return None
+
+    try:
+        result = data["results"][0]
+        ticker = result["ticker"]
+        market_status = result["market_status"]
+
+        # Default price and change percent values based on if market status is open.
+        # Overriden below if market status changes.
+        price = result["session"]["price"]
+        change_percent = result["session"]["change_percent"]
+
+        if market_status == "early_trading":
+            price = result["session"]["previous_close"]
+            change_percent = result["session"]["early_trading_change_percent"]
+
+        if market_status == "closed" or market_status == "late_trading":
+            price = result["session"]["close"]
+            change_percent = result["session"]["regular_trading_change_percent"]
+
+        if not isinstance(change_percent, float) or not isinstance(price, float):
+            logger.warning(f"Polygon snapshot response json has incorrect data types: {data}")
             return None
-        case {
-            "ticker": {
-                "ticker": str(ticker),
-                "todaysChangePerc": float(todays_change),
-                "lastTrade": {"p": float(last_price)},
-            }
-        }:
-            return TickerSnapshot(
-                ticker=ticker,
-                todays_change_perc=f"{todays_change:.2f}",
-                last_price=f"{last_price:.2f}",
-            )
-        case _:
-            logger.warning(f"Polygon invalid ticker snapshot json response: {data}")
-            return None
+
+        # Formatting the values to two decimal places and string type.
+        todays_change_percent = (
+            f"+{change_percent:.2f}" if change_percent > 0 else f"{change_percent:.2f}"
+        )
+        last_trade_price = f"{price:.2f}"
+
+        return TickerSnapshot(
+            ticker=ticker,
+            todays_change_percent=todays_change_percent,
+            last_trade_price=last_trade_price,
+        )
+    except (KeyError, IndexError, TypeError):
+        logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
+        return None
 
 
 def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) -> TickerSummary:
@@ -98,8 +129,8 @@ def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) ->
     company = lookup_ticker_company(ticker)
     exchange = lookup_ticker_exchange(ticker)
     serp_query = f"{ticker} stock"
-    last_price = f"${snapshot.last_price} USD"
-    todays_change_perc = snapshot.todays_change_perc
+    last_price = f"${snapshot.last_trade_price} USD"
+    todays_change_perc = snapshot.todays_change_percent
 
     return TickerSummary(
         ticker=ticker,
@@ -110,3 +141,12 @@ def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) ->
         image_url=image_url,
         exchange=exchange,
     )
+
+
+def generate_cache_key_for_ticker(ticker: str) -> str:
+    """Generate cache key for a ticker."""
+    hasher = hashlib.blake2s()
+    hasher.update(ticker.upper().encode("utf-8"))
+    ticker_hash = hasher.hexdigest()
+
+    return f"PolygonBackend:v1:ticker_snapshot:{ticker_hash}"

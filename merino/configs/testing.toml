@@ -27,6 +27,11 @@ gcs_project = "test_gcp_uploader_project"
 gcs_bucket = "test_gcp_uploader_bucket"
 cdn_hostname = "test-cdn.mozilla.net"
 
+[testing.image_gcs_v2]
+gcs_project = "test_gcp_uploader_project"
+gcs_bucket = "test_gcp_uploader_bucket"
+cdn_hostname = "test-cdn.mozilla.net"
+
 [testing.web.api.v1]
 # Setting to contol the limit on optional client variants passed
 # to suggest endpoint as part of experiments or rollouts.
@@ -42,18 +47,32 @@ api_key = "test"
 # The URL in `url_base` isn't actually pinged during testing but we set it
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "test://test"
-partner_code_ffsuggest_value="test_urlbar"
-partner_code_newtab_value="test_newtab"
+partner_code_ffsuggest_value = "test_urlbar"
+partner_code_newtab_value = "test_newtab"
 
 [testing.remote_settings]
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
-form_factors = ["desktop", "phone",]
+form_factors = ["desktop", "phone"]
+countries = ["US", "DE"]
 
 [testing.providers.accuweather]
 enabled_by_default = false
-backend="test_weather"
+backend = "test_weather"
 circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
+
+[testing.providers.sports]
+enabled_by_default = false
+max_suggestions = 5
+score = 0.5
+query_timeout_sec = 100
+api_key = "test"
+kickstart = false
+
+[testing.providers.sports.es]
+dsn = "http://localhost:9200"
+request_timeout_ms = 100
+api_key = "test"
 
 [testing.polygon]
 api_key = "test"
@@ -61,9 +80,18 @@ api_key = "test"
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "http://test-polygon"
 
+[testing.flightaware]
+api_key = "test"
+
+base_url = "http://test-flightaware.com"
+
 [testing.providers.polygon]
 enabled_by_default = false
-backend="polygon"
+backend = "polygon"
+
+[testing.providers.yelp]
+enabled_by_default = false
+backend = "test"
 
 [testing.providers.adm]
 # Whether or not this provider is enabled by default.

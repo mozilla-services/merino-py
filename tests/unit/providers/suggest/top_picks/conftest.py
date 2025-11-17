@@ -9,7 +9,9 @@ from typing import Any
 import pytest
 
 from merino.configs import settings
-from merino.providers.suggest.top_picks.backends.filemanager import TopPicksRemoteFilemanager
+from merino.providers.suggest.top_picks.backends.filemanager import (
+    TopPicksRemoteFilemanager,
+)
 from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend
 from merino.providers.suggest.top_picks.provider import Provider
 

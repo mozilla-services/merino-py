@@ -26,7 +26,9 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
 )
-from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
+from merino.curated_recommendations.legacy.provider import (
+    LegacyCuratedRecommendationsProvider,
+)
 from merino.curated_recommendations.legacy.protocol import (
     CuratedRecommendationsLegacyFx115Fx129Request,
     CuratedRecommendationsLegacyFx114Request,
@@ -43,7 +45,9 @@ from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
 from merino.utils import task_runner
 
-from merino.utils.api.cache_control import get_ttl_for_cache_control_header_for_suggestions
+from merino.utils.api.cache_control import (
+    get_ttl_for_cache_control_header_for_suggestions,
+)
 from merino.utils.api.metrics import emit_suggestions_per_metrics
 from merino.utils.api.query_params import (
     get_accepted_languages,

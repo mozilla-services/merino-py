@@ -8,7 +8,10 @@ import typing
 
 from sentry_sdk.types import Event
 
-from merino.configs.app_configs.config_sentry import REDACTED_TEXT, strip_sensitive_data
+from merino.configs.app_configs.config_sentry import (
+    REDACTED_TEXT,
+    strip_sensitive_data,
+)
 
 mock_sentry_hint: dict[str, list] = {"exc_info": [RuntimeError, RuntimeError(), None]}
 
@@ -212,32 +215,21 @@ def test_strip_sensitive_data() -> None:
     assert "exc_info" in mock_sentry_hint
     assert isinstance(mock_sentry_hint["exc_info"][1], RuntimeError)
 
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"]["q"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][1]["vars"]["values"]["q"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"]["srequest"]
-        == REDACTED_TEXT
-    )
+    stack_frames = sanitized_event["exception"]["values"][0]["stacktrace"]["frames"]
 
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][2]["vars"]["query"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"]["q"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][4]["vars"]["suggest"]
-        == REDACTED_TEXT
-    )
-    assert (
-        sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][5]["vars"]["body"]
-        == REDACTED_TEXT
-    )
+    assert stack_frames[0]["vars"]["q"] == REDACTED_TEXT
+
+    assert stack_frames[1]["vars"]["values"]["q"] == REDACTED_TEXT
+
+    assert stack_frames[2]["vars"]["srequest"] == REDACTED_TEXT
+    assert stack_frames[2]["vars"]["query"] == REDACTED_TEXT
+
+    solved_result = stack_frames[3]["vars"]["solved_result"][0]
+    assert solved_result["q"] == REDACTED_TEXT
+    values = stack_frames[3]["vars"]["values"]
+    assert values["q"] == REDACTED_TEXT
+
+    assert stack_frames[4]["vars"]["q"] == REDACTED_TEXT
+    assert stack_frames[4]["vars"]["suggest"] == REDACTED_TEXT
+
+    assert stack_frames[5]["vars"]["body"] == REDACTED_TEXT

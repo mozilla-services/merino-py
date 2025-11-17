@@ -8,18 +8,22 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
-from merino.providers.suggest.weather.backends.accuweather.errors import MissingLocationKeyError
+from merino.providers.suggest.weather.backends.accuweather.errors import (
+    MissingLocationKeyError,
+)
 from merino.governance.circuitbreakers import WeatherCircuitBreaker
 from merino.utils import cron
 from merino.middleware.geolocation import Location
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 from merino.providers.suggest.custom_details import CustomDetails, WeatherDetails
 from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
     get_region_mapping_size,
-    get_region_mapping,
     get_skip_cities_mapping_total,
     get_skip_cities_mapping_size,
-    get_skip_cities_mapping,
 )
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
@@ -128,8 +132,6 @@ class Provider(BaseProvider):
             name=f"providers.{self.name}.pathfinder.mapping.size",
             value=get_region_mapping_size(),
         )
-        logger.info(f"Weather Successful Mapping Values: {get_region_mapping()}")
-
         self.metrics_client.gauge(
             name=f"providers.{self.name}.skip_cities_mapping.total.size",
             value=get_skip_cities_mapping_total(),
@@ -138,8 +140,6 @@ class Provider(BaseProvider):
             name=f"providers.{self.name}.skip_cities_mapping.unique.size",
             value=get_skip_cities_mapping_size(),
         )
-
-        logger.info(f"Weather Skip Cities: {get_skip_cities_mapping()}")
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""

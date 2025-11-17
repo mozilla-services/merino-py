@@ -11,6 +11,8 @@ from merino.jobs.relevancy_uploader import relevancy_csv_rs_uploader_cmd
 from merino.jobs.wikipedia_indexer import indexer_cmd
 from merino.jobs.wikipedia_offline_uploader import wiki_offline_uploader_cmd
 from merino.jobs.polygon import cli as polygon_ingestion_cmd
+from merino.jobs.flightaware import cli as flightaware_fetch_schedules_cmd
+from merino.jobs.sportsdata_jobs import cli as sportsdata_cmd
 
 # Include your new jobs module here.
 
@@ -37,6 +39,12 @@ cli.add_typer(wiki_offline_uploader_cmd, no_args_is_help=True)
 
 # Add the polygon ingest subcommand
 cli.add_typer(polygon_ingestion_cmd, no_args_is_help=True)
+
+# Add the flightaware fetch schedules subcommand
+cli.add_typer(flightaware_fetch_schedules_cmd, no_args_is_help=True)
+
+# Add the sports fetch data subcommand
+cli.add_typer(sportsdata_cmd, no_args_is_help=True)
 
 # Describe this command and link to it.
 # cli.add_typer(skeleton_cmd, no_args_is_help=True)

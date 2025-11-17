@@ -33,7 +33,10 @@ from merino.providers.suggest.adm.backends.remotesettings import (
 )
 from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS
 from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
-from merino.providers.suggest.top_picks.backends.top_picks import TopPicksBackend, TopPicksError
+from merino.providers.suggest.top_picks.backends.top_picks import (
+    TopPicksBackend,
+    TopPicksError,
+)
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
@@ -197,7 +200,10 @@ async def get_adm_queries(
         http_client=http_client,
     )
     backend: RemoteSettingsBackend = RemoteSettingsBackend(
-        server, collection, bucket, icon_processor
+        server=server,
+        collection=collection,
+        bucket=bucket,
+        icon_processor=icon_processor,
     )
     records: list[dict[str, Any]] = await backend.get_records()
     amp_records: list[dict[str, Any]] = backend.filter_records("amp", records)

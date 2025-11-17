@@ -7,7 +7,7 @@ from merino.curated_recommendations.protocol import (
     Section,
 )
 
-MIN_INITIALLY_VISIBLE_SECTION_COUNT = 3  # Minimum number of sections shown by default.
+MIN_INITIALLY_VISIBLE_SECTION_COUNT = 5  # Minimum number of sections shown by default.
 MIN_INTEREST_PICKER_COUNT = 8  # Minimum number of items in the interest picker.
 
 
@@ -51,8 +51,10 @@ def _get_interest_picker_rank(
 ) -> int:
     """Return a random rank for the interest picker."""
     if any(s.isFollowed for s in sections.values()):
-        return random.randint(2, 4)
-    return random.randint(1, 3)
+        # If followed, picker always at rank 2 (3rd position)
+        return 2
+    # If no sections followed, picker shows between 1st-3rd position
+    return random.randint(1, 2)
 
 
 def _renumber_sections(
@@ -85,6 +87,6 @@ def _build_picker(
     picker_rank = _get_interest_picker_rank(sections)
     return InterestPicker(
         receivedFeedRank=picker_rank,
-        title="Follow topics to fine-tune your feed",
+        title="Follow topics to fine-tune your experience",
         sections=[InterestPickerSection(sectionId=section_id) for section_id in section_ids],
     )

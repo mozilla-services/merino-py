@@ -5,8 +5,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import logging
 
-from google.cloud.storage import Client
-
 from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
     ScheduledSurfaceBackend,
@@ -18,9 +16,8 @@ from merino.curated_recommendations.corpus_backends.sections_backend import (
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.ml_backends.fake_local_model import (
-    FakeLocalModelSections as FakeLocalModel,
-)
+from merino.curated_recommendations.ml_backends.static_local_model import SuperInferredModel
+
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
 from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
@@ -45,7 +42,7 @@ def init_local_model_backend() -> LocalModelBackend:
     """Initialize the Local Model Backend. This will be repaced with GCSLocal model
     prior to production launch so we can dynamically update models.
     """
-    return FakeLocalModel()
+    return SuperInferredModel()
 
 
 def init_engagement_backend() -> EngagementBackend:

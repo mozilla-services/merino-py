@@ -16,7 +16,7 @@ from merino.configs import settings as config
 from merino.jobs.navigational_suggestions.partner_favicons import PARTNER_FAVICONS
 from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
 from merino.utils.gcs.gcs_uploader import GcsUploader
-from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
+from merino.utils.domain_categories.domain_category_mapping import DOMAIN_MAPPING
 from merino.jobs.navigational_suggestions.domain_data_downloader import (
     DomainDataDownloader,
 )
@@ -27,7 +27,7 @@ from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
 from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
-from merino.providers.suggest.base import Category
+from merino.utils.domain_categories.models import Category
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.jobs.navigational_suggestions.custom_favicons import get_custom_favicon_url
 
@@ -455,7 +455,7 @@ def _run_normal_mode(
     )
 
     if old_top_picks is None:
-        old_top_picks = {}
+        old_top_picks = {"domains": []}
 
     domain_diff = DomainDiff(latest_domain_data=final_top_picks, old_domain_data=old_top_picks)
     (

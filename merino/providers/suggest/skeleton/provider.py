@@ -1,5 +1,6 @@
 """Provide a generic response"""
 
+from abc import abstractmethod
 import logging
 
 import aiodogstatsd
@@ -7,11 +8,13 @@ from pydantic import HttpUrl
 
 from merino.providers.suggest.base import (
     BaseProvider,
-)
-from merino.providers.suggest.skeleton import (
-    SkeletonBackend,
+    BaseSuggestion,
+    SuggestionRequest,
 )
 
+from merino.providers.suggest.skeleton.backends.emoji_picker.backend import (
+    EmojiPickerBackend,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +22,15 @@ logger = logging.getLogger(__name__)
 class SkeletonProvider(BaseProvider):
     """An example Provider.
 
-    This needs to only define the abstracted methods specified by `BaseProvider`
+    This needs to only define the abstracted methods specified by `BaseProvider`.
+    This is the "workhorse" for the suggestion provider and is what is called directly
+    from inside of merino's web CGI.
 
     """
 
     # The backend class we should use to process this request. This should be specified
     # by the child class override.
-    backend: SkeletonBackend
+    backend: EmojiPickerBackend
 
     # The metric client for dealing with stats.
     metrics_client: aiodogstatsd.Client
@@ -45,13 +50,17 @@ class SkeletonProvider(BaseProvider):
 
     def __init__(
         self,
-        backend: SkeletonBackend,
+        backend: EmojiPickerBackend,
         metrics_client: aiodogstatsd.Client,
         score: float,
         name: str,
         query_timeout_sec: float,
         enabled_by_default: bool = False,
     ):
+        """Specify default values. NOTE: do not place any blocking or
+        potentially fatal actions in this method. Those may cause Merino
+        to fail to start up. Instead, use the `.initialize()` method
+        """
         self.backend = backend
         self.metrics_client = metrics_client
         self.score = score
@@ -60,18 +69,37 @@ class SkeletonProvider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         super().__init__()
 
-    # Note:
-    # The following will need to be implemented by the Provider:
-    #
-    # def validate(self, srequest: SuggestionRequest) -> None:
-    #   """Ensure the content of the `srequest` is valid"""
-    #
-    # async def initialize(self) -> None:
-    #   """Perform all one-off initialization functions required
-    #
-    #   This can include things like establishing or pooling database connections,
-    #   creating cron tasks, etc.
-    #   """
-    #
-    # async def query(self, request: SuggestionRequest) -> list[BaseSuggestion]:
-    #   """Process the incoming request and return a list of the suggestions."
+    @abstractmethod
+    async def initialize(self) -> None:
+        """Create connections, components and other actions needed when starting up.
+        This method is only called during general initialization, not on every call,
+        so things that can take more than a few milliseconds should be done here.
+        These should still be wrapped with `try`/`except`.
+        """
+
+    @abstractmethod
+    def normalize_query(self, query: str) -> str:
+        """Normalize means detecting keywords, stripping conflicting terms or stops, etc.
+
+        This function acts as a simple filter for the incoming query string, and the result is
+        swapped into the SuggestionRequest for `.query()`.
+
+        Be sure to call ``super().normalize_query(query)`
+        """
+        return super().normalize_query(query)
+
+    @abstractmethod
+    def validate(self, srequest: SuggestionRequest) -> None:
+        """Ensure that the incoming request is valid. This can involve checking incoming headers
+        as well as other data outside of the content of the query string.
+
+        Validation errors should raise an `HTTPException`.
+        """
+        return super().validate(srequest)
+
+    @abstractmethod
+    async def query(self, request: SuggestionRequest) -> list[BaseSuggestion]:
+        """Handle the incoming query content from the URL bar.
+        This function should fetch data from the backend, and format it into a list
+        of suggestions that follow the agreed upon format.
+        """

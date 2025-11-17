@@ -4,10 +4,26 @@ This should include various data type and derivatives that your example class re
 
 """
 
-import json
+from abc import abstractmethod
+from typing import Protocol
 
 from merino.providers.suggest.base import BaseSuggestion
 from merino.providers.suggest.skeleton import SkeletonData
+
+
+class EmojiPickerProtocol(Protocol):
+    """Startup/Shutdown methods for this backend. This is more of an `impl` style
+    definition, so that expected functions are
+    """
+
+    @abstractmethod
+    async def startup(self) -> None:
+        """Perform the general startup. This method is called during initialization."""
+        pass
+
+    async def shutdown(self) -> None:
+        """Perform general shutdown. This method is called during system shutdown."""
+        pass
 
 
 class EmojiSuggestion(BaseSuggestion):

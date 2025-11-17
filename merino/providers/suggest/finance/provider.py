@@ -8,7 +8,11 @@ import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
 
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
@@ -68,7 +72,7 @@ class Provider(BaseProvider):
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        if settings.current_env.lower() == "production":
+        if settings.image_gcs.gcs_enabled:
             await self._fetch_manifest()
 
             cron_job_fetch = cron.Job(
@@ -129,6 +133,10 @@ class Provider(BaseProvider):
                 status_code=400,
                 detail="Invalid query parameters: `q` is missing",
             )
+
+    def normalize_query(self, query: str) -> str:
+        """Remove trailing spaces from the query string and support both $(stock) and $ (stock)"""
+        return query.strip().replace("$", "STOCK ").replace("  ", " ")
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""

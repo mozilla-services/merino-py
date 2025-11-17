@@ -2,11 +2,34 @@
 
 This guide presumes that you know what [Merino](intro.md), are familiar with programming in Python 3.12+, and are looking to incorporate a new service.
 
+## Setting up a development environment
+
+### ElasticSearch
+
+Merino uses several data stores, including ElasticSearch. You can read
+how to install and run a local only instance by following [this
+guide](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic).
+
+It's important to remember that elastic search is a mapping based data storage system. This means that you need to specify the index declaration, as well as the index specification. The Declaration can be done in the code (see examples in
+[wikipedia](https://github.com/mozilla-services/merino-py/blob/2472bd7f1a892f06763546144b6b84f21bdb5586/merino/jobs/wikipedia_indexer/settings/v1.py#L33) and [sports](https://github.com/mozilla-services/merino-py/blob/0835b214d93a134f596b85948eadedc2a157a311/merino/providers/suggest/sports/backends/sportsdata/common/elastic.py#L27)
+). The actual index creation may need to happen externally, and should be either done manually using the GCP console, or by using the internal teraform definition tooling.
+
+Remember, when running locally, you will have admin rights to your Elasticsearch instance. This will NOT be the case in production.
+
+**_NOTE_**: Only the AirFlow job has WRITE[\*](https://github.com/mozilla/webservices-infra/pull/8387) access to ElasticSearch. The Merino client has only READ access. All modification or alteration operations MUST be performed by the AirFlow job.
+
+The indexes that your jobs will have WRITE access to are defined in the elasticsearch teraform `main.tf` file (see the webservices-infra repo).
+These are defined in the `elasticstack_elasticsearch_security_api_key` resources. Names can describe patterns, e.g. `enwiki-*` or `sports-*`.
+You are encourged to use an index name format similar to `{platform}-{language}-{index_name}` when possible since it will make identifying the columns easier.
+
 ## Types of Merino Services
 
 Merino has two ways to provide suggestions, _off-line_ (which uses user agent locally stored data provided by Remote Settings) and _on-line_ (which provides more timely data by providing live responses to queries).
 
-_off-line_ data sets are generally smaller, since we have limited storage capacity available. These may use the [`csv_rs_uploader`](../merino/jobs/csv_rs_uploader) command. A good example of this is the []`wikipedia_offline_uploader`](../merino/jobs/wikipedia_offline_uploader) job.
+_off-line_ data sets are generally smaller, since we have limited storage capacity available. These may use the
+[`csv_rs_uploader`](../merino/jobs/csv_rs_uploader) command. A good example of this is the
+[`wikipedia_offline_uploader`](../merino/jobs/wikipedia_offline_uploader)
+job.
 
 _on-line_ data do not necessarily have the same size restrictions, but are instead constrained by time. These services should return a response in less than 200ms.
 
@@ -18,7 +41,7 @@ _on-line_ data do not necessarily have the same size restrictions, but are inste
 ```bash
 > uv run merino-jobs
 
- Usage: merino-jobs [OPTIONS] COMMAND [ARGS]...
+Usage: merino-jobs [OPTIONS] COMMAND [ARGS]...
 
  CLI Entrypoint
 
@@ -41,15 +64,42 @@ Please note that file paths presume you are in the Project Root directory.
 
 ### Ingestion
 
-A significant portion of work involves fetching and normalizing data.
+A significant portion of work involves fetching and normalizing data. Data ingestion often requires extra time and write permissions. These are provided by the AirFlow process currently, which is managed by the Data Engineering team. Changes or work requests should use [the Data Engineering Job Intake form](https://mozilla-hub.atlassian.net/jira/software/c/projects/DENG/form/1610). Be sure to allow for high lead time for any job request.
 
 #### Code
 
 ##### Jobs
 
-The ingestion applications are stored under `./merino/jobs/` each provider has it's own application, since each provider is slightly different. For consistency, we use [Typer](https://typer.tiangolo.com/tutorial/) to describe the command,
+The ingestion applications are stored under `./merino/jobs/` each provider has it's own application, since each provider is slightly different. For consistency, we use [Typer](https://typer.tiangolo.com/tutorial/) to describe the command.
 
-_**TODO**_ Having weird problems defining(?)/activating(?) Options. Not sure how they're supposed to be passed along.
+Airflow uses [DAG](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html) definitions to specify job run specifications. These are stored under `./telemetry-airflow` which links to https://github.com/mozilla/telemetry-airflow with merino jobs defined in `merino-jobs.py`. DAGs are python command lines and look like:
+
+```python
+# Run nightly SportsData team/sport update job
+# This fetches sport info, schedules, teams, etc.
+with DAG(
+    "merino_sports_nightly",        # Unique name of the job
+    schedule_interval="0 4 * * *",  # ~ Midnight US/ET
+    doc_md=DOCS,
+    default_args=default_args,
+    tags=tags,
+) as dag:
+
+    sport_nightly_job = merino_job(
+        name="sports_nightly_update",      # Job designator
+        arguments=["fetch_sports", "nightly"],      # Command line args
+        secrets=[sportsdata_prod_apikey_secret],    # name of the stored secret
+    )
+
+```
+
+Remember that you will need to create a separate PR to the [`telemetry-airflow`](https://github.com/mozilla/telemetry-airflow?tab=readme-ov-file) repo to include any changes.
+
+Per the Data Engineering team:
+
+> The workaround for running GKE tasks in dev DAGs is to use the [shared Airflow dev environment](https://dev.telemetry-airflow.nonprod.dataservices.mozgcp.net/home) by pushing [a telemetry-airflow Git tag](https://github.com/mozilla/telemetry-airflow/tags) that starts with dev- so it gets auto-deployed to that dev environment (as described in the [telemetry-airflow README](https://github.com/mozilla/telemetry-airflow/blob/main/README.md#deployments)).
+>
+> For example, Glenda Leonard was using this approach recently, pushing tags that start with dev-gleonard- followed by the commit’s short SHA, so you could do something similar. Obviously, one major downside to this approach is there can be conflicts if multiple developers are wanting to use the shared dev environment at the same time, but I believe Glenda has completed her DAG development work for the time being.
 
 ###### Suggest
 
@@ -57,6 +107,8 @@ Suggest operates by exposing a REST like interface. Code is structured so that:
 
 A **Provider** instantiates it's service (see _initialize()_) and handles the incoming HTTP request (see _query()_).
 Providers instantiate a **Backend**, which resolves individual datum (See _query(str)_) requests and returns a list of `merino.providers.suggest.base.BaseSuggestion`. The Backend is also responsible for managing and updating the **Manifest** data block (see [Manifest](#manifest)) via the `fetch_manifest_data()` and `build_and_upload_manifest_file()` methods.
+
+As an example, `curl "http://localhost:8000/api/v1/suggest?q=jets+game&provider=sports"` will return a list of suggestions from the `sports` provider (which noted the team name `jets` and the extra keyword `game`)
 
 ##### Configuration
 
@@ -132,3 +184,28 @@ Simple utility scripts that may be useful.
 #### Tests
 
 The bank of tests (Unit and Integration) to validate code changes. All code changes should include appropriate tests.
+
+## Creating an Airflow Job
+
+AirFlow uses Apache AirFlow. These are run under the [telemetry-airflow](https://github.com/mozilla/telemetry-airflow) repo.
+
+- Airflow jobs DO NOT have metrics. Use logging instead.
+- Airflow jobs have no local storage. Use remote storage if required.
+- Secrets and API keys need to be managed via Google Secret Manager (GSM). That may require filing an [SRE ticket](https://mozilla-hub.atlassian.net/jira/software/c/projects/SREIN/form/1344), which may get relegated to Data Engineering (the owners of AirFlow processing).
+- Airflow jobs are run using the Merino distribution image.
+
+When creating an AirFlow job:
+
+- Create the job definition in `./merino/jobs` as a python [Typer](https://typer.tiangolo.com/) Command Line Interface(CLI) job.
+- Ensure that each `job` has a distinct command line.
+- Create an SRE ticket requesting GSM storage of any access credentials required by the job. _NOTE_: You should specify the secret identifier for this value, since you will need to refer to it later.
+- If you do not yet have access to the [Data Engineering WTMO](https://mozilla-hub.atlassian.net/wiki/spaces/SRE/pages/27922811/WTMO+Developer+Guide#WTMODeveloperGuide-SecretManagement) system, request access per the [Local Testing & Development of DAGs](https://mozilla-hub.atlassian.net/wiki/spaces/SRE/pages/27922811/WTMO+Developer+Guide#WTMODeveloperGuide-LocalTesting&DevelopmentofDAGs). Also be sure to follow other setup guidance in the [README](https://github.com/mozilla/telemetry-airflow?tab=readme-ov-file#telemetry-airflow)
+- Create a sub task ticket for the generation of the Airflow Job for telemetry
+- Create a new branch in `telemetry-airflow` that includes the Jira ticket identifier created prior (e.g. `git checkout -b feat/DISCO-1234_new_provider`)
+- Modify the `telemetry-airflow/dags/merino_jobs.py` (Note, this is in the `telemetry-airflow` repo, not the `merino-py` repo which may include `telemetry-airflow` as a linked repository).
+
+# Merging and development
+
+Lessons learned:
+
+- When making changes to the `webservices-infra` repo, your changes may require `atlantis`. Run `atlantis apply` _*AFTER*_ the PR has been approved but _*BEFORE*_ the PR has been merged. You will need to make sure that your branch is up-to-date with `main`, so several syncs may be required.

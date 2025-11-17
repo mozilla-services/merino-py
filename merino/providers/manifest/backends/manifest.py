@@ -29,7 +29,9 @@ class ManifestBackend:
         """
         return await self.fetch_manifest_data()
 
-    async def fetch_manifest_data(self) -> tuple[GetManifestResultCode, ManifestData | None]:
+    async def fetch_manifest_data(
+        self,
+    ) -> tuple[GetManifestResultCode, ManifestData | None]:
         """Fetch manifest data from GCS through the remote filemanager."""
         remote_filemanager = ManifestRemoteFilemanager(
             gcs_bucket_path=settings.image_gcs.gcs_bucket,

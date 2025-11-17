@@ -14,7 +14,7 @@ from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.adm.backends.remotesettings import FormFactor
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
-from merino.providers.suggest.base import Category
+
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
 
@@ -154,18 +154,3 @@ async def test_query_with_missing_key(srequest: SuggestionRequestFixture, adm: P
     await adm.initialize()
 
     assert await adm.query(srequest("nope", None, None)) == []
-
-
-@pytest.mark.parametrize(
-    ["domain", "expected"],
-    [
-        ("testserpcategories.com", [Category.Education]),
-        ("nocategories.com", []),
-    ],
-)
-@pytest.mark.asyncio
-async def test_query_serp_categories(adm: Provider, domain: str, expected: list[Category]) -> None:
-    """Test for the serp_categories() method of the adM provider."""
-    categories = adm.serp_categories(domain)
-
-    assert categories == expected

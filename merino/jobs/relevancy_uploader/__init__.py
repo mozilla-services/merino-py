@@ -6,45 +6,19 @@ import csv
 import json
 import io
 from collections import defaultdict
-from enum import Enum
 from hashlib import md5
 
 import typer
 
 from merino.configs import settings as config
+from merino.utils.domain_categories.models import Category
 from merino.jobs.relevancy_uploader.chunked_rs_uploader import (
     ChunkedRemoteSettingsRelevancyUploader,
 )
-from merino.jobs.utils.domain_category_mapping import DOMAIN_MAPPING
+from merino.utils.domain_categories.domain_category_mapping import DOMAIN_MAPPING
 
 CLASSIFICATION_CURRENT_VERSION = 1
 CATEGORY_SCORE_THRESHOLD = 0.3
-
-
-class Category(Enum):
-    """Enum of possible interests for a domain."""
-
-    Inconclusive = 0
-    Animals = 1
-    Arts = 2
-    Autos = 3
-    Business = 4
-    Career = 5
-    Education = 6
-    Fashion = 7
-    Finance = 8
-    Food = 9
-    Government = 10
-    # Disable this per policy consultation
-    # Health = 11
-    Hobbies = 12
-    Home = 13
-    News = 14
-    RealEstate = 15
-    Society = 16
-    Sports = 17
-    Tech = 18
-    Travel = 19
 
 
 RELEVANCY_RECORD_TYPE = "category_to_domains"

@@ -468,6 +468,7 @@ async def test_fetch_with_icon_processing_errors():
                 "iab_category": "5 - Education",
                 "icon": icon_id,
                 "impression_url": "test",
+                "serp_categories": [],
                 "keywords": [],
                 "title": "Test Suggestion",
                 "url": "https://example.org/test",
@@ -480,7 +481,12 @@ async def test_fetch_with_icon_processing_errors():
 
     # Create instance with mock icon processor
     icon_processor_mock = MagicMock(spec=IconProcessor)
-    backend = RemoteSettingsBackend("server", "collection", "bucket", icon_processor_mock)
+    backend = RemoteSettingsBackend(
+        "server",
+        "collection",
+        "bucket",
+        icon_processor_mock,
+    )
 
     # Mock the methods directly on the instance
     backend.get_records = AsyncMock(return_value=mock_records)

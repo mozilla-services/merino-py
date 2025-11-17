@@ -306,3 +306,72 @@ def test_filemanager_rejects_invalid_language():
     """Raises ValueError if FileManager is initialized with an unsupported language."""
     with pytest.raises(ValueError, match="Unsupported language 'es'"):
         FileManager("gcs-bucket", "gcs-project", "http://mock-url", language="es")
+
+
+@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
+def test_get_latest_dump_uses_fallback_when_current_has_no_match(mock_get):
+    """Fall back to the dated directory when current/ has no matching link."""
+    # current/ listing: no matching links
+    resp_current = MagicMock()
+    resp_current.content = "<html><body>No matches here</body></html>"
+
+    # fallback listing: one matching link
+    resp_fallback = MagicMock()
+    resp_fallback.content = """
+    <html><body>
+      <a href="frwiki-20251027-cirrussearch-content.json.gz">frwiki-20251027-cirrussearch-content.json.gz</a>
+    </body></html>
+    """
+
+    # First call -> current/, second call -> fallback
+    mock_get.side_effect = [resp_current, resp_fallback]
+
+    mock_client = MagicMock()
+    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
+        fm = FileManager(
+            gcs_bucket="gcs-bucket",
+            gcs_project="gcs-project",
+            export_base_url="http://mock-url/",
+            language="fr",
+        )
+        # No GCS blob yet (first run)
+        result = fm.get_latest_dump(latest_gcs=None)
+
+    assert (
+        result
+        == "https://dumps.wikimedia.org/other/cirrussearch/20251027/frwiki-20251027-cirrussearch-content.json.gz"
+    )
+
+
+@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
+def test_get_latest_dump_fallback_skips_if_not_newer_than_gcs(mock_get):
+    """Return None when fallback file exists but is not newer than the GCS blob."""
+    # current/ listing: no matching links
+    resp_current = MagicMock()
+    resp_current.content = "<html><body>No matches here</body></html>"
+
+    # fallback listing: one matching link, but it's older/equal to GCS date
+    resp_fallback = MagicMock()
+    resp_fallback.content = """
+    <html><body>
+      <a href="frwiki-20240101-cirrussearch-content.json.gz">frwiki-20240101-cirrussearch-content.json.gz</a>
+    </body></html>
+    """
+
+    mock_get.side_effect = [resp_current, resp_fallback]
+
+    # GCS already has a newer file (or same date)
+    mock_blob = MagicMock()
+    mock_blob.name = "frwiki-20240201-cirrussearch-content.json.gz"
+
+    mock_client = MagicMock()
+    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
+        fm = FileManager(
+            gcs_bucket="gcs-bucket",
+            gcs_project="gcs-project",
+            export_base_url="http://mock-url/",
+            language="fr",
+        )
+        result = fm.get_latest_dump(latest_gcs=mock_blob)
+
+    assert result is None

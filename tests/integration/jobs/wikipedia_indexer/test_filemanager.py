@@ -204,3 +204,53 @@ def test_stream_dump_to_gcs_blob_deletion(mock_requests, mock_gcs_client, mock_w
 
     mock_blob.exists.assert_called_once()
     mock_blob.delete.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_gcs_client")
+def test_get_latest_dump_fallback_used_when_current_empty(requests_mock):
+    """Use the bandaid fallback directory when current/ has no matching link."""
+    base_url = "http://test.com"
+    # current/ listing has no match
+    requests_mock.get(base_url, text="<html><body>No matches</body></html>")  # nosec
+
+    # fallback listing has one match
+    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20251027/"
+    file_name = "enwiki-20251027-cirrussearch-content.json.gz"
+    requests_mock.get(
+        fallback_url,
+        text=f"<html><body><a href='{file_name}'>{file_name}</a></body></html>",
+    )  # nosec
+
+    # First run (no GCS blob yet)
+    latest_gcs = None
+
+    fm = FileManager("foo/bar", "a-project", base_url, "en")
+    latest_dump_url = fm.get_latest_dump(latest_gcs)
+
+    assert latest_dump_url == f"{fallback_url}{file_name}"
+
+
+@pytest.mark.usefixtures("mock_gcs_client")
+def test_get_latest_dump_fallback_skips_if_not_newer(requests_mock):
+    """Return None if fallback file exists but isn't newer than the GCS blob."""
+    base_url = "http://test.com"
+    # current/ listing has no match
+    requests_mock.get(base_url, text="<html><body>No matches</body></html>")  # nosec
+
+    # fallback listing has one match, but it's older than GCS
+    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20251027/"
+    older_file = "enwiki-20240101-cirrussearch-content.json.gz"
+    requests_mock.get(
+        fallback_url,
+        text=f"<html><body><a href='{older_file}'>{older_file}</a></body></html>",
+    )  # nosec
+
+    # GCS already has a newer dump (2024-02-01)
+    from google.cloud.storage import Blob
+
+    latest_gcs = Blob("foo/enwiki-20240201-cirrussearch-content.json.gz", "bucket")
+
+    fm = FileManager("foo/bar", "a-project", base_url, "en")
+    latest_dump_url = fm.get_latest_dump(latest_gcs)
+
+    assert latest_dump_url is None
