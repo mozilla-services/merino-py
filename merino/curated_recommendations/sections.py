@@ -561,6 +561,7 @@ def get_top_story_list(
     extra_count: int = 0,
     extra_source_depth: int = 10,
     rescaler: ExperimentRescaler | None = None,
+    relax_constraints_for_personalization=False,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
@@ -576,6 +577,8 @@ def get_top_story_list(
      rescaler: Optional rescaler associated with the experiment or surface
     Returns: A list of top stories
     """
+    constraint_scale = 2.0 if relax_constraints_for_personalization else 1.0
+
     fresh_story_prob = rescaler.fresh_items_top_stories_max_percentage if rescaler else 0
     total_story_count = top_count + extra_count
 
@@ -588,7 +591,7 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
-    balancer: ArticleBalancer = ArticleBalancer(top_count)
+    balancer: ArticleBalancer = ArticleBalancer(round(top_count * constraint_scale))
     topic_limited_stories, remaining_stories = balancer.add_stories(
         items_throttled_fresh, top_count
     )
@@ -597,7 +600,7 @@ def get_top_story_list(
     if len(second_pass_candidates) > extra_source_depth * 2:
         second_pass_candidates = second_pass_candidates[extra_source_depth:]
 
-    balancer.set_limits_for_expected_articles(total_story_count)
+    balancer.set_limits_for_expected_articles(round(total_story_count * constraint_scale))
     topic_limited_stories, remaining_stories = balancer.add_stories(
         second_pass_candidates, total_story_count
     )
@@ -711,6 +714,7 @@ async def get_sections(
         top_stories_count,
         TOP_STORIES_SECTION_EXTRA_COUNT,
         rescaler=rescaler,
+        relax_constraints_for_personalization=personal_interests is not None,
     )
 
     # Get the story ids in top_stories section

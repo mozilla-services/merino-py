@@ -865,6 +865,25 @@ class TestGetTopStoryList:
         for ix, item in enumerate(result):
             assert item.receivedRank == ix
 
+    def test_basic_topic_limiting_with_personalization(self):
+        """Extra items should be chosen without repeating topics from top_count items."""
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e", "f"],
+            topics=["arts", "arts", "arts", "arts", "food", "government"],
+        )
+        result = get_top_story_list(
+            items,
+            top_count=6,
+            extra_count=0,
+            extra_source_depth=0,
+            relax_constraints_for_personalization=True,
+        )
+        top_ids = [i.corpusItemId for i in result]
+        assert len(result) == 6
+        top_ids[2] == "c"
+        for ix, item in enumerate(result):
+            assert item.receivedRank == ix
+
     def test_includes_extra_items_topic_limiting(self):
         """Extra items should be chosen without repeating topics from top_count items."""
         items = generate_recommendations(
