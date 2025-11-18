@@ -940,31 +940,9 @@ class TestGetCorpusSections:
     """Tests for get_corpus_sections function."""
 
     @pytest.fixture
-    def sections_backend_with_crawl_data(self):
-        """Fake SectionsProtocol returning data with both _crawl and non-_crawl sections."""
+    def sections_backend_with_headlines_section(self):
+        """Fake SectionsProtocol returning data with a headlines section."""
         mock_backend = MagicMock(spec=SectionsProtocol)
-
-        # Create test data with both _crawl and non-_crawl sections
-        # Mock the required attributes properly
-        health_crawl = MagicMock()
-        health_crawl.externalId = "health_crawl"
-        health_crawl.title = "Health (Crawl)"
-        health_crawl.description = None
-        health_crawl.heroTitle = None
-        health_crawl.heroSubtitle = None
-        health_crawl.sectionItems = []
-        health_crawl.iab = None
-        health_crawl.createSource = CreateSource.ML
-
-        tech_crawl = MagicMock()
-        tech_crawl.externalId = "tech_crawl"
-        tech_crawl.title = "Tech (Crawl)"
-        tech_crawl.description = None
-        tech_crawl.heroTitle = None
-        tech_crawl.heroSubtitle = None
-        tech_crawl.sectionItems = []
-        tech_crawl.iab = None
-        tech_crawl.createSource = CreateSource.ML
 
         sports = MagicMock()
         sports.externalId = "sports"
@@ -976,62 +954,55 @@ class TestGetCorpusSections:
         sports.iab = None
         sports.createSource = CreateSource.ML
 
-        arts = MagicMock()
-        arts.externalId = "arts"
-        arts.title = "Arts"
-        arts.description = None
-        arts.heroTitle = None
-        arts.heroSubtitle = None
-        arts.sectionItems = []
-        arts.iab = None
-        arts.createSource = CreateSource.ML
+        headlines = MagicMock()
+        headlines.externalId = "headlines_section"
+        headlines.title = "Headlines"
+        headlines.description = "Top Headlines today"
+        headlines.heroTitle = None
+        headlines.heroSubtitle = None
+        headlines.sectionItems = []
+        headlines.iab = {"taxonomy": "IAB-3.0", "categories": ["386", "JLBCU7"]}
+        headlines.createSource = CreateSource.ML
 
-        crawl_data = [health_crawl, tech_crawl, sports, arts]
-
-        mock_backend.fetch = AsyncMock(return_value=crawl_data)
+        mock_backend.fetch = AsyncMock(return_value=[sports, headlines])
         return mock_backend
 
     @pytest.fixture
-    def sections_backend_with_headlines_section_and_crawl_data(self):
-        """Fake SectionsProtocol returning data with both headlines, _crawl and non-_crawl sections."""
+    def sections_backend_with_manual_sections(self):
+        """Fake SectionsProtocol returning a mix of manual and ML sections."""
         mock_backend = MagicMock(spec=SectionsProtocol)
 
-        # Create test data with both _crawl and non-_crawl sections
-        # Mock the required attributes properly
-        tech_crawl = MagicMock()
-        tech_crawl.externalId = "tech_crawl"
-        tech_crawl.title = "Tech (Crawl)"
-        tech_crawl.description = None
-        tech_crawl.heroTitle = None
-        tech_crawl.heroSubtitle = None
-        tech_crawl.sectionItems = []
-        tech_crawl.iab = None
-        tech_crawl.createSource = CreateSource.ML
+        ml_section = MagicMock()
+        ml_section.externalId = "sports"
+        ml_section.title = "Sports"
+        ml_section.sectionItems = []
+        ml_section.description = None
+        ml_section.heroTitle = None
+        ml_section.heroSubtitle = None
+        ml_section.iab = None
+        ml_section.createSource = CreateSource.ML
 
-        sports = MagicMock()
-        sports.externalId = "sports"
-        sports.title = "Sports"
-        sports.description = None
-        sports.heroTitle = None
-        sports.heroSubtitle = None
-        sports.sectionItems = []
-        sports.iab = None
-        sports.createSource = CreateSource.ML
+        manual_one = MagicMock()
+        manual_one.externalId = "custom-section-1"
+        manual_one.title = "Custom One"
+        manual_one.sectionItems = []
+        manual_one.description = None
+        manual_one.heroTitle = None
+        manual_one.heroSubtitle = None
+        manual_one.iab = None
+        manual_one.createSource = CreateSource.MANUAL
 
-        # headlines_section -- to be split out from the rest of the sections
-        headlines_crawl = MagicMock()
-        headlines_crawl.externalId = "headlines_crawl"
-        headlines_crawl.title = "Headlines"
-        headlines_crawl.description = "Top Headlines today"
-        headlines_crawl.heroTitle = None
-        headlines_crawl.heroSubtitle = None
-        headlines_crawl.sectionItems = []
-        headlines_crawl.iab = {"taxonomy": "IAB-3.0", "categories": ["386", "JLBCU7"]}
-        headlines_crawl.createSource = CreateSource.ML
+        manual_two = MagicMock()
+        manual_two.externalId = "custom-section-2"
+        manual_two.title = "Custom Two"
+        manual_two.sectionItems = []
+        manual_two.description = None
+        manual_two.heroTitle = None
+        manual_two.heroSubtitle = None
+        manual_two.iab = None
+        manual_two.createSource = CreateSource.MANUAL
 
-        crawl_data = [tech_crawl, sports, headlines_crawl]
-
-        mock_backend.fetch = AsyncMock(return_value=crawl_data)
+        mock_backend.fetch = AsyncMock(return_value=[ml_section, manual_one, manual_two])
         return mock_backend
 
     @pytest.fixture
@@ -1074,3 +1045,47 @@ class TestGetCorpusSections:
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
         assert section_c.layout == layout_6_tiles
+
+    @pytest.mark.asyncio
+    async def test_headlines_section_split_out(self, sections_backend_with_headlines_section):
+        """Headlines section should be returned separately from the other sections."""
+        headlines, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_headlines_section,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+        )
+
+        assert headlines is not None
+        assert headlines.title == "Headlines"
+        assert headlines.subtitle == "Top Headlines today"
+        assert "headlines_section" not in sections
+        # Remaining sections should still be mapped.
+        assert set(sections.keys()) == {"sports"}
+
+    @pytest.mark.asyncio
+    async def test_custom_sections_control_excludes_manual_sections(
+        self, sections_backend_with_manual_sections
+    ):
+        """Manual sections are excluded when custom sections experiment is off."""
+        _, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_manual_sections,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=0,
+            is_custom_sections_experiment=False,
+        )
+
+        assert set(sections.keys()) == {"sports"}
+
+    @pytest.mark.asyncio
+    async def test_custom_sections_treatment_only_returns_manual_sections(
+        self, sections_backend_with_manual_sections
+    ):
+        """Only manual sections remain when the custom sections experiment is on."""
+        _, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_manual_sections,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=0,
+            is_custom_sections_experiment=True,
+        )
+
+        assert set(sections.keys()) == {"custom-section-1", "custom-section-2"}
