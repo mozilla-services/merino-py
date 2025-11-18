@@ -103,7 +103,7 @@ class ExperimentName(str, Enum):
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
-    INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking2"
+    INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
 
 
 @unique
