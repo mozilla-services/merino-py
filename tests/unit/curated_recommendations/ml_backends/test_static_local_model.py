@@ -31,6 +31,7 @@ from merino.curated_recommendations.provider import (
 from merino.curated_recommendations.protocol import ExperimentName
 
 INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
+INFERRED_LOCAL_EXPERIMENT_NAME_V2 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V2.value
 
 TEST_SURFACE = "test_surface"
 
@@ -516,7 +517,14 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
     "experiment,branch,model_id,expect_private_nonempty",
     [
         (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
+        (
+            INFERRED_LOCAL_EXPERIMENT_NAME_V2,
+            LOCAL_AND_SERVER_BRANCH_NAME,
+            LOCAL_AND_SERVER_V1,
+            True,
+        ),
         (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (INFERRED_LOCAL_EXPERIMENT_NAME_V2, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
         (
             "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
             LOCAL_AND_SERVER_BRANCH_NAME,
@@ -536,7 +544,9 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
     ],
     ids=[
         "local_and_server_branch",
+        "local_and_server_branch_v2",
         "local_only_branch",
+        "local_only_branch_v2",
         "optin-local_and_server_branch",
         "optin-local_only_branch",
         "local_and_server_branch__no_model",

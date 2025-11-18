@@ -12,6 +12,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
 from merino.curated_recommendations.protocol import ExperimentName
 
 INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
+INFERRED_LOCAL_EXPERIMENT_NAME_V2 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V2.value
 LOCAL_AND_SERVER_V1 = "local-and-server"
 LOCAL_ONLY_V1 = "local-only"
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1
@@ -292,6 +293,8 @@ class SuperInferredModel(LocalModelBackend):
             if (
                 experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME}"
+                or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V2
+                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V2}"
             ):
                 ## switch on branch name
                 if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:
