@@ -31,7 +31,6 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common.sports import TEAM_NAMES
 
 
 class SportsDataProvider(BaseProvider):
@@ -66,7 +65,7 @@ class SportsDataProvider(BaseProvider):
         self._name = name
         self.url = HttpUrl(IGNORED_SUGGESTION_URL)
         self._enabled_by_default = enabled_by_default
-        self.trigger_words = trigger_words + TEAM_NAMES
+        self.trigger_words = trigger_words
         self.score = score
 
     async def initialize(self) -> None:
@@ -118,12 +117,9 @@ class SportsDataProvider(BaseProvider):
         """Perform whatever steps are required to normalize the user provided query string"""
         query = super().normalize_query(query)
 
-        # here, we test for the presence of at least one "trigger word". These can be
-        # sport related words, or team names (Note, for Soccer, these can be city or locales
-        # so we may wish to not trigger on those, but rely on other words.)
+        # here, we test for the presence of at least one "trigger word".
+        # See merino.providers.suggest.sports.DEFAULT_TRIGGER_WORDS
         #
-        # We don't want to just filter the query based on those words, because the query
-        # may contain searchable terms that are not query words.
         if any(map(lambda w: w.lower() in self.trigger_words, query.split())):
             return query
         return ""
