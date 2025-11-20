@@ -24,8 +24,9 @@ from merino.curated_recommendations.protocol import (
     RankingData,
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
     DefaultCrawlerRescaler,
+        SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+        DefaultRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
@@ -333,7 +334,7 @@ class TestThompsonSampling:
     """Tests for the thompson_sampling ranker."""
 
     def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
-        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        """Ranking data should be populated and fresh items flagged when using DefaultRescaler."""
         recs = generate_recommendations(
             item_ids=["fresh", "stale"],
             topics=[Topic.BUSINESS.value, Topic.SCIENCE.value],
@@ -349,7 +350,7 @@ class TestThompsonSampling:
                 "stale": (0, 12),  # impressions -> no_opens = 12 - greater than beta
             }
         )
-        rescaler = DefaultCrawlerRescaler()
+        rescaler = DefaultRescaler()
 
         # Make beta sampling deterministic to avoid flakiness.
         monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
@@ -370,7 +371,7 @@ class TestThompsonSampling:
         assert by_id["stale"].ranking_data.is_fresh is False
 
     def test_ranking_data_and_fresh_flag_set_with_downranked_items(self, monkeypatch):
-        """Ranking data should be populated and fresh items flagged when using DefaultCrawlerRescaler."""
+        """Ranking data should be populated and fresh items flagged when using DefaultRescaler."""
         recs = generate_recommendations(
             item_ids=["fresh1", "stale", "fresh2"],
             topics=[Topic.BUSINESS.value, Topic.SCIENCE.value, Topic.SCIENCE.value],
@@ -387,7 +388,7 @@ class TestThompsonSampling:
                 "fresh2": (2, 4),
             }
         )
-        rescaler = DefaultCrawlerRescaler()
+        rescaler = DefaultRescaler()
         rescaler.fresh_items_max = 1
         rescaler.fresh_items_limit_prior_threshold_multiplier = 1
         rescaler.fresh_items_section_ranking_max_percentage = 0

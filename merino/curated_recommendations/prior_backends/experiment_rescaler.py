@@ -15,7 +15,7 @@ PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 
-class DefaultCrawlerRescaler(ExperimentRescaler):
+class DefaultRescaler(ExperimentRescaler):
     """Scales based on overall percentage"""
 
     def __init__(self, **data: Any):
