@@ -4,7 +4,6 @@ import asyncio
 import json
 from datetime import timedelta, datetime
 import logging
-from typing import Any
 from unittest.mock import AsyncMock
 
 import aiodogstatsd

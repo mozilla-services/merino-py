@@ -320,9 +320,9 @@ def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> ExperimentRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
-    if request.region != "US":
+    if request.region != "US" or not is_scheduler_holdback_experiment(request):
         return None
-    if is_scheduler_holdback_experiment(request):
+    else:
         return SchedulerHoldbackRescaler()
     return None
 

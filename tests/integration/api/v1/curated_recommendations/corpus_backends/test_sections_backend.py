@@ -10,6 +10,7 @@ from merino.curated_recommendations.corpus_backends.protocol import CreateSource
 async def test_fetch(sections_backend: SectionsBackend):
     """Test that fetch returns expected sections from the backend."""
     sections = await sections_backend.fetch(SurfaceId.NEW_TAB_EN_US)
+    # We no longer expect crawl sections from fixtures.
     assert all(
         not section.externalId.endswith("_crawl") for section in sections
     ), "Fixture should not contain crawl sections"
