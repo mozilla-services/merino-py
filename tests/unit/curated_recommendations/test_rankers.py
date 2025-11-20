@@ -24,9 +24,8 @@ from merino.curated_recommendations.protocol import (
     RankingData,
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    DefaultCrawlerRescaler,
-        SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-        DefaultRescaler,
+    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+    DefaultRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (

@@ -7573,7 +7573,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "headlines",
+        "externalId": "headlines_section",
         "active": true,
         "title": "Headlines",
         "description": "Top Headlines today",

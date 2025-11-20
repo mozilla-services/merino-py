@@ -50,7 +50,6 @@ from merino.curated_recommendations.sections import (
     LAYOUT_CYCLE,
     get_top_story_list,
     get_legacy_topic_ids,
-    split_headlines_section,
     put_headlines_first_then_top_stories,
 )
 from tests.unit.curated_recommendations.fixtures import (
@@ -242,7 +241,6 @@ class TestCustomSectionsExperiment:
         req = SimpleNamespace(experimentName=name, experimentBranch=branch)
         assert is_custom_sections_experiment(req) is expected
 
-
     @pytest.mark.parametrize(
         "name,branch,region,expected_class",
         [
@@ -268,7 +266,6 @@ class TestCustomSectionsExperiment:
         else:
             assert get_ranking_rescaler_for_branch(req) is None
 
-
     def test_filter_sections_custom_sections_treatment(self):
         """Test that custom sections experiment treatment only includes MANUAL sections"""
         from merino.curated_recommendations.sections import filter_sections_by_experiment
@@ -283,9 +280,7 @@ class TestCustomSectionsExperiment:
         ]
 
         # Custom sections experiment treatment: should only get MANUAL sections
-        result = filter_sections_by_experiment(
-            sections, is_custom_sections_experiment=True
-        )
+        result = filter_sections_by_experiment(sections, is_custom_sections_experiment=True)
 
         assert len(result) == 2
         assert "custom-section-1" in result
@@ -309,9 +304,7 @@ class TestCustomSectionsExperiment:
         ]
 
         # Custom sections experiment control: should exclude MANUAL sections
-        result = filter_sections_by_experiment(
-            sections,  is_custom_sections_experiment=False
-        )
+        result = filter_sections_by_experiment(sections, is_custom_sections_experiment=False)
 
         assert len(result) == 2
         assert "health" in result
@@ -320,7 +313,6 @@ class TestCustomSectionsExperiment:
         assert result["tech"].createSource == CreateSource.ML
         assert "custom-section-1" not in result
         assert "custom-section-2" not in result
-
 
 
 class TestUpdateReceivedFeedRank:
@@ -942,8 +934,6 @@ class TestSplitHeadlinesSection:
         corpus_section.title = title
 
         return corpus_section
-
-
 
 
 class TestGetCorpusSections:

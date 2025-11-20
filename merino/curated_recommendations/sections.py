@@ -218,6 +218,7 @@ async def get_corpus_sections(
     )
     return headlines_corpus_section, corpus_sections
 
+
 def split_headlines_section(
     corpus_sections: list[CorpusSection],
 ) -> tuple[CorpusSection | None, list[CorpusSection]]:
@@ -230,6 +231,7 @@ def split_headlines_section(
         else:
             remaining_sections.append(cs)
     return headlines_section, remaining_sections
+
 
 def exclude_recommendations_from_blocked_sections(
     recommendations: list[CuratedRecommendation],
@@ -313,6 +315,7 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
     )
 
+
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> ExperimentRescaler | None:
@@ -321,6 +324,7 @@ def get_ranking_rescaler_for_branch(
         return None
     if is_scheduler_holdback_experiment(request):
         return SchedulerHoldbackRescaler()
+    return None
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
@@ -341,6 +345,7 @@ def get_corpus_sections_for_legacy_topic(
     legacy_topics = get_legacy_topic_ids()
 
     return {sid: section for sid, section in corpus_sections.items() if sid in legacy_topics}
+
 
 def filter_sections_by_experiment(
     corpus_sections: list[CorpusSection],
@@ -577,7 +582,6 @@ async def get_sections(
     Returns:
         A dict mapping section IDs to fully-configured Section models.
     """
-
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
