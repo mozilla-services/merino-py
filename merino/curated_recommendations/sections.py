@@ -324,7 +324,6 @@ def get_ranking_rescaler_for_branch(
         return None
     else:
         return SchedulerHoldbackRescaler()
-    return None
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
