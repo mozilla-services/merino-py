@@ -17,9 +17,7 @@ from elasticsearch import (
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.sports import (
-    LOGGING_TAG,
-)
+from merino.providers.suggest.sports import LOGGING_TAG, DEFAULT_TRIGGER_WORDS
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
@@ -369,6 +367,7 @@ class SportsDataStore(ElasticDataStore):
     index_map: dict[str, str]
     meta_map: str
     languages: list[str]
+    strip_words: list[str]
 
     def __init__(
         self,
@@ -378,6 +377,7 @@ class SportsDataStore(ElasticDataStore):
         platform: str,
         index_map: dict[str, str],
         meta_map: str = META_INDEX,
+        strip_words: list[str] = DEFAULT_TRIGGER_WORDS,
         **kwargs,
     ) -> None:
         """Initialize a connection to ElasticSearch"""
@@ -387,6 +387,7 @@ class SportsDataStore(ElasticDataStore):
         # build the index based on the platform.
         self.index_map = index_map
         self.meta_map = meta_map
+        self.strip_words = strip_words
         logging.getLogger(__name__).info(
             f"{LOGGING_TAG} Initialized Elastic search at {credentials.dsn}"
         )
@@ -606,13 +607,14 @@ class SportsDataStore(ElasticDataStore):
         logger = logging.getLogger(__name__)
         if not self.client:
             return {}
-
+        # quick filter out the non-team keywords:
+        search_words: str = " ".join(filter(lambda word: word not in self.strip_words, q.split()))
         if mix_sports:
-            logger.debug(f"{LOGGING_TAG} Mixing sports...")
+            logger.debug(f"{LOGGING_TAG} Mixing sports...{search_words}")
         try:
             query = {
                 "bool": {
-                    "must": [{"match": {"terms": {"query": q, "operator": "or"}}}],
+                    "must": [{"match": {"terms": {"query": search_words, "operator": "and"}}}],
                     "must_not": [{"range": {"expiry": {"lt": utc_now}}}],
                 }
             }
@@ -630,20 +632,17 @@ class SportsDataStore(ElasticDataStore):
         logger.debug(f"{LOGGING_TAG} found {res} for `{q}`")
         if res.get("hits", {}).get("total", {}).get("value", 0) > 0:
             # filter sport for prev, current, next
-            filter: dict[str, dict] = {}
+            event_list: dict[str, dict] = {}
             for doc in res["hits"]["hits"]:
                 event = json.loads((doc["_source"]["event"]))
                 # Add the elastic search score as a baseline score for the return result.
                 event["es_score"] = doc.get("_score", 0)
-                if not event["date"]:
-                    logger.info(f"{LOGGING_TAG}Event has no date, skipping")
-                    continue
                 if mix_sports:
                     sport = "all"
                 else:
                     sport = event["sport"]
-                if sport not in filter:
-                    filter[sport] = {}
+                if sport not in event_list:
+                    event_list[sport] = {}
 
                 # This may be a bit confusing.
                 # There are four "status" fields.
@@ -657,22 +656,22 @@ class SportsDataStore(ElasticDataStore):
                 # concluded game and the next scheduled game. As for current, we just grab the last
                 # "inprogress" game that is reported.
                 if status.is_final():
-                    if filter[sport].get("previous", {}).get("date", 0) < int(event["date"]):
-                        filter[sport]["previous"] = event
+                    if event_list[sport].get("previous", {}).get("date", 0) < int(event["date"]):
+                        event_list[sport]["previous"] = event
                 # If only show the next upcoming game.
                 if status.is_scheduled():
                     # if there is no "next" game, or if the "next" game is later than this one,
                     # display the most immediate upcoming event.
-                    if not filter[sport].get("next") or int(filter[sport]["next"]["date"]) > int(
-                        event["date"]
-                    ):
-                        filter[sport]["next"] = event
+                    if not event_list[sport].get("next") or int(
+                        event_list[sport]["next"]["date"]
+                    ) > int(event["date"]):
+                        event_list[sport]["next"] = event
                 if status.is_in_progress():
                     # remove the previous game info because we have a current one.
-                    if "previous" in filter[sport]:
-                        del filter[sport]["previous"]
-                    filter[sport]["current"] = event
-            return filter
+                    if "previous" in event_list[sport]:
+                        del event_list[sport]["previous"]
+                    event_list[sport]["current"] = event
+            return event_list
         else:
             return {}
 
