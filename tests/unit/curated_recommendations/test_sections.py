@@ -38,7 +38,6 @@ from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
-    is_custom_sections_experiment,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
@@ -224,22 +223,8 @@ class TestMlSectionsExperiment:
         assert is_subtopics_experiment(req) is expected
 
 
-class TestCustomSectionsExperiment:
-    """Tests covering is_custom_sections_experiment"""
-
-    @pytest.mark.parametrize(
-        "name,branch,expected",
-        [
-            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment", True),
-            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "control", False),
-            ("other", "treatment", False),
-            (None, None, False),
-        ],
-    )
-    def test_custom_sections_experiment_flag(self, name, branch, expected):
-        """Test that custom sections experiment flag logic matches expected behavior."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
-        assert is_custom_sections_experiment(req) is expected
+class TestFilterSectionsByExperiment:
+    """Tests covering filter_sections_by_experiment"""
 
     @pytest.mark.parametrize(
         "name,branch,region,expected_class",
@@ -266,8 +251,8 @@ class TestCustomSectionsExperiment:
         else:
             assert get_ranking_rescaler_for_branch(req) is None
 
-    def test_filter_sections_custom_sections_treatment(self):
-        """Test that custom sections experiment treatment only includes MANUAL sections"""
+    def test_filter_sections_includes_both_manual_and_ml(self):
+        """Test that filter_sections_by_experiment includes both MANUAL and ML sections"""
         from merino.curated_recommendations.sections import filter_sections_by_experiment
         from merino.curated_recommendations.corpus_backends.protocol import CreateSource
 
@@ -279,40 +264,42 @@ class TestCustomSectionsExperiment:
             MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
         ]
 
-        # Custom sections experiment treatment: should only get MANUAL sections
-        result = filter_sections_by_experiment(sections, is_custom_sections_experiment=True)
+        # Should include both MANUAL and ML sections (legacy topics)
+        result = filter_sections_by_experiment(sections, include_subtopics=False)
 
-        assert len(result) == 2
+        assert len(result) == 4
         assert "custom-section-1" in result
         assert "custom-section-2" in result
+        assert "health" in result
+        assert "tech" in result
         assert result["custom-section-1"].createSource == CreateSource.MANUAL
         assert result["custom-section-2"].createSource == CreateSource.MANUAL
-        assert "health" not in result
-        assert "tech" not in result
+        assert result["health"].createSource == CreateSource.ML
+        assert result["tech"].createSource == CreateSource.ML
 
-    def test_filter_sections_custom_sections_control(self):
-        """Test that custom sections experiment control excludes MANUAL sections"""
+    def test_filter_sections_respects_subtopics_flag(self):
+        """Test that filter_sections_by_experiment respects the include_subtopics flag"""
         from merino.curated_recommendations.sections import filter_sections_by_experiment
         from merino.curated_recommendations.corpus_backends.protocol import CreateSource
 
-        # Create test sections with different createSource values
+        # Create test sections including a non-legacy topic ML section
         sections = [
-            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health", createSource=CreateSource.ML),  # legacy
             MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
-            MagicMock(externalId="tech", createSource=CreateSource.ML),
-            MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
+            MagicMock(externalId="nfl", createSource=CreateSource.ML),  # non-legacy subtopic
         ]
 
-        # Custom sections experiment control: should exclude MANUAL sections
-        result = filter_sections_by_experiment(sections, is_custom_sections_experiment=False)
-
-        assert len(result) == 2
+        # With subtopics=False: should include MANUAL + legacy ML only
+        result = filter_sections_by_experiment(sections, include_subtopics=False)
+        assert "custom-section-1" in result
         assert "health" in result
-        assert "tech" in result
-        assert result["health"].createSource == CreateSource.ML
-        assert result["tech"].createSource == CreateSource.ML
-        assert "custom-section-1" not in result
-        assert "custom-section-2" not in result
+        assert "nfl" not in result
+
+        # With subtopics=True: should include MANUAL + all ML sections
+        result = filter_sections_by_experiment(sections, include_subtopics=True)
+        assert "custom-section-1" in result
+        assert "health" in result
+        assert "nfl" in result
 
 
 class TestUpdateReceivedFeedRank:
@@ -1063,29 +1050,15 @@ class TestGetCorpusSections:
         assert set(sections.keys()) == {"sports"}
 
     @pytest.mark.asyncio
-    async def test_custom_sections_control_excludes_manual_sections(
+    async def test_includes_both_manual_and_ml_sections(
         self, sections_backend_with_manual_sections
     ):
-        """Manual sections are excluded when custom sections experiment is off."""
+        """Both manual and ML sections are included."""
         _, sections = await get_corpus_sections(
             sections_backend=sections_backend_with_manual_sections,
             surface_id=SurfaceId.NEW_TAB_EN_US,
             min_feed_rank=0,
-            is_custom_sections_experiment=False,
         )
 
-        assert set(sections.keys()) == {"sports"}
-
-    @pytest.mark.asyncio
-    async def test_custom_sections_treatment_only_returns_manual_sections(
-        self, sections_backend_with_manual_sections
-    ):
-        """Only manual sections remain when the custom sections experiment is on."""
-        _, sections = await get_corpus_sections(
-            sections_backend=sections_backend_with_manual_sections,
-            surface_id=SurfaceId.NEW_TAB_EN_US,
-            min_feed_rank=0,
-            is_custom_sections_experiment=True,
-        )
-
-        assert set(sections.keys()) == {"custom-section-1", "custom-section-2"}
+        # Should include both ML and MANUAL sections
+        assert set(sections.keys()) == {"sports", "custom-section-1", "custom-section-2"}
