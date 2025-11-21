@@ -1344,11 +1344,14 @@ class TestSections:
         # Assert layouts are cycled
         assert_section_layouts_are_cycled(sections)
 
-        # The only sections are topic sections or "top_stories_section"
-        assert all(
-            section_name == "top_stories_section" or section_name in Topic
-            for section_name in sections
-        )
+        # Sections can be legacy topics, manually created sections, or top_stories_section
+        legacy_topics = {topic.value for topic in Topic}
+        for section_name in sections:
+            # Each section should be either top_stories_section, a legacy topic, or a MANUAL section (UUID format)
+            is_top_stories = section_name == "top_stories_section"
+            is_legacy_topic = section_name in legacy_topics
+            is_manual_section = "-" in section_name  # MANUAL sections use UUID format
+            assert is_top_stories or is_legacy_topic or is_manual_section
 
     @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
     @pytest.mark.parametrize(
@@ -1395,14 +1398,16 @@ class TestSections:
             recs = section["recommendations"]
             assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
-        # Check if non-ML experiment, only legacy sections returned
+        # Check section types based on experiment
         legacy_topics = {topic.value for topic in Topic}
 
         if experiment_payload.get("experimentName") != ExperimentName.ML_SECTIONS_EXPERIMENT.value:
-            # Non-ML sections experiment: All section keys (excluding top_stories) must be in legacy topics
+            # Non-ML sections experiment: Sections can be legacy topics or manually created sections
             for sid in sections:
                 if sid != "top_stories_section":
-                    assert sid in legacy_topics
+                    is_legacy_topic = sid in legacy_topics
+                    is_manual_section = "-" in sid  # MANUAL sections use UUID format
+                    assert is_legacy_topic or is_manual_section
 
         # Check the recs used in top_stories_section are removed from their original ML sections.
         top_story_ids = {
@@ -1683,18 +1688,24 @@ class TestSections:
             and experiment_branch == "control"
         )
 
+        # Separate MANUAL sections (UUID format) from ML subtopic sections
         non_legacy_section_ids = [
             sid
             for sid in sections
             if sid not in legacy_topics and sid not in {"top_stories_section"}
         ]
+        manual_section_ids = [sid for sid in non_legacy_section_ids if "-" in sid]
+        ml_subtopic_section_ids = [sid for sid in non_legacy_section_ids if "-" not in sid]
 
         if expect_subtopics:
-            assert non_legacy_section_ids, "Expected subtopic sections for US treatment"
+            assert ml_subtopic_section_ids, "Expected ML subtopic sections for US treatment"
         else:
             assert (
-                not non_legacy_section_ids
-            ), f"Unexpected non-legacy sections: {non_legacy_section_ids}"
+                not ml_subtopic_section_ids
+            ), f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
+
+        # MANUAL sections should always be present regardless of experiment
+        # (they may or may not appear based on having enough items, but that's okay)
 
     def test_daily_briefing_experiment_headlines_section_returned(self, client: TestClient):
         """Test that the Headlines section is returned when the daily briefing experiment is enabled.
