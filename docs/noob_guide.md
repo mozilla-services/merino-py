@@ -137,7 +137,7 @@ Suggest operates by exposing a REST like interface. Each `Provider` has specific
 A **Provider** instantiates it's service (see `initialize()`) and optionally validates and conditions the query and handles the incoming HTTP request (see `query()`).
 Providers instantiate a **Backend**, which resolves individual datum (See `query(str)`) requests and returns a list of `merino.providers.suggest.base.BaseSuggestion`. The Backend is also responsible for managing and updating the **Manifest** data block (see [Manifest](#manifest)) via the `fetch_manifest_data()` and `build_and_upload_manifest_file()` methods.
 
-See `merino.providers.skeleton` for a general use template that modules could use.
+See `merino.providers.suggest.skeleton` for a general use template that modules could use.
 
 As an example, `curl "http://localhost:8000/api/v1/suggest?q=jets+game&provider=sports"` will return a list of suggestions from the `sports` provider (which noted the team name `jets` and the extra keyword `game`)
 
