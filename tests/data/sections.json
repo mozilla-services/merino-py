@@ -4687,7 +4687,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "hobbies_crawl",
+        "externalId": "hobbies",
         "active": true,
         "title": "Gaming",
         "iab": {
@@ -4881,7 +4881,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "business_crawl",
+        "externalId": "business",
         "active": true,
         "title": "Business",
         "iab": {
@@ -5075,7 +5075,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "food_crawl",
+        "externalId": "food",
         "active": true,
         "title": "Food",
         "iab": {
@@ -5257,7 +5257,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "society-parenting_crawl",
+        "externalId": "society-parenting",
         "active": true,
         "title": "Parenting",
         "iab": {
@@ -5451,7 +5451,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "tech_crawl",
+        "externalId": "tech",
         "active": true,
         "title": "Tech",
         "iab": {
@@ -5645,7 +5645,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "career_crawl",
+        "externalId": "career",
         "active": true,
         "title": "Career",
         "iab": {
@@ -5839,7 +5839,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "home_crawl",
+        "externalId": "home",
         "active": true,
         "title": "Home & Garden",
         "iab": {
@@ -6033,7 +6033,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "government_crawl",
+        "externalId": "government",
         "active": true,
         "title": "Politics",
         "iab": {
@@ -6215,7 +6215,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "education_crawl",
+        "externalId": "education",
         "active": true,
         "title": "Education",
         "iab": {
@@ -6409,7 +6409,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "education-science_crawl",
+        "externalId": "education-science",
         "active": true,
         "title": "Science",
         "iab": {
@@ -6603,7 +6603,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "finance_crawl",
+        "externalId": "finance",
         "active": true,
         "title": "Money",
         "iab": {
@@ -6797,7 +6797,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "health_crawl",
+        "externalId": "health",
         "active": true,
         "title": "Health",
         "iab": {
@@ -6991,7 +6991,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "arts_crawl",
+        "externalId": "arts",
         "active": true,
         "title": "Entertainment",
         "iab": {
@@ -7185,7 +7185,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "sports_crawl",
+        "externalId": "sports",
         "active": true,
         "title": "Sports",
         "iab": {
@@ -7379,7 +7379,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "travel_crawl",
+        "externalId": "travel",
         "active": true,
         "title": "Travel",
         "iab": {
@@ -7573,7 +7573,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "headlines_crawl",
+        "externalId": "headlines_section",
         "active": true,
         "title": "Headlines",
         "description": "Top Headlines today",
@@ -7709,7 +7709,7 @@
       },
       {
         "createSource": "ML",
-        "externalId": "society_crawl",
+        "externalId": "society",
         "active": true,
         "title": "Life Hacks",
         "iab": {

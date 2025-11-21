@@ -8,20 +8,15 @@ from rich.console import Console
 from rich.table import Table
 from pydantic import BaseModel
 from google.cloud.storage import Blob
-
-from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
-    DomainMetadataExtractor,
-    current_scraper,
-    Scraper,
-)
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
-from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
-    DomainMetadataUploader,
-)
-from merino.utils.gcs.models import BaseContentUploader
+import ast
+import re
+from pprint import pformat
+import tldextract
+from pathlib import Path
 
 cli = typer.Typer(no_args_is_help=True)
 console = Console()
+FAVICON_PATH = "merino/jobs/navigational_suggestions/custom_favicons.py"
 
 
 class DomainTestResult(BaseModel):
@@ -38,6 +33,17 @@ class DomainTestResult(BaseModel):
 
 async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
     """Test metadata extraction for a single domain asynchronously"""
+    from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
+        DomainMetadataExtractor,
+        current_scraper,
+        Scraper,
+    )
+    from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+    from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
+        DomainMetadataUploader,
+    )
+    from merino.utils.gcs.models import BaseContentUploader
+
     timestamp = datetime.now().isoformat()
 
     try:
@@ -206,12 +212,67 @@ async def probe_domains(domains: list[str], min_width: int) -> list[DomainTestRe
     return results
 
 
+def update_custom_favicons(title: str, url: str, table: Table) -> None:
+    """Update the custom favicons dictionary with a given title and url."""
+    dic = {title.lower(): url}
+    with open(FAVICON_PATH, "r") as f:
+        content = f.read()
+    pattern = r"(\s*CUSTOM_FAVICONS\s*:\s*dict\[\s*str\s*,\s*str\s*\]\s*=\s*\{.*?\})"
+    match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+    if not match:
+        table.add_row("Error", "Cannot find CUSTOM_FAVICONS dictionary")
+        return
+    dict_str = match.group(1)
+    try:
+        dict_part = dict_str.split("=", 1)[1].strip()
+        parsed_dict = ast.literal_eval(dict_part)
+    except Exception as e:
+        table.add_row("Error", f"Unable to parse CUSTOM_FAVICONS dictionary: {e}")
+        return
+    parsed_dict.update(dic)
+    updated_dict_str = "\nCUSTOM_FAVICONS: dict[str, str] = {\n "
+    updated_dict_str += (
+        pformat(parsed_dict, indent=4).replace("{", "").replace("}", "").replace("'", '"')
+    )
+    updated_dict_str += "\n}"
+    updated_content = content.replace(dict_str, updated_dict_str)
+    try:
+        # Abstract Syntax Tree parsing suceeds only if the target is valid python code
+        ast.parse(updated_content)
+        with open(FAVICON_PATH, "w") as f:
+            f.write(updated_content)
+        table.add_row("Saved Domain", title)
+        table.add_row("Saved URL", url)
+        table.add_row("Save PATH", FAVICON_PATH)
+    except Exception:
+        table.add_row("Error", "Result is an invalid file")
+
+
+def favicon_width_convertor(width: str) -> int:
+    """Convert the width of a favicon to an integer."""
+    size = width.split("x")
+    if len(size) < 2:
+        best_width = 1
+    else:
+        best_width = int(max(size))
+    return best_width
+
+
 @cli.command()
 def test_domains(
     domains: list[str] = typer.Argument(..., help="List of domains to test"),
     min_width: int = typer.Option(32, help="Minimum favicon width", show_default=True),
+    save_favicon: bool = typer.Option(False, "--save", help="Save custom favicon", is_flag=True),
 ):
     """Test domain metadata extraction for multiple domains"""
+    if not Path("pyproject.toml").exists():
+        print("The probe-images command must be run from the root directory.")
+        return
+
+    from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
+        DomainMetadataExtractor,
+    )
+
     with console.status("Testing domains concurrently..."):
         results = asyncio.run(probe_domains(domains, min_width))
 
@@ -227,6 +288,32 @@ def test_domains(
             console.print("✅ Success!")
             console.print(table)
 
+            save_table = Table(show_header=False, box=None)
+
+            if save_favicon and result.favicon_data:
+                title = tldextract.extract(result.domain).domain
+                best_icon = result.favicon_data["links"][0]
+                best_width = favicon_width_convertor(
+                    result.favicon_data["links"][0].get("sizes", "1x1")
+                )
+                for icon in result.favicon_data["links"]:
+                    if not best_icon:
+                        best_icon = icon
+                        best_width = favicon_width_convertor(icon.get("sizes", "1x1"))
+                        continue
+                    width = favicon_width_convertor(icon.get("sizes", "1x1"))
+                    if DomainMetadataExtractor.is_better_favicon(
+                        icon, width, best_width, best_icon["_source"]
+                    ):
+                        best_icon = icon
+                        best_width = width
+                if title and best_icon:
+                    update_custom_favicons(title, best_icon["href"], save_table)
+                elif not title:
+                    save_table.add_row("Error", "Unable to extract domain")
+                else:
+                    save_table.add_row("Error", "Unable to find any favicons")
+
             if result.favicon_data:
                 console.print("\nAll favicons found:")
                 for link in result.favicon_data["links"]:
@@ -239,6 +326,11 @@ def test_domains(
                         if "type" in link:
                             desc.append(f"type={link['type']}")
                         console.print(f"- {link['href']} ({' '.join(desc)})")
+
+            if save_favicon:
+                console.print("\nSave Results:")
+                console.print(save_table)
+
         else:
             console.print(f"\n❌ Failed testing domain: {result.domain}")
             if result.error:

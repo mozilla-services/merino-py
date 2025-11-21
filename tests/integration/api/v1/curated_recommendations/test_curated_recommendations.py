@@ -77,9 +77,19 @@ class MockEngagementBackend(EngagementBackend):
         # {corpusItemId: (reports, impressions)}
         self.metrics: dict[str, tuple[int, int]] = {}
         self.experiment_traffic_fraction = experiment_traffic_fraction
+        # Optional overrides for deterministic CTRs keyed by corpusItemId.
+        self.ctr_overrides: dict[str, tuple[int, int]] = {}
 
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
+        if corpus_item_id in self.ctr_overrides:
+            clicks, impressions = self.ctr_overrides[corpus_item_id]
+            return Engagement(
+                corpus_item_id=corpus_item_id,
+                region=region,
+                click_count=clicks,
+                impression_count=impressions,
+            )
         if corpus_item_id in self.metrics:
             reports, impressions = self.metrics[corpus_item_id]
             return Engagement(
@@ -146,6 +156,33 @@ class MockEngagementBackend(EngagementBackend):
     def initialize(self) -> None:
         """Mock class must implement this method, but no initialization needs to happen."""
         pass
+
+
+def seed_deterministic_ctr_overrides(
+    engagement_backend: MockEngagementBackend, feeds: dict[str, Any]
+) -> None:
+    """Assign deterministic CTR overrides to ensure ranking tests stay stable."""
+    baseline_sections = {
+        name: section
+        for name, section in feeds.items()
+        if section and name != "top_stories_section"
+    }
+    assert len(baseline_sections) >= 2
+
+    sorted_section_ids = sorted(baseline_sections)
+    split_idx = max(1, len(sorted_section_ids) // 2)
+    favored_section_ids = sorted_section_ids[:split_idx]
+    deprioritized_section_ids = sorted_section_ids[split_idx:]
+
+    engagement_backend.ctr_overrides.clear()
+
+    def assign_overrides(section_ids: list[str], clicks: int, impressions: int) -> None:
+        for sid in section_ids:
+            for rec in baseline_sections[sid]["recommendations"][:6]:
+                engagement_backend.ctr_overrides[rec["corpusItemId"]] = (clicks, impressions)
+
+    assign_overrides(favored_section_ids, clicks=1_000_000, impressions=1_000_000)
+    assign_overrides(deprioritized_section_ids, clicks=1_000, impressions=1_000_000)
 
 
 class MockLocalModelBackend(LocalModelBackend):
@@ -1289,8 +1326,8 @@ class TestSections:
     )
     def test_sections_legacy_holdback(self, experiment_payload, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for different locales, using
-        crawled feeds. Note this also is sent in non-US countries
+        when requesting the 'sections' feed for different locales.
+        Note this also is sent in non-US countries
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1564,12 +1601,7 @@ class TestSections:
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
-        should be boosted and isFollowed attribute set accordingly.
-
-        Also tests that blocked/followed sections work correctly with RSS vs. Zyte experiment:
-        1. Section IDs are cleaned (no _crawl suffix) before blocked/followed evaluation
-        2. Blocked/followed sections are properly handled regardless of experiment branch
-        3. The experiment filtering doesn't interfere with user preferences
+        should be boosted and isFollowed attribute set accordingly, regardless of experiment toggles.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1596,8 +1628,7 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # headlines_crawl section should not be in the final response even if present in the corpus-api response
-        # it should only be available when headlines_section experiment is enabled
+        # headlines_section should not be in the final response unless that experiment is enabled
         assert "headlines_section" not in sections
 
         # assert isFollowed & isBlocked have been correctly set
@@ -1626,20 +1657,6 @@ class TestSections:
             assert data["feeds"]["health"]["isFollowed"]
             assert not data["feeds"]["health"]["isBlocked"]
 
-        # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
-        experiment_name = experiment_payload.get("experimentName")
-        experiment_branch = experiment_payload.get("experimentBranch")
-        if not (
-            experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
-            and experiment_branch == "control"
-        ):
-            for section_id in sections:
-                if section_id != "top_stories_section":
-                    assert not section_id.endswith("_crawl"), (
-                        f"Section ID {section_id} should not have _crawl suffix "
-                        f"in response (experiment: {experiment_payload})"
-                    )
-
     @pytest.mark.parametrize(
         "experiment_payload",
         [
@@ -1657,14 +1674,10 @@ class TestSections:
             },
         ],
     )
-    def test_rss_vs_zyte_experiment_sections_filtering(
-        self, caplog, experiment_payload, sections_response_data, client: TestClient
+    def test_sections_filtering_by_region_and_holdback(
+        self, caplog, experiment_payload, client: TestClient
     ):
-        """Test that the Crawled topics vs Scheduled holdback experiment correctly filters sections based on experiment branch.
-
-        - Treatment: crawl-exclusive corpus items
-        - Control/no-experiment: regular corpus items only
-        """
+        """Test that section filtering respects region and holdback states."""
         print(json.dumps(experiment_payload))
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1676,8 +1689,7 @@ class TestSections:
 
         sections = {name: section for name, section in data["feeds"].items() if section}
 
-        # headlines_crawl section should not be in the final response even if present in the corpus-api response
-        # it should only be available when headlines_section experiment is enabled
+        # headlines_section should not be present unless the daily briefing experiment is enabled separately.
         assert "headlines_section" not in sections
 
         assert len(sections) >= 4
@@ -1686,59 +1698,27 @@ class TestSections:
             if sid != "top_stories_section":
                 assert not sid.endswith("_crawl"), f"{sid} shouldn't have _crawl suffix"
 
-        crawl_ids: set[Any] = set()
-        regular_ids: set[Any] = set()
-        for section in sections_response_data["data"]["getSections"]:
-            items = section.get("sectionItems", [])
-            target_set = crawl_ids if section["externalId"].endswith("_crawl") else regular_ids
-            for item in items:
-                target_set.add(item["corpusItem"]["id"])
-
-        crawl_only = crawl_ids - regular_ids
-        regular_only = regular_ids - crawl_ids
-
-        response_ids = {
-            rec["corpusItemId"]
-            for sid, section in sections.items()
-            if sid != "top_stories_section"
-            for rec in section.get("recommendations", [])
-            if "corpusItemId" in rec
-        }
-
-        experiment_name = experiment_payload.get("experimentName")
-        is_crawl_data = (
-            not (
-                experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
-                and experiment_payload.get("experimentBranch") == "control"
-            )
-        ) and experiment_payload.get("region") == "US"
-
-        crawl_count = len(response_ids & crawl_only)
-        regular_count = len(response_ids & regular_only)
-
-        if is_crawl_data:
-            assert crawl_count >= 50, f"Crawled conetnet needs 50+ crawl items, got {crawl_count}"
-            assert regular_count >= 0, "Treatment missing regular items from subtopics"
-        else:
-            assert (
-                regular_count >= 50
-            ), f"Legacy sections needs 50+ regular items, got {regular_count}"
-            assert (
-                crawl_count == 0
-            ), f"Legacy sections shouldn't have crawl items, got {crawl_count}"
-
         legacy_topics = {topic.value for topic in Topic}
-        is_expected_to_have_subtopics = is_crawl_data  # all crawl data has subtopics
+        experiment_name = experiment_payload.get("experimentName")
+        experiment_branch = experiment_payload.get("experimentBranch")
+        region = experiment_payload.get("region")
+        expect_subtopics = region == "US" and not (
+            experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
+            and experiment_branch == "control"
+        )
 
-        if is_expected_to_have_subtopics:
-            non_legacy = [
-                s for s in sections if s not in legacy_topics and s != "top_stories_section"
-            ]
-            assert non_legacy, "Treatment-crawl-plus-subtopics needs subtopic sections"
+        non_legacy_section_ids = [
+            sid
+            for sid in sections
+            if sid not in legacy_topics and sid not in {"top_stories_section"}
+        ]
+
+        if expect_subtopics:
+            assert non_legacy_section_ids, "Expected subtopic sections for US treatment"
         else:
-            for sid in sections:
-                if sid != "top_stories_section":
-                    assert sid in legacy_topics, f"Should only have legacy topics, got {sid}"
+            assert (
+                not non_legacy_section_ids
+            ), f"Unexpected non-legacy sections: {non_legacy_section_ids}"
 
     def test_daily_briefing_experiment_headlines_section_returned(self, client: TestClient):
         """Test that the Headlines section is returned when the daily briefing experiment is enabled.
@@ -1766,7 +1746,7 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # Assert headlines_crawl section is returned and is renamed to "headlines_section"
+        # Assert headlines section is returned as "headlines_section"
         assert "headlines_section" in sections
         headlines_section = sections.get("headlines_section")
         if headlines_section is not None:
@@ -2079,15 +2059,17 @@ class TestSections:
     )
     def test_ml_sections_thompson_sampling(self, repeat, engagement_backend, client: TestClient):
         """Statistically verify ML sections order by engagement (higher CTR → lower feed rank)."""
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-        )
+        payload = {
+            "locale": "en-US",
+            "feeds": ["sections"],
+            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+            "experimentBranch": "treatment",
+        }
+        seed_response = client.post("/api/v1/curated-recommendations", json=payload)
+        assert seed_response.status_code == 200
+        seed_deterministic_ctr_overrides(engagement_backend, seed_response.json()["feeds"])
+
+        response = client.post("/api/v1/curated-recommendations", json=payload)
         assert response.status_code == 200
         feeds = response.json()["feeds"]
 
@@ -2220,15 +2202,17 @@ class TestSections:
         """Sections should be ordered so that those with higher average CTR
         among their top 3 items get a better (lower) feed rank.
         """
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-        )
+        payload = {
+            "locale": "en-US",
+            "feeds": ["sections"],
+            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+            "experimentBranch": "treatment",
+        }
+        seed_response = client.post("/api/v1/curated-recommendations", json=payload)
+        assert seed_response.status_code == 200
+        seed_deterministic_ctr_overrides(engagement_backend, seed_response.json()["feeds"])
+
+        response = client.post("/api/v1/curated-recommendations", json=payload)
         assert response.status_code == 200
         feeds = response.json()["feeds"]
 
@@ -2331,20 +2315,31 @@ class TestSections:
         client: TestClient,
     ):
         """Verify takedown_reported_recommendations behaves correctly."""
-        corpus_rec_id = "080de671-e4de-4a3d-863f-8c6dd6980069"
+        payload = {
+            "locale": "en-US",
+            "feeds": ["sections"],
+            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+            "experimentBranch": "treatment",
+        }
+
+        baseline_response = client.post("/api/v1/curated-recommendations", json=payload)
+        assert baseline_response.status_code == 200
+        baseline_feeds = baseline_response.json()["feeds"]
+        baseline_ids = [
+            rec["corpusItemId"]
+            for sid, section in baseline_feeds.items()
+            if section
+            for rec in section.get("recommendations", [])
+        ]
+        assert baseline_ids, "Expected at least one recommendation in baseline response"
+        corpus_rec_id = baseline_ids[0]
 
         if reports is not None and impressions is not None:
             engagement_backend.metrics.update({corpus_rec_id: (reports, impressions)})
 
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-        )
+        caplog.clear()
+
+        response = client.post("/api/v1/curated-recommendations", json=payload)
 
         assert response.status_code == 200
         feeds = response.json()["feeds"]
@@ -2361,6 +2356,9 @@ class TestSections:
             assert any("Excluding reported recommendation" in r.message for r in caplog.records)
         else:
             assert corpus_rec_id in response_ids
+            assert not any(
+                "Excluding reported recommendation" in r.message for r in caplog.records
+            )
 
 
 def test_curated_recommendations_enriched_with_icons(

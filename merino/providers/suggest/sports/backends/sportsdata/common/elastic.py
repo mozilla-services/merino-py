@@ -1,6 +1,5 @@
 """Store and retrieve Sports information from ElasticSearch"""
 
-import copy
 import json
 import logging
 from abc import abstractmethod, ABC
@@ -133,37 +132,30 @@ EN_INDEX_SETTINGS: dict = {
 }
 
 
-def get_index_settings(dsn: str = settings.providers.sports.es.dsn) -> dict[str, Any]:
+def get_index_settings(dsn: str | None = None) -> dict[str, Any]:
     """Local installs of ElasticSearch don't support some filters. Strip those only if needed"""
-    settings = EN_INDEX_SETTINGS
-    if "localhost" in dsn:
-        settings = copy.deepcopy(EN_INDEX_SETTINGS)
-        # remove the elements that the dev es environment does not handle:
-        del settings["analysis"]["filter"]["lowercase"]
-        del settings["analysis"]["filter"]["accentfolding"]
-        filters = settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
-        settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"] = list(
-            filter(
-                lambda x: x not in ["icu_normalizer", "accentfolding"],
-                filters,
-            )
-        )
-        filters = settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
-        settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"] = list(
-            filter(
-                lambda x: x not in ["icu_normalizer", "accentfolding"],
-                filters,
-            )
-        )
-    return settings
+    provided_dsn = dsn or ""
+    effective_dsn = (dsn or settings.providers.sports.es.dsn or "").lower()
+    if not provided_dsn or "localhost" in effective_dsn or "127.0.0.1" in effective_dsn:
+        return {
+            "number_of_replicas": "0",
+            "refresh_interval": "-1",
+            "number_of_shards": "1",
+            "analysis": {
+                "analyzer": {
+                    "plain_en": {"type": "standard"},
+                    "plain_search_en": {"type": "standard"},
+                    "stop_analyzer_en": {"type": "standard"},
+                    "stop_analyzer_search_en": {"type": "standard"},
+                }
+            },
+        }
+    return EN_INDEX_SETTINGS
 
 
 SUGGEST_ID: Final[str] = "suggest-on-title"
 MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
 TIMEOUT_MS: Final[str] = f"{settings.providers.sports.es.request_timeout_ms}ms"
-INDEX_SETTINGS: dict[str, Any] = {
-    "en": get_index_settings(),
-}
 
 
 class ElasticCredentials:
@@ -387,6 +379,8 @@ class SportsDataStore(ElasticDataStore):
         # build the index based on the platform.
         self.index_map = index_map
         self.meta_map = meta_map
+        dsn = credentials.dsn or settings.providers.sports.es.dsn
+        self.index_settings = {lang: get_index_settings(dsn=dsn) for lang in languages}
         logging.getLogger(__name__).info(
             f"{LOGGING_TAG} Initialized Elastic search at {credentials.dsn}"
         )
@@ -531,7 +525,7 @@ class SportsDataStore(ElasticDataStore):
                     await self.client.indices.create(
                         index=index,
                         mappings=mappings[idx],
-                        settings=INDEX_SETTINGS[language_code],
+                        settings=self.index_settings[language_code],
                     )
                 except BadRequestError as ex:
                     if ex.error == "resource_already_exists_exception":

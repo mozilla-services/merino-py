@@ -5,7 +5,7 @@ thompson sampling experiments
 from unittest.mock import Mock
 
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    DefaultCrawlerRescaler,
+    DefaultRescaler,
     SchedulerHoldbackRescaler,
     PESSIMISTIC_PRIOR_ALPHA_SCALE,
     PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC,
@@ -20,7 +20,7 @@ class TestDefaultRescaler:
 
     def setup_method(self):
         """Set up test"""
-        self.rescaler = DefaultCrawlerRescaler()
+        self.rescaler = DefaultRescaler()
 
     def test_rescale_with_subtopic_item(self):
         """Test rescaling of priors for relative experiment size"""
