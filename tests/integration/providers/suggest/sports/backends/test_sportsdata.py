@@ -38,11 +38,18 @@ def es_url():
     """ElasticSearch URL fixture."""
     env = {
         "discovery.type": "single-node",
+        "xpack.security.enabled": "false",
+        "xpack.ml.enabled": "false",
+        "xpack.monitoring.collection.enabled": "false",
+        "ingest.geoip.downloader.enabled": "false",
         "ES_JAVA_OPTS": "-Xms512m -Xmx512m",
     }
-    with ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4").with_env("ES_JAVA_OPTS", "-Xms512m -Xmx512m") as es:
+    with ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4") as es:
+        for k, v in env.items():
+            es.with_env(k,v)
         url = es.get_url()
         yield url
+
 
 
 @pytest_asyncio.fixture
@@ -50,7 +57,7 @@ async def es_client(es_url):
     """Elasticsearch client fixture."""
     client = AsyncElasticsearch(es_url, verify_certs=False, ssl_show_warn=False)
     try:
-        await client.cluster.health(wait_for_status="yellow", timeout="20s")
+        await client.cluster.health(wait_for_status="yellow", timeout="10s")
         yield client
     finally:
         await client.close()
