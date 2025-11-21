@@ -307,8 +307,6 @@ def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> 
     )
 
 
-
-
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> ExperimentRescaler | None:
