@@ -257,13 +257,10 @@ async def test_get_index_settings():
     assert "accentfolding" in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
 
     settings = get_index_settings(dsn="localhost")
-    assert "lowercase" not in settings["analysis"]["filter"]
-    assert "accentfolding" not in settings["analysis"]["filter"]
-    assert "accentfolding" not in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
-    assert (
-        "accentfolding"
-        not in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
-    )
+    # Local settings fall back to a simple analyzer config without custom filters.
+    assert "filter" not in settings.get("analysis", {})
+    assert settings["analysis"]["analyzer"]["plain_en"]["type"] == "standard"
+    assert settings["analysis"]["analyzer"]["plain_search_en"]["type"] == "standard"
 
 
 # @pytest.mark.asyncio

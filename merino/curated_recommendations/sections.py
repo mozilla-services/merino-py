@@ -23,7 +23,6 @@ from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SchedulerHoldbackRescaler,
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-    DefaultCrawlerRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, ExperimentRescaler
 from merino.curated_recommendations.protocol import (
@@ -33,7 +32,6 @@ from merino.curated_recommendations.protocol import (
     SectionConfiguration,
     ExperimentName,
     ProcessedInterests,
-    CrawlExperimentBranchName,
     Layout,
 )
 from merino.curated_recommendations.rankers import (
@@ -56,7 +54,6 @@ TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines_section"
-HEADLINES_CRAWL_SECTION_KEY = "headlines_crawl"
 
 
 def map_section_item_to_recommendation(
@@ -170,7 +167,6 @@ async def get_corpus_sections(
     sections_backend: SectionsProtocol,
     surface_id: SurfaceId,
     min_feed_rank: int,
-    crawl_branch: str | None = None,
     include_subtopics: bool = False,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
     is_custom_sections_experiment: bool = False,
@@ -181,7 +177,6 @@ async def get_corpus_sections(
         sections_backend: Backend interface to fetch corpus sections.
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
-        crawl_branch: The crawl experiment branch name or None.
         include_subtopics: Whether to include subtopic sections.
         scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
         is_custom_sections_experiment: Whether custom sections experiment is enabled.
@@ -210,7 +205,6 @@ async def get_corpus_sections(
     # Apply RSS vs. Zyte experiment filtering and custom sections filtering
     filtered_corpus_sections = filter_sections_by_experiment(
         remaining_raw_corpus_sections,
-        crawl_branch,
         include_subtopics,
         is_custom_sections_experiment,
     )
@@ -228,11 +222,11 @@ async def get_corpus_sections(
 def split_headlines_section(
     corpus_sections: list[CorpusSection],
 ) -> tuple[CorpusSection | None, list[CorpusSection]]:
-    """Return the headlines_crawl section separately from everything else."""
+    """Return the headlines section separately from everything else."""
     headlines_section: CorpusSection | None = None
     remaining_sections: list[CorpusSection] = []
     for cs in corpus_sections:
-        if cs.externalId == HEADLINES_CRAWL_SECTION_KEY:
+        if cs.externalId == HEADLINES_SECTION_KEY:
             headlines_section = cs
         else:
             remaining_sections.append(cs)
@@ -302,7 +296,6 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
 
     Include subtopics if:
     - ML sections experiment is enabled (treatment branch), OR
-    - Crawl experiment is in the TREATMENT_CRAWL_PLUS_SUBTOPICS branch
     """
     in_holdback = is_scheduler_holdback_experiment(request)
     # Subtopics only in the US
@@ -323,30 +316,14 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     )
 
 
-def get_crawl_experiment_branch(request: CuratedRecommendationsRequest) -> str | None:
-    """Return the branch name for the RSS vs. Zyte experiment
-
-    Branches:
-    - control: Non-crawl legacy topics only
-    - treatment-crawl: Crawl legacy topics only
-    - treatment-crawl-subtopics: Crawl legacy topics + non-crawl subtopics
-
-    """
-    if is_scheduler_holdback_experiment(request) or request.region != "US":
-        return CrawlExperimentBranchName.CONTROL.value
-
-    return CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
-
-
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> ExperimentRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
-    if request.region != "US":
+    if request.region != "US" or not is_scheduler_holdback_experiment(request):
         return None
-    if is_scheduler_holdback_experiment(request):
+    else:
         return SchedulerHoldbackRescaler()
-    return DefaultCrawlerRescaler()
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
@@ -369,21 +346,8 @@ def get_corpus_sections_for_legacy_topic(
     return {sid: section for sid, section in corpus_sections.items() if sid in legacy_topics}
 
 
-def is_crawl_section_id(section_id: str) -> bool:
-    """Check if a section ID represents a crawl section.
-
-    Args:
-        section_id: The section external ID to check
-
-    Returns:
-        True if the section ID ends with '_crawl', False otherwise
-    """
-    return section_id.endswith("_crawl")
-
-
 def filter_sections_by_experiment(
     corpus_sections: list[CorpusSection],
-    crawl_branch: str | None,
     include_subtopics: bool = False,
     is_custom_sections_experiment: bool = False,
 ) -> dict[str, CorpusSection]:
@@ -391,21 +355,20 @@ def filter_sections_by_experiment(
 
     Args:
         corpus_sections: List of CorpusSection objects
-        crawl_branch: The experiment branch name or None
         include_subtopics: Whether to include subtopic sections
         is_custom_sections_experiment: Whether custom sections experiment is enabled
 
     Returns:
-        Filtered sections with _crawl suffix removed from keys for crawl sections
+        Filtered sections
     """
     legacy_topics = get_legacy_topic_ids()
     result = {}
 
     for section in corpus_sections:
         section_id = section.externalId
-        is_crawl_section = is_crawl_section_id(section_id)
-        base_id = section_id.replace("_crawl", "") if is_crawl_section else section_id
+        base_id = section_id
         is_legacy = base_id in legacy_topics
+        # is_legacy = base_id in legacy_topics
         is_manual_section = section.createSource == CreateSource.MANUAL
 
         # Custom sections experiment: only include MANUAL sections in treatment, exclude them in control
@@ -418,28 +381,8 @@ def filter_sections_by_experiment(
         # Control/default: exclude MANUAL sections
         if is_manual_section:
             continue
-
-        # Determine if we should include this section based on the branch
-        if crawl_branch in [
-            CrawlExperimentBranchName.TREATMENT_CRAWL.value,
-            CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value,
-        ]:
-            # Treatment branches: use _crawl for legacy, regular for subtopics
-            if is_legacy and is_crawl_section:
-                result[base_id] = section
-            elif (
-                not is_legacy
-                and not is_crawl_section
-                and crawl_branch == CrawlExperimentBranchName.TREATMENT_CRAWL_PLUS_SUBTOPICS.value
-            ):
-                # Include non-crawl subtopics only in crawl-plus-subtopics branch
-                result[base_id] = section
-        else:
-            # Control branch or no experiment: use non-_crawl sections
-            if not is_crawl_section:
-                # Include based on whether subtopics are enabled
-                if is_legacy or include_subtopics:
-                    result[base_id] = section
+        if is_legacy or include_subtopics:
+            result[base_id] = section
 
     return result
 
@@ -638,9 +581,6 @@ async def get_sections(
     Returns:
         A dict mapping section IDs to fully-configured Section models.
     """
-    # 1. Get corpus sections with RSS vs. Zyte experiment filtering
-    crawl_branch = get_crawl_experiment_branch(request)
-
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
@@ -653,7 +593,6 @@ async def get_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=1,
-        crawl_branch=crawl_branch,
         include_subtopics=include_subtopics,
         scheduled_surface_backend=scheduled_surface_backend,
         is_custom_sections_experiment=custom_sections_enabled,

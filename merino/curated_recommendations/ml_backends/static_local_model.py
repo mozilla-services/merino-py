@@ -55,6 +55,7 @@ BASE_TOPICS = [
     "travel",
 ]
 
+BASE_TOPICS_SET = set(BASE_TOPICS)
 
 BASE_SECTIONS_FOR_LOCAL_MODEL = [
     "nfl",
@@ -66,22 +67,22 @@ BASE_SECTIONS_FOR_LOCAL_MODEL = [
     "movies",
     "music",
     "books",
-    "business_crawl",
-    "career_crawl",
-    "arts_crawl",
-    "food_crawl",
-    "health_crawl",
-    "home_crawl",
-    "finance_crawl",
-    "government_crawl",
-    "sports_crawl",
-    "tech_crawl",
-    "travel_crawl",
-    "education_crawl",
-    "hobbies_crawl",
-    "society-parenting_crawl",
-    "education-science_crawl",
-    "society_crawl",
+    "business",
+    "career",
+    "arts",
+    "food",
+    "health",
+    "home",
+    "finance",
+    "government",
+    "sports",
+    "tech",
+    "travel",
+    "education",
+    "hobbies",
+    "society-parenting",
+    "education-science",
+    "society",
 ]
 
 
@@ -147,8 +148,6 @@ MODEL_Q_VALUE_V1 = 0.030
 THRESHOLDS_V1_A = [0.008, 0.016, 0.024]
 THRESHOLDS_V1_B = [0.005, 0.010, 0.015]
 
-CRAWL_SUFFIX = "_crawl"
-
 
 # Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
@@ -173,10 +172,6 @@ class SuperInferredModel(LocalModelBackend):
     default_model_id = DEFAULT_PRODUCTION_MODEL_ID
 
     @staticmethod
-    def _clean_section(section_name: str):
-        return section_name.replace(CRAWL_SUFFIX, "")
-
-    @staticmethod
     def _get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
@@ -187,8 +182,13 @@ class SuperInferredModel(LocalModelBackend):
 
     @staticmethod
     def _get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
+        features = (
+            {f"s_{section_name}": 1, f"s_{section_name}_crawl": 1}
+            if section_name in BASE_TOPICS_SET
+            else {f"s_{section_name}": 1}
+        )
         return InterestVectorConfig(
-            features={f"s_{section_name}": 1},
+            features=features,
             thresholds=thresholds,
             diff_p=MODEL_P_VALUE_V1,
             diff_q=MODEL_Q_VALUE_V1,
@@ -245,8 +245,7 @@ class SuperInferredModel(LocalModelBackend):
         else:
             return None
         category_fields = {
-            self._clean_section(a): self._get_section(a, model_thresholds)
-            for a in BASE_SECTIONS_FOR_LOCAL_MODEL
+            a: self._get_section(a, model_thresholds) for a in BASE_SECTIONS_FOR_LOCAL_MODEL
         }  ## all sections
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
