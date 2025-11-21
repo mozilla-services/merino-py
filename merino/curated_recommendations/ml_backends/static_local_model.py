@@ -55,6 +55,7 @@ BASE_TOPICS = [
     "travel",
 ]
 
+BASE_TOPICS_SET = set(BASE_TOPICS)
 
 BASE_SECTIONS_FOR_LOCAL_MODEL = [
     "nfl",
@@ -181,8 +182,13 @@ class SuperInferredModel(LocalModelBackend):
 
     @staticmethod
     def _get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
+        features = (
+            {f"s_{section_name}": 1, f"s_{section_name}_crawl": 1}
+            if section_name in BASE_TOPICS_SET
+            else {f"s_{section_name}": 1}
+        )
         return InterestVectorConfig(
-            features={f"s_{section_name}": 1},
+            features=features,
             thresholds=thresholds,
             diff_p=MODEL_P_VALUE_V1,
             diff_q=MODEL_Q_VALUE_V1,
