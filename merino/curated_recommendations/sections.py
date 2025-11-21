@@ -170,9 +170,8 @@ async def get_corpus_sections(
     min_feed_rank: int,
     include_subtopics: bool = False,
     scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
-    is_custom_sections_experiment: bool = False,
 ) -> tuple[Section | None, dict[str, Section]]:
-    """Fetch editorially curated sections with optional RSS vs. Zyte experiment filtering.
+    """Fetch curated sections.
 
     Args:
         sections_backend: Backend interface to fetch corpus sections.
@@ -180,7 +179,6 @@ async def get_corpus_sections(
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
         include_subtopics: Whether to include subtopic sections.
         scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
-        is_custom_sections_experiment: Whether custom sections experiment is enabled.
 
     Returns:
         A tuple of headlines section (if present) & a mapping from section IDs to Section objects, each with a unique receivedFeedRank.
@@ -203,11 +201,10 @@ async def get_corpus_sections(
             is_legacy_section=False,
         )
 
-    # Apply RSS vs. Zyte experiment filtering and custom sections filtering
+    # Apply filtering based on subtopics experiment
     filtered_corpus_sections = filter_sections_by_experiment(
         remaining_raw_corpus_sections,
         include_subtopics,
-        is_custom_sections_experiment,
     )
 
     # Process the sections using the shared logic, passing the dict directly
@@ -310,11 +307,6 @@ def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> 
     )
 
 
-def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if custom sections should be included based on experiments."""
-    return is_enrolled_in_experiment(
-        request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
-    )
 
 
 def get_ranking_rescaler_for_branch(
@@ -351,17 +343,20 @@ def get_corpus_sections_for_legacy_topic(
 def filter_sections_by_experiment(
     corpus_sections: list[CorpusSection],
     include_subtopics: bool = False,
-    is_custom_sections_experiment: bool = False,
 ) -> dict[str, CorpusSection]:
-    """Filter sections based on RSS vs. Zyte experiment branch and custom sections experiment.
+    """Filter sections based on createSource and subtopics experiment.
+
+    Sections are included if they meet any of these criteria:
+    - Manually created sections (createSource == MANUAL)
+    - ML-generated legacy topic sections
+    - ML-generated subtopic sections (when subtopics experiment is enabled)
 
     Args:
         corpus_sections: List of CorpusSection objects
-        include_subtopics: Whether to include subtopic sections
-        is_custom_sections_experiment: Whether custom sections experiment is enabled
+        include_subtopics: Whether to include ML subtopic sections
 
     Returns:
-        Filtered sections
+        Dict mapping section IDs to CorpusSection objects
     """
     legacy_topics = get_legacy_topic_ids()
     result = {}
@@ -370,20 +365,9 @@ def filter_sections_by_experiment(
         section_id = section.externalId
         base_id = section_id
         is_legacy = base_id in legacy_topics
-        # is_legacy = base_id in legacy_topics
         is_manual_section = section.createSource == CreateSource.MANUAL
 
-        # Custom sections experiment: only include MANUAL sections in treatment, exclude them in control
-        if is_custom_sections_experiment:
-            # Treatment: only include MANUAL sections
-            if is_manual_section:
-                result[base_id] = section
-            continue
-
-        # Control/default: exclude MANUAL sections
-        if is_manual_section:
-            continue
-        if is_legacy or include_subtopics:
+        if is_manual_section or is_legacy or include_subtopics:
             result[base_id] = section
 
     return result
@@ -586,9 +570,6 @@ async def get_sections(
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
-    # Determine if custom sections experiment is enabled
-    custom_sections_enabled = is_custom_sections_experiment(request)
-
     rescaler = get_ranking_rescaler_for_branch(request)
 
     headlines_corpus_section, corpus_sections_all = await get_corpus_sections(
@@ -597,7 +578,6 @@ async def get_sections(
         min_feed_rank=1,
         include_subtopics=include_subtopics,
         scheduled_surface_backend=scheduled_surface_backend,
-        is_custom_sections_experiment=custom_sections_enabled,
     )
 
     # Determine if we should include headlines section based on daily briefing experiment
