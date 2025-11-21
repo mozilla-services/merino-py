@@ -250,9 +250,9 @@ class TestCustomSectionsExperiment:
                 "US",
                 SchedulerHoldbackRescaler,
             ),
-            ("other", "treatment", "US", None),
+            ("other", "treatment", "US", DefaultRescaler),
             ("other", "treatment", "CA", None),
-            (None, None, "US", None),
+            (None, None, "US", DefaultRescaler),
             (None, None, "CA", None),
         ],
     )

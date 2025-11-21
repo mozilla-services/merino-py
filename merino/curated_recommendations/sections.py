@@ -21,6 +21,7 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+    DefaultRescaler,
     SchedulerHoldbackRescaler,
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
 )
@@ -320,10 +321,11 @@ def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> ExperimentRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
-    if request.region != "US" or not is_scheduler_holdback_experiment(request):
-        return None
-    else:
+    if is_scheduler_holdback_experiment(request):
         return SchedulerHoldbackRescaler()
+    if request.region == "US":
+        return DefaultRescaler()
+    return None
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
