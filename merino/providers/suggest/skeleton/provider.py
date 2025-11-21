@@ -80,9 +80,13 @@ class SkeletonProvider(BaseProvider):
     @abstractmethod
     def normalize_query(self, query: str) -> str:
         """Normalize means detecting keywords, stripping conflicting terms or stops, etc.
+        **NOTE**: Python is "pass by value", meaning that any alteration done to the query will
+        impact what is passed to other Providers.
 
         This function acts as a simple filter for the incoming query string, and the result is
-        swapped into the SuggestionRequest for `.query()`.
+        swapped into the SuggestionRequest for `.query()`. It may be useful to use this method
+        to perform "intent word detection", and if no intent is discovered, this function could
+        return an empty string, which would allow the `.query()` function to skip processing.
 
         Be sure to call ``super().normalize_query(query)`
         """

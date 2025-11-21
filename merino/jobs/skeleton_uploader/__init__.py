@@ -20,10 +20,7 @@ uv run merino-jobs skeleton_app
 """
 
 import logging
-import os
 from dynaconf.base import LazySettings
-from typing import Any
-from typing_extensions import Annotated
 
 import typer
 
@@ -32,9 +29,7 @@ from merino.configs.app_configs.config_logging import configure_logging
 
 # Remote Settings accepts CSV files as the upload, so we need to convert
 # our data into CSV format.
-from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
-
-DEFAULT_LOGGING_LEVEL = "WARNING"
+# from merino.jobs.csv_rs_uploader import ChunkedRemoteSettingsSuggestionUploader
 
 # Your provider class will contain the data structures we will want to use
 # from merino.providers.suggest.skeleton.addons_data import ADDON_DATA
@@ -78,23 +73,6 @@ class Options:
         )
 
 
-def init_logs() -> logging.Logger:
-    """Initialize logging based on `PYTHON_LOG` environ)"""
-    level = getattr(logging, os.environ.get("PYTHON_LOG", DEFAULT_LOGGING_LEVEL).upper(), None)
-    logging.basicConfig(level=level)
-    return logging.getLogger(__name__)
-
-
-def _upload(options: Options):
-    """Do the actual functions required."""
-    import pdb
-
-    pdb.set_trace()
-    print(options)
-
-
-logger = init_logs()
-
 # initialize our settings
 # Settings are stored in `/configs` in the `.toml` files.
 # You can generally do `config.providers.{YourProject}`. I'm doing this
@@ -121,8 +99,18 @@ def upload(
     other: str = options.other_option,
 ):
     """Sample Upload function that just prints something. This text is used as the command help."""
-    print(f"Uploading...{auth}")
+    logger = logging.getLogger(__name__)
+    logger.info(f"Uploading...{auth}")
+    # This is a no-op since the skeleton has no meat, so no upload required.
+    # Feel free to flesh this out with the things that you need to do.
 
 
+# This allows you to call this function outside of the `uv` construct.
 if __name__ == "__main__":
+    # Logging is handled universally by `merino.configs.app_configs.configure_logging`
+    # which uses `settings.logging.level` to specify the logging level
+    # (DEBUG=10 .. CRITICAL=50)
+    configure_logging()
+    logger = logging.getLogger(__name__)
+    logger.info("Starting up the skeleton.")
     upload()
