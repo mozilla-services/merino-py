@@ -26,6 +26,7 @@ from merino.curated_recommendations import (
     ConstantPrior,
     interest_picker,
     LocalModelBackend,
+    MLRecsBackend,
 )
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -218,6 +219,7 @@ def provider(
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     local_model_backend: LocalModelBackend,
+    ml_recommendations_backend: MLRecsBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -226,6 +228,7 @@ def provider(
         prior_backend=prior_backend,
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
     )
 
 

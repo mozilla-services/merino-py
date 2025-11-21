@@ -16,10 +16,12 @@ from merino.curated_recommendations.corpus_backends.sections_backend import (
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
 from merino.curated_recommendations.ml_backends.static_local_model import SuperInferredModel
+from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
-from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend
+from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend, MLRecsBackend
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -78,6 +80,14 @@ def init_engagement_backend() -> EngagementBackend:
 def init_prior_backend() -> PriorBackend:
     """Initialize the GCS Prior Backend, falling back to ConstantPrior if GCS Prior cannot be initialized."""
     try:
+        logger.info(
+            "HERE ML RECS GCS: project=%s bucket=%s blob=%s max_size=%s cron=%ss",
+            settings.ml_recommendations.gcs.gcp_project,
+            settings.ml_recommendations.gcs.bucket_name,
+            settings.ml_recommendations.gcs.blob_name,
+            settings.ml_recommendations.gcs.max_size,
+            settings.ml_recommendations.gcs.cron_interval_seconds,
+        )
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
                 destination_gcp_project=settings.curated_recommendations.gcs.gcp_project
@@ -99,6 +109,33 @@ def init_prior_backend() -> PriorBackend:
         return ConstantPrior()
 
 
+def init_ml_recommendations_backend() -> MLRecsBackend:
+    """Initialize the ML Recommendations GCS Backend which falls back to an empty
+    recommendation set if GCS cannot be initialized. This is handled downstream
+    by falling by to Thompson Sampling.
+    """
+    try:
+        synced_gcs_blob = SyncedGcsBlob(
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.ml_recommendations.gcs.gcp_project
+            ),
+            metrics_client=get_metrics_client(),
+            metrics_namespace="ml_contextual_recs.slates",
+            bucket_name=settings.ml_recommendations.gcs.bucket_name,
+            blob_name=settings.ml_recommendations.gcs.blob_name,
+            max_size=settings.ml_recommendations.gcs.max_size,
+            cron_interval_seconds=settings.ml_recommendations.gcs.cron_interval_seconds,
+            cron_job_name="fetch_ml_contextual_recs",
+        )
+        synced_gcs_blob.initialize()
+        return GcsMLRecs(synced_gcs_blob=synced_gcs_blob)
+    except Exception as e:
+        logger.error(f"Failed to initialize GCS Prior Backend: {e}")
+        # Fall back to a empty recommendation set if GCS cannot be initialized.
+        # This happens in contract tests or when the developer isn't logged in with gcloud auth.
+        return EmptyMLRecs()
+
+
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -106,6 +143,7 @@ def init_provider() -> None:
 
     engagement_backend = init_engagement_backend()
     local_model_backend = init_local_model_backend()
+    ml_recommendations_backend = init_ml_recommendations_backend()
 
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
@@ -127,6 +165,7 @@ def init_provider() -> None:
         prior_backend=init_prior_backend(),
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 

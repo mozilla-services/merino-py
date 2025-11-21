@@ -3,7 +3,7 @@
 import logging
 from typing import cast
 
-from merino.curated_recommendations import LocalModelBackend
+from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
 from merino.curated_recommendations.ml_backends.protocol import LOCAL_MODEL_MODEL_ID_KEY
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
@@ -52,12 +52,14 @@ class CuratedRecommendationsProvider:
         prior_backend: PriorBackend,
         sections_backend: SectionsProtocol,
         local_model_backend: LocalModelBackend,
+        ml_recommendations_backend: MLRecsBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.sections_backend = sections_backend
         self.local_model_backend = local_model_backend
+        self.ml_recommendations_backend = ml_recommendations_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -87,6 +89,18 @@ class CuratedRecommendationsProvider:
         @return: A re-ranked list of curated recommendations
         """
         # 3. Apply Thompson sampling to rank recommendations by engagement
+        print(
+            "THIS IS THE REQUEST",
+            request.locale,
+            request.region,
+            request.utcOffset,
+            request.experimentName,
+            request.experimentBranch,
+        )
+        print(
+            "THIS IS THE ML RECS",
+            self.ml_recommendations_backend.get(request.region, str(request.utcOffset)),
+        )
         recommendations = thompson_sampling(
             recommendations,
             engagement_backend=self.engagement_backend,
