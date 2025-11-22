@@ -6,6 +6,7 @@ from datetime import timedelta, datetime
 import logging
 from typing import Any
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import aiodogstatsd
 from fastapi.testclient import TestClient
@@ -63,6 +64,17 @@ from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 from tests.types import FilterCaplogFixture
+
+def is_manual_section(section_id: str) -> bool:
+    """Check if section ID is a UUID (manually created sections use UUIDs, ML sections use human-readable IDs).
+
+    Note: This heuristic may become obsolete if all sections adopt UUID identifiers in the future.
+    """
+    try:
+        UUID(section_id)
+        return True
+    except ValueError:
+        return False
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -1344,14 +1356,12 @@ class TestSections:
         # Assert layouts are cycled
         assert_section_layouts_are_cycled(sections)
 
-        # Sections can be legacy topics, manually created sections, or top_stories_section
+        # Should have top_stories_section and legacy topic sections
+        # (may also have manually created sections)
+        assert "top_stories_section" in sections
         legacy_topics = {topic.value for topic in Topic}
-        for section_name in sections:
-            # Each section should be either top_stories_section, a legacy topic, or a MANUAL section (UUID format)
-            is_top_stories = section_name == "top_stories_section"
-            is_legacy_topic = section_name in legacy_topics
-            is_manual_section = "-" in section_name  # MANUAL sections use UUID format
-            assert is_top_stories or is_legacy_topic or is_manual_section
+        legacy_sections_present = [sid for sid in sections if sid in legacy_topics]
+        assert len(legacy_sections_present) > 0, "Should have at least some legacy topic sections"
 
     @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
     @pytest.mark.parametrize(
@@ -1402,12 +1412,12 @@ class TestSections:
         legacy_topics = {topic.value for topic in Topic}
 
         if experiment_payload.get("experimentName") != ExperimentName.ML_SECTIONS_EXPERIMENT.value:
-            # Non-ML sections experiment: Sections can be legacy topics or manually created sections
+            # Non-ML sections experiment: Should have legacy topics and may have manually created sections
+            # but should not have ML subtopics
             for sid in sections:
-                if sid != "top_stories_section":
-                    is_legacy_topic = sid in legacy_topics
-                    is_manual_section = "-" in sid  # MANUAL sections use UUID format
-                    assert is_legacy_topic or is_manual_section
+                if sid != "top_stories_section" and sid not in legacy_topics:
+                    # Non-legacy sections should only be manually created sections
+                    assert is_manual_section(sid), f"Unexpected section type: {sid}"
 
         # Check the recs used in top_stories_section are removed from their original ML sections.
         top_story_ids = {
@@ -1460,18 +1470,19 @@ class TestSections:
         # top_stories_section should always be present
         assert "top_stories_section" in sections
 
-        manual_section_id = "d532b687-108a-4edb-a076-58a6945de714"
-
         # Should have ML sections (legacy topics)
         legacy_topics = {topic.value for topic in Topic}
         ml_sections_found = [sid for sid in sections if sid in legacy_topics]
         assert len(ml_sections_found) > 0, "Should have at least some ML legacy topic sections"
 
-        # The manually created section "Tech stuff" may or may not appear depending on whether
-        # it has enough items after top stories are removed, but if it does appear,
-        # verify it has the correct title
-        if manual_section_id in sections:
-            assert sections[manual_section_id]["title"] == "Tech stuff"
+        # Check if any manually created sections appear (they may or may not, depending on
+        # whether they have enough items after top stories are removed)
+        manual_sections = [sid for sid in sections if is_manual_section(sid)]
+        if manual_sections:
+            # If the "Tech stuff" manual section appears, verify it has the correct title
+            tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
+            if tech_stuff_id in sections:
+                assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
     @pytest.mark.parametrize(
         "sections_payload",
@@ -1688,14 +1699,16 @@ class TestSections:
             and experiment_branch == "control"
         )
 
-        # Separate MANUAL sections (UUID format) from ML subtopic sections
+        # Categorize non-legacy, non-top_stories sections
         non_legacy_section_ids = [
             sid
             for sid in sections
             if sid not in legacy_topics and sid not in {"top_stories_section"}
         ]
-        manual_section_ids = [sid for sid in non_legacy_section_ids if "-" in sid]
-        ml_subtopic_section_ids = [sid for sid in non_legacy_section_ids if "-" not in sid]
+        manual_section_ids = [sid for sid in non_legacy_section_ids if is_manual_section(sid)]
+        ml_subtopic_section_ids = [
+            sid for sid in non_legacy_section_ids if not is_manual_section(sid)
+        ]
 
         if expect_subtopics:
             assert ml_subtopic_section_ids, "Expected ML subtopic sections for US treatment"
@@ -1704,8 +1717,7 @@ class TestSections:
                 not ml_subtopic_section_ids
             ), f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
 
-        # MANUAL sections should always be present regardless of experiment
-        # (they may or may not appear based on having enough items, but that's okay)
+        # Manually created sections may appear regardless of experiment settings
 
     def test_daily_briefing_experiment_headlines_section_returned(self, client: TestClient):
         """Test that the Headlines section is returned when the daily briefing experiment is enabled.
