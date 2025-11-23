@@ -16,7 +16,7 @@ IGNORED_SUGGESTION_URL: Final[str] = "https://merino.services.mozilla.com"
 BASE_SUGGEST_SCORE: float = 0.5
 PROVIDER_ID: Final[str] = settings.providers.sports.type
 
-DEFAULT_TRIGGER_WORDS = [
+DEFAULT_INTENT_WORDS = [
     "vs",
     "game",
     "match",
