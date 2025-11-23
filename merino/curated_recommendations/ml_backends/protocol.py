@@ -2,6 +2,8 @@
 
 from enum import Enum
 from typing import Protocol, cast
+from pydantic import Field
+from typing_extensions import Annotated
 
 import numpy as np
 from pydantic import BaseModel
@@ -177,6 +179,17 @@ class ContextualArticlesBySample(BaseModel):
 
     sample: str | None = None
     articles: list[ContextualArticleRanked] | None = None
+    article_lookup: Annotated[dict[str, ContextualArticleRanked] | None, Field(exclude=True)] = None
+
+    def __pydantic_post_init__(self) -> dict[str, ContextualArticleRanked]:
+        """Create a dictionary to look up score (ContextualArticleRanked) from the corpus_id"""
+        self.article_lookup = {a.corpus_item_id: a for a in self.articles or []}
+
+    def find_article_by_corpus_id(self, corpus_item_id: str) -> ContextualArticleRanked | None:
+        """Return ranked article for a given corpus item id"""
+        if not self.article_lookup:
+            return None
+        return self.article_lookup.get(corpus_item_id)
 
     def to_corpus_item_ids(self) -> list[str]:
         """Return list of corpus item ids from the sample"""

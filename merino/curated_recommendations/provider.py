@@ -25,7 +25,8 @@ from merino.curated_recommendations.protocol import (
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
-    thompson_sampling,
+    ThompsonSamplingRanker,
+    ContextualRanker
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
@@ -88,23 +89,12 @@ class CuratedRecommendationsProvider:
         @param request: The full API request with all the data
         @return: A re-ranked list of curated recommendations
         """
-        # 3. Apply Thompson sampling to rank recommendations by engagement
-        print(
-            "THIS IS THE REQUEST",
-            request.locale,
-            request.region,
-            request.utcOffset,
-            request.experimentName,
-            request.experimentBranch,
-        )
-        print(
-            "THIS IS THE ML RECS",
-            self.ml_recommendations_backend.get(request.region, str(request.utcOffset)),
-        )
-        recommendations = thompson_sampling(
-            recommendations,
+        ranker = ThompsonSamplingRanker(
             engagement_backend=self.engagement_backend,
-            prior_backend=self.prior_backend,
+            prior_backend=self.prior_backend
+        )
+        recommendations = ranker.rank(
+            recommendations,
             region=derive_region(request.locale, request.region),
         )
 
@@ -157,6 +147,7 @@ class CuratedRecommendationsProvider:
                 personal_interests=inferred_interests,
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
+                ml_backend=self.ml_recommendations_backend,
                 scheduled_surface_backend=self.scheduled_surface_backend,
                 region=derive_region(request.locale, request.region),
             )

@@ -20,6 +20,7 @@ from merino.curated_recommendations.layouts import (
     layout_7_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
+from merino.curated_recommendations.ml_backends.protocol import MLRecsBackend
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SchedulerHoldbackRescaler,
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
@@ -38,10 +39,11 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import (
     ArticleBalancer,
+    ContextualRanker,
+    Ranker,
+    ThompsonSamplingRanker,
     filter_fresh_items_with_probability,
-    thompson_sampling,
     boost_followed_sections,
-    section_thompson_sampling,
     put_top_stories_first,
     greedy_personalized_section_rank,
     TOP_STORIES_SECTION_KEY,
@@ -320,6 +322,12 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     """Return True if custom sections should be included based on experiments."""
     return is_enrolled_in_experiment(
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
+    )
+
+def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the contextual ranking experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request, ExperimentName.CONTEXTUAL_RANKING_EXPERIMENT.value, "treatment"
     )
 
 
@@ -619,6 +627,7 @@ async def get_sections(
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
+    ml_backend: MLRecsBackend,
     scheduled_surface_backend: ScheduledSurfaceProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
@@ -692,11 +701,22 @@ async def get_sections(
         cs.recommendations = [
             rec for rec in cs.recommendations if rec.corpusItemId in remaining_ids
         ]
+    ranker: Ranker
+
+    if is_contextual_ranking_experiment(request):
+        ranker = ContextualRanker(
+            engagement_backend=engagement_backend,
+            ml_backend=ml_backend,
+        )
+    else:
+        ranker = ThompsonSamplingRanker(
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend
+        )
+
     # 7. Rank all corpus recommendations globally by engagement
-    all_ranked_corpus_recommendations = thompson_sampling(
+    all_ranked_corpus_recommendations = ranker.rank_items(
         all_remaining_corpus_recommendations,
-        engagement_backend=engagement_backend,
-        prior_backend=prior_backend,
         region=region,
         rescaler=rescaler,
         personal_interests=personal_interests,
@@ -771,10 +791,9 @@ async def get_sections(
     sections = get_sections_with_enough_items(sections)
 
     # 16. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
-    sections = rank_sections(
+    sections = ranker.rank_sections(
         sections,
         request.sections,
-        engagement_backend,
         personal_interests,
         experiment_rescaler=rescaler,
         include_headlines_section=include_headlines_section,
