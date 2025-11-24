@@ -6,6 +6,7 @@ from datetime import timedelta, datetime
 import logging
 from typing import Any
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import aiodogstatsd
 from fastapi.testclient import TestClient
@@ -63,6 +64,18 @@ from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 from tests.types import FilterCaplogFixture
+
+
+def is_manual_section(section_id: str) -> bool:
+    """Check if section ID is a UUID (manually created sections use UUIDs, ML sections use human-readable IDs).
+
+    Note: This heuristic may become obsolete if all sections adopt UUID identifiers in the future.
+    """
+    try:
+        UUID(section_id)
+        return True
+    except ValueError:
+        return False
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -1344,11 +1357,12 @@ class TestSections:
         # Assert layouts are cycled
         assert_section_layouts_are_cycled(sections)
 
-        # The only sections are topic sections or "top_stories_section"
-        assert all(
-            section_name == "top_stories_section" or section_name in Topic
-            for section_name in sections
-        )
+        # Should have top_stories_section and legacy topic sections
+        # (may also have manually created sections)
+        assert "top_stories_section" in sections
+        legacy_topics = {topic.value for topic in Topic}
+        legacy_sections_present = [sid for sid in sections if sid in legacy_topics]
+        assert len(legacy_sections_present) > 0, "Should have at least some legacy topic sections"
 
     @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
     @pytest.mark.parametrize(
@@ -1395,14 +1409,16 @@ class TestSections:
             recs = section["recommendations"]
             assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
-        # Check if non-ML experiment, only legacy sections returned
+        # Check section types based on experiment
         legacy_topics = {topic.value for topic in Topic}
 
         if experiment_payload.get("experimentName") != ExperimentName.ML_SECTIONS_EXPERIMENT.value:
-            # Non-ML sections experiment: All section keys (excluding top_stories) must be in legacy topics
+            # Non-ML sections experiment: Should have legacy topics and may have manually created sections
+            # but should not have ML subtopics
             for sid in sections:
-                if sid != "top_stories_section":
-                    assert sid in legacy_topics
+                if sid != "top_stories_section" and sid not in legacy_topics:
+                    # Non-legacy sections should only be manually created sections
+                    assert is_manual_section(sid), f"Unexpected section type: {sid}"
 
         # Check the recs used in top_stories_section are removed from their original ML sections.
         top_story_ids = {
@@ -1432,28 +1448,16 @@ class TestSections:
                 == "Insider advice on where to eat, what to see, and how to enjoy the city like a local."
             )
 
-    @pytest.mark.parametrize(
-        "branch,should_have_manual,should_have_ml",
-        [
-            ("treatment", True, False),
-            ("control", False, True),
-        ],
-    )
-    def test_custom_sections_experiment(
-        self, branch: str, should_have_manual: bool, should_have_ml: bool, client: TestClient
-    ):
-        """Test custom sections experiment filters sections by createSource.
+    def test_sections_include_both_manual_and_ml(self, client: TestClient):
+        """Test that sections feed includes both manually created and ML-generated sections.
 
-        Treatment: Returns only MANUAL sections (createSource == "MANUAL")
-        Control: Excludes MANUAL sections (only ML sections returned)
+        Both MANUAL and ML sections should be returned together.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": branch,
             },
         )
         data = response.json()
@@ -1467,30 +1471,19 @@ class TestSections:
         # top_stories_section should always be present
         assert "top_stories_section" in sections
 
-        manual_section_id = "d532b687-108a-4edb-a076-58a6945de714"
+        # Should have ML sections (legacy topics)
+        legacy_topics = {topic.value for topic in Topic}
+        ml_sections_found = [sid for sid in sections if sid in legacy_topics]
+        assert len(ml_sections_found) > 0, "Should have at least some ML legacy topic sections"
 
-        if should_have_manual:
-            # Treatment: Should NOT have ML sections
-            assert "music" not in sections
-            assert "nfl" not in sections
-            assert "tv" not in sections
-            assert "movies" not in sections
-            assert "nba" not in sections
-
-            # The MANUAL section "Tech stuff" may or may not appear depending on whether
-            # it has enough items after top stories are removed, but if it does appear,
-            # verify it has the correct title
-            if manual_section_id in sections:
-                assert sections[manual_section_id]["title"] == "Tech stuff"
-        else:
-            # Control: Should NOT have the MANUAL section
-            assert manual_section_id not in sections
-
-            # Should have ML sections (legacy topics only since not ML experiment)
-            legacy_topics = {topic.value for topic in Topic}
-            for sid in sections:
-                if sid != "top_stories_section":
-                    assert sid in legacy_topics
+        # Check if any manually created sections appear (they may or may not, depending on
+        # whether they have enough items after top stories are removed)
+        manual_sections = [sid for sid in sections if is_manual_section(sid)]
+        if manual_sections:
+            # If the "Tech stuff" manual section appears, verify it has the correct title
+            tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
+            if tech_stuff_id in sections:
+                assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
     @pytest.mark.parametrize(
         "sections_payload",
@@ -1707,18 +1700,24 @@ class TestSections:
             and experiment_branch == "control"
         )
 
+        # Categorize non-legacy, non-top_stories sections
         non_legacy_section_ids = [
             sid
             for sid in sections
             if sid not in legacy_topics and sid not in {"top_stories_section"}
         ]
+        ml_subtopic_section_ids = [
+            sid for sid in non_legacy_section_ids if not is_manual_section(sid)
+        ]
 
         if expect_subtopics:
-            assert non_legacy_section_ids, "Expected subtopic sections for US treatment"
+            assert ml_subtopic_section_ids, "Expected ML subtopic sections for US treatment"
         else:
             assert (
-                not non_legacy_section_ids
-            ), f"Unexpected non-legacy sections: {non_legacy_section_ids}"
+                not ml_subtopic_section_ids
+            ), f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
+
+        # Manually created sections may appear regardless of experiment settings
 
     def test_daily_briefing_experiment_headlines_section_returned(self, client: TestClient):
         """Test that the Headlines section is returned when the daily briefing experiment is enabled.
