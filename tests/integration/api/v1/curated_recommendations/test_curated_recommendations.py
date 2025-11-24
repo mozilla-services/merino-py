@@ -65,6 +65,7 @@ from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 from tests.types import FilterCaplogFixture
 
+
 def is_manual_section(section_id: str) -> bool:
     """Check if section ID is a UUID (manually created sections use UUIDs, ML sections use human-readable IDs).
 
@@ -1705,7 +1706,6 @@ class TestSections:
             for sid in sections
             if sid not in legacy_topics and sid not in {"top_stories_section"}
         ]
-        manual_section_ids = [sid for sid in non_legacy_section_ids if is_manual_section(sid)]
         ml_subtopic_section_ids = [
             sid for sid in non_legacy_section_ids if not is_manual_section(sid)
         ]
