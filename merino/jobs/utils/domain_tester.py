@@ -14,9 +14,11 @@ from pprint import pformat
 import tldextract
 from pathlib import Path
 
+from merino.jobs.navigational_suggestions.favicon.favicon_selector import FaviconSelector
+
 cli = typer.Typer(no_args_is_help=True)
 console = Console()
-FAVICON_PATH = "merino/jobs/navigational_suggestions/custom_favicons.py"
+FAVICON_PATH = "merino/jobs/navigational_suggestions/enrichments/custom_favicons.py"
 
 
 class DomainTestResult(BaseModel):
@@ -33,13 +35,9 @@ class DomainTestResult(BaseModel):
 
 async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
     """Test metadata extraction for a single domain asynchronously"""
-    from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
-        DomainMetadataExtractor,
-        current_scraper,
-        Scraper,
-    )
-    from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
-    from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
+    from merino.jobs.navigational_suggestions.processing.domain_processor import DomainProcessor
+    from merino.jobs.navigational_suggestions.io import (
+        AsyncFaviconDownloader,
         DomainMetadataUploader,
     )
     from merino.utils.gcs.models import BaseContentUploader
@@ -57,9 +55,7 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
         }
 
         favicon_downloader = AsyncFaviconDownloader()
-        extractor = DomainMetadataExtractor(
-            blocked_domains=set(), favicon_downloader=favicon_downloader
-        )
+        processor = DomainProcessor(blocked_domains=set(), favicon_downloader=favicon_downloader)
 
         # Create a mock uploader that doesn't actually upload to GCS
         class MockUploader(BaseContentUploader):
@@ -70,7 +66,6 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
                 return mock_blob
 
             def upload_image(self, image, destination_name, forced_upload=False):
-                # Just return a dummy URL instead of uploading
                 return f"https://dummy-cdn.example.com/{destination_name}"
 
             def get_most_recent_file(self, match, sort_key):
@@ -84,71 +79,58 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
         )
 
         # Process the domain data using the standard method
-        results = await extractor._process_domains(
+        results = await processor._process_domains(
             [domain_data], favicon_min_width=min_width, uploader=dummy_uploader
         )
         metadata = results[0]
 
+        # For detailed favicon information, we need to scrape separately
         favicon_data = None
         total_favicons = 0
 
         if metadata["url"]:
+            from merino.jobs.navigational_suggestions.scrapers.web_scraper import WebScraper
+            from merino.jobs.navigational_suggestions.favicon.favicon_extractor import (
+                FaviconExtractor,
+            )
+            from merino.jobs.navigational_suggestions.scrapers.favicon_scraper import (
+                FaviconScraper,
+            )
+
             base_url = metadata["url"]
 
-            # For testing, we need to create a scraper and set it in the context
-            with Scraper() as test_scraper:
-                # Set the context variable for this test
-                token = current_scraper.set(test_scraper)
-                try:
-                    # Open the URL with our test scraper
-                    test_scraper.open(base_url)
+            with WebScraper() as web_scraper:
+                scraped_url = web_scraper.open(base_url)
+                if scraped_url:
+                    page = web_scraper.get_page()
+                    if page:
+                        favicon_scraper = FaviconScraper(favicon_downloader)
+                        favicon_extractor = FaviconExtractor(favicon_scraper)
 
-                    # Get raw favicon data directly from the test scraper
-                    raw_favicon_data = test_scraper.scrape_favicon_data()
+                        # Extract all favicons
+                        favicons = await favicon_extractor.extract_favicons(
+                            page, scraped_url, max_icons=100
+                        )
 
-                    # Use the extractor method with our context-aware scraper
-                    processed_favicons = await extractor._extract_favicons(
-                        base_url,
-                        max_icons=100,  # Use high max to get all
-                    )
+                        # Build favicon data structure
+                        favicon_data = {
+                            "links": [f for f in favicons if f.get("href")],
+                            "metas": [],
+                            "manifests": [],
+                        }
 
-                    # Create processed version of favicon data
-                    processed_links = []
-                    for favicon in processed_favicons:
-                        # Only include link-type favicons that have href
-                        if "href" in favicon:
-                            processed_links.append(favicon)
+                        favicon_urls = {f["href"] for f in favicons if f.get("href")}
+                        if metadata["icon"]:
+                            favicon_urls.add(metadata["icon"])
 
-                    # Replace the original links with processed ones to ensure
-                    # all URLs are absolute, just like in production
-                    raw_favicon_data.links = processed_links
-
-                    favicon_data = raw_favicon_data.model_dump()
-                    favicon_urls = set()
-
-                    # Collect unique favicon URLs
-                    for link in raw_favicon_data.links:
-                        if "href" in link:
-                            favicon_urls.add(link["href"])
-
-                    for meta in raw_favicon_data.metas:
-                        if "content" in meta:
-                            favicon_urls.add(meta["content"])
-
-                    if metadata["icon"]:
-                        favicon_urls.add(metadata["icon"])
-
-                    total_favicons = len(favicon_urls)
-                finally:
-                    # Reset the context variable
-                    current_scraper.reset(token)
+                        total_favicons = len(favicon_urls)
 
         details = {
             "base_url_tried": f"https://{domain}",
             "www_url_tried": f"https://www.{domain}",
             "final_url": metadata["url"],
             "favicons_found": total_favicons,
-            "manifest_found": bool(favicon_data and favicon_data["manifests"]),
+            "manifest_found": bool(favicon_data and favicon_data.get("manifests")),
         }
 
         return DomainTestResult(
@@ -269,10 +251,6 @@ def test_domains(
         print("The probe-images command must be run from the root directory.")
         return
 
-    from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
-        DomainMetadataExtractor,
-    )
-
     with console.status("Testing domains concurrently..."):
         results = asyncio.run(probe_domains(domains, min_width))
 
@@ -292,21 +270,17 @@ def test_domains(
 
             if save_favicon and result.favicon_data:
                 title = tldextract.extract(result.domain).domain
-                best_icon = result.favicon_data["links"][0]
-                best_width = favicon_width_convertor(
-                    result.favicon_data["links"][0].get("sizes", "1x1")
-                )
+                best_icon = None
+                best_width = 0
+                best_source = "default"
+
                 for icon in result.favicon_data["links"]:
-                    if not best_icon:
-                        best_icon = icon
-                        best_width = favicon_width_convertor(icon.get("sizes", "1x1"))
-                        continue
                     width = favicon_width_convertor(icon.get("sizes", "1x1"))
-                    if DomainMetadataExtractor.is_better_favicon(
-                        icon, width, best_width, best_icon["_source"]
-                    ):
+                    # Use production FaviconSelector logic instead of simple comparison
+                    if FaviconSelector.is_better_favicon(icon, width, best_width, best_source):
                         best_icon = icon
                         best_width = width
+                        best_source = icon.get("_source", "default")
                 if title and best_icon:
                     update_custom_favicons(title, best_icon["href"], save_table)
                 elif not title:
