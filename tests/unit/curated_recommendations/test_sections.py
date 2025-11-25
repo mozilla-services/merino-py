@@ -24,7 +24,7 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SchedulerHoldbackRescaler,
-    DefaultRescaler,
+    CrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -235,10 +235,12 @@ class TestFilterSectionsByExperiment:
                 "US",
                 SchedulerHoldbackRescaler,
             ),
-            ("other", "treatment", "US", DefaultRescaler),
-            ("other", "treatment", "CA", None),
-            (None, None, "US", DefaultRescaler),
-            (None, None, "CA", None),
+            # Whenever we launch sections somewhere else we'll have crawled content, so best
+            # to set it as default.
+            ("other", "treatment", "US", CrawledContentRescaler),
+            ("other", "treatment", "CA", CrawledContentRescaler),
+            (None, None, "US", CrawledContentRescaler),
+            (None, None, "CA", CrawledContentRescaler),
         ],
     )
     def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
@@ -645,7 +647,7 @@ class TestGetTopStoryList:
         """Should return exactly `top_count` items from start of list, not using
         rescaler because no items have fresh label
         """
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
         items = generate_recommendations(
             item_ids=["a", "b", "c", "d", "e"], topics=self.non_dupe_topics[:5]
         )
@@ -675,7 +677,7 @@ class TestGetTopStoryList:
         )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
         monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.1)
 
@@ -694,7 +696,7 @@ class TestGetTopStoryList:
         )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
         monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.9)
 
@@ -754,7 +756,7 @@ class TestSectionThompsonSampling:
 
     def test_limits_fresh_items_when_rescaler_cap_active(self, monkeypatch):
         """Only allow fresh items up to cap when enough non-fresh content exists."""
-        rescaler = DefaultRescaler(fresh_items_section_ranking_max_percentage=0.1)
+        rescaler = CrawledContentRescaler(fresh_items_section_ranking_max_percentage=0.1)
         recs = generate_recommendations(
             item_ids=["fresh1", "fresh2", "fresh3", "stale1", "stale2"],
             time_sensitive_count=0,

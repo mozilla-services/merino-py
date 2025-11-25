@@ -25,7 +25,7 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-    DefaultRescaler,
+    CrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
@@ -349,7 +349,7 @@ class TestThompsonSampling:
                 "stale": (0, 12),  # impressions -> no_opens = 12 - greater than beta
             }
         )
-        rescaler = DefaultRescaler()
+        rescaler = CrawledContentRescaler()
 
         # Make beta sampling deterministic to avoid flakiness.
         monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
@@ -387,7 +387,7 @@ class TestThompsonSampling:
                 "fresh2": (2, 4),
             }
         )
-        rescaler = DefaultRescaler()
+        rescaler = CrawledContentRescaler()
         rescaler.fresh_items_max = 1
         rescaler.fresh_items_limit_prior_threshold_multiplier = 1
         rescaler.fresh_items_section_ranking_max_percentage = 0
