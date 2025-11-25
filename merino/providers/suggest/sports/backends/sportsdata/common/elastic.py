@@ -244,9 +244,7 @@ class ElasticCredentials:
         logger = logging.getLogger(__name__)
         api_key = self.api_key or "None"
         dsn = self.dsn or "None"
-        logger.info(
-            f"{LOGGING_TAG} Elastic API key: [{api_key[:4]}...] DSN:[{dsn[:10]}]"
-        )
+        logger.info(f"{LOGGING_TAG} Elastic API key: [{api_key[:4]}...] DSN:[{dsn[:10]}]")
         return (self.api_key is not None and len(self.api_key) > 0) and (
             self.dsn is not None and len(self.dsn) > 0
         )
@@ -592,9 +590,7 @@ class SportsDataStore(ElasticDataStore):
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logger.warning(
-                    f"{LOGGING_TAG} Encountered conflict error, ignoring for now"
-                )
+                logger.warning(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
                 return False
         return True
 
@@ -663,17 +659,11 @@ class SportsDataStore(ElasticDataStore):
                     # concluded game and the next scheduled game. As for current, we just grab the last
                     # "inprogress" game that is reported.
                     if status.is_final():
-                        if (
-                            "previous" not in filter[sport]
-                            and "current" not in filter[sport]
-                        ):
+                        if "previous" not in filter[sport] and "current" not in filter[sport]:
                             filter[sport]["previous"] = event
                             continue
                         # get the most recently "finalized" game
-                        if (
-                            datetime.fromisoformat(filter[sport]["previous"]["date"])
-                            < event_date
-                        ):
+                        if datetime.fromisoformat(filter[sport]["previous"]["date"]) < event_date:
                             filter[sport]["previous"] = event
                             continue
                     # If only show the next upcoming game.
@@ -684,10 +674,7 @@ class SportsDataStore(ElasticDataStore):
                             filter[sport]["next"] = event
                             continue
                         # get the most recent "next" game
-                        if (
-                            datetime.fromisoformat(filter[sport]["next"]["date"])
-                            > event_date
-                        ):
+                        if datetime.fromisoformat(filter[sport]["next"]["date"]) > event_date:
                             filter[sport]["next"] = event
                     if status.is_in_progress():
                         # remove the previous game info because we have a current one.
@@ -744,9 +731,7 @@ class SportsDataStore(ElasticDataStore):
 
             try:
                 start = datetime.now()
-                await helpers.async_bulk(
-                    client=self.client, actions=actions, stats_only=False
-                )
+                await helpers.async_bulk(client=self.client, actions=actions, stats_only=False)
                 logger.info(
                     f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
                 )
