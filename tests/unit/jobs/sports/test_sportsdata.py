@@ -88,6 +88,7 @@ async def test_updater(
             away_score=0,
             status=GameStatus.Unknown,
             expiry=0,
+            updated=int(now.timestamp()),
         )
     }
     updater.sports = {"mock": mock_sport}

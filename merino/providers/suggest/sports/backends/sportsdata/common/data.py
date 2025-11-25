@@ -49,10 +49,12 @@ class Team(BaseModel):
     # Last update time.
     updated: datetime
     # Team Data expiration date:
-    expiry: int
+    expiry: datetime
 
     @classmethod
-    def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
+    def from_data(
+        cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta
+    ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
@@ -72,7 +74,9 @@ class Team(BaseModel):
                     lword = word.lower()
                     if word not in term_filter:
                         terms.add(lword)
-        locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
+        locale = " ".join(
+            [team_data.get("City") or "", team_data.get("AreaName") or ""]
+        ).strip()
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
@@ -125,7 +129,7 @@ class Event(BaseModel):
     # list of searchable terms for this event.
     terms: str
     # Event UTC start time
-    date: int
+    date: datetime
     # The original date string (used for debugging)
     original_date: str | None
     # minimal team info for home
@@ -139,7 +143,9 @@ class Event(BaseModel):
     # Status of the game
     status: GameStatus
     # UTC timestamp when to expire an event.
-    expiry: int
+    expiry: datetime
+    # UTC of last event update
+    updated: datetime | None
 
     def suggest_title(self) -> str:
         """Event suggest title"""
@@ -194,7 +200,9 @@ class Sport:
         self.event_ttl = event_ttl or timedelta(
             weeks=settings.sportsdata.get("event_ttl_weeks", EVENT_TTL_WEEKS)
         )
-        self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
+        self.team_ttl = team_ttl or timedelta(
+            weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS)
+        )
         self.term_filter = term_filter
         self.cache_dir = cache_dir
 
@@ -296,30 +304,38 @@ class Sport:
             ]
             try:
                 if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                        tzinfo=timezone.utc
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTimeUTC"]
+                    ).replace(tzinfo=timezone.utc)
                 else:
-                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
-                        tzinfo=event_timezone
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTime"]
+                    ).replace(tzinfo=event_timezone)
             # There have been incidents where an event returns "None" as a date value.
             # We should ignore that event, and allow processing to continue, but note
             # the error in case we need to escalate the problem.
             except TypeError:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
+                logger.info(
+                    f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
+                )
                 continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
                 continue
             terms = f"{home_team.terms} {away_team.terms}"
+            updated = None
+            # All "Updated" fields are always in ET.
+            if event_description.get("Updated"):
+                updated = datetime.fromisoformat(event_description["Updated"]).replace(
+                    tzinfo=event_timezone
+                )
             event = Event(
                 sport=self.name,
                 id=event_description["GlobalGameID"],
                 terms=terms,
-                date=int(date.timestamp()),
+                date=date,
                 original_date=event_description["DateTimeUTC"],
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
@@ -329,6 +345,7 @@ class Sport:
                 or event_description.get("AwayScore"),
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
+                updated=updated,
             )
             self.events[event.id] = event
         return self.events
@@ -392,17 +409,19 @@ class Sport:
                 continue
             try:
                 if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                        tzinfo=timezone.utc
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTimeUTC"]
+                    ).replace(tzinfo=timezone.utc)
                 else:
-                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
-                        tzinfo=event_timezone
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTime"]
+                    ).replace(tzinfo=event_timezone)
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
+                logger.info(
+                    f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
+                )
                 logger.debug(
                     f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
@@ -411,11 +430,18 @@ class Sport:
             if not start_window <= date <= end_window:
                 continue
             terms = f"{home_team.terms} {away_team.terms}"
+            # All "Updated" fields are always in ET.
+            updated = None
+            if event_description.get("Updated"):
+                updated = datetime.fromisoformat(event_description["Updated"]).replace(
+                    tzinfo=event_timezone
+                )
+
             event = Event(
                 sport=self.name,
                 id=id,
                 terms=terms,
-                date=int(date.timestamp()),
+                date=date,
                 original_date=event_description.get(
                     "DateTimeUTC", event_description.get("DateTime")
                 ),
@@ -425,6 +451,7 @@ class Sport:
                 away_score=event_description["AwayTeamScore"],
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
+                updated=updated,
             )
             self.events[event.id] = event
         return self.events

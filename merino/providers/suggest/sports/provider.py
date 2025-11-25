@@ -3,6 +3,7 @@ by Merino, when we get a request to process.
 
 """
 
+import copy
 import logging
 
 import aiodogstatsd
@@ -46,6 +47,7 @@ class SportsDataProvider(BaseProvider):
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     enabled_by_default: bool
+    # A list of the intent words, excluding full team names.
     trigger_words: list[str]
     score: float
 
@@ -115,13 +117,16 @@ class SportsDataProvider(BaseProvider):
 
     def normalize_query(self, query: str) -> str:
         """Perform whatever steps are required to normalize the user provided query string"""
-        query = super().normalize_query(query)
+        # Copy the query term because we may be destructive. The product of this function is
+        # consumed internally.
+        query = copy.copy(super().normalize_query(query))
 
         # here, we test for the presence of at least one "trigger word".
         # See merino.providers.suggest.sports.DEFAULT_TRIGGER_WORDS
         #
         if any(map(lambda w: w.lower() in self.trigger_words, query.split())):
-            return query
+            # if we found an intent word, strip it out of the query, else we won't return any results.
+            return " ".join(filter(lambda w: w.lower() not in self.trigger_words, query.split()))
         return ""
 
     def validate(self, srequest: SuggestionRequest) -> None:
