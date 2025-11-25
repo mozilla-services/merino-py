@@ -16,7 +16,7 @@ PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 
 class CrawledContentRescaler(ExperimentRescaler):
-    """Rescaler tha has settings for any Crawl type deployment that has many content item updates throughout the day"""
+    """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day"""
 
     def __init__(self, **data: Any):
         data.setdefault("fresh_items_max", 0)
