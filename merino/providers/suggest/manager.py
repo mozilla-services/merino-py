@@ -39,7 +39,7 @@ from merino.providers.suggest.flightaware.provider import (
 )
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
 from merino.providers.suggest.sports import (
-    DEFAULT_TRIGGER_WORDS as SPORT_DEFAULT_TRIGGER_WORDS,
+    DEFAULT_INTENT_WORDS as SPORT_DEFAULT_INTENT_WORDS,
     BASE_SUGGEST_SCORE as SPORT_BASE_SUGGEST_SCORE,
 )
 from merino.providers.suggest.sports.provider import SportsDataProvider
@@ -319,9 +319,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.SPORTS:
-            trigger_words = [
+            intent_words = [
                 word.lower().strip()
-                for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
+                for word in setting.get("intent_words", SPORT_DEFAULT_INTENT_WORDS)
             ]
             # Use wikipedia as a backup for the Elasticsearch credentials.
             # TODO, use a central Elasticsearch credential set.
@@ -348,7 +348,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
-                trigger_words=trigger_words,
+                intent_words=intent_words,
                 enabled_by_default=setting.enabled_by_default,
             )
         case _:
