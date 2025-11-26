@@ -45,6 +45,6 @@ ONE_HOUR = ONE_MINUTE * 60
 FOUR_HOURS = ONE_HOUR * 4  # For Team Profiles
 
 
-def utc_time_from_now(delta: timedelta) -> int:
+def utc_time_from_now(delta: timedelta) -> datetime:
     """Return the timestamp of the period from now"""
-    return int((datetime.now(tz=timezone.utc) + delta).timestamp())
+    return datetime.now(tz=timezone.utc) + delta

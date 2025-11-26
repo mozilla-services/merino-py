@@ -260,7 +260,7 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
                     "previous": {
                         "sport": "NHL",
                         "id": 30024036,
-                        "date": 1760655600,
+                        "date": "2025-10-16T16:00:00",
                         "home_team": {
                             "key": "PHI",
                             "name": "Philadelphia Flyers",
@@ -274,14 +274,14 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
                         "home_score": 2,
                         "away_score": 5,
                         "status": "Final",
-                        "expiry": 1760921459,
+                        "expiry": "2025-10-19T17:50:59",
                         "es_score": 3.3510802,
                         "event_status": GameStatus.Final,
                     },
                     "next": {
                         "sport": "NFL",
                         "id": 19175,
-                        "date": 1761498000,
+                        "date": "2025-10-26T10:00:00",
                         "home_team": {
                             "key": "CIN",
                             "name": "Cincinnati Bengals",
@@ -295,7 +295,7 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
                         "home_score": None,
                         "away_score": None,
                         "status": "Scheduled",
-                        "expiry": 1761958258,
+                        "expiry": "2025-10-31T17:50:58",
                         "es_score": 3.0596066,
                         "event_status": GameStatus.Scheduled,
                     },

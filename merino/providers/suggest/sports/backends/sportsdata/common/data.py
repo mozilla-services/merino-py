@@ -49,7 +49,7 @@ class Team(BaseModel):
     # Last update time.
     updated: datetime
     # Team Data expiration date:
-    expiry: int
+    expiry: datetime
 
     @classmethod
     def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
@@ -125,7 +125,7 @@ class Event(BaseModel):
     # list of searchable terms for this event.
     terms: str
     # Event UTC start time
-    date: int
+    date: datetime
     # The original date string (used for debugging)
     original_date: str | None
     # minimal team info for home
@@ -139,7 +139,9 @@ class Event(BaseModel):
     # Status of the game
     status: GameStatus
     # UTC timestamp when to expire an event.
-    expiry: int
+    expiry: datetime
+    # UTC of last event update
+    updated: datetime | None
 
     def suggest_title(self) -> str:
         """Event suggest title"""
@@ -315,11 +317,17 @@ class Sport:
             if not start_window <= date <= end_window:
                 continue
             terms = f"{home_team.terms} {away_team.terms}"
+            updated = None
+            # All "Updated" fields are always in ET.
+            if event_description.get("Updated"):
+                updated = datetime.fromisoformat(event_description["Updated"]).replace(
+                    tzinfo=event_timezone
+                )
             event = Event(
                 sport=self.name,
                 id=event_description["GlobalGameID"],
                 terms=terms,
-                date=int(date.timestamp()),
+                date=date,
                 original_date=event_description["DateTimeUTC"],
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
@@ -329,6 +337,7 @@ class Sport:
                 or event_description.get("AwayScore"),
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
+                updated=updated,
             )
             self.events[event.id] = event
         return self.events
@@ -411,11 +420,18 @@ class Sport:
             if not start_window <= date <= end_window:
                 continue
             terms = f"{home_team.terms} {away_team.terms}"
+            # All "Updated" fields are always in ET.
+            updated = None
+            if event_description.get("Updated"):
+                updated = datetime.fromisoformat(event_description["Updated"]).replace(
+                    tzinfo=event_timezone
+                )
+
             event = Event(
                 sport=self.name,
                 id=id,
                 terms=terms,
-                date=int(date.timestamp()),
+                date=date,
                 original_date=event_description.get(
                     "DateTimeUTC", event_description.get("DateTime")
                 ),
@@ -425,6 +441,7 @@ class Sport:
                 away_score=event_description["AwayTeamScore"],
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
+                updated=updated,
             )
             self.events[event.id] = event
         return self.events

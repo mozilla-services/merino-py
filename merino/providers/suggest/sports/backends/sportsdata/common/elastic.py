@@ -541,6 +541,7 @@ class SportsDataStore(ElasticDataStore):
         """
         # Note: Since "stop words" are more sport specific, filter these from
         # the "terms" field on load.
+        # See https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/field-data-types
         return {
             "event": {
                 "dynamic": False,
@@ -548,9 +549,11 @@ class SportsDataStore(ElasticDataStore):
                     # The serialized event data
                     "event": {"type": "keyword", "index": False},
                     "status_type": {"type": "keyword"},
-                    "expiry": {"type": "integer"},
+                    "expiry": {"type": "date"},
                     "sport": {"type": "keyword"},
-                    "date": {"type": "integer"},
+                    "date": {"type": "date_nanos"},
+                    "updated": {"type": "date"},
+                    "touched": {"type": "date_nanos", "index": False},
                     # The non-unique event designator "sport:home:away"
                     "event_key": {"type": "keyword"},
                     # Specify the terms
@@ -565,11 +568,11 @@ class SportsDataStore(ElasticDataStore):
 
     async def prune(
         self,
-        expiry: int | None = None,
+        expiry: datetime | None = None,
         language_code: str = "en",
     ) -> bool:
         """Remove data that has expired."""
-        utc_now = expiry or int(datetime.now(tz=timezone.utc).timestamp())
+        utc_now = expiry or datetime.now(tz=timezone.utc)
         logger = logging.getLogger(__name__)
         if not self.client:
             return False
@@ -596,7 +599,7 @@ class SportsDataStore(ElasticDataStore):
     ) -> dict[str, dict]:
         """Search based on the language and platform template"""
         index_id = self.index_map["event"].format(lang=language_code)
-        utc_now = int(datetime.now(tz=timezone.utc).timestamp())
+        utc_now = datetime.now(tz=timezone.utc)
         logger = logging.getLogger(__name__)
         if not self.client:
             return {}
@@ -606,7 +609,7 @@ class SportsDataStore(ElasticDataStore):
         try:
             query = {
                 "bool": {
-                    "must": [{"match": {"terms": {"query": q, "operator": "or"}}}],
+                    "must": [{"match": {"terms": {"query": q, "operator": "and"}}}],
                     "must_not": [{"range": {"expiry": {"lt": utc_now}}}],
                 }
             }
@@ -616,56 +619,76 @@ class SportsDataStore(ElasticDataStore):
             res = await self.client.search(
                 index=index_id,
                 query=query,
+                sort=[{"date": "desc"}, {"updated": "desc"}],
                 timeout=TIMEOUT_MS,
-                source_includes=["event"],
+                # The list of fields to return from Elasticsearch
+                source_includes=["event", "touched"],
             )
         except Exception as ex:
             raise BackendError(f"Elasticsearch error for {index_id}") from ex
         logger.debug(f"{LOGGING_TAG} found {res} for `{q}`")
         if res.get("hits", {}).get("total", {}).get("value", 0) > 0:
             # filter sport for prev, current, next
-            filter: dict[str, dict] = {}
-            for doc in res["hits"]["hits"]:
-                event = json.loads((doc["_source"]["event"]))
-                # Add the elastic search score as a baseline score for the return result.
-                event["es_score"] = doc.get("_score", 0)
-                if not event["date"]:
-                    logger.info(f"{LOGGING_TAG}Event has no date, skipping")
-                    continue
-                if mix_sports:
-                    sport = "all"
-                else:
-                    sport = event["sport"]
-                if sport not in filter:
-                    filter[sport] = {}
+            try:
+                filter: dict[str, dict] = {}
+                for doc in res["hits"]["hits"]:
+                    event = json.loads((doc["_source"]["event"]))
+                    # Add the elastic search score as a baseline score for the return result.
+                    event["es_score"] = doc.get("_score", 0)
+                    event["touched"] = doc["_source"].get("touched", "None")
+                    if not event["date"]:
+                        logger.info(f"{LOGGING_TAG}Event has no date, skipping")
+                        continue
+                    event_date = datetime.fromisoformat(event["date"])
+                    if mix_sports:
+                        sport = "all"
+                    else:
+                        sport = event["sport"]
+                    if sport not in filter:
+                        filter[sport] = {}
 
-                # This may be a bit confusing.
-                # There are four "status" fields.
-                # `event_status`, used here, is the parsed `GameStatus` enum.
-                # `status` (used internally) is the provided event's status
-                # `status` (reported externally) is the string version of the `event_status`
-                # `status_type` (reported externally) is the simplified type requested by the UI team.
-                status = GameStatus.parse(event["status"])
-                event["event_status"] = status
-                # Because we may be collecting "all" sports, we want to find the most recently
-                # concluded game and the next scheduled game. As for current, we just grab the last
-                # "inprogress" game that is reported.
-                if status.is_final():
-                    if filter[sport].get("previous", {}).get("date", 0) < int(event["date"]):
-                        filter[sport]["previous"] = event
-                # If only show the next upcoming game.
-                if status.is_scheduled():
-                    # if there is no "next" game, or if the "next" game is later than this one,
-                    # display the most immediate upcoming event.
-                    if not filter[sport].get("next") or int(filter[sport]["next"]["date"]) > int(
-                        event["date"]
-                    ):
-                        filter[sport]["next"] = event
-                if status.is_in_progress():
-                    # remove the previous game info because we have a current one.
-                    if "previous" in filter[sport]:
-                        del filter[sport]["previous"]
-                    filter[sport]["current"] = event
+                    # This may be a bit confusing.
+                    # There are four "status" fields.
+                    # `event_status`, used here, is the parsed `GameStatus` enum.
+                    # `status` (used internally) is the provided event's status
+                    # `status` (reported externally) is the string version of the `event_status`
+                    # `status_type` (reported externally) is the simplified type requested by the UI team.
+                    status = GameStatus.parse(event["status"])
+                    event["event_status"] = status
+                    # Because we may be collecting "all" sports, we want to find the most recently
+                    # concluded game and the next scheduled game. As for current, we just grab the last
+                    # "inprogress" game that is reported.
+                    if status.is_final():
+                        if "previous" not in filter[sport] and "current" not in filter[sport]:
+                            filter[sport]["previous"] = event
+                            continue
+                        # get the most recently "finalized" game
+                        if datetime.fromisoformat(filter[sport]["previous"]["date"]) < event_date:
+                            filter[sport]["previous"] = event
+                            continue
+                    # If only show the next upcoming game.
+                    if status.is_scheduled():
+                        # if there is no "next" game, or if the "next" game is later than this one,
+                        # display the most immediate upcoming event.
+                        if "next" not in filter[sport]:
+                            filter[sport]["next"] = event
+                            continue
+                        # get the most recent "next" game
+                        if datetime.fromisoformat(filter[sport]["next"]["date"]) < event_date:
+                            filter[sport]["next"] = event
+                    if status.is_in_progress():
+                        # remove the previous game info because we have a current one.
+                        if "previous" in filter[sport]:
+                            del filter[sport]["previous"]
+                        if "current" not in filter[sport]:
+                            filter[sport]["current"] = event
+                            continue
+                        if datetime.fromisoformat(
+                            filter[sport]["current"]["updated"]
+                        ) > datetime.fromisoformat(event["updated"]):
+                            filter[sport]["current"] = event
+            except Exception as ex:
+                logger.error(f"{LOGGING_TAG} search_event: Unexpected error {ex}")
             return filter
         else:
             return {}
@@ -683,6 +706,8 @@ class SportsDataStore(ElasticDataStore):
 
         index = (self.index_map["event"]).format(lang=language_code)
 
+        # Write the fields to Elasticsearch.
+        # The `_source` _MUST_ match the previously specified `mapping`
         for event in sport.events.values():
             action = {
                 "_index": index,
@@ -692,13 +717,17 @@ class SportsDataStore(ElasticDataStore):
                     "terms": event.terms,
                     "date": event.date,
                     "expiry": event.expiry,
+                    "updated": event.updated or event.date,
                     "id": event.id,
                     "event_key": event.key(),
                     "status_type": event.status.status_type(),
                     "event": event.model_dump_json(),
+                    "touched": datetime.now(tz=timezone.utc),
                 },
             }
             actions.append(action)
+            if event.status.is_in_progress():
+                logger.info(f"{LOGGING_TAG} ## Live Game: {event.terms}")
 
             try:
                 start = datetime.now()
