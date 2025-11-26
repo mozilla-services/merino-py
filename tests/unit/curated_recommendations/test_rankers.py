@@ -1094,11 +1094,12 @@ class TestArticleBalancer:
         balancer = ArticleBalancer(expected_num_articles=9)
         stories = [
             self._build_recommendation("0", Topic.SPORTS, subtopic=True),
-            self._build_recommendation("0", Topic.SPORTS, subtopic=False),
-            self._build_recommendation("1", Topic.GAMING, subtopic=False),
+            self._build_recommendation("1", Topic.SPORTS, subtopic=False),
+            self._build_recommendation("2", Topic.GAMING, subtopic=False),
         ]
-        assert balancer.add_story(stories[0]) is False
-        assert balancer.add_story(stories[1]) is False
+        assert balancer.add_story(stories[0]) is False  # No subtopic
+        assert balancer.add_story(stories[1]) is True
+        assert balancer.add_story(stories[2]) is False  # No gaming
 
     def test_rejects_story_when_per_topic_limit_exceeded(self):
         """Ensure adding beyond the per-topic maximum fails."""

@@ -2,7 +2,6 @@
 
 from collections import defaultdict, deque
 from random import random, sample as random_sample
-import re
 
 from merino.curated_recommendations.prior_backends.experiment_rescaler import (
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
@@ -40,7 +39,9 @@ BALANCER_MAX_EVERGREEN = 0.4
 
 BALANCER_MAX_PER_TOPIC = 0.2
 BALANCER_MAX_SUBTOPIC = 0.2
-MAX_BLOCKED_TOPICS = 0.1 # This effecively means 0 when num articles < 10, which is typical (non personalized) case
+MAX_BLOCKED_TOPICS = (
+    0.1  # This effecively means 0 when num articles < 10, which is typical (non personalized) case
+)
 
 EVERGREEN_TOPICS = {
     Topic.FOOD,
@@ -95,7 +96,9 @@ class ArticleBalancer:
     @staticmethod
     def is_blocked_rec(rec: CuratedRecommendation) -> bool:
         """Return true if topic is a blocked topic"""
-        return (rec.topic == Topic.SPORTS and ArticleBalancer._is_subtopic(rec)) or rec.topic == Topic.GAMING
+        return (
+            rec.topic == Topic.SPORTS and ArticleBalancer._is_subtopic(rec)
+        ) or rec.topic == Topic.GAMING
 
     @staticmethod
     def _update_stats(info_dict, rec: CuratedRecommendation):
@@ -438,8 +441,6 @@ def thompson_sampling(
             and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
         ):
             rec.ranking_data.is_fresh = True
-        print(f"{alpha_val},{beta_val},{opens},{no_opens},{rec.ranking_data.score},{rec.topic},{rec.ranking_data.is_fresh},{re.sub(r'[^a-zA-Z ]', '', rec.title)}")
-
 
     def suppress_fresh_items(scored_recs: list[CuratedRecommendation]) -> None:
         if fresh_items_max <= 0:
