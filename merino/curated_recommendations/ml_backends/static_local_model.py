@@ -201,6 +201,9 @@ class SuperInferredModel(LocalModelBackend):
         add_backward_compatibility = (
             section_name in BASE_TOPICS_SET
         )  # This can be removed in December 2025
+
+        # What we're doing below is splitting the feature weight between the section feature and
+        # the supertopic feature if applicable. So a click on "sports" or "mlb" would boost "soccer"
         section_scalar = 1 - SUBTOPIC_TOPIC_BLEND_RATIO if subsection_supertopic is not None else 1
         features = {f"s_{section_name}": section_scalar}
         if subsection_supertopic:
