@@ -1089,6 +1089,17 @@ class TestArticleBalancer:
             rec.experiment_flags.add(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
         return rec
 
+    def test_special_blocked_stories(self):
+        """Test that blocked stories are rejected."""
+        balancer = ArticleBalancer(expected_num_articles=9)
+        stories = [
+            self._build_recommendation("0", Topic.SPORTS, subtopic=True),
+            self._build_recommendation("0", Topic.SPORTS, subtopic=False),
+            self._build_recommendation("1", Topic.GAMING, subtopic=False),
+        ]
+        assert balancer.add_story(stories[0]) is False
+        assert balancer.add_story(stories[1]) is False
+
     def test_rejects_story_when_per_topic_limit_exceeded(self):
         """Ensure adding beyond the per-topic maximum fails."""
         balancer = ArticleBalancer(expected_num_articles=10)
@@ -1105,7 +1116,7 @@ class TestArticleBalancer:
         stories = [
             self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
             self._build_recommendation("1", Topic.TECHNOLOGY, subtopic=True),
-            self._build_recommendation("2", Topic.SPORTS, subtopic=True),
+            self._build_recommendation("2", Topic.ARTS, subtopic=True),
         ]
 
         assert balancer.add_story(stories[0])
@@ -1114,8 +1125,8 @@ class TestArticleBalancer:
         assert len(balancer.get_stories()) == 2
 
     def test_rejects_story_when_evergreen_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=4)
+        """Ensure evergreen quota caps additions when already full."""
+        balancer = ArticleBalancer(expected_num_articles=5)
         stories = [
             self._build_recommendation("0", Topic.FOOD, subtopic=False),
             self._build_recommendation("1", Topic.SELF_IMPROVEMENT, subtopic=False),
@@ -1125,18 +1136,18 @@ class TestArticleBalancer:
 
         assert balancer.add_story(stories[0])
         assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2])
+        assert balancer.add_story(stories[2]) is False
         assert balancer.add_story(stories[3]) is False
-        assert len(balancer.get_stories()) == 3
+        assert len(balancer.get_stories()) == 2
 
     def test_rejects_story_when_topical_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=4)
+        """Ensure topical quota caps additions when already full."""
+        balancer = ArticleBalancer(expected_num_articles=3)
         stories = [
-            self._build_recommendation("0", Topic.SPORTS, subtopic=False),
+            self._build_recommendation("0", Topic.BUSINESS, subtopic=False),
             self._build_recommendation("1", Topic.ARTS, subtopic=False),
-            self._build_recommendation("2", Topic.POLITICS, subtopic=False),
-            self._build_recommendation("3", Topic.GAMING, subtopic=False),
+            self._build_recommendation("2", Topic.TECHNOLOGY, subtopic=False),
+            self._build_recommendation("3", Topic.POLITICS, subtopic=False),
         ]
 
         assert balancer.add_story(stories[0])
@@ -1144,6 +1155,19 @@ class TestArticleBalancer:
         assert balancer.add_story(stories[2])
         assert balancer.add_story(stories[3]) is False
         assert len(balancer.get_stories()) == 3
+
+    def test_rejects_blocked_topics_until_limits_raise(self):
+        """Blocked topics should be excluded until relaxed limits allow them."""
+        balancer = ArticleBalancer(expected_num_articles=9)
+        allowed_story = self._build_recommendation("0", Topic.BUSINESS)
+        blocked_story = self._build_recommendation("1", Topic.GAMING)
+
+        assert balancer.add_story(allowed_story)
+        assert balancer.add_story(blocked_story) is False
+
+        balancer.set_limits_for_expected_articles(15)
+        assert balancer.add_story(blocked_story)
+        assert len(balancer.get_stories()) == 2
 
     def test_add_stories_supports_raising_limits_and_capacity(self):
         """Add a second batch after increasing both limit and balancing constraints."""
