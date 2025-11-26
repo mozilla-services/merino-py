@@ -1115,15 +1115,13 @@ class TestArticleBalancer:
         """Ensure subtopic quota caps additions when already full."""
         balancer = ArticleBalancer(expected_num_articles=6)
         stories = [
-            self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
-            self._build_recommendation("1", Topic.TECHNOLOGY, subtopic=True),
             self._build_recommendation("2", Topic.ARTS, subtopic=True),
+            self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
         ]
 
         assert balancer.add_story(stories[0])
-        assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2]) is False
-        assert len(balancer.get_stories()) == 2
+        assert balancer.add_story(stories[1]) is False
+        assert len(balancer.get_stories()) == 1
 
     def test_rejects_story_when_evergreen_limit_exceeded(self):
         """Ensure evergreen quota caps additions when already full."""

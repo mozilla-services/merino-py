@@ -34,11 +34,11 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-BALANCER_MAX_TOPICAL = 0.8
+BALANCER_MAX_TOPICAL = 0.75
 BALANCER_MAX_EVERGREEN = 0.4
 
 BALANCER_MAX_PER_TOPIC = 0.2
-BALANCER_MAX_SUBTOPIC = 0.2
+BALANCER_MAX_SUBTOPIC = 0.1
 MAX_BLOCKED_TOPICS = (
     0.1  # This effecively means 0 when num articles < 10, which is typical (non personalized) case
 )
@@ -77,7 +77,7 @@ class ArticleBalancer:
         self.max_topical = math.ceil(BALANCER_MAX_TOPICAL * expected_num_articles)
         self.max_evergreen = math.ceil(BALANCER_MAX_EVERGREEN * expected_num_articles)
         self.max_per_topic = max(2, math.ceil(BALANCER_MAX_PER_TOPIC * expected_num_articles))
-        self.max_subtopic = max(2, math.ceil(BALANCER_MAX_SUBTOPIC * expected_num_articles))
+        self.max_subtopic = max(1, math.ceil(BALANCER_MAX_SUBTOPIC * expected_num_articles))
 
         # We round down here to be conservative in blocking topics in initial list, but relax
         # for extra stories or for personalization
