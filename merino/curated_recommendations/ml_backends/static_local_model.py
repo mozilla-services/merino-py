@@ -37,6 +37,18 @@ DEFAULT_INTERESTS_KEY = "other"
 
 SPECIAL_FEATURE_CLICK = "clicks"
 
+TOPIC_FOR_SUBTOPIC_SECTION = {
+    "movies": Topic.ARTS,
+    "tv": Topic.ARTS,
+    "music": Topic.ARTS,
+    "books": Topic.ARTS,
+    "nfl": Topic.SPORTS,
+    "nba": Topic.SPORTS,
+    "mlb": Topic.SPORTS,
+    "nhl": Topic.SPORTS,
+    "soccer": Topic.SPORTS,
+}
+
 BASE_TOPICS = [
     "arts",
     "education",
@@ -148,6 +160,8 @@ MODEL_Q_VALUE_V1 = 0.030
 THRESHOLDS_V1_A = [0.008, 0.016, 0.024]
 THRESHOLDS_V1_B = [0.002, 0.008, 0.017]
 
+SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
+
 
 # Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
@@ -182,11 +196,17 @@ class SuperInferredModel(LocalModelBackend):
 
     @staticmethod
     def _get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
-        features = (
-            {f"s_{section_name}": 1, f"s_{section_name}_crawl": 1}
-            if section_name in BASE_TOPICS_SET
-            else {f"s_{section_name}": 1}
-        )
+        subsection_supertopic = TOPIC_FOR_SUBTOPIC_SECTION.get(section_name, None)
+
+        add_backward_compatibility = (
+            section_name in BASE_TOPICS_SET
+        )  # This can be removed in December 2025
+        section_scalar = 1 - SUBTOPIC_TOPIC_BLEND_RATIO if subsection_supertopic is not None else 1
+        features = {f"s_{section_name}": section_scalar}
+        if subsection_supertopic:
+            features[f"t_{subsection_supertopic.value}"] = SUBTOPIC_TOPIC_BLEND_RATIO
+        if add_backward_compatibility:
+            features[f"s_{section_name}_crawl"] = section_scalar
         return InterestVectorConfig(
             features=features,
             thresholds=thresholds,
