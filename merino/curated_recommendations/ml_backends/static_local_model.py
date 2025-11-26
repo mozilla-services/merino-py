@@ -146,7 +146,7 @@ MODEL_P_VALUE_V1 = 0.806
 MODEL_Q_VALUE_V1 = 0.030
 
 THRESHOLDS_V1_A = [0.008, 0.016, 0.024]
-THRESHOLDS_V1_B = [0.005, 0.010, 0.015]
+THRESHOLDS_V1_B = [0.002, 0.008, 0.017]
 
 
 # Creates a limited model based on topics. Topics features are stored with a t_
