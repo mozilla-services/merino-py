@@ -32,7 +32,7 @@ class SportEventDetail(BaseModel):
     away_team: SportTeamDetail  # Away Team details
     status: str  # Long form event status. ("Scheduled", "Final - Overtime", etc.)
     status_type: str  # UI display status ("past", "live", "scheduled")
-    touched: str  # UT
+    touched: str  # UTC timestamp of the last record modification
 
     @classmethod
     def from_event_dict(cls, event: dict[str, Any]):

@@ -3,7 +3,6 @@ by Merino, when we get a request to process.
 
 """
 
-import copy
 import logging
 
 import aiodogstatsd
@@ -117,9 +116,7 @@ class SportsDataProvider(BaseProvider):
 
     def normalize_query(self, query: str) -> str:
         """Perform whatever steps are required to normalize the user provided query string"""
-        # Copy the query term because we may be destructive. The product of this function is
-        # consumed internally.
-        query = copy.copy(super().normalize_query(query))
+        query = super().normalize_query(query)
 
         # here, we test for the presence of at least one "trigger word".
         # See merino.providers.suggest.sports.DEFAULT_TRIGGER_WORDS

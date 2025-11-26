@@ -236,9 +236,8 @@ async def test_sports_search_event_hits(
                     {
                         "sport": "NFL",
                         "status": "Scheduled",
-                        "epsilon" "date": (
-                            now + datetime.timedelta(seconds=2 * 86400)
-                        ).isoformat(),
+                        "label": "epsilon",
+                        "date": (now + datetime.timedelta(seconds=2 * 86400)).isoformat(),
                         "updated": now.isoformat(),
                     }
                 )

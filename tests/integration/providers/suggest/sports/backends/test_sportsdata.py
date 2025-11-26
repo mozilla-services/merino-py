@@ -121,7 +121,7 @@ def fixture_nfl() -> NFL:
         aliases=["Fake Away"],
         colors=["000000", "FFFFFF"],
         updated=FROZEN_TIME,
-        expiry=FROZEN_TIME + timedelta(3600),
+        expiry=FROZEN_TIME + timedelta(seconds=3600),
     ).minimal()
 
     ev = Event(

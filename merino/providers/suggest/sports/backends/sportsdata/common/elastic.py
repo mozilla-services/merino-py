@@ -674,13 +674,13 @@ class SportsDataStore(ElasticDataStore):
                             filter[sport]["next"] = event
                             continue
                         # get the most recent "next" game
-                        if datetime.fromisoformat(filter[sport]["next"]["date"]) > event_date:
+                        if datetime.fromisoformat(filter[sport]["next"]["date"]) < event_date:
                             filter[sport]["next"] = event
                     if status.is_in_progress():
                         # remove the previous game info because we have a current one.
                         if "previous" in filter[sport]:
                             del filter[sport]["previous"]
-                        if "previous" not in filter[sport]:
+                        if "current" not in filter[sport]:
                             filter[sport]["current"] = event
                             continue
                         if datetime.fromisoformat(

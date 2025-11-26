@@ -95,7 +95,7 @@ unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
 integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
 	    MERINO_ENV=testing \
-	    $(UV) run pytest $(INTEGRATION_TEST_DIR) $(XTRA)\
+	    $(UV) run pytest $(INTEGRATION_TEST_DIR) $(XTRA) \
 	    --junit-xml=$(INTEGRATION_JUNIT_XML)
 
 .PHONY: integration-test-fixtures
