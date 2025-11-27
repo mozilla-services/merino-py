@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.protocol import ExperimentRescaler
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
@@ -36,11 +37,13 @@ class CrawledContentRescaler(ExperimentRescaler):
 
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Update priors values based on whether item is unique to the experiment.
-        Scale of 4 puts an item with no activity just below the pack of common items that have good activity
+        Scale of 0.25 puts an item with no activity just below the pack of common items that have good activity
+
+        For default case we lower priors for gaming and subtopic stories to be more pessimistic in terms of CTR
         """
         if rec.isTimeSensitive:
             return alpha, beta
-        if self.is_subtopic_story(rec):
+        if self.is_subtopic_story(rec) or rec.topic == Topic.GAMING:
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC, beta
         else:
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta

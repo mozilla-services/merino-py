@@ -34,10 +34,14 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-BALANCER_MAX_TOPICAL = 0.65
-BALANCER_MAX_EVERGREEN = 0.65
+BALANCER_MAX_TOPICAL = 0.75
+BALANCER_MAX_EVERGREEN = 0.4
+
 BALANCER_MAX_PER_TOPIC = 0.2
-BALANCER_MAX_SUBTOPIC = 0.2
+BALANCER_MAX_SUBTOPIC = 0.1
+MAX_BLOCKED_TOPICS = (
+    0.1  # This effecively means 0 when num articles < 10, which is typical (non personalized) case
+)
 
 EVERGREEN_TOPICS = {
     Topic.FOOD,
@@ -50,6 +54,7 @@ EVERGREEN_TOPICS = {
 EVERGREEN_LABEL = "evergreen"
 TOPICAL_LABEL = "topical"
 SUBTOPIC_LABEL = "is_subtopic"
+BLOCKED_TOPICS_LABEL = "blocked_topics"
 
 
 class ArticleBalancer:
@@ -72,7 +77,11 @@ class ArticleBalancer:
         self.max_topical = math.ceil(BALANCER_MAX_TOPICAL * expected_num_articles)
         self.max_evergreen = math.ceil(BALANCER_MAX_EVERGREEN * expected_num_articles)
         self.max_per_topic = max(2, math.ceil(BALANCER_MAX_PER_TOPIC * expected_num_articles))
-        self.max_subtopic = max(2, math.ceil(BALANCER_MAX_SUBTOPIC * expected_num_articles))
+        self.max_subtopic = max(1, math.ceil(BALANCER_MAX_SUBTOPIC * expected_num_articles))
+
+        # We round down here to be conservative in blocking topics in initial list, but relax
+        # for extra stories or for personalization
+        self.max_blocked_topics = 3 * math.floor(MAX_BLOCKED_TOPICS * expected_num_articles)
 
     @staticmethod
     def _is_evergreen(topic: Topic | None):
@@ -85,6 +94,13 @@ class ArticleBalancer:
         return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
 
     @staticmethod
+    def is_blocked_rec(rec: CuratedRecommendation) -> bool:
+        """Return true if topic is a blocked topic"""
+        return (
+            rec.topic == Topic.SPORTS and ArticleBalancer._is_subtopic(rec)
+        ) or rec.topic == Topic.GAMING
+
+    @staticmethod
     def _update_stats(info_dict, rec: CuratedRecommendation):
         """Update passed dictionary with new stats to reflect the article added"""
         if (topic := rec.topic) is not None:
@@ -95,6 +111,8 @@ class ArticleBalancer:
             info_dict[TOPICAL_LABEL] += 1
         if ArticleBalancer._is_subtopic(rec):
             info_dict[SUBTOPIC_LABEL] += 1
+        if ArticleBalancer.is_blocked_rec(rec):
+            info_dict[BLOCKED_TOPICS_LABEL] += 1
 
     def _does_meet_spec(self, info_dict) -> bool:
         """Return true if passed spec meets requirements of the balancer"""
@@ -103,6 +121,8 @@ class ArticleBalancer:
         if info_dict.get(TOPICAL_LABEL, 0) > self.max_topical:
             return False
         if info_dict.get(SUBTOPIC_LABEL, 0) > self.max_subtopic:
+            return False
+        if info_dict.get(BLOCKED_TOPICS_LABEL, 0) > self.max_blocked_topics:
             return False
         for topic in Topic:
             if info_dict.get(topic.value, 0) > self.max_per_topic:
