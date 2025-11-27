@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 import tldextract
 from google.cloud.bigquery import Client
 
-from merino.jobs.navigational_suggestions.custom_domains import CUSTOM_DOMAINS
+from merino.jobs.navigational_suggestions.enrichments.custom_domains import CUSTOM_DOMAINS
 from merino.utils.metrics import logger
 
 

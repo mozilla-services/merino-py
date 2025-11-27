@@ -7,7 +7,7 @@
 import pytest
 from google.cloud.bigquery.table import Row
 
-from merino.jobs.navigational_suggestions.domain_data_downloader import (
+from merino.jobs.navigational_suggestions.io.domain_data_downloader import (
     DomainDataDownloader,
 )
 
@@ -16,7 +16,7 @@ from merino.jobs.navigational_suggestions.domain_data_downloader import (
 def mock_bigquery_client(mocker):
     """Return a mock BigQuery Client instance"""
     return mocker.patch(
-        "merino.jobs.navigational_suggestions.domain_data_downloader.Client"
+        "merino.jobs.navigational_suggestions.io.domain_data_downloader.Client"
     ).return_value
 
 
@@ -139,12 +139,12 @@ def test_download_data_with_duplicates(mock_bigquery_client, mocker):
 
     # Patch the logger
     mock_logger = mocker.patch(
-        "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
+        "merino.jobs.navigational_suggestions.io.domain_data_downloader.logger"
     )
 
     # Patch CUSTOM_DOMAINS to include a duplicate
     mocker.patch(
-        "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+        "merino.jobs.navigational_suggestions.io.domain_data_downloader.CUSTOM_DOMAINS",
         ["amazon.com", "newdomain.com"],
     )
 
@@ -177,7 +177,7 @@ def test_download_data_exception_handling(mock_bigquery_client, mocker):
 
     # Patch the logger
     mock_logger = mocker.patch(
-        "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
+        "merino.jobs.navigational_suggestions.io.domain_data_downloader.logger"
     )
 
     domain_data_downloader = DomainDataDownloader("dummy_gcp_project")
@@ -203,7 +203,7 @@ def test_download_data_with_subdomain(mock_bigquery_client, mocker):
     ]
 
     mocker.patch(
-        "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+        "merino.jobs.navigational_suggestions.io.domain_data_downloader.CUSTOM_DOMAINS",
         ["sub.example.com"],
     )
 

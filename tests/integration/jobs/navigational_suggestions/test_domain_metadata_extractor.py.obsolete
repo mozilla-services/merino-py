@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import pytest
 from PIL import Image as PILImage
 
-from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
-    DomainMetadataExtractor,
-    FaviconData,
-    Scraper,
-    current_scraper,
+from merino.jobs.navigational_suggestions.processing.domain_processor import (
+    DomainProcessor,
+    current_web_scraper,
 )
+from merino.jobs.navigational_suggestions.models import FaviconData
+from merino.jobs.navigational_suggestions.scrapers.web_scraper import WebScraper
 from merino.jobs.utils.system_monitor import SystemMonitor
 from merino.utils.gcs.models import Image
 
@@ -19,7 +19,7 @@ from merino.utils.gcs.models import Image
 @pytest.fixture
 def mock_scraper():
     """Mock scraper for testing."""
-    scraper = MagicMock(spec=Scraper)
+    scraper = MagicMock(spec=WebScraper)
     scraper.open = AsyncMock(return_value="https://example.com")
     scraper.scrape_title = MagicMock(return_value="Example Website")
     scraper.get_default_favicon = AsyncMock(return_value="https://example.com/favicon.ico")
@@ -87,9 +87,9 @@ class TestDomainMetadataExtractor:
     """Test core functionality of domain metadata extractor."""
 
     def test_initialization(self):
-        """Test the initialization of DomainMetadataExtractor."""
+        """Test the initialization of DomainProcessor."""
         # Test with default parameters
-        extractor = DomainMetadataExtractor(blocked_domains=set())
+        extractor = DomainProcessor(blocked_domains=set())
         assert hasattr(extractor, "favicon_downloader")
         assert extractor.blocked_domains == set()
 
@@ -97,7 +97,7 @@ class TestDomainMetadataExtractor:
         mock_downloader = MagicMock()
         custom_blocked = {"blocked1.com", "blocked2.com"}
 
-        extractor = DomainMetadataExtractor(
+        extractor = DomainProcessor(
             blocked_domains=custom_blocked,
             favicon_downloader=mock_downloader,
         )

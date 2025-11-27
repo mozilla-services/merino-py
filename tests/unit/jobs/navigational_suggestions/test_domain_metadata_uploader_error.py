@@ -12,7 +12,7 @@ import pytest
 from google.cloud.storage import Blob
 
 from merino.utils.gcs.models import Image
-from merino.jobs.navigational_suggestions.domain_metadata_uploader import DomainMetadataUploader
+from merino.jobs.navigational_suggestions.io.domain_metadata_uploader import DomainMetadataUploader
 
 
 @pytest.fixture
