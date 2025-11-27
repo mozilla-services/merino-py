@@ -389,7 +389,6 @@ def thompson_sampling(
     def compute_ranking_scores(rec: CuratedRecommendation):
         """Sample beta distributed from weighted regional/global engagement for a recommendation."""
         opens, no_opens = get_opens_no_opens(rec)
-
         prior: Prior = prior_backend.get() or fallback_prior
         a_prior = prior.alpha
         b_prior = prior.beta
@@ -397,7 +396,7 @@ def thompson_sampling(
         # Use a weighted average of regional and global engagement, if that's enabled and available.
         region_opens, region_no_opens = get_opens_no_opens(rec, region)
         region_prior = prior_backend.get(region)
-        if region_no_opens and region_prior:
+        if region_prior:
             opens = (region_weight * region_opens) + ((1 - region_weight) * opens)
             no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
             a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
