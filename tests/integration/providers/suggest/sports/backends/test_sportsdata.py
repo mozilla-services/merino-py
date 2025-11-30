@@ -36,9 +36,20 @@ FROZEN_TIME = datetime(2025, 10, 27, tzinfo=timezone.utc)
 @pytest.fixture(scope="session")
 def es_url():
     """ElasticSearch URL fixture."""
+    env = {
+        "discovery.type": "single-node",
+        "xpack.security.enabled": "false",
+        "xpack.ml.enabled": "false",
+        "xpack.monitoring.collection.enabled": "false",
+        "ingest.geoip.downloader.enabled": "false",
+        "ES_JAVA_OPTS": "-Xms512m -Xmx512m",
+    }
     with ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4") as es:
+        for k, v in env.items():
+            es.with_env(k,v)
         url = es.get_url()
         yield url
+
 
 
 @pytest_asyncio.fixture
