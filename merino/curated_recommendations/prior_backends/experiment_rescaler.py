@@ -9,6 +9,8 @@ from merino.curated_recommendations.protocol import CuratedRecommendation
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
+BLOCKED_FROM_MOST_POPULAR_SCALER = 3.0
+
 # Subtopic prior scaling is derived using data analysis on scores and existing priors
 # See more at:
 # https://mozilla-hub.atlassian.net/wiki/spaces/FAAMT/pages/1727725665/Thompson+Sampling+of+Subtopic+Sections
@@ -31,8 +33,22 @@ class CrawledContentRescaler(ExperimentRescaler):
         """Story is part of an experiment"""
         return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
 
+    @classmethod
+    def is_blocked_from_most_popular(cls, rec: CuratedRecommendation) -> bool:
+        """Return true if the story is blocked from most popular section.
+        Note that this logic is duplicated in ArticleBalancer
+        """
+        return (
+            cls.is_subtopic_story(rec) and rec.topic == Topic.SPORTS
+        ) or rec.topic == Topic.GAMING
+
     def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
-        """Update open and non-open values based on whether item is unique to the experiment"""
+        """Story is not allowed in most popular in some cases. We therefore will have to get by with many less impressions
+        If we don't do this, these stories will rely more on priors for ranking, causing poor exploration/exploitation balance
+        """
+        if self.is_blocked_from_most_popular(rec):
+            opens = opens * BLOCKED_FROM_MOST_POPULAR_SCALER
+            no_opens = no_opens * BLOCKED_FROM_MOST_POPULAR_SCALER
         return opens, no_opens
 
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
@@ -43,7 +59,7 @@ class CrawledContentRescaler(ExperimentRescaler):
         """
         if rec.isTimeSensitive:
             return alpha, beta
-        if self.is_subtopic_story(rec) or rec.topic == Topic.GAMING:
+        if self.is_subtopic_story(rec) or self.is_blocked_from_most_popular(rec):
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC, beta
         else:
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
