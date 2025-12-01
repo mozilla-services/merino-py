@@ -14,6 +14,7 @@ from pydantic import HttpUrl
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
+from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
@@ -23,13 +24,12 @@ from merino.curated_recommendations.protocol import (
     ProcessedInterests,
     RankingData,
 )
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
     CrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
-    ArticleBalancer,
     spread_publishers,
     boost_preferred_topic,
     boost_followed_sections,
@@ -1070,8 +1070,8 @@ class TestGreedyPersonalizedSectionRanker:
         assert bogus not in reranked_sections
 
 
-class TestArticleBalancer:
-    """Tests covering ArticleBalancer balancing behavior."""
+class TestTopStoriesArticleBalancer:
+    """Tests covering TopStoriesArticleBalancer balancing behavior."""
 
     @staticmethod
     def _build_recommendation(
@@ -1091,7 +1091,7 @@ class TestArticleBalancer:
 
     def test_special_blocked_stories(self):
         """Test that blocked stories are rejected."""
-        balancer = ArticleBalancer(expected_num_articles=9)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9)
         stories = [
             self._build_recommendation("0", Topic.SPORTS, subtopic=True),
             self._build_recommendation("1", Topic.SPORTS, subtopic=False),
@@ -1103,7 +1103,7 @@ class TestArticleBalancer:
 
     def test_rejects_story_when_per_topic_limit_exceeded(self):
         """Ensure adding beyond the per-topic maximum fails."""
-        balancer = ArticleBalancer(expected_num_articles=10)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=10)
         stories = [self._build_recommendation(str(idx), Topic.BUSINESS) for idx in range(3)]
 
         assert balancer.add_story(stories[0])
@@ -1113,7 +1113,7 @@ class TestArticleBalancer:
 
     def test_rejects_story_when_subtopic_limit_exceeded(self):
         """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=6)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=6)
         stories = [
             self._build_recommendation("2", Topic.ARTS, subtopic=True),
             self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
@@ -1125,7 +1125,7 @@ class TestArticleBalancer:
 
     def test_rejects_story_when_evergreen_limit_exceeded(self):
         """Ensure evergreen quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=5)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=5)
         stories = [
             self._build_recommendation("0", Topic.FOOD, subtopic=False),
             self._build_recommendation("1", Topic.SELF_IMPROVEMENT, subtopic=False),
@@ -1141,7 +1141,7 @@ class TestArticleBalancer:
 
     def test_rejects_story_when_topical_limit_exceeded(self):
         """Ensure topical quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=3)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=3)
         stories = [
             self._build_recommendation("0", Topic.BUSINESS, subtopic=False),
             self._build_recommendation("1", Topic.ARTS, subtopic=False),
@@ -1157,7 +1157,7 @@ class TestArticleBalancer:
 
     def test_rejects_blocked_topics_until_limits_raise(self):
         """Blocked topics should be excluded until relaxed limits allow them."""
-        balancer = ArticleBalancer(expected_num_articles=9)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9)
         allowed_story = self._build_recommendation("0", Topic.BUSINESS)
         blocked_story = self._build_recommendation("1", Topic.GAMING)
 
@@ -1170,7 +1170,7 @@ class TestArticleBalancer:
 
     def test_add_stories_supports_raising_limits_and_capacity(self):
         """Add a second batch after increasing both limit and balancing constraints."""
-        balancer = ArticleBalancer(expected_num_articles=3)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=3)
         batch_one = [
             self._build_recommendation("0", Topic.BUSINESS),
             self._build_recommendation("1", Topic.BUSINESS),

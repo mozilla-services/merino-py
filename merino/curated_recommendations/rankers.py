@@ -1,11 +1,8 @@
 """Algorithms for ranking curated recommendations."""
 
-from collections import defaultdict, deque
+from collections import deque
 from random import random, sample as random_sample
 
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-)
 import sentry_sdk
 import logging
 import math
@@ -19,7 +16,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import DEFAUL
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
     Prior,
-    ExperimentRescaler,
+    EngagementRescaler,
 )
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
@@ -32,131 +29,6 @@ from scipy.stats import beta
 import numpy as np
 
 logger = logging.getLogger(__name__)
-
-
-BALANCER_MAX_TOPICAL = 0.75
-BALANCER_MAX_EVERGREEN = 0.4
-
-BALANCER_MAX_PER_TOPIC = 0.2
-BALANCER_MAX_SUBTOPIC = 0.1
-MAX_BLOCKED_TOPICS = (
-    0.1  # This effecively means 0 when num articles < 10, which is typical (non personalized) case
-)
-
-EVERGREEN_TOPICS = {
-    Topic.FOOD,
-    Topic.SELF_IMPROVEMENT,
-    Topic.PERSONAL_FINANCE,
-    Topic.PARENTING,
-    Topic.HOME,
-}
-
-EVERGREEN_LABEL = "evergreen"
-TOPICAL_LABEL = "topical"
-SUBTOPIC_LABEL = "is_subtopic"
-BLOCKED_TOPICS_LABEL = "blocked_topics"
-
-
-class ArticleBalancer:
-    """Balance articles by multiple criteria"""
-
-    def __init__(self, expected_num_articles: int) -> None:
-        """Initialize limits for target number of articles"""
-        self.article_list: list[CuratedRecommendation] = []
-        self.feature_counts: defaultdict[str, int] = defaultdict(int)
-        self.num_expected = 0
-        self.set_limits_for_expected_articles(expected_num_articles)
-
-    def set_limits_for_expected_articles(self, expected_num_articles: int):
-        """Update limits for expected number of articles"""
-        if self.num_expected == expected_num_articles:
-            return
-        if self.num_expected > expected_num_articles:
-            raise Exception("Limits can only be raised")
-        self.num_expected = expected_num_articles
-        self.max_topical = math.ceil(BALANCER_MAX_TOPICAL * expected_num_articles)
-        self.max_evergreen = math.ceil(BALANCER_MAX_EVERGREEN * expected_num_articles)
-        self.max_per_topic = max(2, math.ceil(BALANCER_MAX_PER_TOPIC * expected_num_articles))
-        self.max_subtopic = max(1, math.ceil(BALANCER_MAX_SUBTOPIC * expected_num_articles))
-
-        # We round down here to be conservative in blocking topics in initial list, but relax
-        # for extra stories or for personalization
-        self.max_blocked_topics = 3 * math.floor(MAX_BLOCKED_TOPICS * expected_num_articles)
-
-    @staticmethod
-    def _is_evergreen(topic: Topic | None):
-        """Return true if topic is an Evergreen style topic"""
-        return topic in EVERGREEN_TOPICS
-
-    @staticmethod
-    def _is_subtopic(rec: CuratedRecommendation) -> bool:
-        """Return true if item is in a subtopic"""
-        return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
-
-    @staticmethod
-    def is_blocked_rec(rec: CuratedRecommendation) -> bool:
-        """Return true if topic is a blocked topic"""
-        return (
-            rec.topic == Topic.SPORTS and ArticleBalancer._is_subtopic(rec)
-        ) or rec.topic == Topic.GAMING
-
-    @staticmethod
-    def _update_stats(info_dict, rec: CuratedRecommendation):
-        """Update passed dictionary with new stats to reflect the article added"""
-        if (topic := rec.topic) is not None:
-            info_dict[topic.value] += 1
-        if ArticleBalancer._is_evergreen(rec.topic):
-            info_dict[EVERGREEN_LABEL] += 1
-        else:
-            info_dict[TOPICAL_LABEL] += 1
-        if ArticleBalancer._is_subtopic(rec):
-            info_dict[SUBTOPIC_LABEL] += 1
-        if ArticleBalancer.is_blocked_rec(rec):
-            info_dict[BLOCKED_TOPICS_LABEL] += 1
-
-    def _does_meet_spec(self, info_dict) -> bool:
-        """Return true if passed spec meets requirements of the balancer"""
-        if info_dict.get(EVERGREEN_LABEL, 0) > self.max_evergreen:
-            return False
-        if info_dict.get(TOPICAL_LABEL, 0) > self.max_topical:
-            return False
-        if info_dict.get(SUBTOPIC_LABEL, 0) > self.max_subtopic:
-            return False
-        if info_dict.get(BLOCKED_TOPICS_LABEL, 0) > self.max_blocked_topics:
-            return False
-        for topic in Topic:
-            if info_dict.get(topic.value, 0) > self.max_per_topic:
-                return False
-        return True
-
-    def add_story(self, rec: CuratedRecommendation) -> bool:
-        """Add story if it meets requirements. Return strue if story added"""
-        provisional_stats = self.feature_counts.copy()
-        ArticleBalancer._update_stats(provisional_stats, rec)
-        if self._does_meet_spec(provisional_stats):
-            self.article_list.append(rec)
-            self.feature_counts = provisional_stats
-            return True
-        return False
-
-    def add_stories(self, stories_to_add: list[CuratedRecommendation], limit: int):
-        """Add additional stories from stories_to_add up to total limit
-        Return tuple with discarded stories and remaining ones. Selected stories
-        are added to the class.
-        """
-        discarded_stories = []
-        num_stories_consumed = 0
-        for story in stories_to_add:
-            if len(self.article_list) >= limit:
-                break
-            if not self.add_story(story):
-                discarded_stories.append(story)
-            num_stories_consumed += 1
-        return discarded_stories, stories_to_add[num_stories_consumed:]
-
-    def get_stories(self) -> list[CuratedRecommendation]:
-        """Get story list"""
-        return self.article_list
 
 
 def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:
@@ -362,7 +234,7 @@ def thompson_sampling(
     prior_backend: PriorBackend,
     region: str | None = None,
     region_weight: float = REGION_ENGAGEMENT_WEIGHT,
-    rescaler: ExperimentRescaler | None = None,
+    rescaler: EngagementRescaler | None = None,
     personal_interests: ProcessedInterests | None = None,
 ) -> list[CuratedRecommendation]:
     """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
@@ -474,7 +346,7 @@ def section_thompson_sampling(
     sections: dict[str, Section],
     engagement_backend: EngagementBackend,
     top_n: int = 6,
-    rescaler: ExperimentRescaler | None = None,
+    rescaler: EngagementRescaler | None = None,
 ) -> dict[str, Section]:
     """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 

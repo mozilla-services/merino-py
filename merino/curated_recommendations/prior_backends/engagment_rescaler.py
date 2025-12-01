@@ -1,9 +1,9 @@
-"""Rescaler of engagement for experiments"""
+"""Rescaler of engagement for various content types and experiments"""
 
 from typing import Any
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.prior_backends.protocol import ExperimentRescaler
+from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
@@ -18,8 +18,10 @@ PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 
-class CrawledContentRescaler(ExperimentRescaler):
-    """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day"""
+class CrawledContentRescaler(EngagementRescaler):
+    """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
+    Special handling is added for certain content types that are blocked from most popular section
+    """
 
     def __init__(self, **data: Any):
         data.setdefault("fresh_items_max", 0)
@@ -45,6 +47,7 @@ class CrawledContentRescaler(ExperimentRescaler):
     def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
         """Story is not allowed in most popular in some cases. We therefore will have to get by with many less impressions
         If we don't do this, these stories will rely more on priors for ranking, causing poor exploration/exploitation balance
+        both in terms of section ranking and ranking within the section
         """
         if self.is_blocked_from_most_popular(rec):
             opens = opens * BLOCKED_FROM_MOST_POPULAR_SCALER
@@ -65,7 +68,7 @@ class CrawledContentRescaler(ExperimentRescaler):
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
 
 
-class SchedulerHoldbackRescaler(ExperimentRescaler):
+class SchedulerHoldbackRescaler(EngagementRescaler):
     """Scales experiment based content on relative size of experiment, as a fractional percentage"""
 
     def __init__(self, **data: Any):

@@ -22,7 +22,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
 )
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SchedulerHoldbackRescaler,
     CrawledContentRescaler,
 )
