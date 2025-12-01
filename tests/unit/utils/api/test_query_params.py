@@ -83,7 +83,7 @@ def test_validate_suggest_custom_location_params(
 
     records = filter_caplog(caplog.records, "merino.utils.api.query_params")
 
-    assert len(records) == 1
+    assert len(records) == 2
     assert (
         records[0].message
         == "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
