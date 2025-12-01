@@ -43,7 +43,7 @@ def validate_suggest_custom_location_params(
             "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
         )
         logger.warning(
-            "HTTP 400: weather request params: city - {city}, region - {region}, country - {country}"
+            f"HTTP 400: weather request params: city - {city}, region - {region}, country - {country}"
         )
         raise HTTPException(
             status_code=400,
