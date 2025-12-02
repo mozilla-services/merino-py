@@ -55,6 +55,8 @@ TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines_section"
+# Require enough recommendations to fill the layout plus a single fallback item
+SECTION_FALLBACK_BUFFER = 1
 
 
 def map_section_item_to_recommendation(
@@ -105,11 +107,18 @@ def map_corpus_section_to_section(
         A Section model containing mapped recommendations and default layout.
     """
     item_flags = set() if is_legacy_section else {SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG}
+    seen_ids: set[str] = set()
+    section_items: list[CorpusItem] = []
+    for item in corpus_section.sectionItems:
+        if item.corpusItemId in seen_ids:
+            continue
+        seen_ids.add(item.corpusItemId)
+        section_items.append(item)
     recommendations = [
         map_section_item_to_recommendation(
             item, rank, corpus_section.externalId, experiment_flags=item_flags
         )
-        for rank, item in enumerate(corpus_section.sectionItems)
+        for rank, item in enumerate(section_items)
     ]
     return Section(
         receivedFeedRank=rank,
@@ -372,11 +381,32 @@ def filter_sections_by_experiment(
     return result
 
 
-def remove_story_recs(
-    recommendations: list[CuratedRecommendation], story_rec_ids_to_remove
-) -> list[CuratedRecommendation]:
-    """Remove recommendations that were included in the top stories section or headlines section."""
-    return [rec for rec in recommendations if rec.corpusItemId not in story_rec_ids_to_remove]
+def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict[str, Section]:
+    """Remove duplicate recommendations across sections keeping those in higher-priority sections."""
+    seen_ids: set[str] = set()
+    deduped_sections: dict[str, Section] = {}
+
+    for section_id, section in sorted(
+        sections.items(), key=lambda kv: kv[1].receivedFeedRank
+    ):
+        filtered_recs: list[CuratedRecommendation] = []
+        for rec in section.recommendations:
+            if rec.corpusItemId in seen_ids:
+                continue
+            seen_ids.add(rec.corpusItemId)
+            filtered_recs.append(rec)
+
+        for idx, rec in enumerate(filtered_recs):
+            rec.receivedRank = idx
+
+        if len(filtered_recs) < section.layout.max_tile_count + SECTION_FALLBACK_BUFFER:
+            continue
+
+        section.recommendations = filtered_recs
+        deduped_sections[section_id] = section
+
+    update_received_feed_rank(deduped_sections)
+    return deduped_sections
 
 
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
@@ -637,29 +667,13 @@ async def get_sections(
         relax_constraints_for_personalization=personal_interests is not None,
     )
 
-    # Get the story ids in top_stories section
-    top_stories_rec_ids = {rec.corpusItemId for rec in top_stories}
-    # Get the story ids in headlines_section (if present, otherwise empty)
-    headlines_rec_ids = (
-        {rec.corpusItemId for rec in headlines_corpus_section.recommendations}
-        if headlines_corpus_section
-        else {}
-    )
-    # Use set & update() to merge together & ensure no duplicates
-    story_ids_to_remove = set(top_stories_rec_ids)
-    story_ids_to_remove.update(headlines_rec_ids)
-
-    # 9. Remove top stories/headlines from individual sections (they're already in their own sections)
-    for cs in corpus_sections.values():
-        cs.recommendations = remove_story_recs(cs.recommendations, story_ids_to_remove)
-
-    # 10. Create a global rank lookup from the already-ranked recommendations
+    # 9. Create a global rank lookup from the already-ranked recommendations
     # This preserves the Thompson sampling ranking done at step 7 without expensive re-sampling
     global_rank_map = {
         rec.corpusItemId: rank for rank, rec in enumerate(all_ranked_corpus_recommendations)
     }
 
-    # 11. Sort each section's recommendations by their global rank (preserves Thompson sampling order)
+    # 10. Sort each section's recommendations by their global rank (preserves Thompson sampling order)
     # This is much faster than re-running Thompson sampling for each section
     for cs in corpus_sections.values():
         cs.recommendations = sorted(
@@ -669,7 +683,7 @@ async def get_sections(
         for idx, rec in enumerate(cs.recommendations):
             rec.receivedRank = idx
 
-    # 12. Initialize sections with top stories
+    # 11. Initialize sections with top stories
     sections: dict[str, Section] = {
         "top_stories_section": Section(
             receivedFeedRank=0,
@@ -679,18 +693,18 @@ async def get_sections(
         )
     }
 
-    # 13. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
+    # 12. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
     if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
         sections["headlines_section"] = headlines_corpus_section
         sections["top_stories_section"].layout = layout_4_medium
 
-    # 14. Add remaining corpus sections
+    # 13. Add remaining corpus sections
     sections.update(corpus_sections)
 
-    # 15. Prune undersized sections
+    # 14. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
 
-    # 16. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
+    # 15. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
     sections = rank_sections(
         sections,
         request.sections,
@@ -699,6 +713,9 @@ async def get_sections(
         experiment_rescaler=rescaler,
         include_headlines_section=include_headlines_section,
     )
+
+    # 16. Apply cross-section deduplication, preserving higher-priority sections
+    sections = dedupe_recommendations_across_sections(sections)
 
     # 17. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
@@ -722,5 +739,5 @@ def get_sections_with_enough_items(sections: dict[str, Section]) -> dict[str, Se
     return {
         sid: sec
         for sid, sec in sections.items()
-        if len(sec.recommendations) >= sec.layout.max_tile_count + 1
+        if len(sec.recommendations) >= sec.layout.max_tile_count + SECTION_FALLBACK_BUFFER
     }
