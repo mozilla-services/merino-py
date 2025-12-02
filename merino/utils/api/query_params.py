@@ -35,7 +35,10 @@ def get_accepted_languages(languages: str | None) -> list[str]:
 
 
 def validate_suggest_custom_location_params(
-    city: Optional[str], region: Optional[str], country: Optional[str]
+    city: Optional[str],
+    region: Optional[str],
+    country: Optional[str],
+    source: Optional[str] = None,
 ):
     """Validate that city, region & country params are either all present or all omitted."""
     if any([country, region, city]) and not all([country, region, city]):
@@ -43,7 +46,7 @@ def validate_suggest_custom_location_params(
             "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
         )
         logger.warning(
-            f"HTTP 400: weather request params: city - {city}, region - {region}, country - {country}"
+            f"HTTP 400: source: {source} weather request params: city - {city}, region - {region}, country - {country}"
         )
         raise HTTPException(
             status_code=400,
