@@ -386,9 +386,7 @@ def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict
     seen_ids: set[str] = set()
     deduped_sections: dict[str, Section] = {}
 
-    for section_id, section in sorted(
-        sections.items(), key=lambda kv: kv[1].receivedFeedRank
-    ):
+    for section_id, section in sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank):
         filtered_recs: list[CuratedRecommendation] = []
         section_seen: set[str] = set()
         for rec in section.recommendations:
