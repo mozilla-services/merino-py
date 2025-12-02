@@ -390,17 +390,20 @@ def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict
         sections.items(), key=lambda kv: kv[1].receivedFeedRank
     ):
         filtered_recs: list[CuratedRecommendation] = []
+        section_seen: set[str] = set()
         for rec in section.recommendations:
-            if rec.corpusItemId in seen_ids:
+            if rec.corpusItemId in seen_ids or rec.corpusItemId in section_seen:
                 continue
-            seen_ids.add(rec.corpusItemId)
+            section_seen.add(rec.corpusItemId)
             filtered_recs.append(rec)
-
-        for idx, rec in enumerate(filtered_recs):
-            rec.receivedRank = idx
 
         if len(filtered_recs) < section.layout.max_tile_count + SECTION_FALLBACK_BUFFER:
             continue
+
+        seen_ids.update(section_seen)
+
+        for idx, rec in enumerate(filtered_recs):
+            rec.receivedRank = idx
 
         section.recommendations = filtered_recs
         deduped_sections[section_id] = section
