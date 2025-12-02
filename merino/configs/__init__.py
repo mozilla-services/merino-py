@@ -167,13 +167,21 @@ _validators = [
     # Max set that is passed into FastAPI Query constuctor param 'max_length'.
     Validator("web.api.v1.query_character_max", is_type_of=int, gt=5, lte=500),
     Validator("web.api.v1.client_variant_character_max", is_type_of=int, gt=0, lte=100),
-    # Allow a longer timeout for testing & development
+    # Allow a longer timeout for testing
     Validator(
         "runtime.query_timeout_sec",
         is_type_of=float,
         gte=0,
         lte=1.0,
-        env=["testing", "development"],
+        env=["testing"],
+    ),
+    # Allow a much longer timeout for development (to allow for `pdb`)
+    Validator(
+        "runtime.query_timeout_sec",
+        is_type_of=float,
+        gte=0,
+        lte=600.0,
+        env=["development"],
     ),
     Validator("sentry.env", is_in=["prod", "stage", "dev"]),
     Validator("sentry.mode", is_in=["disabled", "release", "debug"]),

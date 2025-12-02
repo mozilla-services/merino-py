@@ -91,8 +91,6 @@ class ExperimentName(str, Enum):
     RSS_VS_ZYTE_EXPERIMENT = "new-ranking-for-legacy-topics-in-new-tab-v1"
     # Experiment to display Daily Briefing section as the first section on New Tab
     DAILY_BRIEFING_EXPERIMENT = "daily-briefing-v1"
-    # Experiment slug for crawling with identical behavior/branches as RSS_VS_ZYTE_EXPERIMENT
-    NEW_TAB_CRAWLING_V2 = "new-tab-crawling-v2"
     # The following are 6 experiments to apply 1 row layout for Popular Today for contextual ads
     CONTEXTUAL_AD_NIGHTLY_EXPERIMENT = "new-tab-ad-updates-nightly"
     CONTEXTUAL_AD_V2_NIGHTLY_EXPERIMENT = "new-tab-contextual-ad-updates-v2-nightly"
@@ -105,15 +103,6 @@ class ExperimentName(str, Enum):
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
-
-
-@unique
-class CrawlExperimentBranchName(str, Enum):
-    """Branch names for the RSS vs. Zyte (crawl) experiment."""
-
-    CONTROL = "control"
-    TREATMENT_CRAWL = "treatment-crawl"
-    TREATMENT_CRAWL_PLUS_SUBTOPICS = "treatment-crawl-subtopics"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max

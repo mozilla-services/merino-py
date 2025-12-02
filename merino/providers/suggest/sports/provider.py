@@ -46,6 +46,7 @@ class SportsDataProvider(BaseProvider):
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     enabled_by_default: bool
+    # A list of the intent words, excluding full team names.
     trigger_words: list[str]
     score: float
 
@@ -121,7 +122,8 @@ class SportsDataProvider(BaseProvider):
         # See merino.providers.suggest.sports.DEFAULT_TRIGGER_WORDS
         #
         if any(map(lambda w: w.lower() in self.trigger_words, query.split())):
-            return query
+            # if we found an intent word, strip it out of the query, else we won't return any results.
+            return " ".join(filter(lambda w: w.lower() not in self.trigger_words, query.split()))
         return ""
 
     def validate(self, srequest: SuggestionRequest) -> None:

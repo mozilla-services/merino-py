@@ -126,7 +126,7 @@ class SectionsBackend(SectionsProtocol):
         utm_source = get_utm_source(surface_id)
         sections_list = []
         for section in data["data"]["getSections"]:
-            if not section.get("active"):
+            if not section.get("active") or section.get("externalId", "").endswith("_crawl"):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 

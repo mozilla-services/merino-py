@@ -159,7 +159,8 @@ class SportDataUpdater:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
-        await self.store.build_indexes()
+        # Drop the prior indexes: Note, this may lose older games.
+        await self.store.build_indexes(clear=True)
 
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
@@ -170,7 +171,7 @@ class SportDataUpdater:
     async def initialize(self) -> None:
         """Initialize the ElasticSearch data store"""
         await self.store.startup()
-        await self.store.build_indexes()
+        await self.store.build_indexes(clear=True)
 
 
 logger = logging.getLogger(__name__)

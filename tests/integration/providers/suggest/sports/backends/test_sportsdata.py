@@ -2,7 +2,7 @@
 
 import logging
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import freezegun
@@ -100,8 +100,6 @@ def fixture_sportsdata(
 @pytest.fixture(name="sports_league")
 def fixture_nfl() -> NFL:
     """Create a NFL instance for Testing."""
-    frozen_time_int = int(FROZEN_TIME.timestamp())
-
     nfl = NFL(settings=settings.providers.sports)
     home = Team(
         terms="fake home",
@@ -112,7 +110,7 @@ def fixture_nfl() -> NFL:
         aliases=["Fake Home"],
         colors=["000000", "FFFFFF"],
         updated=FROZEN_TIME,
-        expiry=frozen_time_int + 3600,
+        expiry=FROZEN_TIME + timedelta(seconds=3600),
     ).minimal()
     away = Team(
         terms="fake away",
@@ -123,21 +121,22 @@ def fixture_nfl() -> NFL:
         aliases=["Fake Away"],
         colors=["000000", "FFFFFF"],
         updated=FROZEN_TIME,
-        expiry=frozen_time_int + 3600,
+        expiry=FROZEN_TIME + timedelta(seconds=3600),
     ).minimal()
 
     ev = Event(
         sport="football",
         id=1,
         terms="fakehome fakeaway",
-        date=frozen_time_int + 600,
+        date=FROZEN_TIME + timedelta(seconds=600),
         original_date="2025-10-27",
         home_team=home,
         away_team=away,
         home_score=None,
         away_score=None,
         status=GameStatus.parse("Scheduled"),
-        expiry=frozen_time_int + 3600,
+        expiry=FROZEN_TIME + timedelta(seconds=3600),
+        updated=FROZEN_TIME + timedelta(seconds=600),
     )
 
     nfl.events = {ev.id: ev}
@@ -177,6 +176,7 @@ async def test_sportsdata_na_query(sportsdata: SportsDataBackend, sports_league:
                 ),
                 status_type="scheduled",
                 status="Scheduled",
+                touched="2025-10-26T00:00:00+00:00",
             )
         ],
     )
@@ -207,9 +207,9 @@ async def test_sportsdata_query_post_prune(sportsdata, sports_league: NFL):
     results = await sportsdata.data_store.search_events("fakehome", "en")
     assert len(results) == 1
 
-    now = int(datetime.now(tz=timezone.utc).timestamp())
+    now = datetime.now(tz=timezone.utc)
     for ev in sports_league.events.values():
-        ev.expiry = now - 5
+        ev.expiry = now - timedelta(seconds=5)
 
     await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
 

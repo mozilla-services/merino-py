@@ -1,7 +1,7 @@
 """Protocol for sport suggestion backends."""
 
 from typing import Any
-from datetime import datetime, timezone
+from datetime import datetime
 
 from merino.providers.suggest.base import BaseModel
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
@@ -18,7 +18,7 @@ class SportTeamDetail(BaseModel):
 
 def build_query(event: dict[str, Any]) -> str:
     """Build the search query from the event information"""
-    date = datetime.fromtimestamp(event["date"]).strftime("%d %b %Y")
+    date = datetime.fromisoformat(event["date"]).strftime("%d %b %Y")
     return f"""{event.get("sport")} {event.get("away_team",{}).get("name","")} at {event.get("home_team", {}).get("name", "")} {date}"""
 
 
@@ -32,6 +32,7 @@ class SportEventDetail(BaseModel):
     away_team: SportTeamDetail  # Away Team details
     status: str  # Long form event status. ("Scheduled", "Final - Overtime", etc.)
     status_type: str  # UI display status ("past", "live", "scheduled")
+    touched: str  # UTC timestamp of the last record modification
 
     @classmethod
     def from_event_dict(cls, event: dict[str, Any]):
@@ -43,7 +44,9 @@ class SportEventDetail(BaseModel):
         return cls(
             sport=event["sport"],
             query=build_query(event),
-            date=datetime.fromtimestamp(event["date"], tz=timezone.utc).isoformat(),
+            # The following essentially converts `Z$` to `+00:00`, which
+            # keeps the output consistent with prior versions
+            date=datetime.fromisoformat(event["date"]).isoformat(),
             home_team=SportTeamDetail(
                 key=event.get("home_team", {}).get("key"),
                 name=event.get("home_team", {}).get("name"),
@@ -58,6 +61,7 @@ class SportEventDetail(BaseModel):
             ),
             status=status.as_str(),
             status_type=str(status.as_ui_status()),
+            touched=event.get("touched", "None"),
         )
 
 
