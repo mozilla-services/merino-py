@@ -74,7 +74,7 @@ def test_validate_suggest_custom_location_params(
     caplog.set_level(logging.INFO)
 
     with pytest.raises(HTTPException) as exc_info:
-        validate_suggest_custom_location_params(city, region, country)
+        validate_suggest_custom_location_params(city, region, country, None)
     assert exc_info.value.status_code == 400
     assert (
         exc_info.value.detail

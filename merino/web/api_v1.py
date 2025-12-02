@@ -212,7 +212,7 @@ async def suggest(
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
 
-    validate_suggest_custom_location_params(city, region, country)
+    validate_suggest_custom_location_params(city, region, country, source)
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
 
     for p in search_from:
