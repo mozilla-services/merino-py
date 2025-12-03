@@ -10,17 +10,19 @@ from unittest.mock import MagicMock, patch
 import pytest
 from google.cloud.storage import Client, Blob
 
-from merino.jobs.navigational_suggestions import (
-    _construct_top_picks,
-    _run_local_mode,
-    _run_normal_mode,
-    _write_xcom_file,
+from merino.jobs.navigational_suggestions.processing.manifest_builder import (
+    construct_top_picks,
 )
-from merino.jobs.navigational_suggestions.domain_metadata_diff import DomainDiff
-from merino.jobs.navigational_suggestions.domain_data_downloader import (
+from merino.jobs.navigational_suggestions.modes import run_local_mode
+from merino.jobs.navigational_suggestions.modes.normal_mode import (
+    run_normal_mode,
+    write_xcom_file,
+)
+from merino.jobs.navigational_suggestions.io import (
+    AsyncFaviconDownloader,
+    DomainDiff,
     DomainDataDownloader,
 )
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
 from merino.jobs.utils.system_monitor import SystemMonitor
 from merino.utils.domain_categories.models import Category
 
@@ -109,14 +111,14 @@ class TestConstructTopPicks:
 
     def test_construct_top_picks(self, mock_domain_data, mock_domain_metadata, mocker):
         """Test constructing top picks with complete data."""
-        # Mock _get_serp_categories
+        # Mock get_serp_categories
         mocker.patch(
-            "merino.jobs.navigational_suggestions._get_serp_categories",
+            "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
             side_effect=lambda url: [Category.Tech.value] if url else None,
         )
 
         # Call the function
-        result = _construct_top_picks(mock_domain_data, mock_domain_metadata)
+        result = construct_top_picks(mock_domain_data, mock_domain_metadata)
 
         # Verify the result
         assert "domains" in result
@@ -143,14 +145,14 @@ class TestConstructTopPicks:
             }
         ]
 
-        # Mock _get_serp_categories
+        # Mock get_serp_categories
         mocker.patch(
-            "merino.jobs.navigational_suggestions._get_serp_categories",
+            "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
             side_effect=lambda url: [Category.Tech.value] if url else None,
         )
 
         # Call the function
-        result = _construct_top_picks(mock_domain_data, domain_metadata)
+        result = construct_top_picks(mock_domain_data, domain_metadata)
 
         # Verify the result only includes the domain with metadata
         assert "domains" in result
@@ -175,14 +177,14 @@ class TestConstructTopPicks:
             },
         ]
 
-        # Mock _get_serp_categories
+        # Mock get_serp_categories
         mocker.patch(
-            "merino.jobs.navigational_suggestions._get_serp_categories",
+            "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
             side_effect=lambda url: [Category.Tech.value] if url else None,
         )
 
         # Call the function
-        result = _construct_top_picks(mock_domain_data, domain_metadata)
+        result = construct_top_picks(mock_domain_data, domain_metadata)
 
         # Verify the result only includes the domain with a non-null URL
         assert "domains" in result
@@ -207,12 +209,22 @@ class TestRunLocalMode:
         mock_socket.socket.return_value = mock_socket_instance
         mocker.patch("socket.socket", return_value=mock_socket_instance)
 
+        # Mock AnonymousCredentials
+        mock_credentials = mocker.MagicMock()
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.AnonymousCredentials",
+            return_value=mock_credentials,
+        )
+
         # Mock the GCS client
         mock_client = mocker.MagicMock(spec=Client)
         mock_bucket = mocker.MagicMock()
         mock_bucket.exists.return_value = True
         mock_client.bucket.return_value = mock_bucket
-        mocker.patch("google.cloud.storage.Client", return_value=mock_client)
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.Client",
+            return_value=mock_client,
+        )
 
         # Mock GCS uploader
         mocker.patch("merino.utils.gcs.gcs_uploader.GcsUploader", return_value=mock_uploader)
@@ -225,14 +237,14 @@ class TestRunLocalMode:
         mock_domain_uploader.upload_top_picks.return_value = mock_blob
         mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataUploader",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.DomainMetadataUploader",
             return_value=mock_domain_uploader,
         )
 
         # Mock metrics collector
         mock_metrics = mocker.MagicMock()
         mocker.patch(
-            "merino.jobs.navigational_suggestions.local_mode.LocalMetricsCollector",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.LocalMetricsCollector",
             return_value=mock_metrics,
         )
 
@@ -242,7 +254,7 @@ class TestRunLocalMode:
             {"domain": "test.com", "categories": ["Test"], "rank": 1}
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.local_mode.LocalDomainDataProvider",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.LocalDomainDataProvider",
             return_value=mock_domain_provider,
         )
 
@@ -257,13 +269,13 @@ class TestRunLocalMode:
             }
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataExtractor",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.DomainProcessor",
             return_value=mock_extractor,
         )
 
         # Mock PARTNER_FAVICONS
         mocker.patch(
-            "merino.jobs.navigational_suggestions.PARTNER_FAVICONS",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.PARTNER_FAVICONS",
             [
                 {
                     "domain": "test.com",
@@ -274,11 +286,11 @@ class TestRunLocalMode:
         )
 
         # Mock logger
-        mocker.patch("merino.jobs.navigational_suggestions.logger")
+        mocker.patch("merino.jobs.navigational_suggestions.modes.local_mode_runner.logger")
 
         # Call the function
         test_dir = str(tmp_path)
-        _run_local_mode(20, test_dir, 48, False)
+        run_local_mode(20, test_dir, 48, False)
 
         # Verify key interactions
         mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 4443))
@@ -302,12 +314,22 @@ class TestRunLocalMode:
         mock_socket.socket.return_value = mock_socket_instance
         mocker.patch("socket.socket", return_value=mock_socket_instance)
 
+        # Mock AnonymousCredentials
+        mock_credentials = mocker.MagicMock()
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.AnonymousCredentials",
+            return_value=mock_credentials,
+        )
+
         # Mock the GCS client
         mock_client = mocker.MagicMock(spec=Client)
         mock_bucket = mocker.MagicMock()
         mock_bucket.exists.return_value = True
         mock_client.bucket.return_value = mock_bucket
-        mocker.patch("google.cloud.storage.Client", return_value=mock_client)
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.Client",
+            return_value=mock_client,
+        )
 
         # Mock GCS uploader
         mocker.patch("merino.utils.gcs.gcs_uploader.GcsUploader", return_value=mock_uploader)
@@ -320,14 +342,14 @@ class TestRunLocalMode:
         mock_domain_uploader.upload_top_picks.return_value = mock_blob
         mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataUploader",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.DomainMetadataUploader",
             return_value=mock_domain_uploader,
         )
 
         # Mock metrics collector
         mock_metrics = mocker.MagicMock()
         mocker.patch(
-            "merino.jobs.navigational_suggestions.local_mode.LocalMetricsCollector",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.LocalMetricsCollector",
             return_value=mock_metrics,
         )
 
@@ -337,7 +359,7 @@ class TestRunLocalMode:
             {"domain": "test.com", "categories": ["Test"], "rank": 1}
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.local_mode.LocalDomainDataProvider",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.LocalDomainDataProvider",
             return_value=mock_domain_provider,
         )
 
@@ -352,13 +374,13 @@ class TestRunLocalMode:
             }
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataExtractor",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.DomainProcessor",
             return_value=mock_extractor,
         )
 
         # Mock PARTNER_FAVICONS
         mocker.patch(
-            "merino.jobs.navigational_suggestions.PARTNER_FAVICONS",
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.PARTNER_FAVICONS",
             [
                 {
                     "domain": "test.com",
@@ -376,11 +398,11 @@ class TestRunLocalMode:
         )
 
         # Mock logger
-        mocker.patch("merino.jobs.navigational_suggestions.logger")
+        mocker.patch("merino.jobs.navigational_suggestions.modes.local_mode_runner.logger")
 
         # Call the function with monitoring enabled
         test_dir = str(tmp_path)
-        _run_local_mode(20, test_dir, 48, True)
+        run_local_mode(20, test_dir, 48, True)
 
         # Verify key interactions
         mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 4443))
@@ -407,17 +429,23 @@ class TestRunLocalMode:
         mocker.patch("socket.socket", return_value=mock_socket_instance)
 
         # Mock logger and sys.exit
-        mock_logger = mocker.patch("merino.jobs.navigational_suggestions.logger")
+        mock_logger = mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.local_mode_runner.logger"
+        )
         mock_exit = mocker.patch("sys.exit")
         mock_exit.side_effect = SystemExit("Mocked exit")
 
         # Mock other components
-        mocker.patch("merino.jobs.navigational_suggestions.local_mode.LocalMetricsCollector")
-        mocker.patch("merino.jobs.navigational_suggestions.local_mode.LocalDomainDataProvider")
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.local_mode_helpers.LocalMetricsCollector"
+        )
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.local_mode_helpers.LocalDomainDataProvider"
+        )
 
         # Call the function (expecting it to exit)
         with pytest.raises(SystemExit):
-            _run_local_mode(20, "./test_data", 48, False)
+            run_local_mode(20, "./test_data", 48, False)
 
         # Verify socket connection was attempted
         mock_socket_instance.connect_ex.assert_called_once_with(("localhost", 4443))
@@ -438,7 +466,7 @@ class TestRunNormalMode:
             {"rank": 1, "domain": "example.com", "categories": ["web"]}
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainDataDownloader",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainDataDownloader",
             return_value=mock_downloader,
         )
 
@@ -452,7 +480,7 @@ class TestRunNormalMode:
             }
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataExtractor",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainProcessor",
             return_value=mock_extractor,
         )
 
@@ -464,7 +492,7 @@ class TestRunNormalMode:
         mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
         mock_domain_uploader.get_latest_file_for_diff.return_value = {"domains": []}
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataUploader",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainMetadataUploader",
             return_value=mock_domain_uploader,
         )
 
@@ -473,15 +501,18 @@ class TestRunNormalMode:
         mock_diff = mocker.MagicMock()
         mock_diff.compare_top_picks.return_value = (set(), set(), set())
         mock_diff.create_diff.return_value = {"diff": "data"}
-        mocker.patch("merino.jobs.navigational_suggestions.DomainDiff", return_value=mock_diff)
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainDiff",
+            return_value=mock_diff,
+        )
 
         # Mock _construct_top_picks and PARTNER_FAVICONS
         mocker.patch(
-            "merino.jobs.navigational_suggestions._construct_top_picks",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.construct_top_picks",
             return_value={"domains": []},
         )
         mocker.patch(
-            "merino.jobs.navigational_suggestions.PARTNER_FAVICONS",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.PARTNER_FAVICONS",
             [
                 {
                     "domain": "test.com",
@@ -492,10 +523,10 @@ class TestRunNormalMode:
         )
 
         # Mock logger
-        mocker.patch("merino.jobs.navigational_suggestions.logger")
+        mocker.patch("merino.jobs.navigational_suggestions.modes.normal_mode.logger")
 
         # Call the function
-        _run_normal_mode(
+        run_normal_mode(
             source_gcp_project="test-project",
             destination_gcp_project="test-dest-project",
             destination_gcs_bucket="test-bucket",
@@ -522,7 +553,7 @@ class TestRunNormalMode:
             {"rank": 1, "domain": "example.com", "categories": ["web"]}
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainDataDownloader",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainDataDownloader",
             return_value=mock_downloader,
         )
 
@@ -536,7 +567,7 @@ class TestRunNormalMode:
             }
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataExtractor",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainProcessor",
             return_value=mock_extractor,
         )
 
@@ -548,7 +579,7 @@ class TestRunNormalMode:
         mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
         mock_domain_uploader.get_latest_file_for_diff.return_value = {"domains": []}
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataUploader",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainMetadataUploader",
             return_value=mock_domain_uploader,
         )
 
@@ -557,15 +588,18 @@ class TestRunNormalMode:
         mock_diff = mocker.MagicMock()
         mock_diff.compare_top_picks.return_value = (set(), set(), set())
         mock_diff.create_diff.return_value = {"diff": "data"}
-        mocker.patch("merino.jobs.navigational_suggestions.DomainDiff", return_value=mock_diff)
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainDiff",
+            return_value=mock_diff,
+        )
 
         # Mock _construct_top_picks and PARTNER_FAVICONS
         mocker.patch(
-            "merino.jobs.navigational_suggestions._construct_top_picks",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.construct_top_picks",
             return_value={"domains": []},
         )
         mocker.patch(
-            "merino.jobs.navigational_suggestions.PARTNER_FAVICONS",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.PARTNER_FAVICONS",
             [
                 {
                     "domain": "test.com",
@@ -583,10 +617,10 @@ class TestRunNormalMode:
         )
 
         # Mock logger
-        mocker.patch("merino.jobs.navigational_suggestions.logger")
+        mocker.patch("merino.jobs.navigational_suggestions.modes.normal_mode.logger")
 
         # Call the function with system monitoring enabled
-        _run_normal_mode(
+        run_normal_mode(
             source_gcp_project="test-project",
             destination_gcp_project="test-dest-project",
             destination_gcs_bucket="test-bucket",
@@ -615,7 +649,9 @@ class TestRunNormalMode:
     def test_run_normal_mode_with_xcom(self, mocker, mock_uploader):
         """Test _run_normal_mode with write_xcom=True."""
         # Mock _write_xcom_file
-        mock_write_xcom = mocker.patch("merino.jobs.navigational_suggestions._write_xcom_file")
+        mock_write_xcom = mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.normal_mode.write_xcom_file"
+        )
 
         # Set up all other mocks like in the previous test
         mock_downloader = mocker.MagicMock()
@@ -623,7 +659,7 @@ class TestRunNormalMode:
             {"rank": 1, "domain": "example.com", "categories": ["web"]}
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainDataDownloader",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainDataDownloader",
             return_value=mock_downloader,
         )
 
@@ -637,7 +673,7 @@ class TestRunNormalMode:
             }
         ]
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataExtractor",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainProcessor",
             return_value=mock_extractor,
         )
 
@@ -649,7 +685,7 @@ class TestRunNormalMode:
         mock_domain_uploader.upload_favicons.return_value = ["https://cdn.example.com/favicon.ico"]
         mock_domain_uploader.get_latest_file_for_diff.return_value = {"domains": []}
         mocker.patch(
-            "merino.jobs.navigational_suggestions.DomainMetadataUploader",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainMetadataUploader",
             return_value=mock_domain_uploader,
         )
 
@@ -658,15 +694,18 @@ class TestRunNormalMode:
         mock_diff = mocker.MagicMock()
         mock_diff.compare_top_picks.return_value = (set(), set(), set())
         mock_diff.create_diff.return_value = {"diff": "data"}
-        mocker.patch("merino.jobs.navigational_suggestions.DomainDiff", return_value=mock_diff)
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.modes.normal_mode.DomainDiff",
+            return_value=mock_diff,
+        )
 
         # Mock _construct_top_picks and PARTNER_FAVICONS
         mocker.patch(
-            "merino.jobs.navigational_suggestions._construct_top_picks",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.construct_top_picks",
             return_value={"domains": []},
         )
         mocker.patch(
-            "merino.jobs.navigational_suggestions.PARTNER_FAVICONS",
+            "merino.jobs.navigational_suggestions.modes.normal_mode.PARTNER_FAVICONS",
             [
                 {
                     "domain": "test.com",
@@ -677,10 +716,10 @@ class TestRunNormalMode:
         )
 
         # Mock logger
-        mocker.patch("merino.jobs.navigational_suggestions.logger")
+        mocker.patch("merino.jobs.navigational_suggestions.modes.normal_mode.logger")
 
         # Call the function with write_xcom=True
-        _run_normal_mode(
+        run_normal_mode(
             source_gcp_project="test-project",
             destination_gcp_project="test-dest-project",
             destination_gcs_bucket="test-bucket",
@@ -747,7 +786,7 @@ class TestDomainDataDownloader:
         mocker.patch("google.auth.default", return_value=(MagicMock(), "test-project"))
 
         mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.CUSTOM_DOMAINS",
             ["custom1.com", "custom2.com"],
         )
 
@@ -795,7 +834,7 @@ class TestDomainDataDownloader:
         )
 
         # Mock logger
-        mocker.patch("merino.jobs.navigational_suggestions.domain_data_downloader.logger")
+        mocker.patch("merino.jobs.navigational_suggestions.io.domain_data_downloader.logger")
 
         # Call the method
         result = downloader.download_data()
@@ -819,7 +858,7 @@ class TestDomainDataDownloader:
         """Test handling of duplicate domains between BigQuery results and custom domains."""
         # Mock CUSTOM_DOMAINS with both unique and duplicate domains
         mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.CUSTOM_DOMAINS",
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.CUSTOM_DOMAINS",
             ["example.com", "custom1.com"],  # example.com will be a duplicate
         )
 
@@ -861,7 +900,7 @@ class TestDomainDataDownloader:
 
         # Mock logger to capture log messages
         mock_logger = mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.logger"
         )
 
         # Call the method
@@ -891,7 +930,7 @@ class TestDomainDataDownloader:
         downloader.client = mocker.MagicMock()
 
         mock_download_data = mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.DomainDataDownloader.download_data",
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.DomainDataDownloader.download_data",
             autospec=True,
         )
 
@@ -911,7 +950,7 @@ class TestDomainDataDownloader:
             ]
             # Simulate an error being logged by the error-handling code in the actual method
             mock_logger = mocker.patch(
-                "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
+                "merino.jobs.navigational_suggestions.io.domain_data_downloader.logger"
             )
             mock_logger.error("Unexpected error processing custom domains: Test error")
             return domains
@@ -934,7 +973,7 @@ class TestDomainDataDownloader:
 
         # Mock the entire download_data method to avoid BigQuery authentication issues
         mock_download_data = mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.DomainDataDownloader.download_data",
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.DomainDataDownloader.download_data",
             autospec=True,
         )
 
@@ -987,7 +1026,7 @@ class TestDomainDataDownloader:
 
         # Mock the entire download_data method to avoid BigQuery authentication issues
         mock_download_data = mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.DomainDataDownloader.download_data",
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.DomainDataDownloader.download_data",
             autospec=True,
         )
 
@@ -1019,7 +1058,7 @@ class TestDomainDataDownloader:
         # Create a mock for download_data that raises an exception
         # during custom domain processing
         mock_download_data = mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.DomainDataDownloader.download_data"
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.DomainDataDownloader.download_data"
         )
         # Set up the mock to simulate an error during custom domain processing
         mock_download_data.side_effect = lambda: [
@@ -1036,7 +1075,7 @@ class TestDomainDataDownloader:
 
         # Mock logger
         mock_logger = mocker.patch(
-            "merino.jobs.navigational_suggestions.domain_data_downloader.logger"
+            "merino.jobs.navigational_suggestions.io.domain_data_downloader.logger"
         )
 
         # Create a downloader instance directly
@@ -1090,7 +1129,7 @@ class TestWriteXcomFile:
         }
 
         # Call function
-        _write_xcom_file(test_data)
+        write_xcom_file(test_data)
 
         # Verify that write was called with valid JSON
         mock_open().write.assert_called()

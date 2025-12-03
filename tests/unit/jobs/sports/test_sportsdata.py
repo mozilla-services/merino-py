@@ -5,7 +5,7 @@
 """Unit tests for fetch_schedules.py module."""
 
 import pytest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
 from unittest.mock import MagicMock
 from pytest_mock import MockerFixture
@@ -80,14 +80,15 @@ async def test_updater(
             sport=mock_sport.name,
             id=0,
             terms="",
-            date=int(now.timestamp()),
+            date=now,
             original_date="",
             home_team=dict(key="HOM"),
             away_team=dict(key="AWY"),
             home_score=0,
             away_score=0,
             status=GameStatus.Unknown,
-            expiry=0,
+            expiry=now + timedelta(seconds=300),
+            updated=now,
         )
     }
     updater.sports = {"mock": mock_sport}

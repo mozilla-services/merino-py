@@ -362,7 +362,7 @@ async def test_nfl_update_events(
     assert ev.status == GameStatus.Scheduled
     assert ev.home_team["key"] == "PIT"
     assert ev.away_team["key"] == "MIN"
-    assert isinstance(json.loads(ev.model_dump_json())["expiry"], int)
+    assert isinstance(json.loads(ev.model_dump_json())["expiry"], str)
     assert get_data.call_count == 2
 
 

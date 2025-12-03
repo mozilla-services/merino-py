@@ -4,18 +4,12 @@
 
 """Fixtures for navigational_suggestions tests."""
 
-from unittest.mock import MagicMock
-
 import httpx
 from typing import Dict
 
 import pytest
 
-from merino.jobs.navigational_suggestions.domain_metadata_extractor import (
-    current_scraper,
-    Scraper,
-)
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.io import AsyncFaviconDownloader
 
 
 @pytest.fixture
@@ -133,27 +127,3 @@ def mock_domain_metadata_uploader(mocker):
     uploader.destination_favicon_name.return_value = "favicons/12345_100.ico"
 
     return uploader
-
-
-@pytest.fixture(name="mock_scraper_context")
-def fixture_mock_scraper_context():
-    """Create a mock Scraper class that uses the contextvar."""
-    shared_scraper = MagicMock(spec=Scraper)
-
-    # Create a class that will set the contextvar when instantiated
-    class MockScraper:
-        def __init__(self):
-            # For synchronous methods
-            pass
-
-        def __enter__(self):
-            # Set the context variable and store the token
-            self.token = current_scraper.set(shared_scraper)
-            return shared_scraper
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            # Reset the context variable
-            current_scraper.reset(self.token)
-            return False
-
-    return MockScraper, shared_scraper

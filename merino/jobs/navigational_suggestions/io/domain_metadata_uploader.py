@@ -10,7 +10,7 @@ from google.cloud.storage import Blob
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.io.async_favicon_downloader import AsyncFaviconDownloader
 
 logger = logging.getLogger(__name__)
 
