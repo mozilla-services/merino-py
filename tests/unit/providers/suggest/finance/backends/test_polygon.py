@@ -232,7 +232,7 @@ async def test_fetch_ticker_snapshot_success(
     assert actual is not None
     assert actual == expected
     assert actual["ticker"]["ticker"] == "AAPL"
-    timeit_metric_mock.assert_called_once_with("polygon.request.snapshot.get")
+    timeit_metric_mock.assert_called_once_with("polygon.request.snapshot.get.latency")
 
 
 @pytest.mark.asyncio
