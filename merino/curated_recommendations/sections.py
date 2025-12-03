@@ -21,12 +21,12 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.ml_backends.protocol import MLRecsBackend
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
     SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
 )
-from merino.curated_recommendations.prior_backends.protocol import PriorBackend, ExperimentRescaler
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend, EngagementRescaler
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendation,
@@ -36,8 +36,8 @@ from merino.curated_recommendations.protocol import (
     ProcessedInterests,
     Layout,
 )
+from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.rankers import (
-    ArticleBalancer,
     ContextualRanker,
     Ranker,
     ThompsonSamplingRanker,
@@ -333,7 +333,7 @@ def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> 
 
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
-) -> ExperimentRescaler | None:
+) -> EngagementRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
     if is_scheduler_holdback_experiment(request):
         return SchedulerHoldbackRescaler()
@@ -474,7 +474,7 @@ def rank_sections(
     section_configurations: list[SectionConfiguration] | None,
     engagement_backend: EngagementBackend,
     personal_interests: ProcessedInterests | None,
-    experiment_rescaler: ExperimentRescaler | None,
+    engagement_rescaler: EngagementRescaler | None,
     do_section_personalization_reranking: bool = True,
     include_headlines_section: bool = False,
 ) -> dict[str, Section]:
@@ -492,7 +492,7 @@ def rank_sections(
             sections are followed/blocked and when they were followed.
         engagement_backend: provides engagement signals for Thompson sampling.
         personal_interests: provides personal interests.
-        experiment_rescaler: Rescaler that can rescale based on experiment size
+        engagement_rescaler: Rescaler that can rescale ranking data based on experiment size and content distribution
         do_section_personalization_reranking: Whether to implement section based reranking for personalization
         if interest vector is avialable.
         include_headlines_section: If headlines_section experiment is enabled, don't put top_stories_section on top
@@ -502,7 +502,7 @@ def rank_sections(
     """
     # 4th priority: reorder for exploration via Thompson sampling on engagement
     sections = section_thompson_sampling(
-        sections, engagement_backend=engagement_backend, rescaler=experiment_rescaler
+        sections, engagement_backend=engagement_backend, rescaler=engagement_rescaler
     )
 
     # 3rd priority: reorder based on inferred interest vector
@@ -534,7 +534,7 @@ def get_top_story_list(
     top_count: int,
     extra_count: int = 0,
     extra_source_depth: int = 10,
-    rescaler: ExperimentRescaler | None = None,
+    rescaler: EngagementRescaler | None = None,
     relax_constraints_for_personalization=False,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
@@ -565,7 +565,7 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
-    balancer: ArticleBalancer = ArticleBalancer(round(top_count * constraint_scale))
+    balancer = TopStoriesArticleBalancer(round(top_count * constraint_scale))
     topic_limited_stories, remaining_stories = balancer.add_stories(
         items_throttled_fresh, top_count
     )
@@ -737,7 +737,7 @@ async def get_sections(
         sections,
         request.sections,
         personal_interests,
-        experiment_rescaler=rescaler,
+        engagement_rescaler=rescaler,
         include_headlines_section=include_headlines_section,
     )
 

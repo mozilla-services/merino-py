@@ -50,7 +50,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     ModelType,
     DayTimeWeightingConfig,
 )
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SECTIONS_HOLDBACK_TOTAL_PERCENT,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
