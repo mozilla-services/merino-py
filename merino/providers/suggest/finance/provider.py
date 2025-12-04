@@ -147,16 +147,17 @@ class Provider(BaseProvider):
             if not tickers:
                 return []
             else:
-                ticker_summaries: list[TickerSummary] = []
-                # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
-                ticker_snapshots = await self.backend.get_snapshots(tickers)
+                with self.metrics_client.timeit("polygon.provider.query.latency"):
+                    ticker_summaries: list[TickerSummary] = []
+                    # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
+                    ticker_snapshots = await self.backend.get_snapshots(tickers)
 
-                # Build ticker summary for each snapshot and its ticker's image
-                for snapshot in ticker_snapshots:
-                    image_url = self.get_image_url_for_ticker(snapshot.ticker)
-                    ticker_summaries.append(self.backend.get_ticker_summary(snapshot, image_url))
+                    # Build ticker summary for each snapshot and its ticker's image
+                    for snapshot in ticker_snapshots:
+                        image_url = self.get_image_url_for_ticker(snapshot.ticker)
+                        ticker_summaries.append(self.backend.get_ticker_summary(snapshot, image_url))
 
-                return [self.build_suggestion(ticker_summaries)]
+                    return [self.build_suggestion(ticker_summaries)]
 
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")

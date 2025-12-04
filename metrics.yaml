@@ -14,6 +14,15 @@ suggest/accuweather:
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 suggest/polygon:
+  polygon_provider_query_latency:
+    description: |
+      A gauge to track the latency for the polygon provider to return a finance suggestion
+    type: gauge
+    labels: [] # no labels
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
   polygon_request_snapshot_get_latency:
     description: |
       A gauge to track the latency for snapshot v3 get request
@@ -21,7 +30,7 @@ suggest/polygon:
     labels: [] # no labels
     scope: |
       The "api/v1/suggest" API endpoint.
-    alert_policy:
+    alert_policy: []
 
   polygon_request_snapshot_get:
     description: |
@@ -30,7 +39,7 @@ suggest/polygon:
     labels: [] # no labels
     scope: |
       The "api/v1/suggest" API endpoint.
-    alert_policy:
+    alert_policy: []
 
   polygon_request_snapshot_get_failed:
     description: |
