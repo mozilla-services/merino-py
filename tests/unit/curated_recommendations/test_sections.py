@@ -22,6 +22,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
 )
+from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SchedulerHoldbackRescaler,
     CrawledContentRescaler,
@@ -33,7 +34,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     RankingData,
 )
-from merino.curated_recommendations.rankers import section_thompson_sampling
+from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
@@ -803,7 +804,8 @@ class TestSectionThompsonSampling:
         monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.5)
         monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.8)
 
-        section_thompson_sampling(sections, backend, top_n=4, rescaler=rescaler)
+        thomspon_sampling = ThompsonSamplingRanker(backend, ConstantPrior())
+        thomspon_sampling.rank_sections(sections, top_n=4, rescaler=rescaler)
 
         expected_ids = [
             recs[3].corpusItemId,

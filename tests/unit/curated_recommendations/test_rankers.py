@@ -30,6 +30,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
+    filter_fresh_items_with_probability,
     spread_publishers,
     boost_preferred_topic,
     boost_followed_sections,
@@ -38,8 +39,7 @@ from merino.curated_recommendations.rankers import (
     put_top_stories_first,
     greedy_personalized_section_rank,
     takedown_reported_recommendations,
-    thompson_sampling,
-    filter_fresh_items_with_probability,
+    ThompsonSamplingRanker
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -353,13 +353,8 @@ class TestThompsonSampling:
 
         # Make beta sampling deterministic to avoid flakiness.
         monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
-
-        ranked = thompson_sampling(
-            recs,
-            engagement_backend=engagement_backend,
-            prior_backend=prior_backend,
-            rescaler=rescaler,
-        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
 
         assert len(ranked) == 2
         by_id = {rec.corpusItemId: rec for rec in ranked}
@@ -395,11 +390,9 @@ class TestThompsonSampling:
 
         # Make beta sampling deterministic to avoid flakiness.
         monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
-
-        ranked = thompson_sampling(
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(
             recs,
-            engagement_backend=engagement_backend,
-            prior_backend=prior_backend,
             rescaler=rescaler,
         )
 

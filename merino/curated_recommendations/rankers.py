@@ -44,11 +44,12 @@ REGION_ENGAGEMENT_WEIGHT = 0.95
 
 class Ranker:
     """Base class for ranking curated recommendations"""
-    def __init__(self):
-        pass
+    def __init__(self, engagement_backend: EngagementBackend):
+        self.engagement_backend = engagement_backend
+
 
     def get_opens_no_opens(
-        rec: CuratedRecommendation, region_query: str | None = None
+        self, rec: CuratedRecommendation, region_query: str | None = None
     ) -> tuple[float, float]:
         """Get opens and no-opens counts for a recommendation, optionally in a region."""
         engagement = self.engagement_backend.get(rec.corpusItemId, region_query)
@@ -57,7 +58,7 @@ class Ranker:
         else:
             return 0, 0
 
-    def suppress_fresh_items(scored_recs: list[CuratedRecommendation], fresh_items_max: int) -> None:
+    def suppress_fresh_items(self, scored_recs: list[CuratedRecommendation], fresh_items_max: int) -> None:
         if fresh_items_max <= 0:
             return
         fresh_items = [
@@ -72,8 +73,8 @@ class Ranker:
                 if item.ranking_data is not None:
                     item.ranking_data.score *= 0.5
 
-    def rank_items(recs: list[CuratedRecommendation],
-                   rescaler: ExperimentRescaler | None = None,
+    def rank_items(self, recs: list[CuratedRecommendation],
+                   rescaler: EngagementRescaler | None = None,
                     personal_interests: ProcessedInterests | None = None,
                     region: str | None = None
     ) -> list[CuratedRecommendation]:
@@ -81,7 +82,7 @@ class Ranker:
         # Placeholder implementation: sort by title alphabetically
         pass
 
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: ExperimentRescaler | None = None) -> dict[str, Section]:
+    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None) -> dict[str, Section]:
         pass
 
 
@@ -92,12 +93,12 @@ class ThompsonSamplingRanker(Ranker):
                 prior_backend: PriorBackend,
                 region_weight: float = REGION_ENGAGEMENT_WEIGHT
         ) -> None:
-        self.engagement_backend = engagement_backend
+        super().__init__(engagement_backend)
         self.prior_backend = prior_backend
         self.region_weight = region_weight
 
     def rank_items(self, recs: list[CuratedRecommendation],
-                   rescaler: ExperimentRescaler | None = None,
+                   rescaler: EngagementRescaler | None = None,
                     personal_interests: ProcessedInterests | None = None,
                     region: str | None = None
     ) -> list[CuratedRecommendation]:
@@ -180,7 +181,7 @@ class ThompsonSamplingRanker(Ranker):
         return sorted_recs
 
 
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: ExperimentRescaler | None = None) -> dict[str, Section]:
+    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None) -> dict[str, Section]:
         """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
         :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
@@ -250,11 +251,11 @@ class ContextualRanker(Ranker):
                 engagement_backend: EngagementBackend,
                 ml_backend: MLRecsBackend
         ) -> None:
-        self.engagement_backend = engagement_backend
+        super().__init__(engagement_backend)
         self.ml_backend = ml_backend
 
     def rank_items(self, recs: list[CuratedRecommendation],
-                   rescaler: ExperimentRescaler | None = None,
+                   rescaler: EngagementRescaler | None = None,
                    personal_interests: ProcessedInterests | None = None,
                    utc_offset: int | None = None,
                    region: str | None = None
@@ -295,7 +296,7 @@ class ContextualRanker(Ranker):
         return sorted_recs
 
 
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: ExperimentRescaler | None = None) -> dict[str, Section]:
+    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None) -> dict[str, Section]:
         """Re-rank sections using average score of top items. """
         def sample_score(sec: Section) -> float:
             """Create score based on top items in section"""
