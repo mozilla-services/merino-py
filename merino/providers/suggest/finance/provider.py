@@ -155,7 +155,9 @@ class Provider(BaseProvider):
                     # Build ticker summary for each snapshot and its ticker's image
                     for snapshot in ticker_snapshots:
                         image_url = self.get_image_url_for_ticker(snapshot.ticker)
-                        ticker_summaries.append(self.backend.get_ticker_summary(snapshot, image_url))
+                        ticker_summaries.append(
+                            self.backend.get_ticker_summary(snapshot, image_url)
+                        )
 
                     return [self.build_suggestion(ticker_summaries)]
 
