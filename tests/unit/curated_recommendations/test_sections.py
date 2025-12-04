@@ -50,6 +50,7 @@ from merino.curated_recommendations.sections import (
     get_legacy_topic_ids,
     put_headlines_first_then_top_stories,
     dedupe_recommendations_across_sections,
+    normalize_id_by_locale,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -302,6 +303,20 @@ class TestFilterSectionsByExperiment:
         assert "custom-section-1" in result
         assert "health" in result
         assert "nfl" in result
+
+
+class TestNormalizeIdByLocale:
+    """Tests for locale suffix normalization helper."""
+
+    def test_returns_input_for_base_ids(self):
+        """Base section IDs should remain unchanged."""
+        assert normalize_id_by_locale("sports") == "sports"
+        assert normalize_id_by_locale("society-parenting") == "society-parenting"
+
+    def test_strips_locale_suffix(self):
+        """Locale suffixes should be stripped when present."""
+        assert normalize_id_by_locale("tech-US") == "tech"
+        assert normalize_id_by_locale("business-EN-GB") == "business"
 
 
 class TestUpdateReceivedFeedRank:
@@ -1018,6 +1033,34 @@ class TestGetCorpusSections:
         return mock_backend
 
     @pytest.fixture
+    def sections_backend_with_locale_suffix(self):
+        """Fake backend returning sections whose IDs include locale suffixes."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
+
+        sports_us = MagicMock()
+        sports_us.externalId = "sports-US"
+        sports_us.title = "Sports"
+        sports_us.sectionItems = [generate_corpus_item("sports_item")]
+        sports_us.description = None
+        sports_us.heroTitle = None
+        sports_us.heroSubtitle = None
+        sports_us.iab = None
+        sports_us.createSource = CreateSource.ML
+
+        tech_gb = MagicMock()
+        tech_gb.externalId = "tech-EN-GB"
+        tech_gb.title = "Tech"
+        tech_gb.sectionItems = [generate_corpus_item("tech_item")]
+        tech_gb.description = None
+        tech_gb.heroTitle = None
+        tech_gb.heroSubtitle = None
+        tech_gb.iab = None
+        tech_gb.createSource = CreateSource.ML
+
+        mock_backend.fetch = AsyncMock(return_value=[sports_us, tech_gb])
+        return mock_backend
+
+    @pytest.fixture
     def sections_backend(self, sample_backend_data):
         """Fake SectionsProtocol returning sample data."""
         mock_backend = MagicMock(spec=SectionsProtocol)
@@ -1052,11 +1095,17 @@ class TestGetCorpusSections:
         assert section_b.receivedFeedRank == 6
         assert len(section_b.recommendations) == 1
         assert section_b.layout == layout_6_tiles
+        assert "s_sports" in section_b.recommendations[0].features
+        assert all(
+            not key.startswith("s_") or key == "s_sports"
+            for key in section_b.recommendations[0].features
+        )
 
         section_c = result["tech"]
         assert section_c.receivedFeedRank == 7
         assert len(section_c.recommendations) == 3
         assert section_c.layout == layout_6_tiles
+        assert "s_tech" in section_c.recommendations[0].features
 
     @pytest.mark.asyncio
     async def test_headlines_section_split_out(self, sections_backend_with_headlines_section):
@@ -1087,3 +1136,22 @@ class TestGetCorpusSections:
 
         # Should include both ML and MANUAL sections
         assert set(sections.keys()) == {"sports", "custom-section-1", "custom-section-2"}
+
+    @pytest.mark.asyncio
+    async def test_locale_suffixes_are_stripped_from_sections(
+        self, sections_backend_with_locale_suffix
+    ):
+        """Locale suffixes should not appear in section keys or recommendation features."""
+        _, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_locale_suffix,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=0,
+        )
+
+        assert set(sections.keys()) == {"sports", "tech"}
+
+        sports_section = sections["sports"]
+        assert sports_section.recommendations, "Expected sports section to contain recommendations"
+        features = sports_section.recommendations[0].features
+        assert "s_sports" in features
+        assert "s_sports-US" not in features
