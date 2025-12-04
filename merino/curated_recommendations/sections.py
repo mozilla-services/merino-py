@@ -472,7 +472,7 @@ def put_headlines_first_then_top_stories(sections: dict[str, Section]) -> dict[s
 def rank_sections(
     sections: dict[str, Section],
     section_configurations: list[SectionConfiguration] | None,
-    engagement_backend: EngagementBackend,
+    ranker: Ranker,
     personal_interests: ProcessedInterests | None,
     engagement_rescaler: EngagementRescaler | None,
     do_section_personalization_reranking: bool = True,
@@ -501,8 +501,8 @@ def rank_sections(
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
     """
     # 4th priority: reorder for exploration via Thompson sampling on engagement
-    sections = section_thompson_sampling(
-        sections, engagement_backend=engagement_backend, rescaler=engagement_rescaler
+    sections = ranker.rank_sections(
+        sections,rescaler=engagement_rescaler
     )
 
     # 3rd priority: reorder based on inferred interest vector
@@ -733,9 +733,10 @@ async def get_sections(
     sections = get_sections_with_enough_items(sections)
 
     # 16. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
-    sections = ranker.rank_sections(
+    sections = rank_sections(
         sections,
         request.sections,
+        ranker,
         personal_interests,
         engagement_rescaler=rescaler,
         include_headlines_section=include_headlines_section,

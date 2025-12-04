@@ -45,6 +45,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     DEFAULT_PRODUCTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
+    ContextualArticleRankings,
     InferredLocalModel,
     ModelData,
     ModelType,
@@ -77,6 +78,36 @@ def is_manual_section(section_id: str) -> bool:
         return True
     except ValueError:
         return False
+
+class MockMLRecommendationsBackend(MLRecsBackend):
+    """ Mock class implementing the protocol for MLRecsBackend."""
+    def __init__(self):
+        super().__init__()
+
+    def get(self, region: str | None = None, utc_offset: str | None = None) -> ContextualArticleRankings | None:
+        """Return sample ML recommendations"""
+        return ContextualArticleRankings(
+            region_offset="UTC+0",
+            n_samples=1,
+            articles_by_sample={
+                "0": ContextualArticlesBySample(
+                    articles=[
+                        ContextualArticleRanked(
+                            corpus_item_id="b2c10703-5377-4fe8-89d3-32fbd7288187",
+                            score=0.9,
+                        ),
+                        ContextualArticleRanked(
+                            corpus_item_id="f509393b-c1d6-4500-8ed2-29f8a23f39a7",
+                            score=0.8,
+                        ),
+                        ContextualArticleRanked(
+                            corpus_item_id="2afcef43-4663-446e-9d69-69cbc6966162",
+                            score=0.7,
+                        ),
+                    ]
+                )
+            },
+        )
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -234,6 +265,10 @@ def engagement_backend():
     """Fixture for the MockEngagementBackend for standard use case"""
     return MockEngagementBackend()
 
+@pytest.fixture
+def ml_recommendations_backend():
+    """Fixture for the MockMLRecommendationsBackend for standard use case"""
+    return MockMLRecommendationsBackend()
 
 @pytest.fixture
 def engagement_backend_legacy_sections_us():

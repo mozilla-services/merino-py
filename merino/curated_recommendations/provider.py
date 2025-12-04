@@ -93,7 +93,7 @@ class CuratedRecommendationsProvider:
             engagement_backend=self.engagement_backend,
             prior_backend=self.prior_backend
         )
-        recommendations = ranker.rank(
+        recommendations = ranker.rank_items(
             recommendations,
             region=derive_region(request.locale, request.region),
         )

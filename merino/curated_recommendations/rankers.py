@@ -82,7 +82,7 @@ class Ranker:
         # Placeholder implementation: sort by title alphabetically
         pass
 
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None) -> dict[str, Section]:
+    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None, include_headlines_section: bool = False) -> dict[str, Section]:
         pass
 
 
@@ -181,7 +181,7 @@ class ThompsonSamplingRanker(Ranker):
         return sorted_recs
 
 
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None) -> dict[str, Section]:
+    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None, include_headlines_section: bool = False) -> dict[str, Section]:
         """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
         :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
@@ -296,7 +296,8 @@ class ContextualRanker(Ranker):
         return sorted_recs
 
 
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None) -> dict[str, Section]:
+    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None,
+                      include_headlines_section=False) -> dict[str, Section]:
         """Re-rank sections using average score of top items. """
         def sample_score(sec: Section) -> float:
             """Create score based on top items in section"""
