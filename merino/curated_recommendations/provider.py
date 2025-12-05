@@ -25,8 +25,7 @@ from merino.curated_recommendations.protocol import (
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
-    ThompsonSamplingRanker,
-    ContextualRanker
+    ThompsonSamplingRanker
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (

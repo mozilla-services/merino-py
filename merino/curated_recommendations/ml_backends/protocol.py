@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import Protocol, cast
-from pydantic import Field
+from pydantic import Field, model_validator
 from typing_extensions import Annotated
 
 import numpy as np
@@ -174,46 +174,22 @@ class ContextualArticleRanked(BaseModel):
     rank: int
 
 
-class ContextualArticlesBySample(BaseModel):
-    """Class that defines articles in a sample from GCS"""
-
-    sample: str | None = None
-    articles: list[ContextualArticleRanked] | None = None
-    article_lookup: Annotated[dict[str, ContextualArticleRanked] | None, Field(exclude=True)] = None
-
-    def __pydantic_post_init__(self) -> dict[str, ContextualArticleRanked]:
-        """Create a dictionary to look up score (ContextualArticleRanked) from the corpus_id"""
-        self.article_lookup = {a.corpus_item_id: a for a in self.articles or []}
-
-    def find_article_by_corpus_id(self, corpus_item_id: str) -> ContextualArticleRanked | None:
-        """Return ranked article for a given corpus item id"""
-        if not self.article_lookup:
-            return None
-        return self.article_lookup.get(corpus_item_id)
-
-    def to_corpus_item_ids(self) -> list[str]:
-        """Return list of corpus item ids from the sample"""
-        if not self.articles:
-            return []
-        return [a.corpus_item_id for a in self.articles]
-
-
 class ContextualArticleRankings(BaseModel):
     """Class that defines rankings for a given region and time"""
 
-    region_offset: str
-    articles_by_sample: dict[str, ContextualArticlesBySample] | None
-    n_samples: int
+    granularity: str
+    shards: dict[str, list[float]]
+    K: int = Field(0, description="Number of shards per article")
 
-    def get_articles_minute_partition(self) -> ContextualArticlesBySample | None:
-        """Return articles for the sample based on the current minute"""
-        # get samples that change depending on the minute % n_samples
-        if not self.articles_by_sample:
-            return ContextualArticlesBySample()
-        return self.articles_by_sample.get(
-            str(datetime.now().minute % self.n_samples), ContextualArticlesBySample()
-        )
+    @model_validator(mode="after")
+    def set_k(self) -> "ContextualArticleRankings":
+        self.K = len(self.shards.get("")) if "" in self.shards else 1
+        return self
 
+    def get_score(self, corpus_item_id: str, shard_index=0) -> float:
+        """Get the scores for a given shard, returning default score if not found"""
+        items = self.shards.get(corpus_item_id, self.shards.get("", None))
+        return items[shard_index % len(items)] if items is not None else -1000.0
 
 class LocalModelBackend(Protocol):
     """Protocol for local model that is applied to New Tab article interactions on the client."""

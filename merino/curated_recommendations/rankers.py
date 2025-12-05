@@ -1,9 +1,9 @@
 """Algorithms for ranking curated recommendations."""
 
 from collections import deque
-from random import random, sample as random_sample
+from random import randint, random, sample as random_sample
 
-from merino.curated_recommendations.ml_backends.protocol import ContextualArticleRankings, ContextualArticlesBySample, MLRecsBackend
+from merino.curated_recommendations.ml_backends.protocol import ContextualArticleRankings, MLRecsBackend
 import sentry_sdk
 import logging
 import math
@@ -44,9 +44,15 @@ REGION_ENGAGEMENT_WEIGHT = 0.95
 
 class Ranker:
     """Base class for ranking curated recommendations"""
-    def __init__(self, engagement_backend: EngagementBackend):
-        self.engagement_backend = engagement_backend
 
+    def __init__(self,
+                engagement_backend: EngagementBackend,
+                prior_backend: PriorBackend,
+                region_weight: float = REGION_ENGAGEMENT_WEIGHT
+        ) -> None:
+        self.engagement_backend = engagement_backend
+        self.prior_backend = prior_backend
+        self.region_weight = region_weight
 
     def get_opens_no_opens(
         self, rec: CuratedRecommendation, region_query: str | None = None
@@ -58,7 +64,42 @@ class Ranker:
         else:
             return 0, 0
 
+    def compute_interactions(self, rec: CuratedRecommendation, rescaler: EngagementRescaler | None = None, region: str | None = None) -> tuple[float, float, float, float, float]:
+        """Compute opens, no_opens, a_prior, b_prior, non_rescaled_b_prior for a recommendation."""
+
+        opens, no_opens = self.get_opens_no_opens(rec)
+        region_opens, region_no_opens = self.get_opens_no_opens(rec, region_query=region)
+
+        prior: Prior = self.prior_backend.get() or ConstantPrior().get()
+        a_prior = float(prior.alpha)
+        b_prior = float(prior.beta)
+        region_prior = self.prior_backend.get(region)
+
+        if region_no_opens and region_prior:
+            # Weighted average of regional and global engagement
+            opens = (
+                region_opens * self.region_weight
+                + opens * (1 - self.region_weight)
+            )
+            no_opens = (
+                region_no_opens * self.region_weight
+                + no_opens * (1 - self.region_weight)
+            )
+            a_prior = (self.region_weight * region_prior.alpha) + ((1 - self.region_weight) * a_prior)
+            b_prior = (self.region_weight * region_prior.beta) + ((1 - self.region_weight) * b_prior)
+
+        if rescaler is not None:
+            opens, no_opens = rescaler.rescale(rec, opens, no_opens)
+
+        non_rescaled_b_prior = b_prior
+        if rescaler is not None:
+            a_prior, b_prior = rescaler.rescale_prior(rec, a_prior, b_prior)
+
+        return opens, no_opens, a_prior, b_prior, non_rescaled_b_prior
+
+
     def suppress_fresh_items(self, scored_recs: list[CuratedRecommendation], fresh_items_max: int) -> None:
+        """Reduce the scores of fresh items if there are too many."""
         if fresh_items_max <= 0:
             return
         fresh_items = [
@@ -83,19 +124,12 @@ class Ranker:
         pass
 
     def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None, include_headlines_section: bool = False) -> dict[str, Section]:
+        """Rank sections."""
         pass
 
 
 class ThompsonSamplingRanker(Ranker):
     """Base class for ranking curated recommendations"""
-    def __init__(self,
-                engagement_backend: EngagementBackend,
-                prior_backend: PriorBackend,
-                region_weight: float = REGION_ENGAGEMENT_WEIGHT
-        ) -> None:
-        super().__init__(engagement_backend)
-        self.prior_backend = prior_backend
-        self.region_weight = region_weight
 
     def rank_items(self, recs: list[CuratedRecommendation],
                    rescaler: EngagementRescaler | None = None,
@@ -117,7 +151,6 @@ class ThompsonSamplingRanker(Ranker):
 
         [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
         """
-        fallback_prior = ConstantPrior().get()
         fresh_items_max: int = rescaler.fresh_items_max if rescaler else 0
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
@@ -135,25 +168,8 @@ class ThompsonSamplingRanker(Ranker):
 
         def compute_ranking_scores(rec: CuratedRecommendation):
             """Sample beta distributed from weighted regional/global engagement for a recommendation."""
-            opens, no_opens = self.get_opens_no_opens(rec)
 
-            prior: Prior = self.prior_backend.get() or fallback_prior
-            a_prior = prior.alpha
-            b_prior = prior.beta
-
-            # Use a weighted average of regional and global engagement, if that's enabled and available.
-            region_opens, region_no_opens = self.get_opens_no_opens(rec, region)
-            region_prior = self.prior_backend.get(region)
-            if region_no_opens and region_prior:
-                opens = (self.region_weight * region_opens) + ((1 - self.region_weight) * opens)
-                no_opens = (self.region_weight * region_no_opens) + ((1 - self.region_weight) * no_opens)
-                a_prior = (self.region_weight * region_prior.alpha) + ((1 - self.region_weight) * a_prior)
-                b_prior = (self.region_weight * region_prior.beta) + ((1 - self.region_weight) * b_prior)
-            non_rescaled_b_prior = b_prior
-            if rescaler is not None:
-                # rescale for content associated exclusively with an experiment in a specific region
-                opens, no_opens = rescaler.rescale(rec, opens, no_opens)
-                a_prior, b_prior = rescaler.rescale_prior(rec, a_prior, b_prior)
+            opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(rec, rescaler, region)
             # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
             alpha_val = opens + max(a_prior, 1e-18)
             beta_val = no_opens + max(b_prior, 1e-18)
@@ -210,30 +226,22 @@ class ThompsonSamplingRanker(Ranker):
             a_prior_total = 0.0
             b_prior_total = 0.0
 
-            # constant prior α, β
+            # Note that we are using the constant prior here, which is likely a bug.
+            # This should be transitioned to use the results of compute_interactions function below
             prior = ConstantPrior().get()
-            a_prior_per_item = float(prior.alpha)
-            b_prior_per_item = float(prior.beta)
+
             for rec in recs:
-                if engagement := self.engagement_backend.get(rec.corpusItemId):
-                    clicks = engagement.click_count
-                    impressions = engagement.impression_count
-                    if rescaler is not None:
-                        # rescale for content associated exclusively with an experiment in a specific experiment
-                        clicks, impressions = rescaler.rescale(rec, clicks, impressions)
+                opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(rec, rescaler, "??")
+                total_clicks += opens
+                total_imps += no_opens
 
-                    total_clicks += clicks
-                    total_imps += impressions
+                a_prior_per_item = float(prior.alpha)
+                b_prior_per_item = float(prior.beta)
+                if rescaler is not None:
+                    a_prior_per_item, b_prior_per_item = rescaler.rescale_prior(rec, a_prior_per_item, b_prior_per_item)
 
-                    if rescaler is not None:
-                        a_prior_mod, b_prior_mod = rescaler.rescale_prior(
-                            rec, a_prior_per_item, b_prior_per_item
-                        )
-                        a_prior_total += a_prior_mod
-                        b_prior_total += b_prior_mod
-                    else:
-                        a_prior_total += a_prior_per_item
-                        b_prior_total += b_prior_per_item
+                a_prior_total += a_prior_per_item
+                b_prior_total += b_prior_per_item
 
             # Sum engagement and priors.
             opens = max(total_clicks + a_prior_total, 1.0)
@@ -247,11 +255,14 @@ class ThompsonSamplingRanker(Ranker):
 
 class ContextualRanker(Ranker):
     """Base class for ranking curated recommendations"""
+
     def __init__(self,
                 engagement_backend: EngagementBackend,
-                ml_backend: MLRecsBackend
+                prior_backend: PriorBackend,
+                region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+                ml_backend: MLRecsBackend = None
         ) -> None:
-        super().__init__(engagement_backend)
+        super().__init__(engagement_backend, prior_backend, region_weight)
         self.ml_backend = ml_backend
 
     def rank_items(self, recs: list[CuratedRecommendation],
@@ -260,31 +271,34 @@ class ContextualRanker(Ranker):
                    utc_offset: int | None = None,
                    region: str | None = None
     ) -> list[CuratedRecommendation]:
-       ## Pull out scores that were previously computed from the contextual ranker
-       ## data artifact. We need to look up the items in the ml backend using region and utc_offset.
-        fresh_impression_threshold = 6000
-
+        """Pull out scores that were previously computed from the contextual ranker
+        data artifact. We need to look up the items in the ml backend using region and utc_offset.
+        """
+        fresh_items_limit_prior_threshold_multiplier: float = (
+            rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
+        )
         contextual_scores: ContextualArticleRankings = self.ml_backend.get(region, str(utc_offset))
-        article_data: ContextualArticlesBySample = contextual_scores.get_articles_minute_partition()
+        k = randint(0, contextual_scores.K - 1)
         for rec in recs:
-            rank_info = article_data.find_article_by_corpus_id(rec.corpusItemId)
-            _opens, no_opens = self.get_opens_no_opens(rec)
-            _region_opens, region_no_opens = self.get_opens_no_opens(rec, region)
-            total_no_opens = 0.0
+            opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(rec, rescaler, region)
+            score = contextual_scores.get_score(rec.corpusItemId, k)
+            opens, no_opens = self.get_opens_no_opens(rec)
+            region_opens, region_no_opens = self.get_opens_no_opens(rec, region)
             if region_no_opens:
-                total_no_opens = no_opens * (1.0 - self.region_weight) + region_no_opens * self.region_weight
-            else:
-                total_no_opens = no_opens
-
+                no_opens = region_no_opens
+                opens = region_opens
+            if rescaler is not None:
+                opens, no_opens = rescaler.rescale(rec, opens, no_opens)
             rec.ranking_data = RankingData(
-                score=rank_info.score if rank_info else -1000,
+                score=score,
                 alpha=0,
                 beta=0,
                 is_fresh=False,
             )
             if (
-                 not rec.isTimeSensitive
-                and (total_no_opens < fresh_impression_threshold)
+                (fresh_items_limit_prior_threshold_multiplier > 0)
+                and not rec.isTimeSensitive
+                and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
             ):
                 rec.ranking_data.is_fresh = True # This is needed for section and top_stories selection
 
@@ -298,7 +312,7 @@ class ContextualRanker(Ranker):
 
     def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None,
                       include_headlines_section=False) -> dict[str, Section]:
-        """Re-rank sections using average score of top items. """
+        """Re-rank sections using average score of top items."""
         def sample_score(sec: Section) -> float:
             """Create score based on top items in section"""
             fresh_retain_likelyhood = (

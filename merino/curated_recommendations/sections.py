@@ -664,6 +664,7 @@ async def get_sections(
     if is_contextual_ranking_experiment(request):
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
             ml_backend=ml_backend,
         )
     else:

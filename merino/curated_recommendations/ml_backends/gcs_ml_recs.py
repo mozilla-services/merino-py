@@ -6,8 +6,6 @@ import logging
 from merino.curated_recommendations.ml_backends.protocol import (
     MLRecsBackend,
     ContextualArticleRankings,
-    ContextualArticleRanked,
-    ContextualArticlesBySample,
 )
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
@@ -42,22 +40,8 @@ class GcsMLRecs(MLRecsBackend):
         slates = payload.get("slates") or {}
 
         new_cache: dict[str, ContextualArticleRankings] = {}
-        for region_offset, slate in slates.items():
-            shards = (slate or {}).get("shards") or {}
-            article_by_sample: dict[str, ContextualArticlesBySample] = {}
-            for sample, rows in shards.items():  # sample like "0", "1", ...
-                s = str(sample)
-                article_by_sample[s] = ContextualArticlesBySample(
-                    sample=s,
-                    articles=[ContextualArticleRanked(**row) for row in rows],
-                )
-            key = str(region_offset)
-            new_cache[key] = ContextualArticleRankings(
-                region_offset=key,
-                articles_by_sample=article_by_sample,
-                n_samples=k,
-            )
-
+        for context_str, slate in slates.items():
+            new_cache[context_str] = ContextualArticleRankings(slate=slate)
         self._cache = new_cache
 
     def get(

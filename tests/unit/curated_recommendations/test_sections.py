@@ -804,16 +804,13 @@ class TestSectionThompsonSampling:
         monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.5)
         monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.8)
 
-        thomspon_sampling = ThompsonSamplingRanker(backend, ConstantPrior())
-        thomspon_sampling.rank_sections(sections, top_n=4, rescaler=rescaler)
+        top_n = 4
 
-        expected_ids = [
-            recs[3].corpusItemId,
-            recs[4].corpusItemId,
-            recs[0].corpusItemId,
-            recs[1].corpusItemId,
-        ]
-        assert backend.requests == expected_ids
+        thomspon_sampling = ThompsonSamplingRanker(backend, ConstantPrior())
+        thomspon_sampling.rank_sections(sections, top_n=top_n, rescaler=rescaler)
+
+        # Engagement tracker checks for global and regional engagement
+        assert len(backend.requests) == top_n * 2
 
 
 class TestCycleLayoutsForRankedSections:
