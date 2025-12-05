@@ -68,7 +68,15 @@ from merino.providers.manifest.backends.protocol import Domain
 from tests.types import FilterCaplogFixture
 
 # Music, NFL, Movies, Soccer, NBA
-REC_HIGH_CTR_IDS = ["b2c10703-5377-4fe8-89d3-32fbd7288187", "f509393b-c1d6-4500-8ed2-29f8a23f39a7", "2afcef43-4663-446e-9d69-69cbc6966162", "dc4b30c4-170b-4e9f-a068-bdc51474a0fb", "9261e868-beff-4419-8071-7750d063d642", "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1"]
+REC_HIGH_CTR_IDS = [
+    "b2c10703-5377-4fe8-89d3-32fbd7288187",
+    "f509393b-c1d6-4500-8ed2-29f8a23f39a7",
+    "2afcef43-4663-446e-9d69-69cbc6966162",
+    "dc4b30c4-170b-4e9f-a068-bdc51474a0fb",
+    "9261e868-beff-4419-8071-7750d063d642",
+    "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1",
+]
+
 
 def is_manual_section(section_id: str) -> bool:
     """Check if section ID is a UUID (manually created sections use UUIDs, ML sections use human-readable IDs).
@@ -81,23 +89,22 @@ def is_manual_section(section_id: str) -> bool:
     except ValueError:
         return False
 
+
 class MockMLRecommendationsBackend(MLRecsBackend):
     """Mock class implementing the protocol for MLRecsBackend."""
 
     def __init__(self):
         super().__init__()
 
-    def get(self, region: str | None = None, utc_offset: str | None = None) -> ContextualArticleRankings | None:
+    def get(
+        self, region: str | None = None, utc_offset: str | None = None
+    ) -> ContextualArticleRankings | None:
         """Return sample ML recommendations"""
-
-        VERY_HIGH_CTR = {k: [1., 1.] for k in REC_HIGH_CTR_IDS}
+        VERY_HIGH_CTR = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
 
         return ContextualArticleRankings(
             granularity="",
-            shards = {
-                      **VERY_HIGH_CTR,
-                      "41111154-ebb1-45d9-9799-a882f13cd8cc": [0.1, 0.1]
-            }
+            shards={**VERY_HIGH_CTR, "41111154-ebb1-45d9-9799-a882f13cd8cc": [0.1, 0.1]},
         )
 
 
@@ -136,7 +143,13 @@ class MockEngagementBackend(EngagementBackend):
                 report_count=reports,
             )
 
-        VERY_HIGH_CTR = {k: (1_000_000 * self.experiment_traffic_fraction, 1_000_000 * self.experiment_traffic_fraction) for k in REC_HIGH_CTR_IDS}
+        VERY_HIGH_CTR = {
+            k: (
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
+            )
+            for k in REC_HIGH_CTR_IDS
+        }
         HIGH_CTR_ITEMS = {
             **VERY_HIGH_CTR,
             "41111154-ebb1-45d9-9799-a882f13cd8cc": (
@@ -236,10 +249,12 @@ def engagement_backend():
     """Fixture for the MockEngagementBackend for standard use case"""
     return MockEngagementBackend()
 
+
 @pytest.fixture
 def ml_recommendations_backend():
     """Fixture for the MockMLRecommendationsBackend for standard use case"""
     return MockMLRecommendationsBackend()
+
 
 @pytest.fixture
 def engagement_backend_legacy_sections_us():
@@ -1532,8 +1547,6 @@ class TestSections:
             tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
             if tech_stuff_id in sections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
-
-
 
     @pytest.mark.parametrize(
         "sections_payload",

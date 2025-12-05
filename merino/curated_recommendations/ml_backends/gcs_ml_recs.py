@@ -36,12 +36,11 @@ class GcsMLRecs(MLRecsBackend):
     def _fetch_callback(self, data: bytes | str) -> None:
         """Process the raw blob data and update the cache atomically."""
         payload = json.loads(data if isinstance(data, str) else data.decode("utf-8"))
-        k = int(payload.get("K", 10))
         slates = payload.get("slates") or {}
 
         new_cache: dict[str, ContextualArticleRankings] = {}
         for context_str, slate in slates.items():
-            new_cache[context_str] = ContextualArticleRankings(slate=slate)
+            new_cache[context_str] = ContextualArticleRankings(**slate)
         self._cache = new_cache
 
     def get(

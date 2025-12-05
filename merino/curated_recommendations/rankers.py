@@ -3,7 +3,10 @@
 from collections import deque
 from random import randint, random, sample as random_sample
 
-from merino.curated_recommendations.ml_backends.protocol import ContextualArticleRankings, MLRecsBackend
+from merino.curated_recommendations.ml_backends.protocol import (
+    ContextualArticleRankings,
+    MLRecsBackend,
+)
 import sentry_sdk
 import logging
 import math
@@ -32,7 +35,6 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-
 # In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
 # somewhat arbitrarily in the new-tab-region-specific-content experiment that only targeted Canada.
 # CA has about 9x fewer impressions than the total for NEW_TAB_EN_US. A value close to 1 boosts
@@ -45,11 +47,12 @@ REGION_ENGAGEMENT_WEIGHT = 0.95
 class Ranker:
     """Base class for ranking curated recommendations"""
 
-    def __init__(self,
-                engagement_backend: EngagementBackend,
-                prior_backend: PriorBackend,
-                region_weight: float = REGION_ENGAGEMENT_WEIGHT
-        ) -> None:
+    def __init__(
+        self,
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
+        region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+    ) -> None:
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.region_weight = region_weight
@@ -64,9 +67,13 @@ class Ranker:
         else:
             return 0, 0
 
-    def compute_interactions(self, rec: CuratedRecommendation, rescaler: EngagementRescaler | None = None, region: str | None = None) -> tuple[float, float, float, float, float]:
+    def compute_interactions(
+        self,
+        rec: CuratedRecommendation,
+        rescaler: EngagementRescaler | None = None,
+        region: str | None = None,
+    ) -> tuple[float, float, float, float, float]:
         """Compute opens, no_opens, a_prior, b_prior, non_rescaled_b_prior for a recommendation."""
-
         opens, no_opens = self.get_opens_no_opens(rec)
         region_opens, region_no_opens = self.get_opens_no_opens(rec, region_query=region)
 
@@ -77,16 +84,14 @@ class Ranker:
 
         if region_no_opens and region_prior:
             # Weighted average of regional and global engagement
-            opens = (
-                region_opens * self.region_weight
-                + opens * (1 - self.region_weight)
+            opens = region_opens * self.region_weight + opens * (1 - self.region_weight)
+            no_opens = region_no_opens * self.region_weight + no_opens * (1 - self.region_weight)
+            a_prior = (self.region_weight * region_prior.alpha) + (
+                (1 - self.region_weight) * a_prior
             )
-            no_opens = (
-                region_no_opens * self.region_weight
-                + no_opens * (1 - self.region_weight)
+            b_prior = (self.region_weight * region_prior.beta) + (
+                (1 - self.region_weight) * b_prior
             )
-            a_prior = (self.region_weight * region_prior.alpha) + ((1 - self.region_weight) * a_prior)
-            b_prior = (self.region_weight * region_prior.beta) + ((1 - self.region_weight) * b_prior)
 
         if rescaler is not None:
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)
@@ -97,8 +102,9 @@ class Ranker:
 
         return opens, no_opens, a_prior, b_prior, non_rescaled_b_prior
 
-
-    def suppress_fresh_items(self, scored_recs: list[CuratedRecommendation], fresh_items_max: int) -> None:
+    def suppress_fresh_items(
+        self, scored_recs: list[CuratedRecommendation], fresh_items_max: int
+    ) -> None:
         """Reduce the scores of fresh items if there are too many."""
         if fresh_items_max <= 0:
             return
@@ -114,27 +120,39 @@ class Ranker:
                 if item.ranking_data is not None:
                     item.ranking_data.score *= 0.5
 
-    def rank_items(self, recs: list[CuratedRecommendation],
-                   rescaler: EngagementRescaler | None = None,
-                    personal_interests: ProcessedInterests | None = None,
-                    region: str | None = None
+    def rank_items(
+        self,
+        recs: list[CuratedRecommendation],
+        rescaler: EngagementRescaler | None = None,
+        personal_interests: ProcessedInterests | None = None,
+        utc_offset: int | None = None,
+        region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Rank items according to some criteria."""
         # Placeholder implementation: sort by title alphabetically
-        pass
+        return recs
 
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None, include_headlines_section: bool = False) -> dict[str, Section]:
+    def rank_sections(
+        self,
+        sections: dict[str, Section],
+        top_n: int = 6,
+        rescaler: EngagementRescaler | None = None,
+        include_headlines_section: bool = False,
+    ) -> dict[str, Section]:
         """Rank sections."""
-        pass
+        return sections
 
 
 class ThompsonSamplingRanker(Ranker):
     """Base class for ranking curated recommendations"""
 
-    def rank_items(self, recs: list[CuratedRecommendation],
-                   rescaler: EngagementRescaler | None = None,
-                    personal_interests: ProcessedInterests | None = None,
-                    region: str | None = None
+    def rank_items(
+        self,
+        recs: list[CuratedRecommendation],
+        rescaler: EngagementRescaler | None = None,
+        personal_interests: ProcessedInterests | None = None,
+        utc_offset: int | None = None,
+        region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
         CTR with exploration of new items using a prior.
@@ -168,8 +186,9 @@ class ThompsonSamplingRanker(Ranker):
 
         def compute_ranking_scores(rec: CuratedRecommendation):
             """Sample beta distributed from weighted regional/global engagement for a recommendation."""
-
-            opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(rec, rescaler, region)
+            opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
+                rec, rescaler, region
+            )
             # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
             alpha_val = opens + max(a_prior, 1e-18)
             beta_val = no_opens + max(b_prior, 1e-18)
@@ -181,7 +200,9 @@ class ThompsonSamplingRanker(Ranker):
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
-                and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
+                and (
+                    no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
+                )
             ):
                 rec.ranking_data.is_fresh = True
 
@@ -196,8 +217,13 @@ class ThompsonSamplingRanker(Ranker):
         )
         return sorted_recs
 
-
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None, include_headlines_section: bool = False) -> dict[str, Section]:
+    def rank_sections(
+        self,
+        sections: dict[str, Section],
+        top_n: int = 6,
+        rescaler: EngagementRescaler | None = None,
+        include_headlines_section: bool = False,
+    ) -> dict[str, Section]:
         """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
         :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
@@ -215,14 +241,16 @@ class ThompsonSamplingRanker(Ranker):
             # sum clicks and impressions over top_n items
 
             fresh_retain_likelyhood = (
-                rescaler.fresh_items_section_ranking_max_percentage if rescaler is not None else 0.0
+                rescaler.fresh_items_section_ranking_max_percentage
+                if rescaler is not None
+                else 0.0
             )
             recs, _ = filter_fresh_items_with_probability(
                 sec.recommendations, fresh_story_prob=fresh_retain_likelyhood, max_items=top_n
             )
 
-            total_clicks = 0
-            total_imps = 0
+            total_clicks = 0.0
+            total_imps = 0.0
             a_prior_total = 0.0
             b_prior_total = 0.0
 
@@ -231,14 +259,18 @@ class ThompsonSamplingRanker(Ranker):
             prior = ConstantPrior().get()
 
             for rec in recs:
-                opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(rec, rescaler, "??")
+                opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = (
+                    self.compute_interactions(rec, rescaler, "??")
+                )
                 total_clicks += opens
                 total_imps += no_opens
 
                 a_prior_per_item = float(prior.alpha)
                 b_prior_per_item = float(prior.beta)
                 if rescaler is not None:
-                    a_prior_per_item, b_prior_per_item = rescaler.rescale_prior(rec, a_prior_per_item, b_prior_per_item)
+                    a_prior_per_item, b_prior_per_item = rescaler.rescale_prior(
+                        rec, a_prior_per_item, b_prior_per_item
+                    )
 
                 a_prior_total += a_prior_per_item
                 b_prior_total += b_prior_per_item
@@ -253,35 +285,47 @@ class ThompsonSamplingRanker(Ranker):
         ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
         return renumber_sections(ordered)
 
+
 class ContextualRanker(Ranker):
     """Base class for ranking curated recommendations"""
 
-    def __init__(self,
-                engagement_backend: EngagementBackend,
-                prior_backend: PriorBackend,
-                region_weight: float = REGION_ENGAGEMENT_WEIGHT,
-                ml_backend: MLRecsBackend = None
-        ) -> None:
+    def __init__(
+        self,
+        engagement_backend: EngagementBackend,
+        prior_backend: PriorBackend,
+        region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+        ml_backend: MLRecsBackend | None = None,
+    ) -> None:
         super().__init__(engagement_backend, prior_backend, region_weight)
-        self.ml_backend = ml_backend
+        assert ml_backend is not None
+        self.ml_backend: MLRecsBackend = ml_backend
 
-    def rank_items(self, recs: list[CuratedRecommendation],
-                   rescaler: EngagementRescaler | None = None,
-                   personal_interests: ProcessedInterests | None = None,
-                   utc_offset: int | None = None,
-                   region: str | None = None
+    def rank_items(
+        self,
+        recs: list[CuratedRecommendation],
+        rescaler: EngagementRescaler | None = None,
+        personal_interests: ProcessedInterests | None = None,
+        utc_offset: int | None = None,
+        region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region and utc_offset.
+
+        Personal interests are not supported yet. They will be supported in a future update.
         """
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
         )
-        contextual_scores: ContextualArticleRankings = self.ml_backend.get(region, str(utc_offset))
-        k = randint(0, contextual_scores.K - 1)
+        contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
+            region, str(utc_offset)
+        )
+        if contextual_scores:
+            k = randint(0, contextual_scores.K - 1)
         for rec in recs:
-            opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(rec, rescaler, region)
-            score = contextual_scores.get_score(rec.corpusItemId, k)
+            opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
+                rec, rescaler, region
+            )
+            score = contextual_scores.get_score(rec.corpusItemId, k) if contextual_scores else 0
             opens, no_opens = self.get_opens_no_opens(rec)
             region_opens, region_no_opens = self.get_opens_no_opens(rec, region)
             if region_no_opens:
@@ -298,9 +342,13 @@ class ContextualRanker(Ranker):
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
-                and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
+                and (
+                    no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
+                )
             ):
-                rec.ranking_data.is_fresh = True # This is needed for section and top_stories selection
+                rec.ranking_data.is_fresh = (
+                    True  # This is needed for section and top_stories selection
+                )
 
         sorted_recs = sorted(
             recs,
@@ -309,14 +357,21 @@ class ContextualRanker(Ranker):
         )
         return sorted_recs
 
-
-    def rank_sections(self, sections: dict[str, Section], top_n: int = 6, rescaler: EngagementRescaler | None = None,
-                      include_headlines_section=False) -> dict[str, Section]:
+    def rank_sections(
+        self,
+        sections: dict[str, Section],
+        top_n: int = 6,
+        rescaler: EngagementRescaler | None = None,
+        include_headlines_section=False,
+    ) -> dict[str, Section]:
         """Re-rank sections using average score of top items."""
+
         def sample_score(sec: Section) -> float:
             """Create score based on top items in section"""
             fresh_retain_likelyhood = (
-                rescaler.fresh_items_section_ranking_max_percentage if rescaler is not None else 0.0
+                rescaler.fresh_items_section_ranking_max_percentage
+                if rescaler is not None
+                else 0.0
             )
             recs, _ = filter_fresh_items_with_probability(
                 sec.recommendations, fresh_story_prob=fresh_retain_likelyhood, max_items=top_n
@@ -329,9 +384,9 @@ class ContextualRanker(Ranker):
                     n_scores += 1
 
             return total_score / n_scores if n_scores > 0 else 0.0
+
         ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
         return renumber_sections(ordered)
-
 
 
 def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:

@@ -25,7 +25,7 @@ from merino.curated_recommendations.protocol import (
 from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
-    ThompsonSamplingRanker
+    ThompsonSamplingRanker,
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
@@ -89,8 +89,7 @@ class CuratedRecommendationsProvider:
         @return: A re-ranked list of curated recommendations
         """
         ranker = ThompsonSamplingRanker(
-            engagement_backend=self.engagement_backend,
-            prior_backend=self.prior_backend
+            engagement_backend=self.engagement_backend, prior_backend=self.prior_backend
         )
         recommendations = ranker.rank_items(
             recommendations,

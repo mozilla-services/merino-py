@@ -3,11 +3,9 @@
 from enum import Enum
 from typing import Protocol, cast
 from pydantic import Field, model_validator
-from typing_extensions import Annotated
 
 import numpy as np
 from pydantic import BaseModel
-from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -183,13 +181,15 @@ class ContextualArticleRankings(BaseModel):
 
     @model_validator(mode="after")
     def set_k(self) -> "ContextualArticleRankings":
-        self.K = len(self.shards.get("")) if "" in self.shards else 1
+        """Set K based on shards data. K represents the number of shards per article."""
+        self.K = len(self.shards.get("", [])) if "" in self.shards else 1
         return self
 
     def get_score(self, corpus_item_id: str, shard_index=0) -> float:
         """Get the scores for a given shard, returning default score if not found"""
         items = self.shards.get(corpus_item_id, self.shards.get("", None))
         return items[shard_index % len(items)] if items is not None else -1000.0
+
 
 class LocalModelBackend(Protocol):
     """Protocol for local model that is applied to New Tab article interactions on the client."""

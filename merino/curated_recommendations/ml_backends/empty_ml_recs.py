@@ -27,6 +27,4 @@ class EmptyMLRecs(MLRecsBackend):
         Returns:
             ContextualArticleRankings: Ranked articles for a given region and utc offset with seeds
         """
-        return ContextualArticleRankings(
-            region_offset=region, articles_by_sample=None, n_samples=10
-        )
+        return None

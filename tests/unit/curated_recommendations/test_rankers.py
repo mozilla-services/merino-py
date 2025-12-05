@@ -39,7 +39,7 @@ from merino.curated_recommendations.rankers import (
     put_top_stories_first,
     greedy_personalized_section_rank,
     takedown_reported_recommendations,
-    ThompsonSamplingRanker
+    ThompsonSamplingRanker,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,

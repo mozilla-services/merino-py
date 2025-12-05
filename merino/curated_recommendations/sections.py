@@ -20,6 +20,7 @@ from merino.curated_recommendations.layouts import (
     layout_7_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
+from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
 from merino.curated_recommendations.ml_backends.protocol import MLRecsBackend
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
@@ -324,6 +325,7 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
     )
 
+
 def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the contextual ranking experiment is enabled."""
     return is_enrolled_in_experiment(
@@ -501,9 +503,7 @@ def rank_sections(
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
     """
     # 4th priority: reorder for exploration via Thompson sampling on engagement
-    sections = ranker.rank_sections(
-        sections,rescaler=engagement_rescaler
-    )
+    sections = ranker.rank_sections(sections, rescaler=engagement_rescaler)
 
     # 3rd priority: reorder based on inferred interest vector
     if do_section_personalization_reranking and personal_interests is not None:
@@ -661,7 +661,11 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    if is_contextual_ranking_experiment(request):
+    if (
+        is_contextual_ranking_experiment(request)
+        and ml_backend is not None
+        and not isinstance(ml_backend, EmptyMLRecs)
+    ):
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -669,8 +673,7 @@ async def get_sections(
         )
     else:
         ranker = ThompsonSamplingRanker(
-            engagement_backend=engagement_backend,
-            prior_backend=prior_backend
+            engagement_backend=engagement_backend, prior_backend=prior_backend
         )
 
     # 7. Rank all corpus recommendations globally by engagement
