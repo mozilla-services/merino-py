@@ -991,7 +991,7 @@ bucket_name = ""
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
 # The maximum size in bytes of the GCS prior blob. If exceeded, an error will be logged.
-max_size = 4_000_000
+max_size = 1_000_000
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
 # GCS path of the priors JSON file.

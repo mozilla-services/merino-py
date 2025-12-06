@@ -185,10 +185,14 @@ class ContextualArticleRankings(BaseModel):
         self.K = len(self.shards.get("", [])) if "" in self.shards else 1
         return self
 
+    def has_item_score(self, corpus_item_id: str) -> bool:
+        """Check if a given corpus item ID has a score entry"""
+        return corpus_item_id in self.shards
+
     def get_score(self, corpus_item_id: str, shard_index=0) -> float:
         """Get the scores for a given shard, returning default score if not found"""
-        items = self.shards.get(corpus_item_id, self.shards.get("", None))
-        return items[shard_index % len(items)] if items is not None else -1000.0
+        items = self.shards.get(corpus_item_id, None)
+        return items[shard_index % len(items)] if items is not None else None
 
 
 class LocalModelBackend(Protocol):

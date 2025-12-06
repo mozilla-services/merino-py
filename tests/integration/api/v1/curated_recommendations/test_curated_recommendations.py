@@ -577,7 +577,7 @@ class TestCuratedRecommendationsRequestParameters:
         """
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            json={"locale": Locale.EN_US, "uct_offset": utc_offset},
         )
         assert response.status_code == 200
 
@@ -586,7 +586,7 @@ class TestCuratedRecommendationsRequestParameters:
         """Test the curated recommendations endpoint rejects invalid utc_offset values."""
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            json={"locale": Locale.EN_US, "utc_offset": utc_offset},
         )
         assert response.status_code == 400
 

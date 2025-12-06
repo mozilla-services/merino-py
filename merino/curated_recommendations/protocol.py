@@ -272,7 +272,7 @@ class CuratedRecommendationsRequest(BaseModel):
     locale: Locale
     region: str | None = None
     coarseOs: CoarseOS | None = None
-    utcOffset: Annotated[int, Field(ge=0, le=24)] | None = None
+    utc_offset: Annotated[int, Field(ge=0, le=24)] | None = None
     count: int = 100
     topics: list[Topic | str] | None = None
     feeds: list[str] | None = None

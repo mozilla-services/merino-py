@@ -2,6 +2,7 @@
 
 from collections import deque
 from random import randint, random, sample as random_sample
+import re
 
 from merino.curated_recommendations.ml_backends.protocol import (
     ContextualArticleRankings,
@@ -136,8 +137,7 @@ class Ranker:
         self,
         sections: dict[str, Section],
         top_n: int = 6,
-        rescaler: EngagementRescaler | None = None,
-        include_headlines_section: bool = False,
+        rescaler: EngagementRescaler | None = None
     ) -> dict[str, Section]:
         """Rank sections."""
         return sections
@@ -222,7 +222,6 @@ class ThompsonSamplingRanker(Ranker):
         sections: dict[str, Section],
         top_n: int = 6,
         rescaler: EngagementRescaler | None = None,
-        include_headlines_section: bool = False,
     ) -> dict[str, Section]:
         """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
@@ -319,26 +318,26 @@ class ContextualRanker(Ranker):
         contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
             region, str(utc_offset)
         )
-        if contextual_scores:
-            k = randint(0, contextual_scores.K - 1)
         for rec in recs:
+            if contextual_scores:
+                k = randint(0, contextual_scores.K - 1)
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
                 rec, rescaler, region
             )
-            score = contextual_scores.get_score(rec.corpusItemId, k) if contextual_scores else 0
-            opens, no_opens = self.get_opens_no_opens(rec)
-            region_opens, region_no_opens = self.get_opens_no_opens(rec, region)
-            if region_no_opens:
-                no_opens = region_no_opens
-                opens = region_opens
-            if rescaler is not None:
-                opens, no_opens = rescaler.rescale(rec, opens, no_opens)
-            rec.ranking_data = RankingData(
-                score=score,
-                alpha=0,
-                beta=0,
-                is_fresh=False,
-            )
+            is_fresh = False
+            # add random value between 0 and 1 to break ties randomly
+            score = None
+            if contextual_scores:
+                score = contextual_scores.get_score(rec.corpusItemId, k)
+
+            if score is None:
+                # Fall back to Thompson sampling if no ML score is found because no data has come in yet
+                alpha_val = opens + max(a_prior, 1e-18)
+                beta_val = no_opens + max(b_prior, 1e-18)
+                score=float(beta.rvs(alpha_val, beta_val))
+            else:
+                score += random() * 0.0001
+
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
@@ -346,9 +345,15 @@ class ContextualRanker(Ranker):
                     no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
                 )
             ):
-                rec.ranking_data.is_fresh = (
-                    True  # This is needed for section and top_stories selection
-                )
+                is_fresh = True
+
+            rec.ranking_data = RankingData(
+                score=score,
+                alpha=0,
+                beta=0,
+                is_fresh=is_fresh,
+            )
+
 
         sorted_recs = sorted(
             recs,
@@ -362,7 +367,6 @@ class ContextualRanker(Ranker):
         sections: dict[str, Section],
         top_n: int = 6,
         rescaler: EngagementRescaler | None = None,
-        include_headlines_section=False,
     ) -> dict[str, Section]:
         """Re-rank sections using average score of top items."""
 
