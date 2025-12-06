@@ -52,6 +52,7 @@ _validators = [
         "curated_recommendations.gcs.engagement.cron_interval_seconds",
         "curated_recommendations.gcs.prior.max_size",
         "curated_recommendations.gcs.prior.cron_interval_seconds",
+        "ml_recommendations.gcs.max_size",
         is_type_of=int,
         must_exist=True,
         env=["production", "staging", "development"],

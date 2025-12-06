@@ -2,7 +2,6 @@
 
 from collections import deque
 from random import randint, random, sample as random_sample
-import re
 
 from merino.curated_recommendations.ml_backends.protocol import (
     ContextualArticleRankings,
@@ -137,7 +136,7 @@ class Ranker:
         self,
         sections: dict[str, Section],
         top_n: int = 6,
-        rescaler: EngagementRescaler | None = None
+        rescaler: EngagementRescaler | None = None,
     ) -> dict[str, Section]:
         """Rank sections."""
         return sections
@@ -334,7 +333,7 @@ class ContextualRanker(Ranker):
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)
                 beta_val = no_opens + max(b_prior, 1e-18)
-                score=float(beta.rvs(alpha_val, beta_val))
+                score = float(beta.rvs(alpha_val, beta_val))
             else:
                 score += random() * 0.0001
 
@@ -353,7 +352,6 @@ class ContextualRanker(Ranker):
                 beta=0,
                 is_fresh=is_fresh,
             )
-
 
         sorted_recs = sorted(
             recs,
