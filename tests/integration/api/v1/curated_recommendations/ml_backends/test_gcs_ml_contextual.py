@@ -32,7 +32,7 @@ def create_ml_recs(
         bucket_name=gcs_bucket.name,
         blob_name=settings.ml_recommendations.gcs.blob_name,
         metrics_client=metrics_client,
-        metrics_namespace="ml_contextual_recs.slates",
+        metrics_namespace="recommendation.ml.contextual",
         max_size=settings.ml_recommendations.gcs.max_size,
         cron_interval_seconds=0.01,
         cron_job_name="fetch_ml_contextual_recs",
@@ -170,9 +170,8 @@ async def test_gcs_engagement_metrics(gcs_storage_client, gcs_bucket, metrics_cl
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
 
-    # Check the last_updated gauge value shows that the engagement was updated just now.
-    # To fix
-    # assert any(
-    #    call[0][0] == "recommendation.ml.contextual.last_updated" and 0 <= call[1]["value"] <= 10
-    #    for call in metrics_client.gauge.call_args_list
-    # ), "The gauge recommendation.ml.contextual.last_updated was not called with value between 0 and 10"
+    # Check the last_updated gauge value shows that the data was updated just now.
+    assert any(
+        call[0][0] == "recommendation.ml.contextual.last_updated" and 0 <= call[1]["value"] <= 10
+        for call in metrics_client.gauge.call_args_list
+    ), "The gauge recommendation.ml.contextual.last_updated was not called with value between 0 and 10"

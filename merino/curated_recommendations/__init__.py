@@ -120,7 +120,7 @@ def init_ml_recommendations_backend() -> MLRecsBackend:
                 destination_gcp_project=settings.ml_recommendations.gcs.gcp_project
             ),
             metrics_client=get_metrics_client(),
-            metrics_namespace="ml_contextual_recs.slates",
+            metrics_namespace="recommendation.ml.contextual",
             bucket_name=settings.ml_recommendations.gcs.bucket_name,
             blob_name=settings.ml_recommendations.gcs.blob_name,
             max_size=settings.ml_recommendations.gcs.max_size,

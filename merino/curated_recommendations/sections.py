@@ -22,6 +22,10 @@ from merino.curated_recommendations.layouts import (
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
 from merino.curated_recommendations.ml_backends.protocol import MLRecsBackend
+from merino.curated_recommendations.ml_backends.static_local_model import (
+    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+    CONTEXTUAL_RANKING_TREATMENT_TZ,
+)
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
@@ -329,7 +333,13 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
 def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the contextual ranking experiment is enabled."""
     return is_enrolled_in_experiment(
-        request, ExperimentName.CONTEXTUAL_RANKING_EXPERIMENT.value, "treatment"
+        request,
+        ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_TZ,
+    ) or is_enrolled_in_experiment(
+        request,
+        ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     )
 
 
@@ -670,6 +680,8 @@ async def get_sections(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
             ml_backend=ml_backend,
+            disable_time_zone_context=request.experimentBranch
+            == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
         )
     else:
         ranker = ThompsonSamplingRanker(

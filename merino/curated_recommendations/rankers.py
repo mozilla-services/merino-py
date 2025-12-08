@@ -293,10 +293,12 @@ class ContextualRanker(Ranker):
         prior_backend: PriorBackend,
         region_weight: float = REGION_ENGAGEMENT_WEIGHT,
         ml_backend: MLRecsBackend | None = None,
+        disable_time_zone_context: bool = False,
     ) -> None:
         super().__init__(engagement_backend, prior_backend, region_weight)
         assert ml_backend is not None
         self.ml_backend: MLRecsBackend = ml_backend
+        self.disable_time_zone_context = disable_time_zone_context
 
     def rank_items(
         self,
@@ -314,6 +316,10 @@ class ContextualRanker(Ranker):
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
         )
+
+        if self.disable_time_zone_context:
+            utc_offset = None
+
         contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
             region, str(utc_offset)
         )

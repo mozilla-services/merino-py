@@ -99,7 +99,8 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-release"
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
-    CONTEXTUAL_RANKING_EXPERIMENT = "new-tab-contextual-ranking"
+    CONTEXTUAL_RANKING_CONTENT_EXPERIMENT = "new-tab-contextual-ranking"
+
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"

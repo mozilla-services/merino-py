@@ -41,6 +41,8 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
+    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+    CONTEXTUAL_RANKING_TREATMENT_TZ,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     DEFAULT_PRODUCTION_MODEL_ID,
 )
@@ -1509,8 +1511,15 @@ class TestSections:
             if tech_stuff_id in sections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
-    def test_sections_contextual_ranking(self, client: TestClient):
-        """Test that sections feed includes both manually created and ML-generated sections.
+    @pytest.mark.parametrize(
+        "experiment_branch",
+        [
+            CONTEXTUAL_RANKING_TREATMENT_TZ,
+            CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+        ],
+    )
+    def test_sections_contextual_ranking(self, client: TestClient, experiment_branch):
+        """Test that sections feed includes both manually created and ML-generated sections for contextual ranking.
 
         Both MANUAL and ML sections should be returned together.
         """
@@ -1519,8 +1528,8 @@ class TestSections:
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_EXPERIMENT.value,
-                "experimentBranch": "treatment",
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": experiment_branch,
             },
         )
         data = response.json()
