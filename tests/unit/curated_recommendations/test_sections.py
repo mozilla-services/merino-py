@@ -31,6 +31,7 @@ from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ExperimentName,
+    DailyBriefingBranch,
     CuratedRecommendation,
     RankingData,
 )
@@ -39,6 +40,8 @@ from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
+    is_daily_briefing_experiment,
+    should_show_popular_today_with_headlines,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
@@ -47,6 +50,7 @@ from merino.curated_recommendations.sections import (
     get_corpus_sections_for_legacy_topic,
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
+    HEADLINES_SECTION_KEY,
     get_top_story_list,
     get_legacy_topic_ids,
     put_headlines_first_then_top_stories,
@@ -222,6 +226,64 @@ class TestMlSectionsExperiment:
         """Test that experiment flag logic matches expected behavior for ML sections"""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         assert is_subtopics_experiment(req) is expected
+
+
+class TestDailyBriefingExperiment:
+    """Tests covering is_daily_briefing_experiment and should_show_popular_today_with_headlines"""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            # briefing-with-popular branch enables daily briefing
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
+                True,
+            ),
+            # briefing-without-popular branch also enables daily briefing
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                True,
+            ),
+            # control branch does not enable daily briefing
+            (ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "control", False),
+            # other experiment does not enable daily briefing
+            ("other-experiment", "treatment", False),
+            # no experiment does not enable daily briefing
+            (None, None, False),
+        ],
+    )
+    def test_is_daily_briefing_experiment(self, name, branch, expected):
+        """Test that is_daily_briefing_experiment returns True for either treatment branch."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert is_daily_briefing_experiment(req) is expected
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            # briefing-with-popular shows Popular Today
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
+                True,
+            ),
+            # briefing-without-popular does NOT show Popular Today
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                False,
+            ),
+            # control branch does not show Popular Today with headlines
+            (ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "control", False),
+            # other experiment does not affect this
+            ("other-experiment", "treatment", False),
+        ],
+    )
+    def test_should_show_popular_today_with_headlines(self, name, branch, expected):
+        """Test that should_show_popular_today_with_headlines returns True only for briefing-with-popular."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert should_show_popular_today_with_headlines(req) is expected
 
 
 class TestFilterSectionsByExperiment:
@@ -880,13 +942,13 @@ class TestPutHeadlinesFirstThenTopStories:
         top_stories_section.receivedFeedRank = 0
 
         # Insert headlines section at rank 3
-        feed["headlines_section"] = Section(
+        feed[HEADLINES_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
             title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed["headlines_section"]
+        headlines_section = feed[HEADLINES_SECTION_KEY]
 
         put_headlines_first_then_top_stories(feed)
 
@@ -896,12 +958,12 @@ class TestPutHeadlinesFirstThenTopStories:
 
         # Get the other sections besides headlines & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
         # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
-        expected_order = ["headlines_section", "top_stories_section"] + remaining_sections
+        expected_order = [HEADLINES_SECTION_KEY, "top_stories_section"] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
@@ -911,17 +973,17 @@ class TestPutHeadlinesFirstThenTopStories:
         feed = generate_sections_feed(section_count=6, has_top_stories=False)
 
         # Insert headlines section at rank 3
-        feed["headlines_section"] = Section(
+        feed[HEADLINES_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
             title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed["headlines_section"]
+        headlines_section = feed[HEADLINES_SECTION_KEY]
 
         # Get the other sections besides headlines & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
@@ -931,7 +993,7 @@ class TestPutHeadlinesFirstThenTopStories:
         assert headlines_section.receivedFeedRank == 0
 
         # Expected: headlines first -> then rest in keys order without headlines & top
-        expected_order = ["headlines_section"] + remaining_sections
+        expected_order = [HEADLINES_SECTION_KEY] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
@@ -968,7 +1030,7 @@ class TestGetCorpusSections:
         sports.createSource = CreateSource.ML
 
         headlines = MagicMock()
-        headlines.externalId = "headlines_section"
+        headlines.externalId = HEADLINES_SECTION_KEY
         headlines.title = "Headlines"
         headlines.description = "Top Headlines today"
         headlines.heroTitle = None
@@ -1071,7 +1133,7 @@ class TestGetCorpusSections:
         assert headlines is not None
         assert headlines.title == "Headlines"
         assert headlines.subtitle == "Top Headlines today"
-        assert "headlines_section" not in sections
+        assert HEADLINES_SECTION_KEY not in sections
         # Remaining sections should still be mapped.
         assert set(sections.keys()) == {"sports"}
 

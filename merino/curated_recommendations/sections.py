@@ -37,6 +37,7 @@ from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ExperimentName,
+    DailyBriefingBranch,
     ProcessedInterests,
     Layout,
 )
@@ -60,7 +61,7 @@ LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
 TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
-HEADLINES_SECTION_KEY = "headlines_section"
+HEADLINES_SECTION_KEY = "headlines"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
 
@@ -298,9 +299,25 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
 
 
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the Daily Briefing Section experiment is enabled."""
+    """Return True if the Daily Briefing Section experiment is enabled (either branch)."""
+    experiment_name = ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
     return is_enrolled_in_experiment(
-        request, ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "treatment"
+        request, experiment_name, DailyBriefingBranch.BRIEFING_WITH_POPULAR.value
+    ) or is_enrolled_in_experiment(
+        request, experiment_name, DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value
+    )
+
+
+def should_show_popular_today_with_headlines(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if Popular Today should be shown alongside the headlines section.
+
+    Returns True when user is in the 'briefing-with-popular' branch of the Daily Briefing experiment.
+    Returns False when user is in the 'briefing-without-popular' branch.
+    """
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+        DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
     )
 
 
@@ -437,12 +454,12 @@ def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict
 
 
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
-    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'headlines_section'."""
-    # Exclude top_stories_section & headlines_section(if present) from layout cycling
+    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'headlines'."""
+    # Exclude top_stories_section & headlines (if present) from layout cycling
     ranked_sections = [
         section
         for sid, section in sections.items()
-        if sid not in ("headlines_section", "top_stories_section")
+        if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")
     ]
     for idx, section in enumerate(ranked_sections):
         section.layout = deepcopy(layout_cycle[idx % len(layout_cycle)])
@@ -506,7 +523,7 @@ def rank_sections(
         engagement_rescaler: Rescaler that can rescale ranking data based on experiment size and content distribution
         do_section_personalization_reranking: Whether to implement section based reranking for personalization
         if interest vector is avialable.
-        include_headlines_section: If headlines_section experiment is enabled, don't put top_stories_section on top
+        include_headlines_section: If headlines experiment is enabled, don't put top_stories_section on top
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
@@ -525,7 +542,7 @@ def rank_sections(
     # 1st priority: always keep top stories at the very top
     sections = put_top_stories_first(sections)
 
-    # If headlines_section experiment enabled, put headlines section on top, followed by top_stories
+    # If headlines experiment enabled, put headlines section on top, followed by top_stories
     if include_headlines_section:
         put_headlines_first_then_top_stories(sections)
 
@@ -737,10 +754,15 @@ async def get_sections(
         )
     }
 
-    # 12. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
+    # 12. If headlines experiment enabled, insert headlines on top
     if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
-        sections["headlines_section"] = headlines_corpus_section
-        sections["top_stories_section"].layout = layout_4_medium
+        sections[HEADLINES_SECTION_KEY] = headlines_corpus_section
+        if should_show_popular_today_with_headlines(request):
+            # briefing-with-popular: show both headlines and top_stories (shrink top_stories)
+            sections["top_stories_section"].layout = layout_4_medium
+        else:
+            # briefing-without-popular: remove top_stories entirely
+            del sections["top_stories_section"]
 
     # 13. Add remaining corpus sections
     sections.update(corpus_sections)

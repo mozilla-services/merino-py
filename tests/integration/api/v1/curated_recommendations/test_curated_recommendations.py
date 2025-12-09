@@ -1362,8 +1362,8 @@ class TestSections:
         assert "music" in sections
 
         # headlines section should not be in the final response even if present in the corpus-api response
-        # it should only be available when headlines_section experiment is enabled
-        assert "headlines_section" not in sections
+        # it should only be available when headlines experiment is enabled
+        assert "headlines" not in sections
 
         # assert IAB metadata is present in ML sections (there are 8 of them)
         expected_iab_metadata = {
