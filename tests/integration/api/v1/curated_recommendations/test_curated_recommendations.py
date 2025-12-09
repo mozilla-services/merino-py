@@ -59,6 +59,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
+    DailyBriefingBranch,
     Layout,
     Locale,
     CoarseOS,
@@ -1894,7 +1895,7 @@ class TestSections:
                 "locale": "en-US",
                 "feeds": ["sections"],
                 "experimentName": ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
-                "experimentBranch": "treatment",
+                "experimentBranch": DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
                 "region": "US",
             },
         )
@@ -1907,9 +1908,9 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # Assert headlines section is returned as "headlines_section"
-        assert "headlines_section" in sections
-        headlines_section = sections.get("headlines_section")
+        # Assert headlines section is returned as "headlines"
+        assert "headlines" in sections
+        headlines_section = sections.get("headlines")
         if headlines_section is not None:
             assert headlines_section["receivedFeedRank"] == 0
             assert headlines_section["title"] == "Headlines"
@@ -1924,24 +1925,68 @@ class TestSections:
             assert top_stories_section["layout"]["name"] == "4-medium-small-1-ad"
 
         remaining_sections = sorted(
-            (sid for sid in sections if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in sections if sid not in ("headlines", "top_stories_section")),
             key=lambda sid: sections[sid]["receivedFeedRank"],
         )
 
         # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
-        expected_order = ["headlines_section", "top_stories_section"] + remaining_sections
+        expected_order = ["headlines", "top_stories_section"] + remaining_sections
         for idx, sid in enumerate(expected_order):
             assert sections[sid]["receivedFeedRank"] == idx
 
         # Check the recs used in headlines section are removed from their original sections.
         headlines_story_ids = {
-            rec["corpusItemId"] for rec in sections["headlines_section"]["recommendations"]
+            rec["corpusItemId"] for rec in sections["headlines"]["recommendations"]
         }
 
         for sid, sec in sections.items():
-            if sid != "headlines_section":
+            if sid != "headlines":
                 for rec in sec["recommendations"]:
                     assert rec["corpusItemId"] not in headlines_story_ids
+
+    def test_daily_briefing_without_popular_excludes_top_stories(self, client: TestClient):
+        """Test that Popular Today is NOT returned when in briefing-without-popular branch.
+
+        - Headlines section should be ranked on the very top (rank == 0)
+        - Popular Today (top_stories_section) should NOT be present
+        - The remaining sections should be ranked right after headlines (rank == 1...N)
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                "experimentBranch": DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                "region": "US",
+            },
+        )
+
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Assert headlines section is returned
+        assert "headlines" in sections
+        headlines_section = sections.get("headlines")
+        if headlines_section is not None:
+            assert headlines_section["receivedFeedRank"] == 0
+            assert headlines_section["title"] == "Headlines"
+
+        # Assert that top_stories_section is NOT present
+        assert "top_stories_section" not in sections
+
+        # Verify remaining sections start at rank 1
+        remaining_sections = sorted(
+            (sid for sid in sections if sid != "headlines"),
+            key=lambda sid: sections[sid]["receivedFeedRank"],
+        )
+        for idx, sid in enumerate(remaining_sections, start=1):
+            assert sections[sid]["receivedFeedRank"] == idx
 
     def test_curated_recommendations_with_sections_feed_removes_blocked_topics(
         self, caplog, client: TestClient
