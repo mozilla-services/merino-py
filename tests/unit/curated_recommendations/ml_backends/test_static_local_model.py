@@ -88,7 +88,7 @@ def test_model_returns_default_limited_model(model_limited):
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
 
     # test a specific threshold value
-    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.002
+    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.005
 
 
 def test_local_and_server_model(model_limited):
