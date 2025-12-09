@@ -13,6 +13,10 @@ from httpx import HTTPStatusError, Request, Response
 from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.flightaware.backends import utils
 
+from merino.providers.suggest.flightaware.backends.errors import (
+    FlightawareError,
+    FlightawareErrorMessages,
+)
 from merino.providers.suggest.flightaware.backends.protocol import (
     AirlineDetails,
     AirportDetails,
@@ -114,23 +118,36 @@ async def test_fetch_flight_details_success(backend, metrics, make_summary):
 
 
 @pytest.mark.asyncio
-async def test_fetch_flight_details_http_error_logs_and_returns_none(backend, metrics, caplog):
-    """If API raises HTTPStatusError, log and return None."""
+async def test_fetch_flight_details_http_error_raises_flightaware_error_with_correct_message(
+    backend, metrics
+):
+    """If API raises HTTPStatusError, backend should raise FlightawareError with correct formatted message."""
     backend.cache.get_flight = AsyncMock(return_value=None)
 
     request = Request("GET", "http://test")
     response = Response(400, request=request)
+
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = HTTPStatusError(
         "Bad Request", request=request, response=response
     )
     mock_response.status_code = 400
+    mock_response.reason_phrase = "Bad Request"
     backend.http_client.get.return_value = mock_response
 
-    result = await backend.fetch_flight_details("UA123")
+    flight_num = "UA123"
+    expected_message = (
+        FlightawareErrorMessages.HTTP_UNEXPECTED_FLIGHT_DETAILS_RESPONSE.format_message(
+            flight_num=flight_num, status_code=400, reason="Bad Request"
+        )
+    )
 
-    assert result is None
-    assert "Flightware request error for flight details" in caplog.text
+    with pytest.raises(FlightawareError) as exc_info:
+        await backend.fetch_flight_details(flight_num)
+
+    err = exc_info.value
+    assert expected_message in str(err)
+    assert isinstance(err, FlightawareError)
 
     metrics.increment.assert_any_call("flightaware.request.summary.get.count")
     metrics.timeit.assert_called_once_with("flightaware.request.summary.get.latency")
@@ -395,3 +412,23 @@ async def test_fetch_flight_numbers_exception(backend, caplog):
     assert result_code == GetFlightNumbersResultCode.FAIL
     assert result is None
     assert "Failed to fetch flight numbers from GCS" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_fetch_flight_details_unexpected_error_is_wrapped_with_message(backend, metrics):
+    """Verify that unexpected exceptions are wrapped in FlightawareError with the correct message."""
+    backend.cache.get_flight = AsyncMock(side_effect=RuntimeError("boom"))
+
+    flight_num = "UA123"
+    expected_message = FlightawareErrorMessages.UNEXPECTED_BACKEND_ERROR.format_message(
+        flight_num=flight_num
+    )
+
+    with pytest.raises(FlightawareError) as exc_info:
+        await backend.fetch_flight_details(flight_num)
+
+    err = exc_info.value
+    assert expected_message in str(err)
+    assert isinstance(err, FlightawareError)
+
+    metrics.increment.assert_any_call("flightaware.request.summary.get.count")
