@@ -593,7 +593,9 @@ class TestCuratedRecommendationsRequestParameters:
         assert response.status_code == 400
 
     @pytest.mark.parametrize("utcOffset", [-1, 11.5, 25, "Z"])
-    def test_curated_recommendations_invalid_utc_offset_camel_case(self, utcOffset, client: TestClient):
+    def test_curated_recommendations_invalid_utc_offset_camel_case(
+        self, utcOffset, client: TestClient
+    ):
         """Test the curated recommendations supports camel case as well as the other case."""
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2110,7 +2112,7 @@ class TestSections:
                 "experimentName": "optin-new-tab-ml-sections",
                 "experimentBranch": "treatment",
                 "utc_offset": 17,
-                "coarse_os": "windows",
+                "coarse_os": "win",
                 "surface_id": "",
                 "locale": "en-US",
                 "region": "US",
@@ -2119,7 +2121,6 @@ class TestSections:
             },
         )
         data = response.json()
-
         interest_picker_response = data["interestPicker"]
         if enable_interest_picker:
             assert interest_picker_response is not None

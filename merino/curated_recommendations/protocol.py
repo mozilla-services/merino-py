@@ -267,15 +267,18 @@ class CuratedRecommendation(CorpusItem):
         """
         return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
 
+
 def camel_to_snake(name: str) -> str:
+    """Convert camelCase or PascalCase to snake_case."""
     out = []
     for c in name:
         if c.isupper():
-            out.append('_')
+            out.append("_")
             out.append(c.lower())
         else:
             out.append(c)
-    return ''.join(out).lstrip('_')
+    return "".join(out).lstrip("_")
+
 
 class CuratedRecommendationsRequest(BaseModel):
     """Body schema for requesting a list of curated recommendations"""
@@ -300,7 +303,6 @@ class CuratedRecommendationsRequest(BaseModel):
     experimentBranch: str | None = None
     enableInterestPicker: bool = False
     inferredInterests: InferredInterests | None = None
-
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):

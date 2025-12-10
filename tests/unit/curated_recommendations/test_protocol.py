@@ -3,7 +3,13 @@
 import pytest
 from pydantic import ValidationError
 
-from merino.curated_recommendations.protocol import Layout, ResponsiveLayout, Tile, TileSize
+from merino.curated_recommendations.protocol import (
+    Layout,
+    ResponsiveLayout,
+    Tile,
+    TileSize,
+    camel_to_snake,
+)
 
 
 @pytest.fixture
@@ -60,6 +66,18 @@ class TestTile:
         hasExcerpt = False if size == TileSize.SMALL else True
         with pytest.raises(ValidationError):
             valid_tile(0, size=size, hasAd=hasAd, hasExcerpt=hasExcerpt)
+
+
+class TestCuratedRecommendationRequest:
+    """Tests for CuratedRecommendation validations."""
+
+    def test_camel_to_snake(self):
+        """Test the camel_to_snake utility function."""
+        assert camel_to_snake("camelCase") == "camel_case"
+        assert camel_to_snake("PascalCase") == "pascal_case"
+        assert camel_to_snake("already_snake_case") == "already_snake_case"
+        assert camel_to_snake("mixedCASEExample") == "mixed_c_a_s_e_example"
+        assert camel_to_snake("utc_offset") == "utc_offset"
 
 
 class TestResponsiveLayout:

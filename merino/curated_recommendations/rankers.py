@@ -125,7 +125,7 @@ class Ranker:
         recs: list[CuratedRecommendation],
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
-        uctOffset: int | None = None,
+        utcOffset: int | None = None,
         region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Rank items according to some criteria."""
