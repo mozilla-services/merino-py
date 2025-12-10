@@ -23,10 +23,10 @@ class GcsMLRecs(MLRecsBackend):
         self.synced_blob.set_fetch_callback(self._fetch_callback)
 
     @staticmethod
-    def _generate_cache_keys(region: str | None, utc_offset: str | None) -> dict[str, str]:
+    def _generate_cache_keys(region: str | None, utcOffset: str | None) -> dict[str, str]:
         """Never return Nones; normalize to strings."""
         r = (region or "").strip().upper()
-        o = (utc_offset or "").strip()
+        o = (utcOffset or "").strip()
         return {
             "region_offset": f"{r}_{o}" if (r or o) else GLOBAL_KEY,
             "region": r,
@@ -46,10 +46,10 @@ class GcsMLRecs(MLRecsBackend):
     def get(
         self,
         region: str | None = None,
-        utc_offset: str | None = None,
+        utcOffset: str | None = None,
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
-        keys = self._generate_cache_keys(region, utc_offset)
+        keys = self._generate_cache_keys(region, utcOffset)
         # Probe in order of specificity
         ro = keys["region_offset"]
         if ro and ro in self._cache:

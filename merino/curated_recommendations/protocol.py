@@ -8,6 +8,7 @@ from datetime import datetime
 
 import numpy as np
 from pydantic import (
+    ConfigDict,
     Field,
     field_validator,
     model_validator,
@@ -266,14 +267,28 @@ class CuratedRecommendation(CorpusItem):
         """
         return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
 
+def camel_to_snake(name: str) -> str:
+    out = []
+    for c in name:
+        if c.isupper():
+            out.append('_')
+            out.append(c.lower())
+        else:
+            out.append(c)
+    return ''.join(out).lstrip('_')
 
 class CuratedRecommendationsRequest(BaseModel):
     """Body schema for requesting a list of curated recommendations"""
 
+    model_config = ConfigDict(
+        alias_generator=camel_to_snake,
+        populate_by_name=True,
+    )
+
     locale: Locale
     region: str | None = None
     coarseOs: CoarseOS | None = None
-    utc_offset: Annotated[int, Field(ge=0, le=24)] | None = None
+    utcOffset: Annotated[int, Field(ge=0, le=24)] | None = None
     count: int = 100
     topics: list[Topic | str] | None = None
     feeds: list[str] | None = None
@@ -285,6 +300,7 @@ class CuratedRecommendationsRequest(BaseModel):
     experimentBranch: str | None = None
     enableInterestPicker: bool = False
     inferredInterests: InferredInterests | None = None
+
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):

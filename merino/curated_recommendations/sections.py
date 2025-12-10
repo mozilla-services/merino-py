@@ -694,7 +694,7 @@ async def get_sections(
         region=region,
         rescaler=rescaler,
         personal_interests=personal_interests,
-        utc_offset=request.utc_offset,
+        utcOffset=request.utcOffset,
     )
     # 8. Split top stories from the globally ranked recommendations
     # Use 2-row layout as default for Popular Today

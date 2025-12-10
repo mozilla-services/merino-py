@@ -99,7 +99,7 @@ class MockMLRecommendationsBackend(MLRecsBackend):
         super().__init__()
 
     def get(
-        self, region: str | None = None, utc_offset: str | None = None
+        self, region: str | None = None, utcOffset: str | None = None
     ) -> ContextualArticleRankings | None:
         """Return sample ML recommendations"""
         VERY_HIGH_CTR = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
@@ -572,23 +572,32 @@ class TestCuratedRecommendationsRequestParameters:
         )
         assert response.status_code == 400
 
-    @pytest.mark.parametrize("utc_offset", [0, 12, 24])
-    def test_curated_recommendations_valid_utc_offset(self, utc_offset, client: TestClient):
+    @pytest.mark.parametrize("utcOffset", [0, 12, 24])
+    def test_curated_recommendations_valid_utc_offset(self, utcOffset, client: TestClient):
         """Test the curated recommendations endpoint accepts valid utc_offset values.
         This includes values that require rounding (e.g., 3.7 should be rounded to 4).
         """
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "uct_offset": utc_offset},
+            json={"locale": Locale.EN_US, "uct_offset": utcOffset},
         )
         assert response.status_code == 200
 
-    @pytest.mark.parametrize("utc_offset", [-1, 11.5, 25, "Z"])
-    def test_curated_recommendations_invalid_utc_offset(self, utc_offset, client: TestClient):
+    @pytest.mark.parametrize("utcOffset", [-1, 11.5, 25, "Z"])
+    def test_curated_recommendations_invalid_utc_offset(self, utcOffset, client: TestClient):
         """Test the curated recommendations endpoint rejects invalid utc_offset values."""
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "utc_offset": utc_offset},
+            json={"locale": Locale.EN_US, "utc_offset": utcOffset},
+        )
+        assert response.status_code == 400
+
+    @pytest.mark.parametrize("utcOffset", [-1, 11.5, 25, "Z"])
+    def test_curated_recommendations_invalid_utc_offset_camel_case(self, utcOffset, client: TestClient):
+        """Test the curated recommendations supports camel case as well as the other case."""
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": Locale.EN_US, "utc_offset": utcOffset},
         )
         assert response.status_code == 400
 

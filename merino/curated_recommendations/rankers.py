@@ -125,7 +125,7 @@ class Ranker:
         recs: list[CuratedRecommendation],
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
-        utc_offset: int | None = None,
+        uctOffset: int | None = None,
         region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Rank items according to some criteria."""
@@ -150,7 +150,7 @@ class ThompsonSamplingRanker(Ranker):
         recs: list[CuratedRecommendation],
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
-        utc_offset: int | None = None,
+        utcOffset: int | None = None,
         region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
@@ -305,11 +305,11 @@ class ContextualRanker(Ranker):
         recs: list[CuratedRecommendation],
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
-        utc_offset: int | None = None,
+        utcOffset: int | None = None,
         region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Pull out scores that were previously computed from the contextual ranker
-        data artifact. We need to look up the items in the ml backend using region and utc_offset.
+        data artifact. We need to look up the items in the ml backend using region and utcOffset.
 
         Personal interests are not supported yet. They will be supported in a future update.
         """
@@ -318,10 +318,10 @@ class ContextualRanker(Ranker):
         )
 
         if self.disable_time_zone_context:
-            utc_offset = None
+            utcOffset = None
 
         contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
-            region, str(utc_offset)
+            region, str(utcOffset)
         )
         for rec in recs:
             if contextual_scores:
