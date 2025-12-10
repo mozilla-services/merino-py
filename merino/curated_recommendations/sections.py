@@ -20,7 +20,6 @@ from merino.curated_recommendations.layouts import (
     layout_7_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
-from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
 from merino.curated_recommendations.ml_backends.protocol import MLRecsBackend
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
@@ -674,7 +673,7 @@ async def get_sections(
     if (
         is_contextual_ranking_experiment(request)
         and ml_backend is not None
-        and not isinstance(ml_backend, EmptyMLRecs)
+        and ml_backend.is_valid()
     ):
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,

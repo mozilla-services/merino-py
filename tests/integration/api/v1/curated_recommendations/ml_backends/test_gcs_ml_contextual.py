@@ -1,6 +1,7 @@
 """Tests loading engagement data from Google Cloud Storage."""
 
 import asyncio
+from datetime import datetime
 import json
 import logging
 import time
@@ -72,7 +73,23 @@ def blob(gcs_bucket):
         gcs_bucket,
         {
             "version": "1",
-            "epoch_id": "20251201-2108",
+            "epoch_id": datetime.now(time.timezone.utc).strftime("%Y%m%d-%H%M"),
+            "K": 15,
+            "topN": 500,
+            "model": {"name": "ContextualLinTS", "version": None},
+            "slates": {"global": {"granularity": "global", "shards": {"": [1, 2], "aa": [3, 4]}}},
+        },
+    )
+
+
+@pytest.fixture
+def old_blob(gcs_bucket):
+    """Create a blob with region data."""
+    return create_blob(
+        gcs_bucket,
+        {
+            "version": "1",
+            "epoch_id": "20250110-1537",
             "K": 15,
             "topN": 500,
             "model": {"name": "ContextualLinTS", "version": None},
@@ -118,11 +135,23 @@ async def test_gcs_engagement_fetches_data(gcs_storage_client, gcs_bucket, metri
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
 
+    assert gcs_engagement.is_valid()
+
     rankings = gcs_engagement.get()  # global rankings
     assert rankings.granularity == "global"
     assert rankings.get_score("") == 1
     assert rankings.get_score("aa") == 3
     assert rankings.get_score("??") is None
+
+
+@pytest.mark.asyncio
+async def test_gcs_engagement_old_data(gcs_storage_client, gcs_bucket, metrics_client, old_blob):
+    """Test that the backend fetches data from GCS and returns engagement data."""
+    gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
+    await wait_until_engagement_is_updated(gcs_engagement)
+    assert not gcs_engagement.is_valid()
+    rankings = gcs_engagement.get()  # global rankings
+    assert rankings is None
 
 
 @pytest.mark.asyncio

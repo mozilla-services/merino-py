@@ -28,3 +28,7 @@ class EmptyMLRecs(MLRecsBackend):
             ContextualArticleRankings: Ranked articles for a given region and utc offset with seeds
         """
         return None
+
+    def is_valid(self):
+        """Return whether the backend is valid and ready to serve recommendations. In this case, always false."""
+        return False

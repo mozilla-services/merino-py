@@ -212,6 +212,10 @@ class LocalModelBackend(Protocol):
 class MLRecsBackend(Protocol):
     """Protocol for ML Recommendations saved in GCS"""
 
+    def is_valid(self) -> bool:
+        """Return whether the backend is valid and ready to serve recommendations"""
+        ...
+
     def get(
         self,
         region: str | None = None,
