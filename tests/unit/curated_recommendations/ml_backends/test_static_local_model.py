@@ -91,6 +91,27 @@ def test_model_returns_default_limited_model(model_limited):
     assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.005
 
 
+def test_local_and_server_model(model_limited):
+    """Tests fake local model"""
+    surface_id = TEST_SURFACE
+    result = model_limited.get(
+        surface_id,
+        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
+    )
+    assert result.model_id == LOCAL_AND_SERVER_V1
+
+    features = result.model_data.interest_vector[Topic.SPORTS.value].features
+    assert "t_sports" not in features
+    assert features.get("s_sports", 0) == 1.0  # Should be dominant feature
+    assert features.get("s_sports_crawl", 0) == features.get("s_sports", 0)
+
+    features = result.model_data.interest_vector["tv"].features
+    assert features.get("t_arts", 0) + features.get("s_tv", 0) == 1.0
+    assert features.get("s_tv", 0) > 0.7  # Should be dominant feature
+    assert "s_arts_crawl" not in features
+
+
 def test_model_returns_legacy_limited_model(model_limited):
     """Tests fake local model"""
     surface_id = TEST_SURFACE

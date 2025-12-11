@@ -74,7 +74,7 @@ def test_validate_suggest_custom_location_params(
     caplog.set_level(logging.INFO)
 
     with pytest.raises(HTTPException) as exc_info:
-        validate_suggest_custom_location_params(city, region, country)
+        validate_suggest_custom_location_params(city, region, country, None)
     assert exc_info.value.status_code == 400
     assert (
         exc_info.value.detail
@@ -83,7 +83,7 @@ def test_validate_suggest_custom_location_params(
 
     records = filter_caplog(caplog.records, "merino.utils.api.query_params")
 
-    assert len(records) == 1
+    assert len(records) == 2
     assert (
         records[0].message
         == "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."

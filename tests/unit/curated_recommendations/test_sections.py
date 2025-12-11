@@ -22,9 +22,9 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
 )
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SchedulerHoldbackRescaler,
-    DefaultRescaler,
+    CrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -43,13 +43,13 @@ from merino.curated_recommendations.sections import (
     get_corpus_sections,
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
-    remove_story_recs,
     get_corpus_sections_for_legacy_topic,
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
     get_top_story_list,
     get_legacy_topic_ids,
     put_headlines_first_then_top_stories,
+    dedupe_recommendations_across_sections,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -235,10 +235,12 @@ class TestFilterSectionsByExperiment:
                 "US",
                 SchedulerHoldbackRescaler,
             ),
-            ("other", "treatment", "US", DefaultRescaler),
-            ("other", "treatment", "CA", None),
-            (None, None, "US", DefaultRescaler),
-            (None, None, "CA", None),
+            # Whenever we launch sections somewhere else we'll have crawled content, so best
+            # to set it as default.
+            ("other", "treatment", "US", CrawledContentRescaler),
+            ("other", "treatment", "CA", CrawledContentRescaler),
+            (None, None, "US", CrawledContentRescaler),
+            (None, None, "CA", CrawledContentRescaler),
         ],
     )
     def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
@@ -405,6 +407,22 @@ class TestMapCorpusSectionToSection:
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
 
+    def test_dedupes_duplicate_items(self):
+        """Duplicate corpus items are removed within a section while preserving order."""
+        dup_item = generate_corpus_item("dup", "sched_dup")
+        unique_item = generate_corpus_item("unique", "sched_unique")
+        cs = CorpusSection(
+            sectionItems=[dup_item, dup_item, unique_item],
+            title="With Duplicates",
+            externalId="dup-section",
+            createSource=CreateSource.ML,
+        )
+
+        sec = map_corpus_section_to_section(cs, 2)
+
+        assert [rec.corpusItemId for rec in sec.recommendations] == ["dup", "unique"]
+        assert [rec.receivedRank for rec in sec.recommendations] == [0, 1]
+
 
 class TestGetCorpusSectionsForLegacyTopics:
     """Tests for get_corpus_sections_for_legacy_topic."""
@@ -492,42 +510,49 @@ class TestGetLegacyTopicIds:
         assert get_legacy_topic_ids() == expected
 
 
-class TestRemoveStoryRecs:
-    """Tests for remove_story_recs."""
+class TestDedupeRecommendationsAcrossSections:
+    """Tests for dedupe_recommendations_across_sections."""
 
-    def test_remove_story_recs(self):
-        """Removes certain recommendations."""
-        # generate 5 recs
-        recommendations = generate_recommendations(5, ["a", "b", "c", "d", "e"])
-        # 3 recs in top_stories_section
-        story_ids_to_remove = {"a", "d", "e"}
+    @staticmethod
+    def build_section(item_ids: list[str], rank: int, title: str) -> Section:
+        """Lightweight helper to create a section with the given ids and rank."""
+        return Section(
+            receivedFeedRank=rank,
+            recommendations=generate_recommendations(item_ids=item_ids),
+            title=title,
+            layout=copy.deepcopy(layout_4_medium),
+        )
 
-        result = remove_story_recs(recommendations, story_ids_to_remove)
+    def test_dedupes_and_drops_underfilled_sections(self):
+        """Keeps items from higher-priority sections and drops sections that shrink too much."""
+        top_ids = ["a", "b", "c", "d", "e"]  # meets layout_4_medium.max_tile_count + 1
+        mid_ids = ["b", "c", "f", "g", "h", "i", "j"]  # drops two dupes, still >= threshold
+        low_ids = ["b", "k"]  # will be too small after dedupe
 
-        # the 3 story ids to remove should not be present, result should have 2 recs
-        assert len(result) == 2
-        assert result[0].corpusItemId == "b"
-        assert result[1].corpusItemId == "c"
+        sections = dedupe_recommendations_across_sections(
+            {
+                "top": self.build_section(top_ids, 0, "Top Stories"),
+                "mid": self.build_section(mid_ids, 1, "Mid"),
+                "low": self.build_section(low_ids, 2, "Low"),
+            }
+        )
 
-    def test_recs_unchanged_no_match_found(self):
-        """Return original list of recommendations if no corpus Ids match story_ids_to_remove."""
-        # generate 3 recs
-        recommendations = generate_recommendations(3, ["a", "b", "c"])
-        # rec ids to remove, not found in recs list
-        story_ids_to_remove = {"z", "xy"}
-        result = remove_story_recs(recommendations, story_ids_to_remove)
+        assert set(sections.keys()) == {"top", "mid"}
+        assert sections["top"].receivedFeedRank == 0
+        assert sections["mid"].receivedFeedRank == 1
 
-        assert result == recommendations
-
-    def test_return_empty_list_all_match(self):
-        """Return empty list if  all recommendations are top stories"""
-        # generate 3 recs
-        recommendations = generate_recommendations(3, ["a", "b", "c"])
-        # rec ids to remove, all 3 ids match original recommendations list
-        story_ids_to_remove = {"a", "b", "c"}
-        result = remove_story_recs(recommendations, story_ids_to_remove)
-
-        assert result == []
+        assert [rec.corpusItemId for rec in sections["top"].recommendations] == top_ids
+        # Duplicates of b/c removed; remaining must re-number ranks
+        assert [rec.corpusItemId for rec in sections["mid"].recommendations] == [
+            "f",
+            "g",
+            "h",
+            "i",
+            "j",
+        ]
+        assert [rec.receivedRank for rec in sections["mid"].recommendations] == list(
+            range(len(sections["mid"].recommendations))
+        )
 
 
 class TestGetTopStoryList:
@@ -645,7 +670,7 @@ class TestGetTopStoryList:
         """Should return exactly `top_count` items from start of list, not using
         rescaler because no items have fresh label
         """
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
         items = generate_recommendations(
             item_ids=["a", "b", "c", "d", "e"], topics=self.non_dupe_topics[:5]
         )
@@ -675,7 +700,7 @@ class TestGetTopStoryList:
         )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
         monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.1)
 
@@ -694,7 +719,7 @@ class TestGetTopStoryList:
         )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
         monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.9)
 
@@ -754,7 +779,7 @@ class TestSectionThompsonSampling:
 
     def test_limits_fresh_items_when_rescaler_cap_active(self, monkeypatch):
         """Only allow fresh items up to cap when enough non-fresh content exists."""
-        rescaler = DefaultRescaler(fresh_items_section_ranking_max_percentage=0.1)
+        rescaler = CrawledContentRescaler(fresh_items_section_ranking_max_percentage=0.1)
         recs = generate_recommendations(
             item_ids=["fresh1", "fresh2", "fresh3", "stale1", "stale2"],
             time_sensitive_count=0,

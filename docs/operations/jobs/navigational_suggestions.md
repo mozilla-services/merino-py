@@ -55,7 +55,7 @@ To see the navigational suggestions code that is run when the job is invoked, vi
 $ uv run probe-images mozilla.org wikipedia.org
 ```
 
-There is a Python script (`domain_tester.py`) which imports the `DomainMetadataExtractor`,  `Scraper` and `FaviconDownloader` and runs them locally, without saving the results to the cloud.
+There is a Python script (`domain_tester.py`) which imports the `DomainProcessor`, `WebScraper` and `AsyncFaviconDownloader` and runs them locally, without saving the results to the cloud.
 
 This is meant to troubleshoot domains locally and iterate over the functionality in a contained environment.
 

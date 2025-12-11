@@ -8,19 +8,19 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from merino.jobs.navigational_suggestions.domain_metadata_extractor import Scraper  # noqa
+from merino.jobs.navigational_suggestions.scrapers.web_scraper import WebScraper  # noqa
 
 
 @pytest.fixture
 def mock_scraper_context():
-    """Fixture that provides a mock Scraper context manager.
+    """Fixture that provides a mock WebScraper context manager.
 
     Returns a tuple containing:
-    1. The mock Scraper class to patch with
+    1. The mock WebScraper class to patch with
     2. The shared scraper instance (accessible for modifying behavior)
     """
     # Create shared instance that all mocks will reference
-    shared_scraper = AsyncMock(spec=Scraper)
+    shared_scraper = AsyncMock(spec=WebScraper)
     shared_scraper.open.return_value = "https://example.com"
     shared_scraper.scrape_title.return_value = "Example Website"
 
@@ -32,9 +32,9 @@ def mock_scraper_context():
         def __exit__(self, exc_type, exc_val, exc_tb):
             return False
 
-    # Create a mock class for Scraper that returns our context manager
-    class MockScraper:
+    # Create a mock class for WebScraper that returns our context manager
+    class MockWebScraper:
         def __new__(cls, *args, **kwargs):
             return MockScraperContextManager()
 
-    return MockScraper, shared_scraper
+    return MockWebScraper, shared_scraper
