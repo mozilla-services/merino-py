@@ -703,7 +703,7 @@ class TestGetTopStoryList:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
         rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.1)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", lambda: 0.1)
 
         result = get_top_story_list(
             items, top_count=3, extra_count=0, extra_source_depth=0, rescaler=rescaler
@@ -722,7 +722,7 @@ class TestGetTopStoryList:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
         rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.9)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", lambda: 0.9)
 
         result = get_top_story_list(
             items, top_count=2, extra_count=0, extra_source_depth=0, rescaler=rescaler
@@ -801,8 +801,10 @@ class TestSectionThompsonSampling:
             )
         }
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.5)
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.8)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.5
+        )
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", lambda: 0.8)
 
         top_n = 4
 
