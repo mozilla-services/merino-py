@@ -80,14 +80,6 @@ def init_engagement_backend() -> EngagementBackend:
 def init_prior_backend() -> PriorBackend:
     """Initialize the GCS Prior Backend, falling back to ConstantPrior if GCS Prior cannot be initialized."""
     try:
-        logger.info(
-            "HERE ML RECS GCS: project=%s bucket=%s blob=%s max_size=%s cron=%ss",
-            settings.ml_recommendations.gcs.gcp_project,
-            settings.ml_recommendations.gcs.bucket_name,
-            settings.ml_recommendations.gcs.blob_name,
-            settings.ml_recommendations.gcs.max_size,
-            settings.ml_recommendations.gcs.cron_interval_seconds,
-        )
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
                 destination_gcp_project=settings.curated_recommendations.gcs.gcp_project

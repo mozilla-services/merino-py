@@ -82,5 +82,5 @@ class GcsMLRecs(MLRecsBackend):
 
     @property
     def update_count(self) -> int:
-        """Return the number of times the prior data has been updated."""
+        """Return the number of times the ml data has been updated."""
         return self.synced_blob.update_count

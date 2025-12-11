@@ -16,6 +16,7 @@ from pydantic import (
     ValidationInfo,
     RootModel,
 )
+from pydantic.alias_generators import to_snake
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
@@ -268,23 +269,11 @@ class CuratedRecommendation(CorpusItem):
         return start + (int(hashlib.sha256(s.encode("utf-8")).hexdigest(), 16) % (stop - start))
 
 
-def camel_to_snake(name: str) -> str:
-    """Convert camelCase or PascalCase to snake_case."""
-    out = []
-    for c in name:
-        if c.isupper():
-            out.append("_")
-            out.append(c.lower())
-        else:
-            out.append(c)
-    return "".join(out).lstrip("_")
-
-
 class CuratedRecommendationsRequest(BaseModel):
     """Body schema for requesting a list of curated recommendations"""
 
     model_config = ConfigDict(
-        alias_generator=camel_to_snake,
+        alias_generator=to_snake,
         populate_by_name=True,
     )
 
