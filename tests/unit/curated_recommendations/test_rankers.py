@@ -354,7 +354,9 @@ class TestThompsonSampling:
         rescaler = CrawledContentRescaler()
 
         # Make beta sampling deterministic to avoid flakiness.
-        monkeypatch.setattr("merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(recs, rescaler)
 
@@ -391,7 +393,9 @@ class TestThompsonSampling:
         rescaler.fresh_items_top_stories_max_percentage = 0
 
         # Make beta sampling deterministic to avoid flakiness.
-        monkeypatch.setattr("merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
