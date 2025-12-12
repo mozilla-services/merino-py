@@ -3,12 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from merino.curated_recommendations.protocol import (
-    Layout,
-    ResponsiveLayout,
-    Tile,
-    TileSize,
-)
+from merino.curated_recommendations.protocol import Layout, ResponsiveLayout, Tile, TileSize
 
 
 @pytest.fixture
