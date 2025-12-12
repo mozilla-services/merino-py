@@ -2,6 +2,7 @@
 
 from enum import Enum
 from typing import Protocol, cast
+from pydantic import Field, model_validator
 
 import numpy as np
 from pydantic import BaseModel
@@ -163,6 +164,37 @@ class InferredLocalModel(BaseModel):
         return result
 
 
+class ContextualArticleRanked(BaseModel):
+    """Class that defines a ranked article" from GCS"""
+
+    corpus_item_id: str
+    score: float
+    rank: int
+
+
+class ContextualArticleRankings(BaseModel):
+    """Class that defines rankings for a given region and time"""
+
+    granularity: str
+    shards: dict[str, list[float]]
+    K: int = Field(0, description="Number of shards per article")
+
+    @model_validator(mode="after")
+    def set_k(self) -> "ContextualArticleRankings":
+        """Set K based on shards data. K represents the number of shards per article."""
+        self.K = len(self.shards.get("", [])) if "" in self.shards else 1
+        return self
+
+    def has_item_score(self, corpus_item_id: str) -> bool:
+        """Check if a given corpus item ID has a score entry"""
+        return corpus_item_id in self.shards
+
+    def get_score(self, corpus_item_id: str, shard_index=0) -> float | None:
+        """Get the scores for a given shard, returning default score if not found"""
+        items = self.shards.get(corpus_item_id, None)
+        return float(items[shard_index % len(items)]) if items is not None else None
+
+
 class LocalModelBackend(Protocol):
     """Protocol for local model that is applied to New Tab article interactions on the client."""
 
@@ -174,4 +206,20 @@ class LocalModelBackend(Protocol):
         experiment_branch: str | None = None,
     ) -> InferredLocalModel | None:
         """Fetch local model for the region"""
+        ...
+
+
+class MLRecsBackend(Protocol):
+    """Protocol for ML Recommendations saved in GCS"""
+
+    def is_valid(self) -> bool:
+        """Return whether the backend is valid and ready to serve recommendations"""
+        ...
+
+    def get(
+        self,
+        region: str | None = None,
+        utcOffset: str | None = None,
+    ) -> ContextualArticleRankings | None:
+        """Fetch the recommendations based on region and utc offset"""
         ...
