@@ -66,7 +66,7 @@ class GcsMLRecs(MLRecsBackend):
         r = keys["region"]
         if r and r in self._cache:
             return self._cache[r]
-        return self._cache.get(GLOBAL_KEY)
+        return self._cache.get(GLOBAL_KEY, None)
 
     def is_valid(self) -> bool:
         """Return whether the backend is valid and ready to serve recommendations."""
