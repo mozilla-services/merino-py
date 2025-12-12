@@ -149,6 +149,21 @@ class CuratedRecommendationsProvider:
                 scheduled_surface_backend=self.scheduled_surface_backend,
                 region=derive_region(request.locale, request.region),
             )
+        elif surface_id == SurfaceId.NEW_TAB_EN_US:
+            # NEW: Use sections for US/CA
+            from merino.curated_recommendations.legacy.provider import (
+                get_legacy_recommendations_from_sections,
+            )
+
+            general_feed = await get_legacy_recommendations_from_sections(
+                sections_backend=self.sections_backend,
+                engagement_backend=self.engagement_backend,
+                prior_backend=self.prior_backend,
+                surface_id=surface_id,
+                count=request.count,
+                region=derive_region(request.locale, request.region),
+                topics=cast(list[Topic], request.topics) if request.topics else None,
+            )
         else:
             general_feed = self.rank_recommendations(recommendations, request)
         response = CuratedRecommendationsResponse(

@@ -14,7 +14,6 @@ import freezegun
 import numpy as np
 import pytest
 from httpx import AsyncClient, Response, HTTPStatusError
-from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 from scipy.stats import linregress
 
@@ -64,7 +63,6 @@ from merino.curated_recommendations.protocol import (
     Locale,
     CoarseOS,
 )
-from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
@@ -367,6 +365,13 @@ def fetch_en_us(client: TestClient) -> Response:
     )
 
 
+def fetch_de_de(client: TestClient) -> Response:
+    """Make a curated recommendations request with de-DE locale (uses scheduled_surface backend)"""
+    return client.post(
+        "/api/v1/curated-recommendations", json={"locale": "de-DE", "topics": [Topic.FOOD]}
+    )
+
+
 async def fetch_en_us_with_need_to_know(client: AsyncClient) -> Response:
     """Make a curated recommendations request with en-US locale and feeds=["need_to_know"]"""
     return await client.post(
@@ -408,23 +413,6 @@ def assert_section_layouts_are_cycled(sections: dict):
 )
 def test_curated_recommendations(repeat, client: TestClient):
     """Test the curated recommendations endpoint response is as expected."""
-    # expected recommendation
-    expected_recommendation = CuratedRecommendation(
-        scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
-        corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
-        url=HttpUrl(
-            "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes?utm_source=firefox-newtab-en-us"
-        ),
-        title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
-        excerpt="Consider this pantry staple your secret ingredient for making more flavorful desserts.",
-        topic=Topic.FOOD,
-        publisher="Epicurious",
-        isTimeSensitive=False,
-        imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
-        receivedRank=0,
-        tileId=301455520317019,
-        features={"t_food": 1.0},
-    )
     # Mock the endpoint
     response = fetch_en_us(client)
     data = response.json()
@@ -444,19 +432,21 @@ def test_curated_recommendations(repeat, client: TestClient):
     assert all(item["imageUrl"] for item in corpus_items)
     assert all(item["tileId"] for item in corpus_items)
     assert all(item["features"] for item in corpus_items)
+    # Assert scheduledCorpusItemId equals corpusItemId (sections behavior)
+    assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
 
     # Assert that receivedRank equals 0, 1, 2, ...
     for i, item in enumerate(corpus_items):
         assert item["receivedRank"] == i
 
-    # The expected recommendation has 100% CTR, and is always present in the response.
-    # In 97% of cases it's the first recommendation, but due to the random nature of
-    # Thompson sampling this is not always the case.
-    assert any(
-        CuratedRecommendation(**item)
-        == expected_recommendation.model_copy(update={"receivedRank": i})
-        for i, item in enumerate(corpus_items)
-    )
+    # With topics=[FOOD] in request, verify at least one FOOD recommendation is present
+    # and that FOOD items are boosted (appear in top positions due to topic boost)
+    food_items = [item for item in corpus_items if item.get("topic") == Topic.FOOD]
+    assert len(food_items) > 0, "At least one FOOD recommendation should be present"
+
+    # Verify topic boosting: at least one FOOD item should be in top 10 positions
+    top_10_topics = [item.get("topic") for item in corpus_items[:10]]
+    assert Topic.FOOD in top_10_topics, "FOOD items should be boosted to top positions"
 
 
 def test_curated_recommendations_for_fx115_129(client: TestClient):
@@ -526,14 +516,20 @@ def test_curated_recommendations_utm_source(client: TestClient):
 
 
 def test_curated_recommendations_features(client: TestClient):
-    """Test the curated recommendations endpoint returns topic features"""
+    """Test the curated recommendations endpoint returns topic and section features"""
     response = fetch_en_us(client)
 
     recommendations = response.json()["data"]
     for rec in recommendations:
-        # Topic features have a t_ prefix
-        expected_features = {f"t_{rec['topic']}": 1.0}
-        assert rec["features"] == expected_features
+        # With sections backend, features include both topic (t_ prefix) and section (s_ prefix)
+        # Topic feature must be present
+        topic_feature = f"t_{rec['topic']}"
+        assert topic_feature in rec["features"]
+        assert rec["features"][topic_feature] == 1.0
+
+        # At least one section feature (s_ prefix) should be present
+        section_features = [k for k in rec["features"].keys() if k.startswith("s_")]
+        assert len(section_features) > 0, "At least one section feature should be present"
 
 
 class TestCuratedRecommendationsRequestParameters:
@@ -953,6 +949,7 @@ class TestCuratedRecommendationsRequestParameters:
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
+        Uses de-DE locale to test scheduled_surface backend behavior.
         """
         caplog.set_level(logging.WARN)
         scheduled_surface_http_client.post.return_value = Response(
@@ -961,7 +958,7 @@ class TestCuratedRecommendationsRequestParameters:
             request=fixture_request_data,
         )
         response = client.post(
-            "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
+            "/api/v1/curated-recommendations", json={"locale": "de-DE", "topics": topics}
         )
         data = response.json()
         corpus_items = data["data"]
@@ -1080,10 +1077,12 @@ class TestCorpusApiCaching:
         fixture_request_data,
         client: TestClient,
     ):
-        """Test that the cache expires, and subsequent requests return new data."""
+        """Test that the cache expires, and subsequent requests return new data.
+        Uses de-DE locale to test scheduled_surface backend caching.
+        """
         with freezegun.freeze_time(tick=True) as frozen_datetime:
             # First fetch to populate cache
-            initial_response = fetch_en_us(client)
+            initial_response = fetch_de_de(client)
             initial_data = initial_response.json()
 
             for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
@@ -1099,11 +1098,11 @@ class TestCorpusApiCaching:
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
             # When the cache is expired, the first fetch may return stale data.
-            fetch_en_us(client)
+            fetch_de_de(client)
             await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
 
             # Next fetch should get the new data
-            new_response = fetch_en_us(client)
+            new_response = fetch_de_de(client)
             assert scheduled_surface_http_client.post.call_count == 2
             new_data = new_response.json()
             assert new_data["recommendedAt"] > initial_data["recommendedAt"]
@@ -1135,13 +1134,15 @@ class TestCorpusApiCaching:
 
 
 class TestCuratedRecommendationsMetrics:
-    """Tests that the right metrics are recorded for curated-recommendations requests"""
+    """Tests that the right metrics are recorded for curated-recommendations requests.
+    Uses de-DE locale to test scheduled_surface backend metrics.
+    """
 
     def test_metrics_cache_miss(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are not yet cached."""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1156,11 +1157,11 @@ class TestCuratedRecommendationsMetrics:
     def test_metrics_cache_hit(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are cached."""
         # The first call populates the cache.
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # This test covers only the metrics emitted from the following cached call.
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1197,7 +1198,7 @@ class TestCuratedRecommendationsMetrics:
 
         scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -2572,7 +2573,9 @@ def test_curated_recommendations_enriched_with_icons(
     fixture_request_data,
     client: TestClient,
 ):
-    """Test the enrichment of a curated recommendation with an added icon-url."""
+    """Test the enrichment of a curated recommendation with an added icon-url.
+    Uses de-DE locale to test scheduled_surface backend icon enrichment.
+    """
     # Set up the manifest data first
     manifest_provider.manifest_data.domains = [
         Domain(
@@ -2595,7 +2598,7 @@ def test_curated_recommendations_enriched_with_icons(
                         "id": "scheduledSurfaceItemId-ABC",
                         "corpusItem": {
                             "id": "corpusItemId-XYZ",
-                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-en-us",
+                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-de-de",
                             "title": "Some MS Article",
                             "excerpt": "All about Microsoft something",
                             "topic": "tech",
@@ -2616,7 +2619,7 @@ def test_curated_recommendations_enriched_with_icons(
 
     response = client.post(
         "/api/v1/curated-recommendations",
-        json={"locale": "en-US"},
+        json={"locale": "de-DE"},
     )
     assert response.status_code == 200
 
@@ -2625,7 +2628,7 @@ def test_curated_recommendations_enriched_with_icons(
     assert len(items) == 1
 
     item = items[0]
-    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-en-us"
+    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-de-de"
 
     assert "iconUrl" in item
     assert (
