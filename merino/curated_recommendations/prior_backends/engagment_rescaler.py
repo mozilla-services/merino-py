@@ -9,7 +9,11 @@ from merino.curated_recommendations.protocol import CuratedRecommendation
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
 SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
-BLOCKED_FROM_MOST_POPULAR_SCALER = 3.0
+# Looking at query of typical subtopic impressions outside of top stories
+# https://sql.telemetry.mozilla.org/queries/112921/source#276948
+# We can see that for a typical section like NFL, impressions are about 4x lower than the overall average
+# compared to stories that can appear in top stories. Just to be safe we are scaling down 5x.
+BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 
 # Subtopic prior scaling is derived using data analysis on scores and existing priors
 # See more at:
