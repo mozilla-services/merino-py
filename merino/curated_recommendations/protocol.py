@@ -2,21 +2,22 @@
 
 import hashlib
 from enum import unique, Enum
+import math
 from typing import Annotated
 import logging
 from datetime import datetime
+import numbers
 
 import numpy as np
 from pydantic import (
-    ConfigDict,
     Field,
     field_validator,
     model_validator,
     BaseModel,
     ValidationInfo,
     RootModel,
+    ConfigDict,
 )
-from pydantic.alias_generators import to_snake
 
 from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusItem,
@@ -272,15 +273,20 @@ class CuratedRecommendation(CorpusItem):
 class CuratedRecommendationsRequest(BaseModel):
     """Body schema for requesting a list of curated recommendations"""
 
-    model_config = ConfigDict(
-        alias_generator=to_snake,
-        populate_by_name=True,
-    )
+    model_config = ConfigDict(populate_by_name=True)
 
     locale: Locale
     region: str | None = None
     coarseOs: CoarseOS | None = None
-    utcOffset: Annotated[int, Field(ge=0, le=24)] | None = None
+    utcOffset: Annotated[
+        int | None,
+        Field(
+            alias="utc_offset",
+            ge=0,
+            le=23,
+            description="UTC offset in hours. Must be between 0 and 23 inclusive.",
+        ),
+    ] = None
     count: int = 100
     topics: list[Topic | str] | None = None
     feeds: list[str] | None = None
@@ -292,6 +298,21 @@ class CuratedRecommendationsRequest(BaseModel):
     experimentBranch: str | None = None
     enableInterestPicker: bool = False
     inferredInterests: InferredInterests | None = None
+
+    @field_validator("utcOffset", mode="before")
+    def validate_utc_offset(cls, value):
+        """Validate the utcOffset param and coerce invalid values to None."""
+        if value is None:
+            return None
+        if isinstance(value, numbers.Real):
+            # reject NaN or infinities
+            if math.isfinite(value):
+                value_int = int(value)
+                if 0 <= value_int <= 23:
+                    return value_int
+            return None
+        # If string, consider invalid
+        return None
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):
