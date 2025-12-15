@@ -333,7 +333,7 @@ class TestFaviconProcessorIntegration:
             favicons, min_width=16, uploader=mock_uploader
         )
 
-        assert result == "https://cdn.example.com/favicon.svg"
+        assert result == ("https://cdn.example.com/favicon.svg", None)
         mock_downloader.download_multiple_favicons.assert_called_once()
         mock_uploader.upload_image.assert_called_once()
 
@@ -374,7 +374,7 @@ class TestFaviconProcessorIntegration:
             favicons, min_width=16, uploader=mock_uploader
         )
 
-        assert result == "https://cdn.example.com/favicon.png"
+        assert result == ("https://cdn.example.com/favicon.png", None)
         mock_downloader.download_multiple_favicons.assert_called_once()
         mock_uploader.upload_image.assert_called_once()
 
@@ -422,7 +422,7 @@ class TestFaviconProcessorIntegration:
         )
 
         # Should prioritize SVG over bitmap, even if bitmap is higher resolution
-        assert result == "https://cdn.example.com/favicon.svg"
+        assert result == ("https://cdn.example.com/favicon.svg", None)
         # Only one download call should be made (for SVG), since SVG succeeds
         assert mock_downloader.download_multiple_favicons.call_count == 1
         mock_uploader.upload_image.assert_called_once_with(
@@ -467,7 +467,7 @@ class TestFaviconProcessorIntegration:
             favicons, min_width=16, uploader=mock_uploader
         )
 
-        assert result == "https://cdn.example.com/favicon.png"
+        assert result == ("https://cdn.example.com/favicon.png", None)
         # Should be called twice due to batching
         assert mock_downloader.download_multiple_favicons.call_count == 2
         # Should upload the largest (best) favicon
@@ -503,7 +503,8 @@ class TestFaviconProcessorIntegration:
         )
 
         # Should return empty string when no favicon meets minimum width
-        assert result == ""
+        assert result[0] == ""
+        # Error reason is provided
 
     @pytest.mark.asyncio
     async def test_process_and_upload_url_processing_integration(self):
@@ -529,7 +530,8 @@ class TestFaviconProcessorIntegration:
         )
 
         # Should process relative URL but result in empty due to no valid images
-        assert result == ""
+        assert result[0] == ""
+        # Error reason is provided
 
     @pytest.mark.asyncio
     async def test_process_and_upload_upload_failure_fallback(self):
@@ -559,7 +561,7 @@ class TestFaviconProcessorIntegration:
         )
 
         # Should fallback to original URL when upload fails
-        assert result == "https://example.com/favicon.svg"
+        assert result == ("https://example.com/favicon.svg", None)
 
     @pytest.mark.asyncio
     async def test_process_and_upload_download_error_handling(self):
@@ -580,8 +582,8 @@ class TestFaviconProcessorIntegration:
             favicons, min_width=16, uploader=mock_uploader
         )
 
-        # Should return empty string when download fails
-        assert result == ""
+        # Should return empty string with error reason when download fails
+        assert result == ("", "no_suitable_favicon_found")
 
     @pytest.mark.asyncio
     async def test_process_and_upload_mixed_content_types(self):
@@ -617,7 +619,7 @@ class TestFaviconProcessorIntegration:
         )
 
         # Should successfully process the valid image and skip the invalid one
-        assert result == "https://cdn.example.com/favicon.png"
+        assert result == ("https://cdn.example.com/favicon.png", None)
 
     @pytest.mark.asyncio
     async def test_process_and_upload_empty_favicons_list(self):
@@ -633,7 +635,7 @@ class TestFaviconProcessorIntegration:
             [], min_width=16, uploader=mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", "no_valid_favicon_urls")
         mock_downloader.download_multiple_favicons.assert_not_called()
 
     @pytest.mark.asyncio
@@ -654,7 +656,7 @@ class TestFaviconProcessorIntegration:
             favicons, min_width=16, uploader=mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", "no_valid_favicon_urls")
         mock_downloader.download_multiple_favicons.assert_not_called()
 
 

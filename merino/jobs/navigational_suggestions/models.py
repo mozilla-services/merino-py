@@ -29,3 +29,11 @@ class ProcessingResult(BaseModel):
     success: bool
     metadata: Optional[DomainMetadata] = None
     error: Optional[str] = None
+    error_reason: Optional[str] = None
+
+
+class DomainError(BaseModel):
+    """Error information for a domain that failed processing."""
+
+    domain: str
+    error_reason: str

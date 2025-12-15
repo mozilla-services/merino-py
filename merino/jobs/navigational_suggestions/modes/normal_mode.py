@@ -8,6 +8,7 @@ from merino.jobs.navigational_suggestions.io.domain_metadata_diff import DomainD
 from merino.jobs.navigational_suggestions.io.domain_metadata_uploader import DomainMetadataUploader
 from merino.jobs.navigational_suggestions.processing.domain_processor import DomainProcessor
 from merino.jobs.navigational_suggestions.processing.manifest_builder import (
+    construct_errors_manifest,
     construct_partner_manifest,
     construct_top_picks,
 )
@@ -72,6 +73,10 @@ def run_normal_mode(
     # Step 5: Construct top picks manifest
     top_picks = construct_top_picks(domain_data, domain_metadata)
 
+    # Step 5b: Construct errors manifest for domains that failed
+    errors_manifest = construct_errors_manifest(domain_data, domain_metadata)
+    logger.info(f"Found {len(errors_manifest['errors'])} domains with favicon extraction errors")
+
     # Step 6: Construct partner manifest
     partner_manifest = construct_partner_manifest(PARTNER_FAVICONS, uploaded_partner_favicons)
     final_top_picks = {**top_picks, **partner_manifest}
@@ -104,6 +109,13 @@ def run_normal_mode(
     logger.info(
         "Top pick contents uploaded to GCS",
         extra={"public_url": top_pick_blob.public_url},
+    )
+
+    # Step 8b: Upload errors manifest to GCS
+    errors_blob = domain_metadata_uploader.upload_errors(json.dumps(errors_manifest, indent=4))
+    logger.info(
+        "Errors manifest uploaded to GCS",
+        extra={"public_url": errors_blob.public_url},
     )
 
     # Step 9: Write XCom file if requested (for Airflow integration)

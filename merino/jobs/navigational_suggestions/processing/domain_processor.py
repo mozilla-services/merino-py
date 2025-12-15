@@ -138,9 +138,15 @@ class DomainProcessor:
         domain: str = domain_data["domain"]
         suffix: str = domain_data["suffix"]
 
-        # Check if domain is blocked
+        # Check if domain is in our internal blocklist
         if is_domain_blocked(domain, suffix, self.blocked_domains):
-            return {"url": None, "title": None, "icon": None, "domain": None}
+            return {
+                "url": None,
+                "title": None,
+                "icon": None,
+                "domain": None,
+                "error_reason": "domain_in_blocklist",
+            }
 
         # Extract second level domain for processing
         e = tldextract.extract(domain)
@@ -151,6 +157,7 @@ class DomainProcessor:
             e.domain, domain, second_level_domain, uploader
         )
         if custom_result:
+            custom_result["error_reason"] = None
             return custom_result
 
         # STEP 2: Fall back to normal scraping process
@@ -211,6 +218,7 @@ class DomainProcessor:
         uploader: "DomainMetadataUploader",
     ) -> dict[str, Optional[str]]:
         """Scrape domain website for metadata and favicon."""
+        error_reason = None
         with WebScraper() as web_scraper:
             # Set the context variable for this task's context
             token = current_web_scraper.set(web_scraper)
@@ -227,34 +235,74 @@ class DomainProcessor:
 
                 # Check if we successfully opened a page on the correct domain
                 if full_url and domain in full_url:
-                    scraped_base_url = get_base_url(full_url)
+                    # Check for bot blocking before processing
+                    if web_scraper.is_bot_blocked():
+                        status_code = web_scraper.get_status_code()
+                        error_reason = f"blocked_by_bot_protection: HTTP {status_code or 'N/A'}"
+                        logger.debug(f"Bot protection detected for domain: {domain}")
+                    else:
+                        scraped_base_url = get_base_url(full_url)
 
-                    # Extract favicon
-                    favicon = await self._extract_and_process_favicon(
-                        web_scraper, scraped_base_url, favicon_min_width, uploader
-                    )
+                        # Extract favicon
+                        favicon, favicon_error = await self._extract_and_process_favicon(
+                            web_scraper, scraped_base_url, favicon_min_width, uploader
+                        )
 
-                    # Extract title
-                    title = self._extract_title(web_scraper, second_level_domain)
+                        # Extract title
+                        title = self._extract_title(web_scraper, second_level_domain)
 
-                    if favicon:
-                        logger.info(f"Found favicon for domain: {domain}")
+                        if favicon:
+                            logger.info(f"Found favicon for domain: {domain}")
 
-                    return {
-                        "url": scraped_base_url,
-                        "title": title,
-                        "icon": favicon,
-                        "domain": second_level_domain,
-                    }
+                        return {
+                            "url": scraped_base_url,
+                            "title": title,
+                            "icon": favicon,
+                            "domain": second_level_domain,
+                            "error_reason": favicon_error if not favicon else None,
+                        }
+                else:
+                    # Capture more granular error
+                    if full_url:
+                        error_reason = (
+                            f"domain_mismatch_after_redirect: expected {domain}, got {full_url}"
+                        )
+                    else:
+                        # Check HTTP status code if available
+                        status_code = web_scraper.get_status_code()
+                        if status_code:
+                            if status_code == 403:
+                                error_reason = "http_403_forbidden: access denied by server"
+                            elif status_code == 503:
+                                error_reason = (
+                                    "http_503_service_unavailable: server temporarily unavailable"
+                                )
+                            elif status_code >= 500:
+                                error_reason = f"http_{status_code}_server_error: server error"
+                            elif status_code >= 400:
+                                error_reason = f"http_{status_code}_client_error: client error"
+                            else:
+                                error_reason = f"http_{status_code}: unexpected status code"
+                        else:
+                            error_reason = "connection_failed: timeout or network error"
 
             except Exception as e:
                 logger.debug(f"Exception processing domain {domain}: {e}")
+                # Capture specific exception types for better debugging
+                exception_type = e.__class__.__name__
+                error_reason = f"scraping_exception_{exception_type}: {str(e)}"
             finally:
                 # Reset the context variable
                 current_web_scraper.reset(token)
 
         # Return empty result if scraping failed
-        return {"url": None, "title": None, "icon": None, "domain": None}
+        return {
+            "url": None,
+            "title": None,
+            "icon": None,
+            "domain": None,
+            "error_reason": error_reason,
+        }
 
     async def _extract_and_process_favicon(
         self,
@@ -262,8 +310,12 @@ class DomainProcessor:
         scraped_url: str,
         min_width: int,
         uploader: "DomainMetadataUploader",
-    ) -> str:
-        """Extract favicons from page and upload the best one."""
+    ) -> tuple[str, Optional[str]]:
+        """Extract favicons from page and upload the best one.
+
+        Returns:
+            Tuple of (favicon_url, error_reason) where error_reason is None if successful
+        """
         try:
             # Create components for favicon extraction
             favicon_scraper = FaviconScraper(self.favicon_downloader)
@@ -274,16 +326,19 @@ class DomainProcessor:
             page = web_scraper.get_page()
             favicons = await favicon_extractor.extract_favicons(page, scraped_url, max_icons=5)
 
+            if not favicons:
+                return "", "no_favicons_found"
+
             # Process and upload the best favicon
-            favicon_url = await favicon_processor.process_and_upload_best_favicon(
+            favicon_url, error = await favicon_processor.process_and_upload_best_favicon(
                 favicons, min_width, uploader
             )
 
-            return favicon_url
+            return favicon_url, error
 
         except Exception as e:
             logger.error(f"Error extracting and processing favicon: {e}")
-            return ""
+            return "", f"favicon_extraction_exception: {str(e)}"
 
     def _extract_title(self, web_scraper: WebScraper, fallback: str) -> str:
         """Extract and validate page title, or return capitalized fallback."""

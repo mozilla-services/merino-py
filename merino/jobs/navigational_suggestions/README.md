@@ -447,6 +447,54 @@ Processes partner favicon URLs:
 - Uploads to GCS
 - Records original URL and GCS URL mapping
 
+#### Errors Manifest
+Tracks domains where favicon extraction failed:
+```json
+{
+  "errors": [
+    {
+      "domain": "example.com",
+      "error_reason": "web_scraping_failed"
+    },
+    {
+      "domain": "another-site.com",
+      "error_reason": "below_minimum_width"
+    }
+  ]
+}
+```
+
+**Common error reasons:**
+
+*Blocklist & Access:*
+- `domain_in_blocklist`: Domain is in our internal blocklist (TOP_PICKS_BLOCKLIST)
+- `blocked_by_bot_protection: HTTP {code}`: Website blocked the scraper (Cloudflare, captcha, etc.)
+- `http_403_forbidden`: Access denied by server
+- `http_503_service_unavailable`: Server temporarily unavailable
+- `http_{code}_server_error`: Server returned 5xx error
+- `http_{code}_client_error`: Client error (4xx)
+
+*Connection & Scraping:*
+- `connection_failed`: Timeout or network error
+- `domain_mismatch_after_redirect`: Redirected to different domain
+- `scraping_exception_{type}`: Exception during scraping (with exception type)
+
+*Favicon Extraction:*
+- `no_favicons_found`: Website opened but no favicon tags found
+- `no_valid_favicon_urls`: Favicon tags found but URLs are invalid
+- `all_favicons_invalid_format`: All favicon images failed PIL validation (cannot decode)
+- `no_suitable_favicon_found: {n}/{total} images failed validation`: Some images failed validation, none suitable
+- `no_suitable_favicon_found`: Favicons downloaded but none met requirements
+- `below_minimum_width`: All favicons below minimum width requirement
+- `favicon_extraction_exception`: Exception during favicon extraction
+- `processing_exception`: General processing error
+
+**Storage:**
+- Timestamped file: `{timestamp}_errors.json`
+- Latest file: `errors_latest.json`
+- Uploaded to same GCS bucket as top_picks.json
+- Local mode saves to `./local_data/errors_latest.json`
+
 ### Phase 4: Diff & Upload
 
 **Diff:** `io/domain_metadata_diff.py`
@@ -538,6 +586,7 @@ docker compose -f dev/docker-compose.yaml down fake-gcs
 
 **Output:**
 - `./local_data/top_picks_latest.json`: Generated manifest
+- `./local_data/errors_latest.json`: Domains that failed favicon extraction
 - `./local_data/metrics.json`: Processing statistics
 - `./local_data/custom_favicon_usage.json`: Custom favicon hit rate
 

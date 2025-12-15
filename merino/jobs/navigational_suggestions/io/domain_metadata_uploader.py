@@ -48,6 +48,19 @@ class DomainMetadataUploader:
 
         return dated_blob
 
+    def upload_errors(self, errors: str) -> Blob:
+        """Upload the errors manifest to GCS.
+        One file is prepended by a timestamp for record keeping,
+        the other file is the latest entry.
+        """
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        timestamp_file_name = f"{timestamp}_errors.json"
+
+        self.uploader.upload_content(errors, "errors_latest.json", forced_upload=True)
+        dated_blob: Blob = self.uploader.upload_content(errors, timestamp_file_name)
+
+        return dated_blob
+
     def get_latest_file_for_diff(
         self,
     ) -> dict[str, list[dict[str, str]]] | None:
