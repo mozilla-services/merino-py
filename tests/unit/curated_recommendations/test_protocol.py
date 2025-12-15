@@ -3,7 +3,13 @@
 import pytest
 from pydantic import ValidationError
 
-from merino.curated_recommendations.protocol import Layout, ResponsiveLayout, Tile, TileSize
+from merino.curated_recommendations.protocol import (
+    Layout,
+    ResponsiveLayout,
+    Tile,
+    TileSize,
+    CuratedRecommendationsRequest,
+)
 
 
 @pytest.fixture
@@ -115,3 +121,63 @@ class TestLayout:
         """Test that Layout creation fails when responsiveLayouts do not include exactly one layout for column counts 1–4."""
         with pytest.raises(ValidationError):
             Layout(name="Invalid Layout", responsiveLayouts=invalid_responsive_layouts)
+
+
+class TestCuratedRecommendationsRequestsProtocol:
+    """Tests for CuratedRecommendationsRequestsProtocol validations."""
+
+    def test_validate_utc_offset(self):
+        """Test that utcOffset validation works correctly."""
+        # Valid utcOffset values
+        valid_offsets = [0, 5.3, 3, 12, 23]
+        for offset in valid_offsets:
+            request = CuratedRecommendationsRequest(
+                locale="en-US",
+                utcOffset=offset,
+            )
+            assert request.utcOffset == round(offset)
+            request = CuratedRecommendationsRequest(
+                locale="en-US",
+                utc_offset=offset,
+            )
+            assert request.utcOffset == round(offset)
+
+        # Invalid or None utcOffset values
+        invalid_offsets = [None, -10, 24, 100, "invalid", float("nan"), float("inf")]
+        for offset in invalid_offsets:
+            request = CuratedRecommendationsRequest(
+                locale="en-US",
+                utcOffset=offset,
+            )
+            assert request.utcOffset is None
+            request = CuratedRecommendationsRequest(
+                locale="en-US",
+                utc_offset=offset,
+            )
+            assert request.utcOffset is None
+
+    def test_topics_validation(self):
+        """Test that topics validation works correctly."""
+        # Valid topics
+        valid_topics = [
+            [],
+            ["government", "arts"],
+        ]
+        for topics in valid_topics:
+            request = CuratedRecommendationsRequest(
+                locale="en-US",
+                topics=topics,
+            )
+            assert request.topics == topics
+
+        invalid_topics_or_types = [
+            [None],
+            [123],
+            ["invalid_topic"],
+        ]
+        for topics in invalid_topics_or_types:
+            request = CuratedRecommendationsRequest(
+                locale="en-US",
+                topics=topics,
+            )
+            assert request.topics == []
