@@ -13,6 +13,10 @@ from merino.providers.suggest.flightaware.backends.cache import (
     FlightCache,
     CachedFlightData,
 )
+from merino.providers.suggest.flightaware.backends.errors import (
+    FlightawareError,
+    FlightawareErrorMessages,
+)
 from merino.providers.suggest.flightaware.backends.protocol import (
     FlightSummary,
     AirportDetails,
@@ -75,29 +79,43 @@ async def test_get_flight_returns_none_if_no_data():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("bad_data", [b"not-json", b"{bad}", b"[]"])
-async def test_get_flight_returns_none_on_invalid_json(bad_data):
-    """Return None if redis returns invalid JSON or wrong structure."""
+@pytest.mark.parametrize(
+    "bad_data",
+    [
+        b"not-json",  # JSONDecodeError
+        b"{bad}",  # JSONDecodeError
+        b"[]",  # pydantic.ValidationError due to wrong structure
+        b"\xff",  # UnicodeDecodeError when decoding UTF-8
+    ],
+)
+async def test_get_flight_raises_flightaware_error_on_parsing_errors(bad_data):
+    """Raise FlightawareError (CACHE_DATA_PARSING_ERROR) on bad cached bytes."""
     mock_redis = AsyncMock()
     mock_redis.get.return_value = bad_data
-
     cache = FlightCache(mock_redis)
-    result = await cache.get_flight("UA123")
 
-    assert result is None
+    with pytest.raises(FlightawareError) as exc:
+        await cache.get_flight("UA123")
+
+    expected_msg = FlightawareErrorMessages.CACHE_DATA_PARSING_ERROR.format_message(
+        flight_num="UA123"
+    )
+    assert expected_msg in str(exc.value)
 
 
 @pytest.mark.asyncio
-async def test_get_flight_logs_and_returns_none_on_cache_adapter_error(caplog):
-    """Return None and log warning if CacheAdapterError is raised."""
+async def test_get_flight_raises_flightaware_error_on_cache_adapter_error():
+    """Raise FlightawareError (CACHE_READ_ERROR) on CacheAdapterError."""
     mock_redis = AsyncMock()
     mock_redis.get.side_effect = CacheAdapterError("boom")
 
     cache = FlightCache(mock_redis)
-    result = await cache.get_flight("UA123")
 
-    assert result is None
-    assert "Error while getting flight summaries" in caplog.text
+    with pytest.raises(FlightawareError) as exc:
+        await cache.get_flight("UA123")
+
+    expected_msg = FlightawareErrorMessages.CACHE_READ_ERROR.format_message(flight_num="UA123")
+    assert expected_msg in str(exc.value)
 
 
 @pytest.mark.asyncio
@@ -126,12 +144,38 @@ async def test_set_flight_writes_correct_payload():
 
 
 @pytest.mark.asyncio
-async def test_set_flight_logs_warning_on_cache_adapter_error(caplog):
-    """If redis.set raises CacheAdapterError, warning should be logged."""
+async def test_set_flight_raises_flightaware_error_on_cache_adapter_error():
+    """Raise FlightawareError (CACHE_WRITE_ERROR) when Redis write fails."""
     mock_redis = AsyncMock()
     mock_redis.set.side_effect = CacheAdapterError("write failed")
 
     cache = FlightCache(mock_redis)
-    await cache.set_flight("UA123", [make_summary()], 600)
 
-    assert "Error while setting flight summaries" in caplog.text
+    with pytest.raises(FlightawareError) as exc:
+        await cache.set_flight("UA123", [make_summary()], 600)
+
+    expected_msg = FlightawareErrorMessages.CACHE_WRITE_ERROR.format_message(flight_num="UA123")
+    assert expected_msg in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_set_flight_raises_flightaware_error_on_serialization_failure(
+    monkeypatch,
+):
+    """Raise FlightawareError (CACHE_DATA_PARSING_ERROR) if json serialization fails."""
+    mock_redis = AsyncMock()
+    cache = FlightCache(mock_redis)
+
+    # force json.dumps to fail with a TypeError to simulate non-serializable payload
+    def boom(_):
+        raise TypeError("not serializable")
+
+    monkeypatch.setattr("merino.providers.suggest.flightaware.backends.cache.json.dumps", boom)
+
+    with pytest.raises(FlightawareError) as exc:
+        await cache.set_flight("UA123", [make_summary()], 600)
+
+    expected_msg = FlightawareErrorMessages.CACHE_DATA_PARSING_ERROR.format_message(
+        flight_num="UA123"
+    )
+    assert expected_msg in str(exc.value)

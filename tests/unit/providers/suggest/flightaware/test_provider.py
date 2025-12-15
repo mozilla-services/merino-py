@@ -14,6 +14,10 @@ from fastapi import HTTPException
 from pydantic import HttpUrl
 
 from merino.middleware.geolocation import Location
+from merino.providers.suggest.flightaware.backends.errors import (
+    FlightawareError,
+    FlightawareErrorMessages,
+)
 from merino.providers.suggest.flightaware.provider import Provider
 from merino.providers.suggest.base import BaseSuggestion, SuggestionRequest
 from merino.providers.suggest.custom_details import CustomDetails, FlightAwareDetails
@@ -227,18 +231,20 @@ async def test_query_fetches_and_builds_suggestion_from_cached_numbers(
 
 
 @pytest.mark.asyncio
-async def test_query_handles_backend_exception(provider, backend_mock, caplog, geolocation):
-    """Query should catch exceptions and return empty list if backend fails."""
+async def test_query_propagates_backend_errors_for_circuit_breaker(
+    provider, backend_mock, geolocation
+):
+    """Query should propagate backend exceptions so the circuit breaker can observe them."""
     provider.flight_numbers = {"UA3711"}
     request = SuggestionRequest(query="UA3711", geolocation=geolocation)
-    backend_mock.fetch_flight_details.side_effect = Exception("boom")
 
-    with caplog.at_level("WARNING"):
-        results = await provider.query(request)
+    backend_mock.fetch_flight_details.side_effect = FlightawareError(
+        FlightawareErrorMessages.UNEXPECTED_BACKEND_ERROR,
+        flight_num="UA3711",
+    )
 
-    assert results == []
-    assert "Exception occurred for FlightAware provider" in caplog.text
-    provider.metrics_client.increment.assert_any_call("providers.flightaware.query.exception")
+    with pytest.raises(FlightawareError):
+        await provider.query(request)
 
 
 def test_build_suggestion_creates_expected_object(provider):

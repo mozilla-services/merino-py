@@ -6,6 +6,7 @@ import time
 import aiodogstatsd
 from fastapi import HTTPException
 from pydantic import HttpUrl
+from merino.governance.circuitbreakers import FlightawareCircuitBreaker
 from merino.providers.suggest.base import (
     BaseProvider,
     BaseSuggestion,
@@ -116,27 +117,27 @@ class Provider(BaseProvider):
         query = " ".join(query.lower().split())
         return query
 
+    @FlightawareCircuitBreaker(name="flight")
     async def query(self, request: SuggestionRequest) -> list[BaseSuggestion]:
-        """Retrieve flight suggestions"""
-        try:
-            flight_number = get_flight_number_from_query_if_valid(request.query)
+        """Retrieve flight suggestions
 
-            if flight_number is None:
-                return []
-            if flight_number in self.flight_numbers:
-                self.metrics_client.increment(
-                    f"providers.{self.name}.flight_no_pattern.match_count"
-                )
+        All the `FlightawareError` errors, raised from the backend, are intentionally
+        unhandled in this function to drive the circuit breaker. Those exceptions will
+        eventually be propagated to the provider consumer (i.e. the API handler) and be
+        handled there.
+        """
+        flight_number = get_flight_number_from_query_if_valid(request.query)
 
-                result = await self.backend.fetch_flight_details(flight_number)
-
-                if result:
-                    return [self.build_suggestion(result)]
+        if flight_number is None:
             return []
-        except Exception as e:
-            logger.warning(f"Exception occurred for FlightAware provider: {e}")
-            self.metrics_client.increment(f"providers.{self.name}.query.exception")
-            return []
+        if flight_number in self.flight_numbers:
+            self.metrics_client.increment(f"providers.{self.name}.flight_no_pattern.match_count")
+
+            result = await self.backend.fetch_flight_details(flight_number)
+
+            if result:
+                return [self.build_suggestion(result)]
+        return []
 
     def build_suggestion(self, relevant_flights: list[FlightSummary]) -> BaseSuggestion:
         """Build a base suggestion with custom flight details"""

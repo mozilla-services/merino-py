@@ -18,6 +18,12 @@ LOCAL_ONLY_V1 = "local-only"
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1
 LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1
 
+
+# Ranking based on normalized time zone offset and country
+CONTEXTUAL_RANKING_TREATMENT_TZ = "contextual-ranking-content-tz"
+# Ranking based on country only
+CONTEXTUAL_RANKING_TREATMENT_COUNTRY = "contextual-ranking-content-country"
+
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 

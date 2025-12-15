@@ -80,6 +80,10 @@ api_key = "test"
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "http://test-polygon"
 
+[testing.providers.flightaware]
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
+
 [testing.flightaware]
 api_key = "test"
 

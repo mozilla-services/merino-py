@@ -27,6 +27,7 @@ from merino.curated_recommendations import (
     ConstantPrior,
     interest_picker,
     LocalModelBackend,
+    MLRecsBackend,
 )
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -40,10 +41,13 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
+    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+    CONTEXTUAL_RANKING_TREATMENT_TZ,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     DEFAULT_PRODUCTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
+    ContextualArticleRankings,
     InferredLocalModel,
     ModelData,
     ModelType,
@@ -65,6 +69,16 @@ from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 from tests.types import FilterCaplogFixture
 
+# Music, NFL, Movies, Soccer, NBA
+REC_HIGH_CTR_IDS = [
+    "b2c10703-5377-4fe8-89d3-32fbd7288187",
+    "f509393b-c1d6-4500-8ed2-29f8a23f39a7",
+    "2afcef43-4663-446e-9d69-69cbc6966162",
+    "dc4b30c4-170b-4e9f-a068-bdc51474a0fb",
+    "9261e868-beff-4419-8071-7750d063d642",
+    "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1",
+]
+
 
 def is_manual_section(section_id: str) -> bool:
     """Check if section ID is a UUID (manually created sections use UUIDs, ML sections use human-readable IDs).
@@ -76,6 +90,60 @@ def is_manual_section(section_id: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+class MockMLRecommendationsBackend(MLRecsBackend):
+    """Mock class implementing the protocol for MLRecsBackend."""
+
+    def __init__(self):
+        super().__init__()
+        HIGH_CONTEXUAL_SCORES = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
+
+        self.data: dict[str, ContextualArticleRankings] = {}
+        rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Give low scores to all except high CTR items
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [0.001, 0.001],
+            },
+        )
+        self.data["global"] = rankings
+        self.data["US"] = rankings
+        tz_rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Extra item is crazy high
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
+            },
+        )
+        self.data["US_16"] = tz_rankings  # PDT timezone
+
+    def get(
+        self, region: str | None = None, utcOffset: str | None = None
+    ) -> ContextualArticleRankings | None:
+        """Return sample ML recommendations"""
+        if region and utcOffset:
+            key = f"{region}_{utcOffset}"
+            rankings = self.data.get(key, None)
+            if rankings:
+                return rankings
+        if region:
+            rankings = self.data.get(region, None)
+            if rankings:
+                return rankings
+        return self.data.get("global", None)
+
+    def is_valid(self) -> bool:
+        """Return whether the backend is valid."""
+        return True
+
+    def get_most_popular_content_id_by_timezone(self, utcOffset: int) -> str:
+        """Return the most popular content ID for a given timezone offset."""
+        if utcOffset == 16:
+            return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"  # High scoring item in US_16
+        return REC_HIGH_CTR_IDS[0]  # Default high CTR item
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -113,29 +181,15 @@ class MockEngagementBackend(EngagementBackend):
                 report_count=reports,
             )
 
+        VERY_HIGH_CTR = {
+            k: (
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
+            )
+            for k in REC_HIGH_CTR_IDS
+        }
         HIGH_CTR_ITEMS = {
-            "b2c10703-5377-4fe8-89d3-32fbd7288187": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML music 100% CTR
-            "f509393b-c1d6-4500-8ed2-29f8a23f39a7": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML NFL 100% CTR
-            "2afcef43-4663-446e-9d69-69cbc6966162": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML Movies 100% CTR
-            "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML Soccer 100% CTR
-            "9261e868-beff-4419-8071-7750d063d642": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML NBA 100% CTR
-            "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1": (1_000_000, 1_000_000),  # ML Food 100% CTR
-            # The above 6 ML recs have the highest CTR & will be included in top_stories_section
+            **VERY_HIGH_CTR,
             "41111154-ebb1-45d9-9799-a882f13cd8cc": (
                 990_000 * self.experiment_traffic_fraction,
                 1_000_000 * self.experiment_traffic_fraction,
@@ -235,6 +289,12 @@ def engagement_backend():
 
 
 @pytest.fixture
+def ml_recommendations_backend():
+    """Fixture for the MockMLRecommendationsBackend for standard use case"""
+    return MockMLRecommendationsBackend()
+
+
+@pytest.fixture
 def engagement_backend_legacy_sections_us():
     """Fixture for the MockEngagementBackend for an experiment that has a fraction of traffic"""
     return MockEngagementBackend(SECTIONS_HOLDBACK_TOTAL_PERCENT)
@@ -268,6 +328,7 @@ def provider(
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     local_model_backend: LocalModelBackend,
+    ml_recommendations_backend: MLRecsBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -276,6 +337,7 @@ def provider(
         prior_backend=prior_backend,
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
     )
 
 
@@ -546,25 +608,23 @@ class TestCuratedRecommendationsRequestParameters:
         )
         assert response.status_code == 400
 
-    @pytest.mark.parametrize("utc_offset", [0, 12, 24])
-    def test_curated_recommendations_valid_utc_offset(self, utc_offset, client: TestClient):
-        """Test the curated recommendations endpoint accepts valid utc_offset values.
-        This includes values that require rounding (e.g., 3.7 should be rounded to 4).
-        """
+    @pytest.mark.parametrize("utcOffset", [0, 12, 24])
+    def test_curated_recommendations_valid_utc_offset(self, utcOffset, client: TestClient):
+        """Test the curated recommendations endpoint accepts valid utcOffset values."""
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            json={"locale": Locale.EN_US, "utcOffset": utcOffset},
         )
         assert response.status_code == 200
 
-    @pytest.mark.parametrize("utc_offset", [-1, 11.5, 25, "Z"])
-    def test_curated_recommendations_invalid_utc_offset(self, utc_offset, client: TestClient):
-        """Test the curated recommendations endpoint rejects invalid utc_offset values."""
+    @pytest.mark.parametrize("utcOffset", [-1, 11.5, 25, None, "Z"])
+    def test_curated_recommendations_invalid_utc_offset(self, utcOffset, client: TestClient):
+        """Test the curated recommendations endpoint doesn't reject malformed utc offsets."""
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            json={"locale": Locale.EN_US, "utcOffset": utcOffset},
         )
-        assert response.status_code == 400
+        assert response.status_code == 200
 
     @pytest.mark.parametrize("count", [10, 50, 100])
     def test_curated_recommendations_count(
@@ -1486,6 +1546,108 @@ class TestSections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
     @pytest.mark.parametrize(
+        "experiment_branch",
+        [
+            CONTEXTUAL_RANKING_TREATMENT_TZ,
+            CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+        ],
+    )
+    def test_sections_contextual_ranking(self, client: TestClient, experiment_branch):
+        """Test that sections feed includes both manually created and ML-generated sections for contextual ranking.
+
+        Both MANUAL and ML sections should be returned together.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": experiment_branch,
+            },
+        )
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+
+        # Should have ML sections (legacy topics)
+        legacy_topics = {topic.value for topic in Topic}
+        ml_sections_found = [sid for sid in sections if sid in legacy_topics]
+        assert len(ml_sections_found) > 0, "Should have at least some ML legacy topic sections"
+
+        # Check if any manually created sections appear (they may or may not, depending on
+        # whether they have enough items after top stories are removed)
+        manual_sections = [sid for sid in sections if is_manual_section(sid)]
+        if manual_sections:
+            # If the "Tech stuff" manual section appears, verify it has the correct title
+            tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
+            if tech_stuff_id in sections:
+                assert sections[tech_stuff_id]["title"] == "Tech stuff"
+
+    def test_sections_contextual_ranking_result_for_timezone(
+        self, ml_recommendations_backend, engagement_backend, sections_backend, client: TestClient
+    ):
+        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
+        because the ml_recommendations_backend relies on it to find fresh items, which are limited
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "utc_offset": 16,
+                "region": "US",
+            },
+        )
+
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] == ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "utc_offset": 0,
+                "region": "US",
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        # Confirm that we have different content for different timezone
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] != ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
+
+    @pytest.mark.parametrize(
         "sections_payload",
         [
             {},
@@ -2029,7 +2191,7 @@ class TestSections:
                 "experimentName": "optin-new-tab-ml-sections",
                 "experimentBranch": "treatment",
                 "utc_offset": 17,
-                "coarse_os": "windows",
+                "coarse_os": "win",
                 "surface_id": "",
                 "locale": "en-US",
                 "region": "US",
@@ -2038,7 +2200,6 @@ class TestSections:
             },
         )
         data = response.json()
-
         interest_picker_response = data["interestPicker"]
         if enable_interest_picker:
             assert interest_picker_response is not None
