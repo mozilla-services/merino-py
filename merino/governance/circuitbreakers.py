@@ -30,7 +30,10 @@ from circuitbreaker import CircuitBreaker
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
+from merino.providers.suggest.flightaware.backends.errors import FlightawareError
+from merino.providers.suggest.weather.backends.accuweather.errors import (
+    AccuweatherError,
+)
 from merino.providers.suggest.base import BaseSuggestion
 
 
@@ -47,5 +50,17 @@ class WeatherCircuitBreaker(CircuitBreaker):
     # This breaker only cares about these two errors, which would cover both Redis errors
     # and AccuWeather API errors.
     EXPECTED_EXCEPTION = (AccuweatherError, BackendError)
+    # When the breaker is open, use this to simply return an empty suggestion list to the caller.
+    FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+
+
+class FlightawareCircuitBreaker(CircuitBreaker):
+    """Circuit Breaker for the flightaware provider."""
+
+    FAILURE_THRESHOLD = settings.providers.flightaware.circuit_breaker_failure_threshold
+    RECOVERY_TIMEOUT = settings.providers.flightaware.circuit_breaker_recover_timeout_sec
+    # This breaker only cares about these two errors, which would cover both Redis errors
+    # and AeroAPI errors.
+    EXPECTED_EXCEPTION = (FlightawareError, BackendError)
     # When the breaker is open, use this to simply return an empty suggestion list to the caller.
     FALLBACK_FUNCTION = _suggest_provider_fallback_fn
