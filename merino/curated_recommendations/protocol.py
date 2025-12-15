@@ -109,6 +109,15 @@ class ExperimentName(str, Enum):
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
 
 
+class DailyBriefingBranch(str, Enum):
+    """Treatment branches for the Daily Briefing experiment."""
+
+    # Show Daily Briefing (headlines) section WITH Popular Today section
+    BRIEFING_WITH_POPULAR = "briefing-with-popular"
+    # Show Daily Briefing (headlines) section WITHOUT Popular Today section
+    BRIEFING_WITHOUT_POPULAR = "briefing-without-popular"
+
+
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
 # value of a Javascript number can be found using `Number.MAX_SAFE_INTEGER`. which is 2^53 - 1
 # because it uses a 64-bit IEEE 754 float.

@@ -39,7 +39,7 @@ async def test_fetch(sections_backend: SectionsBackend):
     assert len(music.sectionItems) >= 15
 
     # Lookup Headlines section
-    headlines = next(s for s in sections if s.externalId == "headlines_section")
+    headlines = next(s for s in sections if s.externalId == "headlines")
     assert headlines is not None
     assert headlines.title == "Headlines"
     assert headlines.description == "Top Headlines today"
