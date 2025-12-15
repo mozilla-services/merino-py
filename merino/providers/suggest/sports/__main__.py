@@ -144,15 +144,16 @@ if __name__ == "__main__":
         log.error(f"Could not get credentials {ex}")
         raise ex
 
-    team_names = asyncio.run(
-        main_loader(
-            log=log,
-            credentials=credentials,
-            settings=settings.providers.sports,
-            platform=platform,
-            event_map=event_map,
+    if False:
+        team_names = asyncio.run(
+            main_loader(
+                log=log,
+                credentials=credentials,
+                settings=settings.providers.sports,
+                platform=platform,
+                event_map=event_map,
+            )
         )
-    )
 
     # Perform a query and return the results.
     asyncio.run(

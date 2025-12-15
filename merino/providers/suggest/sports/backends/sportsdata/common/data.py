@@ -24,6 +24,9 @@ from merino.providers.suggest.sports import (
 from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+)
 
 
 class Team(BaseModel):
@@ -151,6 +154,34 @@ class Event(BaseModel):
         """Generate semi-unique key for this event"""
         return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
 
+    def serialize(self) -> dict[str, Any]:
+        """Condition Event for JSON serialization. This converts dates from datetime and
+        skips potentially blank items.
+        """
+        result = {
+            "sport": self.sport,
+            "id": self.id,
+            "home_score": self.home_score,
+            "away_score": self.away_score,
+            "status": str(self.status),
+            "date": self.date.isoformat(),
+            "expiry": self.expiry.isoformat(),
+        }
+        # This may be a quick_update, meaning these values could be blank
+        # Do not destructively overwrite them!
+        if self.terms:
+            result["terms"] = self.terms
+        if self.home_team:
+            result["home_team"] = self.home_team
+        if self.away_team:
+            result["away_team"] = self.away_team
+        if self.original_date:
+            # NOTE: original_date is stored as a string value.
+            result["original_date"] = self.original_date
+        if self.updated:
+            result["updated"] = self.updated.isoformat()
+        return result
+
 
 class Sport:
     """Root Model for Sport data"""
@@ -217,7 +248,7 @@ class Sport:
         """Update team information and store in common storage (usually called nightly)"""
 
     @abstractmethod
-    async def update_events(self, client: AsyncClient):
+    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Fetch the list of current and upcoming events for this sport"""
 
     def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[str, Team]:
@@ -239,7 +270,10 @@ class Sport:
         return self.teams
 
     def load_scores_from_source(
-        self, data: list[dict[str, Any]], event_timezone: ZoneInfo = ZoneInfo("UTC")
+        self,
+        data: list[dict[str, Any]],
+        event_timezone: ZoneInfo = ZoneInfo("UTC"),
+        allow_no_teams: bool = False,  # Allow no team information, useful for `quick updates`
     ) -> dict[int, "Event"]:
         """Scan the list of Event scores for any event within the 'current' window.
 
@@ -290,12 +324,21 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            home_team = self.teams[
-                event_description.get("HomeTeam") or event_description["HomeTeamKey"]
-            ]
-            away_team = self.teams[
-                event_description.get("AwayTeam") or event_description["AwayTeamKey"]
-            ]
+            home_team_minimal = {}
+            away_team_minimal = {}
+            terms = ""
+            if not allow_no_teams and not self.teams:
+                raise SportsDataError("No teams defined or found for Sports")
+            if self.teams:
+                home_team = self.teams[
+                    event_description.get("HomeTeam") or event_description["HomeTeamKey"]
+                ]
+                home_team_minimal = home_team.minimal()
+                away_team = self.teams[
+                    event_description.get("AwayTeam") or event_description["AwayTeamKey"]
+                ]
+                away_team_minimal = away_team.minimal()
+                terms = f"{home_team.terms} {away_team.terms}"
             try:
                 if "DateTimeUTC" in event_description:
                     date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
@@ -316,7 +359,6 @@ class Sport:
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
                 continue
-            terms = f"{home_team.terms} {away_team.terms}"
             updated = None
             # All "Updated" fields are always in ET.
             if event_description.get("Updated"):
@@ -329,8 +371,8 @@ class Sport:
                 terms=terms,
                 date=date,
                 original_date=event_description["DateTimeUTC"],
-                home_team=home_team.minimal(),
-                away_team=away_team.minimal(),
+                home_team=home_team_minimal,
+                away_team=away_team_minimal,
                 home_score=event_description.get("HomeTeamScore")
                 or event_description.get("HomeScore"),
                 away_score=event_description.get("AwayTeamScore")
