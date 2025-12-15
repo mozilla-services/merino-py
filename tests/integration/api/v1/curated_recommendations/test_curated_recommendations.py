@@ -97,17 +97,53 @@ class MockMLRecommendationsBackend(MLRecsBackend):
 
     def __init__(self):
         super().__init__()
+        HIGH_CONTEXUAL_SCORES = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
+
+        self.data: dict[str, ContextualArticleRankings] = {}
+        rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Give low scores to all except high CTR items
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [0.001, 0.001],
+            },
+        )
+        self.data["global"] = rankings
+        self.data["US"] = rankings
+        tz_rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Extra item is crazy high
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
+            },
+        )
+        self.data["US_16"] = tz_rankings  # PDT timezone
 
     def get(
         self, region: str | None = None, utcOffset: str | None = None
     ) -> ContextualArticleRankings | None:
         """Return sample ML recommendations"""
-        VERY_HIGH_CTR = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
+        if region and utcOffset:
+            key = f"{region}_{utcOffset}"
+            rankings = self.data.get(key, None)
+            if rankings:
+                return rankings
+        if region:
+            rankings = self.data.get(region, None)
+            if rankings:
+                return rankings
+        return self.data.get("global", None)
 
-        return ContextualArticleRankings(
-            granularity="",
-            shards={**VERY_HIGH_CTR, "41111154-ebb1-45d9-9799-a882f13cd8cc": [0.1, 0.1]},
-        )
+    def is_valid(self) -> bool:
+        """Return whether the backend is valid."""
+        return True
+
+    def get_most_popular_content_id_by_timezone(self, utcOffset: int) -> str:
+        """Return the most popular content ID for a given timezone offset."""
+        if utcOffset == 16:
+            return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"  # High scoring item in US_16
+        return REC_HIGH_CTR_IDS[0]  # Default high CTR item
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -1554,6 +1590,62 @@ class TestSections:
             tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
             if tech_stuff_id in sections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
+
+    def test_sections_contextual_ranking_result_for_timezone(
+        self, ml_recommendations_backend, engagement_backend, sections_backend, client: TestClient
+    ):
+        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
+        because the ml_recommendations_backend relies on it to find fresh items, which are limited
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "utc_offset": 16,
+                "region": "US",
+            },
+        )
+
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] == ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "utc_offset": 0,
+                "region": "US",
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        # Confirm that we have different content for different timezone
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] != ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
 
     @pytest.mark.parametrize(
         "sections_payload",
