@@ -150,7 +150,7 @@ class CuratedRecommendationsProvider:
                 region=derive_region(request.locale, request.region),
             )
         elif surface_id == SurfaceId.NEW_TAB_EN_US:
-            # NEW: Use sections for US/CA
+            # US non-sections: fetch from sections backend instead of scheduler
             from merino.curated_recommendations.legacy.sections_adapter import (
                 get_legacy_recommendations_from_sections,
             )

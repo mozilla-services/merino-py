@@ -10,7 +10,10 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import CuratedRecommendation
-from merino.curated_recommendations.sections import get_corpus_sections_for_legacy_topic
+from merino.curated_recommendations.sections import (
+    get_corpus_sections,
+    get_corpus_sections_for_legacy_topic,
+)
 from merino.curated_recommendations.rankers import (
     takedown_reported_recommendations,
     ThompsonSamplingRanker,
@@ -45,10 +48,8 @@ async def get_legacy_recommendations_from_sections(
     Returns:
         Ranked list of CuratedRecommendation objects
     """
-    from merino.curated_recommendations.sections import get_corpus_sections
-
-    # 1. Fetch sections from sections_backend
-    headlines_section, corpus_sections = await get_corpus_sections(
+    # Headlines section is excluded from legacy format (only used in sections feed)
+    _, corpus_sections = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=0,
@@ -93,13 +94,13 @@ async def get_legacy_recommendations_from_sections(
     if topics:
         recommendations = boost_preferred_topic(recommendations, topics)
 
-    # 9. Renumber receivedRank sequentially
-    renumber_recommendations(recommendations)
-
-    # 10. Limit to count items
+    # 9. Limit to count items
     recommendations = recommendations[:count]
 
-    # 11. If no recommendations after filtering, log error and return empty list
+    # 10. Renumber receivedRank sequentially (0, 1, 2, ... count-1)
+    renumber_recommendations(recommendations)
+
+    # 11. If no recommendations after filtering, log error
     if not recommendations:
         logger.error(
             f"No recommendations available after filtering for surface_id={surface_id}, region={region}"
