@@ -66,7 +66,7 @@ class TestExtractRecommendationsFromSections:
         assert corpus_ids == ["a", "b", "c", "d"]
 
     def test_sets_scheduled_corpus_item_id(self):
-        """scheduledCorpusItemId is set to corpusItemId for each recommendation."""
+        """ScheduledCorpusItemId is set to corpusItemId for each recommendation."""
         recs = generate_recommendations(item_ids=["x", "y"])
 
         sections = {

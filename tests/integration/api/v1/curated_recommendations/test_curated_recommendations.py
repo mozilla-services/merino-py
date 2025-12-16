@@ -94,7 +94,7 @@ def is_manual_section(section_id: str) -> bool:
 class MockMLRecommendationsBackend(MLRecsBackend):
     """Mock class implementing the protocol for MLRecsBackend."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         HIGH_CONTEXUAL_SCORES = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
 
@@ -153,7 +153,7 @@ class MockEngagementBackend(EngagementBackend):
     of what is estimated as the real-world traffic.
     """
 
-    def __init__(self, experiment_traffic_fraction=1.0):
+    def __init__(self, experiment_traffic_fraction: float = 1.0) -> None:
         # {corpusItemId: (reports, impressions)}
         self.metrics: dict[str, tuple[int, int]] = {}
         self.experiment_traffic_fraction = experiment_traffic_fraction

@@ -221,7 +221,7 @@ class TestRenumberRecommendations:
 
     def test_empty_list(self):
         """Test that renumber_recommendations works with an empty list."""
-        recs: list[CuratedRecommendation] = []
+        recs = []
         renumber_recommendations(recs)
         assert recs == []
 
@@ -960,7 +960,7 @@ class TestPutTopStoriesFirst:
         # Create 4 sections; default top_stories_section at rank 0
         sections = generate_sections_feed(section_count=4)
         # Get swap 'Top Stories' with the section on index 2.
-        keys: list[str] = list(sections.keys())
+        keys = list(sections.keys())
         keys[0], keys[2] = keys[2], keys[0]
         for idx, sid in enumerate(keys):
             sections[sid].receivedFeedRank = idx
