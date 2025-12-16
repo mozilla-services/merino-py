@@ -208,6 +208,20 @@ async def test_sports_search_event_hits(
                     {
                         "sport": "NFL",
                         "status": "InProgress",
+                        "label": "epsilon",
+                        "date": (now - datetime.timedelta(seconds=100)).isoformat(),
+                        "updated": (now - datetime.timedelta(seconds=1)).isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,  # Current game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "InProgress",
                         "label": "gamma",
                         "date": (now - datetime.timedelta(seconds=100)).isoformat(),
                         "updated": now.isoformat(),
@@ -508,3 +522,11 @@ async def test_build_index_exception(sport_data_store: SportsDataStore, es_clien
     await sport_data_store.build_indexes(clear=True)
     assert es_client.indices.delete.called
     assert es_client.indices.create.called
+
+
+@pytest.mark.asyncio
+async def test_shutdown(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test shutdown"""
+    # note: test cov does not believe that sport_data_store.client is set.
+    await sport_data_store.shutdown()
+    assert es_client.close.called

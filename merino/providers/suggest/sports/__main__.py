@@ -38,7 +38,9 @@ from merino.utils.http_client import create_http_client
 _ = FORCE_IMPORT
 
 
-RUN_LOADER = False
+# Set this value to `False` to prevent the loader functions
+# RUN_LOADER = False
+RUN_LOADER = True
 
 
 async def main_loader(

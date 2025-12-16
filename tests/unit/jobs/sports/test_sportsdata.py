@@ -99,7 +99,7 @@ async def test_updater(
     updater.sports = {"mock": mock_sport}
     updater.store.store_events = mocker.AsyncMock()  # type: ignore
 
-    await updater.update(include_teams=True, client=httpx_client)
+    await updater.update_data(include_teams=True, client=httpx_client)
     assert mock_sport.update_teams.called
     assert updater.store.store_events.called  # type: ignore
     # prune() is not called.
@@ -109,7 +109,7 @@ async def test_updater(
     updater.store.store_events.reset()  # type: ignore
     mock_sport = new_sport()
     updater.sports = {"mock": mock_sport}
-    await updater.nightly(client=httpx_client)
+    await updater.nightly()
     assert mock_sport.update_teams.called
     assert sport_data_store.client.delete_by_query.called  # type: ignore
     assert not sport_data_store.client.store_events.called  # type: ignore
@@ -118,7 +118,7 @@ async def test_updater(
     updater.store.store_events.reset()  # type: ignore
     mock_sport = new_sport()
     updater.sports = {"mock": mock_sport}
-    await updater.quick_update(client=httpx_client)
+    await updater.quick_update()
     assert not mock_sport.update_teams.called
     assert mock_sport.update_events.called
     assert mock_sport.update_events.call_args_list[0][1]["allow_no_teams"]

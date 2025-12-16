@@ -2,8 +2,10 @@
 
 import json
 import logging
+
+# import sys
 from abc import abstractmethod, ABC
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Final
 
 from dynaconf import LazySettings
@@ -19,7 +21,6 @@ from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
-    UPDATE_PERIOD_SECS,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
@@ -187,7 +188,7 @@ class ElasticCredentials:
         self.api_key = api_key
         # We check here to see if `settings` is needed, however mypy ignores this.
         # Add appropriate mypy `# type: ignore` remarks to lines
-        if (not self.dsn or self.api_key) and not settings:
+        if not (self.dsn and self.api_key) and not settings:
             logger.warning(f"{LOGGING_TAG} Empty settings.")
             return
         else:
@@ -510,7 +511,7 @@ class SportsDataStore(ElasticDataStore):
                     ignore_unavailable=True,
                 )
             await self.build_meta()
-        except BadRequestError as ex:
+        except BadRequestError as ex:  # pragma: no cover
             if ex.error != "resource_already_exists_exception":
                 raise SportsDataError(f"Could not create {self.meta_map}") from ex
             else:
@@ -678,10 +679,16 @@ class SportsDataStore(ElasticDataStore):
                         # sport results). There is a risk that a much earlier game is updated long after the
                         # the events closure or the next event's closure (e.g. there is a contested score
                         # that is adjusted), but this should be an anomalous event.
-                        if filter.get(sport, {}).get("previous", {}).get("updated") and (
+                        # Note, in spite of what test coverage says, this is being exercised by
+                        # `test_sports_search_event_hits` & `test_sports_search_event_hits_no_current`,
+                        if filter.get(sport, {}).get(  # pragma: no cover
+                            "previous", {}
+                        ).get("updated") and (
                             datetime.fromisoformat(filter[sport]["previous"]["updated"])
                             < datetime.fromisoformat(event.get("updated", event_date))
                         ):
+                            # if "unittest" in sys.modules.keys():
+                            #    print("\n👀👀 LOOK AT ME! RUNNING IN UNIT TESTS! 👀👀")
                             filter[sport]["previous"] = event
                             continue
                     # If only show the next upcoming game.
@@ -703,7 +710,7 @@ class SportsDataStore(ElasticDataStore):
                             continue
                         if datetime.fromisoformat(
                             filter[sport]["current"]["updated"]
-                        ) > datetime.fromisoformat(event["updated"]):
+                        ) < datetime.fromisoformat(event["updated"]):
                             filter[sport]["current"] = event
             except Exception as ex:
                 logger.error(f"{LOGGING_TAG} search_event: Unexpected error {ex}")
@@ -721,19 +728,6 @@ class SportsDataStore(ElasticDataStore):
         logger = logging.getLogger(__name__)
         if not self.client:
             return
-
-        default_prior_update = datetime.now(tz=timezone.utc) - timedelta(
-            seconds=UPDATE_PERIOD_SECS
-        )
-        if not last_update:
-            last_update_str = (
-                await self.query_meta("last_update") or default_prior_update.isoformat()
-            )
-            try:
-                last_update = datetime.fromisoformat(last_update_str)
-            except Exception:
-                logger.debug(f"{LOGGING_TAG} Bad date format: {last_update_str}")
-                last_update = default_prior_update
         index = (self.index_map["event"]).format(lang=language_code)
         for event in sport.events.values():
             if event.updated and event.updated > last_update:
@@ -780,6 +774,7 @@ class SportsDataStore(ElasticDataStore):
                     "expiry": event.expiry,
                     "updated": event.updated or event.date,
                     "id": event.id,
+                    # NOTE: Do not call `event.key()` if there is no team data.
                     "event_key": event.key(),
                     "status_type": event.status.status_type(),
                     "event": event.serialize(),

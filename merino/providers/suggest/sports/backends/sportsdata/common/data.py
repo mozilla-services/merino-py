@@ -146,10 +146,6 @@ class Event(BaseModel):
     # UTC of last event update
     updated: datetime | None
 
-    def suggest_title(self) -> str:
-        """Event suggest title"""
-        return f"{self.away_team["name"]} at {self.home_team["name"]}"
-
     def key(self) -> str:
         """Generate semi-unique key for this event"""
         return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
