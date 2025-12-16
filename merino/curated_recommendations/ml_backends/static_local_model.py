@@ -258,11 +258,13 @@ class SuperInferredModel(LocalModelBackend):
         information for decoding the interests sent, then calling again with model_id=None
         to return the current default model for future interest calculations.
         """
+        print("get called with", model_id, experiment_name, experiment_branch)
         if model_id is not None and model_id not in SUPPORTED_LIVE_MODELS:
             ## None here insures we don't parse the wrong model
             ## the local model defintion will be reset by the response
             ## there will be another call to "get" with model_id=None
             ## where the next model is built+returned
+            print("skipping unsupported model id", model_id)
             return None
         supported_model = self._build_local(LOCAL_AND_SERVER_V3_MODEL_ID, surface_id)
         if model_id is None:  ## this is the "get" call for building the model sent in the response
@@ -271,6 +273,7 @@ class SuperInferredModel(LocalModelBackend):
                 experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V3}"
             ):
+                print(supported_model);
                 # We don't have to check for branch here as control won't call inferred code
                 return supported_model
             else:
