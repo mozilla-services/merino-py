@@ -107,6 +107,7 @@ class ExperimentName(str, Enum):
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
+    INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
 
 
 class DailyBriefingBranch(str, Enum):
@@ -244,6 +245,7 @@ class CuratedRecommendation(CorpusItem):
         description="Maps feature names to weights, which the client "
         "can use to create a coarse interest vector.",
     )
+    server_score: float | None = None
 
     def in_experiment(self, experiment_name) -> bool:
         """Return if particular experiment name is associated with this experiment

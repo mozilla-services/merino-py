@@ -12,8 +12,8 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CTR_SECTION_MODEL_ID,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
-    LOCAL_AND_SERVER_V1,
-    LOCAL_ONLY_V1,
+    LOCAL_AND_SERVER_V1_MODEL_ID,
+    LOCAL_ONLY_V1_MODEL_ID,
     LOCAL_AND_SERVER_BRANCH_NAME,
     LOCAL_ONLY_BRANCH_NAME,
 )
@@ -99,7 +99,7 @@ def test_local_and_server_model(model_limited):
         experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
         experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
     )
-    assert result.model_id == LOCAL_AND_SERVER_V1
+    assert result.model_id == LOCAL_AND_SERVER_V1_MODEL_ID
 
     features = result.model_data.interest_vector[Topic.SPORTS.value].features
     assert "t_sports" not in features
@@ -172,16 +172,18 @@ def test_model_experiment_name_and_branch_name(model_limited):
     model = model_limited.get(
         "surface",
         experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
-        experiment_branch=LOCAL_AND_SERVER_V1,
+        experiment_branch=LOCAL_AND_SERVER_V1_MODEL_ID,
     )
-    assert model.model_matches_interests(LOCAL_AND_SERVER_V1)
+    assert model.model_matches_interests(LOCAL_AND_SERVER_V1_MODEL_ID)
     assert (
         len(model.model_data.private_features) > 0 and len(model.model_data.private_features) <= 6
     )
     model = model_limited.get(
-        "surface", experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME, experiment_branch=LOCAL_ONLY_V1
+        "surface",
+        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
+        experiment_branch=LOCAL_ONLY_V1_MODEL_ID,
     )
-    assert model.model_matches_interests(LOCAL_ONLY_V1)
+    assert model.model_matches_interests(LOCAL_ONLY_V1_MODEL_ID)
     assert len(model.model_data.private_features) == 0
 
 
@@ -537,22 +539,32 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
 @pytest.mark.parametrize(
     "experiment,branch,model_id,expect_private_nonempty",
     [
-        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
+        (
+            INFERRED_LOCAL_EXPERIMENT_NAME,
+            LOCAL_AND_SERVER_BRANCH_NAME,
+            LOCAL_AND_SERVER_V1_MODEL_ID,
+            True,
+        ),
         (
             INFERRED_LOCAL_EXPERIMENT_NAME_V2,
             LOCAL_AND_SERVER_BRANCH_NAME,
-            LOCAL_AND_SERVER_V1,
+            LOCAL_AND_SERVER_V1_MODEL_ID,
             True,
         ),
-        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
-        (INFERRED_LOCAL_EXPERIMENT_NAME_V2, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1_MODEL_ID, False),
+        (INFERRED_LOCAL_EXPERIMENT_NAME_V2, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1_MODEL_ID, False),
         (
             "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
             LOCAL_AND_SERVER_BRANCH_NAME,
-            LOCAL_AND_SERVER_V1,
+            LOCAL_AND_SERVER_V1_MODEL_ID,
             True,
         ),
-        ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
+        (
+            "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
+            LOCAL_ONLY_BRANCH_NAME,
+            LOCAL_ONLY_V1_MODEL_ID,
+            False,
+        ),
         (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, None, True),
         (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, None, False),
         (
@@ -610,7 +622,7 @@ def test_no_model_id_correct_experiment(model_limited):
         experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
     )
     assert isinstance(result, InferredLocalModel)
-    assert result.model_id == LOCAL_AND_SERVER_V1
+    assert result.model_id == LOCAL_AND_SERVER_V1_MODEL_ID
     ## LOCAL ONLY
     result = model_limited.get(
         TEST_SURFACE,
@@ -619,7 +631,7 @@ def test_no_model_id_correct_experiment(model_limited):
         experiment_branch=LOCAL_ONLY_BRANCH_NAME,
     )
     assert isinstance(result, InferredLocalModel)
-    assert result.model_id == LOCAL_ONLY_V1
+    assert result.model_id == LOCAL_ONLY_V1_MODEL_ID
 
 
 def test_get_with_non_experiment_model_id_ignores_experiment_returns_ctr(model_limited):
