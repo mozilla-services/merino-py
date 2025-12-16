@@ -10,7 +10,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusSection,
     CorpusItem,
     Topic,
-    ScheduledSurfaceProtocol,
     CreateSource,
 )
 from merino.curated_recommendations.layouts import (
@@ -139,30 +138,19 @@ def map_corpus_section_to_section(
     )
 
 
-async def _process_corpus_sections(
+def _process_corpus_sections(
     corpus_sections_dict: dict[str, CorpusSection],
     min_feed_rank: int,
-    surface_id: SurfaceId,
-    scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
 ) -> dict[str, Section]:
-    """Process corpus sections into Section objects with scheduled corpus item mapping.
+    """Process corpus sections into Section objects.
 
     Args:
         corpus_sections_dict: Dict mapping section IDs to CorpusSection objects
         min_feed_rank: Starting rank offset for assigning receivedFeedRank
-        scheduled_surface_backend: Backend interface to fetch scheduled corpus items
-        surface_id: Surface ID for fetching scheduled corpus items
 
     Returns:
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank
     """
-    sid_map: dict[str, str | None] = {}
-    if scheduled_surface_backend is not None:
-        legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
-        for item in legacy_corpus:
-            if item.scheduledCorpusItemId is not None:
-                sid_map[item.corpusItemId] = item.scheduledCorpusItemId
-
     sections: dict[str, Section] = {}
     legacy_sections = get_legacy_topic_ids()
 
@@ -172,11 +160,6 @@ async def _process_corpus_sections(
             cs, rank, is_legacy_section=section_id in legacy_sections
         )
 
-    for section in sections.values():
-        for r in section.recommendations:
-            if r.corpusItemId in sid_map:
-                r.update_scheduled_corpus_item_id(sid_map[r.corpusItemId])
-
     return sections
 
 
@@ -185,7 +168,6 @@ async def get_corpus_sections(
     surface_id: SurfaceId,
     min_feed_rank: int,
     include_subtopics: bool = False,
-    scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
 ) -> tuple[Section | None, dict[str, Section]]:
     """Fetch curated sections.
 
@@ -194,7 +176,6 @@ async def get_corpus_sections(
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
         include_subtopics: Whether to include subtopic sections.
-        scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
 
     Returns:
         A tuple of headlines section (if present) & a mapping from section IDs to Section objects, each with a unique receivedFeedRank.
@@ -223,13 +204,12 @@ async def get_corpus_sections(
         include_subtopics,
     )
 
-    # Process the sections using the shared logic, passing the dict directly
-    corpus_sections = await _process_corpus_sections(
+    # Process the sections using the shared logic
+    corpus_sections = _process_corpus_sections(
         filtered_corpus_sections,
         min_feed_rank,
-        surface_id,
-        scheduled_surface_backend,
     )
+
     return headlines_corpus_section, corpus_sections
 
 
@@ -620,7 +600,6 @@ async def get_sections(
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
     ml_backend: MLRecsBackend,
-    scheduled_surface_backend: ScheduledSurfaceProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     personal_interests: ProcessedInterests | None = None,
@@ -649,7 +628,6 @@ async def get_sections(
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=include_subtopics,
-        scheduled_surface_backend=scheduled_surface_backend,
     )
 
     # Determine if we should include headlines section based on daily briefing experiment

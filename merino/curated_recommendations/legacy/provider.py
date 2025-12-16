@@ -7,6 +7,7 @@ from merino.curated_recommendations.provider import CuratedRecommendationsProvid
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
+    Locale,
 )
 from merino.curated_recommendations.legacy.protocol import (
     CuratedRecommendationLegacyFx115Fx129,
@@ -16,6 +17,16 @@ from merino.curated_recommendations.legacy.protocol import (
     CuratedRecommendationsLegacyFx114Request,
     CuratedRecommendationsLegacyFx114Response,
 )
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+from merino.curated_recommendations.legacy.sections_adapter import (
+    get_legacy_recommendations_from_sections,
+)
+from merino.curated_recommendations.utils import (
+    get_recommendation_surface_id,
+    derive_region,
+)
+
+DEFAULT_RECOMMENDATION_COUNT = 30
 
 
 class LegacyCuratedRecommendationsProvider:
@@ -73,31 +84,48 @@ class LegacyCuratedRecommendationsProvider:
             for item in base_recommendations
         ]
 
+    @staticmethod
+    async def _get_base_recommendations(
+        locale: Locale,
+        region: str | None,
+        count: int | None,
+        curated_corpus_provider: CuratedRecommendationsProvider,
+    ) -> list[CuratedRecommendation]:
+        """Fetch base recommendations from sections backend (US/CA) or scheduler (other)."""
+        surface_id = get_recommendation_surface_id(locale, region)
+
+        if surface_id == SurfaceId.NEW_TAB_EN_US:
+            # US/CA: fetch from sections backend instead of scheduler
+            return await get_legacy_recommendations_from_sections(
+                sections_backend=curated_corpus_provider.sections_backend,
+                engagement_backend=curated_corpus_provider.engagement_backend,
+                prior_backend=curated_corpus_provider.prior_backend,
+                surface_id=surface_id,
+                count=count or DEFAULT_RECOMMENDATION_COUNT,
+                region=derive_region(locale, region),
+            )
+
+        # Other locales: use scheduler via curated recommendations provider
+        request = CuratedRecommendationsRequest(locale=locale, region=region, count=count)
+        return (await curated_corpus_provider.fetch(request)).data
+
     async def fetch_recommendations_for_legacy_fx_115_129(
         self,
         request: CuratedRecommendationsLegacyFx115Fx129Request,
         curated_corpus_provider: CuratedRecommendationsProvider,
     ) -> CuratedRecommendationsLegacyFx115Fx129Response:
         """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
-        # build a CuratedRecommendationsRequest object for the `fetch` method
-        # of curated recommendations provider from the request query params
-        curated_rec_req_from_legacy_req = CuratedRecommendationsRequest(
-            locale=request.locale, region=request.region, count=request.count
+        base_recommendations = await self._get_base_recommendations(
+            locale=request.locale,
+            region=request.region,
+            count=request.count,
+            curated_corpus_provider=curated_corpus_provider,
         )
-
-        # get base recs from the curated recommendations provider
-        base_recommendations = (
-            await curated_corpus_provider.fetch(curated_rec_req_from_legacy_req)
-        ).data
-
-        # map base recommendations to fx 115-129 recommendations
         legacy_recommendations = (
             self.map_curated_recommendations_to_legacy_recommendations_fx_115_129(
                 base_recommendations
             )
         )
-
-        # build the endpoint response
         return CuratedRecommendationsLegacyFx115Fx129Response(data=legacy_recommendations)
 
     async def fetch_recommendations_for_legacy_fx_114(
@@ -105,24 +133,16 @@ class LegacyCuratedRecommendationsProvider:
         request: CuratedRecommendationsLegacyFx114Request,
         curated_corpus_provider: CuratedRecommendationsProvider,
     ) -> CuratedRecommendationsLegacyFx114Response:
-        """Provide curated recommendations for /curated-recommendations/legacy-115-129 endpoint."""
-        # build a CuratedRecommendationsRequest object for the `fetch` method
-        # of curated recommendations provider from the request query params
-        curated_rec_req_from_legacy_req = CuratedRecommendationsRequest(
-            locale=request.locale_lang, region=request.region, count=request.count
+        """Provide curated recommendations for /curated-recommendations/legacy-114 endpoint."""
+        base_recommendations = await self._get_base_recommendations(
+            locale=request.locale_lang,
+            region=request.region,
+            count=request.count,
+            curated_corpus_provider=curated_corpus_provider,
         )
-
-        # get base recs from the curated recommendations provider
-        base_recommendations = (
-            await curated_corpus_provider.fetch(curated_rec_req_from_legacy_req)
-        ).data
-
-        # map base recommendations to fx 114 recommendations
-        legacy_global_recommendations = (
-            self.map_curated_recommendations_to_legacy_recommendations_fx_114(base_recommendations)
+        legacy_recommendations = self.map_curated_recommendations_to_legacy_recommendations_fx_114(
+            base_recommendations
         )
-
-        # build the endpoint response
         return CuratedRecommendationsLegacyFx114Response(
-            recommendations=legacy_global_recommendations,
+            recommendations=legacy_recommendations,
         )
