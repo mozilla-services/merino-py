@@ -116,7 +116,7 @@ async def test_updater(
 
     sport_data_store.client.reset()  # type: ignore
     updater.store.store_events.reset()  # type: ignore
-    mock_sport = new_sport()  # type: ignore
+    mock_sport = new_sport()
     updater.sports = {"mock": mock_sport}
     await updater.quick_update(client=httpx_client)
     assert not mock_sport.update_teams.called

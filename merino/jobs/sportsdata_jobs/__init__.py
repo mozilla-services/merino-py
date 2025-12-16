@@ -32,7 +32,7 @@ from typing import cast
 from aiodogstatsd import Client
 
 from merino.configs import settings
-from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -181,11 +181,17 @@ class SportDataUpdater:
         logger.debug(f"{LOGGING_TAG} starting database")
         start = time()
         await self.store.startup()
+        default_prior_update = datetime.now(tz=timezone.utc) - timedelta(
+            seconds=UPDATE_PERIOD_SECS
+        )
         try:
-            last_update = datetime.fromisoformat(await self.store.query_meta("last_update"))
+            last_update_str = (
+                await self.store.query_meta("last_update") or default_prior_update.isoformat()
+            )
+            last_update = datetime.fromisoformat(last_update_str)
         except Exception as ex:
             logger.error(f"{LOGGING_TAG} quick_update date error {ex}")
-            last_update = datetime.now(tz=timezone.utc) - timedelta(minutes=5)
+            last_update = datetime.now(tz=timezone.utc) - timedelta(seconds=UPDATE_PERIOD_SECS)
         client = create_http_client(
             connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
         )

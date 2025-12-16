@@ -38,6 +38,9 @@ from merino.utils.http_client import create_http_client
 _ = FORCE_IMPORT
 
 
+RUN_LOADER = False
+
+
 async def main_loader(
     log: Logger,
     settings: LazySettings,
@@ -144,7 +147,7 @@ if __name__ == "__main__":
         log.error(f"Could not get credentials {ex}")
         raise ex
 
-    if False:
+    if RUN_LOADER:
         team_names = asyncio.run(
             main_loader(
                 log=log,

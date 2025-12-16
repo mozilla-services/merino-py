@@ -19,6 +19,7 @@ from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
+    UPDATE_PERIOD_SECS,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
@@ -184,6 +185,8 @@ class ElasticCredentials:
         logger = logging.getLogger(__name__)
         self.dsn = dsn
         self.api_key = api_key
+        # We check here to see if `settings` is needed, however mypy ignores this.
+        # Add appropriate mypy `# type: ignore` remarks to lines
         if (not self.dsn or self.api_key) and not settings:
             logger.warning(f"{LOGGING_TAG} Empty settings.")
             return
@@ -191,17 +194,17 @@ class ElasticCredentials:
             # Try to get the data from the settings
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or "None"}"
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or "None"}"  # type: ignore
                 )
-                self.dsn = settings.providers.sports.es.dsn
+                self.dsn = settings.providers.sports.es.dsn  # type: ignore
             except AttributeError:
                 # fail to next candidate
                 pass
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or "None"}"
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or "None"}"  # type: ignore
                 )
-                self.api_key = settings.providers.sports.es.api_key
+                self.api_key = settings.providers.sports.es.api_key  # type: ignore
             except AttributeError:
                 # fail to next candidate
                 pass
@@ -209,36 +212,36 @@ class ElasticCredentials:
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or "None"}"
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or "None"}"  # type: ignore
                 )
-                self.dsn = settings.providers.wikipedia.es_url
+                self.dsn = settings.providers.wikipedia.es_url  # type: ignore
             except AttributeError:
                 # fail to next candidate
                 pass
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or "None"}"
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or "None"}"  # type: ignore
                 )
-                self.dsn = settings.jobs.wikipedia_indexer.es_url
+                self.dsn = settings.jobs.wikipedia_indexer.es_url  # type: ignore
             except AttributeError:
                 # remember to call `.validate()` to ensure valid
                 pass
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or "None"}"
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or "None"}"  # type: ignore
                 )
-                self.api_key = settings.providers.wikipedia.es_api_key
+                self.api_key = settings.providers.wikipedia.es_api_key  # type: ignore
             except AttributeError:
                 # fail to next candidate
                 pass
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or "None"}"
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or "None"}"  # type: ignore
                 )
-                self.api_key = settings.jobs.wikipedia_indexer.es_api_key
+                self.api_key = settings.jobs.wikipedia_indexer.es_api_key  # type: ignore
             except AttributeError:
                 # remember to call `.validate()` to ensure valid
                 pass
@@ -713,19 +716,24 @@ class SportsDataStore(ElasticDataStore):
         sport: Sport,
         language_code: str,
         last_update: datetime,
-    ):
+    ) -> None:
         """Update existing events (used to change status and scores)"""
         logger = logging.getLogger(__name__)
         if not self.client:
             return
 
+        default_prior_update = datetime.now(tz=timezone.utc) - timedelta(
+            seconds=UPDATE_PERIOD_SECS
+        )
         if not last_update:
-            last_update_str = self.query_meta("last_update")
+            last_update_str = (
+                await self.query_meta("last_update") or default_prior_update.isoformat()
+            )
             try:
                 last_update = datetime.fromisoformat(last_update_str)
             except Exception:
-                logger.trace(f"{LOGGING_TAG} Bad date format: {last_update_str}")
-                last_update = datetime.now() - timedelta.seconds(5 * 60)
+                logger.debug(f"{LOGGING_TAG} Bad date format: {last_update_str}")
+                last_update = default_prior_update
         index = (self.index_map["event"]).format(lang=language_code)
         for event in sport.events.values():
             if event.updated and event.updated > last_update:
