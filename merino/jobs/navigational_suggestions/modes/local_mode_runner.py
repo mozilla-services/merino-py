@@ -20,6 +20,7 @@ from merino.jobs.navigational_suggestions.modes.local_mode_helpers import (
     LocalMetricsCollector,
 )
 from merino.jobs.navigational_suggestions.processing.manifest_builder import (
+    construct_errors_manifest,
     construct_partner_manifest,
     construct_top_picks,
 )
@@ -232,10 +233,21 @@ def run_local_mode(
     if not final_top_picks:
         final_top_picks = {"domains": []}
 
+    # Step 6b: Construct errors manifest
+    errors_manifest = construct_errors_manifest(domain_data, domain_metadata)
+    logger.info(f"Found {len(errors_manifest['errors'])} domains with favicon extraction errors")
+
     # Step 7: Save top picks
     top_pick_blob = save_top_picks_locally(
         final_top_picks, local_data_dir, bucket_name, domain_metadata_uploader
     )
+
+    # Step 7b: Save errors manifest
+    errors_json = json.dumps(errors_manifest, indent=4)
+    errors_file = os.path.join(local_data_dir, "errors_latest.json")
+    with open(errors_file, "w") as f:
+        f.write(errors_json)
+    logger.info(f"Errors manifest saved to: {errors_file}")
 
     # Step 8: Save metrics and show results
     metrics_collector.save_report()
@@ -246,6 +258,7 @@ def run_local_mode(
     logger.info("=" * 60)
     logger.info(f"Top Picks File: {top_pick_blob.name}")
     logger.info(f"Public URL: {top_pick_blob.public_url}")
+    logger.info(f"Errors File: {errors_file}")
 
     direct_url = (
         f"http://localhost:4443/storage/v1/b/{bucket_name}/o/{top_pick_blob.name}?alt=media"

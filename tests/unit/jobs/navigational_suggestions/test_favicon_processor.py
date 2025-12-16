@@ -75,7 +75,8 @@ class TestProcessAndUploadBestFavicon:
     ):
         """Test processing with empty favicon list."""
         result = await favicon_processor.process_and_upload_best_favicon([], 32, mock_uploader)
-        assert result == ""
+        assert result[0] == ""
+        assert "processing_exception" in result[1] or "no_valid_favicon" in result[1]
 
     @pytest.mark.asyncio
     async def test_process_and_upload_best_favicon_invalid_urls(
@@ -93,7 +94,8 @@ class TestProcessAndUploadBestFavicon:
                 favicons, 32, mock_uploader
             )
 
-        assert result == ""
+        assert result[0] == ""
+        assert "processing_exception" in result[1] or "no_valid_favicon" in result[1]
 
     @pytest.mark.asyncio
     async def test_process_and_upload_best_favicon_svg_priority(
@@ -116,7 +118,7 @@ class TestProcessAndUploadBestFavicon:
                 favicons, 32, mock_uploader
             )
 
-        assert result == "https://cdn.example.com/favicon.svg"
+        assert result == ("https://cdn.example.com/favicon.svg", None)
 
     @pytest.mark.asyncio
     async def test_process_and_upload_best_favicon_fallback_to_bitmap(
@@ -128,13 +130,13 @@ class TestProcessAndUploadBestFavicon:
         with patch.object(favicon_processor, "_process_svg_favicons") as mock_svg:
             with patch.object(favicon_processor, "_process_bitmap_favicons") as mock_bitmap:
                 mock_svg.return_value = ""
-                mock_bitmap.return_value = "https://cdn.example.com/favicon.ico"
+                mock_bitmap.return_value = ("https://cdn.example.com/favicon.ico", 32, 0)
 
                 result = await favicon_processor.process_and_upload_best_favicon(
                     favicons, 32, mock_uploader
                 )
 
-        assert result == "https://cdn.example.com/favicon.ico"
+        assert result == ("https://cdn.example.com/favicon.ico", None)
 
     @pytest.mark.asyncio
     async def test_process_and_upload_best_favicon_exception_handling(
@@ -152,7 +154,8 @@ class TestProcessAndUploadBestFavicon:
                 favicons, 32, mock_uploader
             )
 
-        assert result == ""
+        assert result[0] == ""
+        assert result[1] is not None  # Should have an error reason
 
 
 class TestCategorizeSvgUrls:
@@ -375,7 +378,7 @@ class TestProcessBitmapFavicons:
     async def test_process_bitmap_favicons_empty_list(self, favicon_processor, mock_uploader):
         """Test bitmap processing with empty list."""
         result = await favicon_processor._process_bitmap_favicons([], [], [], 32, mock_uploader)
-        assert result == ""
+        assert result == ("", 0, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_success(
@@ -397,7 +400,7 @@ class TestProcessBitmapFavicons:
                 bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
             )
 
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_below_min_width(
@@ -420,7 +423,7 @@ class TestProcessBitmapFavicons:
                 bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
             )
 
-        assert result == ""  # Should not return favicon below minimum width
+        assert result == ("", 16, 0)  # Should not return favicon below minimum width
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_batch_processing(
@@ -446,7 +449,7 @@ class TestProcessBitmapFavicons:
             )
 
         # Should process in batches and return result
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
         # Should be called twice (2 batches of 5)
         assert mock_favicon_downloader.download_multiple_favicons.call_count == 2
 
@@ -465,7 +468,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", 0, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_non_image_content_type(
@@ -486,7 +489,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", 0, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_dimension_exception(
@@ -504,7 +507,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", 0, 1)  # One image failed validation
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_upload_failure_fallback(
@@ -527,7 +530,7 @@ class TestProcessBitmapFavicons:
                 bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
             )
 
-        assert result == "https://example.com/favicon.ico"
+        assert result == ("https://example.com/favicon.ico", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_batch_exception(
@@ -546,7 +549,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", 0, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_individual_processing_exception(
@@ -564,7 +567,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == "https://example.com/favicon.ico"
+        assert result == ("https://example.com/favicon.ico", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_overall_exception(
@@ -584,7 +587,7 @@ class TestProcessBitmapFavicons:
                 bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
             )
 
-        assert result == ""
+        assert result == ("", 0, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_memory_cleanup(
@@ -616,7 +619,7 @@ class TestProcessBitmapFavicons:
         )
 
         # Verify the result and that processing occurred
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_with_none_in_batch(
@@ -639,7 +642,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_all_none_images(
@@ -659,7 +662,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", 0, 0)
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_memory_cleanup_on_exception(
@@ -711,7 +714,7 @@ class TestProcessBitmapFavicons:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
 
 
 class TestEdgeCasesAndErrorPaths:
@@ -761,7 +764,8 @@ class TestEdgeCasesAndErrorPaths:
         )
 
         # Should handle empty hrefs gracefully
-        assert isinstance(result, str)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_with_download_exception(
@@ -813,7 +817,7 @@ class TestEdgeCasesAndErrorPaths:
         )
 
         # Should get result from second batch
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
 
     def test_categorize_svg_urls_case_insensitive(self, favicon_processor):
         """Test that SVG categorization is case-insensitive."""
@@ -888,7 +892,7 @@ class TestEdgeCasesAndErrorPaths:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == ""
+        assert result == ("", 0, 0)
 
 
 class TestAdvancedErrorHandlingAndMemoryManagement:
@@ -909,8 +913,8 @@ class TestAdvancedErrorHandlingAndMemoryManagement:
             result = await favicon_processor.process_and_upload_best_favicon(
                 favicons, 32, mock_uploader
             )
-
-            assert result == ""
+            assert result[0] == ""
+        assert "processing_exception" in result[1] or "no_valid_favicon" in result[1]
 
     @pytest.mark.asyncio
     async def test_process_and_upload_best_favicon_with_is_valid_url_exception(
@@ -933,7 +937,8 @@ class TestAdvancedErrorHandlingAndMemoryManagement:
                     favicons, 32, mock_uploader
                 )
 
-                assert result == ""
+            assert result[0] == ""
+            assert result[1] is not None  # Should have an error reason
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_with_del_statement_coverage(
@@ -990,7 +995,7 @@ class TestAdvancedErrorHandlingAndMemoryManagement:
                 bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
             )
 
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 32, 0)
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_upload_exception_with_url_fallback(
@@ -1032,7 +1037,7 @@ class TestAdvancedErrorHandlingAndMemoryManagement:
         )
 
         # Should fall back to original URL
-        assert result == "https://example.com/favicon.ico"
+        assert result == ("https://example.com/favicon.ico", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_with_is_better_favicon_false_path(
@@ -1055,7 +1060,7 @@ class TestAdvancedErrorHandlingAndMemoryManagement:
                 bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
             )
 
-            assert result == ""
+            assert result == ("", 0, 0)
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_zip_iteration_coverage(
@@ -1109,13 +1114,13 @@ class TestFinalCoverageTests:
                         mock_cat_svg.return_value = (["https://example.com/favicon.svg"], [0])
                         mock_cat_bitmap.return_value = (["https://example.com/favicon.ico"], [1])
                         mock_proc_svg.return_value = ""  # No SVG result
-                        mock_proc_bitmap.return_value = "https://cdn.example.com/test.ico"
+                        mock_proc_bitmap.return_value = ("https://cdn.example.com/test.ico", 32, 0)
 
                         result = await favicon_processor.process_and_upload_best_favicon(
                             favicons, 32, mock_uploader
                         )
 
-                        assert result == "https://cdn.example.com/test.ico"
+                        assert result == ("https://cdn.example.com/test.ico", None)
                         mock_cat_svg.assert_called_once()
                         mock_cat_bitmap.assert_called_once()
                         mock_proc_svg.assert_called_once()
@@ -1179,7 +1184,7 @@ class TestFinalCoverageTests:
         )
 
         # Should skip first image and process second
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_del_batch_images_coverage(
@@ -1196,7 +1201,7 @@ class TestFinalCoverageTests:
             bitmap_urls, bitmap_indices, all_favicons, 32, mock_uploader
         )
 
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", 64, 0)
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_del_svg_images_coverage(
@@ -1239,7 +1244,8 @@ class TestFinalCoverageTests:
                     favicons, 32, mock_uploader
                 )
 
-                assert result == ""
+                assert result[0] == ""
+                assert result[1] is not None  # Should have an error reason
 
     def test_init_with_different_base_url_formats(self, mock_favicon_downloader):
         """Test initialization with various base URL formats."""
@@ -1279,7 +1285,7 @@ class TestIntegrationScenarios:
         )
 
         # SVG should win and be uploaded
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", None)
 
     @pytest.mark.asyncio
     async def test_full_processing_flow_bitmap_only(
@@ -1304,7 +1310,7 @@ class TestIntegrationScenarios:
                 favicons, 32, mock_uploader
             )
 
-        assert result == "https://cdn.example.com/test_favicon.png"
+        assert result == ("https://cdn.example.com/test_favicon.png", None)
 
     @pytest.mark.asyncio
     async def test_processing_with_mixed_valid_invalid_urls(
@@ -1332,4 +1338,4 @@ class TestIntegrationScenarios:
                         favicons, 32, mock_uploader
                     )
 
-        assert result == "https://cdn.example.com/favicon.svg"
+        assert result == ("https://cdn.example.com/favicon.svg", None)
