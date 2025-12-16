@@ -407,11 +407,17 @@ class TestMapSectionItemToRecommendation:
         rec = map_section_item_to_recommendation(item, 3, section_id)
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
-        for k in rec.features.keys():
-            if k.startswith("t_"):
-                assert "." not in k  # Make sure we're not sending a type but actual value.
         assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
         assert not rec.in_experiment("unknown_experiment")
+
+    def test_basic_mapping_manual_section(self):
+        """Map a valid CorpusItem into a CuratedRecommendation."""
+        item = generate_corpus_item()
+        section_id = "secX"
+        rec = map_section_item_to_recommendation(item, 3, section_id, is_manual_section=True)
+        assert isinstance(rec, CuratedRecommendation)
+        assert rec.receivedRank == 3
+        assert rec.features == {f"t_{item.topic.value}": 1.0}
 
     def test_basic_mapping_experiment(self):
         """Map a valid CorpusItem into a CuratedRecommendation."""

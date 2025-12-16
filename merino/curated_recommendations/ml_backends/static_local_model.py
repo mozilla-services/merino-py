@@ -210,7 +210,7 @@ class SuperInferredModel(LocalModelBackend):
             features=features,
             thresholds=thresholds,
             diff_p=MODEL_P_VALUE_V3,
-            diff_q=MODEL_Q_VALUE_V3,  # Note since these are non-private features, p/q are ignored
+            diff_q=MODEL_Q_VALUE_V3,  # Note since these section features are non-private features, p/q are ignored
         )
 
     def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
@@ -218,11 +218,15 @@ class SuperInferredModel(LocalModelBackend):
         if model_id == LOCAL_AND_SERVER_V3_MODEL_ID:
             ## private features are sent to merino, "private" from differentially private
             private_features = self.v3_limited_topics
-        section_features = {
-            a: self._get_section(a, model_thresholds)
-            for a in BASE_SECTIONS_FOR_LOCAL_MODEL
-            if a not in self.limited_topics_set
-        }
+        """
+            Section features are disabled but will be returned soon when we have the ability to scale their influence
+            locally via the server_score parameter
+            _section_features = {
+                a: self._get_section(a, model_thresholds)
+                for a in BASE_SECTIONS_FOR_LOCAL_MODEL
+                if a not in self.limited_topics_set
+            }
+        """
         topic_features = {a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics}
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
@@ -232,7 +236,7 @@ class SuperInferredModel(LocalModelBackend):
                 days=[30],
                 relative_weight=[1],
             ),
-            interest_vector={**topic_features, **section_features},
+            interest_vector={**topic_features}, # **_section_features},
             private_features=private_features,
         )
         return InferredLocalModel(

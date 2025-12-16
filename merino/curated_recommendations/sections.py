@@ -67,7 +67,7 @@ SECTION_FALLBACK_BUFFER = 1
 
 
 def map_section_item_to_recommendation(
-    item: CorpusItem, rank: int, section_id: str, experiment_flags: set[str] | None = None
+    item: CorpusItem, rank: int, section_id: str, experiment_flags: set[str] | None = None, is_manual_section: bool = False
 ) -> CuratedRecommendation:
     """Map a CorpusItem to a CuratedRecommendation.
 
@@ -80,7 +80,7 @@ def map_section_item_to_recommendation(
         A CuratedRecommendation.
     """
     # We use a feature prefix of "t_" for topics and "s_" for sections
-    features = {f"s_{section_id}": 1.0}
+    features = {} if is_manual_section else {f"s_{section_id}": 1.0}
     if item.topic is not None:
         features[f"t_{item.topic.value}"] = 1.0
 
@@ -114,6 +114,7 @@ def map_corpus_section_to_section(
         A Section model containing mapped recommendations and default layout.
     """
     item_flags = set() if is_legacy_section else {SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG}
+    is_manual_section = corpus_section.createSource == CreateSource.MANUAL
     seen_ids: set[str] = set()
     section_items: list[CorpusItem] = []
     for item in corpus_section.sectionItems:
@@ -123,7 +124,7 @@ def map_corpus_section_to_section(
         section_items.append(item)
     recommendations = [
         map_section_item_to_recommendation(
-            item, rank, corpus_section.externalId, experiment_flags=item_flags
+            item, rank, corpus_section.externalId, experiment_flags=item_flags, is_manual_section=is_manual_section
         )
         for rank, item in enumerate(section_items)
     ]
