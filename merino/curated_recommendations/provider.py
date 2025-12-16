@@ -116,25 +116,11 @@ class CuratedRecommendationsProvider:
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-        recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                # interest vector. Data science work shows that using the topics as features
-                # is effective as a first pass at personalization.
-                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={f"t_{item.topic.value}": 1.0} if item.topic else {},
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
 
         sections_feeds = None
-        general_feed = []
-        is_sections_experiment = self.is_sections_experiment(request, surface_id)
+        general_feed: list[CuratedRecommendation] = []
 
-        if is_sections_experiment:
+        if self.is_sections_experiment(request, surface_id):
             inferred_interests = self.process_request_interests(
                 request, surface_id, self.local_model_backend
             )
@@ -165,6 +151,20 @@ class CuratedRecommendationsProvider:
                 topics=cast(list[Topic], request.topics) if request.topics else None,
             )
         else:
+            # Non-US/CA markets: fetch from scheduled surface backend
+            corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
+            recommendations = [
+                CuratedRecommendation(
+                    **item.model_dump(),
+                    receivedRank=rank,
+                    # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
+                    # interest vector. Data science work shows that using the topics as features
+                    # is effective as a first pass at personalization.
+                    # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
+                    features={f"t_{item.topic.value}": 1.0} if item.topic else {},
+                )
+                for rank, item in enumerate(corpus_items)
+            ]
             general_feed = self.rank_recommendations(recommendations, request)
         response = CuratedRecommendationsResponse(
             recommendedAt=get_millisecond_epoch_time(),

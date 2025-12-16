@@ -140,8 +140,8 @@ class LegacyCuratedRecommendationsProvider:
             count=request.count,
             curated_corpus_provider=curated_corpus_provider,
         )
-        legacy_recommendations = (
-            self.map_curated_recommendations_to_legacy_recommendations_fx_114(base_recommendations)
+        legacy_recommendations = self.map_curated_recommendations_to_legacy_recommendations_fx_114(
+            base_recommendations
         )
         return CuratedRecommendationsLegacyFx114Response(
             recommendations=legacy_recommendations,

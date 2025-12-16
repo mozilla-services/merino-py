@@ -982,7 +982,9 @@ class TestCuratedRecommendationsRequestParameters:
 
 
 class TestCorpusApiCaching:
-    """Tests covering the caching behavior of the Corpus backend"""
+    """Tests covering the caching behavior of the Corpus backend.
+    Uses de-DE locale to test scheduled_surface backend caching (en-US uses sections backend).
+    """
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     def test_single_request_multiple_fetches(
@@ -990,9 +992,9 @@ class TestCorpusApiCaching:
     ):
         """Test that only a single request is made to the curated-corpus-api."""
         # Gather multiple fetch calls
-        results = [fetch_en_us(client) for _ in range(3)]
+        results = [fetch_de_de(client) for _ in range(3)]
         # Assert that recommendations were returned in each response.
-        assert all(len(result.json()["data"]) == 100 for result in results)
+        assert all(len(result.json()["data"]) > 0 for result in results)
 
         # Assert that exactly one request was made to the corpus api
         scheduled_surface_http_client.post.assert_called_once()
@@ -1054,7 +1056,7 @@ class TestCorpusApiCaching:
         # Hit the endpoint until a 200 response is received or until timeout.
         while datetime.now() < start_time + timedelta(seconds=1):
             try:
-                result = fetch_en_us(client)
+                result = fetch_de_de(client)
                 if result.status_code == 200:
                     break
             except HTTPStatusError:
@@ -1113,7 +1115,7 @@ class TestCorpusApiCaching:
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         # First fetch to populate cache with good data
-        initial_response = fetch_en_us(client)
+        initial_response = fetch_de_de(client)
         initial_data = initial_response.json()
         assert initial_response.status_code == 200
         assert scheduled_surface_http_client.post.call_count == 1
@@ -1125,7 +1127,7 @@ class TestCorpusApiCaching:
         )
 
         # Try to fetch data when cache expired
-        new_response = fetch_en_us(client)
+        new_response = fetch_de_de(client)
         new_data = new_response.json()
 
         assert new_response.status_code == 200
