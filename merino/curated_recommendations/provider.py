@@ -132,7 +132,6 @@ class CuratedRecommendationsProvider:
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
                 ml_backend=self.ml_recommendations_backend,
-                scheduled_surface_backend=self.scheduled_surface_backend,
                 region=derive_region(request.locale, request.region),
             )
         elif surface_id == SurfaceId.NEW_TAB_EN_US:

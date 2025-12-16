@@ -54,7 +54,6 @@ async def get_legacy_recommendations_from_sections(
         surface_id=surface_id,
         min_feed_rank=0,
         include_subtopics=False,
-        scheduled_surface_backend=None,
     )
 
     # 2. Filter to legacy topics
