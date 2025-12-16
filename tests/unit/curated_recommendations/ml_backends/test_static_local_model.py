@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    LOCAL_AND_SERVER_V3_MODEL_ID,
+    SERVER_V3_MODEL_ID,
     THRESHOLDS_V3_NORMALIZED,
     FakeLocalModelSections,
     SuperInferredModel,
@@ -72,7 +72,7 @@ def test_model_returns_default_limited_model(model_limited):
 
     assert isinstance(result, InferredLocalModel)
     assert result.surface_id == surface_id
-    assert result.model_id == LOCAL_AND_SERVER_V3_MODEL_ID
+    assert result.model_id == SERVER_V3_MODEL_ID
     assert result.model_version == 0
     assert result.model_data is not None
     assert (
@@ -135,7 +135,7 @@ def test_model_experiment_name_and_branch_name(model_limited):
         experiment_name=INFERRED_V3_EXPERIMENT_NAME,
         experiment_branch="any",
     )
-    assert model.model_matches_interests(LOCAL_AND_SERVER_V3_MODEL_ID)
+    assert model.model_matches_interests(SERVER_V3_MODEL_ID)
     assert (
         len(model.model_data.private_features) > 0 and len(model.model_data.private_features) <= 8
     )
@@ -327,7 +327,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
     """decode_dp_interests decodes various unary patterns."""
     model = model_limited.get(TEST_SURFACE)
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = LOCAL_AND_SERVER_V3_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
 
     values = []
     for _key, feature in model.model_data.interest_vector.items():
@@ -347,7 +347,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
 @pytest.mark.parametrize(
     "input_id,expected",
     [
-        (LOCAL_AND_SERVER_V3_MODEL_ID, True),
+        (SERVER_V3_MODEL_ID, True),
         ("bad id", False),
         (None, False),
         (3.14, False),
@@ -383,13 +383,13 @@ def test_process_returns_none_when_request_has_no_interests(inferred_model, loca
 def test_process_passes_through_when_no_model(local_model_backend):
     """When inferred_local_model is None, return ProcessedInterests with empty scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = LOCAL_AND_SERVER_V3_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     req = make_request(interests)
     out = CuratedRecommendationsProvider.process_request_interests(
         req, SurfaceId.NEW_TAB_EN_US, local_model_backend
     )
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == LOCAL_AND_SERVER_V3_MODEL_ID
+    assert out.model_id == SERVER_V3_MODEL_ID
     assert out.scores == {}
     assert out.normalized_scores == {}
 
@@ -419,7 +419,7 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
         dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = LOCAL_AND_SERVER_V3_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
@@ -428,7 +428,7 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
     )
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == LOCAL_AND_SERVER_V3_MODEL_ID
+    assert out.model_id == SERVER_V3_MODEL_ID
 
     # spot-check a couple of features decode to the last threshold
     for key, cfg in iv.items():
@@ -449,7 +449,7 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
             dp_values.append("1" + (n - 1) * "0")  # lowest (0) value
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = LOCAL_AND_SERVER_V3_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
@@ -458,7 +458,7 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
     )
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == LOCAL_AND_SERVER_V3_MODEL_ID
+    assert out.model_id == SERVER_V3_MODEL_ID
     # spot-check a couple of features decode to the last threshold
     for idx, (key, cfg) in enumerate(iv.items()):
         if idx == 0:
@@ -474,7 +474,7 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
 ):
     """If model_id matches but no DP values key, extract existing numeric scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = LOCAL_AND_SERVER_V3_MODEL_ID
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     interests.root["foo"] = 0.123
     interests.root["bar"] = "baz"  # String, not a score
     req = make_request(interests)
@@ -483,7 +483,7 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
         req, SurfaceId.NEW_TAB_EN_US, local_model_backend
     )
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == LOCAL_AND_SERVER_V3_MODEL_ID
+    assert out.model_id == SERVER_V3_MODEL_ID
     assert out.scores["foo"] == 0.123
     assert "bar" not in out.normalized_scores  # String values are not included in scores
     assert "bar" not in out.scores  # String values are not included in scores
@@ -495,19 +495,19 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
         (
             "optin-" + INFERRED_V3_EXPERIMENT_NAME,
             "any_branch",
-            LOCAL_AND_SERVER_V3_MODEL_ID,
+            SERVER_V3_MODEL_ID,
             True,
         ),
         (
             INFERRED_V3_EXPERIMENT_NAME,
             "any_branch",
-            LOCAL_AND_SERVER_V3_MODEL_ID,
+            SERVER_V3_MODEL_ID,
             True,
         ),
         (
             "sdfs",
             "any_branch",
-            LOCAL_AND_SERVER_V3_MODEL_ID,
+            SERVER_V3_MODEL_ID,
             True,
         ),
     ],
@@ -545,7 +545,7 @@ def test_get_dummy_experiment_name(model_limited):
         experiment_branch="cow",
     )
     assert result is not None
-    assert result.model_id == LOCAL_AND_SERVER_V3_MODEL_ID
+    assert result.model_id == SERVER_V3_MODEL_ID
     assert isinstance(result, InferredLocalModel)
     # basic payload sanity
     assert Topic.SPORTS.value in result.model_data.interest_vector

@@ -17,7 +17,7 @@ INFERRED_LOCAL_EXPERIMENT_NAME_V3 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.
 
 LOCAL_AND_SERVER_V1_MODEL_ID = "local-and-server"
 LOCAL_ONLY_V1_MODEL_ID = "local-only"
-LOCAL_AND_SERVER_V3_MODEL_ID = "inferred-v3-model"
+SERVER_V3_MODEL_ID = "inferred-v3-model"
 
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1_MODEL_ID
 LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1_MODEL_ID
@@ -31,9 +31,9 @@ CONTEXTUAL_RANKING_TREATMENT_COUNTRY = "contextual-ranking-content-country"
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 
-SUPPORTED_LIVE_MODELS = {LOCAL_AND_SERVER_V3_MODEL_ID}
+SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID}
 
-DEFAULT_PRODUCTION_MODEL_ID = LOCAL_AND_SERVER_V3_MODEL_ID
+DEFAULT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -215,7 +215,7 @@ class SuperInferredModel(LocalModelBackend):
 
     def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
         model_thresholds = THRESHOLDS_V3_NORMALIZED
-        if model_id == LOCAL_AND_SERVER_V3_MODEL_ID:
+        if model_id == SERVER_V3_MODEL_ID:
             ## private features are sent to merino, "private" from differentially private
             private_features = self.v3_limited_topics
         """
@@ -262,15 +262,13 @@ class SuperInferredModel(LocalModelBackend):
         information for decoding the interests sent, then calling again with model_id=None
         to return the current default model for future interest calculations.
         """
-        print("get called with", model_id, experiment_name, experiment_branch)
         if model_id is not None and model_id not in SUPPORTED_LIVE_MODELS:
             ## None here insures we don't parse the wrong model
             ## the local model defintion will be reset by the response
             ## there will be another call to "get" with model_id=None
             ## where the next model is built+returned
-            print("skipping unsupported model id", model_id)
             return None
-        supported_model = self._build_local(LOCAL_AND_SERVER_V3_MODEL_ID, surface_id)
+        supported_model = self._build_local(SERVER_V3_MODEL_ID, surface_id)
         if model_id is None:  ## this is the "get" call for building the model sent in the response
             ## switch on experiment name, not using util becuase we have string name instead of request object
             if (
