@@ -67,7 +67,11 @@ SECTION_FALLBACK_BUFFER = 1
 
 
 def map_section_item_to_recommendation(
-    item: CorpusItem, rank: int, section_id: str, experiment_flags: set[str] | None = None, is_manual_section: bool = False
+    item: CorpusItem,
+    rank: int,
+    section_id: str,
+    experiment_flags: set[str] | None = None,
+    is_manual_section: bool = False,
 ) -> CuratedRecommendation:
     """Map a CorpusItem to a CuratedRecommendation.
 
@@ -124,7 +128,11 @@ def map_corpus_section_to_section(
         section_items.append(item)
     recommendations = [
         map_section_item_to_recommendation(
-            item, rank, corpus_section.externalId, experiment_flags=item_flags, is_manual_section=is_manual_section
+            item,
+            rank,
+            corpus_section.externalId,
+            experiment_flags=item_flags,
+            is_manual_section=is_manual_section,
         )
         for rank, item in enumerate(section_items)
     ]

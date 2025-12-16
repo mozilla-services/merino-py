@@ -43,7 +43,6 @@ from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
-    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     DEFAULT_PRODUCTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -2372,7 +2371,7 @@ class TestSections:
             "sports": 0.0,
             "other": 0.0,
             "arts": 0.5,
-            "model_id": CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+            "model_id": DEFAULT_PRODUCTION_MODEL_ID,
         }
 
         # make the api call

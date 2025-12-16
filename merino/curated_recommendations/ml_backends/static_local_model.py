@@ -17,7 +17,7 @@ INFERRED_LOCAL_EXPERIMENT_NAME_V3 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.
 
 LOCAL_AND_SERVER_V1_MODEL_ID = "local-and-server"
 LOCAL_ONLY_V1_MODEL_ID = "local-only"
-LOCAL_AND_SERVER_V3_MODEL_ID = "local-and-server-v3"
+LOCAL_AND_SERVER_V3_MODEL_ID = "inferred-v3-model"
 
 LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1_MODEL_ID
 LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1_MODEL_ID
@@ -164,7 +164,6 @@ MODEL_P_VALUE_V3 = 0.91
 MODEL_Q_VALUE_V3 = 0.030
 
 
-THRESHOLDS_V3 = [0.005, 0.008, 0.015]
 THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
@@ -237,7 +236,7 @@ class SuperInferredModel(LocalModelBackend):
                 days=[30],
                 relative_weight=[1],
             ),
-            interest_vector={**topic_features}, # **_section_features},
+            interest_vector={**topic_features},  # **_section_features},
             private_features=private_features,
         )
         return InferredLocalModel(
@@ -278,10 +277,9 @@ class SuperInferredModel(LocalModelBackend):
                 experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V3}"
             ):
-                print(supported_model);
                 # We don't have to check for branch here as control won't call inferred code
                 return supported_model
             else:
-                return None
+                return supported_model  # this is the default model
         # Normally we would pick the model based on model_id here, but we are supporting only one right now
         return supported_model

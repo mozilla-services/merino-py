@@ -225,10 +225,12 @@ class CuratedRecommendationsProvider:
                     for k, v in decoded.items()
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
+                is_data_normalized = inferred_local_model.model_data.rescale
                 return ProcessedInterests(
                     model_id=model_id,
                     scores=scores,
                     expected_keys=inferred_local_model.get_interest_keys(),
+                    is_data_normalized=is_data_normalized,
                 )
 
         # Either no decoding needed or no model available - extract existing scores
