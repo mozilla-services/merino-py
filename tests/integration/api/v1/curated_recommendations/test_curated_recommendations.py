@@ -427,10 +427,10 @@ def test_curated_recommendations_sections_request(repeat, client: TestClient):
             assert item["url"]
             assert item["publisher"]
             assert item["imageUrl"]
-            assert item["tileId"]
             assert item["features"]
-            # scheduledCorpusItemId equals corpusItemId for sections
-            assert item["scheduledCorpusItemId"] == item["corpusItemId"]
+            # Sections requests do not set scheduledCorpusItemId or tileId
+            assert item["scheduledCorpusItemId"] is None
+            assert item["tileId"] is None
 
 
 class TestLegacyEndpoints:

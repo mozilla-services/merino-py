@@ -160,11 +160,6 @@ def _process_corpus_sections(
             cs, rank, is_legacy_section=section_id in legacy_sections
         )
 
-    # Set scheduledCorpusItemId = corpusItemId for tileId generation
-    for section in sections.values():
-        for r in section.recommendations:
-            r.update_scheduled_corpus_item_id(r.corpusItemId)
-
     return sections
 
 
@@ -214,6 +209,7 @@ async def get_corpus_sections(
         filtered_corpus_sections,
         min_feed_rank,
     )
+
     return headlines_corpus_section, corpus_sections
 
 
