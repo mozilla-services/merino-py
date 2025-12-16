@@ -168,7 +168,7 @@ class ProcessedInterests(BaseModel):
         if not self.is_data_normalized:
             pre_normalized_dict = self.scores.copy()
             values = np.array(list(self.scores.values()), dtype=float)
-            for missing_key in self.expected_keys - normalized_dict.keys():
+            for missing_key in self.expected_keys - pre_normalized_dict.keys():
                 pre_normalized_dict[missing_key] = values.mean()
             object.__setattr__(self, "normalized_scores", pre_normalized_dict)
         elif len(self.scores) >= self.minimum_value_count_for_normalization:
