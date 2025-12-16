@@ -27,6 +27,9 @@ from merino.curated_recommendations.rankers import (
     spread_publishers,
     ThompsonSamplingRanker,
 )
+from merino.curated_recommendations.legacy.sections_adapter import (
+    get_legacy_recommendations_from_sections,
+)
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
@@ -136,10 +139,6 @@ class CuratedRecommendationsProvider:
             )
         elif surface_id == SurfaceId.NEW_TAB_EN_US:
             # US non-sections: fetch from sections backend instead of scheduler
-            from merino.curated_recommendations.legacy.sections_adapter import (
-                get_legacy_recommendations_from_sections,
-            )
-
             general_feed = await get_legacy_recommendations_from_sections(
                 sections_backend=self.sections_backend,
                 engagement_backend=self.engagement_backend,
@@ -147,7 +146,6 @@ class CuratedRecommendationsProvider:
                 surface_id=surface_id,
                 count=request.count,
                 region=derive_region(request.locale, request.region),
-                topics=cast(list[Topic], request.topics) if request.topics else None,
             )
         else:
             # Non-US/CA markets: fetch from scheduled surface backend

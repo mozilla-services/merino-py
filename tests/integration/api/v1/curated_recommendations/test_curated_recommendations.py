@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 import freezegun
 import numpy as np
 import pytest
-from httpx import AsyncClient, Response, HTTPStatusError
+from httpx import Response, HTTPStatusError
 from pytest_mock import MockerFixture
 from scipy.stats import linregress
 
@@ -359,9 +359,10 @@ def setup_legacy_curated_recommendations_provider(legacy_corpus_provider):
 
 
 def fetch_en_us(client: TestClient) -> Response:
-    """Make a curated recommendations request with en-US locale"""
+    """Make a curated recommendations request with en-US locale and sections feed."""
     return client.post(
-        "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": [Topic.FOOD]}
+        "/api/v1/curated-recommendations",
+        json={"locale": "en-US", "feeds": ["sections"], "topics": [Topic.FOOD]},
     )
 
 
@@ -369,13 +370,6 @@ def fetch_de_de(client: TestClient) -> Response:
     """Make a curated recommendations request with de-DE locale (uses scheduled_surface backend)"""
     return client.post(
         "/api/v1/curated-recommendations", json={"locale": "de-DE", "topics": [Topic.FOOD]}
-    )
-
-
-async def fetch_en_us_with_need_to_know(client: AsyncClient) -> Response:
-    """Make a curated recommendations request with en-US locale and feeds=["need_to_know"]"""
-    return await client.post(
-        "/api/v1/curated-recommendations", json={"locale": "en-US", "feeds": ["need_to_know"]}
     )
 
 
@@ -411,89 +405,177 @@ def assert_section_layouts_are_cycled(sections: dict):
     "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
     range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
 )
-def test_curated_recommendations(repeat, client: TestClient):
-    """Test the curated recommendations endpoint response is as expected."""
-    # Mock the endpoint
+def test_curated_recommendations_sections_request(repeat, client: TestClient):
+    """Test the curated recommendations endpoint with sections feed."""
     response = fetch_en_us(client)
     data = response.json()
 
-    # Check if the mock response is valid
     assert response.status_code == 200
-
-    # Check surfaceId is returned (should be NEW_TAB_EN_US for en-US locale)
     assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
 
-    corpus_items = data["data"]
-    # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
-    assert len(corpus_items) == 100
-    # Assert all corpus_items have expected fields populated.
-    assert all(item["url"] for item in corpus_items)
-    assert all(item["publisher"] for item in corpus_items)
-    assert all(item["imageUrl"] for item in corpus_items)
-    assert all(item["tileId"] for item in corpus_items)
-    assert all(item["features"] for item in corpus_items)
-    # Assert scheduledCorpusItemId equals corpusItemId (sections behavior)
-    assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
+    # Sections requests return data in feeds, not data
+    assert data["data"] == []
+    feeds = data["feeds"]
+    sections = {name: section for name, section in feeds.items() if section is not None}
 
-    # Assert that receivedRank equals 0, 1, 2, ...
-    for i, item in enumerate(corpus_items):
-        assert item["receivedRank"] == i
+    # At least one section should be present
+    assert len(sections) > 0
 
-    # With topics=[FOOD] in request, verify at least one FOOD recommendation is present
-    # and that FOOD items are boosted (appear in top positions due to topic boost)
-    food_items = [item for item in corpus_items if item.get("topic") == Topic.FOOD]
-    assert len(food_items) > 0, "At least one FOOD recommendation should be present"
-
-    # Verify topic boosting: at least one FOOD item should be in top 10 positions
-    top_10_topics = [item.get("topic") for item in corpus_items[:10]]
-    assert Topic.FOOD in top_10_topics, "FOOD items should be boosted to top positions"
+    # All sections should have recommendations with expected fields
+    for section in sections.values():
+        for item in section["recommendations"]:
+            assert item["url"]
+            assert item["publisher"]
+            assert item["imageUrl"]
+            assert item["tileId"]
+            assert item["features"]
+            # scheduledCorpusItemId equals corpusItemId for sections
+            assert item["scheduledCorpusItemId"] == item["corpusItemId"]
 
 
-def test_curated_recommendations_for_fx115_129(client: TestClient):
-    """Test the legacy fx115-129 curated recommedations endpoint response is as expected"""
-    response = client.get(
-        "/api/v1/curated-recommendations/legacy-115-129", params={"locale": "en-US"}
+class TestLegacyEndpoints:
+    """Test the legacy curated recommendations endpoints (fx114 and fx115-129).
+
+    These endpoints have two code paths:
+    - US/CA locales (en-US, en-CA): use sections backend via get_legacy_recommendations_from_sections
+    - Other locales (de-DE, en-GB, etc.): use scheduler backend via CuratedRecommendationsProvider
+    """
+
+    # Locales that use the sections backend (US/CA)
+    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA"]
+    # Locales that use the scheduler backend (non-US/CA)
+    SCHEDULER_BACKEND_LOCALES = ["de-DE", "en-GB", "fr-FR", "es-ES", "it-IT"]
+
+    @pytest.mark.parametrize(
+        "locale",
+        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
     )
-    data = response.json()
+    def test_fx115_129_returns_valid_response(self, locale: str, client: TestClient):
+        """Test the legacy fx115-129 endpoint returns expected response for all supported locales."""
+        response = client.get(
+            "/api/v1/curated-recommendations/legacy-115-129", params={"locale": locale}
+        )
 
-    # Check if the mock response is valid
-    assert response.status_code == 200
+        assert response.status_code == 200
+        data = response.json()
+        corpus_items = data["data"]
 
-    corpus_items = data["data"]
-    # assert total of 30 items returned, which is the default maximum number of recommendations in the response.
-    assert len(corpus_items) == 30
-    # Assert all corpus_items have expected fields populated.
-    assert all(item["__typename"] for item in corpus_items)
-    assert all(item["recommendationId"] for item in corpus_items)
-    assert all(item["tileId"] for item in corpus_items)
-    assert all(item["url"] for item in corpus_items)
-    assert all(item["title"] for item in corpus_items)
-    assert all(item["excerpt"] for item in corpus_items)
-    assert all(item["publisher"] for item in corpus_items)
-    assert all(item["imageUrl"] for item in corpus_items)
+        # Default max is 30 items
+        assert len(corpus_items) == 30
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["__typename"] for item in corpus_items)
+        assert all(item["recommendationId"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["title"] for item in corpus_items)
+        assert all(item["excerpt"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
 
-
-def test_curated_recommendations_for_fx114(client: TestClient):
-    """Test the legacy fx114 curated recommedations endpoint response is as expected"""
-    response = client.get(
-        "/api/v1/curated-recommendations/legacy-114", params={"locale_lang": "en-US"}
+    @pytest.mark.parametrize(
+        "locale_lang",
+        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
     )
-    data = response.json()
+    def test_fx114_returns_valid_response(self, locale_lang: str, client: TestClient):
+        """Test the legacy fx114 endpoint returns expected response for all supported locales."""
+        response = client.get(
+            "/api/v1/curated-recommendations/legacy-114",
+            params={"locale_lang": locale_lang},
+        )
 
-    # Check if the mock response is valid
-    assert response.status_code == 200
+        assert response.status_code == 200
+        data = response.json()
+        corpus_items = data["recommendations"]
 
-    corpus_items = data["recommendations"]
-    # assert total of 20 items returned, which is the default maximum number of recommendations in the response.
-    assert len(corpus_items) == 20
-    # Assert all corpus_items have expected fields populated.
-    assert all(item["id"] for item in corpus_items)
-    assert all(item["title"] for item in corpus_items)
-    assert all(item["url"] for item in corpus_items)
-    assert all(item["excerpt"] for item in corpus_items)
-    assert all(item["domain"] for item in corpus_items)
-    assert all(item["image_src"] for item in corpus_items)
-    assert all(item["raw_image_src"] for item in corpus_items)
+        # Default max is 20 items
+        assert len(corpus_items) == 20
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["id"] for item in corpus_items)
+        assert all(item["title"] for item in corpus_items)
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["excerpt"] for item in corpus_items)
+        assert all(item["domain"] for item in corpus_items)
+        assert all(item["image_src"] for item in corpus_items)
+        assert all(item["raw_image_src"] for item in corpus_items)
+
+    @pytest.mark.parametrize(
+        "endpoint,locale_param,count_param,default_count",
+        [
+            ("legacy-115-129", "locale", "count", 30),
+            ("legacy-114", "locale_lang", "count", 20),
+        ],
+    )
+    @pytest.mark.parametrize("locale", SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES)
+    def test_count_parameter(
+        self,
+        endpoint: str,
+        locale_param: str,
+        count_param: str,
+        default_count: int,
+        locale: str,
+        client: TestClient,
+    ):
+        """Test that the count parameter limits results for both endpoints and all locales."""
+        requested_count = 5
+        response = client.get(
+            f"/api/v1/curated-recommendations/{endpoint}",
+            params={locale_param: locale, count_param: requested_count},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Get items from correct response field
+        items = data["data"] if endpoint == "legacy-115-129" else data["recommendations"]
+        assert len(items) == requested_count
+
+    @pytest.mark.parametrize(
+        "endpoint,locale_param",
+        [
+            ("legacy-115-129", "locale"),
+            ("legacy-114", "locale_lang"),
+        ],
+    )
+    def test_region_parameter(self, endpoint: str, locale_param: str, client: TestClient):
+        """Test that the region parameter is accepted for both endpoints."""
+        response = client.get(
+            f"/api/v1/curated-recommendations/{endpoint}",
+            params={locale_param: "en-US", "region": "CA"},
+        )
+
+        assert response.status_code == 200
+
+    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+    def test_en_us_non_sections_request(self, client: TestClient):
+        """Test en-US non-sections request via main endpoint (backward-compatible path).
+
+        This tests the main /api/v1/curated-recommendations endpoint with en-US locale
+        but WITHOUT feeds=["sections"], which uses get_legacy_recommendations_from_sections.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US"},
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
+
+        # Non-sections request returns data in data[], not feeds
+        corpus_items = data["data"]
+        assert len(corpus_items) == 100
+
+        # Assert all items have expected fields
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+        # scheduledCorpusItemId equals corpusItemId (sections backend behavior)
+        assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
+
+        # Assert receivedRank is sequential
+        for i, item in enumerate(corpus_items):
+            assert item["receivedRank"] == i
 
 
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
@@ -502,25 +584,40 @@ def test_curated_recommendations_utm_source(client: TestClient):
     response = fetch_en_us(client)
     data = response.json()
 
-    # Check if the mock response is valid
     assert response.status_code == 200
 
-    corpus_items = data["data"]
-    # assert items returned, otherwise the following assertions would not test anything.
-    assert len(corpus_items) == 100
-    # Assert all corpus_items have expected fields populated.
-    # check that utm_source is present and has the correct value in all urls
-    assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
-    assert all(item["publisher"] for item in corpus_items)
-    assert all(item["imageUrl"] for item in corpus_items)
+    # Extract all recommendations from sections
+    feeds = data["feeds"]
+    all_recs = [
+        rec
+        for section in feeds.values()
+        if section is not None
+        for rec in section["recommendations"]
+    ]
+
+    # Assert items returned, otherwise the following assertions would not test anything.
+    assert len(all_recs) > 0
+    # Check that utm_source is present and has the correct value in all urls
+    assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in all_recs)
+    assert all(item["publisher"] for item in all_recs)
+    assert all(item["imageUrl"] for item in all_recs)
 
 
 def test_curated_recommendations_features(client: TestClient):
     """Test the curated recommendations endpoint returns topic and section features"""
     response = fetch_en_us(client)
+    data = response.json()
 
-    recommendations = response.json()["data"]
-    for rec in recommendations:
+    # Extract all recommendations from sections
+    feeds = data["feeds"]
+    all_recs = [
+        rec
+        for section in feeds.values()
+        if section is not None
+        for rec in section["recommendations"]
+    ]
+
+    for rec in all_recs:
         # With sections backend, features include both topic (t_ prefix) and section (s_ prefix)
         # Topic feature must be present
         topic_feature = f"t_{rec['topic']}"
@@ -878,13 +975,17 @@ class TestCuratedRecommendationsRequestParameters:
             ],
         ],
     )
-    def test_curated_recommendations_preferred_topic(self, preferred_topics, client: TestClient):
-        """Test the curated recommendations endpoint accepts 1-15 preferred topics &
-        top N recommendations contain the preferred topics.
+    def test_non_sections_request_boosts_preferred_topics(
+        self, preferred_topics, client: TestClient
+    ):
+        """Test non-sections requests boost preferred topics to top positions.
+
+        Uses de-DE locale (scheduler backend path) which supports topic boosting.
+        Note: en-US non-sections requests intentionally do NOT apply topic boosting.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": "en-US", "topics": preferred_topics},
+            json={"locale": "de-DE", "topics": preferred_topics},
         )
         data = response.json()
         corpus_items = data["data"]

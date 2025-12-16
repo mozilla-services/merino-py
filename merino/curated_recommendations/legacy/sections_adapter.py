@@ -5,11 +5,10 @@ import logging
 from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     SurfaceId,
-    Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
-from merino.curated_recommendations.protocol import CuratedRecommendation
+from merino.curated_recommendations.protocol import CuratedRecommendation, Section
 from merino.curated_recommendations.sections import (
     get_corpus_sections,
     get_corpus_sections_for_legacy_topic,
@@ -18,11 +17,35 @@ from merino.curated_recommendations.rankers import (
     takedown_reported_recommendations,
     ThompsonSamplingRanker,
     spread_publishers,
-    boost_preferred_topic,
     renumber_recommendations,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def extract_recommendations_from_sections(
+    sections: dict[str, Section],
+) -> list[CuratedRecommendation]:
+    """Extract and deduplicate recommendations from sections.
+
+    Args:
+        sections: Dict mapping section IDs to Section objects
+
+    Returns:
+        Deduplicated list of recommendations with scheduledCorpusItemId set
+    """
+    seen_ids: set[str] = set()
+    recommendations: list[CuratedRecommendation] = []
+
+    for section in sections.values():
+        for rec in section.recommendations:
+            if rec.corpusItemId in seen_ids:
+                continue
+            seen_ids.add(rec.corpusItemId)
+            rec.update_scheduled_corpus_item_id(rec.corpusItemId)
+            recommendations.append(rec)
+
+    return recommendations
 
 
 async def get_legacy_recommendations_from_sections(
@@ -32,7 +55,6 @@ async def get_legacy_recommendations_from_sections(
     surface_id: SurfaceId,
     count: int,
     region: str | None = None,
-    topics: list[Topic] | None = None,
 ) -> list[CuratedRecommendation]:
     """Fetch section items for NEW_TAB_EN_US and return as flat list.
 
@@ -43,12 +65,11 @@ async def get_legacy_recommendations_from_sections(
         surface_id: Surface identifier (should be NEW_TAB_EN_US)
         count: Maximum number of recommendations to return
         region: Optional region for engagement filtering (e.g., 'US', 'CA')
-        topics: Optional list of preferred topics for boosting
 
     Returns:
         Ranked list of CuratedRecommendation objects
     """
-    # Headlines section is excluded from legacy format (only used in sections feed)
+    # 1. Fetch corpus sections (headlines section discarded; only used in sections feed)
     _, corpus_sections = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
@@ -56,50 +77,36 @@ async def get_legacy_recommendations_from_sections(
         include_subtopics=False,
     )
 
-    # 2. Filter to legacy topics
+    # 2. Filter to legacy topics only
     legacy_sections = get_corpus_sections_for_legacy_topic(corpus_sections)
 
-    # 3. Extract all recommendations from legacy sections, deduplicating by corpusItemId
-    seen_ids: set[str] = set()
-    recommendations: list[CuratedRecommendation] = []
+    # 3. Extract recommendations, deduplicate, and set scheduledCorpusItemId
+    recommendations = extract_recommendations_from_sections(legacy_sections)
 
-    for section in legacy_sections.values():
-        for rec in section.recommendations:
-            if rec.corpusItemId in seen_ids:
-                continue
-            seen_ids.add(rec.corpusItemId)
-            # 4. Set scheduledCorpusItemId = corpusItemId for each item (also generates tileId)
-            rec.update_scheduled_corpus_item_id(rec.corpusItemId)
-            recommendations.append(rec)
-
-    # 5. Filter reported content
+    # 4. Filter reported content
     recommendations = takedown_reported_recommendations(
         recommendations,
         engagement_backend=engagement_backend,
         region=region,
     )
 
-    # 6. Apply Thompson sampling (with rescaler=None)
+    # 5. Apply Thompson sampling (with rescaler=None)
     ranker = ThompsonSamplingRanker(
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
     )
     recommendations = ranker.rank_items(recommendations, region=region, rescaler=None)
 
-    # 7. Apply publisher spread
+    # 6. Apply publisher spread
     recommendations = spread_publishers(recommendations, spread_distance=3)
 
-    # 8. Apply topic boost if topics provided
-    if topics:
-        recommendations = boost_preferred_topic(recommendations, topics)
-
-    # 9. Limit to count items
+    # 7. Limit to count items
     recommendations = recommendations[:count]
 
-    # 10. Renumber receivedRank sequentially (0, 1, 2, ... count-1)
+    # 8. Renumber receivedRank sequentially (0, 1, 2, ... count-1)
     renumber_recommendations(recommendations)
 
-    # 11. If no recommendations after filtering, log error
+    # 9. Log error if no recommendations after filtering
     if not recommendations:
         logger.error(
             f"No recommendations available after filtering for surface_id={surface_id}, region={region}"
