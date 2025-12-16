@@ -312,8 +312,7 @@ async def test_get_snapshots_success(
     """
     tickers = ["AAPL", "MSFT", "TSLA"]
 
-    # Mocking the fetch_ticker_snapshot method to return single_ticker_snapshot_response fixture for two of the calls.
-    # Returns None for one of the calls.
+    # Mocking the fetch_ticker_snapshot method to return single_ticker_snapshot_response fixture for all three calls.
     fetch_mock = mocker.patch.object(
         polygon,
         "fetch_ticker_snapshot",

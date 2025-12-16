@@ -1,5 +1,7 @@
 """A wrapper for Polygon API interactions."""
 
+import asyncio
+from asyncio.queues import QueueFull
 import itertools
 import hashlib
 import logging
@@ -79,6 +81,9 @@ return result
 """
 SCRIPT_ID_BULK_FETCH_TICKERS: str = "bulk_fetch_tickers"
 
+# Type alias for parsed cached data
+ParsedCachedData = list[Optional[Tuple[TickerSnapshot, int]]]
+
 
 class PolygonBackend:
     """Backend that connects to the Polygon API."""
@@ -95,6 +100,8 @@ class PolygonBackend:
     url_single_ticker_snapshot: str
     url_single_ticker_overview: str
     filemanager: PolygonFilemanager
+    cache_refresh_task: asyncio.Task
+    cache_refresh_task_queue: asyncio.Queue
 
     def __init__(
         self,
@@ -136,6 +143,9 @@ class PolygonBackend:
             SCRIPT_ID_BULK_WRITE_TICKERS, LUA_SCRIPT_CACHE_BULK_WRITE_TICKERS
         )
 
+        self.cache_refresh_task_queue = asyncio.Queue()
+        self.cache_refresh_task = asyncio.create_task(self.refresh_ticker_cache_entries())
+
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
         """Get snapshots for the list of tickers."""
         # check the cache first.
@@ -171,12 +181,11 @@ class PolygonBackend:
         """
         return build_ticker_summary(snapshot, image_url)
 
-    async def get_snapshots_from_cache(
-        self, tickers: list[str]
-    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
+    async def get_snapshots_from_cache(self, tickers: list[str]) -> ParsedCachedData:
         """Return snapshots from the cache with their respective TTLs in a list of tuples format."""
+        parsed_cached_data = []
+        cache_keys = []
         try:
-            cache_keys = []
             for ticker in tickers:
                 cache_keys.append(generate_cache_key_for_ticker(ticker))
 
@@ -187,14 +196,29 @@ class PolygonBackend:
                 readonly=True,
             )
 
-            if cached_data:
-                parsed_cached_data = self._parse_cached_data(cached_data)
-                return parsed_cached_data
+            # early exit with empty list if all items are None in cached data
+            if cached_data is None or all(item is None for item in cached_data):
+                return []
+
+            parsed_cached_data = self._parse_cached_data(cached_data)
+
+            # early exit with empty list if all items are None in parsed cached data
+            if parsed_cached_data is None or all(item is None for item in parsed_cached_data):
+                return []
+
+            # get a list of ticker snapshots that need to be refreshed
+            tickers_to_refresh = self._tickers_to_refresh(parsed_cached_data)
+
+            # add list of tickers that need to be refreshed to the queue
+            self.cache_refresh_task_queue.put_nowait(tickers_to_refresh)
+
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch snapshots from Redis: {exc}")
-
+        except QueueFull:
+            logger.error("Ticker refresh queue is full")
+        finally:
             # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
-        return []
+            return parsed_cached_data
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
         """Make a request and fetch the snapshot for this single ticker."""
@@ -403,10 +427,31 @@ class PolygonBackend:
         except CacheAdapterError as exc:
             logger.error(f"Failed to write snapshots to Redis: {exc}")
 
+    async def refresh_ticker_cache_entries(self) -> None:
+        """Refresh ticker snapshot in cache. Fetches new snapshot from upstream API and
+        fires a background task to write it to the cache.
+        """
+        while True:
+            try:
+                # Get the tickers list from the queue
+                # NOTE: get_nowait() can throw QueueEmpty exception
+                tickers: list[str] = self.cache_refresh_task_queue.get_nowait()
+                snapshots = await self.get_snapshots(tickers)
+
+                # Early exit if no snapshots returned.
+                # Although, the store method also has the same check.
+                if len(snapshots) == 0:
+                    return
+
+                await self.store_snapshots_in_cache(snapshots)
+
+                # notify queue that the task is done
+                self.cache_refresh_task_queue.task_done()
+            except Exception as exc:
+                logger.warning(f"Error occerred while refreshing ticker snapshots: {exc}")
+
     # TODO @herraj add unit tests for this
-    def _parse_cached_data(
-        self, cached_data: list[bytes | None]
-    ) -> list[Optional[Tuple[TickerSnapshot, int]]]:
+    def _parse_cached_data(self, cached_data: list[bytes | None]) -> ParsedCachedData:
         """Parse Redis output of the form [snapshot_json, ttl, snapshot_json, ttl, ...].
         Each snapshot is JSON-decoded and validated into a `TickerSnapshot`,
         and each TTL is converted to an int.
@@ -420,7 +465,7 @@ class PolygonBackend:
         if (len(cached_data) % 2) != 0:
             return []
 
-        result: list[Optional[Tuple[TickerSnapshot, int]]] = []
+        result: ParsedCachedData = []
 
         # every even index is a snapshot and odd index is its TTL
         for snapshot, ttl in itertools.batched(cached_data, 2):
@@ -442,6 +487,21 @@ class PolygonBackend:
                 logger.exception(f"Unexpected error parsing cached pair: {exc}")
 
         return result
+
+    def _tickers_to_refresh(self, parsed_cached_data: ParsedCachedData) -> list[str]:
+        """Loop through the parsed cached data (list of tuples) and
+        return a list of tickers whose snapshots need to be refreshed.
+        """
+        tickers_to_refresh = []
+
+        for snaphot_ttl_tuple in parsed_cached_data:
+            if snaphot_ttl_tuple is not None:
+                snaphot, ttl = snaphot_ttl_tuple
+
+                if ttl < self.ticker_ttl_sec / 2:
+                    tickers_to_refresh.append(snaphot.ticker)
+
+        return tickers_to_refresh
 
     async def shutdown(self) -> None:
         """Close http client and cache connections."""
