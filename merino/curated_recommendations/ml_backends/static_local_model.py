@@ -165,6 +165,7 @@ MODEL_Q_VALUE_V3 = 0.030
 
 
 THRESHOLDS_V3 = [0.005, 0.008, 0.015]
+THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 
@@ -214,7 +215,7 @@ class SuperInferredModel(LocalModelBackend):
         )
 
     def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
-        model_thresholds = THRESHOLDS_V3
+        model_thresholds = THRESHOLDS_V3_NORMALIZED
         if model_id == LOCAL_AND_SERVER_V3_MODEL_ID:
             ## private features are sent to merino, "private" from differentially private
             private_features = self.v3_limited_topics
@@ -230,7 +231,7 @@ class SuperInferredModel(LocalModelBackend):
         topic_features = {a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics}
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
-            rescale=False,
+            rescale=True,
             noise_scale=0.0,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],

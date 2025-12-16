@@ -154,6 +154,7 @@ class ProcessedInterests(BaseModel):
     scores: dict[str, float] = Field(default_factory=dict)
     normalized_scores: dict[str, float] = Field(default_factory=dict)
     expected_keys: set[str] = Field(default_factory=set)
+    is_data_normalized: bool = False # Indicates if the input scores are already normalized
 
     @model_validator(mode="after")
     def compute_norm(self):
@@ -164,7 +165,10 @@ class ProcessedInterests(BaseModel):
         If any key is missing from the expected_keys, we set its value to the mean
         of the normalized values.
         """
-        if len(self.scores) >= self.minimum_value_count_for_normalization:
+        if not self.is_data_normalized:
+            normalized_dict = self.scores.copy()
+            object.__setattr__(self, "normalized_scores", normalized_dict)
+        elif len(self.scores) >= self.minimum_value_count_for_normalization:
             keys = list(self.scores.keys())
             values = np.array(list(self.scores.values()), dtype=float)
 
