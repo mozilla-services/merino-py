@@ -1,7 +1,5 @@
 """Unit tests for static local model"""
 
-import math
-
 import pytest
 from types import SimpleNamespace
 
@@ -433,7 +431,6 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
     # spot-check a couple of features decode to the last threshold
     for key, cfg in iv.items():
         assert out.scores[key] == cfg.thresholds[-1]
-        assert abs(out.normalized_scores[key] - 1 / math.sqrt(len(iv))) < 0.01  # normalized
 
 
 def test_process_decodes_when_different_present(inferred_model, local_model_backend):
@@ -463,10 +460,12 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
     for idx, (key, cfg) in enumerate(iv.items()):
         if idx == 0:
             assert out.scores[key] == cfg.thresholds[-1]
-            assert abs(out.normalized_scores[key] - 1) < 0.01  # normalizes to 1
+            assert (
+                out.normalized_scores[key] == cfg.thresholds[-1]
+            )  # Auto-noramlization is off for this model because rescale is True
         else:
             assert out.scores[key] == 0.0
-            assert abs(out.normalized_scores[key]) < 0.01  # normalizes to 0
+            assert out.normalized_scores[key] == 0.0
 
 
 def test_process_passthrough_when_values_missing_even_with_matching_model(

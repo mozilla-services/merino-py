@@ -9,6 +9,7 @@ from merino.curated_recommendations.protocol import (
     Tile,
     TileSize,
     CuratedRecommendationsRequest,
+    ProcessedInterests,
 )
 
 
@@ -181,3 +182,40 @@ class TestCuratedRecommendationsRequestsProtocol:
                 topics=topics,
             )
             assert request.topics == []
+
+
+class TestProcessedInterests:
+    """Tests for ProcessedInterests validations."""
+
+    def test_compute_norm_with_missing_keys(self):
+        """Test that compute_norm fills in missing expected keys with the mean normalized score."""
+        interests = ProcessedInterests(
+            scores={"sports": 3.0, "technology": 5.0, "business": 4.0},
+            expected_keys={"sports", "technology", "arts", "business"},
+            is_data_normalized=False,
+        )
+        normalized = interests.normalized_scores
+        assert "arts" in normalized
+        mean_score = sum(normalized.values()) / len(normalized)
+        assert normalized["arts"] == mean_score
+
+    def test_compute_norm_with_all_keys_present(self):
+        """Test that compute_norm does not alter normalized_scores when all expected keys are present."""
+        interests = ProcessedInterests(
+            scores={"sports": 3.0, "technology": 5.0, "arts": 4.0},
+            expected_keys={"sports", "technology", "arts"},
+            is_data_normalized=False,
+        )
+        normalized = interests.normalized_scores
+        assert "sports" in normalized
+        assert normalized["sports"] < 3.0  # Because of normalization
+
+    def test_pre_normalized_data(self):
+        """Test that when is_data_normalized is True, normalized_scores matches scores."""
+        interests = ProcessedInterests(
+            scores={"sports": 0.2, "technology": 0.5, "arts": 0.3},
+            expected_keys={"sports", "technology", "arts"},
+            is_data_normalized=True,
+        )
+        normalized = interests.normalized_scores
+        assert normalized == interests.scores

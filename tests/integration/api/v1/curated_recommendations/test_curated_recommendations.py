@@ -2339,7 +2339,7 @@ class TestSections:
         assert len(sorted_sections) > 3
 
         # define interest vector, reversed from previous order
-        interests: dict[str, float | str] = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
+        interests: dict[str, float | str] = {sorted_sections[i]: (1 - i / 8) * 10 for i in range(4)}
         interests["model_id"] = DEFAULT_PRODUCTION_MODEL_ID
         # make the api call
         response = client.post(
