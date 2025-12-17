@@ -27,6 +27,9 @@ from merino.curated_recommendations.rankers import (
     spread_publishers,
     ThompsonSamplingRanker,
 )
+from merino.curated_recommendations.legacy.sections_adapter import (
+    get_legacy_recommendations_from_sections,
+)
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
@@ -116,25 +119,11 @@ class CuratedRecommendationsProvider:
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
         surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-        recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                # interest vector. Data science work shows that using the topics as features
-                # is effective as a first pass at personalization.
-                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={f"t_{item.topic.value}": 1.0} if item.topic else {},
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
 
         sections_feeds = None
-        general_feed = []
-        is_sections_experiment = self.is_sections_experiment(request, surface_id)
+        general_feed: list[CuratedRecommendation] = []
 
-        if is_sections_experiment:
+        if self.is_sections_experiment(request, surface_id):
             inferred_interests = self.process_request_interests(
                 request, surface_id, self.local_model_backend
             )
@@ -146,10 +135,33 @@ class CuratedRecommendationsProvider:
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
                 ml_backend=self.ml_recommendations_backend,
-                scheduled_surface_backend=self.scheduled_surface_backend,
+                region=derive_region(request.locale, request.region),
+            )
+        elif surface_id == SurfaceId.NEW_TAB_EN_US:
+            # US non-sections: fetch from sections backend instead of scheduler
+            general_feed = await get_legacy_recommendations_from_sections(
+                sections_backend=self.sections_backend,
+                engagement_backend=self.engagement_backend,
+                prior_backend=self.prior_backend,
+                surface_id=surface_id,
+                count=request.count,
                 region=derive_region(request.locale, request.region),
             )
         else:
+            # Non-US/CA markets: fetch from scheduled surface backend
+            corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
+            recommendations = [
+                CuratedRecommendation(
+                    **item.model_dump(),
+                    receivedRank=rank,
+                    # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
+                    # interest vector. Data science work shows that using the topics as features
+                    # is effective as a first pass at personalization.
+                    # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
+                    features={f"t_{item.topic.value}": 1.0} if item.topic else {},
+                )
+                for rank, item in enumerate(corpus_items)
+            ]
             general_feed = self.rank_recommendations(recommendations, request)
         local_model = self.local_model_backend.get(
             surface_id,

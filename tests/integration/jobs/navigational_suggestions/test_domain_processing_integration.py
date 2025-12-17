@@ -571,7 +571,7 @@ class TestDomainProcessorEndToEndWorkflow:
         # Verify results
         assert len(results) == 1
         result = results[0]
-        assert result["url"] == "https://example.com"
+        assert result.get("url") == "https://example.com"
         assert result["title"] == "Example Domain"
         assert result["icon"] == "https://example.com/favicon.ico"
         assert result["domain"] == "example"
@@ -681,7 +681,10 @@ class TestDomainProcessorMethodIntegration:
         result = await processor._process_single_domain(blocked_domain_data, 32, mock_uploader)
 
         # Should return empty result for blocked domain
-        assert result == {"url": None, "title": None, "icon": None, "domain": None}
+        assert result["url"] is None
+        assert result["title"] is None
+        assert result["icon"] is None
+        assert result["domain"] is None
 
     @pytest.mark.asyncio
     async def test_process_single_domain_custom_favicon_integration(self, sample_blocked_domains):
@@ -822,15 +825,19 @@ class TestDomainProcessorMethodIntegration:
                 with patch.object(processor, "_extract_title") as mock_extract_title:
                     mock_web_scraper = MockWebScraper.return_value.__enter__.return_value
                     mock_web_scraper.open.return_value = "https://example.com/page"
+                    mock_web_scraper.is_bot_blocked.return_value = False
 
-                    mock_favicon_extract.return_value = "https://cdn.example.com/favicon.ico"
+                    mock_favicon_extract.return_value = (
+                        "https://cdn.example.com/favicon.ico",
+                        None,
+                    )
                     mock_extract_title.return_value = "Example Site"
 
                     result = await processor._try_scraping(
                         "example.com", "example", 32, mock_uploader
                     )
 
-        assert result["url"] == "https://example.com"
+        assert result.get("url") == "https://example.com"
         assert result["title"] == "Example Site"
         assert result["icon"] == "https://cdn.example.com/favicon.ico"
         assert result["domain"] == "example"
@@ -855,8 +862,12 @@ class TestDomainProcessorMethodIntegration:
                 with patch.object(processor, "_extract_title") as mock_extract_title:
                     mock_web_scraper = MockWebScraper.return_value.__enter__.return_value
                     mock_web_scraper.open.side_effect = [None, "https://www.example.com/page"]
+                    mock_web_scraper.is_bot_blocked.return_value = False
 
-                    mock_favicon_extract.return_value = "https://cdn.example.com/favicon.ico"
+                    mock_favicon_extract.return_value = (
+                        "https://cdn.example.com/favicon.ico",
+                        None,
+                    )
                     mock_extract_title.return_value = "Example"
 
                     result = await processor._try_scraping(
@@ -868,7 +879,7 @@ class TestDomainProcessorMethodIntegration:
         mock_web_scraper.open.assert_any_call("https://example.com")
         mock_web_scraper.open.assert_any_call("https://www.example.com")
 
-        assert result["url"] == "https://www.example.com"
+        assert result.get("url") == "https://www.example.com"
         assert result["title"] == "Example"
 
     @pytest.mark.asyncio
@@ -895,7 +906,10 @@ class TestDomainProcessorMethodIntegration:
             )
 
         # Should return empty result when scraping fails
-        assert result == {"url": None, "title": None, "icon": None, "domain": None}
+        assert result["url"] is None
+        assert result["title"] is None
+        assert result["icon"] is None
+        assert result["domain"] is None
 
         # Should have tried both URLs
         assert mock_web_scraper.open.call_count == 2
@@ -926,7 +940,10 @@ class TestDomainProcessorMethodIntegration:
             )
 
         # Should return empty result when exception occurs
-        assert result == {"url": None, "title": None, "icon": None, "domain": None}
+        assert result["url"] is None
+        assert result["title"] is None
+        assert result["icon"] is None
+        assert result["domain"] is None
 
     @pytest.mark.asyncio
     async def test_extract_and_process_favicon_integration(self, sample_blocked_domains):
@@ -966,14 +983,14 @@ class TestDomainProcessorMethodIntegration:
                         return_value=mock_favicons
                     )
                     mock_processor_instance.process_and_upload_best_favicon = AsyncMock(
-                        return_value="https://cdn.example.com/favicon.ico"
+                        return_value=("https://cdn.example.com/favicon.ico", None)
                     )
 
                     result = await processor._extract_and_process_favicon(
                         mock_web_scraper, "https://example.com", 32, mock_uploader
                     )
 
-        assert result == "https://cdn.example.com/favicon.ico"
+        assert result == ("https://cdn.example.com/favicon.ico", None)
 
         # Verify components were created and called correctly
         MockExtractor.assert_called_once()
@@ -1008,8 +1025,8 @@ class TestDomainProcessorMethodIntegration:
                 mock_web_scraper, "https://example.com", 32, mock_uploader
             )
 
-        # Should return empty string when extraction fails
-        assert result == ""
+        # Should return empty string when extraction fails (tuple with error reason)
+        assert result == ("", "no_suitable_favicon_found")
 
     @pytest.mark.asyncio
     async def test_process_domains_chunking_and_monitoring_integration(

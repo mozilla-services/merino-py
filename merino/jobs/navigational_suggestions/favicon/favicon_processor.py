@@ -32,15 +32,19 @@ class FaviconProcessor:
         favicons: list[dict[str, Any]],
         min_width: int,
         uploader: "DomainMetadataUploader",
-    ) -> str:
-        """Process and upload best favicon (SVGs first, then bitmaps if needed)."""
+    ) -> tuple[str, str | None]:
+        """Process and upload best favicon (SVGs first, then bitmaps if needed).
+
+        Returns:
+            Tuple of (favicon_url, error_reason) where error_reason is None if successful
+        """
         try:
             # Filter and prepare URLs
             urls = [fix_url(favicon.get("href", ""), self.base_url) for favicon in favicons]
             urls = [url for url in urls if is_valid_url(url)]
 
             if not urls:
-                return ""
+                return "", "no_valid_favicon_urls"
 
             # Identify masked SVG indices upfront (to skip them)
             masked_svg_indices = [i for i, favicon in enumerate(favicons) if "mask" in favicon]
@@ -54,18 +58,30 @@ class FaviconProcessor:
                 svg_urls, svg_indices, masked_svg_indices, uploader
             )
             if svg_result:
-                return svg_result
+                return svg_result, None
 
             # Phase 2: Process bitmaps only if no suitable SVG found
-            bitmap_result = await self._process_bitmap_favicons(
+            bitmap_result, bitmap_width, failed_validations = await self._process_bitmap_favicons(
                 bitmap_urls, bitmap_indices, favicons, min_width, uploader
             )
 
-            return bitmap_result
+            if bitmap_result:
+                return bitmap_result, None
+            elif bitmap_width > 0 and bitmap_width < min_width:
+                return "", "below_minimum_width"
+            elif failed_validations > 0 and failed_validations == len(bitmap_urls):
+                return "", "all_favicons_invalid_format: PIL cannot decode images"
+            elif failed_validations > 0:
+                return (
+                    "",
+                    f"no_suitable_favicon_found: {failed_validations}/{len(bitmap_urls)} images failed validation",
+                )
+            else:
+                return "", "no_suitable_favicon_found"
 
         except Exception as e:
             logger.error(f"Unexpected error in process_and_upload_best_favicon: {e}")
-            return ""
+            return "", f"processing_exception: {str(e)}"
 
     def _categorize_svg_urls(self, urls: list[str]) -> tuple[list[str], list[int]]:
         """Extract SVG URLs and their indices."""
@@ -146,14 +162,22 @@ class FaviconProcessor:
         all_favicons: list[dict[str, Any]],
         min_width: int,
         uploader: "DomainMetadataUploader",
-    ) -> str:
-        """Process bitmaps in batches and upload the best one meeting min_width."""
+    ) -> tuple[str, int, int]:
+        """Process bitmaps in batches and upload the best one meeting min_width.
+
+        Returns:
+            Tuple of (favicon_url, best_width, failed_validations) where:
+            - favicon_url is empty if none meet min_width
+            - best_width is the best width found
+            - failed_validations is count of images that couldn't be decoded
+        """
         if not bitmap_urls:
-            return ""
+            return "", 0, 0
 
         best_favicon_url = ""
         best_favicon_width = 0
         best_favicon_source = "default"
+        failed_image_validations = 0
 
         try:
             # Process in batches to manage memory
@@ -181,6 +205,7 @@ class FaviconProcessor:
                                 logger.warning(
                                     f"Exception getting dimensions at position {local_idx}: {e}"
                                 )
+                                failed_image_validations += 1
                                 continue
 
                             # Check if this is better than current best
@@ -228,9 +253,12 @@ class FaviconProcessor:
                 except Exception as e:
                     logger.error(f"Error processing bitmap batch: {e}")
 
-            # Return the best favicon URL if it meets minimum width requirement
-            return best_favicon_url if best_favicon_width >= min_width else ""
+            # Return the best favicon URL if it meets minimum width requirement, along with width
+            if best_favicon_width >= min_width:
+                return best_favicon_url, best_favicon_width, failed_image_validations
+            else:
+                return "", best_favicon_width, failed_image_validations
 
         except Exception as e:
             logger.error(f"Error during bitmap favicon processing: {e}")
-            return ""
+            return "", 0, 0

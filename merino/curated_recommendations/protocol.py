@@ -159,7 +159,7 @@ class ProcessedInterests(BaseModel):
     )
 
     @model_validator(mode="after")
-    def compute_norm(self):
+    def compute_norm(self) -> "ProcessedInterests":
         """Set the normalized_scores dictionary with an L2-normalized (unit length) set
         of interests if the number of interests we have meets a minimum threshold,
         otherwise leave empty.
