@@ -157,14 +157,6 @@ class CuratedRecommendationsProvider:
             experiment_branch=request.experimentBranch,
         )
 
-        # Reduce weight of local re-ranking for now by increasing server ranking.
-        # Local re-ranking had little impact in previous experiment,
-        # possibly due to range of items sent down from server.
-        if local_model is not None and sections_feeds is not None:
-            for _title, section in sections_feeds.items():
-                for rec in section.recommendations:
-                    rec.server_score = 10000.0
-
         response = CuratedRecommendationsResponse(
             recommendedAt=get_millisecond_epoch_time(),
             surfaceId=surface_id,

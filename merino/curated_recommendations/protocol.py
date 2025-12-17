@@ -253,7 +253,6 @@ class CuratedRecommendation(CorpusItem):
         description="Maps feature names to weights, which the client "
         "can use to create a coarse interest vector.",
     )
-    server_score: float | None = None
 
     def in_experiment(self, experiment_name) -> bool:
         """Return if particular experiment name is associated with this experiment
