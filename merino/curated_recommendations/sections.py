@@ -712,7 +712,7 @@ async def get_sections(
         top_stories_count,
         TOP_STORIES_SECTION_EXTRA_COUNT,
         rescaler=rescaler,
-        relax_constraints_for_personalization=personal_interests is not None,
+        relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations
