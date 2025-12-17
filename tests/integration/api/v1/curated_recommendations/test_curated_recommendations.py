@@ -42,7 +42,6 @@ from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
-    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
     DEFAULT_PRODUCTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -617,6 +616,7 @@ def test_curated_recommendations_features(client: TestClient):
         for rec in section["recommendations"]
     ]
 
+    num_recs_with_section_features = 0
     for rec in all_recs:
         # With sections backend, features include both topic (t_ prefix) and section (s_ prefix)
         # Topic feature must be present
@@ -626,7 +626,11 @@ def test_curated_recommendations_features(client: TestClient):
 
         # At least one section feature (s_ prefix) should be present
         section_features = [k for k in rec["features"].keys() if k.startswith("s_")]
-        assert len(section_features) > 0, "At least one section feature should be present"
+        if len(section_features) > 0:
+            num_recs_with_section_features += 1
+    assert (
+        num_recs_with_section_features > 0
+    )  # We are omitting some UUID based sections until they are deprecated
 
 
 class TestCuratedRecommendationsRequestParameters:
@@ -2444,7 +2448,9 @@ class TestSections:
         assert len(sorted_sections) > 3
 
         # define interest vector, reversed from previous order
-        interests: dict[str, float | str] = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
+        interests: dict[str, float | str] = {
+            sorted_sections[i]: (1 - i / 8) * 10 for i in range(4)
+        }
         interests["model_id"] = DEFAULT_PRODUCTION_MODEL_ID
         # make the api call
         response = client.post(
@@ -2476,7 +2482,7 @@ class TestSections:
             "sports": 0.0,
             "other": 0.0,
             "arts": 0.5,
-            "model_id": CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+            "model_id": DEFAULT_PRODUCTION_MODEL_ID,
         }
 
         # make the api call

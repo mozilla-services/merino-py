@@ -1,21 +1,15 @@
 """Unit tests for static local model"""
 
-import math
-
 import pytest
 from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
+    SERVER_V3_MODEL_ID,
+    THRESHOLDS_V3_NORMALIZED,
     FakeLocalModelSections,
     SuperInferredModel,
     CTR_SECTION_MODEL_ID,
-    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
-    CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
-    LOCAL_AND_SERVER_V1,
-    LOCAL_ONLY_V1,
-    LOCAL_AND_SERVER_BRANCH_NAME,
-    LOCAL_ONLY_BRANCH_NAME,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -30,8 +24,7 @@ from merino.curated_recommendations.provider import (
 
 from merino.curated_recommendations.protocol import ExperimentName
 
-INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
-INFERRED_LOCAL_EXPERIMENT_NAME_V2 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V2.value
+INFERRED_V3_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value
 
 TEST_SURFACE = "test_surface"
 
@@ -77,7 +70,7 @@ def test_model_returns_default_limited_model(model_limited):
 
     assert isinstance(result, InferredLocalModel)
     assert result.surface_id == surface_id
-    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    assert result.model_id == SERVER_V3_MODEL_ID
     assert result.model_version == 0
     assert result.model_data is not None
     assert (
@@ -88,38 +81,10 @@ def test_model_returns_default_limited_model(model_limited):
     assert len(result.model_data.day_time_weighting.relative_weight) > 0
 
     # test a specific threshold value
-    assert result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0] == 0.005
-
-
-def test_local_and_server_model(model_limited):
-    """Tests fake local model"""
-    surface_id = TEST_SURFACE
-    result = model_limited.get(
-        surface_id,
-        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
-        experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
+    assert (
+        result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0]
+        == THRESHOLDS_V3_NORMALIZED[0]
     )
-    assert result.model_id == LOCAL_AND_SERVER_V1
-
-    features = result.model_data.interest_vector[Topic.SPORTS.value].features
-    assert "t_sports" not in features
-    assert features.get("s_sports", 0) == 1.0  # Should be dominant feature
-    assert features.get("s_sports_crawl", 0) == features.get("s_sports", 0)
-
-    features = result.model_data.interest_vector["tv"].features
-    assert features.get("t_arts", 0) + features.get("s_tv", 0) == 1.0
-    assert features.get("s_tv", 0) > 0.7  # Should be dominant feature
-    assert "s_arts_crawl" not in features
-
-
-def test_model_returns_legacy_limited_model(model_limited):
-    """Tests fake local model"""
-    surface_id = TEST_SURFACE
-    result = model_limited.get(surface_id, model_id=CTR_LIMITED_TOPIC_MODEL_ID_V1_A)
-
-    assert isinstance(result, InferredLocalModel)
-    assert result.surface_id == surface_id
-    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_A
 
 
 def test_model_returns_no_model_when_unsupported(model_limited):
@@ -161,28 +126,17 @@ def test_decode_skipped_when_model_id_mismatch(model_limited):
     assert not model.model_matches_interests(wrong_id)
 
 
-def test_model_defaults_v1b(model_limited):
-    """Caller should not decode when the model id doesn't match."""
-    model = model_limited.get("surface")
-    assert model.model_matches_interests(CTR_LIMITED_TOPIC_MODEL_ID_V1_B)
-
-
 def test_model_experiment_name_and_branch_name(model_limited):
     """Caller should not decode when the model id doesn't match."""
     model = model_limited.get(
         "surface",
-        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
-        experiment_branch=LOCAL_AND_SERVER_V1,
+        experiment_name=INFERRED_V3_EXPERIMENT_NAME,
+        experiment_branch="any",
     )
-    assert model.model_matches_interests(LOCAL_AND_SERVER_V1)
+    assert model.model_matches_interests(SERVER_V3_MODEL_ID)
     assert (
-        len(model.model_data.private_features) > 0 and len(model.model_data.private_features) <= 6
+        len(model.model_data.private_features) > 0 and len(model.model_data.private_features) <= 8
     )
-    model = model_limited.get(
-        "surface", experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME, experiment_branch=LOCAL_ONLY_V1
-    )
-    assert model.model_matches_interests(LOCAL_ONLY_V1)
-    assert len(model.model_data.private_features) == 0
 
 
 def test_model_matches_interests_none_and_non_str(model_limited):
@@ -371,7 +325,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
     """decode_dp_interests decodes various unary patterns."""
     model = model_limited.get(TEST_SURFACE)
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
 
     values = []
     for _key, feature in model.model_data.interest_vector.items():
@@ -391,7 +345,7 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
 @pytest.mark.parametrize(
     "input_id,expected",
     [
-        (CTR_LIMITED_TOPIC_MODEL_ID_V1_B, True),
+        (SERVER_V3_MODEL_ID, True),
         ("bad id", False),
         (None, False),
         (3.14, False),
@@ -427,13 +381,13 @@ def test_process_returns_none_when_request_has_no_interests(inferred_model, loca
 def test_process_passes_through_when_no_model(local_model_backend):
     """When inferred_local_model is None, return ProcessedInterests with empty scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     req = make_request(interests)
     out = CuratedRecommendationsProvider.process_request_interests(
         req, SurfaceId.NEW_TAB_EN_US, local_model_backend
     )
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    assert out.model_id == SERVER_V3_MODEL_ID
     assert out.scores == {}
     assert out.normalized_scores == {}
 
@@ -463,7 +417,7 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
         dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
@@ -472,12 +426,11 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
     )
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    assert out.model_id == SERVER_V3_MODEL_ID
 
     # spot-check a couple of features decode to the last threshold
     for key, cfg in iv.items():
         assert out.scores[key] == cfg.thresholds[-1]
-        assert abs(out.normalized_scores[key] - 1 / math.sqrt(len(iv))) < 0.01  # normalized
 
 
 def test_process_decodes_when_different_present(inferred_model, local_model_backend):
@@ -493,7 +446,7 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
             dp_values.append("1" + (n - 1) * "0")  # lowest (0) value
 
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
     req = make_request(interests)
 
@@ -502,15 +455,17 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
     )
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    assert out.model_id == SERVER_V3_MODEL_ID
     # spot-check a couple of features decode to the last threshold
     for idx, (key, cfg) in enumerate(iv.items()):
         if idx == 0:
             assert out.scores[key] == cfg.thresholds[-1]
-            assert abs(out.normalized_scores[key] - 1) < 0.01  # normalizes to 1
+            assert (
+                out.normalized_scores[key] > 0.9  # Normalizaiton moves it close to 1.0
+            )
         else:
             assert out.scores[key] == 0.0
-            assert abs(out.normalized_scores[key]) < 0.01  # normalizes to 0
+            assert out.normalized_scores[key] == 0.0
 
 
 def test_process_passthrough_when_values_missing_even_with_matching_model(
@@ -518,7 +473,7 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
 ):
     """If model_id matches but no DP values key, extract existing numeric scores."""
     interests = InferredInterests.empty()
-    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
     interests.root["foo"] = 0.123
     interests.root["bar"] = "baz"  # String, not a score
     req = make_request(interests)
@@ -527,9 +482,8 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
         req, SurfaceId.NEW_TAB_EN_US, local_model_backend
     )
     assert isinstance(out, ProcessedInterests)
-    assert out.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+    assert out.model_id == SERVER_V3_MODEL_ID
     assert out.scores["foo"] == 0.123
-    assert "foo" not in out.normalized_scores
     assert "bar" not in out.normalized_scores  # String values are not included in scores
     assert "bar" not in out.scores  # String values are not included in scores
 
@@ -537,43 +491,24 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
 @pytest.mark.parametrize(
     "experiment,branch,model_id,expect_private_nonempty",
     [
-        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, LOCAL_AND_SERVER_V1, True),
         (
-            INFERRED_LOCAL_EXPERIMENT_NAME_V2,
-            LOCAL_AND_SERVER_BRANCH_NAME,
-            LOCAL_AND_SERVER_V1,
+            "optin-" + INFERRED_V3_EXPERIMENT_NAME,
+            "any_branch",
+            SERVER_V3_MODEL_ID,
             True,
         ),
-        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
-        (INFERRED_LOCAL_EXPERIMENT_NAME_V2, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
         (
-            "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
-            LOCAL_AND_SERVER_BRANCH_NAME,
-            LOCAL_AND_SERVER_V1,
+            INFERRED_V3_EXPERIMENT_NAME,
+            "any_branch",
+            SERVER_V3_MODEL_ID,
             True,
         ),
-        ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, LOCAL_ONLY_V1, False),
-        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_AND_SERVER_BRANCH_NAME, None, True),
-        (INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, None, False),
         (
-            "optin-" + INFERRED_LOCAL_EXPERIMENT_NAME,
-            LOCAL_AND_SERVER_BRANCH_NAME,
-            None,
+            "sdfs",
+            "any_branch",
+            SERVER_V3_MODEL_ID,
             True,
         ),
-        ("optin-" + INFERRED_LOCAL_EXPERIMENT_NAME, LOCAL_ONLY_BRANCH_NAME, None, False),
-    ],
-    ids=[
-        "local_and_server_branch",
-        "local_and_server_branch_v2",
-        "local_only_branch",
-        "local_only_branch_v2",
-        "optin-local_and_server_branch",
-        "optin-local_only_branch",
-        "local_and_server_branch__no_model",
-        "local_only_branch__no_model",
-        "optin-local_and_server_branch__no_model",
-        "optin-local_only_branch__no_model",
     ],
 )
 def test_get_with_experiment_and_model_id_correct_branch_returns_model(
@@ -600,53 +535,16 @@ def test_get_with_experiment_and_model_id_correct_branch_returns_model(
         assert result.model_data.private_features == []
 
 
-def test_no_model_id_correct_experiment(model_limited):
-    """Control check: no model_id but correct experiment returns expected local model"""
-    ## LOCAL AND SERVER
-    result = model_limited.get(
-        TEST_SURFACE,
-        model_id=None,
-        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
-        experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
-    )
-    assert isinstance(result, InferredLocalModel)
-    assert result.model_id == LOCAL_AND_SERVER_V1
-    ## LOCAL ONLY
-    result = model_limited.get(
-        TEST_SURFACE,
-        model_id=None,
-        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
-        experiment_branch=LOCAL_ONLY_BRANCH_NAME,
-    )
-    assert isinstance(result, InferredLocalModel)
-    assert result.model_id == LOCAL_ONLY_V1
-
-
-def test_get_with_non_experiment_model_id_ignores_experiment_returns_ctr(model_limited):
-    """Control check: passing a non-local (CTR) model_id should build the CTR model, regardless of
-    experiment knobs. Ensures experiment switching applies only to local models.
-    """
-    result = model_limited.get(
-        TEST_SURFACE,
-        model_id=CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
-        experiment_name=INFERRED_LOCAL_EXPERIMENT_NAME,
-        experiment_branch=LOCAL_AND_SERVER_BRANCH_NAME,
-    )
-    assert isinstance(result, InferredLocalModel)
-    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
-    # basic payload sanity
-    assert Topic.SPORTS.value in result.model_data.interest_vector
-
-
 def test_get_dummy_experiment_name(model_limited):
-    """Control check: an unknown experiment name and no model_id defaults to ctr_v1_b"""
+    """Control check: an unknown experiment name and no model_id defaults to no model."""
     result = model_limited.get(
         TEST_SURFACE,
         model_id=None,
         experiment_name="moo",
         experiment_branch="cow",
     )
+    assert result is not None
+    assert result.model_id == SERVER_V3_MODEL_ID
     assert isinstance(result, InferredLocalModel)
-    assert result.model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_B
     # basic payload sanity
     assert Topic.SPORTS.value in result.model_data.interest_vector

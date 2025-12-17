@@ -163,16 +163,18 @@ class CuratedRecommendationsProvider:
                 for rank, item in enumerate(corpus_items)
             ]
             general_feed = self.rank_recommendations(recommendations, request)
+        local_model = self.local_model_backend.get(
+            surface_id,
+            experiment_name=request.experimentName,
+            experiment_branch=request.experimentBranch,
+        )
+
         response = CuratedRecommendationsResponse(
             recommendedAt=get_millisecond_epoch_time(),
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
-            inferredLocalModel=self.local_model_backend.get(
-                surface_id,
-                experiment_name=request.experimentName,
-                experiment_branch=request.experimentBranch,
-            )
+            inferredLocalModel=local_model
             if request.inferredInterests
             else None,  # Inferred interests being not none implies personalization
         )

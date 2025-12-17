@@ -13,11 +13,15 @@ from merino.curated_recommendations.protocol import ExperimentName
 
 INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
 INFERRED_LOCAL_EXPERIMENT_NAME_V2 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V2.value
-LOCAL_AND_SERVER_V1 = "local-and-server"
-LOCAL_ONLY_V1 = "local-only"
-LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1
-LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1
+INFERRED_LOCAL_EXPERIMENT_NAME_V3 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value
 
+LOCAL_AND_SERVER_V1_MODEL_ID = "local-and-server"
+LOCAL_ONLY_V1_MODEL_ID = "local-only"
+SERVER_V3_MODEL_ID = "inferred-v3-model"
+
+LOCAL_ONLY_BRANCH_NAME = LOCAL_ONLY_V1_MODEL_ID
+LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1_MODEL_ID
+LOCAL_AND_SERVER_V3_BRANCH_NAME = "personalized-stories"
 
 # Ranking based on normalized time zone offset and country
 CONTEXTUAL_RANKING_TREATMENT_TZ = "contextual-ranking-content-tz"
@@ -27,16 +31,9 @@ CONTEXTUAL_RANKING_TREATMENT_COUNTRY = "contextual-ranking-content-country"
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 
-CTR_LIMITED_TOPIC_MODEL_ID_V1_A = "ctr_limited_topic_v1"
-CTR_LIMITED_TOPIC_MODEL_ID_V1_B = "ctr_limited_topic_v1_b"
-SUPPORTED_LIVE_MODELS = {
-    CTR_LIMITED_TOPIC_MODEL_ID_V1_A,
-    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
-    LOCAL_AND_SERVER_V1,
-    LOCAL_ONLY_V1,
-}
+SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID}
 
-DEFAULT_PRODUCTION_MODEL_ID = CTR_LIMITED_TOPIC_MODEL_ID_V1_B
+DEFAULT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -103,6 +100,8 @@ BASE_SECTIONS_FOR_LOCAL_MODEL = [
     "society",
 ]
 
+BASE_SECTIONS_FOR_LOCAL_MODEL_SET = set(BASE_SECTIONS_FOR_LOCAL_MODEL)
+
 
 # Creates a simple model based on sections. Section features are stored with a s_
 # in telemetry
@@ -163,8 +162,11 @@ class FakeLocalModelSections(LocalModelBackend):
 MODEL_P_VALUE_V1 = 0.806
 MODEL_Q_VALUE_V1 = 0.030
 
-THRESHOLDS_V1_A = [0.008, 0.016, 0.024]
-THRESHOLDS_V1_B = [0.005, 0.008, 0.015]
+MODEL_P_VALUE_V3 = 0.91
+MODEL_Q_VALUE_V3 = 0.030
+
+
+THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 
@@ -180,111 +182,65 @@ class SuperInferredModel(LocalModelBackend):
      Based on data analysis these were the most impactful topics from personalization when limited to 5
      The last dimension is a combination of other topics.
     """
-    limited_topics = [
-        Topic.SPORTS.value,
-        Topic.POLITICS.value,
-        Topic.ARTS.value,
-        Topic.HEALTH_FITNESS.value,
-        Topic.BUSINESS.value,
-    ]
-    limited_topics_set = set(limited_topics)
 
-    default_model_id = DEFAULT_PRODUCTION_MODEL_ID
+    v3_limited_topics = [
+        # Top clicked in most popular, though food was dropped for parenting
+        Topic.SPORTS.value,
+        Topic.ARTS.value,
+        Topic.POLITICS.value,
+        Topic.PARENTING.value,
+        Topic.BUSINESS.value,
+        Topic.TECHNOLOGY.value,
+        Topic.SCIENCE.value,
+        Topic.PERSONAL_FINANCE.value,
+    ]
+    limited_topics_set = set(v3_limited_topics)
 
     @staticmethod
     def _get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
             thresholds=thresholds,
-            diff_p=MODEL_P_VALUE_V1,
-            diff_q=MODEL_Q_VALUE_V1,
+            diff_p=MODEL_P_VALUE_V3,
+            diff_q=MODEL_Q_VALUE_V3,
         )
 
     @staticmethod
     def _get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
-        subsection_supertopic = TOPIC_FOR_SUBTOPIC_SECTION.get(section_name, None)
-
-        add_backward_compatibility = (
-            section_name in BASE_TOPICS_SET
-        )  # This can be removed in December 2025
-
-        # What we're doing below is splitting the feature weight between the section feature and
-        # the supertopic feature if applicable. So a click on "sports" or "mlb" would boost "soccer"
-        section_scalar = 1 - SUBTOPIC_TOPIC_BLEND_RATIO if subsection_supertopic is not None else 1
-        features = {f"s_{section_name}": section_scalar}
-        if subsection_supertopic:
-            features[f"t_{subsection_supertopic.value}"] = SUBTOPIC_TOPIC_BLEND_RATIO
-        if add_backward_compatibility:
-            features[f"s_{section_name}_crawl"] = section_scalar
+        features = {f"s_{section_name}": 1}
         return InterestVectorConfig(
             features=features,
             thresholds=thresholds,
-            diff_p=MODEL_P_VALUE_V1,
-            diff_q=MODEL_Q_VALUE_V1,
-        )
-
-    def _build_ctr_limited(self, model_id, surface_id) -> InferredLocalModel | None:
-        if model_id == CTR_LIMITED_TOPIC_MODEL_ID_V1_A:
-            model_thresholds = THRESHOLDS_V1_A
-        else:
-            model_thresholds = THRESHOLDS_V1_B
-        private_features = None  ## private features null on frontend
-        category_fields = {a: self._get_topic(a, model_thresholds) for a in self.limited_topics}
-        # Remainder of topics an interest
-        remainder_topic_list = [topic for topic in Topic if topic not in self.limited_topics_set]
-        category_fields[DEFAULT_INTERESTS_KEY] = InterestVectorConfig(
-            features={f"t_{topic_obj.value}": 1 for topic_obj in remainder_topic_list},
-            thresholds=model_thresholds,
-            diff_p=MODEL_P_VALUE_V1,
-            diff_q=MODEL_Q_VALUE_V1,
-        )
-        model_data: ModelData = ModelData(
-            model_type=ModelType.CTR,
-            rescale=False,
-            noise_scale=0.0,
-            day_time_weighting=DayTimeWeightingConfig(
-                days=[3, 14, 45],
-                relative_weight=[1, 1, 1],
-            ),
-            interest_vector=category_fields,
-            private_features=private_features,
-        )
-        return InferredLocalModel(
-            model_id=model_id,
-            surface_id=surface_id,
-            model_data=model_data,
-            model_version=0,
+            diff_p=MODEL_P_VALUE_V3,
+            diff_q=MODEL_Q_VALUE_V3,  # Note since these section features are non-private features, p/q are ignored
         )
 
     def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
-        model_thresholds = THRESHOLDS_V1_B
-        if model_id == LOCAL_AND_SERVER_V1:
+        model_thresholds = THRESHOLDS_V3_NORMALIZED
+        private_features: list[str] | None = None
+
+        if model_id == SERVER_V3_MODEL_ID:
             ## private features are sent to merino, "private" from differentially private
-            private_features = [
-                "sports",
-                "government",
-                "arts",
-                "health",
-                "business",
-                "education-science",
-            ]  ## TODO "education-science"?
-        elif model_id == LOCAL_ONLY_V1:  ## includes (experiment_branch == LOCAL_ONLY_BRANCH_NAME)
-            ## nothing sent to merino
-            private_features = []
-        else:
-            return None
-        category_fields = {
-            a: self._get_section(a, model_thresholds) for a in BASE_SECTIONS_FOR_LOCAL_MODEL
-        }  ## all sections
+            private_features = self.v3_limited_topics
+        """
+            Section features are disabled but will be returned soon when we have the ability to scale their influence
+            locally via the server_score parameter
+            _section_features = {
+                a: self._get_section(a, model_thresholds)
+                for a in BASE_SECTIONS_FOR_LOCAL_MODEL
+                if a not in self.limited_topics_set
+            }
+        """
+        topic_features = {a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics}
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
-            rescale=False,
+            rescale=True,
             noise_scale=0.0,
             day_time_weighting=DayTimeWeightingConfig(
-                days=[3, 14, 45],
-                relative_weight=[1, 1, 1],
+                days=[30],
+                relative_weight=[1],
             ),
-            interest_vector=category_fields,
+            interest_vector={**topic_features},  # **_section_features},
             private_features=private_features,
         )
         return InferredLocalModel(
@@ -316,28 +272,16 @@ class SuperInferredModel(LocalModelBackend):
             ## there will be another call to "get" with model_id=None
             ## where the next model is built+returned
             return None
+        supported_model = self._build_local(SERVER_V3_MODEL_ID, surface_id)
         if model_id is None:  ## this is the "get" call for building the model sent in the response
-            ## switch on experiment name, not using util becuase we have string name instead of request object
+            ## switch on experiment name, not using util because we have string name instead of request object
             if (
-                experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME
-                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME}"
-                or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V2
-                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V2}"
+                experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
+                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V3}"
             ):
-                ## switch on branch name
-                if experiment_branch == LOCAL_AND_SERVER_BRANCH_NAME:
-                    return self._build_local(LOCAL_AND_SERVER_V1, surface_id)
-                elif experiment_branch == LOCAL_ONLY_BRANCH_NAME:
-                    return self._build_local(LOCAL_ONLY_V1, surface_id)
-                else:
-                    return None
+                # We don't have to check for branch here as control won't call inferred code
+                return supported_model
             else:
-                ## default to CTR_V1_B
-                return self._build_ctr_limited(CTR_LIMITED_TOPIC_MODEL_ID_V1_B, surface_id)
-        ## now switch on model_id that isnt None
-        if model_id in (CTR_LIMITED_TOPIC_MODEL_ID_V1_A, CTR_LIMITED_TOPIC_MODEL_ID_V1_B):
-            return self._build_ctr_limited(model_id, surface_id)
-        if model_id in (LOCAL_ONLY_V1, LOCAL_AND_SERVER_V1):
-            return self._build_local(model_id, surface_id)
-        ## no matches
-        return None
+                return supported_model  # this is the default model
+        # Normally we would pick the model based on model_id here, but we are supporting only one right now
+        return supported_model

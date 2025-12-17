@@ -1054,6 +1054,26 @@ class TestGreedyPersonalizedSectionRanker:
         for sec in reranked_sections:
             assert reranked_sections[sec].receivedFeedRank == original_ranking[sec]
 
+    def test_low_interests(self):
+        """Empty inferredinterests should not affect the section ranking"""
+        # get example section feed
+        sections = generate_sections_feed(section_count=16)
+        # store the original ranking
+        original_ranking = {sec: sections[sec].receivedFeedRank for sec in sections}
+        # inferredinterests is empty
+        sec_titles = [sec for sec in sections]
+        personal_sections = [sec_titles[i] for i in [4, 10, 13, 15]]
+        personal_interests = ProcessedInterests(
+            scores={k: float(i) * 0.0001 for i, k in enumerate(personal_sections)}
+        )
+        # rerank the sections
+        reranked_sections = greedy_personalized_section_rank(
+            sections=sections, personal_interests=personal_interests, epsilon=0.0
+        )
+        # the ranking should not have changed
+        for sec in reranked_sections:
+            assert reranked_sections[sec].receivedFeedRank == original_ranking[sec]
+
     def test_fictional_interests(self):
         """Interest vector keys that are not sections should not appear in section ranking"""
         # get example section feed

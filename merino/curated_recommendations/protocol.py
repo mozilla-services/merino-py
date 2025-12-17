@@ -107,6 +107,7 @@ class ExperimentName(str, Enum):
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
+    INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
 
 
 class DailyBriefingBranch(str, Enum):
@@ -153,6 +154,7 @@ class ProcessedInterests(BaseModel):
     scores: dict[str, float] = Field(default_factory=dict)
     normalized_scores: dict[str, float] = Field(default_factory=dict)
     expected_keys: set[str] = Field(default_factory=set)
+    skip_normalization: bool = False
 
     @model_validator(mode="after")
     def compute_norm(self) -> "ProcessedInterests":
@@ -163,7 +165,14 @@ class ProcessedInterests(BaseModel):
         If any key is missing from the expected_keys, we set its value to the mean
         of the normalized values.
         """
-        if len(self.scores) >= self.minimum_value_count_for_normalization:
+        if self.skip_normalization and len(self.scores) > 0:
+            """ Note this scenarios is not being used but may be soon. If not used Jan 2026 it can be removed."""
+            pre_normalized_dict = self.scores.copy()
+            values = np.array(list(self.scores.values()), dtype=float)
+            for missing_key in self.expected_keys - pre_normalized_dict.keys():
+                pre_normalized_dict[missing_key] = values.mean()
+            object.__setattr__(self, "normalized_scores", pre_normalized_dict)
+        elif len(self.scores) >= self.minimum_value_count_for_normalization:
             keys = list(self.scores.keys())
             values = np.array(list(self.scores.values()), dtype=float)
 
@@ -177,7 +186,6 @@ class ProcessedInterests(BaseModel):
             mean_val = normalized.mean()
             for missing_key in self.expected_keys - normalized_dict.keys():
                 normalized_dict[missing_key] = mean_val
-
             object.__setattr__(self, "normalized_scores", normalized_dict)
         return self
 

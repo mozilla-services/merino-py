@@ -224,6 +224,7 @@ def greedy_personalized_section_rank(
     sections: dict[str, Section],
     personal_interests: ProcessedInterests,
     epsilon: float = 0.0,
+    section_consideration_threshold: float = 0.8,
 ) -> dict[str, Section]:
     """Insert the ordered personal interest sections into the top of the section ranking.
 
@@ -234,10 +235,12 @@ def greedy_personalized_section_rank(
     ordered_sections = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
 
     ## order of personal preferences
-    ### only keeps a value if above first coarse threshold. this
+    ### only keeps a value if above a certain threshold. this
     ### is because there is noise added to every value in client and
-    ## we do not want to rank on the noise
-    ptopics = [k for k, v in personal_interests.scores.items() if v > 0]
+    ## we do not want to rank on the noise. Also we don't want to push out custom sections etc.
+    ptopics = [
+        k for k, v in personal_interests.scores.items() if v >= section_consideration_threshold
+    ]
     ordered_preferences = sorted(ptopics, key=lambda x: personal_interests.scores[x], reverse=True)
 
     # decide once for each pref whether it “wins” (prob. 1-epsilon)
