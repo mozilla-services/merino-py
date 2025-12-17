@@ -1,6 +1,7 @@
 """Module for building and ranking curated recommendation sections."""
 
 import logging
+import re
 from copy import deepcopy
 
 from merino.curated_recommendations import EngagementBackend
@@ -98,6 +99,7 @@ def map_corpus_section_to_section(
     rank: int,
     layout: Layout = layout_6_tiles,
     is_legacy_section: bool = False,
+    normalized_section_id: str | None = None,
 ) -> Section:
     """Map a CorpusSection to a Section with recommendations.
 
@@ -120,10 +122,9 @@ def map_corpus_section_to_section(
             continue
         seen_ids.add(item.corpusItemId)
         section_items.append(item)
+    section_id = normalized_section_id or corpus_section.externalId
     recommendations = [
-        map_section_item_to_recommendation(
-            item, rank, corpus_section.externalId, experiment_flags=item_flags
-        )
+        map_section_item_to_recommendation(item, rank, section_id, experiment_flags=item_flags)
         for rank, item in enumerate(section_items)
     ]
     return Section(
@@ -157,7 +158,10 @@ def _process_corpus_sections(
     for section_id, cs in corpus_sections_dict.items():
         rank = len(sections) + min_feed_rank
         sections[section_id] = map_corpus_section_to_section(
-            cs, rank, is_legacy_section=section_id in legacy_sections
+            cs,
+            rank,
+            is_legacy_section=section_id in legacy_sections,
+            normalized_section_id=section_id,
         )
 
     return sections
@@ -362,6 +366,16 @@ def get_legacy_topic_ids() -> set[str]:
     return {topic.value for topic in Topic}
 
 
+# Matches trailing locale suffixes like '-US' or '-EN-US': a hyphen followed by two uppercase letters,
+# optionally another hyphen + two uppercase letters.
+_LOCALE_SUFFIX_PATTERN = re.compile(r"-(?:[A-Z]{2})(?:-[A-Z]{2})?$")
+
+
+def normalize_id_by_locale(section_id: str) -> str:
+    """Strip locale suffixes (e.g., '-US', '-EN-US') from section IDs."""
+    return _LOCALE_SUFFIX_PATTERN.sub("", section_id)
+
+
 def get_corpus_sections_for_legacy_topic(
     corpus_sections: dict[str, Section],
 ) -> dict[str, Section]:
@@ -394,7 +408,7 @@ def filter_sections_by_experiment(
 
     for section in corpus_sections:
         section_id = section.externalId
-        base_id = section_id
+        base_id = normalize_id_by_locale(section_id)
         is_legacy = base_id in legacy_topics
         is_manual_section = section.createSource == CreateSource.MANUAL
 
