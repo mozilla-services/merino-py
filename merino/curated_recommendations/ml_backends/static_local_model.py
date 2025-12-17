@@ -217,6 +217,8 @@ class SuperInferredModel(LocalModelBackend):
 
     def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
         model_thresholds = THRESHOLDS_V3_NORMALIZED
+        private_features: list[str] | None = None
+
         if model_id == SERVER_V3_MODEL_ID:
             ## private features are sent to merino, "private" from differentially private
             private_features = self.v3_limited_topics
@@ -272,7 +274,7 @@ class SuperInferredModel(LocalModelBackend):
             return None
         supported_model = self._build_local(SERVER_V3_MODEL_ID, surface_id)
         if model_id is None:  ## this is the "get" call for building the model sent in the response
-            ## switch on experiment name, not using util becuase we have string name instead of request object
+            ## switch on experiment name, not using util because we have string name instead of request object
             if (
                 experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V3}"
