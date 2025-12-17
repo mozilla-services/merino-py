@@ -461,8 +461,8 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
         if idx == 0:
             assert out.scores[key] == cfg.thresholds[-1]
             assert (
-                out.normalized_scores[key] == cfg.thresholds[-1]
-            )  # Auto-noramlization is off for this model because rescale is True
+                out.normalized_scores[key] > 0.9  # Normalizaiton moves it close to 1.0
+            )
         else:
             assert out.scores[key] == 0.0
             assert out.normalized_scores[key] == 0.0

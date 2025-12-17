@@ -192,7 +192,6 @@ class TestProcessedInterests:
         interests = ProcessedInterests(
             scores={"sports": 3.0, "technology": 5.0, "business": 4.0},
             expected_keys={"sports", "technology", "arts", "business"},
-            is_data_normalized=False,
         )
         normalized = interests.normalized_scores
         assert "arts" in normalized
@@ -204,18 +203,17 @@ class TestProcessedInterests:
         interests = ProcessedInterests(
             scores={"sports": 3.0, "technology": 5.0, "arts": 4.0},
             expected_keys={"sports", "technology", "arts"},
-            is_data_normalized=False,
         )
         normalized = interests.normalized_scores
         assert "sports" in normalized
         assert normalized["sports"] < 3.0  # Because of normalization
 
     def test_pre_normalized_data(self):
-        """Test that when is_data_normalized is True, normalized_scores matches scores."""
+        """Test that when skip_normalization is True, normalized_scores matches input scores."""
         interests = ProcessedInterests(
             scores={"sports": 0.2, "technology": 0.5, "arts": 0.3},
             expected_keys={"sports", "technology", "arts"},
-            is_data_normalized=True,
+            skip_normalization=True,
         )
         normalized = interests.normalized_scores
         assert normalized == interests.scores
