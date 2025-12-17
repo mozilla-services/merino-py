@@ -616,6 +616,7 @@ def test_curated_recommendations_features(client: TestClient):
         for rec in section["recommendations"]
     ]
 
+    num_recs_with_section_features = 0
     for rec in all_recs:
         # With sections backend, features include both topic (t_ prefix) and section (s_ prefix)
         # Topic feature must be present
@@ -625,7 +626,11 @@ def test_curated_recommendations_features(client: TestClient):
 
         # At least one section feature (s_ prefix) should be present
         section_features = [k for k in rec["features"].keys() if k.startswith("s_")]
-        assert len(section_features) > 0, "At least one section feature should be present"
+        if len(section_features) > 0:
+            num_recs_with_section_features += 1
+    assert (
+        num_recs_with_section_features > 0
+    )  # We are omitting some UUID based sections until they are deprecated
 
 
 class TestCuratedRecommendationsRequestParameters:
