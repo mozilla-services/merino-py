@@ -165,7 +165,7 @@ class ProcessedInterests(BaseModel):
         If any key is missing from the expected_keys, we set its value to the mean
         of the normalized values.
         """
-        if self.skip_normalization:
+        if self.skip_normalization and len(self.scores) > 0:
             pre_normalized_dict = self.scores.copy()
             values = np.array(list(self.scores.values()), dtype=float)
             for missing_key in self.expected_keys - pre_normalized_dict.keys():

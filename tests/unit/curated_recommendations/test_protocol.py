@@ -198,6 +198,14 @@ class TestProcessedInterests:
         mean_score = sum(normalized.values()) / len(normalized)
         assert normalized["arts"] == mean_score
 
+    def test_no_keys(self):
+        """Test that compute_norm with empty inputs."""
+        interests = ProcessedInterests(scores={}, skip_normalization=False)
+        assert interests.normalized_scores == {}
+
+        interests = ProcessedInterests(scores={}, skip_normalization=True)
+        assert interests.normalized_scores == {}
+
     def test_compute_norm_with_all_keys_present(self):
         """Test that compute_norm does not alter normalized_scores when all expected keys are present."""
         interests = ProcessedInterests(
