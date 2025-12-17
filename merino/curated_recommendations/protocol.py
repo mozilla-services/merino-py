@@ -166,6 +166,7 @@ class ProcessedInterests(BaseModel):
         of the normalized values.
         """
         if self.skip_normalization and len(self.scores) > 0:
+            """ Note this scenarios is not being used but may be soon. If not used Jan 2026 it can be removed."""
             pre_normalized_dict = self.scores.copy()
             values = np.array(list(self.scores.values()), dtype=float)
             for missing_key in self.expected_keys - pre_normalized_dict.keys():
