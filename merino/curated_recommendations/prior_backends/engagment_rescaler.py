@@ -2,14 +2,10 @@
 
 from typing import Any
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler
-from merino.curated_recommendations.protocol import CuratedRecommendation
+from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
 
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
-
-ITEM_SUBTOPIC_FLAG = "SUBTOPICS"
-ITEM_EDITORIAL_SECTION_FLAG = "EDITORIAL_SECTION"
 
 # Looking at query of typical subtopic impressions outside of top stories
 # https://sql.telemetry.mozilla.org/queries/112921/source#276948
@@ -38,7 +34,7 @@ class CrawledContentRescaler(EngagementRescaler):
 
     @classmethod
     def is_subtopic_story(cls, rec: CuratedRecommendation) -> bool:
-        """Story is part of an experiment"""
+        """Story is a subtopic that is not manualy curated. Currently this is true for all non-legacy sections that not manually curated"""
         return rec.in_experiment(ITEM_SUBTOPIC_FLAG)
 
     @classmethod
@@ -46,9 +42,7 @@ class CrawledContentRescaler(EngagementRescaler):
         """Return true if the story is blocked from most popular section.
         Note that this logic is duplicated in ArticleBalancer
         """
-        return (
-            cls.is_subtopic_story(rec) and rec.topic == Topic.SPORTS
-        ) or rec.topic == Topic.GAMING
+        return rec.is_story_blocked_for_top_stories()
 
     def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
         """Story is not allowed in most popular in some cases. We therefore will have to get by with many less impressions

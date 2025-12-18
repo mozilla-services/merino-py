@@ -17,6 +17,7 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
+    ITEM_SUBTOPIC_FLAG,
     CuratedRecommendation,
     MIN_TILE_ID,
     Section,
@@ -25,8 +26,6 @@ from merino.curated_recommendations.protocol import (
     RankingData,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    ITEM_EDITORIAL_SECTION_FLAG,
-    ITEM_SUBTOPIC_FLAG,
     CrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
@@ -1095,7 +1094,7 @@ class TestTopStoriesArticleBalancer:
 
     @staticmethod
     def _build_recommendation(
-        suffix: str, topic: Topic, *, subtopic: bool = False, editorial_section: bool = False
+        suffix: str, topic: Topic, *, subtopic: bool = False
     ) -> CuratedRecommendation:
         """Construct a deterministic CuratedRecommendation for balancing tests."""
         rec = generate_recommendations(
@@ -1107,23 +1106,31 @@ class TestTopStoriesArticleBalancer:
         rec.experiment_flags = rec.experiment_flags or set()
         if subtopic:
             rec.experiment_flags.add(ITEM_SUBTOPIC_FLAG)
-        if editorial_section:
-            rec.experiment_flags.add(ITEM_EDITORIAL_SECTION_FLAG)
         return rec
 
-    def test_special_blocked_stories(self):
+    def test_is_story_blocked_for_top_stories(self):
+        """Test that blocked stories are identified correctly."""
+        blocked_story1 = self._build_recommendation("1", Topic.GAMING)
+        blocked_story2 = self._build_recommendation("1", Topic.ARTS, subtopic=True)
+        allowed_story1 = self._build_recommendation("2", Topic.BUSINESS)
+        allowed_story2 = self._build_recommendation("2", Topic.SPORTS)
+
+        assert blocked_story1.is_story_blocked_for_top_stories() is True
+        assert blocked_story2.is_story_blocked_for_top_stories() is True
+        assert allowed_story1.is_story_blocked_for_top_stories() is False
+        assert allowed_story2.is_story_blocked_for_top_stories() is False
+
+    def test_all_subtopics_and_gaming_blocked(self):
         """Test that blocked stories are rejected."""
         balancer = TopStoriesArticleBalancer(expected_num_articles=9)
         stories = [
             self._build_recommendation("0", Topic.SPORTS, subtopic=True),
             self._build_recommendation("1", Topic.SPORTS, subtopic=False),
             self._build_recommendation("2", Topic.GAMING, subtopic=False),
-            self._build_recommendation("3", Topic.ARTS, editorial_section=True),
         ]
         assert balancer.add_story(stories[0]) is False  # No subtopic
         assert balancer.add_story(stories[1]) is True
         assert balancer.add_story(stories[2]) is False  # No gaming
-        assert balancer.add_story(stories[3]) is True # Editorial section allowed
 
     def test_rejects_story_when_per_topic_limit_exceeded(self):
         """Ensure adding beyond the per-topic maximum fails."""
@@ -1134,18 +1141,6 @@ class TestTopStoriesArticleBalancer:
         assert balancer.add_story(stories[1])
         assert balancer.add_story(stories[2]) is False
         assert len(balancer.get_stories()) == 2
-
-    def test_rejects_story_when_subtopic_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = TopStoriesArticleBalancer(expected_num_articles=6)
-        stories = [
-            self._build_recommendation("2", Topic.ARTS, subtopic=True),
-            self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
-        ]
-
-        assert balancer.add_story(stories[0])
-        assert balancer.add_story(stories[1]) is False
-        assert len(balancer.get_stories()) == 1
 
     def test_rejects_story_when_evergreen_limit_exceeded(self):
         """Ensure evergreen quota caps additions when already full."""

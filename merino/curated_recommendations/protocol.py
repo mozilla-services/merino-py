@@ -238,6 +238,10 @@ class RankingData(BaseModel):
     is_fresh: bool = False  # Indicates it has relatively little impressions
 
 
+# Flags for in_experiment flags. Note that the name in_experiment is historical and should be migrated to a new name
+ITEM_SUBTOPIC_FLAG = "SUBTOPICS"
+
+
 class CuratedRecommendation(CorpusItem):
     """Extends CorpusItem with additional fields for a curated recommendation"""
 
@@ -264,6 +268,10 @@ class CuratedRecommendation(CorpusItem):
         if sid is not None and self.tileId is None:
             self.tileId = self._integer_hash(sid, MIN_TILE_ID, MAX_TILE_ID)
         self.scheduledCorpusItemId = sid
+
+    def is_story_blocked_for_top_stories(self) -> bool:
+        """Return true if the story should be blocked from most popular section."""
+        return (self.in_experiment(ITEM_SUBTOPIC_FLAG)) or self.topic == Topic.GAMING
 
     @model_validator(mode="before")
     def set_tileId(cls, values):

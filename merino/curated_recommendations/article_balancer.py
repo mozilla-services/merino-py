@@ -6,10 +6,7 @@ import math
 from typing import Callable, Collection
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    ITEM_SUBTOPIC_FLAG, ITEM_EDITORIAL_SECTION_FLAG
-)
-from merino.curated_recommendations.protocol import CuratedRecommendation
+from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
 
 
 @dataclass(frozen=True)
@@ -23,7 +20,6 @@ class ArticleBalancerConfig:
     max_blocked_topics_ratio: float
     evergreen_topics: Collection[Topic]
     subtopic_checker: Callable[[CuratedRecommendation], bool]
-    blocked_checker: Callable[[CuratedRecommendation], bool]
     min_per_topic_limit: int = 0
     min_subtopic_limit: int = 0
     blocked_topics_multiplier: int = 1
@@ -40,7 +36,6 @@ class ArticleBalancer:
         self.num_expected = 0
         self.evergreen_topics = set(config.evergreen_topics)
         self.subtopic_checker = config.subtopic_checker
-        self.blocked_checker = config.blocked_checker
         self.set_limits_for_expected_articles(expected_num_articles)
 
     def set_limits_for_expected_articles(self, expected_num_articles: int):
@@ -77,7 +72,7 @@ class ArticleBalancer:
 
     def is_blocked_rec(self, rec: CuratedRecommendation) -> bool:
         """Return true if topic is a blocked topic."""
-        return self.blocked_checker(rec)
+        return rec.is_story_blocked_for_top_stories()
 
     def _update_stats(self, info_dict, rec: CuratedRecommendation):
         """Update passed dictionary with new stats to reflect the article added."""
@@ -153,12 +148,6 @@ EVERGREEN_TOPICS = {
 }
 
 
-def _is_top_stories_blocked(rec: CuratedRecommendation) -> bool:
-    return (
-        rec.topic == (Topic.SPORTS or Topic.ARTS) and rec.in_experiment(ITEM_SUBTOPIC_FLAG)
-    ) or rec.topic == Topic.GAMING
-
-
 class TopStoriesArticleBalancer(ArticleBalancer):
     """Balancer configured for top stories."""
 
@@ -172,10 +161,7 @@ class TopStoriesArticleBalancer(ArticleBalancer):
                 max_subtopic_ratio=BALANCER_MAX_SUBTOPIC,
                 max_blocked_topics_ratio=MAX_BLOCKED_TOPICS,
                 evergreen_topics=EVERGREEN_TOPICS,
-                subtopic_checker=lambda rec: rec.in_experiment(
-                    ITEM_SUBTOPIC_FLAG
-                ),
-                blocked_checker=_is_top_stories_blocked,
+                subtopic_checker=lambda rec: rec.in_experiment(ITEM_SUBTOPIC_FLAG),
                 min_per_topic_limit=2,
                 min_subtopic_limit=1,
                 blocked_topics_multiplier=3,
