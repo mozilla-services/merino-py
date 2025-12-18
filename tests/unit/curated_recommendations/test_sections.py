@@ -26,6 +26,7 @@ from merino.curated_recommendations.prior_backends.constant_prior import Constan
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SchedulerHoldbackRescaler,
     CrawledContentRescaler,
+    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -290,29 +291,38 @@ class TestFilterSectionsByExperiment:
     """Tests covering filter_sections_by_experiment"""
 
     @pytest.mark.parametrize(
-        "name,branch,region,expected_class",
+        "name,branch,region,surface_id,expected_class",
         [
             (
                 ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
                 "control",
                 "US",
+                None,
                 SchedulerHoldbackRescaler,
             ),
             # Whenever we launch sections somewhere else we'll have crawled content, so best
             # to set it as default.
-            ("other", "treatment", "US", CrawledContentRescaler),
-            ("other", "treatment", "CA", CrawledContentRescaler),
-            (None, None, "US", CrawledContentRescaler),
-            (None, None, "CA", CrawledContentRescaler),
+            ("other", "treatment", "US", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            ("other", "treatment", "US", None, CrawledContentRescaler),
+            ("other", "treatment", "CA", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            (None, None, "US", None, CrawledContentRescaler),
+            (None, None, "CA", None, CrawledContentRescaler),
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
         ],
     )
-    def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
+    def test_get_ranking_rescaler_for_branch(
+        self, name, branch, region, surface_id, expected_class
+    ):
         """Test that we get the appropriate rescaler"""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:
-            assert isinstance(get_ranking_rescaler_for_branch(req), expected_class)
+            assert isinstance(
+                get_ranking_rescaler_for_branch(req, surface_id=surface_id), expected_class
+            )
         else:
             assert get_ranking_rescaler_for_branch(req) is None
 
