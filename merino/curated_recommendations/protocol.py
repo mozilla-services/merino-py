@@ -109,9 +109,6 @@ class ExperimentName(str, Enum):
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
     INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
 
-    # Experiment to enable ML-ranked topic sections for UK (EN-GB) New Tab
-    NEW_TAB_SECTIONS_EN_GB_EXPERIMENT = "new-tab-sections-en-gb"
-
 
 class DailyBriefingBranch(str, Enum):
     """Treatment branches for the Daily Briefing experiment."""

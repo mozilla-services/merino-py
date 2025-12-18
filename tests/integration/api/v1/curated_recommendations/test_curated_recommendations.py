@@ -1429,9 +1429,9 @@ class TestSections:
         localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
         # Assert top-stories has a translation (the only key used)
-        assert "top-stories" in localized_titles and localized_titles["top-stories"], (
-            f"Missing translation for 'top-stories' in {surface_id}"
-        )
+        assert (
+            "top-stories" in localized_titles and localized_titles["top-stories"]
+        ), f"Missing translation for 'top-stories' in {surface_id}"
 
     def test_corpus_sections_feed_content(
         self,
@@ -2736,13 +2736,22 @@ def test_uk_sections_with_gb_backend_data(
         sections = {name: section for name, section in feeds.items() if section is not None}
 
         # Should have top_stories_section and topic sections
-        assert len(sections) >= 2, f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
+        assert (
+            len(sections) >= 2
+        ), f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
         assert "top_stories_section" in sections
 
         # Verify that GB-specific sections are present
         # GB sections have externalIds like 'technology', 'entertainment', 'politics'
         # (not US-style 'tech', 'arts', 'government')
-        gb_expected_sections = {"technology", "entertainment", "politics", "gaming", "science", "personal-finance"}
+        gb_expected_sections = {
+            "technology",
+            "entertainment",
+            "politics",
+            "gaming",
+            "science",
+            "personal-finance",
+        }
         found_gb_sections = set(sections.keys()) & gb_expected_sections
         assert len(found_gb_sections) >= 1, (
             f"Expected at least one GB-style section from {gb_expected_sections}, "
