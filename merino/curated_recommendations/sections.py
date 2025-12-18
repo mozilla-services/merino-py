@@ -351,15 +351,6 @@ def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> 
     )
 
 
-def is_uk_sections_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the UK sections experiment treatment branch is enabled."""
-    return is_enrolled_in_experiment(
-        request,
-        ExperimentName.NEW_TAB_SECTIONS_EN_GB_EXPERIMENT.value,
-        "treatment-sections-ml",
-    )
-
-
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
 ) -> EngagementRescaler | None:
