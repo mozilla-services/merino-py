@@ -2658,16 +2658,14 @@ class TestSections:
         "region",
         ["GB", "IE"],
     )
-    def test_uk_sections_experiment_treatment(self, region, client: TestClient):
-        """Test that UK/IE users in the 'treatment-sections-ml' branch get sections."""
+    def test_uk_sections_enabled(self, region, client: TestClient):
+        """Test that UK/IE users with feeds=['sections'] get sections."""
         response = client.post(
             "/api/v1/curated-recommendations",
             json={
                 "locale": "en-GB",
                 "region": region,
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.NEW_TAB_SECTIONS_EN_GB_EXPERIMENT.value,
-                "experimentBranch": "treatment-sections-ml",
             },
         )
         data = response.json()
@@ -2689,60 +2687,6 @@ class TestSections:
 
         # data array should be empty (all recommendations in feeds)
         assert len(data["data"]) == 0
-
-    @pytest.mark.parametrize(
-        "region",
-        ["GB", "IE"],
-    )
-    def test_uk_sections_experiment_control_no_sections(self, region, client: TestClient):
-        """Test that UK/IE users NOT in treatment branch do not get sections."""
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-GB",
-                "region": region,
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.NEW_TAB_SECTIONS_EN_GB_EXPERIMENT.value,
-                "experimentBranch": "control",
-            },
-        )
-        data = response.json()
-
-        assert response.status_code == 200
-        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
-
-        # Should NOT have feeds (control branch doesn't get sections)
-        assert data["feeds"] is None
-
-        # Should have recommendations in data array instead (from scheduled surface)
-        assert len(data["data"]) > 0
-
-    @pytest.mark.parametrize(
-        "region",
-        ["GB", "IE"],
-    )
-    def test_uk_no_experiment_no_sections(self, region, client: TestClient):
-        """Test that UK/IE users without any experiment do not get sections."""
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-GB",
-                "region": region,
-                "feeds": ["sections"],
-                "experimentName": None,
-                "experimentBranch": None,
-            },
-        )
-        data = response.json()
-
-        assert response.status_code == 200
-        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
-
-        # Should NOT have feeds (no experiment)
-        assert data["feeds"] is None
-
-        # Should have recommendations in data array instead (from scheduled surface)
-        assert len(data["data"]) > 0
 
 
 def test_uk_sections_with_gb_backend_data(
@@ -2779,8 +2723,6 @@ def test_uk_sections_with_gb_backend_data(
                 "locale": "en-GB",
                 "region": "GB",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.NEW_TAB_SECTIONS_EN_GB_EXPERIMENT.value,
-                "experimentBranch": "treatment-sections-ml",
             },
         )
         data = response.json()
