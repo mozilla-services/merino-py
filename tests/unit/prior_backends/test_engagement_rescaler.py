@@ -184,7 +184,6 @@ class TestUKCrawledContentRescaler:
         assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / UK_EXPERIMENT_TREATMENT_PERCENT
 
 
-
 class TestSchedulerHoldbackRescaler:
     """Test Rig for the rescaler"""
 
