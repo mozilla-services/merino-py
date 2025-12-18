@@ -38,6 +38,13 @@ def sections_response_data():
 
 
 @pytest.fixture()
+def sections_gb_response_data():
+    """Load mock response data for the GB getSections query."""
+    with open("tests/data/sections_gb.json") as f:
+        return json.load(f)
+
+
+@pytest.fixture()
 def fixture_graphql_200ok_with_error_response():
     """Load mock response data for a GraphQL error response."""
     with open("tests/data/graphql_error.json") as f:
@@ -83,6 +90,18 @@ def sections_http_client(sections_response_data, fixture_request_data) -> AsyncM
 
 
 @pytest.fixture()
+def sections_gb_http_client(sections_gb_response_data, fixture_request_data) -> AsyncMock:
+    """Mock HTTP client for the GB sections corpus API backend."""
+    mock_http_client = AsyncMock(spec=AsyncClient)
+    mock_http_client.post.return_value = Response(
+        status_code=200,
+        json=sections_gb_response_data,
+        request=fixture_request_data,
+    )
+    return mock_http_client
+
+
+@pytest.fixture()
 def scheduled_surface_backend(
     scheduled_surface_http_client: AsyncMock, manifest_provider
 ) -> ScheduledSurfaceBackend:
@@ -100,6 +119,17 @@ def sections_backend(sections_http_client: AsyncMock, manifest_provider) -> Sect
     """Create a mock SectionsCorpusBackend instance with the sections HTTP client."""
     return SectionsBackend(
         http_client=sections_http_client,
+        graph_config=CorpusApiGraphConfig(),
+        metrics_client=get_metrics_client(),
+        manifest_provider=manifest_provider,
+    )
+
+
+@pytest.fixture()
+def sections_gb_backend(sections_gb_http_client: AsyncMock, manifest_provider) -> SectionsBackend:
+    """Create a mock SectionsCorpusBackend instance with GB sections data."""
+    return SectionsBackend(
+        http_client=sections_gb_http_client,
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=manifest_provider,

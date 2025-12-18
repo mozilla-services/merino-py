@@ -30,7 +30,7 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.legacy.sections_adapter import (
     get_legacy_recommendations_from_sections,
 )
-from merino.curated_recommendations.sections import get_sections
+from merino.curated_recommendations.sections import get_sections, is_uk_sections_experiment
 from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
@@ -69,12 +69,19 @@ class CuratedRecommendationsProvider:
         request: CuratedRecommendationsRequest,
         surface_id: SurfaceId,
     ) -> bool:
-        """Check if the 'sections' experiment is enabled."""
-        return (
-            request.feeds is not None
-            and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
-            and surface_id in LOCALIZED_SECTION_TITLES  # The locale must be supported
-        )
+        """Check if the 'sections' experiment is enabled.
+
+        For UK (NEW_TAB_EN_GB), sections are only enabled for users in the
+        'treatment-sections-ml' branch of the 'new-tab-sections-en-gb' experiment.
+        """
+        if request.feeds is None or "sections" not in request.feeds:
+            return False
+        if surface_id not in LOCALIZED_SECTION_TITLES:
+            return False
+        # UK requires experiment enrollment
+        if surface_id == SurfaceId.NEW_TAB_EN_GB:
+            return is_uk_sections_experiment(request)
+        return True
 
     def rank_recommendations(
         self,

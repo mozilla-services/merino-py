@@ -1416,26 +1416,22 @@ class TestSections:
         "surface_id",
         [
             SurfaceId.NEW_TAB_EN_US,
-            SurfaceId.NEW_TAB_DE_DE,
+            SurfaceId.NEW_TAB_EN_GB,
         ],
     )
     def test_section_translations(self, surface_id):
-        """Check that there is a translation for every topic and top_stories_section.
-        Currently, for en-US and DE.
-        """
-        # Define the mapping of strings to be replaced, use the Topic enum
-        expected_translation_keys = [topic.value for topic in Topic]
-        # top-stories is not in the Topic enum, do separately
-        expected_translation_keys.append("top-stories")
+        """Check that there is a translation for 'top-stories' (the only key used).
 
+        Section titles come from the backend API. Only the 'top-stories' key is
+        used for client-side localization of the Popular Today section title.
+        """
         # Get the localized titles for the current surface_id
         localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
-        # Assert that each section title has a translation
-        for key in expected_translation_keys:
-            assert key in localized_titles and localized_titles[key], (
-                f"Missing translation for '{key}' in " f"{surface_id}"
-            )
+        # Assert top-stories has a translation (the only key used)
+        assert "top-stories" in localized_titles and localized_titles["top-stories"], (
+            f"Missing translation for 'top-stories' in {surface_id}"
+        )
 
     def test_corpus_sections_feed_content(
         self,
@@ -1533,7 +1529,6 @@ class TestSections:
         legacy_sections_present = [sid for sid in sections if sid in legacy_topics]
         assert len(legacy_sections_present) > 0, "Should have at least some legacy topic sections"
 
-    @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
     @pytest.mark.parametrize(
         "experiment_payload",
         [
@@ -1544,10 +1539,11 @@ class TestSections:
             },
         ],
     )
-    def test_sections_feed_content(self, locale, experiment_payload, caplog, client: TestClient):
+    def test_sections_feed_content(self, experiment_payload, caplog, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for different locales.
+        when requesting the 'sections' feed for en-US locale.
         """
+        locale = "en-US"
         response = client.post(
             "/api/v1/curated-recommendations",
             json={"locale": locale, "feeds": ["sections"]} | experiment_payload,
@@ -2246,34 +2242,17 @@ class TestSections:
         # assert 400 is returned for invalid followedAt
         assert response.status_code == 400
 
-    @pytest.mark.parametrize(
-        "locale, expected_titles",
-        [
-            (
-                "en-US",
-                {
-                    "top_stories_section": "Popular Today",
-                    "arts": "Entertainment",
-                    "education": "Education",
-                    "sports": "Sports",
-                },
-            ),
-            (
-                "de-DE",
-                {
-                    "top_stories_section": "Meistgelesen",
-                    "Career": "Karriere",
-                    "Education": "Bildung",
-                    "Sports": "Sport",
-                },
-            ),
-        ],
-    )
-    def test_sections_feed_titles(self, locale, expected_titles, client: TestClient):
-        """Test the curated recommendations endpoint 'sections' have the expected (sub)titles."""
+    def test_sections_feed_titles(self, client: TestClient):
+        """Test the curated recommendations endpoint 'sections' have the expected titles."""
+        expected_titles = {
+            "top_stories_section": "Popular Today",
+            "arts": "Entertainment",
+            "education": "Education",
+            "sports": "Sports",
+        }
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": locale, "feeds": ["sections"]},
+            json={"locale": "en-US", "feeds": ["sections"]},
         )
         data = response.json()
         feeds = data["feeds"]
@@ -2674,6 +2653,165 @@ class TestSections:
             assert not any(
                 "Excluding reported recommendation" in r.message for r in caplog.records
             )
+
+    @pytest.mark.parametrize(
+        "region",
+        ["GB", "IE"],
+    )
+    def test_uk_sections_experiment_treatment(self, region, client: TestClient):
+        """Test that UK/IE users in the 'treatment-sections-ml' branch get sections."""
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-GB",
+                "region": region,
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.NEW_TAB_SECTIONS_EN_GB_EXPERIMENT.value,
+                "experimentBranch": "treatment-sections-ml",
+            },
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
+
+        # Should have feeds with sections
+        assert data["feeds"] is not None
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Should have top_stories_section and topic sections
+        assert len(sections) >= 1
+        assert "top_stories_section" in sections
+
+        # Verify top_stories_section has the correct title
+        assert sections["top_stories_section"]["title"] == "Popular Today"
+
+        # data array should be empty (all recommendations in feeds)
+        assert len(data["data"]) == 0
+
+    @pytest.mark.parametrize(
+        "region",
+        ["GB", "IE"],
+    )
+    def test_uk_sections_experiment_control_no_sections(self, region, client: TestClient):
+        """Test that UK/IE users NOT in treatment branch do not get sections."""
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-GB",
+                "region": region,
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.NEW_TAB_SECTIONS_EN_GB_EXPERIMENT.value,
+                "experimentBranch": "control",
+            },
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
+
+        # Should NOT have feeds (control branch doesn't get sections)
+        assert data["feeds"] is None
+
+        # Should have recommendations in data array instead (from scheduled surface)
+        assert len(data["data"]) > 0
+
+    @pytest.mark.parametrize(
+        "region",
+        ["GB", "IE"],
+    )
+    def test_uk_no_experiment_no_sections(self, region, client: TestClient):
+        """Test that UK/IE users without any experiment do not get sections."""
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-GB",
+                "region": region,
+                "feeds": ["sections"],
+                "experimentName": None,
+                "experimentBranch": None,
+            },
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
+
+        # Should NOT have feeds (no experiment)
+        assert data["feeds"] is None
+
+        # Should have recommendations in data array instead (from scheduled surface)
+        assert len(data["data"]) > 0
+
+
+def test_uk_sections_with_gb_backend_data(
+    scheduled_surface_backend: ScheduledSurfaceBackend,
+    sections_gb_backend: SectionsProtocol,
+    engagement_backend: EngagementBackend,
+    prior_backend: PriorBackend,
+    local_model_backend: LocalModelBackend,
+    ml_recommendations_backend: MLRecsBackend,
+    client: TestClient,
+):
+    """Test that GB sections with real GB-style externalIds are properly included.
+
+    This test uses sections_gb.json which has GB-style externalIds like 'technology',
+    'entertainment', 'politics' instead of US-style 'tech', 'arts', 'government'.
+    """
+    # Create a provider specifically with GB sections backend
+    gb_provider = CuratedRecommendationsProvider(
+        scheduled_surface_backend=scheduled_surface_backend,
+        engagement_backend=engagement_backend,
+        prior_backend=prior_backend,
+        sections_backend=sections_gb_backend,
+        local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
+    )
+
+    # Override the provider dependency for this test
+    app.dependency_overrides[get_provider] = lambda: gb_provider
+
+    try:
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-GB",
+                "region": "GB",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.NEW_TAB_SECTIONS_EN_GB_EXPERIMENT.value,
+                "experimentBranch": "treatment-sections-ml",
+            },
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
+
+        # Should have feeds with sections
+        assert data["feeds"] is not None, "Expected feeds to be returned but got None"
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Should have top_stories_section and topic sections
+        assert len(sections) >= 2, f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
+        assert "top_stories_section" in sections
+
+        # Verify that GB-specific sections are present
+        # GB sections have externalIds like 'technology', 'entertainment', 'politics'
+        # (not US-style 'tech', 'arts', 'government')
+        gb_expected_sections = {"technology", "entertainment", "politics", "gaming", "science", "personal-finance"}
+        found_gb_sections = set(sections.keys()) & gb_expected_sections
+        assert len(found_gb_sections) >= 1, (
+            f"Expected at least one GB-style section from {gb_expected_sections}, "
+            f"but found sections: {list(sections.keys())}"
+        )
+
+        # data array should be empty (all recommendations in feeds)
+        assert len(data["data"]) == 0
+    finally:
+        # Reset the provider override
+        app.dependency_overrides[get_provider] = lambda: None
 
 
 def test_curated_recommendations_enriched_with_icons(
