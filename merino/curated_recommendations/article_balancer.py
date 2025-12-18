@@ -7,7 +7,7 @@ from typing import Callable, Collection
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+    ITEM_SUBTOPIC_FLAG, ITEM_EDITORIAL_SECTION_FLAG
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
@@ -155,7 +155,7 @@ EVERGREEN_TOPICS = {
 
 def _is_top_stories_blocked(rec: CuratedRecommendation) -> bool:
     return (
-        rec.topic == Topic.SPORTS and rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
+        rec.topic == (Topic.SPORTS or Topic.ARTS) and rec.in_experiment(ITEM_SUBTOPIC_FLAG)
     ) or rec.topic == Topic.GAMING
 
 
@@ -173,7 +173,7 @@ class TopStoriesArticleBalancer(ArticleBalancer):
                 max_blocked_topics_ratio=MAX_BLOCKED_TOPICS,
                 evergreen_topics=EVERGREEN_TOPICS,
                 subtopic_checker=lambda rec: rec.in_experiment(
-                    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG
+                    ITEM_SUBTOPIC_FLAG
                 ),
                 blocked_checker=_is_top_stories_blocked,
                 min_per_topic_limit=2,

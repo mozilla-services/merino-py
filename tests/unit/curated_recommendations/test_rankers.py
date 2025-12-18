@@ -25,7 +25,8 @@ from merino.curated_recommendations.protocol import (
     RankingData,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+    ITEM_EDITORIAL_SECTION_FLAG,
+    ITEM_SUBTOPIC_FLAG,
     CrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
@@ -1094,7 +1095,7 @@ class TestTopStoriesArticleBalancer:
 
     @staticmethod
     def _build_recommendation(
-        suffix: str, topic: Topic, *, subtopic: bool = False
+        suffix: str, topic: Topic, *, subtopic: bool = False, editorial_section: bool = False
     ) -> CuratedRecommendation:
         """Construct a deterministic CuratedRecommendation for balancing tests."""
         rec = generate_recommendations(
@@ -1105,7 +1106,9 @@ class TestTopStoriesArticleBalancer:
         )[0]
         rec.experiment_flags = rec.experiment_flags or set()
         if subtopic:
-            rec.experiment_flags.add(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
+            rec.experiment_flags.add(ITEM_SUBTOPIC_FLAG)
+        if editorial_section:
+            rec.experiment_flags.add(ITEM_EDITORIAL_SECTION_FLAG)
         return rec
 
     def test_special_blocked_stories(self):
@@ -1115,10 +1118,12 @@ class TestTopStoriesArticleBalancer:
             self._build_recommendation("0", Topic.SPORTS, subtopic=True),
             self._build_recommendation("1", Topic.SPORTS, subtopic=False),
             self._build_recommendation("2", Topic.GAMING, subtopic=False),
+            self._build_recommendation("3", Topic.ARTS, editorial_section=True),
         ]
         assert balancer.add_story(stories[0]) is False  # No subtopic
         assert balancer.add_story(stories[1]) is True
         assert balancer.add_story(stories[2]) is False  # No gaming
+        assert balancer.add_story(stories[3]) is True # Editorial section allowed
 
     def test_rejects_story_when_per_topic_limit_exceeded(self):
         """Ensure adding beyond the per-topic maximum fails."""

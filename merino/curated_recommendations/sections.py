@@ -25,9 +25,10 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    ITEM_EDITORIAL_SECTION_FLAG,
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+    ITEM_SUBTOPIC_FLAG,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, EngagementRescaler
 from merino.curated_recommendations.protocol import (
@@ -116,7 +117,11 @@ def map_corpus_section_to_section(
     Returns:
         A Section model containing mapped recommendations and default layout.
     """
-    item_flags = set() if is_legacy_section else {SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG}
+    item_flags = set()
+    if not is_legacy_section:
+        item_flags.add(ITEM_SUBTOPIC_FLAG)
+    if corpus_section.createSource == CreateSource.MANUAL:
+        item_flags.add(ITEM_EDITORIAL_SECTION_FLAG)
     is_manual_section = corpus_section.createSource == CreateSource.MANUAL
     seen_ids: set[str] = set()
     section_items: list[CorpusItem] = []

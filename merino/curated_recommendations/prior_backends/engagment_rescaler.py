@@ -7,7 +7,9 @@ from merino.curated_recommendations.prior_backends.protocol import EngagementRes
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
-SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
+
+ITEM_SUBTOPIC_FLAG = "SUBTOPICS"
+ITEM_EDITORIAL_SECTION_FLAG = "EDITORIAL_SECTION"
 
 # Looking at query of typical subtopic impressions outside of top stories
 # https://sql.telemetry.mozilla.org/queries/112921/source#276948
@@ -37,7 +39,7 @@ class CrawledContentRescaler(EngagementRescaler):
     @classmethod
     def is_subtopic_story(cls, rec: CuratedRecommendation) -> bool:
         """Story is part of an experiment"""
-        return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
+        return rec.in_experiment(ITEM_SUBTOPIC_FLAG)
 
     @classmethod
     def is_blocked_from_most_popular(cls, rec: CuratedRecommendation) -> bool:
