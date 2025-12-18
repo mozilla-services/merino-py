@@ -271,7 +271,7 @@ class CuratedRecommendation(CorpusItem):
 
     def is_story_blocked_for_top_stories(self) -> bool:
         """Return true if the story should be blocked from most popular section."""
-        return (self.in_experiment(ITEM_SUBTOPIC_FLAG)) or self.topic == Topic.GAMING
+        return self.in_experiment(ITEM_SUBTOPIC_FLAG) or self.topic == Topic.GAMING
 
     @model_validator(mode="before")
     def set_tileId(cls, values):
