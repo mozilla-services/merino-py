@@ -6,8 +6,8 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 
 def test_get_translation_existing_translation():
     """Test that get_translation returns existing translations."""
-    result = get_translation(SurfaceId.NEW_TAB_EN_US, "business", "Default")
-    assert result == "Business"
+    result = get_translation(SurfaceId.NEW_TAB_EN_US, "top-stories", "Default")
+    assert result == "Popular Today"
 
 
 def test_get_translation_non_existing_locale(caplog):
