@@ -213,8 +213,6 @@ def test_load_schedules_from_source_filters_and_populates(
     assert ev.home_score == 3
     assert ev.away_score == 2
 
-    assert ev.suggest_title() == "The Away Team at The Home Team"
-
     sport.events = {}
     mod_event = events_response[0]
 

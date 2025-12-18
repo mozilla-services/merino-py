@@ -38,6 +38,11 @@ from merino.utils.http_client import create_http_client
 _ = FORCE_IMPORT
 
 
+# Set this value to `False` to prevent the loader functions
+# RUN_LOADER = False
+RUN_LOADER = True
+
+
 async def main_loader(
     log: Logger,
     settings: LazySettings,
@@ -144,15 +149,16 @@ if __name__ == "__main__":
         log.error(f"Could not get credentials {ex}")
         raise ex
 
-    team_names = asyncio.run(
-        main_loader(
-            log=log,
-            credentials=credentials,
-            settings=settings.providers.sports,
-            platform=platform,
-            event_map=event_map,
+    if RUN_LOADER:
+        team_names = asyncio.run(
+            main_loader(
+                log=log,
+                credentials=credentials,
+                settings=settings.providers.sports,
+                platform=platform,
+                event_map=event_map,
+            )
         )
-    )
 
     # Perform a query and return the results.
     asyncio.run(
