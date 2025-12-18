@@ -34,7 +34,7 @@ class CrawledContentRescaler(EngagementRescaler):
 
     @classmethod
     def is_subtopic_story(cls, rec: CuratedRecommendation) -> bool:
-        """Story is a subtopic that is not manualy curated. Currently this is true for all non-legacy sections that not manually curated"""
+        """Story is a subtopic that is not manually curated. Currently this is true for all non-legacy sections that not manually curated"""
         return rec.in_experiment(ITEM_SUBTOPIC_FLAG)
 
     @classmethod
