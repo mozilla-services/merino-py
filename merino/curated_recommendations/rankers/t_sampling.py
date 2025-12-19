@@ -3,6 +3,7 @@
 import logging
 
 from merino.curated_recommendations import ConstantPrior
+from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.ml_backends.static_local_model import DEFAULT_INTERESTS_KEY
 from merino.curated_recommendations.prior_backends.protocol import (
     EngagementRescaler,
@@ -23,6 +24,12 @@ from merino.curated_recommendations.rankers.utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+PERSONALIZATION_TOPIC_WEIGHTING = {
+    Topic.ARTS: 0.6,
+    Topic.POLITICS: 0.7,
+    Topic.SPORTS: 0.8,
+}
 
 
 class ThompsonSamplingRanker(Ranker):
@@ -64,7 +71,11 @@ class ThompsonSamplingRanker(Ranker):
                     personal_interests.normalized_scores.get(DEFAULT_INTERESTS_KEY, 0.0)
                     * INFERRED_SCORE_WEIGHT
                 )
-            return personal_interests.normalized_scores[rec.topic.value] * INFERRED_SCORE_WEIGHT
+            return (
+                personal_interests.normalized_scores[rec.topic.value]
+                * INFERRED_SCORE_WEIGHT
+                * PERSONALIZATION_TOPIC_WEIGHTING.get(rec.topic, 1.0)
+            )
 
         def compute_ranking_scores(rec: CuratedRecommendation):
             """Sample beta distributed from weighted regional/global engagement for a recommendation."""
