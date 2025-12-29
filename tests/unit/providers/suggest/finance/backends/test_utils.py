@@ -199,8 +199,8 @@ def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
     invalid_json_response = single_ticker_snapshot_response
 
     # modifying values to be int type instead of float
-    invalid_json_response["results"][0]["session"]["change_percent"] = 5
-    invalid_json_response["results"][0]["last_trade"]["price"] = 5
+    invalid_json_response["results"][0]["session"]["change_percent"] = "5"
+    invalid_json_response["results"][0]["last_trade"]["price"] = "5.55"
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
 

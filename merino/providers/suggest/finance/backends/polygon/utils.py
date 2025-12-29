@@ -103,8 +103,7 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
             price = result["session"]["close"]
             change_percent = result["session"]["regular_trading_change_percent"]
 
-        if not isinstance(change_percent, float) or not isinstance(price, float):
-            logger.warning(f"Polygon snapshot response json has incorrect data types: {data}")
+        if not isinstance(change_percent, (int, float)) or not isinstance(price, (int, float)):
             return None
 
         # Formatting the values to two decimal places and string type.
