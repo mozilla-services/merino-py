@@ -106,11 +106,14 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
         if not isinstance(change_percent, (int, float)) or not isinstance(price, (int, float)):
             return None
 
-        # Formatting the values to two decimal places and string type.
+        # Formatting the values to two decimal places (for float) and string type.
         todays_change_percent = (
-            f"+{change_percent:.2f}" if change_percent > 0 else f"{change_percent:.2f}"
+            f"+{format_number(change_percent)}"
+            if change_percent > 0
+            else format_number(change_percent)
         )
-        last_trade_price = f"{price:.2f}"
+
+        last_trade_price = format_number(price)
 
         return TickerSnapshot(
             ticker=ticker,
@@ -120,6 +123,13 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
     except (KeyError, IndexError, TypeError):
         logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
         return None
+
+
+def format_number(number: int | float) -> str:
+    """Format float number to two decimal places. If int return as is."""
+    if isinstance(number, float):
+        return f"{number:.2f}"
+    return str(number)  # int (or other non-float Real)
 
 
 def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) -> TickerSummary:

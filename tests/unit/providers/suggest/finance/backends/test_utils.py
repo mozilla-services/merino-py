@@ -5,6 +5,7 @@
 """Unit tests for the Polygon utils module."""
 
 import pytest
+import copy
 from typing import Any
 
 from merino.providers.suggest.finance.backends.polygon.utils import (
@@ -155,6 +156,19 @@ def test_extract_snapshot_if_valid_success(
     )
     actual_market_open = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
+    # should also validate for int values
+    expected_market_open_with_int_values = TickerSnapshot(
+        ticker="AAPL", last_trade_price="229", todays_change_percent="+0.82"
+    )
+    # deep copying the fixture to over write a value.
+    single_ticker_snapshot_response_with_int_values = copy.deepcopy(
+        single_ticker_snapshot_response
+    )
+    single_ticker_snapshot_response_with_int_values["results"][0]["session"]["price"] = 229
+    actual_market_open_with_int_values = extract_snapshot_if_valid(
+        single_ticker_snapshot_response_with_int_values
+    )
+
     # setting the market status to closed.
     single_ticker_snapshot_response["results"][0]["market_status"] = "closed"
     # the change percent value is 0.946 from the fixture but the function rounds it to 2 decimal places.
@@ -180,6 +194,7 @@ def test_extract_snapshot_if_valid_success(
 
     assert actual_market_open is not None
     assert actual_market_open == expected_market_open
+    assert actual_market_open_with_int_values == expected_market_open_with_int_values
     assert actual_market_early_trading == expected_market_early_trading
     assert actual_market_late_trading == expected_market_late_trading
     assert actual_market_closed == expected_market_closed
@@ -198,7 +213,7 @@ def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
     """
     invalid_json_response = single_ticker_snapshot_response
 
-    # modifying values to be int type instead of float
+    # modifying values to be string type instead of number (float / int)
     invalid_json_response["results"][0]["session"]["change_percent"] = "5"
     invalid_json_response["results"][0]["last_trade"]["price"] = "5.55"
 
