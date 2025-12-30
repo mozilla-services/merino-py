@@ -14,6 +14,7 @@ from merino.providers.suggest.finance.backends.polygon.utils import (
     lookup_ticker_exchange,
     extract_snapshot_if_valid,
     get_tickers_for_query,
+    format_number,
 )
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
@@ -253,3 +254,12 @@ def test_build_ticker_summary_success() -> None:
     )
 
     assert actual == expected
+
+
+def test_format_number() -> None:
+    """Test format_number method."""
+    actual_formatted_float = format_number(123.456)
+    actual_formatted_int = format_number(123)
+
+    assert actual_formatted_float == "123.46"
+    assert actual_formatted_int == "123"
