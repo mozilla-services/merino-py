@@ -2472,6 +2472,7 @@ class TestSections:
         # order is in receivedFeedRank
         for i, sec in enumerate(sorted_interests):
             assert data["feeds"][sec]["receivedFeedRank"] == i
+            assert isinstance(data["feeds"][sec]["recommendations"][0]["serverScore"], float)
 
     def test_topic_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
@@ -2503,6 +2504,9 @@ class TestSections:
         assert len(sections) > 3
         assert sections["top_stories_section"]["receivedFeedRank"] == 0
         assert len(sections["top_stories_section"]["recommendations"]) > 10
+        assert isinstance(
+            sections["top_stories_section"]["recommendations"][0]["serverScore"], float
+        )
 
         # TODO - Verify this in the future
         # assert sections["top_stories_section"]["recommendations"][0]["topic"] == "arts"

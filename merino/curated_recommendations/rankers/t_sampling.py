@@ -85,11 +85,16 @@ class ThompsonSamplingRanker(Ranker):
             # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
             alpha_val = opens + max(a_prior, 1e-18)
             beta_val = no_opens + max(b_prior, 1e-18)
+            raw_score = float(beta.rvs(alpha_val, beta_val))
             rec.ranking_data = RankingData(
-                score=float(beta.rvs(alpha_val, beta_val)) + boost_interest(rec),
+                score=raw_score + boost_interest(rec),
                 alpha=alpha_val,
                 beta=beta_val,
             )
+            if personal_interests is not None:
+                rec.serverScore = round(
+                    raw_score, 3
+                )  # Local re-ranking is based on raw score, as we have higher fidelity interests locally
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
