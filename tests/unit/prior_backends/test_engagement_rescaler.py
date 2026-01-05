@@ -125,18 +125,24 @@ class TestUKCrawledContentRescaler:
         rec = Mock()
         rec.in_experiment.return_value = True
         rec.topic = Topic.SPORTS
+        rec.is_story_blocked_for_top_stories.return_value = True
         assert self.rescaler.is_blocked_from_most_popular(rec)
 
         rec = Mock()
         rec.in_experiment.return_value = True
         rec.topic = Topic.ARTS
+        rec.is_story_blocked_for_top_stories.return_value = False
         assert not self.rescaler.is_blocked_from_most_popular(rec)
 
+        rec = Mock()
         rec.in_experiment.return_value = False
         rec.topic = Topic.GAMING
+        rec.is_story_blocked_for_top_stories.return_value = True
         assert self.rescaler.is_blocked_from_most_popular(rec)
 
+        rec = Mock()
         rec.topic = Topic.TECHNOLOGY
+        rec.is_story_blocked_for_top_stories.return_value = False
         assert not self.rescaler.is_blocked_from_most_popular(rec)
 
     def test_rescale_with_subtopic_item(self):
@@ -144,6 +150,7 @@ class TestUKCrawledContentRescaler:
         rec = Mock()
         rec.in_experiment.return_value = True  # Indicates subtopic for flag
         rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = False
         expected_opens = 100
         expected_no_opens = 50
         opens, no_opens = self.rescaler.rescale(rec, expected_opens, expected_no_opens)
@@ -163,6 +170,7 @@ class TestUKCrawledContentRescaler:
         rec = Mock()
         rec.in_experiment.return_value = False
         rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = False
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
         assert opens == 100 / UK_EXPERIMENT_TREATMENT_PERCENT
@@ -178,6 +186,7 @@ class TestUKCrawledContentRescaler:
         rec.in_experiment.return_value = False
         rec.isTimeSensitive = False
         rec.topic = Topic.GAMING
+        rec.is_story_blocked_for_top_stories.return_value = True
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
         assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / UK_EXPERIMENT_TREATMENT_PERCENT
