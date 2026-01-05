@@ -69,12 +69,16 @@ class CuratedRecommendationsProvider:
         request: CuratedRecommendationsRequest,
         surface_id: SurfaceId,
     ) -> bool:
-        """Check if the 'sections' experiment is enabled."""
-        return (
-            request.feeds is not None
-            and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
-            and surface_id in LOCALIZED_SECTION_TITLES  # The locale must be supported
-        )
+        """Check if the 'sections' feed is enabled.
+
+        Sections are enabled when the request includes 'sections' in the feeds list
+        and the surface_id is supported (has localized section titles).
+        """
+        if request.feeds is None or "sections" not in request.feeds:
+            return False
+        if surface_id not in LOCALIZED_SECTION_TITLES:
+            return False
+        return True
 
     def rank_recommendations(
         self,

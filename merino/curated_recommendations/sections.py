@@ -27,6 +27,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
+    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, EngagementRescaler
 from merino.curated_recommendations.protocol import (
@@ -319,8 +320,7 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     - ML sections experiment is enabled (treatment branch), OR
     """
     in_holdback = is_scheduler_holdback_experiment(request)
-    # Subtopics only in the US
-    return not in_holdback and request.region == "US"
+    return not in_holdback and request.region in ("US", "GB", "IE")
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -352,13 +352,19 @@ def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> 
 
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
+    surface_id: SurfaceId | None = None,
 ) -> EngagementRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
     if is_scheduler_holdback_experiment(request):
         return SchedulerHoldbackRescaler()
+
+    if surface_id == SurfaceId.NEW_TAB_EN_GB:
+        return UKCrawledContentRescaler()
+
     # While we preivously returned None for non-US, we know there are some section users
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
+
     return CrawledContentRescaler()
 
 
@@ -632,7 +638,7 @@ async def get_sections(
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
-    rescaler = get_ranking_rescaler_for_branch(request)
+    rescaler = get_ranking_rescaler_for_branch(request, surface_id)
 
     headlines_corpus_section, corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
