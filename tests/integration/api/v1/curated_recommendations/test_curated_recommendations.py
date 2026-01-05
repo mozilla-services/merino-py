@@ -2758,6 +2758,13 @@ def test_uk_sections_with_gb_backend_data(
             f"but found sections: {list(sections.keys())}"
         )
 
+        # Verify that locale suffixes are stripped from section IDs
+        # The backend returns IDs like "food__lEN_GB" but they should be normalized to "food"
+        sections_with_suffix = [s for s in sections.keys() if s.endswith("__lEN_GB")]
+        assert (
+            len(sections_with_suffix) == 0
+        ), f"Section IDs should not contain '__lEN_GB' suffix, but found: {sections_with_suffix}"
+
         # data array should be empty (all recommendations in feeds)
         assert len(data["data"]) == 0
     finally:

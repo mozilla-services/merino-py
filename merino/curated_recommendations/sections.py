@@ -27,7 +27,6 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
     UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, EngagementRescaler
