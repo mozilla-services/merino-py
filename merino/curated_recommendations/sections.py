@@ -210,11 +210,10 @@ async def get_corpus_sections(
             is_legacy_section=False,
         )
 
-    # Apply filtering based on subtopics experiment and surface
+    # Apply filtering based on subtopics experiment
     filtered_corpus_sections = filter_sections_by_experiment(
         remaining_raw_corpus_sections,
         include_subtopics,
-        surface_id,
     )
 
     # Process the sections using the shared logic
@@ -321,8 +320,7 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     - ML sections experiment is enabled (treatment branch), OR
     """
     in_holdback = is_scheduler_holdback_experiment(request)
-    # Subtopics only in the US
-    return not in_holdback and request.region == "US"
+    return not in_holdback and request.region in ("US", "GB", "IE")
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -393,15 +391,10 @@ def get_corpus_sections_for_legacy_topic(
 def filter_sections_by_experiment(
     corpus_sections: list[CorpusSection],
     include_subtopics: bool = False,
-    surface_id: SurfaceId | None = None,
 ) -> dict[str, CorpusSection]:
     """Filter sections based on createSource and subtopics experiment.
 
-    For GB surface: Include all ML/MANUAL sections without legacy topic filtering.
-    The GB corpus API returns different externalIds (e.g., 'technology' instead of 'tech')
-    that don't match the Topic enum values, so we skip that filtering for GB.
-
-    For US surface: Sections are included if they meet any of these criteria:
+    Sections are included if they meet any of these criteria:
     - Manually created sections (createSource == MANUAL)
     - ML-generated legacy topic sections
     - ML-generated subtopic sections (when subtopics experiment is enabled)
@@ -409,21 +402,10 @@ def filter_sections_by_experiment(
     Args:
         corpus_sections: List of CorpusSection objects
         include_subtopics: Whether to include ML subtopic sections
-        surface_id: The surface ID to determine filtering behavior
 
     Returns:
         Dict mapping section IDs to CorpusSection objects
     """
-    # For GB, don't filter by legacy topics - include all ML/MANUAL sections
-    # GB uses different externalIds (e.g., 'technology' vs 'tech') that don't match
-    # the Topic enum values used for legacy topic filtering
-    if surface_id == SurfaceId.NEW_TAB_EN_GB:
-        return {
-            section.externalId: section
-            for section in corpus_sections
-            if section.createSource in (CreateSource.ML, CreateSource.MANUAL)
-        }
-
     legacy_topics = get_legacy_topic_ids()
     result = {}
 
