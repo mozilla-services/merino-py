@@ -439,4 +439,5 @@ ETF_TICKER_EAGER_MATCH_BLOCKLIST = [
     "XLG",
     "FB",
     "QB",
+    "PLUG"
 ]
