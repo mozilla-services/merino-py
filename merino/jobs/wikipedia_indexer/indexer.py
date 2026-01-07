@@ -131,10 +131,33 @@ class Indexer:
             try:
                 res = self.es_client.bulk(operations=self.queue)
                 item_count = len(res.get("items", []))
+                items = res.get("items", []) or []
                 if "errors" in res and res["errors"]:
-                    raise Exception(res["errors"])
-            except Exception as e:
-                raise e
+                    # Find the first failing item (index/create/update/delete)
+                    first_err = None
+                    for it in items:
+                        action = next(
+                            (k for k in ("index", "create", "update", "delete") if k in it),
+                            None,
+                        )
+                        if not action:
+                            continue
+                        meta = it[action] or {}
+                        if meta.get("error"):
+                            first_err = {
+                                "action": action,
+                                "status": meta.get("status"),
+                                "index": meta.get("_index"),
+                                "id": meta.get("_id"),
+                                "error": meta.get("error"),
+                            }
+                            break
+
+                    logger.error("Bulk operation had errors", extra={"first_error": first_err})
+
+                    raise RuntimeError(f"Bulk failed. First error: {json.dumps(first_err)}")
+            except Exception:
+                raise
             finally:
                 self.queue.clear()
         return item_count
