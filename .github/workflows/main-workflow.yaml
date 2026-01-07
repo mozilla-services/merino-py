@@ -59,3 +59,18 @@ jobs:
       workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-build-dockerhub-app:
+    uses: ./.github/workflows/build-dockerhub-app-image.yaml
+    with:
+      image_tag: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}
+  run-publish-dockerhub-app:
+    needs: run-build-dockerhub-app
+    uses: ./.github/workflows/publish-dockerhub-app-image.yaml
+    with:
+      image_tag: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
