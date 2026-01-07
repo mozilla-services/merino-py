@@ -137,7 +137,7 @@ BALANCER_MAX_EVERGREEN = 0.4
 
 BALANCER_MAX_PER_TOPIC = 0.2
 BALANCER_MAX_SUBTOPIC = 0.1
-MAX_BLOCKED_TOPICS = 0.1  # This effectively means 0 when num articles < 10, which is typical (non personalized) case
+MAX_BLOCKED_TOPICS = 0.0  # This effectively means 0 when num articles < 10, which is typical (non personalized) case
 
 EVERGREEN_TOPICS = {
     Topic.FOOD,
