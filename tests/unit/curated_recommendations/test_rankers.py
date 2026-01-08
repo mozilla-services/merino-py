@@ -1174,8 +1174,8 @@ class TestTopStoriesArticleBalancer:
         assert balancer.add_story(stories[3]) is False
         assert len(balancer.get_stories()) == 3
 
-    def test_rejects_blocked_topics_until_limits_raise(self):
-        """Blocked topics should be excluded until relaxed limits allow them."""
+    def test_rejects_blocked_topics_after_limits_raise(self):
+        """Blocked topics should be excluded, even after limits are raised."""
         balancer = TopStoriesArticleBalancer(expected_num_articles=9)
         allowed_story = self._build_recommendation("0", Topic.BUSINESS)
         blocked_story = self._build_recommendation("1", Topic.GAMING)
@@ -1184,8 +1184,8 @@ class TestTopStoriesArticleBalancer:
         assert balancer.add_story(blocked_story) is False
 
         balancer.set_limits_for_expected_articles(15)
-        assert balancer.add_story(blocked_story)
-        assert len(balancer.get_stories()) == 2
+        assert balancer.add_story(blocked_story) is False
+        assert len(balancer.get_stories()) == 1  # Story wasn't allowed
 
     def test_add_stories_supports_raising_limits_and_capacity(self):
         """Add a second batch after increasing both limit and balancing constraints."""
