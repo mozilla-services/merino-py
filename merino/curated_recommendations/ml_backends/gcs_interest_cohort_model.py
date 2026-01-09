@@ -1,7 +1,6 @@
 """Module dedicated to backends for Thompson sampling priors loaded from GCS."""
 
-from datetime import datetime, timedelta, timezone
-import json
+from datetime import datetime
 import torch
 from safetensors.torch import safe_open
 import logging
@@ -37,7 +36,6 @@ class GcsInterestCohortModel(CohortModelBackend):
         self._cohort_model.eval()
         self.get_chohort_for_interests.cache_clear()
 
-
     @lru_cache(maxsize=5000)
     def get_cohort_for_interests(
         self,
@@ -64,7 +62,6 @@ class GcsInterestCohortModel(CohortModelBackend):
         return self.synced_blob.update_count
 
 
-
 class EmptyCohortModel(CohortModelBackend):
     """Empty Backend that fetches ML Recs from GCS for Contextual Ranker"""
 
@@ -77,4 +74,5 @@ class EmptyCohortModel(CohortModelBackend):
         model_id,
         training_run_id: str | None = None,
     ) -> int | None:
+        """Fetch the contextual ranking cohort based on interests string."""
         return None

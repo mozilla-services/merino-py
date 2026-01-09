@@ -224,6 +224,7 @@ class MLRecsBackend(Protocol):
         """Fetch the recommendations based on region and utc offset"""
         ...
 
+
 class CohortModelBackend(Protocol):
     """Protocol for Cohort Model that maps interest vectors to cohorts"""
 

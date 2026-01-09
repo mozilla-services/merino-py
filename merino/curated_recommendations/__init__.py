@@ -19,10 +19,17 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
 from merino.curated_recommendations.ml_backends.static_local_model import SuperInferredModel
 from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
-from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import EmptyCohortModel, GcsInterestCohortModel
+from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import (
+    EmptyCohortModel,
+    GcsInterestCohortModel,
+)
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
-from merino.curated_recommendations.ml_backends.protocol import CohortModelBackend, LocalModelBackend, MLRecsBackend
+from merino.curated_recommendations.ml_backends.protocol import (
+    CohortModelBackend,
+    LocalModelBackend,
+    MLRecsBackend,
+)
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -127,6 +134,7 @@ def init_ml_recommendations_backend() -> MLRecsBackend:
         # Fall back to a empty recommendation set if GCS cannot be initialized.
         # This happens in contract tests or when the developer isn't logged in with gcloud auth.
         return EmptyMLRecs()
+
 
 def init_ml_cohort_model_backend() -> CohortModelBackend:
     """Initialize the ML Cohort Model GCS Backend which falls back to an empty

@@ -1,9 +1,11 @@
+"""Torch model that assigns the user to a particular cohort based on the inferred interests."""
+
 import torch
 import torch.nn as nn
 
+
 class InterestCohortModel(nn.Module):
-    """
-    Model that assigns the user to a particular cohort based on the inferred interests.
+    """Model that assigns the user to a particular cohort based on the inferred interests.
     This model is trained so that more relevant bits are used
     """
 
@@ -29,8 +31,7 @@ class InterestCohortModel(nn.Module):
         )
 
     def forward(self, interests: torch.Tensor) -> torch.Tensor:
-        """
-        interests: (B, num_interest_bits)
+        """interests: (B, num_interest_bits)
         returns:   (B, target_cohorts)
         """
         if interests.dim() != 2 or interests.size(1) != self.num_interest_bits:
