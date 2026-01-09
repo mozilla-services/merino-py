@@ -522,7 +522,7 @@ type = "adm"
 
 # MERINO_PROVIDERS__ADM__ENABLED_BY_DEFAULT
 # Whether or not this provider is enabled by default.
-enabled_by_default = false
+enabled_by_default = true
 
 # MERINO_PROVIDERS__ADM__BACKEND
 # The backend of the provider. Either "remote-settings" or "test".
@@ -652,7 +652,7 @@ type = "wikipedia"
 
 # MERINO_PROVIDERS__WIKIPEDIA__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default. Defaults to true.
-enabled_by_default = false
+enabled_by_default = true
 
 # MERINO_PROVIDERS__WIKIPEDIA__BACKEND
 # The backend of the provider. Either "elasticsearch" or "test".
