@@ -1002,6 +1002,27 @@ blob_name = "contextual_ts/latest.json"
 # Prior data updates daily, so we don't need to check frequently for new data.
 cron_interval_seconds = 300
 
+[default.interest_cohort_model.gcs]
+gcp_project = ""
+
+# MERINO__ML_RECOMMENDATIONS__GCS__BUCKET_NAME
+# GCS bucket that contains ranked articles from ml
+bucket_name = ""
+
+# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
+# The maximum size in bytes of the GCS prior blob. If exceeded, an error will be logged.
+max_size = 10_000
+
+# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "contextual_ts/cohort_model.safetensors"
+
+# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated prior data.
+# Prior data updates daily, so we don't need to check frequently for new data.
+cron_interval_seconds = 300
+
+
 
 [default.curated_recommendations.corpus_api]
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_API__RETRY_COUNT

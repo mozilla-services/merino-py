@@ -61,3 +61,12 @@ gcp_project = "moz-fx-merino-nonprod-db57"
 # MERINO__ML_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains ranked articles from ml
 bucket_name = "merino-ml-data-stage"
+
+
+[stage.interest_cohort_model.gcs]
+# GCP project name where the GCS bucket lives.
+gcp_project = "moz-fx-merino-nonprod-db57"
+
+# GCS bucket that contains cohort model data
+bucket_name = "merino-ml-data-stage"
+

@@ -223,3 +223,15 @@ class MLRecsBackend(Protocol):
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
         ...
+
+class CohortModelBackend(Protocol):
+    """Protocol for Cohort Model that maps interest vectors to cohorts"""
+
+    def get_chohort_for_interests(
+        self,
+        interests: str,
+        model_id: str,
+        training_run_id: str | None = None,
+    ) -> int | None:
+        """Fetch the contextual ranking cohort based on interests string."""
+        ...
