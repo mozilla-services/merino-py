@@ -185,6 +185,40 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
         case _:
             return None
 
+# TODO: map values
+def process_hourly_forecast_response(response: Any) -> dict[str, Any] | None:
+    """Process the API response for hourly forecasts."""
+    match response:
+        case [
+            {
+                "Link": url,
+                "WeatherText": summary,
+                "WeatherIcon": icon_id,
+                "Temperature": {
+                    "Metric": {
+                        "Value": c,
+                    },
+                    "Imperial": {
+                        "Value": f,
+                    },
+                },
+            }
+        ]:
+            # `type: ignore` is necessary because mypy gets confused when
+            # matching structures of type `Any` and reports the following
+            # lines as unreachable. See
+            # https://github.com/python/mypy/issues/12770
+            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE_NEWTAB)  # type: ignore
+            return {
+                "url": url,
+                "summary": summary,
+                "icon_id": icon_id,
+                "temperature": {"c": c, "f": f},
+            }
+        case _:
+            return None
+
+
 
 def get_language(requested_languages: list[str]) -> str:
     """Get first language that is in default_languages."""

@@ -117,6 +117,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                             settings.accuweather.url_current_conditions_path
                         ),
                         url_forecasts_path=settings.accuweather.url_forecasts_path,
+                        url_hourly_forecasts_path=settings.accuweather.url_hourly_forecasts_path,
                         url_location_completion_path=(
                             settings.accuweather.url_location_completion_path
                         ),

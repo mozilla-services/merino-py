@@ -24,16 +24,18 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecast,
     LocationCompletion,
     Temperature,
     WeatherReport,
-    WeatherContext,
+    WeatherContext, HourlyForecast,
 )
 from merino.providers.suggest.weather.backends.accuweather import pathfinder
 from merino.providers.suggest.weather.backends.accuweather.utils import (
     RequestType,
     process_location_completion_response,
     process_forecast_response,
+    process_hourly_forecast_response,
     process_current_condition_response,
     process_location_response,
     get_language,
@@ -139,6 +141,7 @@ __all__ = [
     "AccuweatherLocation",
     "CurrentConditionsWithTTL",
     "ForecastWithTTL",
+    "HourlyForecastWithTTL",
     "WeatherData",
     "WeatherDataType",
 ]
@@ -167,6 +170,7 @@ class WeatherData(NamedTuple):
     location: AccuweatherLocation | None = None
     current_conditions: CurrentConditions | None = None
     forecast: Forecast | None = None
+    hourly_forecast: HourlyForecast | None = None
     ttl: int | None = None
 
 
@@ -184,11 +188,19 @@ class ForecastWithTTL(NamedTuple):
     ttl: int
 
 
+class HourlyForecastWithTTL(NamedTuple):
+    """Hourly Forecast and its TTL value that is used to build a WeatherReport instance"""
+
+    hourly_forecast: HourlyForecast
+    ttl: int
+
+
 class WeatherDataType(Enum):
     """Enum to capture all types for weather data."""
 
     CURRENT_CONDITIONS = 1
     FORECAST = 2
+    HOURLY_FORECAST = 3
 
 
 class AccuweatherBackend:
@@ -199,6 +211,7 @@ class AccuweatherBackend:
     cached_location_key_ttl_sec: int
     cached_current_condition_ttl_sec: int
     cached_forecast_ttl_sec: int
+    cached_hourly_forecast_ttl_sec: int
     metrics_client: aiodogstatsd.Client
     url_param_api_key: str
     url_cities_admin_path: str
@@ -206,6 +219,7 @@ class AccuweatherBackend:
     url_cities_param_query: str
     url_current_conditions_path: str
     url_forecasts_path: str
+    url_hourly_forecasts_path: str
     url_location_path: str
     url_location_key_placeholder: str
     url_location_completion_path: str
@@ -219,6 +233,7 @@ class AccuweatherBackend:
         cached_location_key_ttl_sec: int,
         cached_current_condition_ttl_sec: int,
         cached_forecast_ttl_sec: int,
+        cached_hourly_forecast_ttl_sec: int,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
         url_param_api_key: str,
@@ -227,6 +242,7 @@ class AccuweatherBackend:
         url_cities_param_query: str,
         url_current_conditions_path: str,
         url_forecasts_path: str,
+        url_hourly_forecasts_path: str,
         url_location_completion_path: str,
         url_location_key_placeholder: str,
         metrics_sample_rate: float,
@@ -246,6 +262,7 @@ class AccuweatherBackend:
             or not url_cities_param_query
             or not url_current_conditions_path
             or not url_forecasts_path
+            or not url_hourly_forecasts_path
             or not url_location_key_placeholder
         ):
             raise ValueError("One or more AccuWeather API URL parameters are undefined")
@@ -262,6 +279,7 @@ class AccuweatherBackend:
         self.cached_location_key_ttl_sec = cached_location_key_ttl_sec
         self.cached_current_condition_ttl_sec = cached_current_condition_ttl_sec
         self.cached_forecast_ttl_sec = cached_forecast_ttl_sec
+        self.cached_hourly_forecast_ttl_sec = cached_hourly_forecast_ttl_sec
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.url_param_api_key = url_param_api_key
@@ -270,6 +288,7 @@ class AccuweatherBackend:
         self.url_cities_param_query = url_cities_param_query
         self.url_current_conditions_path = url_current_conditions_path
         self.url_forecasts_path = url_forecasts_path
+        self.url_hourly_forecasts_path = url_hourly_forecasts_path
         self.url_location_completion_path = url_location_completion_path
         self.url_location_key_placeholder = url_location_key_placeholder
         self.metrics_sample_rate = metrics_sample_rate
@@ -308,6 +327,11 @@ class AccuweatherBackend:
             case WeatherDataType.FORECAST:  # pragma: no cover
                 return self.cache_key_for_accuweather_request(
                     self.url_forecasts_path,
+                    query_params=query_params,
+                )
+            case WeatherDataType.HOURLY_FORECAST:
+                return self.cache_key_for_accuweather_request(
+                    self.url_hourly_forecasts_path,
                     query_params=query_params,
                 )
 
@@ -451,11 +475,12 @@ class AccuweatherBackend:
         if len(cached_data) == 0:
             return WeatherData()
 
-        location_cached, current_cached, forecast_cached, ttl_cached = cached_data
+        location_cached, current_cached, forecast_cached, hourly_forecast_cached, ttl_cached = cached_data
 
         location: AccuweatherLocation | None = None
         current_conditions: CurrentConditions | None = None
         forecast: Forecast | None = None
+        hourly_forecast: HourlyForecast | None = None
         ttl: int | None = None
 
         try:
@@ -465,6 +490,8 @@ class AccuweatherBackend:
                 current_conditions = CurrentConditions.model_validate(orjson.loads(current_cached))
             if forecast_cached is not None:
                 forecast = Forecast.model_validate(orjson.loads(forecast_cached))
+            if hourly_forecast_cached is not None:
+                hourly_forecast = HourlyForecast.model_validate(orjson.loads(hourly_forecast_cached))
             if ttl_cached is not None:
                 # redis returns the TTL value as an integer, however, we are explicitly casting
                 # the value returned from the cache since it's received as bytes as the method
@@ -474,7 +501,7 @@ class AccuweatherBackend:
             logger.error(f"Failed to load weather report data from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.data.error")
 
-        return WeatherData(location, current_conditions, forecast, ttl)
+        return WeatherData(location, current_conditions, forecast, hourly_forecast, ttl)
 
     def get_location_key_query_params(self, city: str) -> dict[str, str]:
         """Get the query parameters for the location key for a given city."""
@@ -898,6 +925,48 @@ class AccuweatherBackend:
             raise AccuweatherError(
                 AccuweatherErrorMessages.HTTP_UNEXPECTED_FORECAST_RESPONSE,
                 forecast_url=self.url_forecasts_path.format(location_key=location_key),
+            ) from error
+        except Exception as exc:
+            raise AccuweatherError(
+                AccuweatherErrorMessages.UNEXPECTED_FORECAST_ERROR,
+                exception_class_name=exc.__class__.__name__,
+            ) from exc
+
+        return (
+            ForecastWithTTL(
+                forecast=Forecast(
+                    url=response["url"],
+                    summary=response["summary"],
+                    high=Temperature(**response["high"]),
+                    low=Temperature(**response["low"]),
+                ),
+                ttl=response["cached_request_ttl"],
+            )
+            if response
+            else None
+        )
+
+    async def get_hourly_forecast(self, location_key: str, language: str) -> HourlyForecastWithTTL | None:
+        """Return hourly forecast data for a specific location or None if hourly
+        forecast data is not found.
+
+        Raises:
+            AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
+        Reference:
+            https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/hourly/12hour/{locationKey}
+        """
+        try:
+            response: dict[str, Any] | None = await self.request_upstream(
+                self.url_hourly_forecasts_path.format(location_key=location_key),
+                params={self.url_param_api_key: self.api_key, LANGUAGE_PARAM: language},
+                request_type=RequestType.FORECASTS,
+                process_api_response=process_hourly_forecast_response,
+                cache_ttl_sec=self.cached_hourly_forecast_ttl_sec,
+            )
+        except HTTPError as error:
+            raise AccuweatherError(
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_FORECAST_RESPONSE,
+                forecast_url=self.url_hourly_forecasts_path.format(location_key=location_key),
             ) from error
         except Exception as exc:
             raise AccuweatherError(
