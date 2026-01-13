@@ -690,7 +690,7 @@ pl_es_index = "plwiki-v1"
 
 # MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS
 # The maximum suggestions for each search request to Elasticsearch.
-es_max_suggestions = 3
+es_max_suggestions = 1
 
 # MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS
 # The timeout in milliseconds for each search request to Elasticsearch.
