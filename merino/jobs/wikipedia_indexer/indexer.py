@@ -63,9 +63,11 @@ class Indexer:
 
         # parse the index name out of the latest file name
         index_name = self._get_index_name(latest.name)
+        alias_name = elasticsearch_alias.format(version=self.index_version)
+
         logger.info("Ensuring index exists", extra={"index": index_name})
 
-        if self._create_index(index_name):
+        if self._create_index(index_name, alias_name):
             logger.info("Start indexing", extra={"index": index_name})
             reporter = ProgressReporter(logger, "Indexing", latest.name, index_name, total_docs)
             indexed = 0
@@ -183,7 +185,7 @@ class Indexer:
         base_name = "-".join(file_name.split("-")[:2])
         return f"{base_name}-{self.index_version}-{timestamp}"
 
-    def _create_index(self, index_name: str) -> bool:
+    def _create_index(self, index_name: str, alias_name: str) -> bool:
         indices_client = self.es_client.indices
         exists = indices_client.exists(index=index_name)
 
@@ -193,10 +195,16 @@ class Indexer:
         if not exists and version_settings:
             logger.info(f"Creating index for language: {language}")
 
+            base_settings = get_suggest_settings(language)
+            settings = {
+                **base_settings,
+                "index.lifecycle.rollover_alias": alias_name,
+            }
+
             res = indices_client.create(
                 index=index_name,
                 mappings=get_suggest_mapping(language),
-                settings=get_suggest_settings(language),
+                settings=settings,
             )
             return bool(res.get("acknowledged", False))
 
@@ -206,9 +214,10 @@ class Indexer:
         alias = alias.format(version=self.index_version)
 
         # fetch previous index using alias so we know what to delete
-        actions: list[Mapping[str, Any]] = [{"add": {"index": current_index, "alias": alias}}]
+        actions: list[Mapping[str, Any]] = [
+            {"add": {"index": current_index, "alias": alias, "is_write_index": True}}
+        ]
 
-        indices_to_close = []
         if self.es_client.indices.exists_alias(name=alias):
             indices = self.es_client.indices.get_alias(name=alias)
             for idx in indices:
@@ -217,12 +226,5 @@ class Indexer:
                     extra={"index": idx, "alias": alias},
                 )
                 actions.append({"remove": {"index": idx, "alias": alias}})
-                indices_to_close.append(idx)
 
         self.es_client.indices.update_aliases(actions=actions)
-
-        # Close the indices that have been removed from the alias.
-        # This will improve the memory usage of the cluster.
-        if indices_to_close:
-            self.es_client.indices.close(index=indices_to_close)
-            logger.info("closed some indices", extra={"indices": indices_to_close})
