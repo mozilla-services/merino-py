@@ -14,6 +14,7 @@ from merino.curated_recommendations.protocol import ExperimentName
 INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
 INFERRED_LOCAL_EXPERIMENT_NAME_V2 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V2.value
 INFERRED_LOCAL_EXPERIMENT_NAME_V3 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value
+INFERRED_LOCAL_EXPERIMENT_NAME_V4 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value
 
 LOCAL_AND_SERVER_V1_MODEL_ID = "local-and-server"
 LOCAL_ONLY_V1_MODEL_ID = "local-only"
@@ -276,7 +277,9 @@ class SuperInferredModel(LocalModelBackend):
         if model_id is None:  ## this is the "get" call for building the model sent in the response
             ## switch on experiment name, not using util because we have string name instead of request object
             if (
-                experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
+                experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V4
+                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V4}"
+                or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V3}"
             ):
                 # We don't have to check for branch here as control won't call inferred code

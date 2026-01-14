@@ -24,7 +24,7 @@ from merino.curated_recommendations.provider import (
 
 from merino.curated_recommendations.protocol import ExperimentName
 
-INFERRED_V3_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value
+INFERRED_V4_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value
 
 TEST_SURFACE = "test_surface"
 
@@ -130,7 +130,7 @@ def test_model_experiment_name_and_branch_name(model_limited):
     """Caller should not decode when the model id doesn't match."""
     model = model_limited.get(
         "surface",
-        experiment_name=INFERRED_V3_EXPERIMENT_NAME,
+        experiment_name=INFERRED_V4_EXPERIMENT_NAME,
         experiment_branch="any",
     )
     assert model.model_matches_interests(SERVER_V3_MODEL_ID)
@@ -492,13 +492,13 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
     "experiment,branch,model_id,expect_private_nonempty",
     [
         (
-            "optin-" + INFERRED_V3_EXPERIMENT_NAME,
+            "optin-" + INFERRED_V4_EXPERIMENT_NAME,
             "any_branch",
             SERVER_V3_MODEL_ID,
             True,
         ),
         (
-            INFERRED_V3_EXPERIMENT_NAME,
+            INFERRED_V4_EXPERIMENT_NAME,
             "any_branch",
             SERVER_V3_MODEL_ID,
             True,
