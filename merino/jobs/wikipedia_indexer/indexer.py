@@ -208,7 +208,6 @@ class Indexer:
         # fetch previous index using alias so we know what to delete
         actions: list[Mapping[str, Any]] = [{"add": {"index": current_index, "alias": alias}}]
 
-        indices_to_close = []
         if self.es_client.indices.exists_alias(name=alias):
             indices = self.es_client.indices.get_alias(name=alias)
             for idx in indices:
@@ -217,12 +216,5 @@ class Indexer:
                     extra={"index": idx, "alias": alias},
                 )
                 actions.append({"remove": {"index": idx, "alias": alias}})
-                indices_to_close.append(idx)
 
         self.es_client.indices.update_aliases(actions=actions)
-
-        # Close the indices that have been removed from the alias.
-        # This will improve the memory usage of the cluster.
-        if indices_to_close:
-            self.es_client.indices.close(index=indices_to_close)
-            logger.info("closed some indices", extra={"indices": indices_to_close})
