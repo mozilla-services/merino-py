@@ -4,7 +4,7 @@ import logging
 from typing import cast
 
 from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
-from merino.curated_recommendations.ml_backends.protocol import LOCAL_MODEL_MODEL_ID_KEY
+from merino.curated_recommendations.ml_backends.protocol import LOCAL_MODEL_MODEL_ID_KEY, CohortModelBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
     SurfaceId,
@@ -56,6 +56,7 @@ class CuratedRecommendationsProvider:
         sections_backend: SectionsProtocol,
         local_model_backend: LocalModelBackend,
         ml_recommendations_backend: MLRecsBackend,
+        cohort_model_backend: CohortModelBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
@@ -63,6 +64,7 @@ class CuratedRecommendationsProvider:
         self.sections_backend = sections_backend
         self.local_model_backend = local_model_backend
         self.ml_recommendations_backend = ml_recommendations_backend
+        self.cohort_model_backend = cohort_model_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -129,7 +131,8 @@ class CuratedRecommendationsProvider:
 
         if self.is_sections_experiment(request, surface_id):
             inferred_interests = self.process_request_interests(
-                request, surface_id, self.local_model_backend
+                request, surface_id, self.local_model_backend,
+                self.cohort_model_backend
             )
             sections_feeds = await get_sections(
                 request,
@@ -193,6 +196,7 @@ class CuratedRecommendationsProvider:
         request: CuratedRecommendationsRequest,
         surface_id: str,
         local_model_backend: LocalModelBackend,
+        interest_cohort_model_backend: CohortModelBackend = None,
     ) -> ProcessedInterests | None:
         """Convert the interest vector from the request into a clean internal representation
         with numeric scores. This does the unary decoding if necessary.
@@ -225,6 +229,14 @@ class CuratedRecommendationsProvider:
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )
             if dp_values is not None:
+                if interest_cohort_model_backend is not None:
+                    cohort = interest_cohort_model_backend.get_cohort_for_interests(
+                        interests="".join(dp_values), # Join the strings for cohort lookup
+                        model_id=model_id,
+                    )
+                    print(f"Identified cohort: {cohort}")
+                else:
+                    print("No cohort model backend provided")
                 # Decode the DP values
                 decoded = inferred_local_model.decode_dp_interests(dp_values, model_id)
                 # Extract just the numeric scores

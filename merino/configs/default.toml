@@ -1011,16 +1011,15 @@ bucket_name = ""
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
 # The maximum size in bytes of the GCS prior blob. If exceeded, an error will be logged.
-max_size = 10_000
+max_size = 200_000
 
-# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
+# MERINO__ML_RECOMMENDATIONS__GCS__COHORT_MODEL__BLOB_PREFIX
 # GCS path of the priors JSON file.
 blob_name = "contextual_ts/cohort_model.safetensors"
 
-# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
-# Interval in seconds at which the cron job checks if GCS contains updated prior data.
-# Prior data updates daily, so we don't need to check frequently for new data.
-cron_interval_seconds = 300
+# MERINO__ML_RECOMMENDATIONS__GCS__COHORT_MODEL__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated model.
+cron_interval_seconds = 600
 
 
 

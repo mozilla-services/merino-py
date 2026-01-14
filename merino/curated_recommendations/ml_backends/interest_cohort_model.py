@@ -13,7 +13,7 @@ class InterestCohortModel(nn.Module):
         self,
         num_interest_bits: int = 32,
         num_hidden_interests: int = 16,
-        target_cohorts: int = 16,
+        target_cohorts: int = 10,
         num_topics: int = 16,
     ):
         super().__init__()

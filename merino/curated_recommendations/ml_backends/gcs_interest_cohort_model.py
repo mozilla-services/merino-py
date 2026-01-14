@@ -2,7 +2,8 @@
 
 from datetime import datetime
 import torch
-from safetensors.torch import safe_open
+import tempfile
+from safetensors.torch import safe_open, load as safetensors_load
 import logging
 from functools import lru_cache
 
@@ -14,6 +15,7 @@ from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_TARGET_COHORTS = 10
 
 class GcsInterestCohortModel(CohortModelBackend):
     """Backend that fetches ML Recs from GCS for Contextual Ranker"""
@@ -22,19 +24,30 @@ class GcsInterestCohortModel(CohortModelBackend):
         self.synced_blob = synced_gcs_blob
         self.synced_blob.set_fetch_callback(self._fetch_callback)
         self.cache_time: datetime | None = None
+        self._model_id: str | None = None
+        self._num_bits: int = 0
+        self._target_cohorts: int = DEFAULT_TARGET_COHORTS
 
     def _fetch_callback(self, data: bytes | str) -> None:
         """Process the raw blob data and update the cache atomically."""
-        cohort_model = InterestCohortModel()
-        cohort_model.load_state_dict(data)
-        with safe_open(data, framework="pt") as f:
-            metadata = f.metadata()
-            self._model_id = metadata.get("model_id", "unknown")
-            self._num_bits = metadata.get("num_interest_bits", 32)
-            self._training_run_id = metadata.get("training_run_id", "unknown")
-        self._cohort_model = cohort_model
-        self._cohort_model.eval()
-        self.get_chohort_for_interests.cache_clear()
+        with tempfile.NamedTemporaryFile(suffix=".safetensors") as tmp:
+            tmp.write(data)
+            tmp.flush()
+            try:
+                with safe_open(tmp.name, framework="pt") as f:
+                    metadata = f.metadata() or {}
+                    self._model_id = metadata.get("model_id", "unknown")
+                    self._num_bits = int(metadata.get("num_interest_bits", 32))
+                    self._training_run_id = metadata.get("training_run_id", "unknown")
+                    self._target_cohorts = int(metadata.get("target_cohorts", DEFAULT_TARGET_COHORTS))
+                cohort_model = InterestCohortModel(target_cohorts=self._target_cohorts, num_interest_bits=self._num_bits)
+                state_dict = safetensors_load(data)
+                cohort_model.load_state_dict(state_dict)
+                self._cohort_model = cohort_model
+                self._cohort_model.eval()
+                self.get_cohort_for_interests.cache_clear()
+            except Exception as e:
+                logger.error(f"Failed to load cohort model {e}")
 
     @lru_cache(maxsize=5000)
     def get_cohort_for_interests(
@@ -51,10 +64,14 @@ class GcsInterestCohortModel(CohortModelBackend):
         if training_run_id is not None and self._training_run_id != training_run_id:
             return None
         interest_bits = [int(c) for c in interests]
-        with torch.no_grad():
-            tensor_data = torch.tensor([interest_bits], dtype=torch.float32)
-            results = self._cohort_model(tensor_data).argmax(dim=1)
-            return results[0].item()
+        try:
+            with torch.no_grad():
+                tensor_data = torch.tensor([interest_bits], dtype=torch.float32)
+                results = self._cohort_model(tensor_data).argmax(dim=1)
+                return results[0].item()
+        except Exception as e:
+            logger.error(f"Error during model inference: {e}")
+            return None
 
     @property
     def update_count(self) -> int:

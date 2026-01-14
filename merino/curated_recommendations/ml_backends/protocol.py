@@ -228,7 +228,7 @@ class MLRecsBackend(Protocol):
 class CohortModelBackend(Protocol):
     """Protocol for Cohort Model that maps interest vectors to cohorts"""
 
-    def get_chohort_for_interests(
+    def get_cohort_for_interests(
         self,
         interests: str,
         model_id: str,
