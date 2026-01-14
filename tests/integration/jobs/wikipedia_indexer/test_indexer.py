@@ -101,9 +101,8 @@ def test_create_index(
 
     index_name = "enwiki-123-v1"
     indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
-    alias_name = "enwiki-v1"
 
-    assert expected_return == indexer._create_index(index_name, alias_name)
+    assert expected_return == indexer._create_index(index_name)
     assert expected_create_called == es_client.indices.create.called
 
 
@@ -153,13 +152,7 @@ def test_index_from_export_fail_on_existing_index(
             "enwiki",
             ["enwiki-345"],
             [
-                {
-                    "add": {
-                        "index": "enwiki-123",
-                        "alias": "enwiki",
-                        "is_write_index": True,
-                    }
-                },
+                {"add": {"index": "enwiki-123", "alias": "enwiki"}},
                 {"remove": {"index": "enwiki-345", "alias": "enwiki"}},
             ],
         ),
@@ -168,13 +161,7 @@ def test_index_from_export_fail_on_existing_index(
             "enwiki-{version}",
             ["enwiki-345", "enwiki-678"],
             [
-                {
-                    "add": {
-                        "index": "enwiki-123",
-                        "alias": "enwiki-v1",
-                        "is_write_index": True,
-                    }
-                },
+                {"add": {"index": "enwiki-123", "alias": "enwiki-v1"}},
                 {"remove": {"index": "enwiki-345", "alias": "enwiki-v1"}},
                 {"remove": {"index": "enwiki-678", "alias": "enwiki-v1"}},
             ],
@@ -184,13 +171,7 @@ def test_index_from_export_fail_on_existing_index(
             "enwiki-{version}",
             [],
             [
-                {
-                    "add": {
-                        "index": "enwiki-123",
-                        "alias": "enwiki-v1",
-                        "is_write_index": True,
-                    }
-                },
+                {"add": {"index": "enwiki-123", "alias": "enwiki-v1"}},
             ],
         ),
     ],
