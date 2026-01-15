@@ -128,8 +128,8 @@ skips = ["B101", "B104", "B311"]
 exclude_dirs = [
   # Data file only
   "merino/utils/domain_categories/domain_category_mapping.py",
-	# Test utilities
-	"tests/utils/test_probe.py",
+  # Test utilities
+  "tests/utils/test_probe.py",
 ]
 
 [tool.mypy]
@@ -155,10 +155,10 @@ norecursedirs = [
   "tests/load/",
 ]
 addopts = [
-	"-v",
-	"-r s",
-	"--cov=merino",
-	"--import-mode=importlib",
+  "-v",
+  "-r s",
+  "--cov=merino",
+  "--import-mode=importlib",
 ]
 filterwarnings = [
   # Transform warnings into errors.
