@@ -108,7 +108,6 @@ class ExperimentName(str, Enum):
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
     INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
-    INFERRED_LOCAL_EXPERIMENT_V4 = "new-tab-automated-personalization-v4"
 
 
 class DailyBriefingBranch(str, Enum):
