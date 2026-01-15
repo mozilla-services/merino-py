@@ -149,6 +149,11 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+norecursedirs = [
+  "tests/data/",
+  "tests/utils/",
+  "tests/load/",
+]
 addopts = "-v -r s --cov=merino"
 filterwarnings = [
   # Transform warnings into errors.
