@@ -154,7 +154,12 @@ norecursedirs = [
   "tests/utils/",
   "tests/load/",
 ]
-addopts = "-v -r s --cov=merino"
+addopts = [
+	"-v",
+	"-r s",
+	"--cov=merino",
+	"--import-mode=importlib",
+]
 filterwarnings = [
   # Transform warnings into errors.
   # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html

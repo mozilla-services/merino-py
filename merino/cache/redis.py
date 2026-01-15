@@ -6,7 +6,6 @@ from typing import Any
 from redis.asyncio import Redis, RedisError
 from redis.commands.core import AsyncScript
 
-
 from merino.exceptions import CacheAdapterError
 
 
