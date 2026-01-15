@@ -290,6 +290,15 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
     )
 
 
+def is_inferred_contextual_ranking(_request: CuratedRecommendationsRequest, personal_interests: ProcessedInterests | None) -> bool:
+    """Return True if inferred contextual ranking should be applied."""
+    INFERRED_ENABLED_MOD_SELECTOR = 4 # 25% of inferred users are going to go to the contextual ranking
+    return (
+        personal_interests is not None
+        and personal_interests.cohort is not None
+#        and personal_interests.numerical_value % INFERRED_ENABLED_MOD_SELECTOR == 0
+    )
+
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled (either branch)."""
     experiment_name = ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
@@ -682,8 +691,11 @@ async def get_sections(
         ]
     ranker: Ranker
 
+    do_inferred_contextual = is_inferred_contextual_ranking(request, personal_interests)
+    print("Inferred Contextual Ranking Enabled: ", do_inferred_contextual)
     if (
-        is_contextual_ranking_experiment(request)
+        (do_inferred_contextual or
+        is_contextual_ranking_experiment(request))
         and ml_backend is not None
         and ml_backend.is_valid()
     ):

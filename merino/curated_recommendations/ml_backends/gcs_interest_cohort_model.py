@@ -55,7 +55,7 @@ class GcsInterestCohortModel(CohortModelBackend):
         interests: str,
         model_id,
         training_run_id: str | None = None,
-    ) -> int | None:
+    ) -> str | None:
         """Fetch the contextual ranking cohort based on interests string."""
         if self._model_id != model_id or self._model_id is None:
             return None
@@ -68,7 +68,7 @@ class GcsInterestCohortModel(CohortModelBackend):
             with torch.no_grad():
                 tensor_data = torch.tensor([interest_bits], dtype=torch.float32)
                 results = self._cohort_model(tensor_data).argmax(dim=1)
-                return results[0].item()
+                return f"COHORT_{results[0].item()}"
         except Exception as e:
             logger.error(f"Error during model inference: {e}")
             return None
@@ -90,6 +90,6 @@ class EmptyCohortModel(CohortModelBackend):
         interests: str,
         model_id,
         training_run_id: str | None = None,
-    ) -> int | None:
+    ) -> str | None:
         """Fetch the contextual ranking cohort based on interests string."""
         return None

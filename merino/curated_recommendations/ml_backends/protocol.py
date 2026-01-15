@@ -220,6 +220,7 @@ class MLRecsBackend(Protocol):
         self,
         region: str | None = None,
         utcOffset: str | None = None,
+        cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
         ...
@@ -233,6 +234,6 @@ class CohortModelBackend(Protocol):
         interests: str,
         model_id: str,
         training_run_id: str | None = None,
-    ) -> int | None:
+    ) -> str | None:
         """Fetch the contextual ranking cohort based on interests string."""
         ...

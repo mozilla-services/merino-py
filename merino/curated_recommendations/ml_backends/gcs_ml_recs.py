@@ -27,11 +27,13 @@ class GcsMLRecs(MLRecsBackend):
         self.cache_time: datetime | None = None
 
     @staticmethod
-    def _generate_cache_keys(region: str | None, utcOffset: str | None) -> dict[str, str]:
+    def _generate_cache_keys(region: str | None, utcOffset: str | None, cohort: str | None) -> dict[str, str]:
         """Never return Nones; normalize to strings."""
         r = (region or "").strip().upper()
         o = (utcOffset or "").strip()
+        c = (cohort or "").strip()
         return {
+            "region_cohort": f"{r}_{c}" if (r or c) else GLOBAL_KEY,
             "region_offset": f"{r}_{o}" if (r or o) else GLOBAL_KEY,
             "region": r,
             "global": GLOBAL_KEY,
@@ -56,10 +58,14 @@ class GcsMLRecs(MLRecsBackend):
         self,
         region: str | None = None,
         utcOffset: str | None = None,
+        cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
-        keys = self._generate_cache_keys(region, utcOffset)
+        keys = self._generate_cache_keys(region, utcOffset, cohort)
         # Probe in order of specificity
+        ro = keys["region_cohort"]
+        if ro and ro in self._cache:
+            return self._cache[ro]
         ro = keys["region_offset"]
         if ro and ro in self._cache:
             return self._cache[ro]

@@ -229,14 +229,14 @@ class CuratedRecommendationsProvider:
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )
             if dp_values is not None:
+                cohort: str | None = None
+                dp_values_joined = "".join(dp_values) # Join the strings for cohort lookup
+                numerical_value = dp_values_joined.count("1")
                 if interest_cohort_model_backend is not None:
                     cohort = interest_cohort_model_backend.get_cohort_for_interests(
-                        interests="".join(dp_values), # Join the strings for cohort lookup
+                        interests=dp_values_joined,
                         model_id=model_id,
                     )
-                    print(f"Identified cohort: {cohort}")
-                else:
-                    print("No cohort model backend provided")
                 # Decode the DP values
                 decoded = inferred_local_model.decode_dp_interests(dp_values, model_id)
                 # Extract just the numeric scores
@@ -248,6 +248,8 @@ class CuratedRecommendationsProvider:
                 return ProcessedInterests(
                     model_id=model_id,
                     scores=scores,
+                    cohort=cohort,
+                    numerical_value=numerical_value,
                     expected_keys=inferred_local_model.get_interest_keys(),
                 )
 
