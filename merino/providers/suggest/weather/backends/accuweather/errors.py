@@ -20,11 +20,15 @@ class AccuweatherErrorMessages(Enum):
         "Unexpected current conditions response, Url: {current_conditions_url}"
     )
     HTTP_UNEXPECTED_FORECAST_RESPONSE = "Unexpected forecast response, Url: {forecast_url}"
+    HTTP_UNEXPECTED_HOURLY_FORCAST_ERROR = (
+        "Unexpected hourly forecast response, Url: {forecast_url}"
+    )
     HTTP_LOCATION_COMPLETION_ERROR = "Failed to get location completion from Accuweather, http error occurred. Url path: {url_path}, query: {search_term}, language: {language}"
     UNEXPECTED_GEOLOCATION_ERROR = "Unexpected error occurred when requesting location by geolocation from Accuweather: {exception_class_name}"
     UNEXPECTED_CURRENT_CONDITIONS_ERROR = "Unexpected error occurred when requesting current conditions from Accuweather: {exception_class_name}"
     UNEXPECTED_FORECAST_ERROR = "Unexpected error occurred when requesting forecast from Accuweather: {exception_class_name}"
     UNEXPECTED_LOCATION_COMPLETION_ERROR = "Unexpected error occurred when requesting location completion from Accuweather: {exception_class_name}"
+    UNEXPECTED_HOURLY_FORCAST_ERROR = "Unexpected error occurred when requesting hourly forecast from Accuweather: {exception_class_name}"
 
     def format_message(self, **kwargs) -> str:
         """Format the enum string value with the passed in keyword arguments"""

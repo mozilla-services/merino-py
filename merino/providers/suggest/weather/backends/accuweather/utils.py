@@ -8,7 +8,12 @@ from httpx import URL, InvalidURL
 from pydantic import HttpUrl
 
 from merino.configs import settings
-from merino.providers.suggest.weather.backends.protocol import CurrentConditions, Forecast
+from merino.providers.suggest.weather.backends.protocol import (
+    CurrentConditions,
+    Forecast,
+    HourlyForecast,
+    Temperature,
+)
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE_NEWTAB: str | None = settings.accuweather.get("partner_code_newtab_value")
@@ -185,39 +190,37 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
         case _:
             return None
 
-# TODO: map values
-def process_hourly_forecast_response(response: Any) -> dict[str, Any] | None:
+
+def process_hourly_forecast_response(response: Any) -> dict[str, list[HourlyForecast]] | None:
     """Process the API response for hourly forecasts."""
     match response:
-        case [
-            {
-                "Link": url,
-                "WeatherText": summary,
-                "WeatherIcon": icon_id,
-                "Temperature": {
-                    "Metric": {
-                        "Value": c,
-                    },
-                    "Imperial": {
-                        "Value": f,
-                    },
-                },
-            }
-        ]:
-            # `type: ignore` is necessary because mypy gets confused when
-            # matching structures of type `Any` and reports the following
-            # lines as unreachable. See
-            # https://github.com/python/mypy/issues/12770
-            url = add_partner_code(url, PARTNER_PARAM_ID, PARTNER_CODE_NEWTAB)  # type: ignore
-            return {
-                "url": url,
-                "summary": summary,
-                "icon_id": icon_id,
-                "temperature": {"c": c, "f": f},
-            }
+        case list():
+            hourly_forecasts: list[HourlyForecast] = []
+
+            for forecast in response:
+                url = add_partner_code(forecast["Link"], PARTNER_PARAM_ID, PARTNER_CODE_NEWTAB)
+                temperature_unit = forecast["Temperature"]["Unit"].lower()
+                temperature_value = forecast["Temperature"]["Value"]
+
+                temperature = (
+                    Temperature(c=temperature_value)
+                    if temperature_unit == "c"
+                    else Temperature(f=temperature_value)
+                )
+
+                hourly_forecasts.append(
+                    HourlyForecast(
+                        date_time=forecast["DateTime"],
+                        epoch_date_time=forecast["EpochDateTime"],
+                        temperature=temperature,
+                        icon_id=forecast["WeatherIcon"],
+                        url=HttpUrl(url),
+                    )
+                )
+
+            return {"hourly_forecasts": hourly_forecasts}
         case _:
             return None
-
 
 
 def get_language(requested_languages: list[str]) -> str:

@@ -24,11 +24,11 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
-    HourlyForecast,
     LocationCompletion,
     Temperature,
     WeatherReport,
-    WeatherContext, HourlyForecast,
+    WeatherContext,
+    HourlyForecast,
 )
 from merino.providers.suggest.weather.backends.accuweather import pathfinder
 from merino.providers.suggest.weather.backends.accuweather.utils import (
@@ -191,7 +191,7 @@ class ForecastWithTTL(NamedTuple):
 class HourlyForecastWithTTL(NamedTuple):
     """Hourly Forecast and its TTL value that is used to build a WeatherReport instance"""
 
-    hourly_forecast: HourlyForecast
+    hourly_forecast: list[HourlyForecast]
     ttl: int
 
 
@@ -475,7 +475,9 @@ class AccuweatherBackend:
         if len(cached_data) == 0:
             return WeatherData()
 
-        location_cached, current_cached, forecast_cached, hourly_forecast_cached, ttl_cached = cached_data
+        location_cached, current_cached, forecast_cached, hourly_forecast_cached, ttl_cached = (
+            cached_data
+        )
 
         location: AccuweatherLocation | None = None
         current_conditions: CurrentConditions | None = None
@@ -491,7 +493,9 @@ class AccuweatherBackend:
             if forecast_cached is not None:
                 forecast = Forecast.model_validate(orjson.loads(forecast_cached))
             if hourly_forecast_cached is not None:
-                hourly_forecast = HourlyForecast.model_validate(orjson.loads(hourly_forecast_cached))
+                hourly_forecast = HourlyForecast.model_validate(
+                    orjson.loads(hourly_forecast_cached)
+                )
             if ttl_cached is not None:
                 # redis returns the TTL value as an integer, however, we are explicitly casting
                 # the value returned from the cache since it's received as bytes as the method
@@ -713,7 +717,7 @@ class AccuweatherBackend:
             """Wrap a non-awaitable value into a coroutine and resolve it right away."""
             return val
 
-        location, current_conditions, forecast, ttl = cached_report
+        location, current_conditions, forecast, hourly_forecast, ttl = cached_report
 
         if location_key and location is None:
             # request was made with location key rather than geolocation
@@ -734,6 +738,7 @@ class AccuweatherBackend:
                     current_conditions, forecast
                 )
 
+            # TODO @herraj make hourly_forecast required?
             return WeatherReport(
                 city_name=city_name if city_name else location.localized_name,
                 region_code=admin_area,
@@ -946,14 +951,16 @@ class AccuweatherBackend:
             else None
         )
 
-    async def get_hourly_forecast(self, location_key: str, language: str) -> HourlyForecastWithTTL | None:
+    async def get_hourly_forecast(
+        self, location_key: str, language: str
+    ) -> HourlyForecastWithTTL | None:
         """Return hourly forecast data for a specific location or None if hourly
         forecast data is not found.
 
         Raises:
             AccuweatherError: Failed request or 4xx and 5xx response from AccuWeather.
         Reference:
-            https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/hourly/12hour/{locationKey}
+            https://apidev.accuweather.com/developers/forecastsAPIguide#ForecastHourly12
         """
         try:
             response: dict[str, Any] | None = await self.request_upstream(
@@ -963,30 +970,24 @@ class AccuweatherBackend:
                 process_api_response=process_hourly_forecast_response,
                 cache_ttl_sec=self.cached_hourly_forecast_ttl_sec,
             )
+            if response:
+                # {"hourly_forecasts: [], cached_request_ttl: 123"}
+                return HourlyForecastWithTTL(
+                    hourly_forecast=response.get("hourly_forecasts", []),
+                    ttl=response.get("cached_request_ttl", self.cached_hourly_forecast_ttl_sec),
+                )
+            else:
+                return None
         except HTTPError as error:
             raise AccuweatherError(
-                AccuweatherErrorMessages.HTTP_UNEXPECTED_FORECAST_RESPONSE,
+                AccuweatherErrorMessages.HTTP_UNEXPECTED_HOURLY_FORCAST_ERROR,
                 forecast_url=self.url_hourly_forecasts_path.format(location_key=location_key),
             ) from error
         except Exception as exc:
             raise AccuweatherError(
-                AccuweatherErrorMessages.UNEXPECTED_FORECAST_ERROR,
+                AccuweatherErrorMessages.UNEXPECTED_HOURLY_FORCAST_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
-
-        return (
-            ForecastWithTTL(
-                forecast=Forecast(
-                    url=response["url"],
-                    summary=response["summary"],
-                    high=Temperature(**response["high"]),
-                    low=Temperature(**response["low"]),
-                ),
-                ttl=response["cached_request_ttl"],
-            )
-            if response
-            else None
-        )
 
     async def get_location_completion(
         self, weather_context: WeatherContext, search_term: str
