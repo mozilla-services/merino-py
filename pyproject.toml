@@ -30,6 +30,7 @@ dependencies = [
     "ua-parser>=1.0,<2.0",
     "redis[hiredis]>=5.2.1,<6",
     "circuitbreaker>=2.1.3",
+    "torch>=2.9.1,<2.10",
     "mozilla-merino-ext>=0.2.0",
 ]
 
