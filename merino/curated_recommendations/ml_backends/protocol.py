@@ -222,6 +222,10 @@ class MLRecsBackend(Protocol):
         """Fetch the recommendations based on region and utc offset"""
         ...
 
+    def get_cohort_training_run_id(self) -> str | None:
+        """Return the training run ID for the cohort model used."""
+        ...
+
 
 class CohortModelBackend(Protocol):
     """Protocol for Cohort Model that maps interest vectors to cohorts"""

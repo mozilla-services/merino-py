@@ -376,6 +376,7 @@ class TestFilterSectionsByExperiment:
         assert "health" in result
         assert "nfl" in result
 
+
 class TestIsInferredContextualRankingExperiment:
     """Tests covering is_inferred_contextual_ranking function"""
 
@@ -398,6 +399,7 @@ class TestIsInferredContextualRankingExperiment:
         # Test case where all conditions are met
         pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0
         assert is_inferred_contextual_ranking(pi_selected)
+
 
 class TestUpdateReceivedFeedRank:
     """Tests covering update_received_feed_rank"""

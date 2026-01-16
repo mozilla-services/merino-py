@@ -131,10 +131,18 @@ class CuratedRecommendationsProvider:
 
         sections_feeds = None
         general_feed: list[CuratedRecommendation] = []
-
+        cohort_model_training_run_id = (
+            self.ml_recommendations_backend.get_cohort_training_run_id()
+            if self.ml_recommendations_backend
+            else None
+        )
         if self.is_sections_experiment(request, surface_id):
             inferred_interests = self.process_request_interests(
-                request, surface_id, self.local_model_backend, self.cohort_model_backend
+                request,
+                surface_id,
+                self.local_model_backend,
+                self.cohort_model_backend,
+                cohort_model_training_run_id=cohort_model_training_run_id,
             )
             sections_feeds = await get_sections(
                 request,
@@ -199,6 +207,7 @@ class CuratedRecommendationsProvider:
         surface_id: str,
         local_model_backend: LocalModelBackend,
         interest_cohort_model_backend: CohortModelBackend | None = None,
+        cohort_model_training_run_id: str | None = None,
     ) -> ProcessedInterests | None:
         """Convert the interest vector from the request into a clean internal representation
         with numeric scores. This does the unary decoding if necessary.
@@ -238,6 +247,7 @@ class CuratedRecommendationsProvider:
                     cohort = interest_cohort_model_backend.get_cohort_for_interests(
                         interests=dp_values_joined,
                         model_id=model_id,
+                        training_run_id=cohort_model_training_run_id,
                     )
                 # Decode the DP values
                 decoded = inferred_local_model.decode_dp_interests(dp_values, model_id)

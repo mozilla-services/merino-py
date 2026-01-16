@@ -105,7 +105,9 @@ class MockCohortModelBackend(CohortModelBackend):
         if not interests:
             return None
         # Simple hash to assign deterministic cohort
-        return str(sum((ord(c) - ord("0")) for c in interests) % 10)  # Assume 10 cohorts for testing
+        return str(
+            sum((ord(c) - ord("0")) for c in interests) % 10
+        )  # Assume 10 cohorts for testing
 
 
 class MockMLRecommendationsBackend(MLRecsBackend):
@@ -178,9 +180,10 @@ class MockMLRecommendationsBackend(MLRecsBackend):
 
     def get_most_popular_content_id_by_cohort(self, cohort: int) -> str:
         """Return the most popular content ID for a given cohort."""
-        if cohort == 8: # 1 bit selected for each interest sum to 8 by cohort model
+        if cohort == 8:  # 1 bit selected for each interest sum to 8 by cohort model
             return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"
         return REC_HIGH_CTR_IDS[0]
+
 
 class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend.
@@ -1803,7 +1806,6 @@ class TestSections:
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
 
-
     def test_sections_inferred_contextual_ranking_result_for_cohort(
         self,
         ml_recommendations_backend,
@@ -1824,18 +1826,9 @@ class TestSections:
                 "experimentBranch": LOCAL_AND_SERVER_V3_BRANCH_NAME,
                 "region": "US",
                 "inferredInterests": {
-                    "values": [
-                        "1000",
-                        "1000",
-                        "1000",
-                        "1000",
-                        "0001",
-                        "1000",
-                        "0001",
-                        "0001"
-                    ],
-                    "model_id": "fake"
-                    }
+                    "values": ["1000", "1000", "1000", "1000", "0001", "1000", "0001", "0001"],
+                    "model_id": "fake",
+                },
             },
         )
         data = response.json()
@@ -1860,18 +1853,9 @@ class TestSections:
                 "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
                 "region": "US",
                 "inferredInterests": {
-                    "values": [
-                        "1001",
-                        "1001",
-                        "1001",
-                        "1001",
-                        "0001",
-                        "1001",
-                        "0001",
-                        "0001"
-                    ],
-                    "model_id": "fake"
-                    }
+                    "values": ["1001", "1001", "1001", "1001", "0001", "1001", "0001", "0001"],
+                    "model_id": "fake",
+                },
             },
         )
         data = response.json()
@@ -1888,7 +1872,6 @@ class TestSections:
         assert sections["top_stories_section"]["recommendations"][0][
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
-
 
     @pytest.mark.parametrize(
         "sections_payload",

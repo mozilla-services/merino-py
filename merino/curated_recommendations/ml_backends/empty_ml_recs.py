@@ -34,3 +34,7 @@ class EmptyMLRecs(MLRecsBackend):
     def is_valid(self):
         """Return whether the backend is valid and ready to serve recommendations. In this case, always false."""
         return False
+
+    def get_cohort_training_run_id(self) -> str | None:
+        """Return the training run ID for the cohort model used."""
+        return None

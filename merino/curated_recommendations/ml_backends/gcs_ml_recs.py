@@ -25,6 +25,7 @@ class GcsMLRecs(MLRecsBackend):
         self.synced_blob = synced_gcs_blob
         self.synced_blob.set_fetch_callback(self._fetch_callback)
         self.cache_time: datetime | None = None
+        self.cohort_training_run_id: str | None = None
 
     @staticmethod
     def _generate_cache_keys(
@@ -54,6 +55,7 @@ class GcsMLRecs(MLRecsBackend):
             self.cache_time = datetime.strptime(epoch_id, "%Y%m%d-%H%M").replace(
                 tzinfo=timezone.utc
             )
+        self.cohort_training_run_id = payload.get("cohort_model", {}).get("training_run_id", None)
         self._cache = new_cache
 
     def get(
@@ -84,6 +86,10 @@ class GcsMLRecs(MLRecsBackend):
                 <= timedelta(minutes=VALIDITY_PERIOD_MINUTES)
             )
         )
+
+    def get_cohort_training_run_id(self) -> str | None:
+        """Return the training run ID for the cohort model used."""
+        return self.cohort_training_run_id
 
     @property
     def update_count(self) -> int:

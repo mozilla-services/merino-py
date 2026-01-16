@@ -40,7 +40,7 @@ def create_cohort_model(
         max_size=settings.interest_cohort_model.gcs.max_size,
         cron_interval_seconds=0.01,
         cron_job_name="fetch_ml_cohort_model",
-        is_bytes=True
+        is_bytes=True,
     )
     # Call initialize to start the cron job in the same event loop
     synced_gcs_blob.initialize()
@@ -115,9 +115,11 @@ async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client
     """Test that the backend parses model."""
     model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_model_is_updated(model_provider)
-    result = model_provider.get_cohort_for_interests(model_id="inferred-v3-model", interests="1" * model_provider._num_bits)
+    result = model_provider.get_cohort_for_interests(
+        model_id="inferred-v3-model", interests="1" * model_provider._num_bits
+    )
     assert result is not None
-    int_result : int | None = None
+    int_result: int | None = None
     try:
         int_result = int(result)
     except ValueError:

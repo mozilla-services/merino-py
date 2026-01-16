@@ -63,7 +63,9 @@ class GcsInterestCohortModel(CohortModelBackend):
         model_id: str,
         training_run_id: str | None = None,
     ) -> str | None:
-        """Fetch the contextual ranking cohort based on interests string."""
+        """Fetch the contextual ranking cohort based on interests string.
+        Requires Model ID to match, and also checks training_run_id if provided.
+        """
         if self._model_id != model_id or self._model_id is None:
             return None
         if len(interests) != self._num_bits:

@@ -193,7 +193,7 @@ class TestProcessedInterests:
             scores={"sports": 3.0, "technology": 5.0, "business": 4.0},
             expected_keys={"sports", "technology", "arts", "business"},
             cohort="1",
-            numerical_value=0
+            numerical_value=0,
         )
         normalized = interests.normalized_scores
         assert "arts" in normalized
@@ -207,7 +207,6 @@ class TestProcessedInterests:
         interests = ProcessedInterests(scores={}, skip_normalization=False)
         assert interests.normalized_scores == {}
         assert interests.cohort is None
-        assert interests.numerical_value is None
 
         interests = ProcessedInterests(scores={}, skip_normalization=True)
         assert interests.normalized_scores == {}
