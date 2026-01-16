@@ -4,7 +4,10 @@ import logging
 from typing import cast
 
 from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
-from merino.curated_recommendations.ml_backends.protocol import LOCAL_MODEL_MODEL_ID_KEY, CohortModelBackend
+from merino.curated_recommendations.ml_backends.protocol import (
+    LOCAL_MODEL_MODEL_ID_KEY,
+    CohortModelBackend,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
     SurfaceId,
@@ -131,8 +134,7 @@ class CuratedRecommendationsProvider:
 
         if self.is_sections_experiment(request, surface_id):
             inferred_interests = self.process_request_interests(
-                request, surface_id, self.local_model_backend,
-                self.cohort_model_backend
+                request, surface_id, self.local_model_backend, self.cohort_model_backend
             )
             sections_feeds = await get_sections(
                 request,
@@ -196,7 +198,7 @@ class CuratedRecommendationsProvider:
         request: CuratedRecommendationsRequest,
         surface_id: str,
         local_model_backend: LocalModelBackend,
-        interest_cohort_model_backend: CohortModelBackend = None,
+        interest_cohort_model_backend: CohortModelBackend | None = None,
     ) -> ProcessedInterests | None:
         """Convert the interest vector from the request into a clean internal representation
         with numeric scores. This does the unary decoding if necessary.
@@ -230,7 +232,7 @@ class CuratedRecommendationsProvider:
             )
             if dp_values is not None:
                 cohort: str | None = None
-                dp_values_joined = "".join(dp_values) # Join the strings for cohort lookup
+                dp_values_joined = "".join(dp_values)  # Join the strings for cohort lookup
                 numerical_value = dp_values_joined.count("1")
                 if interest_cohort_model_backend is not None:
                     cohort = interest_cohort_model_backend.get_cohort_for_interests(

@@ -217,10 +217,7 @@ class MLRecsBackend(Protocol):
         ...
 
     def get(
-        self,
-        region: str | None = None,
-        utcOffset: str | None = None,
-        cohort: str | None = None
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
         ...

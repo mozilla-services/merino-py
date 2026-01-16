@@ -69,6 +69,7 @@ class ContextualRanker(Ranker):
             cohort = personal_interests.cohort
         if self.disable_time_zone_context:
             utcOffset = None
+        print(f"Calling ML backend with region={region}, utcOffset={utcOffset}, cohort={cohort} ")
         contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
             region, str(utcOffset), cohort
         )

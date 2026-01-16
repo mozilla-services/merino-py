@@ -27,7 +27,9 @@ class GcsMLRecs(MLRecsBackend):
         self.cache_time: datetime | None = None
 
     @staticmethod
-    def _generate_cache_keys(region: str | None, utcOffset: str | None, cohort: str | None) -> dict[str, str]:
+    def _generate_cache_keys(
+        region: str | None, utcOffset: str | None, cohort: str | None
+    ) -> dict[str, str]:
         """Never return Nones; normalize to strings."""
         r = (region or "").strip().upper()
         o = (utcOffset or "").strip()
@@ -39,7 +41,7 @@ class GcsMLRecs(MLRecsBackend):
             "global": GLOBAL_KEY,
         }
 
-    def _fetch_callback(self, data: bytes | str) -> None:
+    def _fetch_callback(self, data: str) -> None:
         """Process the raw blob data and update the cache atomically."""
         payload = json.loads(data if isinstance(data, str) else data.decode("utf-8"))
         slates = payload.get("slates") or {}
@@ -55,10 +57,7 @@ class GcsMLRecs(MLRecsBackend):
         self._cache = new_cache
 
     def get(
-        self,
-        region: str | None = None,
-        utcOffset: str | None = None,
-        cohort: str | None = None
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
         keys = self._generate_cache_keys(region, utcOffset, cohort)

@@ -63,6 +63,7 @@ class SyncedGcsBlob:
         self.cron_job_name = cron_job_name
         self.metrics_namespace = metrics_namespace
         self.fetch_callback: Callable[[str], None] | None = None
+        self.fetch_binary_callback: Callable[[bytes], None] | None = None
         self.last_updated = LAST_UPDATED_INITIAL_VALUE
         self.is_bytes = is_bytes
         self._update_count = 0
@@ -84,13 +85,21 @@ class SyncedGcsBlob:
         """Return the number of times the data has been updated."""
         return self._update_count
 
-    def set_fetch_callback(self, fetch_callback: Callable[[str | bytes], None]) -> None:
-        """Set the fetch callback function.
+    def set_fetch_callback(self, fetch_callback: Callable[[str], None]) -> None:
+        """Set the fetch callback function for a string blob
 
         Args:
             fetch_callback: A callable that processes the raw blob data.
         """
         self.fetch_callback = fetch_callback
+
+    def set_fetch_binary_callback(self, fetch_binary_callback: Callable[[bytes], None]) -> None:
+        """Set the fetch callback function for a binary data blob
+
+        Args:
+            fetch_binary_callback: A callable that processes the raw blob data.
+        """
+        self.fetch_binary_callback = fetch_binary_callback
 
     async def _start_cron_job(self) -> None:
         """Start the background cron job to update data periodically."""
@@ -123,14 +132,20 @@ class SyncedGcsBlob:
         else:
             if self.is_bytes:
                 data = blob.download_as_bytes()
+                if self.fetch_binary_callback:
+                    self.fetch_binary_callback(data)
+                    self._update_count += 1
+                    self.last_updated = blob.updated
+                else:
+                    logger.warning("Binary data fetch callback is not set. Ignoring fetched data.")
             else:
                 data = blob.download_as_text()
-            if self.fetch_callback:
-                self.fetch_callback(data)
-                self._update_count += 1
-                self.last_updated = blob.updated
-            else:
-                logger.warning("Fetch callback is not set. Ignoring fetched data.")
+                if self.fetch_callback:
+                    self.fetch_callback(data)
+                    self._update_count += 1
+                    self.last_updated = blob.updated
+                else:
+                    logger.warning("Fetch callback is not set. Ignoring fetched data.")
 
         # Report the staleness of the data in seconds.
         if self.last_updated != LAST_UPDATED_INITIAL_VALUE:

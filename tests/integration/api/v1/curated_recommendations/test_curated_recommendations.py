@@ -45,6 +45,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     DEFAULT_PRODUCTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
+    CohortModelBackend,
     ContextualArticleRankings,
     InferredLocalModel,
     ModelData,
@@ -90,6 +91,22 @@ def is_manual_section(section_id: str) -> bool:
         return False
 
 
+class MockCohortModelBackend(CohortModelBackend):
+    """Mock class implementing the protocol for CohortModelBackend."""
+
+    def get_cohort_for_interests(
+        self,
+        interests: str,
+        model_id: str | None = None,
+        training_run_id: str | None = None,
+    ) -> str | None:
+        """Return a sample cohort based on simple hash of interests string."""
+        if not interests:
+            return None
+        # Simple hash to assign deterministic cohort
+        return str(sum(ord(c) for c in interests) % 10)  # Assume 10 cohorts for testing
+
+
 class MockMLRecommendationsBackend(MLRecsBackend):
     """Mock class implementing the protocol for MLRecsBackend."""
 
@@ -119,7 +136,7 @@ class MockMLRecommendationsBackend(MLRecsBackend):
         self.data["US_16"] = tz_rankings  # PDT timezone
 
     def get(
-        self, region: str | None = None, utcOffset: str | None = None
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Return sample ML recommendations"""
         if region and utcOffset:
@@ -293,6 +310,12 @@ def ml_recommendations_backend():
 
 
 @pytest.fixture
+def cohort_model_backend():
+    """Fixture for the MockCohortModelBackend for standard use case"""
+    return MockCohortModelBackend()
+
+
+@pytest.fixture
 def engagement_backend_legacy_sections_us():
     """Fixture for the MockEngagementBackend for an experiment that has a fraction of traffic"""
     return MockEngagementBackend(SECTIONS_HOLDBACK_TOTAL_PERCENT)
@@ -327,6 +350,7 @@ def provider(
     prior_backend: PriorBackend,
     local_model_backend: LocalModelBackend,
     ml_recommendations_backend: MLRecsBackend,
+    cohort_model_backend: CohortModelBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -336,6 +360,7 @@ def provider(
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
+        cohort_model_backend=cohort_model_backend,
     )
 
 
@@ -1697,7 +1722,12 @@ class TestSections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
     def test_sections_contextual_ranking_result_for_timezone(
-        self, ml_recommendations_backend, engagement_backend, sections_backend, client: TestClient
+        self,
+        ml_recommendations_backend,
+        engagement_backend,
+        sections_backend,
+        cohort_model_backend,
+        client: TestClient,
     ):
         """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
         because the ml_recommendations_backend relies on it to find fresh items, which are limited
@@ -2696,6 +2726,7 @@ def test_uk_sections_with_gb_backend_data(
     prior_backend: PriorBackend,
     local_model_backend: LocalModelBackend,
     ml_recommendations_backend: MLRecsBackend,
+    cohort_model_backend: CohortModelBackend,
     client: TestClient,
 ):
     """Test that GB sections with real GB-style externalIds are properly included.
@@ -2711,6 +2742,7 @@ def test_uk_sections_with_gb_backend_data(
         sections_backend=sections_gb_backend,
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
+        cohort_model_backend=cohort_model_backend,
     )
 
     # Override the provider dependency for this test

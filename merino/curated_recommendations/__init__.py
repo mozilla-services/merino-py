@@ -152,7 +152,7 @@ def init_ml_cohort_model_backend() -> CohortModelBackend:
             max_size=settings.interest_cohort_model.gcs.max_size,
             cron_interval_seconds=settings.interest_cohort_model.gcs.cron_interval_seconds,
             cron_job_name="fetch_ml_interest_cohort_model",
-            is_bytes=True
+            is_bytes=True,
         )
         synced_gcs_blob.initialize()
         return GcsInterestCohortModel(synced_gcs_blob=synced_gcs_blob)
@@ -193,7 +193,7 @@ def init_provider() -> None:
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
-        cohort_model_backend=cohort_model_backend
+        cohort_model_backend=cohort_model_backend,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 

@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+from typing import cast
 
 
 class InterestCohortModel(nn.Module):
@@ -23,7 +24,7 @@ class InterestCohortModel(nn.Module):
         self.num_hidden_interests = num_hidden_interests
 
         # interests -> cohort probabilities (B, K)
-        self.interest_layer = nn.Sequential(
+        self.interest_layer: nn.Module = nn.Sequential(
             nn.Linear(num_interest_bits, num_hidden_interests),
             nn.ReLU(),
             nn.Linear(num_hidden_interests, target_cohorts),
@@ -38,4 +39,4 @@ class InterestCohortModel(nn.Module):
             raise ValueError(
                 f"interests must be (B, {self.num_interest_bits}), got {tuple(interests.shape)}"
             )
-        return self.interest_layer(interests)
+        return cast(torch.Tensor, self.interest_layer(interests))
