@@ -19,7 +19,7 @@ from merino.utils.synced_gcs_blob import SyncedGcsBlob
 @pytest.fixture(scope="function")
 def gcs_bucket(gcs_storage_client):
     """Create a test bucket in the fake GCS server."""
-    bucket = gcs_storage_client.create_bucket(settings.curated_recommendations.gcs.bucket_name)
+    bucket = gcs_storage_client.create_bucket(settings.ml_recommendations.gcs.bucket_name)
     yield bucket
     bucket.delete(force=True)
 
@@ -130,7 +130,7 @@ async def test_gcs_engagement_returns_none_for_missing_keys(
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_fetches_data(gcs_storage_client, gcs_bucket, metrics_client, blob):
+async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_client, blob):
     """Test that the backend fetches data from GCS and returns engagement data."""
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
@@ -145,7 +145,7 @@ async def test_gcs_engagement_fetches_data(gcs_storage_client, gcs_bucket, metri
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_old_data(gcs_storage_client, gcs_bucket, metrics_client, old_blob):
+async def test_gcs_ml_recs_old_data(gcs_storage_client, gcs_bucket, metrics_client, old_blob):
     """Test that the backend fetches data from GCS and returns engagement data."""
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
@@ -153,7 +153,7 @@ async def test_gcs_engagement_old_data(gcs_storage_client, gcs_bucket, metrics_c
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_logs_error_for_large_blob(
+async def test_gcs_ml_recs_logs_error_for_large_blob(
     gcs_storage_client, gcs_bucket, metrics_client, large_blob, caplog
 ):
     """Test that the backend logs an error if the blob size exceeds the max size."""
@@ -167,7 +167,7 @@ async def test_gcs_engagement_logs_error_for_large_blob(
 
 
 @pytest.mark.asyncio
-async def test_gcs_engagement_logs_error_for_missing_blob(
+async def test_gcs_ml_recs_logs_error_for_missing_blob(
     gcs_storage_client, gcs_bucket, metrics_client, caplog, setting_environment
 ):
     """Test that the backend logs an error if the blob does not exist, outside 'stage'."""
@@ -182,7 +182,7 @@ async def test_gcs_engagement_logs_error_for_missing_blob(
             record for record in caplog.records if record.levelname == expected_level_name
         ]
         # Assert that the expected message appears with the expected log level
-        expected_message = " not found."
+        expected_message = "Blob 'contextual_ts/latest.json' not found."
         return any(expected_message in record.message for record in log_records)
 
     # Ensure that this test runs quickly, by waiting only until the expected message is logged.
