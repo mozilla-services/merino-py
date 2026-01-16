@@ -43,7 +43,7 @@ class GcsMLRecs(MLRecsBackend):
 
     def _fetch_callback(self, data: str) -> None:
         """Process the raw blob data and update the cache atomically."""
-        payload = json.loads(data if isinstance(data, str) else data.decode("utf-8"))
+        payload = json.loads(data)
         slates = payload.get("slates") or {}
         epoch_id = payload.get("epoch_id", None)
 
