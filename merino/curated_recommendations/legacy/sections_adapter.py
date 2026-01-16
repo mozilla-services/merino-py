@@ -5,8 +5,12 @@ import logging
 from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     SurfaceId,
+    Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    EngagementRescaler,
+)
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import CuratedRecommendation, Section
 from merino.curated_recommendations.sections import (
@@ -55,6 +59,7 @@ async def get_legacy_recommendations_from_sections(
     surface_id: SurfaceId,
     count: int,
     region: str | None = None,
+    rescaler: EngagementRescaler | None = None,
 ) -> list[CuratedRecommendation]:
     """Fetch section items for NEW_TAB_EN_US and return as flat list.
 
@@ -65,6 +70,8 @@ async def get_legacy_recommendations_from_sections(
         surface_id: Surface identifier (should be NEW_TAB_EN_US)
         count: Maximum number of recommendations to return
         region: Optional region for engagement filtering (e.g., 'US', 'CA')
+        rescaler: Optional rescaler for Thompson sampling (applies pessimistic priors
+            and scales engagement metrics for gaming/hobbies content)
 
     Returns:
         Ranked list of CuratedRecommendation objects
@@ -83,30 +90,39 @@ async def get_legacy_recommendations_from_sections(
     # 3. Extract recommendations, deduplicate, and set scheduledCorpusItemId
     recommendations = extract_recommendations_from_sections(legacy_sections)
 
-    # 4. Filter reported content
+    # 4. Filter out gaming/hobbies content
+    # Gaming content updates frequently (hourly) and can be overrepresented in Thompson sampling
+    # results without proper rescaling. Since mobile/non-sections requests don't support
+    # user preferences yet, we exclude gaming entirely to prevent it from dominating the feed.
+    # See HNT-1427 for more context.
+    recommendations = [rec for rec in recommendations if rec.topic != Topic.GAMING]
+
+    # 5. Filter reported content
     recommendations = takedown_reported_recommendations(
         recommendations,
         engagement_backend=engagement_backend,
         region=region,
     )
 
-    # 5. Apply Thompson sampling (with rescaler=None)
+    # 6. Apply Thompson sampling with rescaler
+    # The rescaler applies pessimistic priors and scales engagement metrics to prevent
+    # overrepresentation of frequently-updated content (e.g., gaming/hobbies).
     ranker = ThompsonSamplingRanker(
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
     )
-    recommendations = ranker.rank_items(recommendations, region=region, rescaler=None)
+    recommendations = ranker.rank_items(recommendations, region=region, rescaler=rescaler)
 
-    # 6. Apply publisher spread
+    # 7. Apply publisher spread
     recommendations = spread_publishers(recommendations, spread_distance=3)
 
-    # 7. Limit to count items
+    # 8. Limit to count items
     recommendations = recommendations[:count]
 
-    # 8. Renumber receivedRank sequentially (0, 1, 2, ... count-1)
+    # 9. Renumber receivedRank sequentially (0, 1, 2, ... count-1)
     renumber_recommendations(recommendations)
 
-    # 9. Log error if no recommendations after filtering
+    # 10. Log error if no recommendations after filtering
     if not recommendations:
         logger.error(
             f"No recommendations available after filtering for surface_id={surface_id}, region={region}"

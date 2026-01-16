@@ -21,6 +21,7 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.legacy.sections_adapter import (
     get_legacy_recommendations_from_sections,
 )
+from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
     derive_region,
@@ -96,6 +97,10 @@ class LegacyCuratedRecommendationsProvider:
 
         if surface_id == SurfaceId.NEW_TAB_EN_US:
             # US/CA: fetch from sections backend instead of scheduler
+            # Create request to determine the correct rescaler for Thompson sampling
+            request = CuratedRecommendationsRequest(locale=locale, region=region, count=count)
+            rescaler = get_ranking_rescaler_for_branch(request, surface_id)
+
             return await get_legacy_recommendations_from_sections(
                 sections_backend=curated_corpus_provider.sections_backend,
                 engagement_backend=curated_corpus_provider.engagement_backend,
@@ -103,6 +108,7 @@ class LegacyCuratedRecommendationsProvider:
                 surface_id=surface_id,
                 count=count or DEFAULT_RECOMMENDATION_COUNT,
                 region=derive_region(locale, region),
+                rescaler=rescaler,
             )
 
         # Other locales: use scheduler via curated recommendations provider
