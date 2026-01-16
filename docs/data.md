@@ -194,7 +194,7 @@ The following additional metrics are recorded when curated recommendations are r
 - `recommendation.ml.cohort_model.size` - A gauge to track the size of the cohort model blob on GCS.
 - `recommendation.ml.cohort_model.last_updated` -
  A gauge for the staleness (in seconds) of the cohort model data, measured between when the data was
- updated in GCS and the current time.
+ updated in GCS and the current time. This value could get large as the model may be updated weekly.
 
 
 

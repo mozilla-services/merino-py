@@ -49,7 +49,6 @@ class GcsInterestCohortModel(CohortModelBackend):
                 cohort_model = InterestCohortModel(
                     target_cohorts=self._target_cohorts, num_interest_bits=self._num_bits
                 )
-                #                state_dict = load(data)
                 cohort_model.load_state_dict(state_dict)
                 self._cohort_model = cohort_model
                 self._cohort_model.eval()
@@ -76,7 +75,7 @@ class GcsInterestCohortModel(CohortModelBackend):
             with torch.no_grad():
                 tensor_data = torch.tensor([interest_bits], dtype=torch.float32)
                 results = self._cohort_model(tensor_data).argmax(dim=1)
-                return f"COHORT_{results[0].item()}"
+                return str(results[0].item())
         except Exception as e:
             logger.error(f"Error during model inference: {e}")
             return None

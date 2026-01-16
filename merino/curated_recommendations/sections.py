@@ -291,7 +291,7 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
 
 
 def is_inferred_contextual_ranking(
-    _request: CuratedRecommendationsRequest, personal_interests: ProcessedInterests | None
+    personal_interests: ProcessedInterests | None
 ) -> bool:
     """Return True if inferred contextual ranking should be applied."""
     INFERRED_ENABLED_MOD_SELECTOR = (
@@ -696,7 +696,7 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    do_inferred_contextual = is_inferred_contextual_ranking(request, personal_interests)
+    do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
     if (
         (do_inferred_contextual or is_contextual_ranking_experiment(request))
         and ml_backend is not None

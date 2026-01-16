@@ -33,7 +33,7 @@ class GcsMLRecs(MLRecsBackend):
         """Never return Nones; normalize to strings."""
         r = (region or "").strip().upper()
         o = (utcOffset or "").strip()
-        c = (cohort or "").strip()
+        c = (f"COHORT_{cohort}" if cohort else "").strip()
         return {
             "region_cohort": f"{r}_{c}" if (r or c) else GLOBAL_KEY,
             "region_offset": f"{r}_{o}" if (r or o) else GLOBAL_KEY,

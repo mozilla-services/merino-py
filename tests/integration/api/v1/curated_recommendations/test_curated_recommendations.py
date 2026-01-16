@@ -43,6 +43,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
     DEFAULT_PRODUCTION_MODEL_ID,
+    LOCAL_AND_SERVER_V3_BRANCH_NAME,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     CohortModelBackend,
@@ -104,7 +105,7 @@ class MockCohortModelBackend(CohortModelBackend):
         if not interests:
             return None
         # Simple hash to assign deterministic cohort
-        return str(sum(ord(c) for c in interests) % 10)  # Assume 10 cohorts for testing
+        return str(sum((ord(c) - ord("0")) for c in interests) % 10)  # Assume 10 cohorts for testing
 
 
 class MockMLRecommendationsBackend(MLRecsBackend):
@@ -133,12 +134,27 @@ class MockMLRecommendationsBackend(MLRecsBackend):
                 "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
             },
         )
+        cohort_rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Extra item is crazy high
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
+            },
+        )
+
         self.data["US_16"] = tz_rankings  # PDT timezone
+        self.data["US_COHORT_8"] = cohort_rankings
 
     def get(
         self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Return sample ML recommendations"""
+        if cohort and region:
+            key = f"{region}_COHORT_{cohort}"
+            rankings = self.data.get(key, None)
+            if rankings:
+                return rankings
         if region and utcOffset:
             key = f"{region}_{utcOffset}"
             rankings = self.data.get(key, None)
@@ -160,6 +176,11 @@ class MockMLRecommendationsBackend(MLRecsBackend):
             return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"  # High scoring item in US_16
         return REC_HIGH_CTR_IDS[0]  # Default high CTR item
 
+    def get_most_popular_content_id_by_cohort(self, cohort: int) -> str:
+        """Return the most popular content ID for a given cohort."""
+        if cohort == 8: # 1 bit selected for each interest sum to 8 by cohort model
+            return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"
+        return REC_HIGH_CTR_IDS[0]
 
 class MockEngagementBackend(EngagementBackend):
     """Mock class implementing the protocol for EngagementBackend.
@@ -1781,6 +1802,93 @@ class TestSections:
         assert sections["top_stories_section"]["recommendations"][0][
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
+
+
+    def test_sections_inferred_contextual_ranking_result_for_cohort(
+        self,
+        ml_recommendations_backend,
+        engagement_backend,
+        sections_backend,
+        cohort_model_backend,
+        client: TestClient,
+    ):
+        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
+        because the ml_recommendations_backend relies on it to find fresh items, which are limited
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value,
+                "experimentBranch": LOCAL_AND_SERVER_V3_BRANCH_NAME,
+                "region": "US",
+                "inferredInterests": {
+                    "values": [
+                        "1000",
+                        "1000",
+                        "1000",
+                        "1000",
+                        "0001",
+                        "1000",
+                        "0001",
+                        "0001"
+                    ],
+                    "model_id": "fake"
+                    }
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "region": "US",
+                "inferredInterests": {
+                    "values": [
+                        "1001",
+                        "1001",
+                        "1001",
+                        "1001",
+                        "0001",
+                        "1001",
+                        "0001",
+                        "0001"
+                    ],
+                    "model_id": "fake"
+                    }
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        # Confirm that we have different content than for our 0 cohort item, indicating we
+        # got data from aother cohort or have fallen back to global US rankings
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+
 
     @pytest.mark.parametrize(
         "sections_payload",

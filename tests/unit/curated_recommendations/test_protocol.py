@@ -192,16 +192,22 @@ class TestProcessedInterests:
         interests = ProcessedInterests(
             scores={"sports": 3.0, "technology": 5.0, "business": 4.0},
             expected_keys={"sports", "technology", "arts", "business"},
+            cohort="1",
+            numerical_value=0
         )
         normalized = interests.normalized_scores
         assert "arts" in normalized
         mean_score = sum(normalized.values()) / len(normalized)
         assert normalized["arts"] == mean_score
+        assert interests.numerical_value == 0
+        assert interests.cohort == "1"
 
     def test_no_keys(self):
         """Test that compute_norm with empty inputs."""
         interests = ProcessedInterests(scores={}, skip_normalization=False)
         assert interests.normalized_scores == {}
+        assert interests.cohort is None
+        assert interests.numerical_value is None
 
         interests = ProcessedInterests(scores={}, skip_normalization=True)
         assert interests.normalized_scores == {}
