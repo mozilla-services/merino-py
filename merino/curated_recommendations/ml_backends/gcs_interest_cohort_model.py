@@ -56,7 +56,7 @@ class GcsInterestCohortModel(CohortModelBackend):
             except Exception as e:
                 logger.error(f"Failed to load cohort model {e}")
 
-    @lru_cache(maxsize=5000)
+    @lru_cache(maxsize=1000)
     def get_cohort_for_interests(
         self,
         interests: str,

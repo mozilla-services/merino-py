@@ -130,6 +130,31 @@ async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client
 
 
 @pytest.mark.asyncio
+async def test_cohort_model_skips_due_to_mismatch(
+    gcs_storage_client, gcs_bucket, metrics_client, blob
+):
+    """Test that the backend parses model."""
+    model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
+    await wait_until_model_is_updated(model_provider)
+    result = model_provider.get_cohort_for_interests(
+        model_id="inferred-othermodel", interests="1" * model_provider._num_bits
+    )
+    assert result is not None
+
+    result = model_provider.get_cohort_for_interests(
+        model_id="inferred-othermodel", interests="1" * (model_provider._num_bits - 1)
+    )
+    assert result is not None
+
+    result = model_provider.get_cohort_for_interests(
+        model_id="inferred-v3-model",
+        interests="1" * model_provider._num_bits,
+        training_run_id="different-run-id",
+    )
+    assert result is not None
+
+
+@pytest.mark.asyncio
 async def test_gcs_engagement_logs_error_for_large_blob(
     gcs_storage_client, gcs_bucket, metrics_client, large_blob, caplog
 ):
