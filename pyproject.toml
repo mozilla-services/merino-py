@@ -1,3 +1,6 @@
+[tool.uv.pip]
+extra-index-url = ["https://download.pytorch.org/whl/cpu"]
+
 [project]
 name = "merino-py"
 version = "0.1.0"
