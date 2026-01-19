@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Any, Optional, Literal
+from typing import Any, Optional
 
 import aiodogstatsd
 from fastapi import HTTPException
@@ -28,6 +28,7 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecast,
     LocationCompletion,
     WeatherBackend,
     WeatherReport,
@@ -41,12 +42,11 @@ logger = logging.getLogger(__name__)
 class Suggestion(BaseSuggestion):
     """Model for weather suggestions."""
 
-    # Only set when hourly_forecast is requested
-    type: Optional[Literal["weather_forecast"]] = None
     city_name: str
     region_code: str
     current_conditions: CurrentConditions
     forecast: Forecast
+    hourly_forecasts: list[HourlyForecast]
     placeholder: Optional[bool] = None
 
 
@@ -68,6 +68,15 @@ NO_LOCATION_KEY_SUGGESTION: Suggestion = Suggestion(
         high=Temperature(),
         low=Temperature(),
     ),
+    hourly_forecasts=[
+        HourlyForecast(
+            url=HttpUrl("https://merino.services.mozilla.com"),
+            date_time="",
+            epoch_date_time=0,
+            icon_id=0,
+            temperature=Temperature(),
+        )
+    ],
     provider="",
     is_sponsored=False,
     score=0,
@@ -186,16 +195,16 @@ class Provider(BaseProvider):
 
         # for this provider, the request can be either for weather or location completion
         if weather_report:
-            return [self.build_suggestion(weather_report)]
+            return [self.build_suggestion(weather_report, srequest.weather_forecast_hours)]
         if location_completions:
-            return [self.build_suggestion(location_completions)]
+            return [self.build_suggestion(location_completions, srequest.weather_forecast_hours)]
         return []
 
     def build_suggestion(
-        self, data: WeatherReport | list[LocationCompletion]
+        self, data: WeatherReport | list[LocationCompletion], weather_forecast_hours: int | None
     ) -> Suggestion | LocationCompletionSuggestion:
         """Build either a weather suggestion or a location completion suggestion."""
-        is_hourly_forecast = getattr(data, "hourly", None) is not None
+        forecast_hours = weather_forecast_hours if weather_forecast_hours is not None else 3
 
         if isinstance(data, WeatherReport):
             return Suggestion(
@@ -209,7 +218,7 @@ class Provider(BaseProvider):
                 region_code=data.region_code,
                 current_conditions=data.current_conditions,
                 forecast=data.forecast,
-                type="weather_forecast" if is_hourly_forecast else None,
+                hourly_forecasts=data.hourly_forecasts[:forecast_hours],
                 custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=data.ttl)),
             )
         else:

@@ -23,13 +23,14 @@ class SuggestionRequest(BaseModel):
     country: str | None = None
     user_agent: UserAgent | None = None
     source: str | None = None
-    # Only for request_type="weather_forecast"
-    forecast_hours: int | None = Field(
+
+    weather_forecast_hours: int | None = Field(
         default=5,
         ge=5,
         le=24,
-        description="Number of hourly forecast points to return (only for request_type=weather_forecast).",
+        description="Number of hourly forecast points to return.",
     )
+
 
 class BaseSuggestion(BaseModel):
     """Base model for suggestions.

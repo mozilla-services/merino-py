@@ -71,7 +71,7 @@ class WeatherReport(BaseModel):
     city_name: str
     current_conditions: CurrentConditions
     forecast: Forecast
-    hourly_forecast: list[HourlyForecast] | None = None
+    hourly_forecasts: list[HourlyForecast]
     ttl: int
     region_code: str
 

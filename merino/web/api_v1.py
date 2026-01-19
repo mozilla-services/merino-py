@@ -95,11 +95,8 @@ async def suggest(
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-    request_type: Annotated[
-        str | None, Query(pattern="^(location|weather|weather_forecast)$")
-    ] = None,
-    # Number of hourly points to return when request_type=weather_forecast
-    hours: Annotated[int | None, Query(ge=5, le=24)] = 5,
+    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    weather_forecast_hours: Annotated[int | None, Query(ge=5, le=24)] = None,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -228,7 +225,7 @@ async def suggest(
             languages=languages,
             user_agent=user_agent,
             source=source,
-            forecast_hours=hours if request_type == "weather_forecast" else None,
+            weather_forecast_hours=weather_forecast_hours,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")

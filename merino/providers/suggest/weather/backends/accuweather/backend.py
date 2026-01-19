@@ -77,11 +77,13 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
     end
 
     local key = cjson.decode(location_key)["key"]
-    local condition_key = string.gsub(ARGV[1], ARGV[3], key)
-    local forecast_key = string.gsub(ARGV[2], ARGV[3], key)
+    local condition_key = string.gsub(ARGV[1], ARGV[4], key)
+    local forecast_key = string.gsub(ARGV[2], ARGV[4], key)
+    local hourly_forecast_key = string.gsub(ARGV[3], ARGV[4], key)
 
     local current_conditions = redis.call("GET", condition_key)
     local forecast = redis.call("GET", forecast_key)
+    local hourly_forecast = redis.call("GET", hourly_forecast_key)
     local ttl = false
 
     if current_conditions and forecast then
@@ -90,7 +92,7 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
         ttl = math.min(current_conditions_ttl, forecast_ttl)
     end
 
-    return {location_key, current_conditions, forecast, ttl}
+    return {location_key, current_conditions, forecast, hourly_forecast, ttl}
 """
 SCRIPT_ID_BULK_FETCH_VIA_GEOLOCATION: str = "bulk_fetch_by_geolocation"
 
@@ -170,7 +172,7 @@ class WeatherData(NamedTuple):
     location: AccuweatherLocation | None = None
     current_conditions: CurrentConditions | None = None
     forecast: Forecast | None = None
-    hourly_forecast: HourlyForecast | None = None
+    hourly_forecast: list[HourlyForecast] | None = None
     ttl: int | None = None
 
 
@@ -368,6 +370,7 @@ class AccuweatherBackend:
             f"accuweather.request.{request_type}.get", sample_rate=self.metrics_sample_rate
         ):
             response: Response = await self.http_client.get(url_path, params=params)
+
             response.raise_for_status()
 
         if (response_dict := process_api_response(response.json())) is None:
@@ -482,7 +485,7 @@ class AccuweatherBackend:
         location: AccuweatherLocation | None = None
         current_conditions: CurrentConditions | None = None
         forecast: Forecast | None = None
-        hourly_forecast: HourlyForecast | None = None
+        hourly_forecasts: list[HourlyForecast] | None = None
         ttl: int | None = None
 
         try:
@@ -493,9 +496,8 @@ class AccuweatherBackend:
             if forecast_cached is not None:
                 forecast = Forecast.model_validate(orjson.loads(forecast_cached))
             if hourly_forecast_cached is not None:
-                hourly_forecast = HourlyForecast.model_validate(
-                    orjson.loads(hourly_forecast_cached)
-                )
+                # TODO @herraj validate model
+                hourly_forecasts = orjson.loads(hourly_forecast_cached)["hourly_forecasts"]
             if ttl_cached is not None:
                 # redis returns the TTL value as an integer, however, we are explicitly casting
                 # the value returned from the cache since it's received as bytes as the method
@@ -504,8 +506,7 @@ class AccuweatherBackend:
         except ValidationError as exc:
             logger.error(f"Failed to load weather report data from Redis: {exc}")
             self.metrics_client.increment("accuweather.cache.data.error")
-
-        return WeatherData(location, current_conditions, forecast, hourly_forecast, ttl)
+        return WeatherData(location, current_conditions, forecast, hourly_forecasts, ttl)
 
     def get_location_key_query_params(self, city: str) -> dict[str, str]:
         """Get the query parameters for the location key for a given city."""
@@ -647,6 +648,7 @@ class AccuweatherBackend:
                 args=[
                     self.cache_key_template(WeatherDataType.CURRENT_CONDITIONS, language),
                     self.cache_key_template(WeatherDataType.FORECAST, language),
+                    self.cache_key_template(WeatherDataType.HOURLY_FORECAST, language),
                     self.url_location_key_placeholder,
                 ],
                 readonly=True,
@@ -729,7 +731,7 @@ class AccuweatherBackend:
                 country_name="N/A",
             )
         # if all the other three values are present, ttl here would be a valid ttl value
-        if location and current_conditions and forecast and ttl:
+        if location and current_conditions and forecast and hourly_forecast and ttl:
             # Return the weather report with the values returned from the cache.
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
@@ -744,6 +746,7 @@ class AccuweatherBackend:
                 region_code=admin_area,
                 current_conditions=current_conditions,
                 forecast=forecast,
+                hourly_forecasts=hourly_forecast,
                 ttl=ttl,
             )
         # The cached report is incomplete, now fetching from AccuWeather.
@@ -778,16 +781,30 @@ class AccuweatherBackend:
                         ForecastWithTTL(forecast=forecast, ttl=self.cached_forecast_ttl_sec)
                     )
                 )
+                task_hourly_forecast = tg.create_task(
+                    self.get_hourly_forecast(location.key, language)
+                    if hourly_forecast is None
+                    else as_awaitable(
+                        HourlyForecastWithTTL(
+                            hourly_forecast=hourly_forecast, ttl=self.cached_forecast_ttl_sec
+                        )
+                    )
+                )
+
         except ExceptionGroup as e:
             raise AccuweatherError(
                 AccuweatherErrorMessages.FAILED_WEATHER_REPORT, exceptions=e.exceptions
             )
 
-        if (current_conditions_response := await task_current) is not None and (
-            forecast_response := await task_forecast
+        if (
+            (current_conditions_response := await task_current) is not None
+            and (forecast_response := await task_forecast)
+            and (hourly_forecast_response := await task_hourly_forecast)
         ):
             current_conditions, current_conditions_ttl = current_conditions_response
             forecast, forecast_ttl = forecast_response
+            # TODO @herraj not pulling ttl out
+            hourly_forecast, _ = hourly_forecast_response
             weather_report_ttl = min(current_conditions_ttl, forecast_ttl)
             city_name = self.get_localized_city_name(location, weather_context)
             admin_area = self.get_region_for_weather_report(location, weather_context)
@@ -795,12 +812,14 @@ class AccuweatherBackend:
                 current_conditions, forecast = update_weather_url_with_suggest_partner_code(
                     current_conditions, forecast
                 )
+
             return (
                 WeatherReport(
                     city_name=city_name if city_name else location.localized_name,
                     region_code=admin_area,
                     current_conditions=current_conditions,
                     forecast=forecast,
+                    hourly_forecasts=hourly_forecast,
                     ttl=weather_report_ttl,
                 )
                 if current_conditions is not None and forecast is not None
@@ -966,7 +985,7 @@ class AccuweatherBackend:
             response: dict[str, Any] | None = await self.request_upstream(
                 self.url_hourly_forecasts_path.format(location_key=location_key),
                 params={self.url_param_api_key: self.api_key, LANGUAGE_PARAM: language},
-                request_type=RequestType.FORECASTS,
+                request_type=RequestType.HOURLY_FORECASTS,
                 process_api_response=process_hourly_forecast_response,
                 cache_ttl_sec=self.cached_hourly_forecast_ttl_sec,
             )
