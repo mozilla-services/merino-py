@@ -64,11 +64,13 @@ class ContextualRanker(Ranker):
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
         )
 
+        cohort = None
+        if personal_interests is not None:
+            cohort = personal_interests.cohort
         if self.disable_time_zone_context:
             utcOffset = None
-
         contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
-            region, str(utcOffset)
+            region, str(utcOffset), cohort
         )
         for rec in recs:
             if contextual_scores:

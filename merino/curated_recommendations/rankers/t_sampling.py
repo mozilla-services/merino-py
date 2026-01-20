@@ -29,6 +29,7 @@ PERSONALIZATION_TOPIC_WEIGHTING = {
     Topic.ARTS: 0.6,
     Topic.POLITICS: 0.7,
     Topic.SPORTS: 0.8,
+    Topic.TECHNOLOGY: 0.7,
 }
 
 

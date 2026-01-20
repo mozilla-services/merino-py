@@ -139,6 +139,15 @@ gcp_project = "test-project"
 #    ```
 test_repeat_count = 1
 
+
+[testing.ml_recommendations.gcs]
+bucket_name = "test-bucket"
+gcp_project = "test-project"
+
+[testing.interest_cohort_model.gcs]
+bucket_name = "test-bucket"
+gcp_project = "test-project"
+
 [testing.curated_recommendations.corpus_api]
 
 # Tests sleep for a shorter duration than defautl to make them execute more quickly.

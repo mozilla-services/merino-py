@@ -217,9 +217,24 @@ class MLRecsBackend(Protocol):
         ...
 
     def get(
-        self,
-        region: str | None = None,
-        utcOffset: str | None = None,
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
+        ...
+
+    def get_cohort_training_run_id(self) -> str | None:
+        """Return the training run ID for the cohort model used."""
+        ...
+
+
+class CohortModelBackend(Protocol):
+    """Protocol for Cohort Model that maps interest vectors to cohorts"""
+
+    def get_cohort_for_interests(
+        self,
+        interests: str,
+        model_id: str,
+        training_run_id: str | None = None,
+    ) -> str | None:
+        """Fetch the contextual ranking cohort based on interests string."""
         ...
