@@ -24,7 +24,7 @@ class MassiveIngestion:
         """Return a massive provider instance"""
         provider = Provider(
             backend=MassiveBackend(
-                api_key=settings.massive.api_key,
+                api_key=settings.massive.api_key or settings.massive.new_api_key,
                 metrics_client=get_metrics_client(),
                 metrics_sample_rate=settings.massive.metrics_sampling_rate,
                 http_client=create_http_client(

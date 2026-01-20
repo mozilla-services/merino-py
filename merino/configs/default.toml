@@ -719,7 +719,7 @@ backend = "massive"
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "none"
 
-# MERINO_PROVIDERS__POLYGON__CACHE_DB
+# MERINO_PROVIDERS__MASSIVE__CACHE_DB
 # The db within the redis instance that the clients should connect to.
 # Default is `0`. See redis.py.
 cache_db = 0
@@ -772,6 +772,11 @@ ticker_ttl_sec = 300 # 5 minutes
 # The API key to Polygon's API endpoint.
 # In production, this should be set via environment variable as a secret.
 api_key = "test"
+
+# MERINO_MASSIVE__API_KEY
+# The API key to Massive's API endpoint.
+# In production, this should be set via environment variable as a secret.
+new_api_key = "test"
 
 ## MERINO_MASSIVE__URL_BASE
 url_base = "https://api.massive.com"

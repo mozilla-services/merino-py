@@ -131,7 +131,7 @@ test_top_picks_3 = {
     ]
 }
 
-test_polygon = {
+test_massive = {
     "tickers": {
         "AAPL": "http://www.apple.com",
     }
@@ -151,7 +151,9 @@ def test_upload_top_picks(gcs_storage_client, gcs_storage_bucket, mock_favicon_d
 
     # create a DomainMetadataUploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -216,7 +218,9 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket, mock_f
 
     # create a DomainMetadataUploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     # upload test_top_picks_1 for the 2024... file
@@ -227,8 +231,8 @@ def test_get_latest_file_for_diff(gcs_storage_client, gcs_storage_bucket, mock_f
     gcp_uploader.upload_content(
         json.dumps(test_top_picks_3), "20220101120555_top_picks_latest.json"
     )
-    # upload test_polygon for the 2022... file
-    gcp_uploader.upload_content(json.dumps(test_polygon), "polygon_latest.json")
+    # upload test_massive for the 2022... file
+    gcp_uploader.upload_content(json.dumps(test_massive), "massive_latest.json")
 
     # get the latest file
     latest_file = domain_metadata_uploader.get_latest_file_for_diff()
@@ -252,11 +256,13 @@ def test_get_latest_file_for_diff_when_no_file_is_found(
 
     # create a DomainMetadataUploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
-    # upload test_polygon
-    gcp_uploader.upload_content(json.dumps(test_polygon), "polygon_latest.json")
+    # upload test_massive
+    gcp_uploader.upload_content(json.dumps(test_massive), "massive_latest.json")
 
     # this should return None since we didn't upload any top picks to our gcs bucket
     latest_file = domain_metadata_uploader.get_latest_file_for_diff()
@@ -275,7 +281,9 @@ def test_destination_favicon_name(gcs_storage_client, gcs_storage_bucket, mock_f
 
     # Create uploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     # Test with different image content types
@@ -319,7 +327,9 @@ def test_upload_image(gcs_storage_client, gcs_storage_bucket, mock_favicon_downl
 
     # Create uploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     # Create test image
@@ -356,7 +366,9 @@ def test_upload_favicon_with_cdn_url(
 
     # Create uploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     # Test with a URL that's already on our CDN
@@ -391,7 +403,9 @@ def test_upload_favicon_with_empty_url(gcs_storage_client, gcs_storage_bucket, m
 
     # Create uploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     # Call upload_favicon with an empty URL
@@ -420,7 +434,9 @@ def test_upload_favicon_download_failure(gcs_storage_client, gcs_storage_bucket,
 
     # Create uploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     # Call upload_favicon with a URL that will fail to download
@@ -456,7 +472,9 @@ def test_upload_favicon_upload_failure(gcs_storage_client, gcs_storage_bucket, m
 
     # Create uploader instance
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mock_favicon_downloader
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
     )
 
     # Call upload_favicon
@@ -477,7 +495,9 @@ def test_upload_favicons_with_mixed_results(gcs_storage_client, gcs_storage_buck
 
     # Create a partial mock of DomainMetadataUploader to control upload_favicon behavior
     domain_metadata_uploader = DomainMetadataUploader(
-        uploader=gcp_uploader, force_upload=False, async_favicon_downloader=mocker.AsyncMock()
+        uploader=gcp_uploader,
+        force_upload=False,
+        async_favicon_downloader=mocker.AsyncMock(),
     )
 
     # Mock upload_favicon to return different results based on input

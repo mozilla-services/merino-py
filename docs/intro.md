@@ -96,7 +96,7 @@ subgraph suggestBackends["fa:fa-microchip Suggest Backends"]
         elasticBackend("elastic")
         toppicksBackend("top picks")
         dynamicAmoBackend("dynamic addons")
-        polygonBackend("polygon")
+        massiveBackend("massive")
 end
 subgraph curatedRecommendationsBackends["fa:fa-microchip Curated Recommendations Backends"]
         corpusBackend("corpus")
@@ -140,8 +140,8 @@ end
     toppicksProvider --> toppicksBackend
     weatherProvider --> accuweatherBackend
     wikipediaProvider --> elasticBackend
-    financeProvider --> polygonBackend
-    polygonBackend --> polygonApi("fa:fa-globe Polygon API")
+    financeProvider --> massiveBackend
+    massiveBackend --> massiveApi("fa:fa-globe Massive API")
     Geolocation --> maxmind
     dynamicAmoBackend --> addonsAPI("fa:fa-globe Addons API")
     elasticBackend --> elasticSearch[("Elasticsearch")]

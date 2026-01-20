@@ -223,7 +223,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             )
             return MassiveProvider(
                 backend=MassiveBackend(
-                    api_key=settings.massive.api_key,
+                    api_key=settings.massive.api_key or settings.massive.new_api_key,
                     metrics_client=get_metrics_client(),
                     metrics_sample_rate=settings.massive.metrics_sampling_rate,
                     http_client=create_http_client(
