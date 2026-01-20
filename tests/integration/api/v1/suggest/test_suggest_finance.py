@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Integration tests for the Merino v1 suggest API endpoint configured with the polygon (finance) provider."""
+"""Integration tests for the Merino v1 suggest API endpoint configured with the massive (finance) provider."""
 
 from typing import Any
 
@@ -42,14 +42,14 @@ def fixture_providers(backend_mock: Any, statsd_mock: Any) -> dict[str, FinanceP
         backend=backend_mock,
         metrics_client=statsd_mock,
         score=0.8,
-        name="polygon",
+        name="massive",
         query_timeout_sec=0.2,
         enabled_by_default=False,
         resync_interval_sec=60,
         cron_interval_sec=60,
     )
 
-    return {"polygon": provider}
+    return {"massive": provider}
 
 
 @pytest.fixture(name="AAPL_ticker_snapshot")
@@ -87,14 +87,14 @@ def test_suggest_for_finance_suggestion_returns_suggestion_for_valid_ticker(
     backend_mock.get_ticker_summary.return_value = AAPL_ticker_summary
 
     # testing for q="$AAPL"
-    response = client.get("/api/v1/suggest?q=$AAPL&providers=polygon")
+    response = client.get("/api/v1/suggest?q=$AAPL&providers=massive")
 
     assert response.status_code == 200
     body = response.json()
 
     assert len(body["suggestions"]) == 1
 
-    actual_ticker_summary = body["suggestions"][0]["custom_details"]["polygon"]["values"][0]
+    actual_ticker_summary = body["suggestions"][0]["custom_details"]["massive"]["values"][0]
 
     assert actual_ticker_summary["ticker"] == "AAPL"
     assert actual_ticker_summary["name"] == "Apple Inc"
@@ -117,7 +117,7 @@ def test_suggest_for_finance_suggestion_returns_no_suggestion_for_invalid_ticker
     # where it does not find a valid (supported) ticker and returns an empty list.
 
     # testing for q="$INVALID"
-    response = client.get("/api/v1/suggest?q=$INVALID&providers=polygon")
+    response = client.get("/api/v1/suggest?q=$INVALID&providers=massive")
 
     assert response.status_code == 200
     body = response.json()
@@ -137,7 +137,7 @@ def test_suggest_for_finance_suggestion_returns_no_suggestion_for_eager_match_bl
     # where it does find a valid (supported) ticker but it is on the eager match block list, and returns an empty list.
 
     # testing for q="AAPL"
-    response = client.get("/api/v1/suggest?q=AAPL&providers=polygon")
+    response = client.get("/api/v1/suggest?q=AAPL&providers=massive")
 
     assert response.status_code == 200
     body = response.json()
