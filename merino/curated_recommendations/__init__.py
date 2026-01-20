@@ -4,6 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import logging
+import random
 
 from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
@@ -26,6 +27,7 @@ from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
 from merino.curated_recommendations.ml_backends.protocol import (
+    NUM_ML_RECS_BACKEND_FILES,
     CohortModelBackend,
     LocalModelBackend,
     MLRecsBackend,
@@ -114,6 +116,16 @@ def init_ml_recommendations_backend() -> MLRecsBackend:
     recommendation set if GCS cannot be initialized. This is handled downstream
     by falling by to Thompson Sampling.
     """
+    """ Pick a random blob name from a set of possible files to increase diversity.
+    Because there are so merino servers, we don't need to rotate files in a particular
+    instance"""
+
+    blob_name = settings.ml_recommendations.gcs.blob_name
+    if NUM_ML_RECS_BACKEND_FILES > 1:
+        file_index = random.randint(0, NUM_ML_RECS_BACKEND_FILES - 1)
+        blob_name = (
+            f"{settings.ml_recommendations.gcs.blob_name.replace(".json", "")}_{file_index}.json"
+        )
     try:
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
@@ -122,7 +134,7 @@ def init_ml_recommendations_backend() -> MLRecsBackend:
             metrics_client=get_metrics_client(),
             metrics_namespace="recommendation.ml.contextual",
             bucket_name=settings.ml_recommendations.gcs.bucket_name,
-            blob_name=settings.ml_recommendations.gcs.blob_name,
+            blob_name=blob_name,
             max_size=settings.ml_recommendations.gcs.max_size,
             cron_interval_seconds=settings.ml_recommendations.gcs.cron_interval_seconds,
             cron_job_name="fetch_ml_contextual_recs",
