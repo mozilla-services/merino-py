@@ -209,6 +209,9 @@ class LocalModelBackend(Protocol):
         ...
 
 
+NUM_ML_RECS_BACKEND_FILES = 10
+
+
 class MLRecsBackend(Protocol):
     """Protocol for ML Recommendations saved in GCS"""
 
