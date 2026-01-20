@@ -29,11 +29,22 @@ ES_PROP = {
     "started": threading.Event(),
     "done": threading.Event(),
     "error": None,
+    "should_start": False,
 }
+
+SPORT_TESTS = "test_sportsdata"
+
+
+def pytest_collection_finish(session):
+    """Determine if we start the sport es test container based on whether it's needed."""
+    if any(SPORT_TESTS in item.nodeid for item in session.items):
+        ES_PROP["should_start"] = True
 
 
 def _start_container_in_thread(timeout=120):
     """Start container in thread and update container status with ES_PROP."""
+    if not ES_PROP["should_start"]:
+        return
     try:
         container = ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4")
         container.with_env("discovery.type", "single-node")
