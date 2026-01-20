@@ -74,11 +74,11 @@ dsn = "http://localhost:9200"
 request_timeout_ms = 100
 api_key = "test"
 
-[testing.polygon]
+[testing.massive]
 api_key = "test"
 # The URL in `url_base` isn't actually pinged during testing but we set it
 # anyway to make sure the production server isn't accidentally pinged.
-url_base = "http://test-polygon"
+url_base = "http://test-massive"
 
 [testing.providers.flightaware]
 circuit_breaker_failure_threshold = 1
@@ -89,9 +89,9 @@ api_key = "test"
 
 base_url = "http://test-flightaware.com"
 
-[testing.providers.polygon]
+[testing.providers.massive]
 enabled_by_default = false
-backend = "polygon"
+backend = "massive"
 
 [testing.providers.yelp]
 enabled_by_default = false

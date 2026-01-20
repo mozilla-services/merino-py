@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Integration tests for the Polygon backend module."""
+"""Integration tests for the Massive backend module."""
 
 import logging
 import pytest
@@ -24,13 +24,13 @@ from merino.cache.redis import RedisAdapter
 from merino.exceptions import CacheAdapterError
 
 from merino.providers.suggest.finance.backends.protocol import TickerSnapshot
-from merino.providers.suggest.finance.backends.polygon import PolygonBackend
+from merino.providers.suggest.finance.backends.massive import MassiveBackend
 
 logger = logging.getLogger(__name__)
 
-URL_SINGLE_TICKER_SNAPSHOT = settings.polygon.url_single_ticker_snapshot
-URL_SINGLE_TICKER_OVERVIEW = settings.polygon.url_single_ticker_overview
-TICKER_TTL_SEC = settings.providers.polygon.cache_ttls.ticker_ttl_sec
+URL_SINGLE_TICKER_SNAPSHOT = settings.massive.url_single_ticker_snapshot
+URL_SINGLE_TICKER_OVERVIEW = settings.massive.url_single_ticker_overview
+TICKER_TTL_SEC = settings.providers.massive.cache_ttls.ticker_ttl_sec
 
 
 @pytest.fixture(scope="module")
@@ -63,11 +63,11 @@ async def fixture_redis_client(
     await client.flushall()
 
 
-@pytest.fixture(name="polygon_parameters")
-def fixture_polygon_parameters(
+@pytest.fixture(name="massive_parameters")
+def fixture_massive_parameters(
     mocker: MockerFixture, statsd_mock: Any, redis_client: Redis
 ) -> dict[str, Any]:
-    """Create constructor parameters for Polygon backend module."""
+    """Create constructor parameters for Massive backend module."""
     return {
         "api_key": "api_key",
         "metrics_client": statsd_mock,
@@ -83,18 +83,18 @@ def fixture_polygon_parameters(
     }
 
 
-@pytest.fixture(name="polygon")
-def fixture_polygon(
-    polygon_parameters: dict[str, Any],
+@pytest.fixture(name="massive")
+def fixture_massive(
+    massive_parameters: dict[str, Any],
     mocker: MockerFixture,
-) -> PolygonBackend:
-    """Create a Polygon backend module object."""
+) -> MassiveBackend:
+    """Create a Massive backend module object."""
     mock_filemanager = mocker.MagicMock()
     mocker.patch(
-        "merino.providers.suggest.finance.backends.polygon.backend.PolygonFilemanager",
+        "merino.providers.suggest.finance.backends.massive.backend.MassiveFilemanager",
         return_value=mock_filemanager,
     )
-    return PolygonBackend(**polygon_parameters)
+    return MassiveBackend(**massive_parameters)
 
 
 @pytest.fixture(name="ticker_snapshot_AAPL")
@@ -122,7 +122,7 @@ def fixture_ticker_snapshot_NFLX() -> TickerSnapshot:
 @pytest.mark.asyncio
 async def test_get_snapshots_from_cache_success(
     mocker: MockerFixture,
-    polygon: PolygonBackend,
+    massive: MassiveBackend,
     ticker_snapshot_AAPL: TickerSnapshot,
     ticker_snapshot_NFLX,
 ) -> None:
@@ -133,10 +133,10 @@ async def test_get_snapshots_from_cache_success(
     ]
 
     # write to cache
-    await polygon.store_snapshots_in_cache([ticker_snapshot_AAPL, ticker_snapshot_NFLX])
+    await massive.store_snapshots_in_cache([ticker_snapshot_AAPL, ticker_snapshot_NFLX])
 
     # call backend method
-    actual = await polygon.get_snapshots_from_cache(["AAPL", "NFLX"])
+    actual = await massive.get_snapshots_from_cache(["AAPL", "NFLX"])
 
     assert actual is not None
     assert actual == expected
@@ -145,9 +145,9 @@ async def test_get_snapshots_from_cache_success(
     assert actual[1] == expected[1]
 
     # `get_snapshots` should not make a network API call on a cache hit.
-    spy = mocker.spy(polygon.http_client, "get")
+    spy = mocker.spy(massive.http_client, "get")
 
-    snapshots = await polygon.get_snapshots(["AAPL", "NFLX"])
+    snapshots = await massive.get_snapshots(["AAPL", "NFLX"])
 
     spy.assert_not_called()
     assert snapshots == [snapshot for snapshot, _ttl in expected]
@@ -155,14 +155,14 @@ async def test_get_snapshots_from_cache_success(
 
 @pytest.mark.asyncio
 async def test_get_snapshots_from_cache_returns_empty_list(
-    polygon: PolygonBackend, ticker_snapshot_AAPL: TickerSnapshot, ticker_snapshot_NFLX
+    massive: MassiveBackend, ticker_snapshot_AAPL: TickerSnapshot, ticker_snapshot_NFLX
 ) -> None:
     """Test that get_snapshots_from_cache method returns an empty list for keys not found."""
     # write to cache
-    await polygon.store_snapshots_in_cache([ticker_snapshot_AAPL, ticker_snapshot_NFLX])
+    await massive.store_snapshots_in_cache([ticker_snapshot_AAPL, ticker_snapshot_NFLX])
 
     # call backend method with non-existent keys
-    actual = await polygon.get_snapshots_from_cache(["TSLA", "QQQ"])
+    actual = await massive.get_snapshots_from_cache(["TSLA", "QQQ"])
 
     assert actual is not None
     assert actual == []
@@ -170,7 +170,7 @@ async def test_get_snapshots_from_cache_returns_empty_list(
 
 @pytest.mark.asyncio
 async def test_get_snapshots_from_cache_raises_cache_error(
-    polygon: PolygonBackend,
+    massive: MassiveBackend,
     ticker_snapshot_AAPL: TickerSnapshot,
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -180,16 +180,16 @@ async def test_get_snapshots_from_cache_raises_cache_error(
     # Set the log level
     caplog.set_level(ERROR)
 
-    # patch the polygon back cache with a mock that throws on run_script()
-    redis_error_mock = mocker.patch.object(polygon.cache, "run_script", new_callable=AsyncMock)
+    # patch the massive back cache with a mock that throws on run_script()
+    redis_error_mock = mocker.patch.object(massive.cache, "run_script", new_callable=AsyncMock)
     redis_error_mock.side_effect = CacheAdapterError("test cache error")
 
     # get from cache
-    actual = await polygon.get_snapshots_from_cache(["AAPL"])
+    actual = await massive.get_snapshots_from_cache(["AAPL"])
 
     # capture error log
     records: list[LogRecord] = filter_caplog(
-        caplog.records, "merino.providers.suggest.finance.backends.polygon.backend"
+        caplog.records, "merino.providers.suggest.finance.backends.massive.backend"
     )
 
     assert len(records) == 1

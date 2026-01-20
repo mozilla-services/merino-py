@@ -2,13 +2,15 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Unit tests for the polygon filemanager module."""
+"""Unit tests for the massive filemanager module."""
 
 import pytest
 import orjson
 from gcloud.aio.storage import Blob
 
-from merino.providers.suggest.finance.backends.polygon.filemanager import PolygonFilemanager
+from merino.providers.suggest.finance.backends.massive.filemanager import (
+    MassiveFilemanager,
+)
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceManifest,
     GetManifestResultCode,
@@ -31,7 +33,7 @@ async def test_get_file_success(mocker):
     mock_bucket = mocker.MagicMock()
     mock_bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
 
-    filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
+    filemanager = MassiveFilemanager("mock-bucket", "mock-blob")
     filemanager.bucket = mock_bucket
 
     result_code, manifest = await filemanager.get_file()
@@ -52,7 +54,7 @@ async def test_get_file_invalid_json(mocker):
     mock_bucket = mocker.MagicMock()
     mock_bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
 
-    filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
+    filemanager = MassiveFilemanager("mock-bucket", "mock-blob")
     filemanager.bucket = mock_bucket
 
     result_code, manifest = await filemanager.get_file()
@@ -72,7 +74,7 @@ async def test_get_file_validation_error(mocker):
     mock_bucket = mocker.MagicMock()
     mock_bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
 
-    filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
+    filemanager = MassiveFilemanager("mock-bucket", "mock-blob")
     filemanager.bucket = mock_bucket
 
     result_code, manifest = await filemanager.get_file()
@@ -85,13 +87,13 @@ async def test_get_file_validation_error(mocker):
 async def test_get_bucket_memoization(mocker):
     """Test that get_bucket returns the same bucket instance on multiple calls (memoized)."""
     mock_storage = mocker.patch(
-        "merino.providers.suggest.finance.backends.polygon.filemanager.Storage"
+        "merino.providers.suggest.finance.backends.massive.filemanager.Storage"
     )
     mock_bucket_instance = mocker.MagicMock()
     mock_storage.return_value = mocker.MagicMock()
     mocker.patch("gcloud.aio.storage.Bucket", return_value=mock_bucket_instance)
 
-    filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
+    filemanager = MassiveFilemanager("mock-bucket", "mock-blob")
 
     bucket1 = await filemanager.get_bucket()
     bucket2 = await filemanager.get_bucket()
@@ -111,7 +113,7 @@ async def test_get_file_uses_get_bucket(mocker):
     mock_bucket = mocker.AsyncMock()
     mock_bucket.get_blob.return_value = mock_blob
 
-    filemanager = PolygonFilemanager("mock-bucket", "mock-blob")
+    filemanager = MassiveFilemanager("mock-bucket", "mock-blob")
     mocker.patch.object(filemanager, "get_bucket", return_value=mock_bucket)
 
     result_code, manifest = await filemanager.get_file()
@@ -129,16 +131,16 @@ async def test_get_bucket_initializes_client_and_bucket(mocker):
     mock_bucket_instance = mocker.MagicMock(name="MockBucketInstance")
 
     mock_storage_class = mocker.patch(
-        "merino.providers.suggest.finance.backends.polygon.filemanager.Storage",
+        "merino.providers.suggest.finance.backends.massive.filemanager.Storage",
         return_value=mock_storage_instance,
     )
     mock_bucket_class = mocker.patch(
-        "merino.providers.suggest.finance.backends.polygon.filemanager.Bucket",
+        "merino.providers.suggest.finance.backends.massive.filemanager.Bucket",
         return_value=mock_bucket_instance,
     )
 
     # instantiate filemanager with no initialized clients
-    filemanager = PolygonFilemanager("test-bucket", "manifest.json")
+    filemanager = MassiveFilemanager("test-bucket", "manifest.json")
 
     # confirm client and bucket are None before call
     assert filemanager.gcs_client is None

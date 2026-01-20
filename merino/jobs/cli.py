@@ -10,7 +10,7 @@ from merino.jobs.navigational_suggestions import navigational_suggestions_cmd
 from merino.jobs.relevancy_uploader import relevancy_csv_rs_uploader_cmd
 from merino.jobs.wikipedia_indexer import indexer_cmd
 from merino.jobs.wikipedia_offline_uploader import wiki_offline_uploader_cmd
-from merino.jobs.polygon import cli as polygon_ingestion_cmd
+from merino.jobs.massive import cli as polygon_ingestion_cmd
 from merino.jobs.flightaware import cli as flightaware_fetch_schedules_cmd
 from merino.jobs.sportsdata_jobs import cli as sportsdata_cmd
 

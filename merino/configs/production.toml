@@ -64,7 +64,7 @@ bucket_name = "merino-airflow-data-prodpy"
 gcp_project = "moz-fx-merino-prod-1c2f"
 
 [production.providers.polygon]
-# MERINO_PROVIDERS__POLYGON__CACHE
+# MERINO_PROVIDERS__MASSIVE__CACHE
 # The store used to finance data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "redis"

@@ -1,16 +1,16 @@
-"""CLI commands for the polygon image ingestion job"""
+"""CLI commands for the massive image ingestion job"""
 
 import asyncio
 import logging
 
 import typer
 
-from merino.jobs.polygon.polygon_ingestion import PolygonIngestion
+from merino.jobs.massive.massive_ingestion import MassiveIngestion
 
 logger = logging.getLogger(__name__)
 
 cli = typer.Typer(
-    name="polygon-ingestion",
+    name="massive-ingestion",
     help="Commands to download ticker logos, upload to GCS, and generate manifest",
 )
 
@@ -18,10 +18,10 @@ cli = typer.Typer(
 @cli.command()
 def ingest():  # pragma: no cover
     """Download logos, upload to GCS, and generate manifest."""
-    logger.info("Starting Polygon ingestion pipeline...")
+    logger.info("Starting Massive ingestion pipeline...")
 
     try:
-        ingestion = PolygonIngestion()
+        ingestion = MassiveIngestion()
 
         asyncio.run(ingestion.ingest())
     except Exception as ex:

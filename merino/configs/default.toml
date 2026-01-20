@@ -705,16 +705,16 @@ query_timeout_sec = 5.0
 score = 0.23
 
 
-[default.providers.polygon]
-# MERINO_PROVIDERS__POLYGON__TYPE
-# The type of this provider, should be `polygon`.
-type = "polygon"
+[default.providers.massive]
+# MERINO_PROVIDERS__MASSIVE__TYPE
+# The type of this provider, should be `massive`.
+type = "massive"
 
-# MERINO_PROVIDERS__POLYGON__BACKEND
-#  The backend of the provider. Either `polygon` or `test`.
-backend = "polygon"
+# MERINO_PROVIDERS__MASSIVE__BACKEND
+#  The backend of the provider. Either `massive` or `test`.
+backend = "massive"
 
-# MERINO_PROVIDERS__POLYGON__CACHE
+# MERINO_PROVIDERS__MASSIVE__CACHE
 # The store used to finance data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "none"
@@ -724,65 +724,65 @@ cache = "none"
 # Default is `0`. See redis.py.
 cache_db = 0
 
-# MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
+# MERINO_PROVIDERS__MASSIVE__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
 enabled_by_default = false
 
-# MERINO_PROVIDERS__POLYGON__SCORE
+# MERINO_PROVIDERS__MASSIVE__SCORE
 # The ranking score for this provider as a floating point number.
 score = 0.29
 
-# MERINO_PROVIDERS__POLYGON__QUERY_TIMEOUT_SEC
+# MERINO_PROVIDERS__MASSIVE__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for finance data. This will override the default global query timeout.
 query_timeout_sec = 5.0
 
-# MERINO_PROVIDERS__POLYGON__CONNECT_TIMEOUT_SEC
+# MERINO_PROVIDERS__MASSIVE__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
-# polygon backend http client to establish a connection to the host.
+# massive backend http client to establish a connection to the host.
 connect_timeout_sec = 3.0
 
-# MERINO_PROVIDERS__POLYGON__CRON_INTERVAL_SEC
-# The interval of the PolygonFilemanager cron job (in seconds)
+# MERINO_PROVIDERS__MASSIVE__CRON_INTERVAL_SEC
+# The interval of the MassiveFilemanager cron job (in seconds)
 # The cron job should tick more frequently than `resync_interval_sec` so that
 # the resync failure can be retried soon.
 cron_interval_sec = 60
 
-# MERINO_PROVIDERS__POLYGON__RESYNC_INTERVAL_SEC
-# Time between re-syncs of the polygon manifest file, in seconds.
+# MERINO_PROVIDERS__MASSIVE__RESYNC_INTERVAL_SEC
+# Time between re-syncs of the massive manifest file, in seconds.
 # Set to daily.
 resync_interval_sec = 86400
 
-# MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# MERINO_PROVIDERS__MASSIVE__CIRCUIT_BREAKER_FAILURE_THRESHOLD
 # The circuit breaker will open when the failure is over this threshold.
 circuit_breaker_failure_threshold = 10
 
-# MERINO_PROVIDERS__POLYGON__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# MERINO_PROVIDERS__MASSIVE__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
 # The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
 
-[default.providers.polygon.cache_ttls]
-# Cache TTLs for Polygon ticker snapshots.
+[default.providers.massive.cache_ttls]
+# Cache TTLs for Massive ticker snapshots.
 
-# MERINO_PROVIDERS__POLYGON__CACHE_TTLS__TICKER_TTL_SEC
+# MERINO_PROVIDERS__MASSIVE__CACHE_TTLS__TICKER_TTL_SEC
 ticker_ttl_sec = 300 # 5 minutes
 
-[default.polygon]
+[default.massive]
 # MERINO_POLYGON__API_KEY
 # The API key to Polygon's API endpoint.
 # In production, this should be set via environment variable as a secret.
 api_key = "test"
 
-## MERINO_POLYGON__URL_BASE
-url_base = "https://api.polygon.io"
+## MERINO_MASSIVE__URL_BASE
+url_base = "https://api.massive.com"
 
-# MERINO_POLYGON__URL_TICKER_SNAPSHOT
+# MERINO_MASSIVE__URL_TICKER_SNAPSHOT
 url_single_ticker_snapshot = "v3/snapshot"
 
-# MERINO_POLYGON__URL_TICKER_OVERVIEW
+# MERINO_MASSIVE__URL_TICKER_OVERVIEW
 url_single_ticker_overview = "/v3/reference/tickers/{ticker}"
 
-# MERINO_ACCUWEATHER__URL_PARAM_API_KEY
+# MERINO_MASSIVE__URL_PARAM_API_KEY
 # The name of the query param whose value is the API key, not the key itself.
 url_param_api_key = "apiKey"
 

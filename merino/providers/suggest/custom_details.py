@@ -37,8 +37,8 @@ class WeatherDetails(BaseModel):
     weather_report_ttl: int
 
 
-class PolygonDetails(BaseModel):
-    """Polygon specific fields."""
+class MassiveDetails(BaseModel):
+    """Massive specific fields."""
 
     values: list[TickerSummary]
 
@@ -64,7 +64,7 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     amo: AmoDetails | None = None
     geolocation: GeolocationDetails | None = None
     weather: WeatherDetails | None = None
-    polygon: PolygonDetails | None = None
+    massive: MassiveDetails | None = None
     yelp: YelpDetails | None = None
     sports: SportEventDetails | None = None
     flightaware: FlightAwareDetails | None = None

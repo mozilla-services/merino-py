@@ -1,4 +1,4 @@
-"""A wrapper for Polygon API interactions."""
+"""A wrapper for Massive API interactions."""
 
 import itertools
 import hashlib
@@ -10,8 +10,8 @@ from pydantic import HttpUrl, ValidationError
 from merino.configs import settings
 from typing import Any, Tuple, Optional
 
-from merino.providers.suggest.finance.backends.polygon.filemanager import (
-    PolygonFilemanager,
+from merino.providers.suggest.finance.backends.massive.filemanager import (
+    MassiveFilemanager,
 )
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceManifest,
@@ -21,10 +21,10 @@ from merino.providers.suggest.finance.backends.protocol import (
 )
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import CacheAdapterError
-from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
+from merino.providers.suggest.finance.backends.massive.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
 )
-from merino.providers.suggest.finance.backends.polygon.utils import (
+from merino.providers.suggest.finance.backends.massive.utils import (
     extract_snapshot_if_valid,
     build_ticker_summary,
     generate_cache_key_for_ticker,
@@ -34,12 +34,12 @@ from merino.utils.gcs.models import Image
 
 # Export all the classes from this module
 __all__ = [
-    "PolygonBackend",
+    "MassiveBackend",
 ]
 
 logger = logging.getLogger(__name__)
 
-GCS_BLOB_NAME = "polygon_latest.json"
+GCS_BLOB_NAME = "massive_latest.json"
 
 # The Lua script to write ticker snapshots and their TTLs for a list of keys.
 #
@@ -80,8 +80,8 @@ return result
 SCRIPT_ID_BULK_FETCH_TICKERS: str = "bulk_fetch_tickers"
 
 
-class PolygonBackend:
-    """Backend that connects to the Polygon API."""
+class MassiveBackend:
+    """Backend that connects to the Massive API."""
 
     api_key: str
     cache: CacheAdapter
@@ -94,7 +94,7 @@ class PolygonBackend:
     url_param_api_key: str
     url_single_ticker_snapshot: str
     url_single_ticker_overview: str
-    filemanager: PolygonFilemanager
+    filemanager: MassiveFilemanager
 
     def __init__(
         self,
@@ -110,7 +110,7 @@ class PolygonBackend:
         gcs_uploader: GcsUploader,
         metrics_sample_rate: float,
     ) -> None:
-        """Initialize the Polygon backend."""
+        """Initialize the Massive backend."""
         self.api_key = api_key
         self.cache = cache
         self.ticker_ttl_sec = ticker_ttl_sec
@@ -122,7 +122,7 @@ class PolygonBackend:
         self.gcs_uploader = gcs_uploader
         self.url_single_ticker_snapshot = url_single_ticker_snapshot
         self.url_single_ticker_overview = url_single_ticker_overview
-        self.filemanager = PolygonFilemanager(
+        self.filemanager = MassiveFilemanager(
             gcs_bucket_path=settings.image_gcs.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
         )
@@ -193,7 +193,7 @@ class PolygonBackend:
         except CacheAdapterError as exc:
             logger.error(f"Failed to fetch snapshots from Redis: {exc}")
 
-            # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
+            # TODO @Herraj -- Propagate the error for circuit breaking as MassiveError.
         return []
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
@@ -211,7 +211,7 @@ class PolygonBackend:
             response.raise_for_status()
         except HTTPStatusError as ex:
             logger.warning(
-                f"Polygon request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
+                f"Massive request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
             )
             self.metrics_client.increment("polygon.request.snapshot.get.failed")
             return None
@@ -272,7 +272,7 @@ class PolygonBackend:
             return None
 
     async def bulk_download_and_upload_ticker_images(
-        self, tickers: list[str], prefix: str = "polygon"
+        self, tickers: list[str], prefix: str = "massive"
     ) -> dict[str, dict[str, str]]:
         """Download and upload images for a list of ticker symbols.
         Uses content hash to deduplicate and skips upload if destination blob already exists.
@@ -339,7 +339,7 @@ class PolygonBackend:
     async def build_and_upload_manifest_file(self) -> None:
         """Build and upload the finance manifest file to GCS.
 
-        - Downloads ticker logo images from polygon.
+        - Downloads ticker logo images from massive.
         - Uploads only new or changed images to GCS.
         - Constructs a FinanceManifest from the resulting GCS URLs.
         - Uploads the manifest JSON file to the GCS bucket.
@@ -369,9 +369,9 @@ class PolygonBackend:
                 forced_upload=True,
             )
             if blob is None:
-                logger.error("polygon manifest upload failed.")
+                logger.error("massive manifest upload failed.")
             if blob_v2 is None:
-                logger.error("polygon manifest upload failed for v2.")
+                logger.error("massive manifest upload failed for v2.")
         except Exception as e:
             logger.error(f"Error building/uploading manifest: {e}")
             return None
@@ -446,7 +446,7 @@ class PolygonBackend:
 
     async def shutdown(self) -> None:
         """Close http client and cache connections."""
-        logger.info("Shutting down polygon backend")
+        logger.info("Shutting down massive backend")
         await self.cache.close()
         await self.http_client.aclose()
-        logger.info("polygon backend successfully shut down")
+        logger.info("massive backend successfully shut down")

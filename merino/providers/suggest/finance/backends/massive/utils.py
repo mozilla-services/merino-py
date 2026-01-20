@@ -1,4 +1,4 @@
-"""Utilities for the Polygon backend"""
+"""Utilities for the Massive backend"""
 
 import logging
 import re
@@ -6,16 +6,19 @@ from typing import Any
 import hashlib
 
 from pydantic import HttpUrl
-from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
-from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
+from merino.providers.suggest.finance.backends.protocol import (
+    TickerSnapshot,
+    TickerSummary,
+)
+from merino.providers.suggest.finance.backends.massive.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
     STOCK_TICKER_EAGER_MATCH_BLOCKLIST,
 )
-from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
+from merino.providers.suggest.finance.backends.massive.etf_ticker_company_mapping import (
     ALL_ETF_TICKER_COMPANY_MAPPING,
     ETF_TICKER_EAGER_MATCH_BLOCKLIST,
 )
-from merino.providers.suggest.finance.backends.polygon.keyword_ticker_mapping import (
+from merino.providers.suggest.finance.backends.massive.keyword_ticker_mapping import (
     KEYWORD_TO_STOCK_TICKER_MAPPING,
     KEYWORD_TO_ETF_TICKER_MAPPING,
 )
@@ -29,7 +32,8 @@ ALL_TICKER_COMPANY_MAPPING: dict[str, dict] = {
 
 # This match either "stock(s) ABC" or "ABC stock(s)". Case insensitive.
 STOCK_QUERY_PATTERN = re.compile(
-    r"^(?:(?P<keyword1>\w+)\s+stocks?)$|^(?:stocks?\s+(?P<keyword2>\w+))$", re.IGNORECASE
+    r"^(?:(?P<keyword1>\w+)\s+stocks?)$|^(?:stocks?\s+(?P<keyword2>\w+))$",
+    re.IGNORECASE,
 )
 
 
@@ -121,7 +125,7 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
             last_trade_price=last_trade_price,
         )
     except (KeyError, IndexError, TypeError):
-        logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
+        logger.warning(f"Massive snapshot response json has incorrect shape: {data}")
         return None
 
 
@@ -158,4 +162,4 @@ def generate_cache_key_for_ticker(ticker: str) -> str:
     hasher.update(ticker.upper().encode("utf-8"))
     ticker_hash = hasher.hexdigest()
 
-    return f"PolygonBackend:v1:ticker_snapshot:{ticker_hash}"
+    return f"MassiveBackend:v1:ticker_snapshot:{ticker_hash}"

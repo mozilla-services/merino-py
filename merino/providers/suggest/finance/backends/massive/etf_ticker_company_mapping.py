@@ -4,12 +4,30 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     ###############
     # DOW JONES   #
     ###############
-    "DIA": {"company": "SPDR Dow Jones Industrial Average ETF Trust", "exchange": "NYSE"},
-    "DJD": {"company": "Invesco Dow Jones Industrial Average Dividend ETF", "exchange": "NYSE"},
-    "FDM": {"company": "First Trust Dow Jones Select MicroCap Index Fund", "exchange": "NYSE"},
-    "FDN": {"company": "First Trust Dow Jones Internet Index Fund ETF", "exchange": "NYSE"},
-    "FDND": {"company": "FT Vest Dow Jones Internet & Target Income ETF", "exchange": "BATS"},
-    "FDNI": {"company": "First Trust Dow Jones International Internet ETF", "exchange": "NASDAQ"},
+    "DIA": {
+        "company": "SPDR Dow Jones Industrial Average ETF Trust",
+        "exchange": "NYSE",
+    },
+    "DJD": {
+        "company": "Invesco Dow Jones Industrial Average Dividend ETF",
+        "exchange": "NYSE",
+    },
+    "FDM": {
+        "company": "First Trust Dow Jones Select MicroCap Index Fund",
+        "exchange": "NYSE",
+    },
+    "FDN": {
+        "company": "First Trust Dow Jones Internet Index Fund ETF",
+        "exchange": "NYSE",
+    },
+    "FDND": {
+        "company": "FT Vest Dow Jones Internet & Target Income ETF",
+        "exchange": "BATS",
+    },
+    "FDNI": {
+        "company": "First Trust Dow Jones International Internet ETF",
+        "exchange": "NASDAQ",
+    },
     "FGD": {
         "company": "First Trust Dow Jones Global Select Dividend Index Fund",
         "exchange": "NYSE",
@@ -18,18 +36,33 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     "IYY": {"company": "iShares Dow Jones U.S. ETF", "exchange": "NYSE"},
     "RWO": {"company": "SPDR  Dow Jones  Global Real Estate ETF", "exchange": "NYSE"},
     "RWR": {"company": "SPDR Dow Jones REIT ETF", "exchange": "NYSE"},
-    "RWX": {"company": "SPDR Dow Jones  International Real Estate ETF", "exchange": "NYSE"},
+    "RWX": {
+        "company": "SPDR Dow Jones  International Real Estate ETF",
+        "exchange": "NYSE",
+    },
     "SCHD": {"company": "Schwab US Dividend Equity ETF", "exchange": "NYSE"},
     "SPSK": {"company": "SP Funds Dow Jones Global Sukuk ETF", "exchange": "NYSE"},
     "UMMA": {"company": "Wahed Dow Jones Islamic World ETF", "exchange": "NASDAQ"},
-    "WEBL": {"company": "Direxion Daily Dow Jones Internet Bull 3X Shares", "exchange": "NYSE"},
-    "WEBS": {"company": "Direxion Daily Dow Jones Internet Bear 3X Shares", "exchange": "NYSE"},
+    "WEBL": {
+        "company": "Direxion Daily Dow Jones Internet Bull 3X Shares",
+        "exchange": "NYSE",
+    },
+    "WEBS": {
+        "company": "Direxion Daily Dow Jones Internet Bear 3X Shares",
+        "exchange": "NYSE",
+    },
     ###############
     # NASDAQ      #
     ###############
     "BIB": {"company": "ProShares Ultra NASDAQ Biotechnology", "exchange": "NASDAQ"},
-    "BIS": {"company": "ProShares UltraShort NASDAQ Biotechnology", "exchange": "NASDAQ"},
-    "BLCN": {"company": "Siren ETF Trust Siren Nasdaq NexGen Economy ETF", "exchange": "NASDAQ"},
+    "BIS": {
+        "company": "ProShares UltraShort NASDAQ Biotechnology",
+        "exchange": "NASDAQ",
+    },
+    "BLCN": {
+        "company": "Siren ETF Trust Siren Nasdaq NexGen Economy ETF",
+        "exchange": "NASDAQ",
+    },
     "BUFQ": {"company": "FT Vest Laddered Nasdaq Buffer ETF", "exchange": "BATS"},
     "CANQ": {
         "company": "Calamos ETF Trust Calamos Nasdaq Equity & Income ETF",
@@ -55,7 +88,10 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "company": "Calamos Nasdaq-100 Structured Alt Protection ETF - September",
         "exchange": "NYSE",
     },
-    "DRUP": {"company": "GraniteShares Nasdaq Select Disruptors ETF", "exchange": "NYSE"},
+    "DRUP": {
+        "company": "GraniteShares Nasdaq Select Disruptors ETF",
+        "exchange": "NYSE",
+    },
     "EKG": {
         "company": "First Trust Nasdaq Lux Digital Health Solutions ETF",
         "exchange": "NASDAQ",
@@ -79,29 +115,56 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "company": "JPMorgan Nasdaq Hedged Equity Laddered Overlay ETF",
         "exchange": "NASDAQ",
     },
-    "HNDL": {"company": "Strategy Shares Nasdaq 7HANDL Index ETF", "exchange": "NASDAQ"},
+    "HNDL": {
+        "company": "Strategy Shares Nasdaq 7HANDL Index ETF",
+        "exchange": "NASDAQ",
+    },
     "IBBQ": {"company": "Invesco Nasdaq Biotechnology ETF", "exchange": "NASDAQ"},
     "IQQQ": {"company": "ProShares Nasdaq-100 High Income ETF", "exchange": "NASDAQ"},
-    "JEPQ": {"company": "J.P. Morgan Nasdaq Equity Premium Income ETF", "exchange": "NASDAQ"},
+    "JEPQ": {
+        "company": "J.P. Morgan Nasdaq Equity Premium Income ETF",
+        "exchange": "NASDAQ",
+    },
     "NCIQ": {"company": "Hashdex Nasdaq Crypto Index US ETF", "exchange": "NASDAQ"},
     "ONEQ": {"company": "Fidelity Nasdaq Composite Index ETF", "exchange": "NASDAQ"},
     "OOQB": {"company": "One One Nasdaq-100 and Bitcoin ETF", "exchange": "NASDAQ"},
-    "PATN": {"company": "Pacer Nasdaq International Patent Leaders ETF", "exchange": "NASDAQ"},
+    "PATN": {
+        "company": "Pacer Nasdaq International Patent Leaders ETF",
+        "exchange": "NASDAQ",
+    },
     "PBQQ": {"company": "PGIM Laddered Nasdaq-100 Buffer 12 ETF", "exchange": "NASDAQ"},
     "PNQI": {"company": "Invesco NASDAQ Internet ETF", "exchange": "NASDAQ"},
     "PQAP": {"company": "PGIM Nasdaq-100 Buffer 12 ETF - April", "exchange": "NASDAQ"},
-    "PQJA": {"company": "PGIM Nasdaq-100 Buffer 12 ETF - January", "exchange": "NASDAQ"},
+    "PQJA": {
+        "company": "PGIM Nasdaq-100 Buffer 12 ETF - January",
+        "exchange": "NASDAQ",
+    },
     "PQJL": {"company": "PGIM Nasdaq-100 Buffer 12 ETF - July", "exchange": "NASDAQ"},
-    "PQOC": {"company": "PGIM Nasdaq-100 Buffer 12 ETF - October", "exchange": "NASDAQ"},
-    "QABA": {"company": "First Trust NASDAQ ABA Community Bank Index Fund", "exchange": "NASDAQ"},
+    "PQOC": {
+        "company": "PGIM Nasdaq-100 Buffer 12 ETF - October",
+        "exchange": "NASDAQ",
+    },
+    "QABA": {
+        "company": "First Trust NASDAQ ABA Community Bank Index Fund",
+        "exchange": "NASDAQ",
+    },
     "QB": {"company": "ProShares Nasdaq-100 Dynamic Buffer ETF", "exchange": "NASDAQ"},
-    "QBUF": {"company": "Innovator Nasdaq-100 10 Buffer ETF Quarterly", "exchange": "NASDAQ"},
-    "QCAP": {"company": "FT Vest Nasdaq-100 Conservative Buffer ETF - April", "exchange": "BATS"},
+    "QBUF": {
+        "company": "Innovator Nasdaq-100 10 Buffer ETF Quarterly",
+        "exchange": "NASDAQ",
+    },
+    "QCAP": {
+        "company": "FT Vest Nasdaq-100 Conservative Buffer ETF - April",
+        "exchange": "BATS",
+    },
     "QCJA": {
         "company": "FT Vest Nasdaq-100 Conservative Buffer ETF - January",
         "exchange": "BATS",
     },
-    "QCJL": {"company": "FT Vest Nasdaq-100 Conservative Buffer ETF - July", "exchange": "BATS"},
+    "QCJL": {
+        "company": "FT Vest Nasdaq-100 Conservative Buffer ETF - July",
+        "exchange": "BATS",
+    },
     "QCLN": {
         "company": "First Trust NASDAQ Clean Edge Green Energy Index Fund",
         "exchange": "NASDAQ",
@@ -117,23 +180,50 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     },
     "QGRD": {"company": "Horizon Nasdaq-100 Defined Risk ETF", "exchange": "NASDAQ"},
     "QHDG": {"company": "Innovator Hedged Nasdaq-100 ETF", "exchange": "NASDAQ"},
-    "QMAG": {"company": "FT Vest Nasdaq-100 Moderate Buffer ETF - August", "exchange": "BATS"},
-    "QMFE": {"company": "FT Vest Nasdaq-100 Moderate Buffer ETF - February", "exchange": "BATS"},
-    "QMMY": {"company": "FT Vest Nasdaq-100 Moderate Buffer ETF - May", "exchange": "BATS"},
-    "QMNV": {"company": "FT Vest Nasdaq-100 Moderate Buffer ETF - November", "exchange": "BATS"},
+    "QMAG": {
+        "company": "FT Vest Nasdaq-100 Moderate Buffer ETF - August",
+        "exchange": "BATS",
+    },
+    "QMFE": {
+        "company": "FT Vest Nasdaq-100 Moderate Buffer ETF - February",
+        "exchange": "BATS",
+    },
+    "QMMY": {
+        "company": "FT Vest Nasdaq-100 Moderate Buffer ETF - May",
+        "exchange": "BATS",
+    },
+    "QMNV": {
+        "company": "FT Vest Nasdaq-100 Moderate Buffer ETF - November",
+        "exchange": "BATS",
+    },
     "QNXT": {"company": "iShares Nasdaq-100 ex Top 30 ETF", "exchange": "NASDAQ"},
-    "QOWZ": {"company": "Invesco Nasdaq Free Cash Flow Achievers ETF", "exchange": "NASDAQ"},
-    "QQEW": {"company": "First Trust NASDAQ-100 Equal Weighted Index Fund", "exchange": "NASDAQ"},
+    "QOWZ": {
+        "company": "Invesco Nasdaq Free Cash Flow Achievers ETF",
+        "exchange": "NASDAQ",
+    },
+    "QQEW": {
+        "company": "First Trust NASDAQ-100 Equal Weighted Index Fund",
+        "exchange": "NASDAQ",
+    },
     "QQJG": {"company": "Invesco ESG NASDAQ Next Gen 100 ETF", "exchange": "NASDAQ"},
     "QQMG": {"company": "Invesco ESG NASDAQ 100 ETF", "exchange": "NASDAQ"},
     "QQQ": {"company": "Invesco QQQ Trust, Series 1", "exchange": "NASDAQ"},
-    "QQQA": {"company": "ProShares Nasdaq-100 Dorsey Wright Momentum ETF", "exchange": "NASDAQ"},
-    "QQQE": {"company": "Direxion NASDAQ-100 Equal Weighted Index Shares", "exchange": "NASDAQ"},
+    "QQQA": {
+        "company": "ProShares Nasdaq-100 Dorsey Wright Momentum ETF",
+        "exchange": "NASDAQ",
+    },
+    "QQQE": {
+        "company": "Direxion NASDAQ-100 Equal Weighted Index Shares",
+        "exchange": "NASDAQ",
+    },
     "QQQG": {
         "company": "Pacer Nasdaq 100 Top 50 Cash Cows Growth Leaders ETF",
         "exchange": "NASDAQ",
     },
-    "QQQH": {"company": "NEOS Nasdaq-100 Hedged Equity Income ETF", "exchange": "NASDAQ"},
+    "QQQH": {
+        "company": "NEOS Nasdaq-100 Hedged Equity Income ETF",
+        "exchange": "NASDAQ",
+    },
     "QQQI": {"company": "NEOS Nasdaq 100 High Income ETF", "exchange": "NASDAQ"},
     "QQQJ": {"company": "Invesco NASDAQ Next Gen 100 ETF", "exchange": "NASDAQ"},
     "QQQM": {"company": "Invesco NASDAQ 100 ETF", "exchange": "NASDAQ"},
@@ -143,18 +233,30 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "company": "Tidal Trust II Defiance Nasdaq 100 Enhanced Options & 0DTE Income ETF",
         "exchange": "NASDAQ",
     },
-    "QQWZ": {"company": "Pacer Cash COWZ 100-Nasdaq 100 Rotator ETF", "exchange": "NASDAQ"},
+    "QQWZ": {
+        "company": "Pacer Cash COWZ 100-Nasdaq 100 Rotator ETF",
+        "exchange": "NASDAQ",
+    },
     "QQXT": {
         "company": "First Trust NASDAQ - 100 Ex-Technology Sector Index Fund",
         "exchange": "NASDAQ",
     },
-    "QRMI": {"company": "Global X NASDAQ 100 Risk Managed Income ETF", "exchange": "NASDAQ"},
+    "QRMI": {
+        "company": "Global X NASDAQ 100 Risk Managed Income ETF",
+        "exchange": "NASDAQ",
+    },
     "QSIX": {
         "company": "Pacer Metaurus Nasdaq 100 Dividend Multiplier 600 ETF",
         "exchange": "NASDAQ",
     },
-    "QSPT": {"company": "FT Vest Nasdaq-100 Buffer ETF - September", "exchange": "BATS"},
-    "QTEC": {"company": "First Trust NASDAQ-100 Technology  Index Fund", "exchange": "NASDAQ"},
+    "QSPT": {
+        "company": "FT Vest Nasdaq-100 Buffer ETF - September",
+        "exchange": "BATS",
+    },
+    "QTEC": {
+        "company": "First Trust NASDAQ-100 Technology  Index Fund",
+        "exchange": "NASDAQ",
+    },
     "QTOP": {"company": "iShares Nasdaq Top 30 Stocks ETF", "exchange": "NASDAQ"},
     "QTR": {"company": "Global X NASDAQ 100 Tail Risk ETF", "exchange": "NASDAQ"},
     "QXQ": {"company": "SGI Enhanced Nasdaq-100 ETF", "exchange": "NASDAQ"},
@@ -162,17 +264,26 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "company": "Global X Funds Global X NASDAQ-100 Covered Call ETF",
         "exchange": "NASDAQ",
     },
-    "QYLG": {"company": "Global X Nasdaq 100 Covered Call & Growth ETF", "exchange": "NASDAQ"},
+    "QYLG": {
+        "company": "Global X Nasdaq 100 Covered Call & Growth ETF",
+        "exchange": "NASDAQ",
+    },
     "ROBT": {
         "company": "First Trust Nasdaq Artificial Intelligence and Robotics ETF",
         "exchange": "NASDAQ",
     },
-    "SKYU": {"company": "ProShares Ultra Nasdaq Cloud Computing ETF", "exchange": "NASDAQ"},
+    "SKYU": {
+        "company": "ProShares Ultra Nasdaq Cloud Computing ETF",
+        "exchange": "NASDAQ",
+    },
     "TDIV": {
         "company": "First Trust Exchange-Traded Fund VI First Trust NASDAQ Technology Dividend Index Fund",
         "exchange": "NASDAQ",
     },
-    "UCYB": {"company": "ProShares Ultra Nasdaq Cybersecurity ETF", "exchange": "NASDAQ"},
+    "UCYB": {
+        "company": "ProShares Ultra Nasdaq Cybersecurity ETF",
+        "exchange": "NASDAQ",
+    },
     ###############
     # S&P 500     #
     ###############
@@ -200,7 +311,10 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "company": "Calamos Laddered S&P 500 Structured Alt Protection ETF",
         "exchange": "BATS",
     },
-    "CPSM": {"company": "Calamos S&P 500 Structured Alt Protection ETF - May", "exchange": "NYSE"},
+    "CPSM": {
+        "company": "Calamos S&P 500 Structured Alt Protection ETF - May",
+        "exchange": "NYSE",
+    },
     "CPSN": {
         "company": "Calamos S&P 500 Structured Alt Protection ETF - November",
         "exchange": "NYSE",
@@ -230,22 +344,43 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "exchange": "NYSE",
     },
     "DECP": {"company": "PGIM S&P 500 Buffer 12 ETF - December", "exchange": "BATS"},
-    "DIVG": {"company": "Invesco S&P 500 High Dividend Growers ETF", "exchange": "NYSE"},
-    "DSPY": {"company": "Tema S&P 500 Historical Weight ETF Strategy", "exchange": "NYSE"},
+    "DIVG": {
+        "company": "Invesco S&P 500 High Dividend Growers ETF",
+        "exchange": "NYSE",
+    },
+    "DSPY": {
+        "company": "Tema S&P 500 Historical Weight ETF Strategy",
+        "exchange": "NYSE",
+    },
     "EFIV": {"company": "SPDR S&P 500 ESG ETF", "exchange": "NYSE"},
-    "EGLE": {"company": "Global X S&P 500 U.S. Revenue Leaders ETF", "exchange": "NYSE"},
+    "EGLE": {
+        "company": "Global X S&P 500 U.S. Revenue Leaders ETF",
+        "exchange": "NYSE",
+    },
     "EMOT": {"company": "First Trust S&P 500 Economic Moat ETF", "exchange": "NYSE"},
     "EQWL": {"company": "Invesco S&P 100 Equal Weight ETF", "exchange": "NYSE"},
     "FB": {"company": "ProShares S&P 500 Dynamic Buffer ETF", "exchange": "BATS"},
-    "FCFY": {"company": "First Trust S&P 500 Diversified Free Cash Flow ETF", "exchange": "NYSE"},
+    "FCFY": {
+        "company": "First Trust S&P 500 Diversified Free Cash Flow ETF",
+        "exchange": "NYSE",
+    },
     "FEBP": {"company": "PGIM S&P 500 Buffer 12 ETF - February", "exchange": "BATS"},
-    "FLAG": {"company": "Global X S&P 500 U.S. Market Leaders Top 50 ETF", "exchange": "NYSE"},
+    "FLAG": {
+        "company": "Global X S&P 500 U.S. Market Leaders Top 50 ETF",
+        "exchange": "NYSE",
+    },
     "GPIX": {
         "company": "Goldman Sachs ETF Trust Goldman Sachs S&P 500 Premium Income ETF",
         "exchange": "NASDAQ",
     },
-    "HIBL": {"company": "Direxion Daily S&P 500 High Beta Bull 3X Shares", "exchange": "NYSE"},
-    "HIBS": {"company": "Direxion Daily S&P 500 High Beta Bear 3X Shares", "exchange": "NYSE"},
+    "HIBL": {
+        "company": "Direxion Daily S&P 500 High Beta Bull 3X Shares",
+        "exchange": "NYSE",
+    },
+    "HIBS": {
+        "company": "Direxion Daily S&P 500 High Beta Bear 3X Shares",
+        "exchange": "NYSE",
+    },
     "ISPY": {"company": "ProShares S&P 500 High Income ETF", "exchange": "BATS"},
     "IVE": {"company": "iShares S&P 500 Value ETF", "exchange": "NYSE"},
     "IVV": {"company": "iShares Core S&P 500 ETF", "exchange": "NYSE"},
@@ -262,10 +397,16 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "company": "First Trust Exchange-Traded Fund VI First Trust S&P 500 Diversified Dividend Aristocrats ETF",
         "exchange": "NASDAQ",
     },
-    "LCOW": {"company": "Pacer S&P 500 Quality FCF Aristocrats ETF", "exchange": "BATS"},
+    "LCOW": {
+        "company": "Pacer S&P 500 Quality FCF Aristocrats ETF",
+        "exchange": "BATS",
+    },
     "MAYP": {"company": "PGIM S&P 500 Buffer 12 ETF - May", "exchange": "BATS"},
     "MRCP": {"company": "PGIM S&P 500 Buffer 12 ETF - March", "exchange": "BATS"},
-    "NOBL": {"company": "ProShares S&P 500 Dividend Aristocrats ETF", "exchange": "BATS"},
+    "NOBL": {
+        "company": "ProShares S&P 500 Dividend Aristocrats ETF",
+        "exchange": "BATS",
+    },
     "NOVP": {"company": "PGIM S&P 500 Buffer 12 ETF - November", "exchange": "BATS"},
     "OCTP": {"company": "PGIM S&P 500 Buffer 12 ETF - October", "exchange": "BATS"},
     "OEF": {"company": "iShares S&P 100 ETF", "exchange": "NYSE"},
@@ -292,14 +433,23 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     "PMJN": {"company": "PGIM S&P 500 Max Buffer ETF - June", "exchange": "BATS"},
     "PMMR": {"company": "PGIM S&P 500 Max Buffer ETF - March", "exchange": "BATS"},
     "PMMY": {"company": "PGIM S&P 500 Max Buffer ETF - May", "exchange": "BATS"},
-    "PUTD": {"company": "Cboe Validus S&P 500 Dynamic PutWrite Index ETF", "exchange": "BATS"},
-    "QDCC": {"company": "Global X S&P 500 Quality Dividend Covered Call ETF", "exchange": "NYSE"},
+    "PUTD": {
+        "company": "Cboe Validus S&P 500 Dynamic PutWrite Index ETF",
+        "exchange": "BATS",
+    },
+    "QDCC": {
+        "company": "Global X S&P 500 Quality Dividend Covered Call ETF",
+        "exchange": "NYSE",
+    },
     "QDIV": {"company": "Global X S&P 500 Quality Dividend ETF", "exchange": "NYSE"},
     "QVML": {"company": "Invesco S&P 500 QVM Multi-factor ETF", "exchange": "NYSE"},
     "RPG": {"company": "Invesco S&P 500 Pure Growth ETF", "exchange": "NYSE"},
     "RPV": {"company": "Invesco S&P 500 Pure Value ETF", "exchange": "NYSE"},
     "RSP": {"company": "Invesco S&P 500 Equal Weight ETF", "exchange": "NYSE"},
-    "RSPA": {"company": "Invesco S&P 500 Equal Weight Income Advantage ETF", "exchange": "NYSE"},
+    "RSPA": {
+        "company": "Invesco S&P 500 Equal Weight Income Advantage ETF",
+        "exchange": "NYSE",
+    },
     "RSPC": {
         "company": "Invesco Exchange-Traded Fund Trust Invesco S&P 500 Equal Weight Communication Services ETF",
         "exchange": "NYSE",
@@ -309,26 +459,62 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
         "exchange": "NYSE",
     },
     "RSPE": {"company": "Invesco ESG S&P 500 Equal Weight ETF", "exchange": "NYSE"},
-    "RSPF": {"company": "Invesco S&P 500 Equal Weight Financials ETF", "exchange": "NYSE"},
+    "RSPF": {
+        "company": "Invesco S&P 500 Equal Weight Financials ETF",
+        "exchange": "NYSE",
+    },
     "RSPG": {"company": "Invesco S&P 500 Equal Weight Energy ETF", "exchange": "NYSE"},
-    "RSPH": {"company": "Invesco S&P 500 Equal Weight Health Care ETF", "exchange": "NYSE"},
-    "RSPM": {"company": "Invesco S&P 500 Equal Weight Materials ETF", "exchange": "NYSE"},
-    "RSPN": {"company": "Invesco S&P 500 Equal Weight Industrials ETF", "exchange": "NYSE"},
-    "RSPR": {"company": "Invesco S&P 500 Equal Weight Real Estate ETF", "exchange": "NYSE"},
-    "RSPS": {"company": "Invesco S&P 500 Equal Weight Consumer Staples ETF", "exchange": "NYSE"},
-    "RSPT": {"company": "Invesco S&P 500 Equal Weight Technology ETF", "exchange": "NYSE"},
-    "RSPU": {"company": "Invesco S&P 500 Equal Weight Utilities ETF", "exchange": "NYSE"},
+    "RSPH": {
+        "company": "Invesco S&P 500 Equal Weight Health Care ETF",
+        "exchange": "NYSE",
+    },
+    "RSPM": {
+        "company": "Invesco S&P 500 Equal Weight Materials ETF",
+        "exchange": "NYSE",
+    },
+    "RSPN": {
+        "company": "Invesco S&P 500 Equal Weight Industrials ETF",
+        "exchange": "NYSE",
+    },
+    "RSPR": {
+        "company": "Invesco S&P 500 Equal Weight Real Estate ETF",
+        "exchange": "NYSE",
+    },
+    "RSPS": {
+        "company": "Invesco S&P 500 Equal Weight Consumer Staples ETF",
+        "exchange": "NYSE",
+    },
+    "RSPT": {
+        "company": "Invesco S&P 500 Equal Weight Technology ETF",
+        "exchange": "NYSE",
+    },
+    "RSPU": {
+        "company": "Invesco S&P 500 Equal Weight Utilities ETF",
+        "exchange": "NYSE",
+    },
     "RWL": {"company": "Invesco S&P 500 Revenue ETF", "exchange": "NYSE"},
-    "SDTY": {"company": "YieldMax S&P 500 0DTE Covered Call Strategy ETF", "exchange": "NASDAQ"},
+    "SDTY": {
+        "company": "YieldMax S&P 500 0DTE Covered Call Strategy ETF",
+        "exchange": "NASDAQ",
+    },
     "SEPP": {"company": "PGIM S&P 500 Buffer 12 ETF - September", "exchange": "BATS"},
     "SNPE": {"company": "Xtrackers S&P 500 Scored & Screened ETF", "exchange": "NYSE"},
-    "SNPG": {"company": "Xtrackers S&P 500 Growth Scored & Screened ETF", "exchange": "BATS"},
-    "SNPV": {"company": "Xtrackers S&P 500 Value Scored & Screened ETF", "exchange": "BATS"},
+    "SNPG": {
+        "company": "Xtrackers S&P 500 Growth Scored & Screened ETF",
+        "exchange": "BATS",
+    },
+    "SNPV": {
+        "company": "Xtrackers S&P 500 Value Scored & Screened ETF",
+        "exchange": "BATS",
+    },
     "SPDN": {"company": "Direxion Daily S&P 500 Bear 1X Shares", "exchange": "NYSE"},
     "SPDV": {"company": "AAM S&P 500 High Dividend Value ETF", "exchange": "NYSE"},
     "SPGP": {"company": "Invesco S&P 500 GARP ETF", "exchange": "NYSE"},
     "SPHB": {"company": "Invesco S&P 500 High Beta ETF", "exchange": "NYSE"},
-    "SPHD": {"company": "Invesco S&P 500 High Dividend Low Volatility ETF", "exchange": "NYSE"},
+    "SPHD": {
+        "company": "Invesco S&P 500 High Dividend Low Volatility ETF",
+        "exchange": "NYSE",
+    },
     "SPHQ": {"company": "Invesco S&P 500 Quality ETF", "exchange": "NYSE"},
     "SPLG": {"company": "SPDR Portfolio S&P 500 ETF", "exchange": "NYSE"},
     "SPLV": {"company": "Invesco S&P 500 Low Volatility ETF", "exchange": "NYSE"},
@@ -338,7 +524,10 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     "SPUU": {"company": "Direxion Daily S&P 500 Bull 2X Shares", "exchange": "NYSE"},
     "SPVM": {"company": "Invesco S&P 500 Value with Momentum ETF", "exchange": "NYSE"},
     "SPVU": {"company": "Invesco S&P 500 Enhanced Value ETF", "exchange": "NYSE"},
-    "SPXD": {"company": "Xtrackers S&P 500 Diversified Sector Weight ETF", "exchange": "NASDAQ"},
+    "SPXD": {
+        "company": "Xtrackers S&P 500 Diversified Sector Weight ETF",
+        "exchange": "NASDAQ",
+    },
     "SPXE": {"company": "ProShares S&P 500 Ex-Energy ETF", "exchange": "NYSE"},
     "SPXL": {"company": "Direxion Daily S&P 500  Bull 3x Shares", "exchange": "NYSE"},
     "SPXN": {"company": "ProShares S&P 500 Ex-Financials ETF", "exchange": "NYSE"},
@@ -359,12 +548,24 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     "VOO": {"company": "Vanguard S&P 500 ETF", "exchange": "NYSE"},
     "VOOG": {"company": "Vanguard S&P 500 Growth ETF", "exchange": "NYSE"},
     "VOOV": {"company": "Vanguard S&P 500 Value ETF", "exchange": "NYSE"},
-    "VXX": {"company": "iPath Series B S&P 500 VIX Short-Term Futures ETN", "exchange": "BATS"},
-    "VXZ": {"company": "iPath Series B S&P 500 VIX Mid-Term Futures ETN", "exchange": "BATS"},
-    "WDTE": {"company": "Defiance S&P 500 Enhanced Options & 0DTE Income ETF", "exchange": "NYSE"},
+    "VXX": {
+        "company": "iPath Series B S&P 500 VIX Short-Term Futures ETN",
+        "exchange": "BATS",
+    },
+    "VXZ": {
+        "company": "iPath Series B S&P 500 VIX Mid-Term Futures ETN",
+        "exchange": "BATS",
+    },
+    "WDTE": {
+        "company": "Defiance S&P 500 Enhanced Options & 0DTE Income ETF",
+        "exchange": "NYSE",
+    },
     "XCLR": {"company": "Global X S&P 500 Collar 95-110 ETF", "exchange": "NYSE"},
     "XDIV": {"company": "Roundhill S&P 500 No Dividend Target ETF", "exchange": "BATS"},
-    "XDTE": {"company": "Roundhill S&P 500 0DTE Covered Call Strategy ETF", "exchange": "BATS"},
+    "XDTE": {
+        "company": "Roundhill S&P 500 0DTE Covered Call Strategy ETF",
+        "exchange": "BATS",
+    },
     "XLG": {"company": "Invesco S&P 500 Top 50 ETF", "exchange": "NYSE"},
     "XOEF": {"company": "iShares S&P 500 ex S&P 100 ETF", "exchange": "NYSE"},
     "XPAY": {
@@ -379,7 +580,10 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     "XTR": {"company": "Global X S&P 500 Tail Risk ETF", "exchange": "NYSE"},
     "XVV": {"company": "iShares ESG Select Screened S&P 500 ETF", "exchange": "BATS"},
     "XYLD": {"company": "Global X S&P 500 Covered Call ETF", "exchange": "NYSE"},
-    "XYLG": {"company": "Global X S&P 500 Covered Call & Growth ETF", "exchange": "NYSE"},
+    "XYLG": {
+        "company": "Global X S&P 500 Covered Call & Growth ETF",
+        "exchange": "NYSE",
+    },
     "ZZZ": {
         "company": "Cyber Hornet S&P 500 and Bitcoin 75/25 Strategy ETF",
         "exchange": "NASDAQ",
@@ -388,7 +592,10 @@ ALL_ETF_TICKER_COMPANY_MAPPING = {
     # RUSSELL2000 #
     ###############
     "IWM": {"company": "iShares Russell 2000 ETF", "exchange": "NYSE"},
-    "SMMV": {"company": "iShares MSCI USA Small-Cap Min Vol Factor ETF", "exchange": "BATS"},
+    "SMMV": {
+        "company": "iShares MSCI USA Small-Cap Min Vol Factor ETF",
+        "exchange": "BATS",
+    },
     "VTWO": {"company": "Vanguard Russell 2000 ETF", "exchange": "NASDAQ"},
     ###############
     # HSI         #
@@ -409,7 +616,7 @@ SP500_POPULAR_3_ETF = ["SPY", "VOO", "IVV"]
 SP100_POPULAR_3_ETF = ["EQWL", "OEF", "XOEF"]
 RUSSELL2000_POPULAR_3_ETF = ["IWM", "VTWO", "SMMV"]
 NI225_POPULAR_3_ETF = ["EWJ", "FLJP", "DXJ"]
-# NOTE: This index only has 2 ETF tickers listed on the US market and supported by Polygon.
+# NOTE: This index only has 2 ETF tickers listed on the US market and supported by Massive.
 HSI_POPULAR_2_ETF = ["EWH", "KTEC"]
 
 

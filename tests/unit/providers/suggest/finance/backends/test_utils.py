@@ -2,13 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Unit tests for the Polygon utils module."""
+"""Unit tests for the Massive utils module."""
 
 import pytest
 import copy
 from typing import Any
 
-from merino.providers.suggest.finance.backends.polygon.utils import (
+from merino.providers.suggest.finance.backends.massive.utils import (
     build_ticker_summary,
     lookup_ticker_company,
     lookup_ticker_exchange,
@@ -17,7 +17,10 @@ from merino.providers.suggest.finance.backends.polygon.utils import (
     format_number,
 )
 
-from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
+from merino.providers.suggest.finance.backends.protocol import (
+    TickerSnapshot,
+    TickerSummary,
+)
 
 
 @pytest.fixture(name="single_ticker_snapshot_response")

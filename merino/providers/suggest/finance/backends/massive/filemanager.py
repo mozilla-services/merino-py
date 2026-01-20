@@ -1,7 +1,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-"""A Filemanager to retrieve data for the Polygon Provider."""
+"""A Filemanager to retrieve data for the Massive Provider."""
 
 import orjson
 import logging
@@ -18,7 +18,7 @@ from merino.providers.suggest.finance.backends.protocol import (
 logger = logging.getLogger(__name__)
 
 
-class PolygonFilemanager:
+class MassiveFilemanager:
     """Filemanager for fetching logo data from GCS asynchronously and storing only in memory."""
 
     gcs_bucket_path: str

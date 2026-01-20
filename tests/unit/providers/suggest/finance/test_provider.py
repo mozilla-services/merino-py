@@ -15,7 +15,7 @@ from pytest_mock import MockerFixture
 from starlette.exceptions import HTTPException
 
 from merino.middleware.geolocation import Location
-from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
+from merino.providers.suggest.custom_details import CustomDetails, MassiveDetails
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
     FinanceManifest,
@@ -173,7 +173,7 @@ async def test_query_ticker_summary_for_ticker_symbol_returned(
             provider=provider.name,
             is_sponsored=False,
             score=provider.score,
-            custom_details=CustomDetails(polygon=PolygonDetails(values=[ticker_summary])),
+            custom_details=CustomDetails(massive=MassiveDetails(values=[ticker_summary])),
         ),
     ]
     backend_mock.get_snapshots.return_value = [ticker_snapshot]
@@ -215,7 +215,7 @@ async def test_query_ticker_summary_for_stock_keyword_returned(
             provider=provider.name,
             is_sponsored=False,
             score=provider.score,
-            custom_details=CustomDetails(polygon=PolygonDetails(values=[ticker_summary])),
+            custom_details=CustomDetails(massive=MassiveDetails(values=[ticker_summary])),
         ),
     ]
     backend_mock.get_snapshots.return_value = [ticker_snapshot]
@@ -337,8 +337,8 @@ async def test_query_appends_image_url_to_summary(
     assert len(suggestions) == 1
     suggestion = suggestions[0]
     assert suggestion.custom_details is not None
-    assert suggestion.custom_details.polygon is not None
-    summary = suggestion.custom_details.polygon.values[0]
+    assert suggestion.custom_details.massive is not None
+    summary = suggestion.custom_details.massive.values[0]
 
     assert summary.ticker == ticker
     assert summary.image_url == image_url
@@ -419,7 +419,7 @@ async def test_initialize_runs_cron_and_fetch_when_gcs_enabled(provider):
         mock_fetch_manifest.assert_awaited_once()
 
         mock_job.assert_called_once_with(
-            name="fetch_polygon_manifest",
+            name="fetch_massive_manifest",
             interval=provider.cron_interval_sec,
             condition=provider._should_fetch,
             task=provider._fetch_manifest,

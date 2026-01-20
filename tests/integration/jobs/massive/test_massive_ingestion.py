@@ -1,14 +1,14 @@
-"""Unit tests for the polygon ingestion class"""
+"""Unit tests for the massive ingestion class"""
 
 import pytest
 from unittest.mock import AsyncMock
 
-from merino.jobs.polygon.polygon_ingestion import PolygonIngestion
+from merino.jobs.massive.massive_ingestion import MassiveIngestion
 
 
 @pytest.fixture
 def patched_provider(mocker):
-    """Return a mock Provider with a mock PolygonBackend."""
+    """Return a mock Provider with a mock MassiveBackend."""
     mock_provider = mocker.MagicMock()
     mock_backend = mocker.MagicMock()
     mock_provider.backend = mock_backend
@@ -21,14 +21,14 @@ async def test_ingest_triggers_upload_and_shutdown(mocker, patched_provider):
     mock_provider, mock_backend = patched_provider
 
     mocker.patch(
-        "merino.jobs.polygon.polygon_ingestion.PolygonIngestion.get_provider",
+        "merino.jobs.massive.massive_ingestion.MassiveIngestion.get_provider",
         return_value=mock_provider,
     )
 
     mock_backend.build_and_upload_manifest_file = AsyncMock()
     mock_backend.shutdown = AsyncMock()
 
-    ingestion = PolygonIngestion()
+    ingestion = MassiveIngestion()
 
     await ingestion.ingest()
 
@@ -38,9 +38,9 @@ async def test_ingest_triggers_upload_and_shutdown(mocker, patched_provider):
 
 def test_provider_instantiation(mocker):
     """Ensure get_provider builds a Provider with a backend."""
-    mocker.patch("merino.providers.suggest.finance.backends.polygon.backend.PolygonFilemanager")
+    mocker.patch("merino.providers.suggest.finance.backends.massive.backend.MassiveFilemanager")
 
-    ingestion = PolygonIngestion()
+    ingestion = MassiveIngestion()
     provider = ingestion.get_provider()
 
     assert provider is not None

@@ -94,7 +94,7 @@ class FinanceBackend(Protocol):
         ...
 
     async def bulk_download_and_upload_ticker_images(
-        self, tickers: list[str], prefix: str = "polygon"
+        self, tickers: list[str], prefix: str = "massive"
     ) -> dict[str, dict[str, str]]:
         """Download and upload images for a list of ticker symbols.
         Uses content hash to deduplicate and skips upload if destination blob already exists.
@@ -116,7 +116,7 @@ class FinanceBackend(Protocol):
         """Build and upload the finance manifest file to GCS.
 
         This method:
-        - Downloads ticker logo images from polygon.
+        - Downloads ticker logo images from massive.
         - Uploads only new or changed images to GCS.
         - Constructs a FinanceManifest from the resulting GCS URLs.
         - Uploads the manifest JSON file to the GCS bucket.

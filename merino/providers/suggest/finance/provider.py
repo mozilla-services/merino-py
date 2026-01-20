@@ -13,7 +13,7 @@ from merino.providers.suggest.base import (
     BaseSuggestion,
     SuggestionRequest,
 )
-from merino.providers.suggest.custom_details import CustomDetails, PolygonDetails
+from merino.providers.suggest.custom_details import CustomDetails, MassiveDetails
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
     FinanceBackendError,
@@ -21,7 +21,7 @@ from merino.providers.suggest.finance.backends.protocol import (
     GetManifestResultCode,
     TickerSummary,
 )
-from merino.providers.suggest.finance.backends.polygon.utils import (
+from merino.providers.suggest.finance.backends.massive.utils import (
     get_tickers_for_query,
 )
 from merino.utils import cron
@@ -76,7 +76,7 @@ class Provider(BaseProvider):
             await self._fetch_manifest()
 
             cron_job_fetch = cron.Job(
-                name="fetch_polygon_manifest",
+                name="fetch_massive_manifest",
                 interval=self.cron_interval_sec,
                 condition=self._should_fetch,
                 task=self._fetch_manifest,
@@ -162,12 +162,12 @@ class Provider(BaseProvider):
                     return [self.build_suggestion(ticker_summaries)]
 
         except Exception as e:
-            logger.warning(f"Exception occurred for Polygon provider: {e}")
+            logger.warning(f"Exception occurred for Massive provider: {e}")
             return []
 
     def build_suggestion(self, data: list[TickerSummary]) -> BaseSuggestion:
-        """Build the suggestion with custom polygon details since this is a finance suggestion."""
-        custom_details = CustomDetails(polygon=PolygonDetails(values=data))
+        """Build the suggestion with custom massive details since this is a finance suggestion."""
+        custom_details = CustomDetails(massive=MassiveDetails(values=data))
 
         return BaseSuggestion(
             title="Finance Suggestion",

@@ -1,6 +1,6 @@
 """Module containing keywords for stock and ETF tickers."""
 
-from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
+from merino.providers.suggest.finance.backends.massive.etf_ticker_company_mapping import (
     DOW_JONES_POPULAR_3_ETF,
     NASDAQ_POPULAR_3_ETF,
     SP500_POPULAR_3_ETF,
