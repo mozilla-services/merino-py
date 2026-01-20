@@ -28,6 +28,7 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecast,
     LocationCompletion,
     WeatherBackend,
     WeatherReport,
@@ -45,6 +46,7 @@ class Suggestion(BaseSuggestion):
     region_code: str
     current_conditions: CurrentConditions
     forecast: Forecast
+    hourly_forecasts: list[HourlyForecast] | None = None
     placeholder: Optional[bool] = None
 
 
@@ -66,6 +68,7 @@ NO_LOCATION_KEY_SUGGESTION: Suggestion = Suggestion(
         high=Temperature(),
         low=Temperature(),
     ),
+    hourly_forecasts=None,
     provider="",
     is_sponsored=False,
     score=0,
@@ -165,7 +168,9 @@ class Provider(BaseProvider):
         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
-        weather_context = WeatherContext(geolocation, languages, request_source=source)
+        weather_context = WeatherContext(
+            geolocation, languages, request_source=source, forecast_hours=srequest.forecast_hours
+        )
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 if is_location_completion_request:
@@ -205,6 +210,7 @@ class Provider(BaseProvider):
                 region_code=data.region_code,
                 current_conditions=data.current_conditions,
                 forecast=data.forecast,
+                hourly_forecasts=data.hourly_forecasts,
                 custom_details=CustomDetails(weather=WeatherDetails(weather_report_ttl=data.ttl)),
             )
         else:

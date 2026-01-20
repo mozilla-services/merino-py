@@ -97,6 +97,7 @@ async def suggest(
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    forecast_hours: Annotated[int, Query(ge=1, le=12)] = 5,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -138,6 +139,9 @@ async def suggest(
         "location" or "weather" string. For "location" it will get location completion
         suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
         to weather suggestions.
+    - `forecast_hours`: [Optional] Number of hourly forecast hours to return (1-12).
+        Defaults to 5 hours. Used with AccuWeather weather suggestions to specify how many
+        hours of forecast data to include in the response.
 
     **Headers:**
 
@@ -226,6 +230,7 @@ async def suggest(
             languages=languages,
             user_agent=user_agent,
             source=source,
+            forecast_hours=forecast_hours,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")

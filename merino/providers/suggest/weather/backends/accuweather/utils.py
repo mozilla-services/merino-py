@@ -8,7 +8,12 @@ from httpx import URL, InvalidURL
 from pydantic import HttpUrl
 
 from merino.configs import settings
-from merino.providers.suggest.weather.backends.protocol import CurrentConditions, Forecast
+from merino.providers.suggest.weather.backends.protocol import (
+    CurrentConditions,
+    Forecast,
+    HourlyForecast,
+    Temperature,
+)
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE_NEWTAB: str | None = settings.accuweather.get("partner_code_newtab_value")
@@ -27,6 +32,7 @@ class RequestType(StrEnum):
     LOCATIONS = "locations"
     CURRENT_CONDITIONS = "currentconditions"
     FORECASTS = "forecasts"
+    HOURLY_FORECASTS = "hourlyforecasts"
     AUTOCOMPLETE = "autocomplete"
 
 
@@ -182,6 +188,38 @@ def process_forecast_response(response: Any) -> dict[str, Any] | None:
                 "high": {high_unit.lower(): high_value},
                 "low": {low_unit.lower(): low_value},
             }
+        case _:
+            return None
+
+
+def process_hourly_forecast_response(response: Any) -> dict[str, list[HourlyForecast]] | None:
+    """Process the API response for hourly forecasts."""
+    match response:
+        case list():
+            hourly_forecasts: list[HourlyForecast] = []
+
+            for forecast in response:
+                url = add_partner_code(forecast["Link"], PARTNER_PARAM_ID, PARTNER_CODE_NEWTAB)
+                temperature_unit = forecast["Temperature"]["Unit"].lower()
+                temperature_value = forecast["Temperature"]["Value"]
+
+                temperature = (
+                    Temperature(c=temperature_value)
+                    if temperature_unit == "c"
+                    else Temperature(f=temperature_value)
+                )
+
+                hourly_forecasts.append(
+                    HourlyForecast(
+                        date_time=forecast["DateTime"],
+                        epoch_date_time=forecast["EpochDateTime"],
+                        temperature=temperature,
+                        icon_id=forecast["WeatherIcon"],
+                        url=HttpUrl(url),
+                    )
+                )
+
+            return {"hourly_forecasts": hourly_forecasts}
         case _:
             return None
 
