@@ -111,7 +111,7 @@ def init_prior_backend() -> PriorBackend:
         return ConstantPrior()
 
 
-def init_ml_recommendations_backend() -> MLRecsBackend:
+def init_ml_recommendations_backend(num_files=NUM_ML_RECS_BACKEND_FILES) -> MLRecsBackend:
     """Initialize the ML Recommendations GCS Backend which falls back to an empty
     recommendation set if GCS cannot be initialized. This is handled downstream
     by falling by to Thompson Sampling.
@@ -121,11 +121,11 @@ def init_ml_recommendations_backend() -> MLRecsBackend:
     instance"""
 
     blob_name = settings.ml_recommendations.gcs.blob_name
-    if NUM_ML_RECS_BACKEND_FILES > 1:
-        file_index = random.randint(0, NUM_ML_RECS_BACKEND_FILES - 1)
-        blob_name = (
-            f"{settings.ml_recommendations.gcs.blob_name.replace(".json", "")}_{file_index}.json"
-        )
+
+    if num_files > 1:
+        file_index = random.randint(1, num_files)
+        base = blob_name.removesuffix(".json")
+        blob_name = f"{base}_{file_index}.json"
     try:
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
