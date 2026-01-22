@@ -2,6 +2,7 @@
 
 import datetime
 import json
+import logging
 
 import freezegun
 import pytest
@@ -41,6 +42,12 @@ def es_client(mocker):
     """Return a mock Elasticsearch client."""
     es_mock = mocker.patch("elasticsearch.Elasticsearch")
     return es_mock.return_value
+
+
+@pytest.fixture
+def indexer(file_manager, es_client, category_blocklist, title_blocklist):
+    """Return a mock indexer instance"""
+    return Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
 
 
 @pytest.mark.parametrize(
@@ -138,7 +145,6 @@ def test_index_from_export_fail_on_existing_index(
         "alias_name",
         "existing_indices",
         "expected_actions",
-        "expected_close_indices",
     ],
     [
         (
@@ -149,7 +155,6 @@ def test_index_from_export_fail_on_existing_index(
                 {"add": {"index": "enwiki-123", "alias": "enwiki"}},
                 {"remove": {"index": "enwiki-345", "alias": "enwiki"}},
             ],
-            ["enwiki-345"],
         ),
         (
             "enwiki-123",
@@ -160,7 +165,6 @@ def test_index_from_export_fail_on_existing_index(
                 {"remove": {"index": "enwiki-345", "alias": "enwiki-v1"}},
                 {"remove": {"index": "enwiki-678", "alias": "enwiki-v1"}},
             ],
-            ["enwiki-345", "enwiki-678"],
         ),
         (
             "enwiki-123",
@@ -169,7 +173,6 @@ def test_index_from_export_fail_on_existing_index(
             [
                 {"add": {"index": "enwiki-123", "alias": "enwiki-v1"}},
             ],
-            [],
         ),
     ],
 )
@@ -182,7 +185,6 @@ def test_flip_alias(
     alias_name,
     existing_indices,
     expected_actions,
-    expected_close_indices,
 ):
     """Test alias flipping logic."""
     es_client.indices.exists_alias.return_value = len(existing_indices) > 0
@@ -194,10 +196,6 @@ def test_flip_alias(
     assert es_client.indices.update_aliases.called
 
     es_client.indices.update_aliases.assert_called_with(actions=expected_actions)
-    if expected_close_indices:
-        es_client.indices.close.assert_called_once_with(index=expected_close_indices)
-    else:
-        assert not es_client.indices.close.called
 
 
 def test_index_from_export(
@@ -372,3 +370,96 @@ def test_index_from_export_with_title_blocklist_content_filter(
     indexer.index_from_export(1, "enwiki")
 
     es_client.bulk.assert_called_once()
+
+
+def _set_queue(indexer, n=1):
+    # queue is [op, doc, op, doc, ...]
+    indexer.queue.clear()
+    for i in range(n):
+        indexer.queue.append({"index": {"_index": "test-idx", "_id": str(i)}})
+        indexer.queue.append({"title": f"Doc {i}"})
+
+
+def test_index_docs_raises_with_first_failing_item(indexer, es_client, caplog):
+    """Test that when errors=True, raise with the first item that actually failed, not just items[0]."""
+    _set_queue(indexer, n=2)
+
+    # first item is a success, second item is a failure
+    es_client.bulk.return_value = {
+        "took": 12,
+        "errors": True,
+        "items": [
+            {
+                "index": {
+                    "_index": "test-idx",
+                    "_id": "0",
+                    "status": 201,
+                    "result": "created",
+                }
+            },
+            {
+                "index": {
+                    "_index": "test-idx",
+                    "_id": "1",
+                    "status": 400,
+                    "error": {
+                        "type": "mapper_parsing_exception",
+                        "reason": "failed to parse field [suggest]",
+                    },
+                }
+            },
+        ],
+    }
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError) as exc:
+            indexer._index_docs(force=True)
+
+    msg = str(exc.value)
+    assert "Bulk failed" in msg
+    assert "mapper_parsing_exception" in msg
+    assert '"status": 400' in msg
+    assert indexer.queue == []
+    assert any("Bulk operation had errors" in rec.message for rec in caplog.records)
+
+
+def test_index_docs_handles_non_index_actions(indexer, es_client):
+    """Test that index_docs works when ES returns actions like 'update'"""
+    _set_queue(indexer, n=1)
+    es_client.bulk.return_value = {
+        "errors": True,
+        "items": [
+            {
+                "update": {
+                    "_index": "test-idx",
+                    "_id": "42",
+                    "status": 404,
+                    "error": {
+                        "type": "document_missing_exception",
+                        "reason": "[42]: document missing",
+                    },
+                }
+            }
+        ],
+    }
+    with pytest.raises(RuntimeError) as exc:
+        indexer._index_docs(force=True)
+    assert "document_missing_exception" in str(exc.value)
+    assert indexer.queue == []
+
+
+def test_index_docs_success_returns_item_count(indexer, es_client):
+    """Test that when errors=False, return count and do not raise."""
+    _set_queue(indexer, n=3)
+    es_client.bulk.return_value = {
+        "took": 5,
+        "errors": False,
+        "items": [
+            {"index": {"_index": "test-idx", "_id": "0", "status": 201}},
+            {"index": {"_index": "test-idx", "_id": "1", "status": 201}},
+            {"index": {"_index": "test-idx", "_id": "2", "status": 201}},
+        ],
+    }
+    count = indexer._index_docs(force=True)
+    assert count == 3
+    assert indexer.queue == []

@@ -131,10 +131,33 @@ class Indexer:
             try:
                 res = self.es_client.bulk(operations=self.queue)
                 item_count = len(res.get("items", []))
+                items = res.get("items", []) or []
                 if "errors" in res and res["errors"]:
-                    raise Exception(res["errors"])
-            except Exception as e:
-                raise e
+                    # Find the first failing item (index/create/update/delete)
+                    first_err = None
+                    for it in items:
+                        action = next(
+                            (k for k in ("index", "create", "update", "delete") if k in it),
+                            None,
+                        )
+                        if not action:
+                            continue
+                        meta = it[action] or {}
+                        if meta.get("error"):
+                            first_err = {
+                                "action": action,
+                                "status": meta.get("status"),
+                                "index": meta.get("_index"),
+                                "id": meta.get("_id"),
+                                "error": meta.get("error"),
+                            }
+                            break
+
+                    logger.error("Bulk operation had errors", extra={"first_error": first_err})
+
+                    raise RuntimeError(f"Bulk failed. First error: {json.dumps(first_err)}")
+            except Exception:
+                raise
             finally:
                 self.queue.clear()
         return item_count
@@ -185,7 +208,6 @@ class Indexer:
         # fetch previous index using alias so we know what to delete
         actions: list[Mapping[str, Any]] = [{"add": {"index": current_index, "alias": alias}}]
 
-        indices_to_close = []
         if self.es_client.indices.exists_alias(name=alias):
             indices = self.es_client.indices.get_alias(name=alias)
             for idx in indices:
@@ -194,12 +216,5 @@ class Indexer:
                     extra={"index": idx, "alias": alias},
                 )
                 actions.append({"remove": {"index": idx, "alias": alias}})
-                indices_to_close.append(idx)
 
         self.es_client.indices.update_aliases(actions=actions)
-
-        # Close the indices that have been removed from the alias.
-        # This will improve the memory usage of the cluster.
-        if indices_to_close:
-            self.es_client.indices.close(index=indices_to_close)
-            logger.info("closed some indices", extra={"indices": indices_to_close})

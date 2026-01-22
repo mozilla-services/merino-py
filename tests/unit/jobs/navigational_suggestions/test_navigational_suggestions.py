@@ -10,20 +10,20 @@ from hashlib import md5
 
 import pytest
 
-from merino.jobs.navigational_suggestions import (
-    prepare_domain_metadata,
-    _get_serp_categories,
-    _write_xcom_file,
-    _construct_partner_manifest,
-    _construct_top_picks,
+from merino.jobs.navigational_suggestions import prepare_domain_metadata
+from merino.jobs.navigational_suggestions.processing.manifest_builder import (
+    get_serp_categories,
+    construct_partner_manifest,
+    construct_top_picks,
 )
+from merino.jobs.navigational_suggestions.modes.normal_mode import write_xcom_file
 from merino.utils.domain_categories.models import Category
 
 
 def test_prepare_domain_metadata_top_picks_construction():
     """Test whether top pick is constructed properly"""
     # Mock the functionality that would otherwise be executed
-    with patch("merino.jobs.navigational_suggestions._run_normal_mode") as mock_run_normal:
+    with patch("merino.jobs.navigational_suggestions.run_normal_mode") as mock_run_normal:
         # Call the function with local_mode=False
         prepare_domain_metadata(
             "dummy_src_project",
@@ -32,13 +32,15 @@ def test_prepare_domain_metadata_top_picks_construction():
             local_mode=False,
         )
 
-        # Verify that _run_normal_mode was called
+        # Verify that run_normal_mode was called
         mock_run_normal.assert_called_once()
 
 
 def test_get_serp_categories_with_url():
     """Test _get_serp_categories with a URL."""
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         # Set up the mock to return a specific category
         test_url = "https://example.com"
         test_host = "example.com"
@@ -48,7 +50,7 @@ def test_get_serp_categories_with_url():
         mock_domain_mapping.get.return_value = [Category.Tech]
 
         # Call the function
-        result = _get_serp_categories(test_url)
+        result = get_serp_categories(test_url)
 
         # Verify the result
         assert result == [Category.Tech.value]
@@ -57,28 +59,30 @@ def test_get_serp_categories_with_url():
 
 def test_get_serp_categories_with_none_url():
     """Test _get_serp_categories with None URL."""
-    result = _get_serp_categories(None)
+    result = get_serp_categories(None)
     assert result is None
 
 
 def test_get_serp_categories_with_default_category():
     """Test _get_serp_categories when domain is not in mapping."""
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         # Set up the mock to return the default value (not found in mapping)
         mock_domain_mapping.get.return_value = [Category.Inconclusive]
 
         # Call the function
-        result = _get_serp_categories("https://unknown-domain.com")
+        result = get_serp_categories("https://unknown-domain.com")
 
         # Verify the result uses the default category
         assert result == [Category.Inconclusive.value]
 
 
 def test_write_xcom_file():
-    """Test _write_xcom_file."""
+    """Test write_xcom_file."""
     with patch("builtins.open", MagicMock()) as mock_open, patch("json.dump") as mock_json_dump:
         test_data = {"key": "value"}
-        _write_xcom_file(test_data)
+        write_xcom_file(test_data)
 
         # Verify the file was opened with the correct path
         mock_open.assert_called_once_with("/airflow/xcom/return.json", "w")
@@ -88,8 +92,8 @@ def test_write_xcom_file():
         mock_json_dump.assert_called_once_with(test_data, file_handle)
 
 
-def test_construct_partner_manifest_mismatch():
-    """Test that _construct_partner_manifest raises an error when lengths don't match."""
+def testconstruct_partner_manifest_mismatch():
+    """Test that construct_partner_manifest raises an error when lengths don't match."""
     partner_favicon_source = [
         {
             "domain": "partner1.com",
@@ -110,14 +114,16 @@ def test_construct_partner_manifest_mismatch():
 
     # Should raise ValueError due to length mismatch
     with pytest.raises(ValueError) as excinfo:
-        _construct_partner_manifest(partner_favicon_source, uploaded_favicons)
+        construct_partner_manifest(partner_favicon_source, uploaded_favicons)
 
     assert "Mismatch" in str(excinfo.value)
 
 
-def test_construct_top_picks_with_serp_categories():
-    """Test that _construct_top_picks correctly includes SERP categories."""
-    with patch("merino.jobs.navigational_suggestions._get_serp_categories") as mock_get_serp:
+def testconstruct_top_picks_with_serp_categories():
+    """Test that construct_top_picks correctly includes SERP categories."""
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories"
+    ) as mock_get_serp:
         # Setup mock to return different categories for different URLs
         mock_get_serp.side_effect = (
             lambda url: [18] if "example" in url else [0]
@@ -138,7 +144,7 @@ def test_construct_top_picks_with_serp_categories():
             {"domain": "other.com", "url": "https://other.com", "title": "Other", "icon": "icon2"},
         ]
 
-        result = _construct_top_picks(domain_data, domain_metadata)
+        result = construct_top_picks(domain_data, domain_metadata)
 
         # Verify serp_categories values
         assert result["domains"][0]["serp_categories"] == [18]  # Tech category for example.com
@@ -150,8 +156,8 @@ def test_construct_top_picks_with_serp_categories():
         mock_get_serp.assert_any_call("https://other.com")
 
 
-def test_construct_top_picks_source_field():
-    """Test that _construct_top_picks includes the source field in the output JSON data."""
+def testconstruct_top_picks_source_field():
+    """Test that construct_top_picks includes the source field in the output JSON data."""
     # Mock input data
     domain_data = [
         {"rank": 1, "categories": ["web"], "source": "top-picks"},
@@ -169,8 +175,11 @@ def test_construct_top_picks_source_field():
     ]
 
     # Mock _get_serp_categories to avoid dependency
-    with patch("merino.jobs.navigational_suggestions._get_serp_categories", return_value=[0]):
-        result = _construct_top_picks(domain_data, domain_metadata)
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
+        return_value=[0],
+    ):
+        result = construct_top_picks(domain_data, domain_metadata)
 
         # Check if source field is included correctly in the results
         assert "domains" in result
@@ -190,8 +199,8 @@ def test_construct_top_picks_source_field():
         assert result["domains"][1]["icon"] == "icon2"
 
 
-def test_construct_top_picks_missing_source_field():
-    """Test that _construct_top_picks handles missing source field correctly."""
+def testconstruct_top_picks_missing_source_field():
+    """Test that construct_top_picks handles missing source field correctly."""
     # Mock input data with missing source field
     domain_data = [
         {"rank": 1, "categories": ["web"]},  # No source field
@@ -206,9 +215,12 @@ def test_construct_top_picks_missing_source_field():
         }
     ]
 
-    # Mock _get_serp_categories to avoid dependency
-    with patch("merino.jobs.navigational_suggestions._get_serp_categories", return_value=[0]):
-        result = _construct_top_picks(domain_data, domain_metadata)
+    # Mock get_serp_categories to avoid dependency
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
+        return_value=[0],
+    ):
+        result = construct_top_picks(domain_data, domain_metadata)
 
         # Check if source field defaults to "top-picks"
         assert "domains" in result
@@ -216,8 +228,8 @@ def test_construct_top_picks_missing_source_field():
         assert result["domains"][0]["source"] == "top-picks"
 
 
-def test_construct_top_picks_with_null_url():
-    """Test that _construct_top_picks correctly handles null URL values."""
+def testconstruct_top_picks_with_null_url():
+    """Test that construct_top_picks correctly handles null URL values."""
     domain_data = [
         {"rank": 1, "categories": ["web"], "source": "top-picks"},
         {"rank": 2, "categories": ["shopping"], "source": "custom-domains"},
@@ -233,9 +245,12 @@ def test_construct_top_picks_with_null_url():
         {"domain": "amazon.ca", "url": "https://amazon.ca", "title": "Amazon", "icon": "icon2"},
     ]
 
-    # Mock _get_serp_categories to avoid dependency
-    with patch("merino.jobs.navigational_suggestions._get_serp_categories", return_value=[0]):
-        result = _construct_top_picks(domain_data, domain_metadata)
+    # Mock get_serp_categories to avoid dependency
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
+        return_value=[0],
+    ):
+        result = construct_top_picks(domain_data, domain_metadata)
 
         # The first item should be excluded since its URL is None
         assert "domains" in result
@@ -245,8 +260,8 @@ def test_construct_top_picks_with_null_url():
 
 # Skip testing _run_local_mode since it requires extensive mocking
 # A more focused approach is to test the components individually
-def test_construct_top_picks_with_source_field_extensive():
-    """Comprehensive test for _construct_top_picks function."""
+def testconstruct_top_picks_with_source_field_extensive():
+    """Comprehensive test for construct_top_picks function."""
     # This test doesn't require complex patching for the _run_local_mode function
 
     # Create test data with all required fields
@@ -275,9 +290,12 @@ def test_construct_top_picks_with_source_field_extensive():
         },
     ]
 
-    # Use a patch to avoid calling the real _get_serp_categories
-    with patch("merino.jobs.navigational_suggestions._get_serp_categories", return_value=[0]):
-        result = _construct_top_picks(domain_data, domain_metadata)
+    # Use a patch to avoid calling the real get_serp_categories
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
+        return_value=[0],
+    ):
+        result = construct_top_picks(domain_data, domain_metadata)
 
     # Verify the result structure and content
     assert "domains" in result
@@ -302,8 +320,8 @@ def test_construct_top_picks_with_source_field_extensive():
     assert result["domains"][1]["source"] == "custom-domains"
 
 
-def test_construct_top_picks_with_all_required_fields():
-    """Test that _construct_top_picks handles all required fields correctly."""
+def testconstruct_top_picks_with_all_required_fields():
+    """Test that construct_top_picks handles all required fields correctly."""
     # Create test data with all required fields including categories
     domain_data = [
         {
@@ -323,9 +341,12 @@ def test_construct_top_picks_with_all_required_fields():
         }
     ]
 
-    # Patch _get_serp_categories to return a known value
-    with patch("merino.jobs.navigational_suggestions._get_serp_categories", return_value=[18]):
-        result = _construct_top_picks(domain_data, domain_metadata)
+    # Patch get_serp_categories to return a known value
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories",
+        return_value=[18],
+    ):
+        result = construct_top_picks(domain_data, domain_metadata)
 
     # Verify the structure and content
     assert "domains" in result
@@ -342,8 +363,8 @@ def test_construct_top_picks_with_all_required_fields():
     assert domain["source"] == "top-picks"
 
 
-def test_construct_partner_manifest_complete():
-    """Test the complete functionality of _construct_partner_manifest."""
+def testconstruct_partner_manifest_complete():
+    """Test the complete functionality of construct_partner_manifest."""
     partner_favicons = [
         {
             "domain": "example.com",
@@ -362,7 +383,7 @@ def test_construct_partner_manifest_complete():
         "https://cdn.example.com/favicons/mozilla-favicon.ico",
     ]
 
-    result = _construct_partner_manifest(partner_favicons, uploaded_favicons)
+    result = construct_partner_manifest(partner_favicons, uploaded_favicons)
 
     # Verify structure
     assert "partners" in result

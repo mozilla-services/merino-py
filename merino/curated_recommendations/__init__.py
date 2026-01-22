@@ -4,6 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import logging
+import random
 
 from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
@@ -16,10 +17,21 @@ from merino.curated_recommendations.corpus_backends.sections_backend import (
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
 from merino.curated_recommendations.ml_backends.static_local_model import SuperInferredModel
+from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
+from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import (
+    EmptyCohortModel,
+    GcsInterestCohortModel,
+)
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
-from merino.curated_recommendations.ml_backends.protocol import LocalModelBackend
+from merino.curated_recommendations.ml_backends.protocol import (
+    NUM_ML_RECS_BACKEND_FILES,
+    CohortModelBackend,
+    LocalModelBackend,
+    MLRecsBackend,
+)
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
@@ -99,6 +111,69 @@ def init_prior_backend() -> PriorBackend:
         return ConstantPrior()
 
 
+def init_ml_recommendations_backend(num_files=NUM_ML_RECS_BACKEND_FILES) -> MLRecsBackend:
+    """Initialize the ML Recommendations GCS Backend which falls back to an empty
+    recommendation set if GCS cannot be initialized. This is handled downstream
+    by falling by to Thompson Sampling.
+    """
+    """ Pick a random blob name from a set of possible files to increase diversity.
+    Because there are so merino servers, we don't need to rotate files in a particular
+    instance"""
+
+    blob_name = settings.ml_recommendations.gcs.blob_name
+
+    if num_files > 1:
+        file_index = random.randint(1, num_files)
+        base = blob_name.removesuffix(".json")
+        blob_name = f"{base}_{file_index}.json"
+    try:
+        synced_gcs_blob = SyncedGcsBlob(
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.ml_recommendations.gcs.gcp_project
+            ),
+            metrics_client=get_metrics_client(),
+            metrics_namespace="recommendation.ml.contextual",
+            bucket_name=settings.ml_recommendations.gcs.bucket_name,
+            blob_name=blob_name,
+            max_size=settings.ml_recommendations.gcs.max_size,
+            cron_interval_seconds=settings.ml_recommendations.gcs.cron_interval_seconds,
+            cron_job_name="fetch_ml_contextual_recs",
+        )
+        synced_gcs_blob.initialize()
+        return GcsMLRecs(synced_gcs_blob=synced_gcs_blob)
+    except Exception as e:
+        logger.error(f"Failed to initialize GCS ML Recs Backend: {e}")
+        # Fall back to a empty recommendation set if GCS cannot be initialized.
+        # This happens in contract tests or when the developer isn't logged in with gcloud auth.
+        return EmptyMLRecs()
+
+
+def init_ml_cohort_model_backend() -> CohortModelBackend:
+    """Initialize the ML Cohort Model GCS Backend which falls back to an empty
+    if GCS cannot be initialized.
+    """
+    try:
+        synced_gcs_blob = SyncedGcsBlob(
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.interest_cohort_model.gcs.gcp_project
+            ),
+            metrics_client=get_metrics_client(),
+            metrics_namespace="recommendation.ml.interest_cohort_model",
+            bucket_name=settings.interest_cohort_model.gcs.bucket_name,
+            blob_name=settings.interest_cohort_model.gcs.blob_name,
+            max_size=settings.interest_cohort_model.gcs.max_size,
+            cron_interval_seconds=settings.interest_cohort_model.gcs.cron_interval_seconds,
+            cron_job_name="fetch_ml_interest_cohort_model",
+            is_bytes=True,
+        )
+        synced_gcs_blob.initialize()
+        return GcsInterestCohortModel(synced_gcs_blob=synced_gcs_blob)
+    except Exception as e:
+        logger.error(f"Failed to initialize GCS cohort model Backend: {e}")
+        # Fall back to a Null model if GCS cannot be initialized.
+        return EmptyCohortModel()
+
+
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -106,6 +181,8 @@ def init_provider() -> None:
 
     engagement_backend = init_engagement_backend()
     local_model_backend = init_local_model_backend()
+    ml_recommendations_backend = init_ml_recommendations_backend()
+    cohort_model_backend = init_ml_cohort_model_backend()
 
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
@@ -127,6 +204,8 @@ def init_provider() -> None:
         prior_backend=init_prior_backend(),
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
+        cohort_model_backend=cohort_model_backend,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 

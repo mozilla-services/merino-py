@@ -724,6 +724,7 @@ ALL_STOCK_TICKER_COMPANY_MAPPING: dict[str, dict[str, str]] = {
     "PLD": {"company": "Prologis Inc", "exchange": "NYSE"},
     "PLNT": {"company": "Planet Fitness", "exchange": "NYSE"},
     "PLTR": {"company": "Palantir Technologies Inc", "exchange": "NASDAQ"},
+    "PLUG": {"company": "Plug Power Inc", "exchange": "NASDAQ"},
     "PM": {"company": "Philip Morris International Inc", "exchange": "NYSE"},
     "PNC": {"company": "PNC Bank", "exchange": "NYSE"},
     "PNFP": {"company": "Pinnacle Finl Ptnrs", "exchange": "NASDAQ"},

@@ -52,6 +52,7 @@ _validators = [
         "curated_recommendations.gcs.engagement.cron_interval_seconds",
         "curated_recommendations.gcs.prior.max_size",
         "curated_recommendations.gcs.prior.cron_interval_seconds",
+        "ml_recommendations.gcs.max_size",
         is_type_of=int,
         must_exist=True,
         env=["production", "staging", "development"],
@@ -61,6 +62,22 @@ _validators = [
         "curated_recommendations.gcs.gcp_project",
         "curated_recommendations.gcs.engagement.blob_name",
         "curated_recommendations.gcs.prior.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "ml_recommendations.gcs.bucket_name",
+        "ml_recommendations.gcs.gcp_project",
+        "ml_recommendations.gcs.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "interest_cohort_model.gcs.bucket_name",
+        "interest_cohort_model.gcs.gcp_project",
+        "interest_cohort_model.gcs.blob_name",
         is_type_of=str,
         must_exist=True,
         env=["production", "staging", "development"],
@@ -159,13 +176,21 @@ _validators = [
     # Max set that is passed into FastAPI Query constuctor param 'max_length'.
     Validator("web.api.v1.query_character_max", is_type_of=int, gt=5, lte=500),
     Validator("web.api.v1.client_variant_character_max", is_type_of=int, gt=0, lte=100),
-    # Allow a longer timeout for testing & development
+    # Allow a longer timeout for testing
     Validator(
         "runtime.query_timeout_sec",
         is_type_of=float,
         gte=0,
         lte=1.0,
-        env=["testing", "development"],
+        env=["testing"],
+    ),
+    # Allow a much longer timeout for development (to allow for `pdb`)
+    Validator(
+        "runtime.query_timeout_sec",
+        is_type_of=float,
+        gte=0,
+        lte=600.0,
+        env=["development"],
     ),
     Validator("sentry.env", is_in=["prod", "stage", "dev"]),
     Validator("sentry.mode", is_in=["disabled", "release", "debug"]),

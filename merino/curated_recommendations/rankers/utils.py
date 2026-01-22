@@ -1,142 +1,34 @@
 """Algorithms for ranking curated recommendations."""
 
-from collections import defaultdict, deque
-from random import random, sample as random_sample
+from collections import deque
+from random import random
 
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-)
 import sentry_sdk
 import logging
 import math
 from copy import copy
 from datetime import datetime, timedelta, timezone
 
-from merino.curated_recommendations import ConstantPrior
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
-from merino.curated_recommendations.ml_backends.static_local_model import DEFAULT_INTERESTS_KEY
-from merino.curated_recommendations.prior_backends.protocol import (
-    PriorBackend,
-    Prior,
-    ExperimentRescaler,
-)
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     SectionConfiguration,
     Section,
     ProcessedInterests,
-    RankingData,
 )
-from scipy.stats import beta
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
 
-BALANCER_MAX_TOPICAL = 0.65
-BALANCER_MAX_EVERGREEN = 0.65
-BALANCER_MAX_PER_TOPIC = 0.2
-BALANCER_MAX_SUBTOPIC = 0.2
-
-EVERGREEN_TOPICS = {
-    Topic.FOOD,
-    Topic.SELF_IMPROVEMENT,
-    Topic.PERSONAL_FINANCE,
-    Topic.PARENTING,
-    Topic.HOME,
-}
-
-EVERGREEN_LABEL = "evergreen"
-TOPICAL_LABEL = "topical"
-SUBTOPIC_LABEL = "is_subtopic"
-
-
-class ArticleBalancer:
-    """Balance articles by multiple criteria"""
-
-    def __init__(self, expected_num_articles: int) -> None:
-        """Initialize limits for target number of articles"""
-        self.article_list: list[CuratedRecommendation] = []
-        self.feature_counts: defaultdict[str, int] = defaultdict(int)
-        self.num_expected = 0
-        self.set_limits_for_expected_articles(expected_num_articles)
-
-    def set_limits_for_expected_articles(self, expected_num_articles: int):
-        """Update limits for expected number of articles"""
-        if self.num_expected == expected_num_articles:
-            return
-        if self.num_expected > expected_num_articles:
-            raise Exception("Limits can only be raised")
-        self.num_expected = expected_num_articles
-        self.max_topical = math.ceil(BALANCER_MAX_TOPICAL * expected_num_articles)
-        self.max_evergreen = math.ceil(BALANCER_MAX_EVERGREEN * expected_num_articles)
-        self.max_per_topic = max(2, math.ceil(BALANCER_MAX_PER_TOPIC * expected_num_articles))
-        self.max_subtopic = max(2, math.ceil(BALANCER_MAX_SUBTOPIC * expected_num_articles))
-
-    @staticmethod
-    def _is_evergreen(topic: Topic | None):
-        """Return true if topic is an Evergreen style topic"""
-        return topic in EVERGREEN_TOPICS
-
-    @staticmethod
-    def _is_subtopic(rec: CuratedRecommendation) -> bool:
-        """Return true if item is in a subtopic"""
-        return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
-
-    @staticmethod
-    def _update_stats(info_dict, rec: CuratedRecommendation):
-        """Update passed dictionary with new stats to reflect the article added"""
-        if (topic := rec.topic) is not None:
-            info_dict[topic.value] += 1
-        if ArticleBalancer._is_evergreen(rec.topic):
-            info_dict[EVERGREEN_LABEL] += 1
-        else:
-            info_dict[TOPICAL_LABEL] += 1
-        if ArticleBalancer._is_subtopic(rec):
-            info_dict[SUBTOPIC_LABEL] += 1
-
-    def _does_meet_spec(self, info_dict) -> bool:
-        """Return true if passed spec meets requirements of the balancer"""
-        if info_dict.get(EVERGREEN_LABEL, 0) > self.max_evergreen:
-            return False
-        if info_dict.get(TOPICAL_LABEL, 0) > self.max_topical:
-            return False
-        if info_dict.get(SUBTOPIC_LABEL, 0) > self.max_subtopic:
-            return False
-        for topic in Topic:
-            if info_dict.get(topic.value, 0) > self.max_per_topic:
-                return False
-        return True
-
-    def add_story(self, rec: CuratedRecommendation) -> bool:
-        """Add story if it meets requirements. Return strue if story added"""
-        provisional_stats = self.feature_counts.copy()
-        ArticleBalancer._update_stats(provisional_stats, rec)
-        if self._does_meet_spec(provisional_stats):
-            self.article_list.append(rec)
-            self.feature_counts = provisional_stats
-            return True
-        return False
-
-    def add_stories(self, stories_to_add: list[CuratedRecommendation], limit: int):
-        """Add additional stories from stories_to_add up to total limit
-        Return tuple with discarded stories and remaining ones. Selected stories
-        are added to the class.
-        """
-        discarded_stories = []
-        num_stories_consumed = 0
-        for story in stories_to_add:
-            if len(self.article_list) >= limit:
-                break
-            if not self.add_story(story):
-                discarded_stories.append(story)
-            num_stories_consumed += 1
-        return discarded_stories, stories_to_add[num_stories_consumed:]
-
-    def get_stories(self) -> list[CuratedRecommendation]:
-        """Get story list"""
-        return self.article_list
+# In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
+# somewhat arbitrarily in the new-tab-region-specific-content experiment that only targeted Canada.
+# CA has about 9x fewer impressions than the total for NEW_TAB_EN_US. A value close to 1 boosts
+# regional engagement enough to let it significantly impact the final ranking, while still giving
+# some influence to global engagement. It might work equally well for other regions than Canada.
+# We could decide later to derive this value dynamically per region.
+REGION_ENGAGEMENT_WEIGHT = 0.95
 
 
 def renumber_recommendations(recommendations: list[CuratedRecommendation]) -> None:
@@ -162,20 +54,12 @@ def renumber_sections(ordered_sections: list[tuple[str, Section]]) -> dict[str, 
     return result
 
 
-# In a weighted average, how much to weigh the metrics from the requested region. 0.95 was chosen
-# somewhat arbitrarily in the new-tab-region-specific-content experiment that only targeted Canada.
-# CA has about 9x fewer impressions than the total for NEW_TAB_EN_US. A value close to 1 boosts
-# regional engagement enough to let it significantly impact the final ranking, while still giving
-# some influence to global engagement. It might work equally well for other regions than Canada.
-# We could decide later to derive this value dynamically per region.
-REGION_ENGAGEMENT_WEIGHT = 0.95
-
 MAX_TOP_REC_SLOTS = 10
 NUM_RECS_PER_TOPIC = 2
 
 TOP_STORIES_SECTION_KEY = "top_stories_section"
 
-INFERRED_SCORE_WEIGHT = 0.001
+INFERRED_SCORE_WEIGHT = 0.00075
 
 # For taking down reported content
 DEFAULT_REPORT_RECS_RATIO_THRESHOLD = 0.001  # using a low number for now (0.1%)
@@ -336,194 +220,11 @@ def filter_fresh_items_with_probability(
     return filtered_items, list(fresh_backlog)
 
 
-def thompson_sampling(
-    recs: list[CuratedRecommendation],
-    engagement_backend: EngagementBackend,
-    prior_backend: PriorBackend,
-    region: str | None = None,
-    region_weight: float = REGION_ENGAGEMENT_WEIGHT,
-    rescaler: ExperimentRescaler | None = None,
-    personal_interests: ProcessedInterests | None = None,
-) -> list[CuratedRecommendation]:
-    """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
-    CTR with exploration of new items using a prior.
-
-    :param recs: A list of recommendations in the desired order (pre-publisher spread).
-    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
-    :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
-    :param region: Optionally, the client's region, e.g. 'US'.
-    :param region_weight: In a weighted average, how much to weigh regional engagement.
-    :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
-    :param personal_interests User interests
-
-    :return: A re-ordered version of recs, ranked according to the Thompson sampling score.
-
-    [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
-    """
-    fallback_prior = ConstantPrior().get()
-    fresh_items_max: int = rescaler.fresh_items_max if rescaler else 0
-    fresh_items_limit_prior_threshold_multiplier: float = (
-        rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
-    )
-
-    def get_opens_no_opens(
-        rec: CuratedRecommendation, region_query: str | None = None
-    ) -> tuple[float, float]:
-        """Get opens and no-opens counts for a recommendation, optionally in a region."""
-        engagement = engagement_backend.get(rec.corpusItemId, region_query)
-        if engagement:
-            return engagement.click_count, engagement.impression_count - engagement.click_count
-        else:
-            return 0, 0
-
-    def boost_interest(rec: CuratedRecommendation) -> float:
-        if personal_interests is None or rec.topic is None:
-            return 0.0
-        if rec.topic.value not in personal_interests.normalized_scores:
-            return (
-                personal_interests.normalized_scores.get(DEFAULT_INTERESTS_KEY, 0.0)
-                * INFERRED_SCORE_WEIGHT
-            )
-        return personal_interests.normalized_scores[rec.topic.value] * INFERRED_SCORE_WEIGHT
-
-    def compute_ranking_scores(rec: CuratedRecommendation):
-        """Sample beta distributed from weighted regional/global engagement for a recommendation."""
-        opens, no_opens = get_opens_no_opens(rec)
-
-        prior: Prior = prior_backend.get() or fallback_prior
-        a_prior = prior.alpha
-        b_prior = prior.beta
-
-        # Use a weighted average of regional and global engagement, if that's enabled and available.
-        region_opens, region_no_opens = get_opens_no_opens(rec, region)
-        region_prior = prior_backend.get(region)
-        if region_no_opens and region_prior:
-            opens = (region_weight * region_opens) + ((1 - region_weight) * opens)
-            no_opens = (region_weight * region_no_opens) + ((1 - region_weight) * no_opens)
-            a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
-            b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
-        non_rescaled_b_prior = b_prior
-        if rescaler is not None:
-            # rescale for content associated exclusively with an experiment in a specific region
-            opens, no_opens = rescaler.rescale(rec, opens, no_opens)
-            a_prior, b_prior = rescaler.rescale_prior(rec, a_prior, b_prior)
-        # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
-        alpha_val = opens + max(a_prior, 1e-18)
-        beta_val = no_opens + max(b_prior, 1e-18)
-        rec.ranking_data = RankingData(
-            score=float(beta.rvs(alpha_val, beta_val)) + boost_interest(rec),
-            alpha=alpha_val,
-            beta=beta_val,
-        )
-        if (
-            (fresh_items_limit_prior_threshold_multiplier > 0)
-            and not rec.isTimeSensitive
-            and (no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier)
-        ):
-            rec.ranking_data.is_fresh = True
-
-    def suppress_fresh_items(scored_recs: list[CuratedRecommendation]) -> None:
-        if fresh_items_max <= 0:
-            return
-
-        fresh_items = [
-            rec
-            for rec in scored_recs
-            if rec.ranking_data is not None and rec.ranking_data.is_fresh
-        ]
-        num_to_remove = len(fresh_items) - fresh_items_max
-        if num_to_remove > 0:
-            items_to_suppress = random_sample(fresh_items, k=num_to_remove)
-            for item in items_to_suppress:
-                if item.ranking_data is not None:
-                    item.ranking_data.score *= 0.5
-
-    for rec in recs:
-        compute_ranking_scores(rec)
-    suppress_fresh_items(recs)
-    # Sort the recommendations from best to worst sampled score & renumber
-    sorted_recs = sorted(
-        recs,
-        key=lambda r: r.ranking_data.score if r.ranking_data is not None else float("-inf"),
-        reverse=True,
-    )
-    return sorted_recs
-
-
-def section_thompson_sampling(
-    sections: dict[str, Section],
-    engagement_backend: EngagementBackend,
-    top_n: int = 6,
-    rescaler: ExperimentRescaler | None = None,
-) -> dict[str, Section]:
-    """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
-
-    :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
-    :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
-    :param top_n: Number of top items in each section for which to sum engagement in the Thompson sampling score.
-    :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
-
-    :return: Mapping of section IDs to Section objects with updated receivedFeedRank.
-
-    [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
-    """
-
-    def sample_score(sec: Section) -> float:
-        """Sample beta distribution for the combined engagement of the top _n_ items."""
-        # sum clicks and impressions over top_n items
-
-        fresh_retain_likelyhood = (
-            rescaler.fresh_items_section_ranking_max_percentage if rescaler is not None else 0.0
-        )
-        recs, _ = filter_fresh_items_with_probability(
-            sec.recommendations, fresh_story_prob=fresh_retain_likelyhood, max_items=top_n
-        )
-
-        total_clicks = 0
-        total_imps = 0
-        a_prior_total = 0.0
-        b_prior_total = 0.0
-
-        # constant prior α, β
-        prior = ConstantPrior().get()
-        a_prior_per_item = float(prior.alpha)
-        b_prior_per_item = float(prior.beta)
-        for rec in recs:
-            if engagement := engagement_backend.get(rec.corpusItemId):
-                clicks = engagement.click_count
-                impressions = engagement.impression_count
-                if rescaler is not None:
-                    # rescale for content associated exclusively with an experiment in a specific experiment
-                    clicks, impressions = rescaler.rescale(rec, clicks, impressions)
-
-                total_clicks += clicks
-                total_imps += impressions
-
-                if rescaler is not None:
-                    a_prior_mod, b_prior_mod = rescaler.rescale_prior(
-                        rec, a_prior_per_item, b_prior_per_item
-                    )
-                    a_prior_total += a_prior_mod
-                    b_prior_total += b_prior_mod
-                else:
-                    a_prior_total += a_prior_per_item
-                    b_prior_total += b_prior_per_item
-
-        # Sum engagement and priors.
-        opens = max(total_clicks + a_prior_total, 1.0)
-        no_opens = max(total_imps - total_clicks + b_prior_total, 1.0)
-        # Sample distribution
-        return float(beta.rvs(opens, no_opens))
-
-    # sort sections by sampled score, highest first
-    ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
-    return renumber_sections(ordered)
-
-
 def greedy_personalized_section_rank(
     sections: dict[str, Section],
     personal_interests: ProcessedInterests,
     epsilon: float = 0.0,
+    section_consideration_threshold: float = 0.8,
 ) -> dict[str, Section]:
     """Insert the ordered personal interest sections into the top of the section ranking.
 
@@ -534,10 +235,12 @@ def greedy_personalized_section_rank(
     ordered_sections = sorted(sections, key=lambda x: sections[x].receivedFeedRank)
 
     ## order of personal preferences
-    ### only keeps a value if above first coarse threshold. this
+    ### only keeps a value if above a certain threshold. this
     ### is because there is noise added to every value in client and
-    ## we do not want to rank on the noise
-    ptopics = [k for k, v in personal_interests.scores.items() if v > 0]
+    ## we do not want to rank on the noise. Also we don't want to push out custom sections etc.
+    ptopics = [
+        k for k, v in personal_interests.scores.items() if v >= section_consideration_threshold
+    ]
     ordered_preferences = sorted(ptopics, key=lambda x: personal_interests.scores[x], reverse=True)
 
     # decide once for each pref whether it “wins” (prob. 1-epsilon)

@@ -11,11 +11,8 @@ import httpx
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.jobs.navigational_suggestions.utils import (
-    AsyncFaviconDownloader,
-    REQUEST_HEADERS,
-    TIMEOUT,
-)
+from merino.jobs.navigational_suggestions.io import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.constants import REQUEST_HEADERS, TIMEOUT
 from merino.utils.gcs.models import Image
 
 
@@ -358,8 +355,8 @@ async def test_reset_session(mocker):
 
     # Mock create_http_client to return a new mock session
     new_mock_session = mocker.AsyncMock()
-    mocker.patch(
-        "merino.jobs.navigational_suggestions.utils.create_http_client",
+    mock_create_client = mocker.patch(
+        "merino.jobs.navigational_suggestions.io.async_favicon_downloader.create_http_client",
         return_value=new_mock_session,
     )
 
@@ -370,9 +367,7 @@ async def test_reset_session(mocker):
     mock_session.aclose.assert_called_once()
 
     # Verify create_http_client was called with the right timeout values
-    from merino.jobs.navigational_suggestions.utils import create_http_client
-
-    create_http_client.assert_called_once_with(
+    mock_create_client.assert_called_once_with(
         request_timeout=float(TIMEOUT),
         connect_timeout=float(TIMEOUT),
     )

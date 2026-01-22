@@ -126,12 +126,15 @@ class SectionsBackend(SectionsProtocol):
         utm_source = get_utm_source(surface_id)
         sections_list = []
         for section in data["data"]["getSections"]:
-            if not section.get("active"):
+            if not section.get("active") or section.get("externalId", "").endswith("_crawl"):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
+            # Strip locale suffix (e.g., "__lEN_GB") from externalId if present
+            external_id = section["externalId"].removesuffix("__lEN_GB")
+
             section_obj = CorpusSection(
-                externalId=section["externalId"],
+                externalId=external_id,
                 title=section["title"],
                 description=section.get("description"),  # use .get (can be None)
                 heroTitle=section.get("heroTitle"),

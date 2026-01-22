@@ -10,7 +10,7 @@ from google.cloud.storage import Blob
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.io.async_favicon_downloader import AsyncFaviconDownloader
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,19 @@ class DomainMetadataUploader:
             top_picks, self.DESTINATION_TOP_PICK_FILE_NAME, forced_upload=True
         )
         dated_blob: Blob = self.uploader.upload_content(top_picks, timestamp_file_name)
+
+        return dated_blob
+
+    def upload_errors(self, errors: str) -> Blob:
+        """Upload the errors manifest to GCS.
+        One file is prepended by a timestamp for record keeping,
+        the other file is the latest entry.
+        """
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        timestamp_file_name = f"{timestamp}_errors.json"
+
+        self.uploader.upload_content(errors, "errors_latest.json", forced_upload=True)
+        dated_blob: Blob = self.uploader.upload_content(errors, timestamp_file_name)
 
         return dated_blob
 

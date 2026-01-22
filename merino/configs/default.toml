@@ -690,7 +690,7 @@ pl_es_index = "plwiki-v1"
 
 # MERINO_PROVIDERS__WIKIPEDIA__ES_MAX_SUGGESTIONS
 # The maximum suggestions for each search request to Elasticsearch.
-es_max_suggestions = 3
+es_max_suggestions = 1
 
 # MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS
 # The timeout in milliseconds for each search request to Elasticsearch.
@@ -726,7 +726,7 @@ cache_db = 0
 
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = true
+enabled_by_default = false
 
 # MERINO_PROVIDERS__POLYGON__SCORE
 # The ranking score for this provider as a floating point number.
@@ -979,6 +979,48 @@ blob_name = "newtab-merino-exports/priors/latest.json"
 # Interval in seconds at which the cron job checks if GCS contains updated prior data.
 # Prior data updates daily, so we don't need to check frequently for new data.
 cron_interval_seconds = 600
+
+[default.ml_recommendations.gcs]
+# MERINO__ML_RECOMMENDATIONS__GCS__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = ""
+
+# MERINO__ML_RECOMMENDATIONS__GCS__BUCKET_NAME
+# GCS bucket that contains ranked articles from ml
+bucket_name = ""
+
+# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
+# The maximum size in bytes of the GCS prior blob. If exceeded, an error will be logged.
+max_size = 1_000_000
+
+# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "contextual_ts/latest.json"
+
+# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated prior data.
+# Prior data updates daily, so we don't need to check frequently for new data.
+cron_interval_seconds = 300
+
+[default.interest_cohort_model.gcs]
+gcp_project = ""
+
+# MERINO__ML_RECOMMENDATIONS__GCS__BUCKET_NAME
+# GCS bucket that contains ranked articles from ml
+bucket_name = ""
+
+# MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
+# The maximum size in bytes of the GCS prior blob. If exceeded, an error will be logged.
+max_size = 200_000
+
+# MERINO__ML_RECOMMENDATIONS__GCS__COHORT_MODEL__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name = "contextual_ts/cohort_model.safetensors"
+
+# MERINO__ML_RECOMMENDATIONS__GCS__COHORT_MODEL__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains updated model.
+cron_interval_seconds = 600
+
 
 
 [default.curated_recommendations.corpus_api]

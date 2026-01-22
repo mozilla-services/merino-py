@@ -2,9 +2,11 @@
 
 import hashlib
 from enum import unique, Enum
+import math
 from typing import Annotated
 import logging
 from datetime import datetime
+import numbers
 
 import numpy as np
 from pydantic import (
@@ -14,6 +16,7 @@ from pydantic import (
     BaseModel,
     ValidationInfo,
     RootModel,
+    ConfigDict,
 )
 
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -91,8 +94,6 @@ class ExperimentName(str, Enum):
     RSS_VS_ZYTE_EXPERIMENT = "new-ranking-for-legacy-topics-in-new-tab-v1"
     # Experiment to display Daily Briefing section as the first section on New Tab
     DAILY_BRIEFING_EXPERIMENT = "daily-briefing-v1"
-    # Experiment slug for crawling with identical behavior/branches as RSS_VS_ZYTE_EXPERIMENT
-    NEW_TAB_CRAWLING_V2 = "new-tab-crawling-v2"
     # The following are 6 experiments to apply 1 row layout for Popular Today for contextual ads
     CONTEXTUAL_AD_NIGHTLY_EXPERIMENT = "new-tab-ad-updates-nightly"
     CONTEXTUAL_AD_V2_NIGHTLY_EXPERIMENT = "new-tab-contextual-ad-updates-v2-nightly"
@@ -101,17 +102,22 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-release"
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
+    CONTEXTUAL_RANKING_CONTENT_EXPERIMENT = "content-contextual-ranking"
+
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
+    INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
+    INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
+    INFERRED_LOCAL_EXPERIMENT_V4 = "new-tab-automated-personalization-v4"
 
 
-@unique
-class CrawlExperimentBranchName(str, Enum):
-    """Branch names for the RSS vs. Zyte (crawl) experiment."""
+class DailyBriefingBranch(str, Enum):
+    """Treatment branches for the Daily Briefing experiment."""
 
-    CONTROL = "control"
-    TREATMENT_CRAWL = "treatment-crawl"
-    TREATMENT_CRAWL_PLUS_SUBTOPICS = "treatment-crawl-subtopics"
+    # Show Daily Briefing (headlines) section WITH Popular Today section
+    BRIEFING_WITH_POPULAR = "briefing-with-popular"
+    # Show Daily Briefing (headlines) section WITHOUT Popular Today section
+    BRIEFING_WITHOUT_POPULAR = "briefing-without-popular"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
@@ -149,9 +155,12 @@ class ProcessedInterests(BaseModel):
     scores: dict[str, float] = Field(default_factory=dict)
     normalized_scores: dict[str, float] = Field(default_factory=dict)
     expected_keys: set[str] = Field(default_factory=set)
+    skip_normalization: bool = False
+    cohort: str | None = None
+    numerical_value: int = 0
 
     @model_validator(mode="after")
-    def compute_norm(self):
+    def compute_norm(self) -> "ProcessedInterests":
         """Set the normalized_scores dictionary with an L2-normalized (unit length) set
         of interests if the number of interests we have meets a minimum threshold,
         otherwise leave empty.
@@ -159,7 +168,14 @@ class ProcessedInterests(BaseModel):
         If any key is missing from the expected_keys, we set its value to the mean
         of the normalized values.
         """
-        if len(self.scores) >= self.minimum_value_count_for_normalization:
+        if self.skip_normalization and len(self.scores) > 0:
+            """ Note this scenarios is not being used but may be soon. If not used Jan 2026 it can be removed."""
+            pre_normalized_dict = self.scores.copy()
+            values = np.array(list(self.scores.values()), dtype=float)
+            for missing_key in self.expected_keys - pre_normalized_dict.keys():
+                pre_normalized_dict[missing_key] = values.mean()
+            object.__setattr__(self, "normalized_scores", pre_normalized_dict)
+        elif len(self.scores) >= self.minimum_value_count_for_normalization:
             keys = list(self.scores.keys())
             values = np.array(list(self.scores.values()), dtype=float)
 
@@ -173,7 +189,6 @@ class ProcessedInterests(BaseModel):
             mean_val = normalized.mean()
             for missing_key in self.expected_keys - normalized_dict.keys():
                 normalized_dict[missing_key] = mean_val
-
             object.__setattr__(self, "normalized_scores", normalized_dict)
         return self
 
@@ -226,6 +241,10 @@ class RankingData(BaseModel):
     is_fresh: bool = False  # Indicates it has relatively little impressions
 
 
+# Flags for in_experiment flags. Note that the name in_experiment is historical and should be migrated to a new name
+ITEM_SUBTOPIC_FLAG = "SUBTOPICS"
+
+
 class CuratedRecommendation(CorpusItem):
     """Extends CorpusItem with additional fields for a curated recommendation"""
 
@@ -253,6 +272,10 @@ class CuratedRecommendation(CorpusItem):
             self.tileId = self._integer_hash(sid, MIN_TILE_ID, MAX_TILE_ID)
         self.scheduledCorpusItemId = sid
 
+    def is_story_blocked_for_top_stories(self) -> bool:
+        """Return true if the story should be blocked from most popular section."""
+        return self.in_experiment(ITEM_SUBTOPIC_FLAG) or self.topic == Topic.GAMING
+
     @model_validator(mode="before")
     def set_tileId(cls, values):
         """Set the tileId field automatically."""
@@ -278,10 +301,20 @@ class CuratedRecommendation(CorpusItem):
 class CuratedRecommendationsRequest(BaseModel):
     """Body schema for requesting a list of curated recommendations"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     locale: Locale
     region: str | None = None
     coarseOs: CoarseOS | None = None
-    utcOffset: Annotated[int, Field(ge=0, le=24)] | None = None
+    utcOffset: Annotated[
+        int | None,
+        Field(
+            alias="utc_offset",
+            ge=0,
+            le=23,
+            description="UTC offset in hours. Must be between 0 and 23 inclusive.",
+        ),
+    ] = None
     count: int = 100
     topics: list[Topic | str] | None = None
     feeds: list[str] | None = None
@@ -293,6 +326,21 @@ class CuratedRecommendationsRequest(BaseModel):
     experimentBranch: str | None = None
     enableInterestPicker: bool = False
     inferredInterests: InferredInterests | None = None
+
+    @field_validator("utcOffset", mode="before")
+    def validate_utc_offset(cls, value):
+        """Validate the utcOffset param and coerce invalid values to None."""
+        if value is None:
+            return None
+        if isinstance(value, numbers.Real):
+            # reject NaN or infinities
+            if math.isfinite(value):
+                value_int = int(value)
+                if 0 <= value_int <= 23:
+                    return value_int
+            return None
+        # If string, consider invalid
+        return None
 
     @field_validator("topics", mode="before")
     def validate_topics(cls, values):

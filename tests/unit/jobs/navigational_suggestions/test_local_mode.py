@@ -3,7 +3,7 @@
 from unittest.mock import patch
 from datetime import datetime
 
-from merino.jobs.navigational_suggestions.local_mode import (
+from merino.jobs.navigational_suggestions.modes.local_mode_helpers import (
     LocalMetricsCollector,
     LocalDomainDataProvider,
 )
@@ -71,7 +71,7 @@ def test_record_domain_result(mock_mkdir):
     assert collector.domain_records[1]["success"] is False
 
 
-@patch("merino.jobs.navigational_suggestions.local_mode.logger")
+@patch("merino.jobs.navigational_suggestions.modes.local_mode_helpers.logger")
 @patch("pathlib.Path.mkdir")
 def test_log_progress(mock_mkdir, mock_logger):
     """Test _log_progress method."""
@@ -108,7 +108,7 @@ def test_local_domain_data_provider_init():
     assert custom_provider.sample_size == 2
 
 
-@patch("merino.jobs.navigational_suggestions.local_mode.logger")
+@patch("merino.jobs.navigational_suggestions.modes.local_mode_helpers.logger")
 def test_get_domain_data(mock_logger):
     """Test get_domain_data method."""
     custom_domains = ["example.com", "mozilla.org", "firefox.com"]
@@ -143,7 +143,7 @@ def test_get_domain_data(mock_logger):
     assert any("Sample range" in str(call) for call in log_calls)
 
 
-@patch("merino.jobs.navigational_suggestions.local_mode.logger")
+@patch("merino.jobs.navigational_suggestions.modes.local_mode_helpers.logger")
 def test_get_domain_data_empty_list(mock_logger):
     """Test get_domain_data with an empty domains list."""
     provider = LocalDomainDataProvider([], sample_size=5)
@@ -153,7 +153,7 @@ def test_get_domain_data_empty_list(mock_logger):
     mock_logger.info.assert_called()
 
 
-@patch("merino.jobs.navigational_suggestions.local_mode.logger")
+@patch("merino.jobs.navigational_suggestions.modes.local_mode_helpers.logger")
 @patch("builtins.open")
 @patch("json.dump")
 @patch("pathlib.Path.mkdir")

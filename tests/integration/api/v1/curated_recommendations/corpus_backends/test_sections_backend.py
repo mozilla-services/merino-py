@@ -10,18 +10,11 @@ from merino.curated_recommendations.corpus_backends.protocol import CreateSource
 async def test_fetch(sections_backend: SectionsBackend):
     """Test that fetch returns expected sections from the backend."""
     sections = await sections_backend.fetch(SurfaceId.NEW_TAB_EN_US)
-    # The test data includes both regular sections and _crawl versions
-    # Check that we have at least 10 sections with _crawl suffix
-    crawl_sections = [s for s in sections if s.externalId.endswith("_crawl")]
-    assert (
-        len(crawl_sections) >= 10
-    ), f"Expected at least 10 _crawl sections, got {len(crawl_sections)}"
-
-    # Check that we have at least 10 sections without _crawl suffix
-    non_crawl_sections = [s for s in sections if not s.externalId.endswith("_crawl")]
-    assert (
-        len(non_crawl_sections) >= 10
-    ), f"Expected at least 10 non-_crawl sections, got {len(non_crawl_sections)}"
+    # We no longer expect crawl sections from fixtures.
+    assert all(
+        not section.externalId.endswith("_crawl") for section in sections
+    ), "Fixture should not contain crawl sections"
+    assert len(sections) >= 20, f"Expected at least 20 sections in fixture, got {len(sections)}"
 
     # Check that we have exactly 1 section with createSource == "MANUAL"
     manual_sections = [s for s in sections if s.createSource == CreateSource.MANUAL]
@@ -46,7 +39,7 @@ async def test_fetch(sections_backend: SectionsBackend):
     assert len(music.sectionItems) >= 15
 
     # Lookup Headlines section
-    headlines = next(s for s in sections if s.externalId == "headlines_crawl")
+    headlines = next(s for s in sections if s.externalId == "headlines")
     assert headlines is not None
     assert headlines.title == "Headlines"
     assert headlines.description == "Top Headlines today"

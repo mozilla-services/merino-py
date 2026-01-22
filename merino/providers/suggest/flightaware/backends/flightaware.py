@@ -8,6 +8,10 @@ import logging
 from merino.cache.protocol import CacheAdapter
 from merino.configs import settings
 from merino.providers.suggest.flightaware.backends.cache import FlightCache
+from merino.providers.suggest.flightaware.backends.errors import (
+    FlightawareError,
+    FlightawareErrorMessages,
+)
 from merino.providers.suggest.flightaware.backends.filemanager import (
     FlightawareFilemanager,
 )
@@ -119,10 +123,17 @@ class FlightAwareBackend(FlightBackendProtocol):
             self.metrics_client.increment(
                 f"{metric_base}.get.status", tags={"status_code": status_code}
             )
-            logger.warning(
-                f"Flightware request error for flight details for {flight_num}: {status_code} {ex.response.reason_phrase}"
-            )
-            return None
+            raise FlightawareError(
+                FlightawareErrorMessages.HTTP_UNEXPECTED_FLIGHT_DETAILS_RESPONSE,
+                flight_num=flight_num,
+                status_code=status_code,
+                reason=ex.response.reason_phrase,
+            ) from ex
+
+        except Exception as ex:
+            raise FlightawareError(
+                FlightawareErrorMessages.UNEXPECTED_BACKEND_ERROR, flight_num=flight_num
+            ) from ex
 
     def get_flight_summaries(
         self, flight_response: dict | None, query: str

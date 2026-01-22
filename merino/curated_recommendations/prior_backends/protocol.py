@@ -35,9 +35,8 @@ class PriorBackend(Protocol):
         ...
 
 
-class ExperimentRescaler(BaseModel):
-    """Used to scale priors based on relative experiment size, when an experiment
-    include content that is not in other test branches.
+class EngagementRescaler(BaseModel):
+    """Used to scale priors based on relative experiment or content type.
 
     Also contains parameters for limiting the number of unscored items in most popular
     """

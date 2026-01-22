@@ -74,3 +74,19 @@ cache = "redis"
 # The store used for flightaware data. Either `redis` or `none`.
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "redis"
+
+[production.ml_recommendations.gcs]
+# MERINO__ML_RECOMMENDATIONS__GCS__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = "moz-fx-merino-prod-5de4"
+
+# MERINO__ML_RECOMMENDATIONS__GCS__BUCKET_NAME
+# GCS bucket that contains ranked articles from ml
+bucket_name = "merino-ml-data-prod"
+
+[production.interest_cohort_model.gcs]
+# GCP project name where the GCS bucket lives.
+gcp_project = "moz-fx-merino-prod-5de4"
+
+# GCS bucket that contains cohort model data
+bucket_name = "merino-ml-data-prod"

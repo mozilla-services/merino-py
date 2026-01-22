@@ -6,14 +6,14 @@ from datetime import timedelta, datetime
 import logging
 from typing import Any
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 import aiodogstatsd
 from fastapi.testclient import TestClient
 import freezegun
 import numpy as np
 import pytest
-from httpx import AsyncClient, Response, HTTPStatusError
-from pydantic import HttpUrl
+from httpx import Response, HTTPStatusError
 from pytest_mock import MockerFixture
 from scipy.stats import linregress
 
@@ -26,6 +26,7 @@ from merino.curated_recommendations import (
     ConstantPrior,
     interest_picker,
     LocalModelBackend,
+    MLRecsBackend,
 )
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -39,30 +40,149 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+    CONTEXTUAL_RANKING_TREATMENT_TZ,
     DEFAULT_PRODUCTION_MODEL_ID,
+    LOCAL_AND_SERVER_V3_BRANCH_NAME,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
+    CohortModelBackend,
+    ContextualArticleRankings,
     InferredLocalModel,
     ModelData,
     ModelType,
     DayTimeWeightingConfig,
 )
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SECTIONS_HOLDBACK_TOTAL_PERCENT,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     ExperimentName,
+    DailyBriefingBranch,
     Layout,
     Locale,
     CoarseOS,
 )
-from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
 from tests.types import FilterCaplogFixture
+
+# Music, NFL, Movies, Soccer, NBA
+REC_HIGH_CTR_IDS = [
+    "b2c10703-5377-4fe8-89d3-32fbd7288187",
+    "f509393b-c1d6-4500-8ed2-29f8a23f39a7",
+    "2afcef43-4663-446e-9d69-69cbc6966162",
+    "dc4b30c4-170b-4e9f-a068-bdc51474a0fb",
+    "9261e868-beff-4419-8071-7750d063d642",
+    "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1",
+]
+
+
+def is_manual_section(section_id: str) -> bool:
+    """Check if section ID is a UUID (manually created sections use UUIDs, ML sections use human-readable IDs).
+
+    Note: This heuristic may become obsolete if all sections adopt UUID identifiers in the future.
+    """
+    try:
+        UUID(section_id)
+        return True
+    except ValueError:
+        return False
+
+
+class MockCohortModelBackend(CohortModelBackend):
+    """Mock class implementing the protocol for CohortModelBackend."""
+
+    def get_cohort_for_interests(
+        self,
+        interests: str,
+        model_id: str | None = None,
+        training_run_id: str | None = None,
+    ) -> str | None:
+        """Return a sample cohort based on simple hash of interests string."""
+        if not interests:
+            return None
+        # Simple hash to assign deterministic cohort
+        return str(
+            sum((ord(c) - ord("0")) for c in interests) % 10
+        )  # Assume 10 cohorts for testing
+
+
+class MockMLRecommendationsBackend(MLRecsBackend):
+    """Mock class implementing the protocol for MLRecsBackend."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        HIGH_CONTEXUAL_SCORES = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
+
+        self.data: dict[str, ContextualArticleRankings] = {}
+        rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Give low scores to all except high CTR items
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [0.001, 0.001],
+            },
+        )
+        self.data["global"] = rankings
+        self.data["US"] = rankings
+        tz_rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Extra item is crazy high
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
+            },
+        )
+        cohort_rankings = ContextualArticleRankings(
+            granularity="not_set",
+            # Extra item is crazy high
+            shards={
+                **HIGH_CONTEXUAL_SCORES,
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
+            },
+        )
+
+        self.data["US_16"] = tz_rankings  # PDT timezone
+        self.data["US_COHORT_8"] = cohort_rankings
+
+    def get(
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
+    ) -> ContextualArticleRankings | None:
+        """Return sample ML recommendations"""
+        if cohort and region:
+            key = f"{region}_COHORT_{cohort}"
+            rankings = self.data.get(key, None)
+            if rankings:
+                return rankings
+        if region and utcOffset:
+            key = f"{region}_{utcOffset}"
+            rankings = self.data.get(key, None)
+            if rankings:
+                return rankings
+        if region:
+            rankings = self.data.get(region, None)
+            if rankings:
+                return rankings
+        return self.data.get("global", None)
+
+    def is_valid(self) -> bool:
+        """Return whether the backend is valid."""
+        return True
+
+    def get_most_popular_content_id_by_timezone(self, utcOffset: int) -> str:
+        """Return the most popular content ID for a given timezone offset."""
+        if utcOffset == 16:
+            return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"  # High scoring item in US_16
+        return REC_HIGH_CTR_IDS[0]  # Default high CTR item
+
+    def get_most_popular_content_id_by_cohort(self, cohort: int) -> str:
+        """Return the most popular content ID for a given cohort."""
+        if cohort == 8:  # 1 bit selected for each interest sum to 8 by cohort model
+            return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"
+        return REC_HIGH_CTR_IDS[0]
 
 
 class MockEngagementBackend(EngagementBackend):
@@ -73,13 +193,23 @@ class MockEngagementBackend(EngagementBackend):
     of what is estimated as the real-world traffic.
     """
 
-    def __init__(self, experiment_traffic_fraction=1.0):
+    def __init__(self, experiment_traffic_fraction: float = 1.0) -> None:
         # {corpusItemId: (reports, impressions)}
         self.metrics: dict[str, tuple[int, int]] = {}
         self.experiment_traffic_fraction = experiment_traffic_fraction
+        # Optional overrides for deterministic CTRs keyed by corpusItemId.
+        self.ctr_overrides: dict[str, tuple[int, int]] = {}
 
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return random click and impression counts based on the scheduled corpus id and region."""
+        if corpus_item_id in self.ctr_overrides:
+            clicks, impressions = self.ctr_overrides[corpus_item_id]
+            return Engagement(
+                corpus_item_id=corpus_item_id,
+                region=region,
+                click_count=clicks,
+                impression_count=impressions,
+            )
         if corpus_item_id in self.metrics:
             reports, impressions = self.metrics[corpus_item_id]
             return Engagement(
@@ -90,29 +220,15 @@ class MockEngagementBackend(EngagementBackend):
                 report_count=reports,
             )
 
+        VERY_HIGH_CTR = {
+            k: (
+                1_000_000 * self.experiment_traffic_fraction,
+                1_000_000 * self.experiment_traffic_fraction,
+            )
+            for k in REC_HIGH_CTR_IDS
+        }
         HIGH_CTR_ITEMS = {
-            "b2c10703-5377-4fe8-89d3-32fbd7288187": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML music 100% CTR
-            "f509393b-c1d6-4500-8ed2-29f8a23f39a7": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML NFL 100% CTR
-            "2afcef43-4663-446e-9d69-69cbc6966162": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML Movies 100% CTR
-            "dc4b30c4-170b-4e9f-a068-bdc51474a0fb": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML Soccer 100% CTR
-            "9261e868-beff-4419-8071-7750d063d642": (
-                1_000_000 * self.experiment_traffic_fraction,
-                1_000_000 * self.experiment_traffic_fraction,
-            ),  # ML NBA 100% CTR
-            "63909b8c-a619-45f3-9ebc-fd8fcaeb72b1": (1_000_000, 1_000_000),  # ML Food 100% CTR
-            # The above 6 ML recs have the highest CTR & will be included in top_stories_section
+            **VERY_HIGH_CTR,
             "41111154-ebb1-45d9-9799-a882f13cd8cc": (
                 990_000 * self.experiment_traffic_fraction,
                 1_000_000 * self.experiment_traffic_fraction,
@@ -146,6 +262,33 @@ class MockEngagementBackend(EngagementBackend):
     def initialize(self) -> None:
         """Mock class must implement this method, but no initialization needs to happen."""
         pass
+
+
+def seed_deterministic_ctr_overrides(
+    engagement_backend: MockEngagementBackend, feeds: dict[str, Any]
+) -> None:
+    """Assign deterministic CTR overrides to ensure ranking tests stay stable."""
+    baseline_sections = {
+        name: section
+        for name, section in feeds.items()
+        if section and name != "top_stories_section"
+    }
+    assert len(baseline_sections) >= 2
+
+    sorted_section_ids = sorted(baseline_sections)
+    split_idx = max(1, len(sorted_section_ids) // 2)
+    favored_section_ids = sorted_section_ids[:split_idx]
+    deprioritized_section_ids = sorted_section_ids[split_idx:]
+
+    engagement_backend.ctr_overrides.clear()
+
+    def assign_overrides(section_ids: list[str], clicks: int, impressions: int) -> None:
+        for sid in section_ids:
+            for rec in baseline_sections[sid]["recommendations"][:6]:
+                engagement_backend.ctr_overrides[rec["corpusItemId"]] = (clicks, impressions)
+
+    assign_overrides(favored_section_ids, clicks=1_000_000, impressions=1_000_000)
+    assign_overrides(deprioritized_section_ids, clicks=1_000, impressions=1_000_000)
 
 
 class MockLocalModelBackend(LocalModelBackend):
@@ -185,6 +328,18 @@ def engagement_backend():
 
 
 @pytest.fixture
+def ml_recommendations_backend():
+    """Fixture for the MockMLRecommendationsBackend for standard use case"""
+    return MockMLRecommendationsBackend()
+
+
+@pytest.fixture
+def cohort_model_backend():
+    """Fixture for the MockCohortModelBackend for standard use case"""
+    return MockCohortModelBackend()
+
+
+@pytest.fixture
 def engagement_backend_legacy_sections_us():
     """Fixture for the MockEngagementBackend for an experiment that has a fraction of traffic"""
     return MockEngagementBackend(SECTIONS_HOLDBACK_TOTAL_PERCENT)
@@ -218,6 +373,8 @@ def provider(
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     local_model_backend: LocalModelBackend,
+    ml_recommendations_backend: MLRecsBackend,
+    cohort_model_backend: CohortModelBackend,
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
@@ -226,6 +383,8 @@ def provider(
         prior_backend=prior_backend,
         sections_backend=sections_backend,
         local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
+        cohort_model_backend=cohort_model_backend,
     )
 
 
@@ -248,16 +407,17 @@ def setup_legacy_curated_recommendations_provider(legacy_corpus_provider):
 
 
 def fetch_en_us(client: TestClient) -> Response:
-    """Make a curated recommendations request with en-US locale"""
+    """Make a curated recommendations request with en-US locale and sections feed."""
     return client.post(
-        "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": [Topic.FOOD]}
+        "/api/v1/curated-recommendations",
+        json={"locale": "en-US", "feeds": ["sections"], "topics": [Topic.FOOD]},
     )
 
 
-async def fetch_en_us_with_need_to_know(client: AsyncClient) -> Response:
-    """Make a curated recommendations request with en-US locale and feeds=["need_to_know"]"""
-    return await client.post(
-        "/api/v1/curated-recommendations", json={"locale": "en-US", "feeds": ["need_to_know"]}
+def fetch_de_de(client: TestClient) -> Response:
+    """Make a curated recommendations request with de-DE locale (uses scheduled_surface backend)"""
+    return client.post(
+        "/api/v1/curated-recommendations", json={"locale": "de-DE", "topics": [Topic.FOOD]}
     )
 
 
@@ -293,104 +453,177 @@ def assert_section_layouts_are_cycled(sections: dict):
     "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
     range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
 )
-def test_curated_recommendations(repeat, client: TestClient):
-    """Test the curated recommendations endpoint response is as expected."""
-    # expected recommendation
-    expected_recommendation = CuratedRecommendation(
-        scheduledCorpusItemId="de614b6b-6df6-470a-97f2-30344c56c1b3",
-        corpusItemId="4095b364-02ff-402c-b58a-792a067fccf2",
-        url=HttpUrl(
-            "https://getpocket.com/explore/item/milk-powder-is-the-key-to-better-cookies-brownies-and-cakes?utm_source=firefox-newtab-en-us"
-        ),
-        title="Milk Powder Is the Key to Better Cookies, Brownies, and Cakes",
-        excerpt="Consider this pantry staple your secret ingredient for making more flavorful desserts.",
-        topic=Topic.FOOD,
-        publisher="Epicurious",
-        isTimeSensitive=False,
-        imageUrl="https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e30ce2-a298-4b34-ab58-8f0f3910ee39.jpeg",
-        receivedRank=0,
-        tileId=301455520317019,
-        features={"t_food": 1.0},
-    )
-    # Mock the endpoint
+def test_curated_recommendations_sections_request(repeat, client: TestClient):
+    """Test the curated recommendations endpoint with sections feed."""
     response = fetch_en_us(client)
     data = response.json()
 
-    # Check if the mock response is valid
     assert response.status_code == 200
-
-    # Check surfaceId is returned (should be NEW_TAB_EN_US for en-US locale)
     assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
 
-    corpus_items = data["data"]
-    # assert total of 100 items returned, which is the default maximum number of recommendations in the response.
-    assert len(corpus_items) == 100
-    # Assert all corpus_items have expected fields populated.
-    assert all(item["url"] for item in corpus_items)
-    assert all(item["publisher"] for item in corpus_items)
-    assert all(item["imageUrl"] for item in corpus_items)
-    assert all(item["tileId"] for item in corpus_items)
-    assert all(item["features"] for item in corpus_items)
+    # Sections requests return data in feeds, not data
+    assert data["data"] == []
+    feeds = data["feeds"]
+    sections = {name: section for name, section in feeds.items() if section is not None}
 
-    # Assert that receivedRank equals 0, 1, 2, ...
-    for i, item in enumerate(corpus_items):
-        assert item["receivedRank"] == i
+    # At least one section should be present
+    assert len(sections) > 0
 
-    # The expected recommendation has 100% CTR, and is always present in the response.
-    # In 97% of cases it's the first recommendation, but due to the random nature of
-    # Thompson sampling this is not always the case.
-    assert any(
-        CuratedRecommendation(**item)
-        == expected_recommendation.model_copy(update={"receivedRank": i})
-        for i, item in enumerate(corpus_items)
+    # All sections should have recommendations with expected fields
+    for section in sections.values():
+        for item in section["recommendations"]:
+            assert item["url"]
+            assert item["publisher"]
+            assert item["imageUrl"]
+            assert item["features"]
+            # Sections requests do not set scheduledCorpusItemId or tileId
+            assert item["scheduledCorpusItemId"] is None
+            assert item["tileId"] is None
+
+
+class TestLegacyEndpoints:
+    """Test the legacy curated recommendations endpoints (fx114 and fx115-129).
+
+    These endpoints have two code paths:
+    - US/CA locales (en-US, en-CA): use sections backend via get_legacy_recommendations_from_sections
+    - Other locales (de-DE, en-GB, etc.): use scheduler backend via CuratedRecommendationsProvider
+    """
+
+    # Locales that use the sections backend (US/CA)
+    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA"]
+    # Locales that use the scheduler backend (non-US/CA)
+    SCHEDULER_BACKEND_LOCALES = ["de-DE", "en-GB", "fr-FR", "es-ES", "it-IT"]
+
+    @pytest.mark.parametrize(
+        "locale",
+        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
     )
+    def test_fx115_129_returns_valid_response(self, locale: str, client: TestClient):
+        """Test the legacy fx115-129 endpoint returns expected response for all supported locales."""
+        response = client.get(
+            "/api/v1/curated-recommendations/legacy-115-129", params={"locale": locale}
+        )
 
+        assert response.status_code == 200
+        data = response.json()
+        corpus_items = data["data"]
 
-def test_curated_recommendations_for_fx115_129(client: TestClient):
-    """Test the legacy fx115-129 curated recommedations endpoint response is as expected"""
-    response = client.get(
-        "/api/v1/curated-recommendations/legacy-115-129", params={"locale": "en-US"}
+        # Default max is 30 items
+        assert len(corpus_items) == 30
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["__typename"] for item in corpus_items)
+        assert all(item["recommendationId"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["title"] for item in corpus_items)
+        assert all(item["excerpt"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+
+    @pytest.mark.parametrize(
+        "locale_lang",
+        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
     )
-    data = response.json()
+    def test_fx114_returns_valid_response(self, locale_lang: str, client: TestClient):
+        """Test the legacy fx114 endpoint returns expected response for all supported locales."""
+        response = client.get(
+            "/api/v1/curated-recommendations/legacy-114",
+            params={"locale_lang": locale_lang},
+        )
 
-    # Check if the mock response is valid
-    assert response.status_code == 200
+        assert response.status_code == 200
+        data = response.json()
+        corpus_items = data["recommendations"]
 
-    corpus_items = data["data"]
-    # assert total of 30 items returned, which is the default maximum number of recommendations in the response.
-    assert len(corpus_items) == 30
-    # Assert all corpus_items have expected fields populated.
-    assert all(item["__typename"] for item in corpus_items)
-    assert all(item["recommendationId"] for item in corpus_items)
-    assert all(item["tileId"] for item in corpus_items)
-    assert all(item["url"] for item in corpus_items)
-    assert all(item["title"] for item in corpus_items)
-    assert all(item["excerpt"] for item in corpus_items)
-    assert all(item["publisher"] for item in corpus_items)
-    assert all(item["imageUrl"] for item in corpus_items)
+        # Default max is 20 items
+        assert len(corpus_items) == 20
+        # Assert all corpus_items have expected fields populated.
+        assert all(item["id"] for item in corpus_items)
+        assert all(item["title"] for item in corpus_items)
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["excerpt"] for item in corpus_items)
+        assert all(item["domain"] for item in corpus_items)
+        assert all(item["image_src"] for item in corpus_items)
+        assert all(item["raw_image_src"] for item in corpus_items)
 
-
-def test_curated_recommendations_for_fx114(client: TestClient):
-    """Test the legacy fx114 curated recommedations endpoint response is as expected"""
-    response = client.get(
-        "/api/v1/curated-recommendations/legacy-114", params={"locale_lang": "en-US"}
+    @pytest.mark.parametrize(
+        "endpoint,locale_param,count_param,default_count",
+        [
+            ("legacy-115-129", "locale", "count", 30),
+            ("legacy-114", "locale_lang", "count", 20),
+        ],
     )
-    data = response.json()
+    @pytest.mark.parametrize("locale", SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES)
+    def test_count_parameter(
+        self,
+        endpoint: str,
+        locale_param: str,
+        count_param: str,
+        default_count: int,
+        locale: str,
+        client: TestClient,
+    ):
+        """Test that the count parameter limits results for both endpoints and all locales."""
+        requested_count = 5
+        response = client.get(
+            f"/api/v1/curated-recommendations/{endpoint}",
+            params={locale_param: locale, count_param: requested_count},
+        )
 
-    # Check if the mock response is valid
-    assert response.status_code == 200
+        assert response.status_code == 200
+        data = response.json()
 
-    corpus_items = data["recommendations"]
-    # assert total of 20 items returned, which is the default maximum number of recommendations in the response.
-    assert len(corpus_items) == 20
-    # Assert all corpus_items have expected fields populated.
-    assert all(item["id"] for item in corpus_items)
-    assert all(item["title"] for item in corpus_items)
-    assert all(item["url"] for item in corpus_items)
-    assert all(item["excerpt"] for item in corpus_items)
-    assert all(item["domain"] for item in corpus_items)
-    assert all(item["image_src"] for item in corpus_items)
-    assert all(item["raw_image_src"] for item in corpus_items)
+        # Get items from correct response field
+        items = data["data"] if endpoint == "legacy-115-129" else data["recommendations"]
+        assert len(items) == requested_count
+
+    @pytest.mark.parametrize(
+        "endpoint,locale_param",
+        [
+            ("legacy-115-129", "locale"),
+            ("legacy-114", "locale_lang"),
+        ],
+    )
+    def test_region_parameter(self, endpoint: str, locale_param: str, client: TestClient):
+        """Test that the region parameter is accepted for both endpoints."""
+        response = client.get(
+            f"/api/v1/curated-recommendations/{endpoint}",
+            params={locale_param: "en-US", "region": "CA"},
+        )
+
+        assert response.status_code == 200
+
+    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+    def test_en_us_non_sections_request(self, client: TestClient):
+        """Test en-US non-sections request via main endpoint (backward-compatible path).
+
+        This tests the main /api/v1/curated-recommendations endpoint with en-US locale
+        but WITHOUT feeds=["sections"], which uses get_legacy_recommendations_from_sections.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US"},
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
+
+        # Non-sections request returns data in data[], not feeds
+        corpus_items = data["data"]
+        assert len(corpus_items) == 100
+
+        # Assert all items have expected fields
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+        # scheduledCorpusItemId equals corpusItemId (sections backend behavior)
+        assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
+
+        # Assert receivedRank is sequential
+        for i, item in enumerate(corpus_items):
+            assert item["receivedRank"] == i
 
 
 @freezegun.freeze_time("2012-01-14 03:25:34", tz_offset=0)
@@ -399,28 +632,54 @@ def test_curated_recommendations_utm_source(client: TestClient):
     response = fetch_en_us(client)
     data = response.json()
 
-    # Check if the mock response is valid
     assert response.status_code == 200
 
-    corpus_items = data["data"]
-    # assert items returned, otherwise the following assertions would not test anything.
-    assert len(corpus_items) == 100
-    # Assert all corpus_items have expected fields populated.
-    # check that utm_source is present and has the correct value in all urls
-    assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in corpus_items)
-    assert all(item["publisher"] for item in corpus_items)
-    assert all(item["imageUrl"] for item in corpus_items)
+    # Extract all recommendations from sections
+    feeds = data["feeds"]
+    all_recs = [
+        rec
+        for section in feeds.values()
+        if section is not None
+        for rec in section["recommendations"]
+    ]
+
+    # Assert items returned, otherwise the following assertions would not test anything.
+    assert len(all_recs) > 0
+    # Check that utm_source is present and has the correct value in all urls
+    assert all("utm_source=firefox-newtab-en-us" in item["url"] for item in all_recs)
+    assert all(item["publisher"] for item in all_recs)
+    assert all(item["imageUrl"] for item in all_recs)
 
 
 def test_curated_recommendations_features(client: TestClient):
-    """Test the curated recommendations endpoint returns topic features"""
+    """Test the curated recommendations endpoint returns topic and section features"""
     response = fetch_en_us(client)
+    data = response.json()
 
-    recommendations = response.json()["data"]
-    for rec in recommendations:
-        # Topic features have a t_ prefix
-        expected_features = {f"t_{rec['topic']}": 1.0}
-        assert rec["features"] == expected_features
+    # Extract all recommendations from sections
+    feeds = data["feeds"]
+    all_recs = [
+        rec
+        for section in feeds.values()
+        if section is not None
+        for rec in section["recommendations"]
+    ]
+
+    num_recs_with_section_features = 0
+    for rec in all_recs:
+        # With sections backend, features include both topic (t_ prefix) and section (s_ prefix)
+        # Topic feature must be present
+        topic_feature = f"t_{rec['topic']}"
+        assert topic_feature in rec["features"]
+        assert rec["features"][topic_feature] == 1.0
+
+        # At least one section feature (s_ prefix) should be present
+        section_features = [k for k in rec["features"].keys() if k.startswith("s_")]
+        if len(section_features) > 0:
+            num_recs_with_section_features += 1
+    assert (
+        num_recs_with_section_features > 0
+    )  # We are omitting some UUID based sections until they are deprecated
 
 
 class TestCuratedRecommendationsRequestParameters:
@@ -496,25 +755,23 @@ class TestCuratedRecommendationsRequestParameters:
         )
         assert response.status_code == 400
 
-    @pytest.mark.parametrize("utc_offset", [0, 12, 24])
-    def test_curated_recommendations_valid_utc_offset(self, utc_offset, client: TestClient):
-        """Test the curated recommendations endpoint accepts valid utc_offset values.
-        This includes values that require rounding (e.g., 3.7 should be rounded to 4).
-        """
+    @pytest.mark.parametrize("utcOffset", [0, 12, 24])
+    def test_curated_recommendations_valid_utc_offset(self, utcOffset, client: TestClient):
+        """Test the curated recommendations endpoint accepts valid utcOffset values."""
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            json={"locale": Locale.EN_US, "utcOffset": utcOffset},
         )
         assert response.status_code == 200
 
-    @pytest.mark.parametrize("utc_offset", [-1, 11.5, 25, "Z"])
-    def test_curated_recommendations_invalid_utc_offset(self, utc_offset, client: TestClient):
-        """Test the curated recommendations endpoint rejects invalid utc_offset values."""
+    @pytest.mark.parametrize("utcOffset", [-1, 11.5, 25, None, "Z"])
+    def test_curated_recommendations_invalid_utc_offset(self, utcOffset, client: TestClient):
+        """Test the curated recommendations endpoint doesn't reject malformed utc offsets."""
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "utcOffset": utc_offset},
+            json={"locale": Locale.EN_US, "utcOffset": utcOffset},
         )
-        assert response.status_code == 400
+        assert response.status_code == 200
 
     @pytest.mark.parametrize("count", [10, 50, 100])
     def test_curated_recommendations_count(
@@ -771,13 +1028,17 @@ class TestCuratedRecommendationsRequestParameters:
             ],
         ],
     )
-    def test_curated_recommendations_preferred_topic(self, preferred_topics, client: TestClient):
-        """Test the curated recommendations endpoint accepts 1-15 preferred topics &
-        top N recommendations contain the preferred topics.
+    def test_non_sections_request_boosts_preferred_topics(
+        self, preferred_topics, client: TestClient
+    ):
+        """Test non-sections requests boost preferred topics to top positions.
+
+        Uses de-DE locale (scheduler backend path) which supports topic boosting.
+        Note: en-US non-sections requests intentionally do NOT apply topic boosting.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": "en-US", "topics": preferred_topics},
+            json={"locale": "de-DE", "topics": preferred_topics},
         )
         data = response.json()
         corpus_items = data["data"]
@@ -842,6 +1103,7 @@ class TestCuratedRecommendationsRequestParameters:
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
+        Uses de-DE locale to test scheduled_surface backend behavior.
         """
         caplog.set_level(logging.WARN)
         scheduled_surface_http_client.post.return_value = Response(
@@ -850,7 +1112,7 @@ class TestCuratedRecommendationsRequestParameters:
             request=fixture_request_data,
         )
         response = client.post(
-            "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
+            "/api/v1/curated-recommendations", json={"locale": "de-DE", "topics": topics}
         )
         data = response.json()
         corpus_items = data["data"]
@@ -874,7 +1136,9 @@ class TestCuratedRecommendationsRequestParameters:
 
 
 class TestCorpusApiCaching:
-    """Tests covering the caching behavior of the Corpus backend"""
+    """Tests covering the caching behavior of the Corpus backend.
+    Uses de-DE locale to test scheduled_surface backend caching (en-US uses sections backend).
+    """
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     def test_single_request_multiple_fetches(
@@ -882,9 +1146,9 @@ class TestCorpusApiCaching:
     ):
         """Test that only a single request is made to the curated-corpus-api."""
         # Gather multiple fetch calls
-        results = [fetch_en_us(client) for _ in range(3)]
+        results = [fetch_de_de(client) for _ in range(3)]
         # Assert that recommendations were returned in each response.
-        assert all(len(result.json()["data"]) == 100 for result in results)
+        assert all(len(result.json()["data"]) > 0 for result in results)
 
         # Assert that exactly one request was made to the corpus api
         scheduled_surface_http_client.post.assert_called_once()
@@ -946,7 +1210,7 @@ class TestCorpusApiCaching:
         # Hit the endpoint until a 200 response is received or until timeout.
         while datetime.now() < start_time + timedelta(seconds=1):
             try:
-                result = fetch_en_us(client)
+                result = fetch_de_de(client)
                 if result.status_code == 200:
                     break
             except HTTPStatusError:
@@ -969,10 +1233,12 @@ class TestCorpusApiCaching:
         fixture_request_data,
         client: TestClient,
     ):
-        """Test that the cache expires, and subsequent requests return new data."""
+        """Test that the cache expires, and subsequent requests return new data.
+        Uses de-DE locale to test scheduled_surface backend caching.
+        """
         with freezegun.freeze_time(tick=True) as frozen_datetime:
             # First fetch to populate cache
-            initial_response = fetch_en_us(client)
+            initial_response = fetch_de_de(client)
             initial_data = initial_response.json()
 
             for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
@@ -988,11 +1254,11 @@ class TestCorpusApiCaching:
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
             # When the cache is expired, the first fetch may return stale data.
-            fetch_en_us(client)
+            fetch_de_de(client)
             await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
 
             # Next fetch should get the new data
-            new_response = fetch_en_us(client)
+            new_response = fetch_de_de(client)
             assert scheduled_surface_http_client.post.call_count == 2
             new_data = new_response.json()
             assert new_data["recommendedAt"] > initial_data["recommendedAt"]
@@ -1003,7 +1269,7 @@ class TestCorpusApiCaching:
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         # First fetch to populate cache with good data
-        initial_response = fetch_en_us(client)
+        initial_response = fetch_de_de(client)
         initial_data = initial_response.json()
         assert initial_response.status_code == 200
         assert scheduled_surface_http_client.post.call_count == 1
@@ -1015,7 +1281,7 @@ class TestCorpusApiCaching:
         )
 
         # Try to fetch data when cache expired
-        new_response = fetch_en_us(client)
+        new_response = fetch_de_de(client)
         new_data = new_response.json()
 
         assert new_response.status_code == 200
@@ -1024,13 +1290,15 @@ class TestCorpusApiCaching:
 
 
 class TestCuratedRecommendationsMetrics:
-    """Tests that the right metrics are recorded for curated-recommendations requests"""
+    """Tests that the right metrics are recorded for curated-recommendations requests.
+    Uses de-DE locale to test scheduled_surface backend metrics.
+    """
 
     def test_metrics_cache_miss(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are not yet cached."""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1045,11 +1313,11 @@ class TestCuratedRecommendationsMetrics:
     def test_metrics_cache_hit(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are cached."""
         # The first call populates the cache.
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # This test covers only the metrics emitted from the following cached call.
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1086,7 +1354,7 @@ class TestCuratedRecommendationsMetrics:
 
         scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
-        fetch_en_us(client)
+        fetch_de_de(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1197,26 +1465,22 @@ class TestSections:
         "surface_id",
         [
             SurfaceId.NEW_TAB_EN_US,
-            SurfaceId.NEW_TAB_DE_DE,
+            SurfaceId.NEW_TAB_EN_GB,
         ],
     )
     def test_section_translations(self, surface_id):
-        """Check that there is a translation for every topic and top_stories_section.
-        Currently, for en-US and DE.
-        """
-        # Define the mapping of strings to be replaced, use the Topic enum
-        expected_translation_keys = [topic.value for topic in Topic]
-        # top-stories is not in the Topic enum, do separately
-        expected_translation_keys.append("top-stories")
+        """Check that there is a translation for 'top-stories' (the only key used).
 
+        Section titles come from the backend API. Only the 'top-stories' key is
+        used for client-side localization of the Popular Today section title.
+        """
         # Get the localized titles for the current surface_id
         localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
-        # Assert that each section title has a translation
-        for key in expected_translation_keys:
-            assert key in localized_titles and localized_titles[key], (
-                f"Missing translation for '{key}' in " f"{surface_id}"
-            )
+        # Assert top-stories has a translation (the only key used)
+        assert (
+            "top-stories" in localized_titles and localized_titles["top-stories"]
+        ), f"Missing translation for 'top-stories' in {surface_id}"
 
     def test_corpus_sections_feed_content(
         self,
@@ -1252,8 +1516,8 @@ class TestSections:
         assert "music" in sections
 
         # headlines section should not be in the final response even if present in the corpus-api response
-        # it should only be available when headlines_section experiment is enabled
-        assert "headlines_section" not in sections
+        # it should only be available when headlines experiment is enabled
+        assert "headlines" not in sections
 
         # assert IAB metadata is present in ML sections (there are 8 of them)
         expected_iab_metadata = {
@@ -1289,8 +1553,8 @@ class TestSections:
     )
     def test_sections_legacy_holdback(self, experiment_payload, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for different locales, using
-        crawled feeds. Note this also is sent in non-US countries
+        when requesting the 'sections' feed for different locales.
+        Note this also is sent in non-US countries
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1307,13 +1571,13 @@ class TestSections:
         # Assert layouts are cycled
         assert_section_layouts_are_cycled(sections)
 
-        # The only sections are topic sections or "top_stories_section"
-        assert all(
-            section_name == "top_stories_section" or section_name in Topic
-            for section_name in sections
-        )
+        # Should have top_stories_section and legacy topic sections
+        # (may also have manually created sections)
+        assert "top_stories_section" in sections
+        legacy_topics = {topic.value for topic in Topic}
+        legacy_sections_present = [sid for sid in sections if sid in legacy_topics]
+        assert len(legacy_sections_present) > 0, "Should have at least some legacy topic sections"
 
-    @pytest.mark.parametrize("locale", ["en-US", "de-DE"])
     @pytest.mark.parametrize(
         "experiment_payload",
         [
@@ -1324,10 +1588,11 @@ class TestSections:
             },
         ],
     )
-    def test_sections_feed_content(self, locale, experiment_payload, caplog, client: TestClient):
+    def test_sections_feed_content(self, experiment_payload, caplog, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
-        when requesting the 'sections' feed for different locales.
+        when requesting the 'sections' feed for en-US locale.
         """
+        locale = "en-US"
         response = client.post(
             "/api/v1/curated-recommendations",
             json={"locale": locale, "feeds": ["sections"]} | experiment_payload,
@@ -1358,14 +1623,16 @@ class TestSections:
             recs = section["recommendations"]
             assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
-        # Check if non-ML experiment, only legacy sections returned
+        # Check section types based on experiment
         legacy_topics = {topic.value for topic in Topic}
 
         if experiment_payload.get("experimentName") != ExperimentName.ML_SECTIONS_EXPERIMENT.value:
-            # Non-ML sections experiment: All section keys (excluding top_stories) must be in legacy topics
+            # Non-ML sections experiment: Should have legacy topics and may have manually created sections
+            # but should not have ML subtopics
             for sid in sections:
-                if sid != "top_stories_section":
-                    assert sid in legacy_topics
+                if sid != "top_stories_section" and sid not in legacy_topics:
+                    # Non-legacy sections should only be manually created sections
+                    assert is_manual_section(sid), f"Unexpected section type: {sid}"
 
         # Check the recs used in top_stories_section are removed from their original ML sections.
         top_story_ids = {
@@ -1395,28 +1662,16 @@ class TestSections:
                 == "Insider advice on where to eat, what to see, and how to enjoy the city like a local."
             )
 
-    @pytest.mark.parametrize(
-        "branch,should_have_manual,should_have_ml",
-        [
-            ("treatment", True, False),
-            ("control", False, True),
-        ],
-    )
-    def test_custom_sections_experiment(
-        self, branch: str, should_have_manual: bool, should_have_ml: bool, client: TestClient
-    ):
-        """Test custom sections experiment filters sections by createSource.
+    def test_sections_include_both_manual_and_ml(self, client: TestClient):
+        """Test that sections feed includes both manually created and ML-generated sections.
 
-        Treatment: Returns only MANUAL sections (createSource == "MANUAL")
-        Control: Excludes MANUAL sections (only ML sections returned)
+        Both MANUAL and ML sections should be returned together.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": branch,
             },
         )
         data = response.json()
@@ -1430,30 +1685,193 @@ class TestSections:
         # top_stories_section should always be present
         assert "top_stories_section" in sections
 
-        manual_section_id = "d532b687-108a-4edb-a076-58a6945de714"
+        # Should have ML sections (legacy topics)
+        legacy_topics = {topic.value for topic in Topic}
+        ml_sections_found = [sid for sid in sections if sid in legacy_topics]
+        assert len(ml_sections_found) > 0, "Should have at least some ML legacy topic sections"
 
-        if should_have_manual:
-            # Treatment: Should NOT have ML sections
-            assert "music" not in sections
-            assert "nfl" not in sections
-            assert "tv" not in sections
-            assert "movies" not in sections
-            assert "nba" not in sections
+        # Check if any manually created sections appear (they may or may not, depending on
+        # whether they have enough items after top stories are removed)
+        manual_sections = [sid for sid in sections if is_manual_section(sid)]
+        if manual_sections:
+            # If the "Tech stuff" manual section appears, verify it has the correct title
+            tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
+            if tech_stuff_id in sections:
+                assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
-            # The MANUAL section "Tech stuff" may or may not appear depending on whether
-            # it has enough items after top stories are removed, but if it does appear,
-            # verify it has the correct title
-            if manual_section_id in sections:
-                assert sections[manual_section_id]["title"] == "Tech stuff"
-        else:
-            # Control: Should NOT have the MANUAL section
-            assert manual_section_id not in sections
+    @pytest.mark.parametrize(
+        "experiment_branch",
+        [
+            CONTEXTUAL_RANKING_TREATMENT_TZ,
+            CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+        ],
+    )
+    def test_sections_contextual_ranking(self, client: TestClient, experiment_branch):
+        """Test that sections feed includes both manually created and ML-generated sections for contextual ranking.
 
-            # Should have ML sections (legacy topics only since not ML experiment)
-            legacy_topics = {topic.value for topic in Topic}
-            for sid in sections:
-                if sid != "top_stories_section":
-                    assert sid in legacy_topics
+        Both MANUAL and ML sections should be returned together.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": experiment_branch,
+            },
+        )
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+
+        # Should have ML sections (legacy topics)
+        legacy_topics = {topic.value for topic in Topic}
+        ml_sections_found = [sid for sid in sections if sid in legacy_topics]
+        assert len(ml_sections_found) > 0, "Should have at least some ML legacy topic sections"
+
+        # Check if any manually created sections appear (they may or may not, depending on
+        # whether they have enough items after top stories are removed)
+        manual_sections = [sid for sid in sections if is_manual_section(sid)]
+        if manual_sections:
+            # If the "Tech stuff" manual section appears, verify it has the correct title
+            tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
+            if tech_stuff_id in sections:
+                assert sections[tech_stuff_id]["title"] == "Tech stuff"
+
+    def test_sections_contextual_ranking_result_for_timezone(
+        self,
+        ml_recommendations_backend,
+        engagement_backend,
+        sections_backend,
+        cohort_model_backend,
+        client: TestClient,
+    ):
+        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
+        because the ml_recommendations_backend relies on it to find fresh items, which are limited
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "utc_offset": 16,
+                "region": "US",
+            },
+        )
+
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] == ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "utc_offset": 0,
+                "region": "US",
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        # Confirm that we have different content for different timezone
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] != ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
+
+    def test_sections_inferred_contextual_ranking_result_for_cohort(
+        self,
+        ml_recommendations_backend,
+        engagement_backend,
+        sections_backend,
+        cohort_model_backend,
+        client: TestClient,
+    ):
+        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
+        because the ml_recommendations_backend relies on it to find fresh items, which are limited
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value,
+                "experimentBranch": LOCAL_AND_SERVER_V3_BRANCH_NAME,
+                "region": "US",
+                "inferredInterests": {
+                    "values": ["1000", "1000", "1000", "1000", "0001", "1000", "0001", "0001"],
+                    "model_id": "fake",
+                },
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
+                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
+                "region": "US",
+                "inferredInterests": {
+                    "values": ["1001", "1001", "1001", "1001", "0001", "1001", "0001", "0001"],
+                    "model_id": "fake",
+                },
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+        # Confirm that we have different content than for our 0 cohort item, indicating we
+        # got data from aother cohort or have fallen back to global US rankings
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
 
     @pytest.mark.parametrize(
         "sections_payload",
@@ -1564,12 +1982,7 @@ class TestSections:
     ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale. Sections requested to be boosted (followed)
-        should be boosted and isFollowed attribute set accordingly.
-
-        Also tests that blocked/followed sections work correctly with RSS vs. Zyte experiment:
-        1. Section IDs are cleaned (no _crawl suffix) before blocked/followed evaluation
-        2. Blocked/followed sections are properly handled regardless of experiment branch
-        3. The experiment filtering doesn't interfere with user preferences
+        should be boosted and isFollowed attribute set accordingly, regardless of experiment toggles.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1596,8 +2009,7 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # headlines_crawl section should not be in the final response even if present in the corpus-api response
-        # it should only be available when headlines_section experiment is enabled
+        # headlines_section should not be in the final response unless that experiment is enabled
         assert "headlines_section" not in sections
 
         # assert isFollowed & isBlocked have been correctly set
@@ -1626,20 +2038,6 @@ class TestSections:
             assert data["feeds"]["health"]["isFollowed"]
             assert not data["feeds"]["health"]["isBlocked"]
 
-        # For RSS vs. Zyte experiment, verify that section IDs don't have _crawl suffix
-        experiment_name = experiment_payload.get("experimentName")
-        experiment_branch = experiment_payload.get("experimentBranch")
-        if not (
-            experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
-            and experiment_branch == "control"
-        ):
-            for section_id in sections:
-                if section_id != "top_stories_section":
-                    assert not section_id.endswith("_crawl"), (
-                        f"Section ID {section_id} should not have _crawl suffix "
-                        f"in response (experiment: {experiment_payload})"
-                    )
-
     @pytest.mark.parametrize(
         "experiment_payload",
         [
@@ -1657,14 +2055,10 @@ class TestSections:
             },
         ],
     )
-    def test_rss_vs_zyte_experiment_sections_filtering(
-        self, caplog, experiment_payload, sections_response_data, client: TestClient
+    def test_sections_filtering_by_region_and_holdback(
+        self, caplog, experiment_payload, client: TestClient
     ):
-        """Test that the Crawled topics vs Scheduled holdback experiment correctly filters sections based on experiment branch.
-
-        - Treatment: crawl-exclusive corpus items
-        - Control/no-experiment: regular corpus items only
-        """
+        """Test that section filtering respects region and holdback states."""
         print(json.dumps(experiment_payload))
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1676,8 +2070,7 @@ class TestSections:
 
         sections = {name: section for name, section in data["feeds"].items() if section}
 
-        # headlines_crawl section should not be in the final response even if present in the corpus-api response
-        # it should only be available when headlines_section experiment is enabled
+        # headlines_section should not be present unless the daily briefing experiment is enabled separately.
         assert "headlines_section" not in sections
 
         assert len(sections) >= 4
@@ -1686,59 +2079,33 @@ class TestSections:
             if sid != "top_stories_section":
                 assert not sid.endswith("_crawl"), f"{sid} shouldn't have _crawl suffix"
 
-        crawl_ids: set[Any] = set()
-        regular_ids: set[Any] = set()
-        for section in sections_response_data["data"]["getSections"]:
-            items = section.get("sectionItems", [])
-            target_set = crawl_ids if section["externalId"].endswith("_crawl") else regular_ids
-            for item in items:
-                target_set.add(item["corpusItem"]["id"])
-
-        crawl_only = crawl_ids - regular_ids
-        regular_only = regular_ids - crawl_ids
-
-        response_ids = {
-            rec["corpusItemId"]
-            for sid, section in sections.items()
-            if sid != "top_stories_section"
-            for rec in section.get("recommendations", [])
-            if "corpusItemId" in rec
-        }
-
-        experiment_name = experiment_payload.get("experimentName")
-        is_crawl_data = (
-            not (
-                experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
-                and experiment_payload.get("experimentBranch") == "control"
-            )
-        ) and experiment_payload.get("region") == "US"
-
-        crawl_count = len(response_ids & crawl_only)
-        regular_count = len(response_ids & regular_only)
-
-        if is_crawl_data:
-            assert crawl_count >= 50, f"Crawled conetnet needs 50+ crawl items, got {crawl_count}"
-            assert regular_count >= 0, "Treatment missing regular items from subtopics"
-        else:
-            assert (
-                regular_count >= 50
-            ), f"Legacy sections needs 50+ regular items, got {regular_count}"
-            assert (
-                crawl_count == 0
-            ), f"Legacy sections shouldn't have crawl items, got {crawl_count}"
-
         legacy_topics = {topic.value for topic in Topic}
-        is_expected_to_have_subtopics = is_crawl_data  # all crawl data has subtopics
+        experiment_name = experiment_payload.get("experimentName")
+        experiment_branch = experiment_payload.get("experimentBranch")
+        region = experiment_payload.get("region")
+        expect_subtopics = region == "US" and not (
+            experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
+            and experiment_branch == "control"
+        )
 
-        if is_expected_to_have_subtopics:
-            non_legacy = [
-                s for s in sections if s not in legacy_topics and s != "top_stories_section"
-            ]
-            assert non_legacy, "Treatment-crawl-plus-subtopics needs subtopic sections"
+        # Categorize non-legacy, non-top_stories sections
+        non_legacy_section_ids = [
+            sid
+            for sid in sections
+            if sid not in legacy_topics and sid not in {"top_stories_section"}
+        ]
+        ml_subtopic_section_ids = [
+            sid for sid in non_legacy_section_ids if not is_manual_section(sid)
+        ]
+
+        if expect_subtopics:
+            assert ml_subtopic_section_ids, "Expected ML subtopic sections for US treatment"
         else:
-            for sid in sections:
-                if sid != "top_stories_section":
-                    assert sid in legacy_topics, f"Should only have legacy topics, got {sid}"
+            assert (
+                not ml_subtopic_section_ids
+            ), f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
+
+        # Manually created sections may appear regardless of experiment settings
 
     def test_daily_briefing_experiment_headlines_section_returned(self, client: TestClient):
         """Test that the Headlines section is returned when the daily briefing experiment is enabled.
@@ -1753,7 +2120,7 @@ class TestSections:
                 "locale": "en-US",
                 "feeds": ["sections"],
                 "experimentName": ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
-                "experimentBranch": "treatment",
+                "experimentBranch": DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
                 "region": "US",
             },
         )
@@ -1766,9 +2133,9 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # Assert headlines_crawl section is returned and is renamed to "headlines_section"
-        assert "headlines_section" in sections
-        headlines_section = sections.get("headlines_section")
+        # Assert headlines section is returned as "headlines"
+        assert "headlines" in sections
+        headlines_section = sections.get("headlines")
         if headlines_section is not None:
             assert headlines_section["receivedFeedRank"] == 0
             assert headlines_section["title"] == "Headlines"
@@ -1783,24 +2150,68 @@ class TestSections:
             assert top_stories_section["layout"]["name"] == "4-medium-small-1-ad"
 
         remaining_sections = sorted(
-            (sid for sid in sections if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in sections if sid not in ("headlines", "top_stories_section")),
             key=lambda sid: sections[sid]["receivedFeedRank"],
         )
 
         # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
-        expected_order = ["headlines_section", "top_stories_section"] + remaining_sections
+        expected_order = ["headlines", "top_stories_section"] + remaining_sections
         for idx, sid in enumerate(expected_order):
             assert sections[sid]["receivedFeedRank"] == idx
 
         # Check the recs used in headlines section are removed from their original sections.
         headlines_story_ids = {
-            rec["corpusItemId"] for rec in sections["headlines_section"]["recommendations"]
+            rec["corpusItemId"] for rec in sections["headlines"]["recommendations"]
         }
 
         for sid, sec in sections.items():
-            if sid != "headlines_section":
+            if sid != "headlines":
                 for rec in sec["recommendations"]:
                     assert rec["corpusItemId"] not in headlines_story_ids
+
+    def test_daily_briefing_without_popular_excludes_top_stories(self, client: TestClient):
+        """Test that Popular Today is NOT returned when in briefing-without-popular branch.
+
+        - Headlines section should be ranked on the very top (rank == 0)
+        - Popular Today (top_stories_section) should NOT be present
+        - The remaining sections should be ranked right after headlines (rank == 1...N)
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                "experimentBranch": DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                "region": "US",
+            },
+        )
+
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Assert headlines section is returned
+        assert "headlines" in sections
+        headlines_section = sections.get("headlines")
+        if headlines_section is not None:
+            assert headlines_section["receivedFeedRank"] == 0
+            assert headlines_section["title"] == "Headlines"
+
+        # Assert that top_stories_section is NOT present
+        assert "top_stories_section" not in sections
+
+        # Verify remaining sections start at rank 1
+        remaining_sections = sorted(
+            (sid for sid in sections if sid != "headlines"),
+            key=lambda sid: sections[sid]["receivedFeedRank"],
+        )
+        for idx, sid in enumerate(remaining_sections, start=1):
+            assert sections[sid]["receivedFeedRank"] == idx
 
     def test_curated_recommendations_with_sections_feed_removes_blocked_topics(
         self, caplog, client: TestClient
@@ -1952,34 +2363,17 @@ class TestSections:
         # assert 400 is returned for invalid followedAt
         assert response.status_code == 400
 
-    @pytest.mark.parametrize(
-        "locale, expected_titles",
-        [
-            (
-                "en-US",
-                {
-                    "top_stories_section": "Popular Today",
-                    "arts": "Entertainment",
-                    "education": "Education",
-                    "sports": "Sports",
-                },
-            ),
-            (
-                "de-DE",
-                {
-                    "top_stories_section": "Meistgelesen",
-                    "Career": "Karriere",
-                    "Education": "Bildung",
-                    "Sports": "Sport",
-                },
-            ),
-        ],
-    )
-    def test_sections_feed_titles(self, locale, expected_titles, client: TestClient):
-        """Test the curated recommendations endpoint 'sections' have the expected (sub)titles."""
+    def test_sections_feed_titles(self, client: TestClient):
+        """Test the curated recommendations endpoint 'sections' have the expected titles."""
+        expected_titles = {
+            "top_stories_section": "Popular Today",
+            "arts": "Entertainment",
+            "education": "Education",
+            "sports": "Sports",
+        }
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": locale, "feeds": ["sections"]},
+            json={"locale": "en-US", "feeds": ["sections"]},
         )
         data = response.json()
         feeds = data["feeds"]
@@ -2050,7 +2444,7 @@ class TestSections:
                 "experimentName": "optin-new-tab-ml-sections",
                 "experimentBranch": "treatment",
                 "utc_offset": 17,
-                "coarse_os": "windows",
+                "coarse_os": "win",
                 "surface_id": "",
                 "locale": "en-US",
                 "region": "US",
@@ -2059,7 +2453,6 @@ class TestSections:
             },
         )
         data = response.json()
-
         interest_picker_response = data["interestPicker"]
         if enable_interest_picker:
             assert interest_picker_response is not None
@@ -2079,15 +2472,17 @@ class TestSections:
     )
     def test_ml_sections_thompson_sampling(self, repeat, engagement_backend, client: TestClient):
         """Statistically verify ML sections order by engagement (higher CTR → lower feed rank)."""
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-        )
+        payload = {
+            "locale": "en-US",
+            "feeds": ["sections"],
+            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+            "experimentBranch": "treatment",
+        }
+        seed_response = client.post("/api/v1/curated-recommendations", json=payload)
+        assert seed_response.status_code == 200
+        seed_deterministic_ctr_overrides(engagement_backend, seed_response.json()["feeds"])
+
+        response = client.post("/api/v1/curated-recommendations", json=payload)
         assert response.status_code == 200
         feeds = response.json()["feeds"]
 
@@ -2153,7 +2548,9 @@ class TestSections:
         assert len(sorted_sections) > 3
 
         # define interest vector, reversed from previous order
-        interests: dict[str, float | str] = {sorted_sections[i]: (1 - i / 8) for i in range(4)}
+        interests: dict[str, float | str] = {
+            sorted_sections[i]: (1 - i / 8) * 10 for i in range(4)
+        }
         interests["model_id"] = DEFAULT_PRODUCTION_MODEL_ID
         # make the api call
         response = client.post(
@@ -2185,7 +2582,7 @@ class TestSections:
             "sports": 0.0,
             "other": 0.0,
             "arts": 0.5,
-            "model_id": CTR_LIMITED_TOPIC_MODEL_ID_V1_B,
+            "model_id": DEFAULT_PRODUCTION_MODEL_ID,
         }
 
         # make the api call
@@ -2220,15 +2617,17 @@ class TestSections:
         """Sections should be ordered so that those with higher average CTR
         among their top 3 items get a better (lower) feed rank.
         """
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-        )
+        payload = {
+            "locale": "en-US",
+            "feeds": ["sections"],
+            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+            "experimentBranch": "treatment",
+        }
+        seed_response = client.post("/api/v1/curated-recommendations", json=payload)
+        assert seed_response.status_code == 200
+        seed_deterministic_ctr_overrides(engagement_backend, seed_response.json()["feeds"])
+
+        response = client.post("/api/v1/curated-recommendations", json=payload)
         assert response.status_code == 200
         feeds = response.json()["feeds"]
 
@@ -2331,20 +2730,31 @@ class TestSections:
         client: TestClient,
     ):
         """Verify takedown_reported_recommendations behaves correctly."""
-        corpus_rec_id = "080de671-e4de-4a3d-863f-8c6dd6980069"
+        payload = {
+            "locale": "en-US",
+            "feeds": ["sections"],
+            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
+            "experimentBranch": "treatment",
+        }
+
+        baseline_response = client.post("/api/v1/curated-recommendations", json=payload)
+        assert baseline_response.status_code == 200
+        baseline_feeds = baseline_response.json()["feeds"]
+        baseline_ids = [
+            rec["corpusItemId"]
+            for sid, section in baseline_feeds.items()
+            if section
+            for rec in section.get("recommendations", [])
+        ]
+        assert baseline_ids, "Expected at least one recommendation in baseline response"
+        corpus_rec_id = baseline_ids[0]
 
         if reports is not None and impressions is not None:
             engagement_backend.metrics.update({corpus_rec_id: (reports, impressions)})
 
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-        )
+        caplog.clear()
+
+        response = client.post("/api/v1/curated-recommendations", json=payload)
 
         assert response.status_code == 200
         feeds = response.json()["feeds"]
@@ -2361,6 +2771,128 @@ class TestSections:
             assert any("Excluding reported recommendation" in r.message for r in caplog.records)
         else:
             assert corpus_rec_id in response_ids
+            assert not any(
+                "Excluding reported recommendation" in r.message for r in caplog.records
+            )
+
+    @pytest.mark.parametrize(
+        "region",
+        ["GB", "IE"],
+    )
+    def test_uk_sections_enabled(self, region, client: TestClient):
+        """Test that UK/IE users with feeds=['sections'] get sections."""
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-GB",
+                "region": region,
+                "feeds": ["sections"],
+            },
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
+
+        # Should have feeds with sections
+        assert data["feeds"] is not None
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Should have top_stories_section and topic sections
+        assert len(sections) >= 1
+        assert "top_stories_section" in sections
+
+        # Verify top_stories_section has the correct title
+        assert sections["top_stories_section"]["title"] == "Popular Today"
+
+        # data array should be empty (all recommendations in feeds)
+        assert len(data["data"]) == 0
+
+
+def test_uk_sections_with_gb_backend_data(
+    scheduled_surface_backend: ScheduledSurfaceBackend,
+    sections_gb_backend: SectionsProtocol,
+    engagement_backend: EngagementBackend,
+    prior_backend: PriorBackend,
+    local_model_backend: LocalModelBackend,
+    ml_recommendations_backend: MLRecsBackend,
+    cohort_model_backend: CohortModelBackend,
+    client: TestClient,
+):
+    """Test that GB sections with real GB-style externalIds are properly included.
+
+    This test uses sections_gb.json which has GB-style externalIds like 'technology',
+    'entertainment', 'politics' instead of US-style 'tech', 'arts', 'government'.
+    """
+    # Create a provider specifically with GB sections backend
+    gb_provider = CuratedRecommendationsProvider(
+        scheduled_surface_backend=scheduled_surface_backend,
+        engagement_backend=engagement_backend,
+        prior_backend=prior_backend,
+        sections_backend=sections_gb_backend,
+        local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
+        cohort_model_backend=cohort_model_backend,
+    )
+
+    # Override the provider dependency for this test
+    app.dependency_overrides[get_provider] = lambda: gb_provider
+
+    try:
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-GB",
+                "region": "GB",
+                "feeds": ["sections"],
+            },
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
+
+        # Should have feeds with sections
+        assert data["feeds"] is not None, "Expected feeds to be returned but got None"
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Should have top_stories_section and topic sections
+        assert (
+            len(sections) >= 2
+        ), f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
+        assert "top_stories_section" in sections
+
+        # Verify that GB-specific sections are present
+        # GB sections have externalIds like 'technology', 'entertainment', 'politics'
+        # (not US-style 'tech', 'arts', 'government')
+        gb_expected_sections = {
+            "technology",
+            "entertainment",
+            "politics",
+            "gaming",
+            "science",
+            "personal-finance",
+        }
+        found_gb_sections = set(sections.keys()) & gb_expected_sections
+        assert len(found_gb_sections) >= 1, (
+            f"Expected at least one GB-style section from {gb_expected_sections}, "
+            f"but found sections: {list(sections.keys())}"
+        )
+
+        # Verify that locale suffixes are stripped from section IDs
+        # The backend returns IDs like "food__lEN_GB" but they should be normalized to "food"
+        sections_with_suffix = [s for s in sections.keys() if s.endswith("__lEN_GB")]
+        assert (
+            len(sections_with_suffix) == 0
+        ), f"Section IDs should not contain '__lEN_GB' suffix, but found: {sections_with_suffix}"
+
+        # data array should be empty (all recommendations in feeds)
+        assert len(data["data"]) == 0
+    finally:
+        # Reset the provider override
+        app.dependency_overrides[get_provider] = lambda: None
 
 
 def test_curated_recommendations_enriched_with_icons(
@@ -2369,7 +2901,9 @@ def test_curated_recommendations_enriched_with_icons(
     fixture_request_data,
     client: TestClient,
 ):
-    """Test the enrichment of a curated recommendation with an added icon-url."""
+    """Test the enrichment of a curated recommendation with an added icon-url.
+    Uses de-DE locale to test scheduled_surface backend icon enrichment.
+    """
     # Set up the manifest data first
     manifest_provider.manifest_data.domains = [
         Domain(
@@ -2392,7 +2926,7 @@ def test_curated_recommendations_enriched_with_icons(
                         "id": "scheduledSurfaceItemId-ABC",
                         "corpusItem": {
                             "id": "corpusItemId-XYZ",
-                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-en-us",
+                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-de-de",
                             "title": "Some MS Article",
                             "excerpt": "All about Microsoft something",
                             "topic": "tech",
@@ -2413,7 +2947,7 @@ def test_curated_recommendations_enriched_with_icons(
 
     response = client.post(
         "/api/v1/curated-recommendations",
-        json={"locale": "en-US"},
+        json={"locale": "de-DE"},
     )
     assert response.status_code == 200
 
@@ -2422,7 +2956,7 @@ def test_curated_recommendations_enriched_with_icons(
     assert len(items) == 1
 
     item = items[0]
-    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-en-us"
+    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-de-de"
 
     assert "iconUrl" in item
     assert (

@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 from freezegun import freeze_time
 
-from merino.jobs.navigational_suggestions.local_mode import (
+from merino.jobs.navigational_suggestions.modes.local_mode_helpers import (
     LocalMetricsCollector,
     LocalDomainDataProvider,
 )
-from merino.jobs.navigational_suggestions.custom_domains import CUSTOM_DOMAINS
+from merino.jobs.navigational_suggestions.enrichments.custom_domains import CUSTOM_DOMAINS
 
 
 @pytest.fixture(scope="function")

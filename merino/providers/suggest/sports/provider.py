@@ -85,7 +85,9 @@ class SportsDataProvider(BaseProvider):
         if not sreq.query:
             return []
         if not self.backend:
-            logger.error(f"{LOGGING_TAG} Sports backend unavailable due to configuration error")
+            logger.error(
+                f"{LOGGING_TAG} Sports backend unavailable due to configuration error"
+            )
             return []
         self.metrics_client.increment("sports.suggestions.count")
         # Both query and build suggestion have the ability to differentiate
@@ -121,7 +123,10 @@ class SportsDataProvider(BaseProvider):
         # See merino.providers.suggest.sports.DEFAULT_INTENT_WORDS
         #
         if any(map(lambda w: w.lower() in self.intent_words, query.split())):
-            return query
+            # if we found an intent word, strip it out of the query, else we won't return any results.
+            return " ".join(
+                filter(lambda w: w.lower() not in self.intent_words, query.split())
+            )
         return ""
 
     def validate(self, srequest: SuggestionRequest) -> None:
@@ -152,7 +157,9 @@ class SportsDataProvider(BaseProvider):
                 f"{LOGGING_TAG} Multiple Sports provided to build_suggestion: {query}: {sport_name}"
             )
             return None
-        self.metrics_client.increment("sports.suggestions.result", tags={"sport": sport_name})
+        self.metrics_client.increment(
+            "sports.suggestions.result", tags={"sport": sport_name}
+        )
         return BaseSuggestion(
             title=f"{sport_name}",  # IGNORED
             url=HttpUrl(IGNORED_SUGGESTION_URL),  # IGNORED
