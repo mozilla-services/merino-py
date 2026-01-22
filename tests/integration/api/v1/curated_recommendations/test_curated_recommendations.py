@@ -49,6 +49,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     CohortModelBackend,
     ContextualArticleRankings,
     InferredLocalModel,
+    InterestVectorConfig,
     ModelData,
     ModelType,
     DayTimeWeightingConfig,
@@ -310,7 +311,19 @@ class MockLocalModelBackend(LocalModelBackend):
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],
             ),
-            interest_vector={},
+            interest_vector={
+                k: InterestVectorConfig(
+                    features={f"s_{k}": 1}, thresholds=[0.3, 0.5, 0.8], diff_p=0.75, diff_q=0.25
+                )
+                for k in [
+                    Topic.SPORTS.value,
+                    Topic.ARTS.value,
+                    Topic.POLITICS.value,
+                    Topic.PARENTING.value,
+                    Topic.BUSINESS.value,
+                    Topic.FOOD.value,
+                ]
+            },
         )
         return InferredLocalModel(
             model_id="fake", model_version=0, surface_id=surface_id, model_data=model_data
