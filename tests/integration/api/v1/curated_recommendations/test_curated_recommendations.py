@@ -1886,17 +1886,6 @@ class TestSections:
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
 
-    def test_sections_inferred_contextual_ranking_no_clicks(
-        self,
-        ml_recommendations_backend,
-        engagement_backend,
-        sections_backend,
-        cohort_model_backend,
-        client: TestClient,
-    ):
-        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
-        because the ml_recommendations_backend relies on it to find fresh items, which are limited
-        """
         response = client.post(
             "/api/v1/curated-recommendations",
             json={
