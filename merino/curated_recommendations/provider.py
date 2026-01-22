@@ -252,7 +252,7 @@ class CuratedRecommendationsProvider:
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
                 # Don't apply cohort model if we have no known interests (clicks) at all
-                is_empty_scores = all(value == 0.0 for value in scores.values())
+                is_empty_scores = all(value < 0.3 for value in scores.values())
                 if interest_cohort_model_backend is not None and not is_empty_scores:
                     cohort = interest_cohort_model_backend.get_cohort_for_interests(
                         interests=dp_values_joined,
