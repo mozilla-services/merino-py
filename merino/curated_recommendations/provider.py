@@ -243,12 +243,6 @@ class CuratedRecommendationsProvider:
                 cohort: str | None = None
                 dp_values_joined = "".join(dp_values)  # Join the strings for cohort lookup
                 numerical_value = dp_values_joined.count("1")
-                if interest_cohort_model_backend is not None:
-                    cohort = interest_cohort_model_backend.get_cohort_for_interests(
-                        interests=dp_values_joined,
-                        model_id=model_id,
-                        training_run_id=cohort_model_training_run_id,
-                    )
                 # Decode the DP values
                 decoded = inferred_local_model.decode_dp_interests(dp_values, model_id)
                 # Extract just the numeric scores
@@ -257,6 +251,14 @@ class CuratedRecommendationsProvider:
                     for k, v in decoded.items()
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
+                # Don't apply cohort model if we have no known interests (clicks) at all
+                is_empty_scores = all(value < 0.3 for value in scores.values())
+                if interest_cohort_model_backend is not None and not is_empty_scores:
+                    cohort = interest_cohort_model_backend.get_cohort_for_interests(
+                        interests=dp_values_joined,
+                        model_id=model_id,
+                        training_run_id=cohort_model_training_run_id,
+                    )
                 return ProcessedInterests(
                     model_id=model_id,
                     scores=scores,
