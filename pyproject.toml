@@ -128,6 +128,8 @@ skips = ["B101", "B104", "B311"]
 exclude_dirs = [
   # Data file only
   "merino/utils/domain_categories/domain_category_mapping.py",
+  # Test utilities
+  "tests/utils/test_probe.py",
 ]
 
 [tool.mypy]
@@ -147,7 +149,17 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v -r s --cov=merino"
+norecursedirs = [
+  "tests/data/",
+  "tests/utils/",
+  "tests/load/",
+]
+addopts = [
+  "-v",
+  "-r s",
+  "--cov=merino",
+  "--import-mode=importlib",
+]
 filterwarnings = [
   # Transform warnings into errors.
   # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html

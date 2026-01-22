@@ -15,13 +15,6 @@ from testcontainers.elasticsearch import ElasticSearchContainer  # noqa
 from elasticsearch import AsyncElasticsearch  # noqa
 
 
-# When the conftest plugin is loaded the following fixtures will be loaded as well.
-pytest_plugins = [
-    "tests.integration.fixtures.gcs",
-    "tests.integration.fixtures.metrics",
-    "tests.integration.api.v1.curated_recommendations.corpus_backends.fixtures",
-]
-
 # Temporary skip for further investigation
 collect_ignore = ["providers/suggest/sports/backends/test_sportsdata.py"]
 
