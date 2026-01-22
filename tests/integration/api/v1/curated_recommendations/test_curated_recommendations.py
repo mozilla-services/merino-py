@@ -43,7 +43,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
     DEFAULT_PRODUCTION_MODEL_ID,
-    LOCAL_AND_SERVER_V3_BRANCH_NAME,
+    LOCAL_AND_SERVER_V4_BRANCH_NAME,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     CohortModelBackend,
@@ -1822,7 +1822,7 @@ class TestSections:
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value,
+                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value,
                 "experimentBranch": LOCAL_AND_SERVER_V3_BRANCH_NAME,
                 "region": "US",
                 "inferredInterests": {
@@ -1872,6 +1872,42 @@ class TestSections:
         assert sections["top_stories_section"]["recommendations"][0][
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+
+    def test_sections_inferred_contextual_ranking_no_clicks(
+        self,
+        ml_recommendations_backend,
+        engagement_backend,
+        sections_backend,
+        cohort_model_backend,
+        client: TestClient,
+    ):
+        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
+        because the ml_recommendations_backend relies on it to find fresh items, which are limited
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value,
+                "experimentBranch": LOCAL_AND_SERVER_V4_BRANCH_NAME,
+                "region": "US",
+                "inferredInterests": {
+                    # Interst vector with no clicks. This has different handling pattern
+                    "values": ["1000", "1000", "1000", "1000", "1000", "1000", "1000", "1000"],
+                    "model_id": "fake",
+                },
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+        assert(len(sections) > 1)
+
+
 
     @pytest.mark.parametrize(
         "sections_payload",
