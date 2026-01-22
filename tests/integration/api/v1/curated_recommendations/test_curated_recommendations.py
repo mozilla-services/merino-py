@@ -1823,7 +1823,7 @@ class TestSections:
                 "locale": "en-US",
                 "feeds": ["sections"],
                 "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value,
-                "experimentBranch": LOCAL_AND_SERVER_V3_BRANCH_NAME,
+                "experimentBranch": LOCAL_AND_SERVER_V4_BRANCH_NAME,
                 "region": "US",
                 "inferredInterests": {
                     "values": ["1000", "1000", "1000", "1000", "0001", "1000", "0001", "0001"],
@@ -1905,9 +1905,7 @@ class TestSections:
 
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
-        assert(len(sections) > 1)
-
-
+        assert len(sections) > 1
 
     @pytest.mark.parametrize(
         "sections_payload",
