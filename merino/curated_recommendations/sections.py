@@ -64,6 +64,7 @@ TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later secti
 HEADLINES_SECTION_KEY = "headlines"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
+IS_COHORT_FEATURE_DISABLED = True  # To be used when we want to disable the feature quickly
 
 
 def map_section_item_to_recommendation(
@@ -295,6 +296,9 @@ def is_inferred_contextual_ranking(personal_interests: ProcessedInterests | None
     We are using the property of the interest vector to evenly split users to contextual ranking.
     25% of inferred users are going to go to the contextual ranking via the modulo of the interest bits total
     """
+    if IS_COHORT_FEATURE_DISABLED:
+        return False
+
     INFERRED_ENABLED_MOD_SELECTOR = 4
     return (
         personal_interests is not None
