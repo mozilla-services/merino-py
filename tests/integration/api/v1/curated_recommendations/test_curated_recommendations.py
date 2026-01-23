@@ -65,6 +65,7 @@ from merino.curated_recommendations.protocol import (
     Locale,
     CoarseOS,
 )
+from merino.curated_recommendations.sections import IS_COHORT_FEATURE_DISABLED
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
@@ -1853,9 +1854,15 @@ class TestSections:
 
         # top_stories_section should always be present
         assert "top_stories_section" in sections
-        assert sections["top_stories_section"]["recommendations"][0][
-            "corpusItemId"
-        ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+
+        if IS_COHORT_FEATURE_DISABLED:
+            assert sections["top_stories_section"]["recommendations"][0][
+                "corpusItemId"
+            ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+        else:
+            assert sections["top_stories_section"]["recommendations"][0][
+                "corpusItemId"
+            ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
 
         response = client.post(
             "/api/v1/curated-recommendations",
