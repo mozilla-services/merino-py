@@ -72,7 +72,7 @@ async def test_sports_provider(mock_client: AsyncClient):
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["test"],
+        intent_words=["test"],
     )
     await provider.initialize()
     sreq = SuggestionRequest(query="test game jets", geolocation=Location())
@@ -96,14 +96,14 @@ async def test_sports_provider(mock_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_provider_query_non_trigger_word():
+async def test_provider_query_non_intent_word():
     """Test non-trigger word returns no suggestions."""
     backend = AsyncMock(spec=SportsDataBackend)
     provider = SportsDataProvider(
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["trigger word"],
+        intent_words=["trigger word"],
     )
     await provider.initialize()
     backend.query.return_value = []
@@ -120,7 +120,7 @@ async def test_provider_normalize_query():
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["trigger", "word"],
+        intent_words=["trigger", "word"],
     )
     success = "Trigger is my horse"
     fail = "Hi-ho Silver!"
@@ -138,7 +138,7 @@ async def test_provider_backend_failure():
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["trigger", "word"],
+        intent_words=["trigger", "word"],
     )
     await provider.initialize()
     assert provider.backend is None

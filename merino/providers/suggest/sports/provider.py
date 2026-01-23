@@ -46,8 +46,7 @@ class SportsDataProvider(BaseProvider):
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     enabled_by_default: bool
-    # A list of the intent words, excluding full team names.
-    trigger_words: list[str]
+    intent_words: list[str]
     score: float
 
     def __init__(
@@ -56,7 +55,7 @@ class SportsDataProvider(BaseProvider):
         backend: SportsDataBackend,
         name: str = PROVIDER_ID,
         enabled_by_default: bool = False,
-        trigger_words: list[str] = [],
+        intent_words: list[str] = [],
         score: float = BASE_SUGGEST_SCORE,
         *args,
         **kwargs,
@@ -66,7 +65,7 @@ class SportsDataProvider(BaseProvider):
         self._name = name
         self.url = HttpUrl(IGNORED_SUGGESTION_URL)
         self._enabled_by_default = enabled_by_default
-        self.trigger_words = trigger_words
+        self.intent_words = intent_words
         self.score = score
 
     async def initialize(self) -> None:
@@ -118,12 +117,12 @@ class SportsDataProvider(BaseProvider):
         """Perform whatever steps are required to normalize the user provided query string"""
         query = super().normalize_query(query)
 
-        # here, we test for the presence of at least one "trigger word".
-        # See merino.providers.suggest.sports.DEFAULT_TRIGGER_WORDS
+        # here, we test for the presence of at least one "intent word".
+        # See merino.providers.suggest.sports.DEFAULT_INTENT_WORDS
         #
-        if any(map(lambda w: w.lower() in self.trigger_words, query.split())):
+        if any(map(lambda w: w.lower() in self.intent_words, query.split())):
             # if we found an intent word, strip it out of the query, else we won't return any results.
-            return " ".join(filter(lambda w: w.lower() not in self.trigger_words, query.split()))
+            return " ".join(filter(lambda w: w.lower() not in self.intent_words, query.split()))
         return ""
 
     def validate(self, srequest: SuggestionRequest) -> None:
