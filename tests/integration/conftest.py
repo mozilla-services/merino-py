@@ -1,4 +1,4 @@
-# """Module for test configurations for the integration test directory."""
+"""Module for test configurations for the integration test directory."""
 #
 # import asyncio
 # import os
