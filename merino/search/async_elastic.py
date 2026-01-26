@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional
 from elasticsearch import AsyncElasticsearch
 
 
-class AsyncElasticsearchService:
+class AsyncElasticSearchAdapter:
     """
     Wrapper around AsyncElasticsearch.
 

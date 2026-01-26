@@ -9,7 +9,7 @@ from merino.configs import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
 from merino.jobs.wikipedia_indexer.utils import create_blocklist
-from merino.search.elastic import ElasticsearchService
+from merino.search.elastic import ElasticSearchAdapter
 from merino.utils.blocklists import WIKIPEDIA_TITLE_BLOCKLIST
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def index(
     gcp_project: str = gcp_project_option,
 ):
     """Index file from GCS to Elasticsearch"""
-    elasticsearch = ElasticsearchService(
+    elasticsearch = ElasticSearchAdapter(
         url=elasticsearch_url, api_key=elasticsearch_api_key
     )
 

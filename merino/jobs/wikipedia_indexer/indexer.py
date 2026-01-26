@@ -16,7 +16,7 @@ from merino.jobs.wikipedia_indexer.settings.v1 import (
 )
 from merino.jobs.wikipedia_indexer.suggestion import Builder
 from merino.jobs.wikipedia_indexer.utils import ProgressReporter
-from merino.search.elastic import ElasticsearchService
+from merino.search.elastic import ElasticSearchAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class Indexer:
     export_file: Blob
     index_version: str
     file_manager: FileManager
-    elasticsearch: ElasticsearchService
+    elasticsearch: ElasticSearchAdapter
     category_blocklist: set[str]
     title_blocklist: set[str]
 
@@ -41,7 +41,7 @@ class Indexer:
         category_blocklist: set[str],
         title_blocklist: set[str],
         file_manager: FileManager,
-        elasticsearch: ElasticsearchService,
+        elasticsearch: ElasticSearchAdapter,
     ):
         self.queue = []
         self.index_version = index_version

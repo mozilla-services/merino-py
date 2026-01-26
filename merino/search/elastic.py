@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterable, Mapping
 from elasticsearch import Elasticsearch
 
 
-class ElasticsearchService:
+class ElasticSearchAdapter:
     """
     A wrapper around the Elasticsearch Python client.
 

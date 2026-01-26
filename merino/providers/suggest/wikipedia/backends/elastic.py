@@ -7,7 +7,7 @@ from urllib.parse import quote
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.search.async_elastic import AsyncElasticsearchService
+from merino.search.async_elastic import AsyncElasticSearchAdapter
 
 SUGGEST_ID: Final[str] = "suggest-on-title"
 TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}ms"
@@ -49,13 +49,13 @@ def get_best_keyword(q: str, title: str):
 class ElasticBackend:
     """The client that works with the Elasticsearch backend."""
 
-    elasticsearch: AsyncElasticsearchService
+    elasticsearch: AsyncElasticSearchAdapter
 
     def __init__(self, *, api_key: str, url: str) -> None:
         """Initialize the ElasticBackend.
         Raises a ValueError if URL is incorrectly formatted.
         """
-        self.elasticsearch = AsyncElasticsearchService(url=url, api_key=api_key)
+        self.elasticsearch = AsyncElasticSearchAdapter(url=url, api_key=api_key)
         logging.info("Initialized Elasticsearch with URL")
 
     async def shutdown(self) -> None:
