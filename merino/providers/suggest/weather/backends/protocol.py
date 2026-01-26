@@ -99,7 +99,7 @@ class WeatherContext:
     selected_region: Optional[str] = None
     selected_city: Optional[str] = None
     request_source: Optional[str] = None
-    forecast_hours: int = 5
+    forecast_hours: Optional[int] = None
 
 
 class WeatherBackend(Protocol):

@@ -97,7 +97,7 @@ async def suggest(
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
-    forecast_hours: Annotated[int, Query(ge=1, le=12)] = 5,
+    forecast_hours: Annotated[int | None, Query(ge=5, le=5)] = None,
 ) -> Response:
     """Query Merino for suggestions.
 

@@ -168,9 +168,13 @@ class Provider(BaseProvider):
         is_location_completion_request = srequest.request_type == "location"
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
+        forecast_hours = srequest.forecast_hours
+
+        # build a WeatherContext object to be used by backend methods.
         weather_context = WeatherContext(
-            geolocation, languages, request_source=source, forecast_hours=srequest.forecast_hours
+            geolocation, languages, request_source=source, forecast_hours=forecast_hours
         )
+
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
                 if is_location_completion_request:
