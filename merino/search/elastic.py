@@ -18,11 +18,9 @@ class ElasticSearchAdapter:
         *,
         url: str,
         api_key: str,
-        request_timeout_s: int = 60,
     ) -> None:
         self._url = url
         self._api_key = api_key
-        self._request_timeout_s = request_timeout_s
         self._client: Elasticsearch | None = None
 
     def create_client(self) -> Elasticsearch:
@@ -30,7 +28,6 @@ class ElasticSearchAdapter:
         return Elasticsearch(
             self._url,
             api_key=self._api_key,
-            request_timeout=self._request_timeout_s,
         )
 
     def get_client(self) -> Elasticsearch:
@@ -67,15 +64,12 @@ class ElasticSearchAdapter:
             settings=settings,
             aliases=aliases,
             wait_for_active_shards=wait_for_active_shards,
-            request_timeout=self._request_timeout_s,
         )
         return bool(res.get("acknowledged", False))
 
     def refresh_index(self, *, index: str) -> None:
         """Refresh an index to make recent operations visible to search."""
-        self.get_client().indices.refresh(
-            index=index, request_timeout=self._request_timeout_s
-        )
+        self.get_client().indices.refresh(index=index)
 
     def bulk(
         self,
@@ -99,13 +93,10 @@ class ElasticSearchAdapter:
         Raises:
             RuntimeError: If raise_on_error=True and the bulk response contains
                 one or more failed items.
-            elasticsearch.ApiError: If the bulk request itself fails at the
-                transport or HTTP level.
         """
 
         res = self.get_client().bulk(
             operations=operations,
-            request_timeout=self._request_timeout_s,
         )
 
         if raise_on_error and res.get("errors"):
@@ -151,5 +142,4 @@ class ElasticSearchAdapter:
         """
         self.get_client().indices.update_aliases(
             actions=actions,
-            request_timeout=self._request_timeout_s,
         )
