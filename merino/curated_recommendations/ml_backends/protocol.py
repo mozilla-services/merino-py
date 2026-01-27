@@ -225,6 +225,10 @@ class MLRecsBackend(Protocol):
         """Fetch the recommendations based on region and utc offset"""
         ...
 
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return the impression count for a given corpus item id (adjusted for propensity)"""
+        ...
+
     def get_cohort_training_run_id(self) -> str | None:
         """Return the training run ID for the cohort model used."""
         ...

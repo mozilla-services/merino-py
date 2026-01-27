@@ -174,6 +174,10 @@ class MockMLRecommendationsBackend(MLRecsBackend):
         """Return whether the backend is valid."""
         return True
 
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return the impression count for a given corpus item id (adjusted for propensity)"""
+        return 100000
+
     def get_most_popular_content_id_by_timezone(self, utcOffset: int) -> str:
         """Return the most popular content ID for a given timezone offset."""
         if utcOffset == 16:

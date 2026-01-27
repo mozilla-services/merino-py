@@ -78,6 +78,7 @@ def blob(gcs_bucket):
             "topN": 500,
             "model": {"name": "ContextualLinTS", "version": None},
             "slates": {"global": {"granularity": "global", "shards": {"": [1, 2], "aa": [3, 4]}}},
+            "impressions_by_id": {"aa": 1},
         },
     )
 
@@ -94,6 +95,7 @@ def old_blob(gcs_bucket):
             "topN": 500,
             "model": {"name": "ContextualLinTS", "version": None},
             "slates": {"global": {"granularity": "global", "shards": {"": [1, 2], "aa": [3, 4]}}},
+            "impressions_by_id": {"aa": 1},
         },
     )
 
@@ -142,6 +144,9 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     assert rankings.get_score("") == 1
     assert rankings.get_score("aa") == 3
     assert rankings.get_score("??") is None
+
+    assert gcs_engagement.get_adjusted_impressions("aa") == 1
+    assert gcs_engagement.get_adjusted_impressions("unknown") == 0
 
 
 @pytest.mark.asyncio

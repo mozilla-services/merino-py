@@ -90,6 +90,12 @@ class ContextualRanker(Ranker):
                 beta_val = no_opens + max(b_prior, 1e-18)
                 score = float(beta.rvs(alpha_val, beta_val))
             else:
+                # Contextual ranker known imprssions override the computed no_opens based on engagement
+                # which runs on a different interval. We will need to potentially rescale the ml_backend
+                # impresions before completely ignoring the no_opens from the legacy engagement backend.
+                no_opens = max(
+                    self.ml_backend.get_adjusted_impressions(rec.corpusItemId), no_opens
+                )
                 score += random() * 0.0001
 
             if (
