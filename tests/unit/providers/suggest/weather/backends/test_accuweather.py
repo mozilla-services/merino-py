@@ -269,6 +269,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "cached_location_key_ttl_sec": TEST_CACHE_TTL_SEC,
         "cached_current_condition_ttl_sec": TEST_CACHE_TTL_SEC,
         "cached_forecast_ttl_sec": TEST_CACHE_TTL_SEC,
+        "cached_hourly_forecast_ttl_sec": TEST_CACHE_TTL_SEC,
         "metrics_client": statsd_mock,
         "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
@@ -277,6 +278,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_cities_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
+        "url_hourly_forecasts_path": "/forecasts/v1/hourly/12hour/{location_key}.json",
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
         "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
@@ -2355,9 +2357,10 @@ def test_parse_cached_data_error(
     """Test cached data parsing with errors."""
     caplog.set_level(logging.ERROR)
 
-    location, current_conditions, forecast, ttl = accuweather.parse_cached_data(
+    location, current_conditions, forecast, hourly_forecasts, ttl = accuweather.parse_cached_data(
         [
             accuweather_cached_location_key,
+            b"{}",
             b"{}",
             b"{}",
             None,

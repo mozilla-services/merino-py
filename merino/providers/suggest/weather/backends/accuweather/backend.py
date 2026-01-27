@@ -732,7 +732,7 @@ class AccuweatherBackend:
         location_key = geolocation.key
         language = get_language(weather_context.languages)
         request_source = weather_context.request_source
-        has_requested_hourly_forecasted = weather_context.forecast_hours is not None
+        has_requested_hourly_forecasts = weather_context.forecast_hours is not None
 
         async def as_awaitable(val: Any) -> Any:
             """Wrap a non-awaitable value into a coroutine and resolve it right away."""
@@ -759,7 +759,7 @@ class AccuweatherBackend:
                     current_conditions, forecast
                 )
 
-            if not has_requested_hourly_forecasted:
+            if not has_requested_hourly_forecasts:
                 return WeatherReport(
                     city_name=city_name if city_name else location.localized_name,
                     region_code=admin_area,
@@ -769,7 +769,7 @@ class AccuweatherBackend:
                     ttl=ttl,
                 )
 
-            if has_requested_hourly_forecasted and hourly_forecasts:
+            if has_requested_hourly_forecasts and hourly_forecasts:
                 return WeatherReport(
                     city_name=city_name if city_name else location.localized_name,
                     region_code=admin_area,
@@ -815,7 +815,7 @@ class AccuweatherBackend:
                     self.get_hourly_forecast(
                         location.key, language, weather_context.forecast_hours
                     )
-                    if has_requested_hourly_forecasted and hourly_forecasts is None
+                    if has_requested_hourly_forecasts and hourly_forecasts is None
                     else as_awaitable(hourly_forecasts)
                 )
         except ExceptionGroup as e:

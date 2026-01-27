@@ -139,9 +139,8 @@ async def suggest(
         "location" or "weather" string. For "location" it will get location completion
         suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
         to weather suggestions.
-    - `forecast_hours`: [Optional] Number of hourly forecast hours to return (1-12).
-        Defaults to 5 hours. Used with AccuWeather weather suggestions to specify how many
-        hours of forecast data to include in the response.
+    - `forecast_hours`: [Optional] Number of hourly forecast hours to return when requesting weather.
+        Only excepted value is 5 for now.
 
     **Headers:**
 

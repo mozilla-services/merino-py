@@ -55,11 +55,7 @@ class Forecast(BaseModel):
 
 
 class HourlyForecast(BaseModel):
-    """Model for a single hourly weather forecast.
-
-    Note: The url field is the same for all hourly forecasts but is
-    included in each object for client convenience.
-    """
+    """Model for a single hourly weather forecast."""
 
     date_time: str
     epoch_date_time: int
