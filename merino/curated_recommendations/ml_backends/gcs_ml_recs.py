@@ -55,6 +55,8 @@ class GcsMLRecs(MLRecsBackend):
             self.cache_time = datetime.strptime(epoch_id, "%Y%m%d-%H%M").replace(
                 tzinfo=timezone.utc
             )
+        self._impression_counts: dict[str, int] = payload.get("impressions_by_id", {})
+
         self.cohort_training_run_id = payload.get("cohort_model", {}).get("training_run_id", None)
         self._cache = new_cache
 
@@ -75,6 +77,10 @@ class GcsMLRecs(MLRecsBackend):
             return self._cache[r]
         return self._cache.get(GLOBAL_KEY, None)
 
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return the impression count for a given corpus item id (adjusted for propensity)"""
+        return self._impression_counts.get(corpus_item_id, 0)
+
     def is_valid(self) -> bool:
         """Return whether the backend is valid and ready to serve recommendations."""
         return (
@@ -85,6 +91,8 @@ class GcsMLRecs(MLRecsBackend):
                 datetime.now(timezone.utc) - self.cache_time
                 <= timedelta(minutes=VALIDITY_PERIOD_MINUTES)
             )
+            and self._impression_counts is not None
+            and len(self._impression_counts) > 0
         )
 
     def get_cohort_training_run_id(self) -> str | None:

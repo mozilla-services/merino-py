@@ -31,6 +31,10 @@ class EmptyMLRecs(MLRecsBackend):
         """
         return None
 
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return the impression count for a given corpus item id (adjusted for propensity)"""
+        return 0
+
     def is_valid(self):
         """Return whether the backend is valid and ready to serve recommendations. In this case, always false."""
         return False
