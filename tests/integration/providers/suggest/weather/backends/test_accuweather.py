@@ -47,6 +47,7 @@ ACCUWEATHER_METRICS_SAMPLE_RATE = 0.9
 WEATHER_REPORT_TTL_SEC = 1800
 CURRENT_CONDITIONS_TTL_SEC = 1800
 FORECAST_TTL_SEC = 3600
+HOURLY_FORECAST_TTL_SEC = 3600
 LOCATION_KEY_TTL_SEC = 2592000
 
 TEST_CACHE_ERROR = "test cache error"
@@ -63,6 +64,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "cached_location_key_ttl_sec": LOCATION_KEY_TTL_SEC,
         "cached_current_condition_ttl_sec": CURRENT_CONDITIONS_TTL_SEC,
         "cached_forecast_ttl_sec": FORECAST_TTL_SEC,
+        "cached_hourly_forecast_ttl_sec": HOURLY_FORECAST_TTL_SEC,
         "metrics_client": statsd_mock,
         "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
@@ -71,6 +73,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_cities_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
+        "url_hourly_forecasts_path": "/forecasts/v1/hourly/12hour/{location_key}.json",
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
         "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
@@ -453,10 +456,12 @@ async def test_get_weather_report_from_cache_with_ttl(
         call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
     ]
 
+    # TODO @herraj verify this
     assert metrics_increment_called == [
         "accuweather.cache.hit.locations",
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
+        "accuweather.cache.fetch.miss.hourlyforecasts",
     ]
 
 
@@ -693,9 +698,11 @@ async def test_get_weather_report_with_location_key_from_cache(
         call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list
     ]
 
+    # TODO @herraj verify this
     assert metrics_increment_called == [
         "accuweather.cache.hit.currentconditions",
         "accuweather.cache.hit.forecasts",
+        "accuweather.cache.fetch.miss.hourlyforecasts",
     ]
 
 
