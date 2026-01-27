@@ -433,13 +433,6 @@ class AccuweatherBackend:
                 pass
             # the last variable is ttl but is omitted here since we don't need to use but need
             # it to satisfy this match case
-            case [location_cached, current_cached, forecast_cached, None, _]:
-                location, current, forecast = (
-                    location_cached is not None,
-                    current_cached is not None,
-                    forecast_cached is not None,
-                )
-            # TODO @Herraj verify these
             case [location_cached, current_cached, forecast_cached, hourly_forecast_cached, _]:
                 location, current, forecast, hourly_forecasts = (
                     location_cached is not None,

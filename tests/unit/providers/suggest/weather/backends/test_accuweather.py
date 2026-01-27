@@ -47,10 +47,12 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     add_partner_code,
     get_language,
     update_weather_url_with_suggest_partner_code,
+    create_hourly_forecasts_from_json,
 )
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecast,
     LocationCompletion,
     LocationCompletionGeoDetails,
     Temperature,
@@ -752,17 +754,80 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
     )
 
 
+@pytest.fixture(name="accuweather_cached_hourly_forecasts")
+def fixture_accuweather_cached_hourly_forecasts() -> bytes:
+    """Return the cached Accuweather hourly forecasts"""
+    return orjson.dumps(
+        {
+            "hourly_forecasts": [
+                {
+                    "date_time": "2026-01-26T14:00:00-08:00",
+                    "epoch_date_time": 1769464800,
+                    "temperature_unit": "c",
+                    "temperature_value": 7,
+                    "icon_id": 4,
+                    "url": "https://www.accuweather.com/en/us/milton-wa/98354/hourly-weather-forecast/2084110?day=1&hbhhour=14&lang=en-us&partner=web_mozilla_adc",
+                },
+                {
+                    "date_time": "2026-01-26T15:00:00-08:00",
+                    "epoch_date_time": 1769468400,
+                    "temperature_unit": "c",
+                    "temperature_value": 7,
+                    "icon_id": 4,
+                    "url": "https://www.accuweather.com/en/us/milton-wa/98354/hourly-weather-forecast/2084110?day=1&hbhhour=15&lang=en-us&partner=web_mozilla_adc",
+                },
+                {
+                    "date_time": "2026-01-26T16:00:00-08:00",
+                    "epoch_date_time": 1769472000,
+                    "temperature_unit": "c",
+                    "temperature_value": 7,
+                    "icon_id": 4,
+                    "url": "https://www.accuweather.com/en/us/milton-wa/98354/hourly-weather-forecast/2084110?day=1&hbhhour=16&lang=en-us&partner=web_mozilla_adc",
+                },
+                {
+                    "date_time": "2026-01-26T17:00:00-08:00",
+                    "epoch_date_time": 1769475600,
+                    "temperature_unit": "c",
+                    "temperature_value": 7,
+                    "icon_id": 4,
+                    "url": "https://www.accuweather.com/en/us/milton-wa/98354/hourly-weather-forecast/2084110?day=1&hbhhour=17&lang=en-us&partner=web_mozilla_adc",
+                },
+                {
+                    "date_time": "2026-01-26T18:00:00-08:00",
+                    "epoch_date_time": 1769479200,
+                    "temperature_unit": "c",
+                    "temperature_value": 7,
+                    "icon_id": 38,
+                    "url": "https://www.accuweather.com/en/us/milton-wa/98354/hourly-weather-forecast/2084110?day=1&hbhhour=18&lang=en-us&partner=web_mozilla_adc",
+                },
+            ]
+        }
+    )
+
+
+@pytest.fixture(name="accuweather_parsed_cached_hourly_forecasts")
+def fixture_accuweather_parsed_cached_hourly_forecasts(
+    accuweather_cached_hourly_forecasts: bytes,
+) -> list[HourlyForecast]:
+    """Return the parsed cached Accuweather hourly forecasts"""
+    return create_hourly_forecasts_from_json(
+        orjson.loads(accuweather_cached_hourly_forecasts).get("hourly_forecasts", [])
+    )
+
+
 @pytest.fixture(name="accuweather_cached_data_hits")
 def fixture_accuweather_cached_data_hits(
     accuweather_cached_location_key: bytes,
     accuweather_cached_current_conditions: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
+    accuweather_cached_hourly_forecasts: bytes,
 ) -> list[Optional[bytes] | Optional[int]]:
     """Return the cached AccuWeather quartet for a cache hit."""
     return [
         accuweather_cached_location_key,
         accuweather_cached_current_conditions,
         accuweather_cached_forecast_fahrenheit,
+        accuweather_cached_hourly_forecasts,
         TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
     ]
 
@@ -772,10 +837,12 @@ def fixture_accuweather_parsed_data_hits(
     accuweather_cached_location_key: bytes,
     accuweather_cached_current_conditions: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
+    accuweather_parsed_cached_hourly_forecasts: list[HourlyForecast],
 ) -> tuple[
     Optional[AccuweatherLocation],
     Optional[CurrentConditions],
     Optional[Forecast],
+    Optional[list[HourlyForecast]],
     Optional[int],
 ]:
     """Return the parsed AccuWeather triplet for a cache hit."""
@@ -783,6 +850,7 @@ def fixture_accuweather_parsed_data_hits(
         AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         CurrentConditions.model_validate_json(accuweather_cached_current_conditions),
         Forecast.model_validate_json(accuweather_cached_forecast_fahrenheit),
+        accuweather_parsed_cached_hourly_forecasts,
         TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC,
     )
 
@@ -792,7 +860,7 @@ def Fixture_accuweather_cached_data_partial_hits(
     accuweather_cached_location_key: bytes,
 ) -> list[Optional[bytes]]:
     """Return the parsed AccuWeather quartet for a partial cache miss."""
-    return [accuweather_cached_location_key, None, None, None]
+    return [accuweather_cached_location_key, None, None, None, None]
 
 
 @pytest.fixture(name="accuweather_parsed_data_partial_hits")
@@ -802,11 +870,13 @@ def fixture_accuweather_parsed_data_partial_hits(
     Optional[AccuweatherLocation],
     Optional[CurrentConditions],
     Optional[Forecast],
+    Optional[list[HourlyForecast]],
     Optional[int],
 ]:
     """Return the partial parsed AccuWeather quartet for a cache hit."""
     return (
         AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
+        None,
         None,
         None,
         None,
@@ -824,6 +894,7 @@ def fixture_accuweather_cached_data_partial_hits_left(
         accuweather_cached_current_conditions,
         None,
         None,
+        None,
     ]
 
 
@@ -835,12 +906,14 @@ def fixture_accuweather_parsed_data_partial_hits_left(
     Optional[AccuweatherLocation],
     Optional[CurrentConditions],
     Optional[Forecast],
+    Optional[list[HourlyForecast]],
     Optional[int],
 ]:
     """Return the partial parsed AccuWeather triplet for a cache hit."""
     return (
         AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         CurrentConditions.model_validate_json(accuweather_cached_current_conditions),
+        None,
         None,
         None,
     )
@@ -857,6 +930,7 @@ def fixture_accuweather_cached_data_partial_hits_right(
         None,
         accuweather_cached_forecast_fahrenheit,
         None,
+        None,
     ]
 
 
@@ -868,6 +942,7 @@ def fixture_accuweather_parsed_data_partial_hits_right(
     Optional[AccuweatherLocation],
     Optional[CurrentConditions],
     Optional[Forecast],
+    Optional[list[HourlyForecast]],
     Optional[int],
 ]:
     """Return the partial parsed AccuWeather quartet for a cache hit."""
@@ -875,6 +950,7 @@ def fixture_accuweather_parsed_data_partial_hits_right(
         AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         None,
         Forecast.model_validate_json(accuweather_cached_forecast_fahrenheit),
+        None,
         None,
     )
 
@@ -884,12 +960,14 @@ def fixture_accuweather_cached_data_partial_miss_ttl(
     accuweather_cached_location_key: bytes,
     accuweather_cached_current_conditions: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
+    accuweather_cached_hourly_forecasts: bytes,
 ) -> list[Optional[bytes] | Optional[int]]:
     """Return the cached AccuWeather quartet for a cache hit but a TTL miss"""
     return [
         accuweather_cached_location_key,
         accuweather_cached_current_conditions,
         accuweather_cached_forecast_fahrenheit,
+        accuweather_cached_hourly_forecasts,
         None,
     ]
 
@@ -899,10 +977,12 @@ def fixture_accuweather_parsed_data_partial_miss_ttl(
     accuweather_cached_location_key: bytes,
     accuweather_cached_current_conditions: bytes,
     accuweather_cached_forecast_fahrenheit: bytes,
+    accuweather_parsed_cached_hourly_forecasts: list[HourlyForecast],
 ) -> tuple[
     Optional[AccuweatherLocation],
     Optional[CurrentConditions],
     Optional[Forecast],
+    Optional[list[HourlyForecast]],
     Optional[int],
 ]:
     """Return the parsed AccuWeather triplet for a cache hit but a TTL miss"""
@@ -910,6 +990,7 @@ def fixture_accuweather_parsed_data_partial_miss_ttl(
         AccuweatherLocation.model_validate_json(accuweather_cached_location_key),
         CurrentConditions.model_validate_json(accuweather_cached_current_conditions),
         Forecast.model_validate_json(accuweather_cached_forecast_fahrenheit),
+        accuweather_parsed_cached_hourly_forecasts,
         None,
     )
 
@@ -917,7 +998,7 @@ def fixture_accuweather_parsed_data_partial_miss_ttl(
 @pytest.fixture(name="accuweather_cached_data_misses")
 def fixture_accuweather_cached_data_misses() -> list[Optional[bytes]]:
     """Return the cached AccuWeather quartet for a cache miss."""
-    return [None, None, None, None]
+    return [None, None, None, None, None]
 
 
 @pytest.fixture(name="accuweather_parsed_data_misses")
@@ -926,11 +1007,12 @@ def fixture_accuweather_parsed_data_misses() -> (
         Optional[AccuweatherLocation],
         Optional[CurrentConditions],
         Optional[Forecast],
+        Optional[list[HourlyForecast]],
         Optional[int],
     ]
 ):
     """Return the partial parsed AccuWeather quartet for a cache hit."""
-    return (None, None, None, None)
+    return (None, None, None, None, None)
 
 
 @pytest.fixture(autouse=True)
@@ -2245,27 +2327,43 @@ def test_update_weather_url_with_suggest_partner_code(
     ("cached_data", "expected_metrics"),
     [
         (
-            ["location", "current", "forecast", "ttl"],
-            ("hit.locations", "hit.currentconditions", "hit.forecasts"),
+            ["location", "current", "forecast", "hourlyforecasts", "ttl"],
+            ("hit.locations", "hit.currentconditions", "hit.forecasts", "hit.hourlyforecasts"),
         ),
         (
-            ["location", None, "forecast", "ttl"],
-            ("hit.locations", "fetch.miss.currentconditions", "hit.forecasts"),
+            ["location", None, "forecast", "hourlyforecasts", "ttl"],
+            (
+                "hit.locations",
+                "fetch.miss.currentconditions",
+                "hit.forecasts",
+                "hit.hourlyforecasts",
+            ),
         ),
         (
-            ["location", "current", None, "ttl"],
-            ("hit.locations", "hit.currentconditions", "fetch.miss.forecasts"),
+            ["location", "current", None, "hourlyforecasts", "ttl"],
+            (
+                "hit.locations",
+                "hit.currentconditions",
+                "fetch.miss.forecasts",
+                "hit.hourlyforecasts",
+            ),
         ),
         (
-            ["location", None, None, "ttl"],
-            ("hit.locations", "fetch.miss.currentconditions", "fetch.miss.forecasts"),
+            ["location", None, None, "hourlyforecasts", "ttl"],
+            (
+                "hit.locations",
+                "fetch.miss.currentconditions",
+                "fetch.miss.forecasts",
+                "hit.hourlyforecasts",
+            ),
         ),
         (
-            [None, None, None, None],
+            [None, None, None, None, None],
             (
                 "fetch.miss.locations",
                 "fetch.miss.currentconditions",
                 "fetch.miss.forecasts",
+                "fetch.miss.hourlyforecasts",
             ),
         ),
     ],
