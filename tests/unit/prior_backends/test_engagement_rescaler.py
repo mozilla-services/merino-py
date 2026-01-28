@@ -154,8 +154,8 @@ class TestUKCrawledContentRescaler:
         expected_opens = 100
         expected_no_opens = 50
         opens, no_opens = self.rescaler.rescale(rec, expected_opens, expected_no_opens)
-        assert opens == expected_opens / UK_EXPERIMENT_TREATMENT_PERCENT
-        assert no_opens == expected_no_opens / UK_EXPERIMENT_TREATMENT_PERCENT
+        assert opens == expected_opens
+        assert no_opens == expected_no_opens
 
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
         assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC

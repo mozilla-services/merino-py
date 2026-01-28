@@ -7,8 +7,6 @@ from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedR
 
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
 
-UK_EXPERIMENT_TREATMENT_PERCENT = 0.05
-
 # Looking at query of typical subtopic impressions outside of top stories
 # https://sql.telemetry.mozilla.org/queries/112921/source#276948
 # We can see that for a typical section like NFL, impressions are about 4x lower than the overall average
@@ -84,7 +82,7 @@ class UKCrawledContentRescaler(CrawledContentRescaler):
         both in terms of section ranking and ranking within the section
         """
         opens, no_opens = super().rescale(rec, opens, no_opens)
-        return opens / UK_EXPERIMENT_TREATMENT_PERCENT, no_opens / UK_EXPERIMENT_TREATMENT_PERCENT
+        return opens, no_opens
 
 
 class SchedulerHoldbackRescaler(EngagementRescaler):
