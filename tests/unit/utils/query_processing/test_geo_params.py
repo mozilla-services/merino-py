@@ -13,7 +13,7 @@ from fastapi import Request
 
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
-from merino.utils.api.query_params import (
+from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
