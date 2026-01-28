@@ -72,9 +72,8 @@ class ContextualRanker(Ranker):
         contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
             region, str(utcOffset), cohort
         )
+        k = randint(0, contextual_scores.K - 1) if contextual_scores is not None else 0
         for rec in recs:
-            if contextual_scores:
-                k = randint(0, contextual_scores.K - 1)
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
                 rec, rescaler, region
             )
