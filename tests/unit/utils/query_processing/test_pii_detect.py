@@ -1,6 +1,6 @@
 """Tests for PII detection."""
 
-from merino.utils.api.pii_detect import (
+from merino.utils.query_processing.pii_detect import (
     query_contains_email,
     query_contains_numeric,
     query_contains_name,
