@@ -181,8 +181,11 @@ class ContextualArticleRankings(BaseModel):
 
     @model_validator(mode="after")
     def set_k(self) -> "ContextualArticleRankings":
-        """Set K based on shards data. K represents the number of shards per article."""
-        self.K = len(self.shards.get("", [])) if "" in self.shards else 1
+        """Set K (number of shards per article) based on shards data"""
+        self.K = 1
+        for _key, v in self.shards.items():
+            self.K = len(v)
+            break
         return self
 
     def has_item_score(self, corpus_item_id: str) -> bool:
