@@ -155,7 +155,7 @@ client_ip_override = ""
 [default.remote_settings]
 # MERINO_REMOTE_SETTINGS__SERVER
 # The server to sync from. Ex: `https://firefox.settings.services.mozilla.com`
-server = "https://firefox.settings.services.mozilla.com"
+server = "https://firefox.settings.services.mozilla.com/v1"
 
 # MERINO_REMOTE_SETTINGS__BUCKET
 # The bucket to use for Remote Settings providers if not specified in provider config.
