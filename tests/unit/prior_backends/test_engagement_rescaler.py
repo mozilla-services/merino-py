@@ -7,7 +7,6 @@ from unittest.mock import Mock
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     BLOCKED_FROM_MOST_POPULAR_SCALER,
-    UK_EXPERIMENT_TREATMENT_PERCENT,
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
     PESSIMISTIC_PRIOR_ALPHA_SCALE,
@@ -173,8 +172,8 @@ class TestUKCrawledContentRescaler:
         rec.is_story_blocked_for_top_stories.return_value = False
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
-        assert opens == 100 / UK_EXPERIMENT_TREATMENT_PERCENT
-        assert no_opens == 50 / UK_EXPERIMENT_TREATMENT_PERCENT
+        assert opens == 100
+        assert no_opens == 50
 
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
         assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
@@ -189,8 +188,8 @@ class TestUKCrawledContentRescaler:
         rec.is_story_blocked_for_top_stories.return_value = True
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
-        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / UK_EXPERIMENT_TREATMENT_PERCENT
-        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / UK_EXPERIMENT_TREATMENT_PERCENT
+        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER
+        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER
 
 
 class TestSchedulerHoldbackRescaler:
