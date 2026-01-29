@@ -196,7 +196,7 @@ async def suggest(
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
-    if query_contains_pii():
+    if query_contains_pii(q):
         pass
 
     active_providers, default_providers = sources
