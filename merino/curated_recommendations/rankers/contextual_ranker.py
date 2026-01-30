@@ -92,7 +92,7 @@ class ContextualRanker(Ranker):
                 # Contextual ranker known imprssions override the computed no_opens based on engagement
                 # which runs on a different interval. We will need to potentially rescale the ml_backend
                 # impresions before completely ignoring the no_opens from the legacy engagement backend.
-                no_opens = contextual_scores.get_adjusted_impressions(rec.corpusItemId)
+                no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
                 score += random() * 0.0001
 
             if (
