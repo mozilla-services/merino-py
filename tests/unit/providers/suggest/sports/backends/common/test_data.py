@@ -71,7 +71,7 @@ def events_response():
             "GlobalHomeTeamID": 123,
             "GameEndDateTime": "2025-09-22T00:10:17",
             "NeutralVenue": False,
-            "DateTimeUTC": "2025-09-22T01:30:00",
+            # "DateTimeUTC": "2025-09-22T01:30:00", # Exercise the `DateTime` recovery statement
             "SeriesInfo": None,
         },
         {
@@ -211,6 +211,12 @@ def test_load_schedules_from_source_filters_and_populates(
     assert 12312312 not in events
     assert 12345678 not in events
 
+    sport.events = {}
+    score_events = sport.load_scores_from_source(events_response)
+    assert 30023869 in score_events
+    assert 12312312 not in score_events
+    assert 12345678 not in score_events
+
     ev = events[30023869]
 
     assert ev.status == GameStatus.Final
@@ -235,6 +241,43 @@ def test_load_schedules_from_source_filters_and_populates(
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+def test_load_incomplete_schedules_from_source(
+    sport_cls: type[Sport],
+    events_response: list[dict],
+    home_team: Team,
+    away_team: Team,
+):
+    """Ensure we drop events with incorrect team IDs"""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    sport.teams = {
+        000: home_team,
+        456: away_team,
+    }
+    sport.events = {}
+    events = sport.load_schedules_from_source(events_response)
+    assert not events
+
+    sport.events = {}
+    events = sport.load_scores_from_source(events_response)
+    assert not events
+
+    sport.teams = {
+        123: home_team,
+        456: away_team,
+    }
+
+    del events_response[0]["GlobalAwayTeamID"]
+    sport.events = {}
+    events = sport.load_scores_from_source(events_response)
+    assert not events
+
+    sport.events = {}
+    events = sport.load_schedules_from_source(events_response)
+    assert not events
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
 def test_load_teams_from_source(
     sport_cls: type[Sport],
     events_response: list[dict],
@@ -247,3 +290,20 @@ def test_load_teams_from_source(
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {456, 123}
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+def test_load_bad_teams_from_source(
+    sport_cls: type[Sport],
+    events_response: list[dict],
+    teams: list[dict],
+    home_team: Team,
+    away_team: Team,
+):
+    """Ensure bad teams are not loaded."""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    del teams[0]["GlobalTeamId"]
+    teams_data = sport.load_teams_from_source(teams)
+
+    assert set(teams_data.keys()) == {456}

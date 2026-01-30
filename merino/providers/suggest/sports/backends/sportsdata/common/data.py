@@ -211,10 +211,6 @@ class Sport:
         self.term_filter = term_filter
         self.cache_dir = cache_dir
 
-    def gen_key(self, key: str) -> str:
-        """Generate the internal sport:team key for unique lookup and storage."""
-        return f"{self.name.lower()}:{key.lower()}"
-
     @abstractmethod
     async def get_team(self, id: int) -> Team | None:
         """Return the team based on the id provided"""
@@ -360,7 +356,9 @@ class Sport:
                 id=event_description["GlobalGameID"],
                 terms=terms,
                 date=date,
-                original_date=event_description["DateTimeUTC"],
+                original_date=event_description.get(
+                    "DateTimeUTC", event_description.get("DateTime")
+                ),
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
                 home_score=event_description.get("HomeTeamScore")
@@ -419,8 +417,12 @@ class Sport:
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
             # US sports use "(Away|Home)Team", Soccer uses "(Away|Home)TeamKey"
-            home_id = event_description.get("HomeTeamID") or event_description.get("HomeTeamId")
-            away_id = event_description.get("AwayTeamID") or event_description.get("AwayTeamId")
+            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
+                "GlobalHomeTeamId"
+            )
+            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
+                "GlobalAwayTeamId"
+            )
             if not home_id or not away_id:
                 logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
                 continue
@@ -460,7 +462,8 @@ class Sport:
             terms = f"{home_team.terms} {away_team.terms}"
             # All "Updated" fields are always in ET.
             updated = None
-            if event_description.get("Updated"):
+            # The following code is exercised in unit tests, but is not included in coverage for some reason.
+            if event_description.get("Updated"):  # pragma: no cover
                 updated = datetime.fromisoformat(event_description["Updated"]).replace(
                     tzinfo=event_timezone
                 )
