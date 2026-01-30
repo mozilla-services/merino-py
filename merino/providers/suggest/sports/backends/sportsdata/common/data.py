@@ -25,6 +25,10 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
 )
 
+from merino.providers.suggest.sports.backends.sportsdata.common.error import (
+    SportsDataError,
+)
+
 
 class Team(BaseModel):
     """Contain the truncated 'Team' information.
@@ -40,6 +44,8 @@ class Team(BaseModel):
     name: str
     # Team sport specific unique key
     key: str
+    # Team ID
+    id: int
     # Location of the team (city, state | country) if available
     locale: str | None
     # Alternate names for the team
@@ -76,9 +82,14 @@ class Team(BaseModel):
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
+        id = team_data.get("GlobalTeamID", team_data.get("GlobalTeamId"))
+        if not id:
+            logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
+            raise SportsDataError(f"No GlobalTeamID found for {fullname}")
         return cls(
             terms=" ".join(terms),
             key=team_data["Key"],
+            id=id,
             fullname=fullname,
             name=name,
             locale=locale,
@@ -157,7 +168,7 @@ class Sport:
 
     api_key: str
     name: str
-    teams: dict[str, Team] = {}
+    teams: dict[int, Team] = {}
     events: dict[int, Event] = {}
     base_url: str
     event_ttl: timedelta
@@ -205,8 +216,8 @@ class Sport:
         return f"{self.name.lower()}:{key.lower()}"
 
     @abstractmethod
-    async def get_team(self, key: str) -> Team | None:
-        """Return the team based on the key provided"""
+    async def get_team(self, id: int) -> Team | None:
+        """Return the team based on the id provided"""
 
     @abstractmethod
     async def get_season(self, client: AsyncClient):
@@ -220,7 +231,7 @@ class Sport:
     async def update_events(self, client: AsyncClient):
         """Fetch the list of current and upcoming events for this sport"""
 
-    def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[str, Team]:
+    def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
         """Create the Team entries from the data source
 
         This presumes that we are receiving data that complies with the SportsData.io
@@ -230,12 +241,15 @@ class Sport:
         SportData provider class.
         """
         for team_data in data:
-            team = Team.from_data(
-                team_data=team_data,
-                term_filter=self.term_filter,
-                team_ttl=self.team_ttl,
-            )
-            self.teams[team.key] = team
+            try:
+                team = Team.from_data(
+                    team_data=team_data,
+                    term_filter=self.term_filter,
+                    team_ttl=self.team_ttl,
+                )
+                self.teams[team.id] = team
+            except SportsDataError:
+                pass
         return self.teams
 
     def load_scores_from_source(
@@ -290,14 +304,25 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
+            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
+                "GlobalHomeTeamId"
+            )
+            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
+                "GlobalAwayTeamId"
+            )
             home_name = event_description.get("HomeTeam") or event_description.get(
                 "HomeTeamKey", "UNDEFINED_HOME"
             )
             away_name = event_description.get("AwayTeam") or event_description.get(
                 "AwayTeamKey", "UNDEFINED_AWAY"
             )
-            home_team = self.teams.get(home_name)
-            away_team = self.teams.get(away_name)
+            if not home_id or not away_id:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+                )
+                continue
+            home_team = self.teams.get(home_id)
+            away_team = self.teams.get(away_id)
             if not home_team or not away_team:
                 logger.warning(
                     f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
@@ -394,12 +419,18 @@ class Sport:
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
             # US sports use "(Away|Home)Team", Soccer uses "(Away|Home)TeamKey"
-            home_team = self.teams[
-                event_description.get("HomeTeamKey") or event_description["HomeTeam"]
-            ]
-            away_team = self.teams[
-                event_description.get("AwayTeamKey") or event_description["AwayTeam"]
-            ]
+            home_id = event_description.get("HomeTeamID") or event_description.get("HomeTeamId")
+            away_id = event_description.get("AwayTeamID") or event_description.get("AwayTeamId")
+            if not home_id or not away_id:
+                logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
+                continue
+            home_team = self.teams.get(home_id)
+            away_team = self.teams.get(away_id)
+            if not home_team or not away_team:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not find team info for event: {event_description}"
+                )
+                continue
             id = event_description.get("GlobalGameID") or event_description["GameId"]
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.

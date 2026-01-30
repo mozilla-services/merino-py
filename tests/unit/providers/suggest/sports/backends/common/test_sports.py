@@ -42,7 +42,8 @@ def nfl_teams_payload() -> list[dict]:
             "City": "Pittsburgh",
             "AreaName": "PA",
             "FullName": "Pittsburgh Steelers",
-            "Nickname1": "Stillers",
+            "Nickname1": "Steelers",
+            "GlobalTeamId": 28,
             "PrimaryColor": "000000",
             "SecondaryColor": "FFB612",
         },
@@ -51,6 +52,7 @@ def nfl_teams_payload() -> list[dict]:
             "Name": "Vikings",
             "City": "Minneapolis",
             "AreaName": "MN",
+            "GlobalTeamId": 20,
             "FullName": "Minnesota Vikings",
             "PrimaryColor": "4F2683",
             "SecondaryColor": "FFC62F",
@@ -68,6 +70,7 @@ def nhl_nba_teams_payload() -> list[dict]:
             "City": "Vancouver",
             "AreaName": "",
             "FullName": "Vancouver Canucks",
+            "GlobalTeamId": 30000024,
             "PrimaryColor": "00205B",
             "SecondaryColor": "00843d",
         },
@@ -77,6 +80,7 @@ def nhl_nba_teams_payload() -> list[dict]:
             "City": "Toronto",
             "AreaName": "",
             "FullName": "Toronto Maple Leafs",
+            "GlobalTeamID": 30000007,
             "PrimaryColor": "00205B",
             "SecondaryColor": "None",
         },
@@ -133,8 +137,8 @@ def schedules_payload() -> list[dict]:
             "AwayTeamScore": 2,
             "HomeTeamScore": 3,
             "GlobalGameID": 30023869,
-            "GlobalAwayTeamID": 30000041,
-            "GlobalHomeTeamID": 30000019,
+            "GlobalAwayTeamID": 30000024,
+            "GlobalHomeTeamID": 30000007,
             "GameEndDateTime": "2025-09-22T00:10:17",
             "NeutralVenue": False,
             "DateTimeUTC": "2025-09-22T01:30:00",
@@ -157,8 +161,8 @@ def schedules_payload() -> list[dict]:
             "AwayTeamScore": 0,
             "HomeTeamScore": 0,
             "GlobalGameID": 0,
-            "GlobalAwayTeamID": 30000041,
-            "GlobalHomeTeamID": 30000019,
+            "GlobalAwayTeamID": 30000024,
+            "GlobalHomeTeamID": 30000007,
             "GameEndDateTime": "2000-09-22T00:10:17",
             "NeutralVenue": False,
             "DateTimeUTC": "2000-09-22T01:30:00",
@@ -223,18 +227,19 @@ def nfl_scores_payload() -> list[dict[str, Any]]:
     ]
 
 
-def _mk_team(key: str, name: str, locale: str) -> Team:
+def _mk_team(key: str, name: str, locale: str, id: int) -> Team:
     """Team function."""
     return Team(
         fullname=name,
         terms=name.lower(),
         name=name,
+        id=id,
         key=key,
         locale=locale,
         aliases=[name],
         colors=["000000"],
         updated=datetime(2025, 9, 22, tzinfo=timezone.utc),
-        expiry=123,
+        expiry=datetime(2026, 9, 22, tzinfo=timezone.utc),
     )
 
 
@@ -244,13 +249,13 @@ async def test_get_team_lookup(cls: type[Sport]) -> None:
     """Test team lookups."""
     sport: Sport = cls(settings=settings.providers.sports, base_url="", name="")
 
-    t = _mk_team("PIT", "Pittsburgh Steelers", "Pittsburgh PA")
+    t = _mk_team("PIT", "Pittsburgh Steelers", "Pittsburgh PA", 28)
 
-    sport.teams = {"PIT": t}
-    assert await sport.get_team("PIT") is None
+    sport.teams = {28: t}
+    assert await sport.get_team(0) is None
 
-    sport.teams = {sport.gen_key("PIT"): t}
-    found = await sport.get_team("PIT")
+    sport.teams = {28: t}
+    found = await sport.get_team(28)
     assert isinstance(found, Team) and found.name == "Pittsburgh Steelers"
 
 
@@ -282,8 +287,8 @@ async def test_nfl_update_teams(
 
     assert nfl.season == "2025REG"
     assert nfl.week == "3"
-    assert set(nfl.teams.keys()) == {"PIT", "MIN"}
-    pit = nfl.teams["PIT"]
+    assert set(nfl.teams.keys()) == {28, 20}
+    pit = nfl.teams[28]
     assert pit.name == "Steelers"
     assert get_data.call_count == 2
     assert "/Timeframes/current" in get_data.call_args_list[0].kwargs["url"]
@@ -323,7 +328,7 @@ async def test_nhl_update_teams(
     )
     await nhl.update_teams(client=mock_client)
     assert nhl.season == "2026PRE"
-    assert set(nhl.teams.keys()) == {"VAN", "TOR"}
+    assert set(nhl.teams.keys()) == {30000007, 30000024}
     assert get_data.call_count == 2
 
 
@@ -340,7 +345,7 @@ async def test_nba_update_teams(
     )
     await nba.update_teams(client=mock_client)
     assert nba.season == "2026PRE"
-    assert set(nba.teams.keys()) == {"VAN", "TOR"}
+    assert set(nba.teams.keys()) == {30000007, 30000024}
     assert get_data.call_count == 2
 
 
@@ -360,7 +365,7 @@ async def test_ucl_update_teams(
     )
     await ucl.update_teams(client=mock_client)
     assert ucl.season == "2025"
-    assert set(ucl.teams.keys()) == {"VAN", "TOR"}
+    assert set(ucl.teams.keys()) == {30000007, 30000024}
     assert get_data.call_count == 1
 
     assert "/Teams/ucl?key=" in get_data.call_args_list[0].kwargs["url"]
