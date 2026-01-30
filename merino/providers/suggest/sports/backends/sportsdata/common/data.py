@@ -300,7 +300,7 @@ class Sport:
             away_team = self.teams.get(away_name)
             if not home_team or not away_team:
                 logger.warning(
-                    f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}"
+                    f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
                 )
                 continue
             try:
