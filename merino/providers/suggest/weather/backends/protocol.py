@@ -54,12 +54,23 @@ class Forecast(BaseModel):
     low: Temperature
 
 
+class HourlyForecast(BaseModel):
+    """Model for a single hourly weather forecast."""
+
+    date_time: str
+    epoch_date_time: int
+    temperature: Temperature
+    icon_id: int
+    url: HttpUrl
+
+
 class WeatherReport(BaseModel):
     """Model for weather conditions."""
 
     city_name: str
     current_conditions: CurrentConditions
     forecast: Forecast
+    hourly_forecasts: list[HourlyForecast] | None = None
     ttl: int
     region_code: str
 
@@ -84,6 +95,7 @@ class WeatherContext:
     selected_region: Optional[str] = None
     selected_city: Optional[str] = None
     request_source: Optional[str] = None
+    forecast_hours: Optional[int] = None
 
 
 class WeatherBackend(Protocol):
