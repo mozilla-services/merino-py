@@ -1,17 +1,13 @@
 """Unit tests for the utils module in wikipedia-indexer job"""
 
 import logging
-from unittest.mock import ANY
 
 import pytest
-from elasticsearch import Elasticsearch
 from pytest import LogCaptureFixture
-from pytest_mock import MockerFixture
 
 from merino.jobs.wikipedia_indexer.utils import (
     ProgressReporter,
     create_blocklist,
-    create_elasticsearch_client,
 )
 
 
@@ -78,16 +74,3 @@ def test_progress_reporter(
         else:
             assert len(caplog.records) == 1
             assert caplog.records[0].message == f"Test progress: {expected_perc}%"
-
-
-def test_create_elasticsearch_client_url(mocker: MockerFixture):
-    """Test that Elasticsearch client is created with the URL."""
-    es_new_mock = mocker.patch.object(Elasticsearch, "__new__")
-
-    api_key = "mMyY2E2ZDA0MjI0OWFmMGNjN2Q3YTllOTYyNTc0Mw=="
-    url = "http://localhost:9200"
-
-    create_elasticsearch_client(url, api_key)
-
-    # First argument is "self", which I've stubbed with ANY
-    es_new_mock.assert_called_with(ANY, url, api_key=api_key, request_timeout=60)
