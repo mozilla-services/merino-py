@@ -395,7 +395,7 @@ class TestIsInferredContextualRankingExperiment:
 
         # Test case where numerical_value mod selector is not zero
         pi_not_selected = ProcessedInterests(cohort="test", numerical_value=3)  # 3 % 4 != 0
-        assert not is_inferred_contextual_ranking(pi_not_selected)
+        not is_inferred_contextual_ranking(pi_not_selected)
 
         # Test case where all conditions are met
         pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0

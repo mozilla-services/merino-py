@@ -292,19 +292,10 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
 
 
 def is_inferred_contextual_ranking(personal_interests: ProcessedInterests | None) -> bool:
-    """Return True if inferred contextual ranking should be applied.
-    We are using the property of the interest vector to evenly split users to contextual ranking.
-    25% of inferred users are going to go to the contextual ranking via the modulo of the interest bits total
-    """
+    """Return True if inferred contextual ranking should be applied."""
     if IS_COHORT_FEATURE_DISABLED:
         return False
-
-    INFERRED_ENABLED_MOD_SELECTOR = 4
-    return (
-        personal_interests is not None
-        and personal_interests.cohort is not None
-        and personal_interests.numerical_value % INFERRED_ENABLED_MOD_SELECTOR == 0
-    )
+    return personal_interests is not None and personal_interests.cohort is not None
 
 
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
