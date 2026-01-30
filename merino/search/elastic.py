@@ -1,13 +1,12 @@
 """Elasticsearch service utilities."""
 
-from typing import Any, Dict, Iterable, Mapping
+from typing import Any, Mapping, Sequence, cast
 
 from elasticsearch import Elasticsearch
 
 
 class ElasticSearchAdapter:
-    """
-    A wrapper around the Elasticsearch Python client.
+    """A wrapper around the Elasticsearch Python client.
 
     Instances are configured with a URL and API key and lazily create the
     underlying Elasticsearch client on first use..
@@ -31,8 +30,7 @@ class ElasticSearchAdapter:
         )
 
     def get_client(self) -> Elasticsearch:
-        """
-        Return the underlying Elasticsearch client, creating it if needed.
+        """Return the underlying Elasticsearch client, creating it if needed.
 
         The client is created lazily and cached on the service instance.
         """
@@ -53,8 +51,7 @@ class ElasticSearchAdapter:
         aliases: dict[str, Any] | None = None,
         wait_for_active_shards: str | int = "1",
     ) -> bool:
-        """
-        Create an index and return whether the operation was acknowledged.
+        """Create an index and return whether the operation was acknowledged.
 
         Note: This does not check for existence. Call `index_exists()` if needed.
         """
@@ -74,11 +71,10 @@ class ElasticSearchAdapter:
     def bulk(
         self,
         *,
-        operations: Iterable[Mapping[str, Any]],
+        operations: Sequence[Mapping[str, Any]],
         raise_on_error: bool = True,
     ) -> dict[str, Any]:
-        """
-        Execute a bulk operation against Elasticsearch.
+        """Execute a bulk operation against Elasticsearch.
 
         Args:
             operations: Iterable of bulk operations, typically action/document
@@ -94,9 +90,11 @@ class ElasticSearchAdapter:
             RuntimeError: If raise_on_error=True and the bulk response contains
                 one or more failed items.
         """
-
-        res = self.get_client().bulk(
-            operations=operations,
+        res = cast(
+            dict[str, Any],
+            self.get_client().bulk(
+                operations=operations,
+            ),
         )
 
         if raise_on_error and res.get("errors"):
@@ -130,16 +128,12 @@ class ElasticSearchAdapter:
         return bool(self.get_client().indices.exists_alias(name=alias))
 
     def get_indices_for_alias(self, *, alias: str) -> list[str]:
-        """
-        Return a list of index names currently associated with an alias.
-        """
-        indices: Dict[str, Any] = self.get_client().indices.get_alias(name=alias)
+        """Return a list of index names currently associated with an alias."""
+        indices = cast(dict[str, Any], self.get_client().indices.get_alias(name=alias))
         return list(indices.keys())
 
-    def update_aliases(self, *, actions: list[Mapping[str, Any]]) -> None:
-        """
-        Apply alias update actions atomically.
-        """
+    def update_aliases(self, *, actions: list[dict[str, Any]]) -> None:
+        """Apply alias update actions atomically."""
         self.get_client().indices.update_aliases(
             actions=actions,
         )

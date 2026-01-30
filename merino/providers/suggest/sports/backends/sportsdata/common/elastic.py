@@ -26,7 +26,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
-from merino.search.async_elastic import AsyncElasticSearchAdapter
 
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
 
@@ -245,9 +244,7 @@ class ElasticCredentials:
         logger = logging.getLogger(__name__)
         api_key = self.api_key or "None"
         dsn = self.dsn or "None"
-        logger.info(
-            f"{LOGGING_TAG} Elastic API key: [{api_key[:4]}...] DSN:[{dsn[:10]}]"
-        )
+        logger.info(f"{LOGGING_TAG} Elastic API key: [{api_key[:4]}...] DSN:[{dsn[:10]}]")
         return (self.api_key is not None and len(self.api_key) > 0) and (
             self.dsn is not None and len(self.dsn) > 0
         )
@@ -281,7 +278,6 @@ class ElasticDataStore(ABC):
             logger.error(f"{LOGGING_TAG} Missing API Key")
         self.credentials = credentials
         self.client = None
-        self.elasticsearch = None
 
     @abstractmethod
     async def startup(self) -> None:
@@ -296,10 +292,9 @@ class ElasticDataStore(ABC):
         if not self.credentials.validate():
             raise SportsDataError("Missing credentials for storage")
         if not self.client:
-            self.elasticsearch = AsyncElasticSearchAdapter(
-                url=self.credentials.dsn, api_key=self.credentials.api_key
+            self.client = AsyncElasticsearch(
+                self.credentials.dsn, api_key=self.credentials.api_key
             )
-            self.client = self.elasticsearch.get_client()
 
     async def shutdown(self) -> None:
         """Politely close the data connection. Not strictly required, but python
@@ -307,7 +302,7 @@ class ElasticDataStore(ABC):
         """
         logging.getLogger(__name__).info(f"{LOGGING_TAG} closing...")
         if self.client:
-            await self.elasticsearch.shutdown()
+            await self.client.close()
 
     @abstractmethod
     def build_event_mappings(self, language_code: str) -> dict[str, Any]:
@@ -469,7 +464,7 @@ class SportsDataStore(ElasticDataStore):
             return
         try:
             # await self.client.indices.delete(index=self.meta_map)
-            await self.elasticsearch.create_index(
+            await self.client.indices.create(
                 index=self.meta_map,
                 settings={
                     "number_of_replicas": "1",
@@ -484,7 +479,7 @@ class SportsDataStore(ElasticDataStore):
                     },
                 },
             )
-            await self.elasticsearch.refresh_index(index=self.meta_map)
+            await self.client.indices.refresh(index=self.meta_map)
         except BadRequestError as ex:
             if ex.error != "resource_already_exists_exception":
                 raise SportsDataError(f"Could not create {self.meta_map}") from ex
@@ -505,7 +500,7 @@ class SportsDataStore(ElasticDataStore):
         # Build the meta index
         try:
             if clear:
-                await self.elasticsearch.delete_index(
+                await self.client.indices.delete(
                     index=self.meta_map,
                     ignore_unavailable=True,
                 )
@@ -521,13 +516,13 @@ class SportsDataStore(ElasticDataStore):
             for idx, index in self.index_map.items():
                 try:
                     if clear:
-                        await self.elasticsearch.delete_index(
+                        await self.client.indices.delete(
                             index=index.format(lang=language_code),
                             ignore_unavailable=True,
                         )
                     index = index.format(lang=language_code)
                     logger.info(f"{LOGGING_TAG} Building index: {index}")
-                    await self.elasticsearch.create_index(
+                    await self.client.indices.create(
                         index=index,
                         mappings=mappings[idx],
                         settings=self.index_settings[language_code],
@@ -586,7 +581,7 @@ class SportsDataStore(ElasticDataStore):
             query = {"range": {"expiry": {"lte": utc_now}}}
             try:
                 start = datetime.now()
-                res = await self.elasticsearch.delete_by_query(
+                res = await self.client.delete_by_query(
                     index=index, query=query, timeout=TIMEOUT_MS
                 )
                 logger.info(
@@ -595,9 +590,7 @@ class SportsDataStore(ElasticDataStore):
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
                 # parse it
-                logger.warning(
-                    f"{LOGGING_TAG} Encountered conflict error, ignoring for now"
-                )
+                logger.warning(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
                 return False
         return True
 
@@ -623,7 +616,7 @@ class SportsDataStore(ElasticDataStore):
 
             logger.debug(f"{LOGGING_TAG} Searching {index_id} for `{q}`")
 
-            res = await self.elasticsearch.search(
+            res = await self.client.search(
                 index=index_id,
                 query=query,
                 sort=[{"date": "desc"}, {"updated": "desc"}],
@@ -666,17 +659,11 @@ class SportsDataStore(ElasticDataStore):
                     # concluded game and the next scheduled game. As for current, we just grab the last
                     # "inprogress" game that is reported.
                     if status.is_final():
-                        if (
-                            "previous" not in filter[sport]
-                            and "current" not in filter[sport]
-                        ):
+                        if "previous" not in filter[sport] and "current" not in filter[sport]:
                             filter[sport]["previous"] = event
                             continue
                         # get the most recently "finalized" game
-                        if (
-                            datetime.fromisoformat(filter[sport]["previous"]["date"])
-                            < event_date
-                        ):
+                        if datetime.fromisoformat(filter[sport]["previous"]["date"]) < event_date:
                             filter[sport]["previous"] = event
                             continue
                     # If only show the next upcoming game.
@@ -687,10 +674,7 @@ class SportsDataStore(ElasticDataStore):
                             filter[sport]["next"] = event
                             continue
                         # get the most recent "next" game
-                        if (
-                            datetime.fromisoformat(filter[sport]["next"]["date"])
-                            < event_date
-                        ):
+                        if datetime.fromisoformat(filter[sport]["next"]["date"]) < event_date:
                             filter[sport]["next"] = event
                     if status.is_in_progress():
                         # remove the previous game info because we have a current one.
@@ -747,9 +731,7 @@ class SportsDataStore(ElasticDataStore):
 
             try:
                 start = datetime.now()
-                await helpers.async_bulk(
-                    client=self.client, actions=actions, stats_only=False
-                )
+                await helpers.async_bulk(client=self.client, actions=actions, stats_only=False)
                 logger.info(
                     f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
                 )
@@ -758,7 +740,7 @@ class SportsDataStore(ElasticDataStore):
                     f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
                 ) from ex
         start = datetime.now()
-        await self.elasticsearch.refresh_index(index=index)
+        await self.client.indices.refresh(index=index)
         # await self.store_meta("update", str(start.timestamp()))
         logger.info(
             f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"

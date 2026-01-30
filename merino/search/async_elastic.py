@@ -1,13 +1,12 @@
 """Async Elasticsearch service utilities."""
 
-from typing import Any, Dict, Iterable, Mapping, Optional
+from typing import Any, Optional, cast
 
 from elasticsearch import AsyncElasticsearch
 
 
 class AsyncElasticSearchAdapter:
-    """
-    Wrapper around AsyncElasticsearch.
+    """Wrapper around AsyncElasticsearch.
 
     - Lazily creates and caches an AsyncElasticsearch client instance.
     - Exposes async helpers for operations (search, close).
@@ -31,7 +30,7 @@ class AsyncElasticSearchAdapter:
     def get_client(self) -> AsyncElasticsearch:
         """Return the cached AsyncElasticsearch client, creating it if needed."""
         if self._client is None:
-            return self.create_client()
+            self._client = self.create_client()
         return self._client
 
     async def shutdown(self) -> None:
@@ -44,46 +43,31 @@ class AsyncElasticSearchAdapter:
         self,
         *,
         index: str,
-        body: Optional[Mapping[str, Any]] = None,
-        suggest: Optional[Mapping[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        suggest: Optional[dict[str, Any]] = None,
         timeout: Optional[str] = None,
         **kwargs: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run an async search request."""
         client = self.get_client()
 
-        return await client.search(
-            index=index, body=body, suggest=suggest, timeout=timeout, **kwargs
+        return cast(
+            dict[str, Any],
+            await client.search(
+                index=index, body=body, suggest=suggest, timeout=timeout, **kwargs
+            ),
         )
-
-    # async def indices_get_alias(self, *, name: str) -> Dict[str, Any]:
-    #     """Return the raw alias metadata as returned by ES (awaitable wrapper)."""
-    #     client = self.get_client()
-    #     return await client.indices.get_alias(name=name)
-
-    # async def indices_exists_alias(self, *, name: str) -> bool:
-    #     """Return whether an alias exists (awaitable wrapper)."""
-    #     client = self.get_client()
-    #     return await client.indices.exists_alias(name=name)
-
-    # async def indices_update_aliases(
-    #     self, *, actions: Iterable[Mapping[str, Any]]
-    # ) -> Dict[str, Any]:
-    #     """Apply alias update actions atomically (awaitable wrapper)."""
-    #     client = self.get_client()
-    #     return await client.indices.update_aliases(actions=actions)
 
     async def create_index(
         self,
         *,
         index: str,
-        mappings: Optional[Mapping[str, Any]] = None,
-        settings: Optional[Mapping[str, Any]] = None,
-        aliases: Optional[Mapping[str, Any]] = None,
+        mappings: Optional[dict[str, Any]] = None,
+        settings: Optional[dict[str, Any]] = None,
+        aliases: Optional[dict[str, Any]] = None,
         wait_for_active_shards: Optional[str | int] = "1",
     ) -> bool:
-        """
-        Create an index.
+        """Create an index.
 
         Args:
             index: Index name.
@@ -97,17 +81,12 @@ class AsyncElasticSearchAdapter:
             True if Elasticsearch acknowledged index creation, otherwise False.
         """
         client = self.get_client()
-        body: dict[str, Any] = {}
-        if mappings is not None:
-            body["mappings"] = mappings
-        if settings is not None:
-            body["settings"] = settings
-        if aliases is not None:
-            body["aliases"] = aliases
 
         res = await client.indices.create(
             index=index,
-            **({"body": body} if body else {}),
+            mappings=mappings,
+            settings=settings,
+            aliases=aliases,
             wait_for_active_shards=wait_for_active_shards,
         )
 
@@ -121,11 +100,8 @@ class AsyncElasticSearchAdapter:
             index=index,
         )
 
-    async def delete_index(
-        self, *, index: str, ignore_unavailable: bool = True
-    ) -> bool:
-        """
-        Delete an index.
+    async def delete_index(self, *, index: str, ignore_unavailable: bool = True) -> bool:
+        """Delete an index.
 
         Args:
             index: Name of the index to delete.
@@ -148,21 +124,19 @@ class AsyncElasticSearchAdapter:
         self,
         *,
         index: str,
-        query: Mapping[str, Any],
-        refresh: bool | str | None = None,
+        query: dict[str, Any],
+        refresh: bool | None = None,
         conflicts: str | None = None,
         wait_for_completion: bool | None = None,
         timeout: Optional[str] = None,
     ) -> dict[str, Any]:
-        """
-        Delete documents matching a query.
+        """Delete documents matching a query.
 
         Args:
             index: Name of the index (or index pattern) to delete documents from.
             query: Elasticsearch query DSL describing documents to delete.
             refresh: If True, refresh affected shards to make the deletion visible
-                to search. If 'wait_for', wait for a refresh. If False or None,
-                do not refresh.
+                to search.
             conflicts: What to do when version conflicts occur. Valid values are
                 'abort' or 'proceed'.
             wait_for_completion: If False, the request is executed asynchronously
@@ -173,7 +147,7 @@ class AsyncElasticSearchAdapter:
         """
         client = self.get_client()
 
-        return await client.delete_by_query(
+        result = await client.delete_by_query(
             index=index,
             query=query,
             refresh=refresh,
@@ -181,3 +155,4 @@ class AsyncElasticSearchAdapter:
             wait_for_completion=wait_for_completion,
             timeout=timeout,
         )
+        return cast(dict[str, Any], result)

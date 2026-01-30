@@ -1,12 +1,9 @@
 """Unit tests for the utils module in wikipedia-indexer job"""
 
 import logging
-from unittest.mock import ANY
 
 import pytest
-from elasticsearch import Elasticsearch
 from pytest import LogCaptureFixture
-from pytest_mock import MockerFixture
 
 from merino.jobs.wikipedia_indexer.utils import (
     ProgressReporter,

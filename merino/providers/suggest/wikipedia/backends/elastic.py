@@ -97,9 +97,7 @@ class ElasticBackend:
             return []
 
     @staticmethod
-    def build_article(
-        q: str, doc: dict[str, Any], language_code: str
-    ) -> dict[str, Any]:
+    def build_article(q: str, doc: dict[str, Any], language_code: str) -> dict[str, Any]:
         """Build a Wikipedia article based on the ES result."""
         title = str(doc["_source"]["title"])
         quoted_title = quote(title.replace(" ", "_"))

@@ -31,9 +31,7 @@ gcp_project_option = typer.Option(
 )
 
 
-version_option = typer.Option(
-    job_settings.index_version, "--version", help="Version of the index"
-)
+version_option = typer.Option(job_settings.index_version, "--version", help="Version of the index")
 
 
 indexer_cmd = typer.Typer(
@@ -56,9 +54,7 @@ def index(
     gcp_project: str = gcp_project_option,
 ):
     """Index file from GCS to Elasticsearch"""
-    elasticsearch = ElasticSearchAdapter(
-        url=elasticsearch_url, api_key=elasticsearch_api_key
-    )
+    elasticsearch = ElasticSearchAdapter(url=elasticsearch_url, api_key=elasticsearch_api_key)
 
     blocklist = create_blocklist(
         blocklist_file_url
@@ -85,9 +81,7 @@ def index(
 def copy_export(
     language: Annotated[
         str,
-        typer.Option(
-            help="Language to copy export for (e.g., en, fr, de), default to en."
-        ),
+        typer.Option(help="Language to copy export for (e.g., en, fr, de), default to en."),
     ] = "en",
     export_base_url: str = job_settings.export_base_url,
     gcs_path: str = gcs_path_option,
