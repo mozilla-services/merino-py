@@ -327,6 +327,7 @@ class Sport:
                 logger.warning(
                     f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
                 )
+                continue
             try:
                 if "DateTimeUTC" in event_description:
                     date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(

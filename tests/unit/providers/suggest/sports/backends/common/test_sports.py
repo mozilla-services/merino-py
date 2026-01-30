@@ -88,6 +88,37 @@ def nhl_nba_teams_payload() -> list[dict]:
 
 
 @pytest.fixture
+def weird_schedules_payload() -> list[dict]:
+    """Schedules payload that are out and in window."""
+    return [
+        {
+            "GameId": 23869,
+            "Season": 2026,
+            "SeasonType": 2,
+            "Status": "Final",
+            "Day": "2025-09-21T00:00:00",
+            "DateTime": "2025-09-21T21:30:00",
+            "Updated": "2025-09-29T04:10:57",
+            "IsClosed": True,
+            "AwayTeam": "AFC",
+            "HomeTeam": "TOR",
+            "StadiumID": 9,
+            "AwayTeamScore": 2,
+            "HomeTeamScore": 3,
+            "GlobalGameID": 30023869,
+            "GlobalAwayTeamID": 30000041,
+            "GlobalHomeTeamID": 30000019,
+            "GameEndDateTime": "2025-09-22T00:10:17",
+            "NeutralVenue": False,
+            "DateTimeUTC": "2025-09-22T01:30:00",
+            "AwayTeamID": 41,
+            "HomeTeamID": 19,
+            "SeriesInfo": None,
+        }
+    ]
+
+
+@pytest.fixture
 def schedules_payload() -> list[dict]:
     """Schedules payload that are out and in window."""
     return [
@@ -472,6 +503,28 @@ async def test_ucl_update_events(
     await ucl.update_events(client=mock_client)
     assert 30023869 in ucl.events and 0 not in ucl.events
     assert "/SchedulesBasic/UCL/2025?key=" in get_data.call_args_list[0].kwargs["url"]
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_weird_afc_update_events(
+    nhl_nba_teams_payload: list[dict],
+    weird_schedules_payload: list[dict],
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Test UCL event updates."""
+    sport = NFL(settings=settings.providers.sports)
+    sport.load_teams_from_source(nhl_nba_teams_payload)
+    sport.season = "2025"  # set by update_teams normally
+    sport.event_ttl = timedelta(weeks=2)
+
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        return_value=weird_schedules_payload,
+    )
+    await sport.update_events(client=mock_client)
+    assert not sport.events
 
 
 @pytest.mark.asyncio
