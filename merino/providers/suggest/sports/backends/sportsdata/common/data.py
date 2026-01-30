@@ -290,12 +290,19 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            home_team = self.teams[
-                event_description.get("HomeTeam") or event_description["HomeTeamKey"]
-            ]
-            away_team = self.teams[
-                event_description.get("AwayTeam") or event_description["AwayTeamKey"]
-            ]
+            home_name = event_description.get("HomeTeam") or event_description.get(
+                "HomeTeamKey", "UNDEFINED_HOME"
+            )
+            away_name = event_description.get("AwayTeam") or event_description.get(
+                "AwayTeamKey", "UNDEFINED_AWAY"
+            )
+            home_team = self.teams.get(home_name)
+            away_team = self.teams.get(away_name)
+            if not home_team or not away_team:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+                )
+                continue
             try:
                 if "DateTimeUTC" in event_description:
                     date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
