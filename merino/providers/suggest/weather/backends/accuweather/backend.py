@@ -51,10 +51,9 @@ from merino.providers.suggest.weather.backends.accuweather.errors import (
 
 logger = logging.getLogger(__name__)
 
-# TODO @herraj update comment
 
-# The Lua script to fetch the location key, current condition, forecast, and a TTL for
-# a given country/region/city.
+# The Lua script to fetch the location key, current condition, forecast, hourly_forecasts
+#  and a TTL for a given country/region/city.
 #
 # Note:
 #   - The script expects a JSON serialized string as the value of the location key,
@@ -63,12 +62,13 @@ logger = logging.getLogger(__name__)
 #   - The cache key for the country/region/city should be provided through `KEYS[1]`
 #   - The cache key templates for current conditions and forecast should be provided
 #     through `ARGV[1]` and `ARGV[2]`
+#   - The cache key template for hourly forecast through `ARGV[3]`
 #   - The placeholder for location key (i.e. `self.url_location_key_placeholder`)
-#     is passed via `ARGV[3]`
+#     is passed via `ARGV[4]`
 #   - If the location key is present in the cache, it uses the key to fetch the current
-#     conditions and forecast for that key in the cache. It returns a 4-element array
-#     `[location_key, current_condition, forecast, ttl]`. The `current_condition` and `forecast` are `nil`
-#     if they are not present in the cache
+#     conditions and forecast for that key in the cache. It returns a 5-element array
+#     `[location_key, current_condition, forecast, hourly_forecasts, ttl]`
+#     The `current_condition`, `forecast` and `hourly_forecasts` are `nil` if they are not present in the cache
 #   - If the location key is missing, it will return an empty array
 #   - If the current_conditions and forecast TTLs are a non-positive value (-1 or -2),
 #     it will return ttl as false, which is translated to None type in app code.
@@ -99,16 +99,15 @@ LUA_SCRIPT_CACHE_BULK_FETCH: str = """
 """
 SCRIPT_ID_BULK_FETCH_VIA_GEOLOCATION: str = "bulk_fetch_by_geolocation"
 
-# TODO @herraj update comment
 
-# The Lua script to fetch the current condition, forecast, and a TTL for
+# The Lua script to fetch the current condition, forecast, hourly_forecasts and a TTL for
 # a given a city-based_location key.
 #
 # Note:
-#   - The script retrieves the cached current conditions, forecast and TTL data
-#   - The cache key for current conditions and forecast should be provided
-#     through `ARGV[1]` and `ARGV[2]`
-#   - It returns a 3-element array `[current_condition, forecast, ttl]`. All of these elements
+#   - The script retrieves the cached current conditions, forecast, hourly_forecasts and TTL data
+#   - The cache key for current conditions, forecast and hourly forecasts should be provided
+#     through `ARGV[1]`, `ARGV[2]` and `ARGV[3]`
+#   - It returns a 4-element array `[current_condition, forecast, hourly_forecasts, ttl]`. All of these elements
 #     can be nil
 #   - If the forecast and current_conditions TTLs are a non-positive value (-1 or -2),
 #     it will return ttl as false, which is translated to None type in app code.
