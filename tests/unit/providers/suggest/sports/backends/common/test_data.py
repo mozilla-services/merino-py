@@ -60,18 +60,18 @@ def events_response():
             "Updated": "2025-09-29T04:10:57",
             "IsClosed": True,
             "AwayTeam": "AWA",
+            "AwayTeamId": 456,
             "HomeTeam": "HOM",
+            "HomeTeamId": 123,
             "StadiumID": 9,
             "AwayTeamScore": 2,
             "HomeTeamScore": 3,
             "GlobalGameID": 30023869,
-            "GlobalAwayTeamID": 30000041,
-            "GlobalHomeTeamID": 30000019,
+            "GlobalAwayTeamID": 456,
+            "GlobalHomeTeamID": 123,
             "GameEndDateTime": "2025-09-22T00:10:17",
             "NeutralVenue": False,
-            "DateTimeUTC": "2025-09-22T01:30:00",
-            "AwayTeamID": 41,
-            "HomeTeamID": 19,
+            # "DateTimeUTC": "2025-09-22T01:30:00", # Exercise the `DateTime` recovery statement
             "SeriesInfo": None,
         },
         {
@@ -84,18 +84,18 @@ def events_response():
             "Updated": "2025-01-01T04:10:57",
             "IsClosed": True,
             "AwayTeam": "AWA",
+            "AwayTeamId": 456,
             "HomeTeam": "HOM",
+            "HomeTeamID": 123,
             "StadiumID": 9,
             "AwayTeamScore": 0,
             "HomeTeamScore": 0,
             "GlobalGameID": 12312312,
-            "GlobalAwayTeamID": 30000041,
-            "GlobalHomeTeamID": 30000019,
+            "GlobalAwayTeamID": 456,
+            "GlobalHomeTeamID": 123,
             "GameEndDateTime": "2000-09-22T00:10:17",
             "NeutralVenue": False,
             "DateTimeUTC": "2000-09-22T01:30:00",
-            "AwayTeamID": 41,
-            "HomeTeamID": 19,
             "SeriesInfo": None,
         },
         {
@@ -108,18 +108,18 @@ def events_response():
             "Updated": "2025-01-02T04:10:57",
             "IsClosed": True,
             "AwayTeam": "AWA",
+            "AwayTeamID": 456,
             "HomeTeam": "HOM",
+            "HomeTeamID": 123,
             "StadiumID": 9,
             "AwayTeamScore": 0,
             "HomeTeamScore": 0,
             "GlobalGameID": 12345678,
-            "GlobalAwayTeamID": 30000041,
-            "GlobalHomeTeamID": 30000019,
+            "GlobalAwayTeamID": 456,
+            "GlobalHomeTeamID": 123,
             "GameEndDateTime": None,
             "NeutralVenue": False,
             "DateTimeUTC": None,
-            "AwayTeamID": 41,
-            "HomeTeamID": 19,
             "SeriesInfo": None,
         },
     ]
@@ -132,6 +132,7 @@ def home_team_fixture():
         fullname="The Home Team",
         terms="Home Team",
         name="Home Team",
+        id=123,
         key="HOM",
         locale="AA",
         aliases=["Home Team", "Home", "AA Home Team"],
@@ -148,6 +149,7 @@ def away_team_fixture():
         fullname="The Away Team",
         terms="Away Team",
         name="Away Team",
+        id=456,
         key="AWA",
         locale="BB",
         aliases=["Away Team", "Away Team", "BB Away Team"],
@@ -165,6 +167,8 @@ def teams_fixture():
             "Key": "HOM",
             "Name": "Home",
             "City": "Toronto",
+            "TeamID": 123,
+            "GlobalTeamId": 123,
             "AreaName": "HO",
             "FullName": "The Homes",
             "Nickname1": "Home",
@@ -175,6 +179,8 @@ def teams_fixture():
             "Key": "AWA",
             "Name": "Away",
             "City": "Montreal",
+            "TeamID": 456,
+            "GlobalTeamID": 456,
             "AreaName": "AW",
             "FullName": "The Aways",
             "PrimaryColor": "00205B",
@@ -194,8 +200,8 @@ def test_load_schedules_from_source_filters_and_populates(
     """Ensure Load scores from source filters and returns relevant events."""
     sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
     sport.teams = {
-        "HOM": home_team,
-        "AWA": away_team,
+        123: home_team,
+        456: away_team,
     }
 
     sport.events = {}
@@ -204,6 +210,12 @@ def test_load_schedules_from_source_filters_and_populates(
     assert 30023869 in events
     assert 12312312 not in events
     assert 12345678 not in events
+
+    sport.events = {}
+    score_events = sport.load_scores_from_source(events_response)
+    assert 30023869 in score_events
+    assert 12312312 not in score_events
+    assert 12345678 not in score_events
 
     ev = events[30023869]
 
@@ -229,6 +241,43 @@ def test_load_schedules_from_source_filters_and_populates(
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+def test_load_incomplete_schedules_from_source(
+    sport_cls: type[Sport],
+    events_response: list[dict],
+    home_team: Team,
+    away_team: Team,
+):
+    """Ensure we drop events with incorrect team IDs"""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    sport.teams = {
+        000: home_team,
+        456: away_team,
+    }
+    sport.events = {}
+    events = sport.load_schedules_from_source(events_response)
+    assert not events
+
+    sport.events = {}
+    events = sport.load_scores_from_source(events_response)
+    assert not events
+
+    sport.teams = {
+        123: home_team,
+        456: away_team,
+    }
+
+    del events_response[0]["GlobalAwayTeamID"]
+    sport.events = {}
+    events = sport.load_scores_from_source(events_response)
+    assert not events
+
+    sport.events = {}
+    events = sport.load_schedules_from_source(events_response)
+    assert not events
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
 def test_load_teams_from_source(
     sport_cls: type[Sport],
     events_response: list[dict],
@@ -240,4 +289,21 @@ def test_load_teams_from_source(
     sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
     teams_data = sport.load_teams_from_source(teams)
 
-    assert set(teams_data.keys()) == {"AWA", "HOM"}
+    assert set(teams_data.keys()) == {456, 123}
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+def test_load_bad_teams_from_source(
+    sport_cls: type[Sport],
+    events_response: list[dict],
+    teams: list[dict],
+    home_team: Team,
+    away_team: Team,
+):
+    """Ensure bad teams are not loaded."""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    del teams[0]["GlobalTeamId"]
+    teams_data = sport.load_teams_from_source(teams)
+
+    assert set(teams_data.keys()) == {456}
