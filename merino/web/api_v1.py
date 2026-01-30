@@ -49,7 +49,8 @@ from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
 )
 from merino.utils.api.metrics import emit_suggestions_per_metrics
-from merino.utils.api.query_params import (
+from merino.utils.query_processing.pii_detect import query_contains_pii
+from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
@@ -195,6 +196,8 @@ async def suggest(
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
+    if query_contains_pii():
+        pass
 
     active_providers, default_providers = sources
     if providers is not None:

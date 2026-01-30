@@ -43,12 +43,13 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
     DEFAULT_PRODUCTION_MODEL_ID,
-    LOCAL_AND_SERVER_V3_BRANCH_NAME,
+    LOCAL_AND_SERVER_V4_BRANCH_NAME,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     CohortModelBackend,
     ContextualArticleRankings,
     InferredLocalModel,
+    InterestVectorConfig,
     ModelData,
     ModelType,
     DayTimeWeightingConfig,
@@ -64,6 +65,7 @@ from merino.curated_recommendations.protocol import (
     Locale,
     CoarseOS,
 )
+from merino.curated_recommendations.sections import IS_COHORT_FEATURE_DISABLED
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
@@ -171,6 +173,10 @@ class MockMLRecommendationsBackend(MLRecsBackend):
     def is_valid(self) -> bool:
         """Return whether the backend is valid."""
         return True
+
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return the impression count for a given corpus item id (adjusted for propensity)"""
+        return 100000
 
     def get_most_popular_content_id_by_timezone(self, utcOffset: int) -> str:
         """Return the most popular content ID for a given timezone offset."""
@@ -310,7 +316,19 @@ class MockLocalModelBackend(LocalModelBackend):
                 days=[3, 14, 45],
                 relative_weight=[1, 1, 1],
             ),
-            interest_vector={},
+            interest_vector={
+                k: InterestVectorConfig(
+                    features={f"s_{k}": 1}, thresholds=[0.3, 0.5, 0.8], diff_p=0.75, diff_q=0.25
+                )
+                for k in [
+                    Topic.SPORTS.value,
+                    Topic.ARTS.value,
+                    Topic.POLITICS.value,
+                    Topic.PARENTING.value,
+                    Topic.BUSINESS.value,
+                    Topic.FOOD.value,
+                ]
+            },
         )
         return InferredLocalModel(
             model_id="fake", model_version=0, surface_id=surface_id, model_data=model_data
@@ -1822,8 +1840,8 @@ class TestSections:
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value,
-                "experimentBranch": LOCAL_AND_SERVER_V3_BRANCH_NAME,
+                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value,
+                "experimentBranch": LOCAL_AND_SERVER_V4_BRANCH_NAME,
                 "region": "US",
                 "inferredInterests": {
                     "values": ["1000", "1000", "1000", "1000", "0001", "1000", "0001", "0001"],
@@ -1840,9 +1858,15 @@ class TestSections:
 
         # top_stories_section should always be present
         assert "top_stories_section" in sections
-        assert sections["top_stories_section"]["recommendations"][0][
-            "corpusItemId"
-        ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+
+        if IS_COHORT_FEATURE_DISABLED:
+            assert sections["top_stories_section"]["recommendations"][0][
+                "corpusItemId"
+            ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+        else:
+            assert sections["top_stories_section"]["recommendations"][0][
+                "corpusItemId"
+            ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
 
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1872,6 +1896,29 @@ class TestSections:
         assert sections["top_stories_section"]["recommendations"][0][
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value,
+                "experimentBranch": LOCAL_AND_SERVER_V4_BRANCH_NAME,
+                "region": "US",
+                "inferredInterests": {
+                    # Interst vector with no clicks. This has different handling pattern
+                    "values": ["1000", "1000", "1000", "1000", "1000", "1000", "1000", "1000"],
+                    "model_id": "fake",
+                },
+            },
+        )
+        data = response.json()
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+        assert len(sections) > 1
 
     @pytest.mark.parametrize(
         "sections_payload",

@@ -38,6 +38,7 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
+    IS_COHORT_FEATURE_DISABLED,
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
@@ -398,7 +399,10 @@ class TestIsInferredContextualRankingExperiment:
 
         # Test case where all conditions are met
         pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0
-        assert is_inferred_contextual_ranking(pi_selected)
+        if IS_COHORT_FEATURE_DISABLED:
+            assert not is_inferred_contextual_ranking(pi_selected)
+        else:
+            assert is_inferred_contextual_ranking(pi_selected)
 
 
 class TestUpdateReceivedFeedRank:
