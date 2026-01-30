@@ -58,7 +58,9 @@ class Team(BaseModel):
     expiry: datetime
 
     @classmethod
-    def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
+    def from_data(
+        cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta
+    ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
@@ -78,18 +80,20 @@ class Team(BaseModel):
                     lword = word.lower()
                     if word not in term_filter:
                         terms.add(lword)
-        locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
+        locale = " ".join(
+            [team_data.get("City") or "", team_data.get("AreaName") or ""]
+        ).strip()
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
-        id = team_data.get("GlobalTeamID", team_data.get("GlobalTeamId"))
-        if not id:
+        team_id = team_data.get("GlobalTeamID", team_data.get("GlobalTeamId"))
+        if not team_id:
             logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
             raise SportsDataError(f"No GlobalTeamID found for {fullname}")
         return cls(
             terms=" ".join(terms),
             key=team_data["Key"],
-            id=id,
+            id=team_id,
             fullname=fullname,
             name=name,
             locale=locale,
@@ -207,7 +211,9 @@ class Sport:
         self.event_ttl = event_ttl or timedelta(
             weeks=settings.sportsdata.get("event_ttl_weeks", EVENT_TTL_WEEKS)
         )
-        self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
+        self.team_ttl = team_ttl or timedelta(
+            weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS)
+        )
         self.term_filter = term_filter
         self.cache_dir = cache_dir
 
@@ -304,12 +310,12 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
-                "GlobalHomeTeamId"
-            )
-            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
-                "GlobalAwayTeamId"
-            )
+            home_id = event_description.get(
+                "GlobalHomeTeamID"
+            ) or event_description.get("GlobalHomeTeamId")
+            away_id = event_description.get(
+                "GlobalAwayTeamID"
+            ) or event_description.get("GlobalAwayTeamId")
             home_name = event_description.get("HomeTeam") or event_description.get(
                 "HomeTeamKey", "UNDEFINED_HOME"
             )
@@ -330,20 +336,22 @@ class Sport:
                 continue
             try:
                 if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                        tzinfo=timezone.utc
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTimeUTC"]
+                    ).replace(tzinfo=timezone.utc)
                 else:
-                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
-                        tzinfo=event_timezone
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTime"]
+                    ).replace(tzinfo=event_timezone)
             # There have been incidents where an event returns "None" as a date value.
             # We should ignore that event, and allow processing to continue, but note
             # the error in case we need to escalate the problem.
             except TypeError:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
+                logger.info(
+                    f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
+                )
                 continue
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
@@ -419,10 +427,16 @@ class Sport:
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
             # US sports use "(Away|Home)Team", Soccer uses "(Away|Home)TeamKey"
-            home_id = event_description.get("HomeTeamID") or event_description.get("HomeTeamId")
-            away_id = event_description.get("AwayTeamID") or event_description.get("AwayTeamId")
+            home_id = event_description.get("HomeTeamID") or event_description.get(
+                "HomeTeamId"
+            )
+            away_id = event_description.get("AwayTeamID") or event_description.get(
+                "AwayTeamId"
+            )
             if not home_id or not away_id:
-                logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
+                logger.warning(
+                    f"{LOGGING_TAG} Could not find team for event: {event_description}"
+                )
                 continue
             home_team = self.teams.get(home_id)
             away_team = self.teams.get(away_id)
@@ -431,7 +445,9 @@ class Sport:
                     f"{LOGGING_TAG} Could not find team info for event: {event_description}"
                 )
                 continue
-            id = event_description.get("GlobalGameID") or event_description["GameId"]
+            game_id = (
+                event_description.get("GlobalGameID") or event_description["GameId"]
+            )
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
             if status == GameStatus.Canceled:
@@ -439,19 +455,21 @@ class Sport:
                 continue
             try:
                 if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                        tzinfo=timezone.utc
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTimeUTC"]
+                    ).replace(tzinfo=timezone.utc)
                 else:
-                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
-                        tzinfo=event_timezone
-                    )
+                    date = datetime.fromisoformat(
+                        event_description["DateTime"]
+                    ).replace(tzinfo=event_timezone)
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
+                logger.info(
+                    f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
+                )
                 logger.debug(
-                    f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
+                    f"{LOGGING_TAG} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
                 continue
             # Ignore any events that are outside of the event interest window.
@@ -467,7 +485,7 @@ class Sport:
 
             event = Event(
                 sport=self.name,
-                id=id,
+                id=game_id,
                 terms=terms,
                 date=date,
                 original_date=event_description.get(
