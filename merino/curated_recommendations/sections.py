@@ -65,7 +65,7 @@ HEADLINES_SECTION_KEY = "headlines"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
 IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
-
+MAX_SECTIONS_PER_RESPONSE = 20
 
 def map_section_item_to_recommendation(
     item: CorpusItem,
@@ -551,10 +551,12 @@ def rank_sections(
     if include_headlines_section:
         put_headlines_first_then_top_stories(sections)
 
+    sorted_sections = sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)[:MAX_SECTIONS_PER_RESPONSE]
+
     # Sort sections by receivedFeedRank
     sections = {
         sid: section
-        for sid, section in sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)
+        for sid, section in sorted_sections
     }
 
     return sections
