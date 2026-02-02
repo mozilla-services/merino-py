@@ -342,7 +342,7 @@ forecast_ttl_sec = 3600 # 1 hr
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
 # e.g. ["NFL","NBA","NHL"]
-# sports=["NFL","NBA","NHL"]
+sports=["NFL","NBA","NHL"]
 # Index names for Elastic Search.
 event_index="sports-{lang}-event"
 team_index="sports-{lang}-team"
