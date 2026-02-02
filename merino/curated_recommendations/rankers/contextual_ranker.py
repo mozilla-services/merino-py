@@ -86,6 +86,8 @@ class ContextualRanker(Ranker):
             if contextual_scores:
                 score = contextual_scores.get_score(rec.corpusItemId, k)
 
+            beta_value_for_fresh_check = non_rescaled_b_prior
+
             if score is None:
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)
@@ -97,13 +99,13 @@ class ContextualRanker(Ranker):
                 # impresions before completely ignoring the no_opens from the legacy engagement backend.
                 no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
                 score += random() * 0.0001
-
+                beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
                 and (
                     no_opens
-                    < CONTEXUAL_AVG_BETA_VALUE * fresh_items_limit_prior_threshold_multiplier
+                    < beta_value_for_fresh_check * fresh_items_limit_prior_threshold_multiplier
                 )
             ):
                 is_fresh = True
