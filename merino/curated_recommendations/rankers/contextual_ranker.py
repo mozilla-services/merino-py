@@ -28,6 +28,11 @@ from merino.curated_recommendations.rankers.utils import (
     renumber_sections,
 )
 
+# We are still learning how to compute how many impressions before we can trust the ranker score completely
+# So far, 3000 impressions seems to be a reasonable average beta value to use as a threshold
+# This means that items with less than 3000 impressions will be marked as fresh.
+CONTEXUAL_AVG_BETA_VALUE = 3000
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,8 +62,6 @@ class ContextualRanker(Ranker):
     ) -> list[CuratedRecommendation]:
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region and utcOffset.
-
-        Personal interests are not supported yet. They will be supported in a future update.
         """
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
@@ -99,7 +102,8 @@ class ContextualRanker(Ranker):
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
                 and (
-                    no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
+                    no_opens
+                    < CONTEXUAL_AVG_BETA_VALUE * fresh_items_limit_prior_threshold_multiplier
                 )
             ):
                 is_fresh = True
