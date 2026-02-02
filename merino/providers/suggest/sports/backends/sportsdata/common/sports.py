@@ -92,11 +92,17 @@ class NFL(Sport):
             'ApiWeek': '3'
         }]
         """
-        self.season = response[0].get("ApiSeason")
-        self.week = response[0].get("ApiWeek")
+        # Special case the Superbowl
+        if not response[0].get("ApiSeason").endswith("STAR"):
+            self.season = response[0].get("ApiSeason")
+            self.week = response[0].get("ApiWeek")
+        else:
+            # The ProBowl interferes with displaying the Superbowl.
+            self.season = response[0].get("ApiSeason").replace("STAR", "POST")
+            self.week = 4
         start = response[0].get("StartDate")
         end = response[0].get("EndDate")
-        logger.debug(f"{LOGGING_TAG} {self.name} week {self.week} {start} to {end}")
+        logger.debug(f"{LOGGING_TAG} {self.name} {self.season} week {self.week} {start} to {end}")
 
     async def update_teams(self, client: AsyncClient):
         """NFL requires a nightly "Timeframe" lookup."""

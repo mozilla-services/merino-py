@@ -296,6 +296,36 @@ async def test_nfl_update_teams(
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+async def test_nfl_superbowl(
+    nfl_teams_payload: list[dict], mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """Test NFL override for the Superbowl vs. Pro Bowl."""
+    nfl = NFL(settings=settings.providers.sports)
+    timeframe = [
+        {
+            "SeasonType": 5,
+            "Season": 2025,
+            "Week": 1,
+            "Name": "Pro Bowl",
+            "ApiSeason": "2025STAR",
+            "ApiWeek": "1",
+            "StartDate": "2025-09-17T00:00:00",
+            "EndDate": "2025-09-23T23:59:59",
+        }
+    ]
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[timeframe, nfl_teams_payload],
+    )
+
+    await nfl.get_season(client=mock_client)
+
+    assert nfl.season == "2025POST"
+    assert nfl.week == 4
+
+
+@pytest.mark.asyncio
 async def test_nhl_update_teams_with_none_season(
     mocker: MockerFixture, mock_client: AsyncClient
 ) -> None:
