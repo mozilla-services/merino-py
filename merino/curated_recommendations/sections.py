@@ -691,11 +691,12 @@ async def get_sections(
     ranker: Ranker
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
-    if (
+    use_contexual_ranker = (
         (do_inferred_contextual or is_contextual_ranking_experiment(request))
         and ml_backend is not None
         and ml_backend.is_valid()
-    ):
+    )
+    if use_contexual_ranker:
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -781,6 +782,7 @@ async def get_sections(
         ranker,
         personal_interests,
         engagement_rescaler=rescaler,
+        do_section_personalization_reranking=not use_contexual_ranker,  # Contextual ranker already re-ranks all sections
         include_headlines_section=include_headlines_section,
     )
 

@@ -2577,49 +2577,6 @@ class TestSections:
         else:
             assert local_model is None
 
-    def test_sections_model_interest_vector_greedy_ranking(self, monkeypatch, client: TestClient):
-        """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
-        np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
-
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={"locale": Locale.EN_US, "feeds": ["sections"]},
-        )
-        data = response.json()
-
-        ## sort sections received
-        sorted_sections = sorted(
-            data["feeds"], key=lambda x: data["feeds"][x]["receivedFeedRank"]
-        )[::-1]
-        ## we should get some sections out
-        assert len(sorted_sections) > 3
-
-        # define interest vector, reversed from previous order
-        interests: dict[str, float | str] = {
-            sorted_sections[i]: (1 - i / 8) * 10 for i in range(4)
-        }
-        interests["model_id"] = DEFAULT_PRODUCTION_MODEL_ID
-        # make the api call
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": Locale.EN_US,
-                "feeds": ["sections"],
-                "inferredInterests": interests,
-            },
-        )
-        data = response.json()
-        # expect interests to be sorted by value
-        sorted_interests = sorted(
-            [k for k, v in interests.items() if isinstance(v, float)],
-            key=interests.get,  # type: ignore
-        )[::-1]
-        # expect top stories to be first
-        sorted_interests.insert(0, "top_stories_section")
-        # order is in receivedFeedRank
-        for i, sec in enumerate(sorted_interests):
-            assert data["feeds"][sec]["receivedFeedRank"] == i
-
     def test_topic_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)

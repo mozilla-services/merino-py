@@ -28,6 +28,11 @@ from merino.curated_recommendations.rankers.utils import (
     renumber_sections,
 )
 
+# We are still learning how to compute how many impressions before we can trust the ranker score completely
+# So far, 3000 impressions seems to be a reasonable average beta value to use as a threshold
+# This means that items with less than 3000 impressions will be marked as fresh.
+CONTEXUAL_AVG_BETA_VALUE = 3000
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,8 +62,6 @@ class ContextualRanker(Ranker):
     ) -> list[CuratedRecommendation]:
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region and utcOffset.
-
-        Personal interests are not supported yet. They will be supported in a future update.
         """
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
@@ -83,6 +86,8 @@ class ContextualRanker(Ranker):
             if contextual_scores:
                 score = contextual_scores.get_score(rec.corpusItemId, k)
 
+            beta_value_for_fresh_check = non_rescaled_b_prior
+
             if score is None:
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)
@@ -94,12 +99,13 @@ class ContextualRanker(Ranker):
                 # impresions before completely ignoring the no_opens from the legacy engagement backend.
                 no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
                 score += random() * 0.0001
-
+                beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
                 and (
-                    no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
+                    no_opens
+                    < beta_value_for_fresh_check * fresh_items_limit_prior_threshold_multiplier
                 )
             ):
                 is_fresh = True
