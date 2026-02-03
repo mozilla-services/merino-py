@@ -3,7 +3,7 @@
 import re
 from enum import StrEnum
 
-EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+EMAIL_PATTERN = re.compile(r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}", re.IGNORECASE)
 NUMERIC_PATTERN = re.compile(r"\d")
 
 
