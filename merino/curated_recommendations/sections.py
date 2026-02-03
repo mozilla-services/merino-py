@@ -552,11 +552,11 @@ def rank_sections(
     if include_headlines_section:
         put_headlines_first_then_top_stories(sections)
 
+    # Sort sections by receivedFeedRank and limit to MAX_SECTIONS_PER_RESPONSE
     sorted_sections = sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)[
         :MAX_SECTIONS_PER_RESPONSE
     ]
 
-    # Sort sections by receivedFeedRank
     sections = {sid: section for sid, section in sorted_sections}
 
     return sections
