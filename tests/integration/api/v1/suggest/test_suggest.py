@@ -367,6 +367,40 @@ def test_suggest_with_invalid_geolocation_ip(
             ],
         ),
         (
+            "/api/v1/suggest?q=test@example.com",
+            [
+                ("suggestions.pii.email", None),
+                ("get.api.v1.suggest.timing", None),
+                (
+                    "get.api.v1.suggest.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+                (
+                    "response.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+            ],
+        ),
+        (
+            "/api/v1/suggest?q=sp0ns0r3d-s0ft-p11",
+            [
+                ("providers.sponsored.query", None),
+                ("providers.non-sponsored.query", None),
+                ("suggestions-per.request", None),
+                ("suggestions-per.provider.sponsored", None),
+                ("suggestions-per.provider.non-sponsored", None),
+                ("get.api.v1.suggest.timing", None),
+                (
+                    "get.api.v1.suggest.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+                (
+                    "response.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+            ],
+        ),
+        (
             "/api/v1/suggest",
             [
                 ("get.api.v1.suggest.timing", None),
@@ -381,7 +415,7 @@ def test_suggest_with_invalid_geolocation_ip(
             ],
         ),
     ],
-    ids=["status_code_200", "status_code_400"],
+    ids=["status_code_200", "status_code_200_pii", "status_code_200_soft_pii", "status_code_400"],
 )
 def test_suggest_metrics(
     mocker: MockerFixture,

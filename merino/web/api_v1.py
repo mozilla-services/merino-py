@@ -49,7 +49,7 @@ from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
 )
 from merino.utils.api.metrics import emit_suggestions_per_metrics
-from merino.utils.query_processing.pii_detect import pii_inspect
+from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
     refine_geolocation_for_suggestion,
@@ -196,8 +196,28 @@ async def suggest(
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
-    if pii_inspect(q):
-        pass
+
+    pii_type = pii_inspect(q)
+    is_soft_pii = False
+
+    match pii_type:  # noqa
+        case PIIType.EMAIL:
+            metrics_client.increment(f"suggestions.pii.{pii_type.name.lower()}")
+            response = SuggestResponse(
+                suggestions=[],
+                request_id=correlation_id.get(),
+                # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string beyond max_split.
+                client_variants=(
+                    client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[:CLIENT_VARIANT_MAX]
+                    if client_variants
+                    else []
+                ),
+            )
+            return ORJSONResponse(content=jsonable_encoder(response))
+        case PIIType.NUMERIC:
+            is_soft_pii = True
+        case _:
+            pass
 
     active_providers, default_providers = sources
     if providers is not None:
@@ -253,7 +273,10 @@ async def suggest(
     if len(suggestions) == 1 and suggestions[0] is NO_LOCATION_KEY_SUGGESTION:
         return Response(status_code=204)
 
-    emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
+    if len(suggestions) == 0 and is_soft_pii:
+        metrics_client.increment(f"suggestions.pii.{pii_type.name.lower()}")
+    else:
+        emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
     response = SuggestResponse(
         suggestions=suggestions,
