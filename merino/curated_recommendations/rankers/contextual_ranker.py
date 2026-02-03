@@ -33,6 +33,9 @@ from merino.curated_recommendations.rankers.utils import (
 # This means that items with less than 3000 impressions will be marked as fresh.
 CONTEXUAL_AVG_BETA_VALUE = 3000
 
+# Hard coded cohot for users with no clicks. We handle differently
+NO_CLICKS_COHORT_ID = 1
+
 logger = logging.getLogger(__name__)
 
 
@@ -72,9 +75,14 @@ class ContextualRanker(Ranker):
             cohort = personal_interests.cohort
         if self.disable_time_zone_context:
             utcOffset = None
-        contextual_scores: ContextualArticleRankings | None = self.ml_backend.get(
-            region, str(utcOffset), cohort
-        )
+
+        contextual_scores: ContextualArticleRankings | None
+
+        if cohort == NO_CLICKS_COHORT_ID:
+            contextual_scores = self.ml_backend.get(region=region, utcOffset=None, cohort=None)
+        else:
+            contextual_scores = self.ml_backend.get(region, str(utcOffset), cohort)
+
         k = randint(0, contextual_scores.K - 1) if contextual_scores is not None else 0
         for rec in recs:
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(

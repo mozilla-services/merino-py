@@ -16,7 +16,7 @@ from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import
 )
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
-MODEL_BASE64 = "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"
+MODEL_BASE64 = "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"
 
 
 @pytest.fixture(scope="function")
@@ -128,6 +128,84 @@ async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client
     assert int_result >= 0
     assert int_result < 20
 
+    # Test specific expected result for the v2 model, which has cohort of 1 for
+    # a no clicks cohort. This test can be adjusted when the model is updated.
+    result = model_provider.get_cohort_for_interests(
+        model_id="inferred-v3-model", interests="1000" * 8
+    )
+    assert result == 1
+    result = model_provider.get_cohort_for_interests(
+        model_id="inferred-v3-model", interests="0000" * 8
+    )
+    assert result == 1
+
+
+@pytest.mark.asyncio
+async def test_normalize_interests_applies_chunk_rewrites(
+    gcs_storage_client, gcs_bucket, metrics_client
+):
+    """Test that _normalize_interests rewrites 4-bit chunks per the normalization rules."""
+    model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
+    await wait_until_model_is_updated(model_provider)
+
+    # Build an interests bitstring out of 4-bit chunks:
+    # - include each rewrite case at least once
+    # - include a chunk that should pass through unchanged
+    chunks_in = [
+        "1010",  # -> 0100
+        "0101",  # -> 0010
+        "1100",  # -> 0100
+        "0110",  # -> 0010
+        "0011",  # -> 0010
+        "1001",  # -> 0010
+        "1101",  # -> 0000
+        "1011",  # -> 0000
+        "0111",  # -> 0000
+        "1110",  # -> 0000
+        "0001",  # unchanged (control)
+    ]
+    chunks_out = [
+        "0100",
+        "0010",
+        "0100",
+        "0010",
+        "0010",
+        "0010",
+        "0000",
+        "0000",
+        "0000",
+        "0000",
+        "0001",
+    ]
+
+    interests_in = "".join(chunks_in)
+    normalized_out = "".join(chunks_out)
+
+    # first set of items
+    test_in = interests_in[: model_provider._num_bits]
+    test_out = normalized_out[: model_provider._num_bits]
+
+    result = model_provider._normalize_interests(test_in)
+    assert result == test_out
+
+    # second set of items
+    test_in = interests_in[-model_provider._num_bits :]
+    test_out = normalized_out[-model_provider._num_bits :]
+
+    result = model_provider._normalize_interests(test_in)
+    assert result == test_out
+
+
+@pytest.mark.asyncio
+async def test_normalize_interests_raises_on_wrong_length(
+    gcs_storage_client, gcs_bucket, metrics_client
+):
+    """Test that _normalize_interests rejects strings of incorrect length."""
+    model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
+    await wait_until_model_is_updated(model_provider)
+
+    assert model_provider._normalize_interests("0" * (model_provider._num_bits - 1)) is None
+
 
 @pytest.mark.asyncio
 async def test_cohort_model_skips_due_to_mismatch(
@@ -185,7 +263,7 @@ async def test_gcs_cohort_logs_error_for_missing_blob(
             record for record in caplog.records if record.levelname == expected_level_name
         ]
         # Assert that the expected message appears with the expected log level
-        expected_message = "Blob 'contextual_ts/cohort_model.safetensors' not found."
+        expected_message = "Blob 'contextual_ts/cohort_model_v2.safetensors' not found."
         return any(expected_message in record.message for record in log_records)
 
     # Ensure that this test runs quickly, by waiting only until the expected message is logged.
