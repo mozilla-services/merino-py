@@ -39,6 +39,8 @@ class GcsInterestCohortModel(CohortModelBackend):
                     metadata = f.metadata() or {}
                     self._model_id = metadata.get("model_id", "unknown")
                     self._num_bits = int(metadata.get("num_interest_bits", 32))
+                    if self._num_bits == 40:
+                        self._num_bits = 32  # backwards compatibility hack, as external inputs are still 40 bits. Will remove later.
                     self._training_run_id = metadata.get("training_run_id", "unknown")
                     self._target_cohorts = int(
                         metadata.get("target_cohorts", DEFAULT_TARGET_COHORTS)
