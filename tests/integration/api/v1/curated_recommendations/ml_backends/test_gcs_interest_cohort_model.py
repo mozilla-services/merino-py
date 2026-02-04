@@ -133,11 +133,12 @@ async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client
     result = model_provider.get_cohort_for_interests(
         model_id="inferred-v3-model", interests="1000" * 8
     )
-    assert result == '1'
+    assert result == "1"
     result = model_provider.get_cohort_for_interests(
         model_id="inferred-v3-model", interests="0000" * 8
     )
-    assert result == '1'
+    assert result == "1"
+
 
 @pytest.mark.asyncio
 async def test_normalize_interests_applies_chunk_rewrites(
@@ -188,8 +189,8 @@ async def test_normalize_interests_applies_chunk_rewrites(
     assert result == test_out
 
     # second set of items
-    test_in = interests_in[:-model_provider._num_bits]
-    test_out = normalized_out[:-model_provider._num_bits]
+    test_in = interests_in[: -model_provider._num_bits]
+    test_out = normalized_out[: -model_provider._num_bits]
 
     result = model_provider._normalize_interests(test_in)
     assert result == test_out

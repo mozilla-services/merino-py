@@ -14,7 +14,7 @@ class InterestCohortModel(nn.Module):
 
     def __init__(
         self,
-        num_interest_bits: int = 32, # input bits
+        num_interest_bits: int = 32,  # input bits
         num_interests: int = 8,
         num_hidden_interests: int = 16,
         target_cohorts: int = 10,
