@@ -34,7 +34,7 @@ from merino.curated_recommendations.rankers.utils import (
 CONTEXUAL_AVG_BETA_VALUE = 3000
 
 # Hard coded cohot for users with no clicks. We handle differently
-NO_CLICKS_COHORT_ID = 1
+NO_CLICKS_COHORT_ID = '1'
 
 logger = logging.getLogger(__name__)
 
