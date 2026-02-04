@@ -1015,7 +1015,7 @@ max_size = 200_000
 
 # MERINO__ML_RECOMMENDATIONS__GCS__COHORT_MODEL__BLOB_PREFIX
 # GCS path of the priors JSON file.
-blob_name = "contextual_ts/cohort_model.safetensors"
+blob_name = "contextual_ts/cohort_model_v2.safetensors"
 
 # MERINO__ML_RECOMMENDATIONS__GCS__COHORT_MODEL__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains updated model.

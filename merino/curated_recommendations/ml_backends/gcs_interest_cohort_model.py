@@ -39,6 +39,8 @@ class GcsInterestCohortModel(CohortModelBackend):
                     metadata = f.metadata() or {}
                     self._model_id = metadata.get("model_id", "unknown")
                     self._num_bits = int(metadata.get("num_interest_bits", 32))
+                    if self._num_bits == 40:
+                        self._num_bits = 32  # backwards compatibility hack, as external inputs are still 40 bits. Will remove later.
                     self._training_run_id = metadata.get("training_run_id", "unknown")
                     self._target_cohorts = int(
                         metadata.get("target_cohorts", DEFAULT_TARGET_COHORTS)
@@ -52,11 +54,34 @@ class GcsInterestCohortModel(CohortModelBackend):
                 cohort_model.load_state_dict(state_dict)
                 self._cohort_model = cohort_model
                 self._cohort_model.eval()
-                self.get_cohort_for_interests.cache_clear()
+                self._get_cohort_for_normalized_interests.cache_clear()
             except Exception as e:
                 logger.error(f"Failed to load cohort model {e}")
 
-    @lru_cache(maxsize=1000)
+    def _normalize_interests(self, interests: str) -> str | None:
+        """Normalize the interests string into a string with simpler patterns."""
+        if len(interests) != self._num_bits:
+            return None
+
+        # Mapping equivalent to the CASE / REGEXP_CONTAINS logic
+        replacement_map = {
+            "1010": "0100",
+            "1100": "0100",
+            "0101": "0010",
+            "0110": "0010",
+            "0011": "0010",
+            "1000": "1000",
+            "0100": "0100",
+            "0010": "0010",
+            "0001": "0001",
+        }
+        normalized_chunks = []
+        # Process in 4-bit chunks
+        for i in range(0, self._num_bits, 4):
+            chunk = interests[i : i + 4]
+            normalized_chunks.append(replacement_map.get(chunk, "0000"))
+        return "".join(normalized_chunks)
+
     def get_cohort_for_interests(
         self,
         interests: str,
@@ -72,10 +97,24 @@ class GcsInterestCohortModel(CohortModelBackend):
             return None
         if training_run_id is not None and self._training_run_id != training_run_id:
             return None
-        interest_bits = [int(c) for c in interests]
+        normalized_interests: str | None = self._normalize_interests(interests)
+        if normalized_interests is None:
+            return None
+        else:
+            return self._get_cohort_for_normalized_interests(normalized_interests)
+
+    @lru_cache(maxsize=3000)
+    def _get_cohort_for_normalized_interests(
+        self,
+        normalized_interests: str,
+    ) -> str | None:
+        """Fetch the contextual ranking cohort based on normalized interests list.
+        Requires Model ID to match, and also checks training_run_id if provided.
+        """
+        bit_values = [int(bit) for bit in normalized_interests]
         try:
             with torch.no_grad():
-                tensor_data = torch.tensor([interest_bits], dtype=torch.float32)
+                tensor_data = torch.tensor([bit_values], dtype=torch.float32)
                 results = self._cohort_model(tensor_data).argmax(dim=1)
                 return str(results[0].item())
         except Exception as e:
