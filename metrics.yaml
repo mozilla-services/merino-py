@@ -1,6 +1,22 @@
 version: 1.0
 
 service: Merino
+suggest:
+  query_pii_detected_email:
+    description: |
+      Measurement for queries that contain emails
+    type: counter
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+  query_pii_detected_numeric:
+    description: |
+      Measurement for queries that contain numbers
+    type:
+      counter
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
 suggest/accuweather:
   providers_accuweather_query_weather_report:
     description: |

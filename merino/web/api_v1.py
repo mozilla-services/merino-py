@@ -197,28 +197,6 @@ async def suggest(
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
 
-    pii_type = pii_inspect(q)
-    is_soft_pii = False
-
-    match pii_type:  # noqa
-        case PIIType.EMAIL:
-            metrics_client.increment(f"suggestions.pii.{pii_type.name.lower()}")
-            response = SuggestResponse(
-                suggestions=[],
-                request_id=correlation_id.get(),
-                # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string beyond max_split.
-                client_variants=(
-                    client_variants.split(",", maxsplit=CLIENT_VARIANT_MAX)[:CLIENT_VARIANT_MAX]
-                    if client_variants
-                    else []
-                ),
-            )
-            return ORJSONResponse(content=jsonable_encoder(response))
-        case PIIType.NUMERIC:
-            is_soft_pii = True
-        case _:
-            pass
-
     active_providers, default_providers = sources
     if providers is not None:
         # Set used to filter out possible duplicate providers passed in.
@@ -231,6 +209,18 @@ async def suggest(
             search_from.extend(p for p in default_providers if p not in search_from)
     else:
         search_from = default_providers
+
+    pii_type = pii_inspect(q)
+    is_soft_pii = False
+
+    match pii_type:  # noqa
+        case PIIType.EMAIL:
+            metrics_client.increment(f"suggestions.query.pii_detected.{pii_type.name.lower()}")
+            return build_suggestion_response(client_variants, search_from, [])
+        case PIIType.NUMERIC:
+            is_soft_pii = True
+        case _:
+            pass
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
@@ -274,10 +264,14 @@ async def suggest(
         return Response(status_code=204)
 
     if len(suggestions) == 0 and is_soft_pii:
-        metrics_client.increment(f"suggestions.pii.{pii_type.name.lower()}")
+        metrics_client.increment(f"suggestions.query.pii_detected.{pii_type.name.lower()}")
     else:
         emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
+    return build_suggestion_response(client_variants, search_from, suggestions)
+
+
+def build_suggestion_response(client_variants, search_from, suggestions):
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
@@ -288,14 +282,11 @@ async def suggest(
             else []
         ),
     )
-
     # response headers
     response_headers = {}
-
     # could be specific or default
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
     response_headers["Cache-control"] = f"private, max-age={ttl}"
-
     return ORJSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
