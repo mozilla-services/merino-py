@@ -15,6 +15,7 @@ from pytest import LogCaptureFixture
     [
         (SurfaceId.NEW_TAB_EN_US, "America/New_York"),
         (SurfaceId.NEW_TAB_EN_GB, "Europe/London"),
+        (SurfaceId.NEW_TAB_EN_CA, "America/Toronto"),
         (SurfaceId.NEW_TAB_EN_INTL, "Asia/Kolkata"),
         (SurfaceId.NEW_TAB_DE_DE, "Europe/Berlin"),
         (SurfaceId.NEW_TAB_ES_ES, "Europe/Madrid"),
@@ -35,6 +36,8 @@ def test_get_surface_timezone(surface_id, timezone_str, caplog: LogCaptureFixtur
     [
         ("America/New_York", "2023-08-01 7:00:00", "2023-08-01"),
         ("America/New_York", "2023-08-01 6:59:00", "2023-07-31"),
+        ("America/Toronto", "2023-08-01 7:00:00", "2023-08-01"),
+        ("America/Toronto", "2023-08-01 6:59:00", "2023-07-31"),
         ("Asia/Kolkata", "2023-07-31 21:30:00", "2023-08-01"),
         ("Asia/Kolkata", "2023-07-31 21:29:00", "2023-07-31"),
         ("Europe/London", "2023-08-01 2:00:00", "2023-08-01"),

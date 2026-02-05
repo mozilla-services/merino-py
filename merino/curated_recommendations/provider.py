@@ -131,7 +131,9 @@ class CuratedRecommendationsProvider:
         self, request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
-        surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
+        surface_id = get_recommendation_surface_id(
+            locale=request.locale, region=request.region, request=request
+        )
 
         sections_feeds = None
         general_feed: list[CuratedRecommendation] = []

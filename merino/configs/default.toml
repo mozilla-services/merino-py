@@ -1038,6 +1038,12 @@ retry_wait_initial_seconds = 0.5
 retry_wait_jitter_seconds = 0.2
 
 
+[default.curated_recommendations.rankers.thompson_sampling]
+# MERINO__CURATED_RECOMMENDATIONS__RANKERS__THOMPSON_SAMPLING__TEST_REPEAT_COUNT
+# Number of times to repeat tests for Thompson sampling ranker.
+test_repeat_count = 1
+
+
 [default.jobs.wikipedia_indexer]
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL
 # The URL of the Elasticsearch cluster for indexing job.
