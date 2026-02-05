@@ -79,6 +79,7 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
         zones = {
             SurfaceId.NEW_TAB_EN_US: "America/New_York",
             SurfaceId.NEW_TAB_EN_GB: "Europe/London",
+            SurfaceId.NEW_TAB_EN_CA: "America/Toronto",
             # Note: en-Intl is poorly named. Only India is currently eligible.
             SurfaceId.NEW_TAB_EN_INTL: "Asia/Kolkata",
             SurfaceId.NEW_TAB_DE_DE: "Europe/Berlin",

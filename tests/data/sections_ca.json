@@ -1,0 +1,2709 @@
+{
+    "data": {
+        "getSections": [
+            {
+                "createSource": "ML",
+                "externalId": "travel__lEN_CA",
+                "active": true,
+                "title": "Travel",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "653"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "c66060fa-b7fc-4091-8848-285f06ac31d5",
+                            "url": "https://www.lonelyplanet.com/articles/guide-to-ko-samui-thailand",
+                            "title": "A guide to Ko Samui, Thailand",
+                            "excerpt": "Plan your time on Ko Samui, an unspoilt island in Thailand\u2019s Lower Gulf, with these top tips on when to visit, how long to stay and the best things to do.",
+                            "topic": "TRAVEL",
+                            "publisher": "Lonely Planet",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ffc008f5-1845-4092-89da-87a1455edbf7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b1bf8750-4ad4-436a-a43f-954cc4175a1a",
+                            "url": "https://explore-mag.com/10-sunken-treasures-in-canada-what-lies-beneath-the-waves/",
+                            "title": "10 Sunken Treasures in Canada: What Lies Beneath the Waves",
+                            "excerpt": "Underwater treasures take many forms in Canadian waters.",
+                            "topic": "TRAVEL",
+                            "publisher": "explore-mag.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2824ebff-e788-4152-af24-0cc38af55f90.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5cbd90b6-dd4c-402a-a62f-1facb513e92e",
+                            "url": "https://www.timeout.com/news/italy-has-added-7-new-villages-to-its-most-beautiful-list-heres-where-to-find-them-020426",
+                            "title": "Italy Has Added 7 New Villages to Its \u2018Most Beautiful\u2019 List \u2013 Here\u2019s Where to Find Them",
+                            "excerpt": "Each one has \u2018preserved their architectural integrity, local traditions, and a distinct way of life\u2019",
+                            "topic": "TRAVEL",
+                            "publisher": "Time Out",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/61d82e21-a614-4016-b992-fe5821c20957.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8859019f-3fa7-455e-832f-cd982997d0c4",
+                            "url": "https://www.timeout.com/news/love-cats-this-greek-island-is-seeking-cat-sanctuary-volunteers-in-exchange-for-free-housing-020426",
+                            "title": "Love cats? This Greek island is seeking cat sanctuary volunteers in exchange for free housing",
+                            "excerpt": "The tasks required include cleaning, feeding and \u2018kitten cuddling\u2019",
+                            "topic": "TRAVEL",
+                            "publisher": "Time Out",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/243b37c1-a2c4-4dc5-b39d-df726efd10ab.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d8bdc0f9-6db5-4e62-8931-234db6b3350c",
+                            "url": "https://canadiangeographic.ca/articles/the-essential-itinerary-anguilla-a-true-gem-of-the-caribbean/",
+                            "title": "The Essential Itinerary: Anguilla, \u201ca true gem of the Caribbean \u201d",
+                            "excerpt": "A three-day guide on what to do, where to stay and where to eat in Anguilla \u2014 one of the Caribbean\u2019s best-kept islands.",
+                            "topic": "TRAVEL",
+                            "publisher": "canadiangeographic.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/436c0091-df04-4101-8dea-0bf9b26aa59f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e8b24f23-e77f-4ee7-8ab4-821c76304b4f",
+                            "url": "https://www.lonelyplanet.com/articles/weekend-itinerary-french-polynesia",
+                            "title": "How to take a solo trip in Tahiti & French Polynesia",
+                            "excerpt": "Our writer did her own Goldilocks story and tried three different ways to enjoy French Polynesia.",
+                            "topic": "TRAVEL",
+                            "publisher": "Lonely Planet",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/54973d89-4f4d-4fcd-8876-63df4b4de26c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1f56fcc4-b90e-4763-a6d2-40d106421123",
+                            "url": "https://o.canada.com/travel/air-canada-adds-new-winter-flights-to-europe-and-latin-america",
+                            "title": "Air Canada adds new winter flights to Europe and Latin America",
+                            "excerpt": "Air Canada is expanding its network to Latin America and Europe amid a growing demand for premium international travel.",
+                            "topic": "TRAVEL",
+                            "publisher": "o.canada.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2bc0b8dc-7e58-4fc8-b4de-1595a0f9bffa.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e335938c-9f6f-4222-8a80-c0c685af318a",
+                            "url": "https://www.afar.com/magazine/why-the-northern-lights-will-soon-be-easier-to-see",
+                            "title": "Why Northern Lights Viewing Will Be Stellar This Year\u2014and How and Where to Spot Them",
+                            "excerpt": "Time to learn the term \u201csolar maximum\u201d and book that aurora borealis trip.",
+                            "topic": "TRAVEL",
+                            "publisher": "AFAR",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/964262b6-a5b3-4196-8980-0f82c0cc38ec.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9d28fd88-d39d-42a0-a3ca-0792f8949729",
+                            "url": "https://ottawacitizen.com/news/ottawa-tourism-michelin",
+                            "title": "Ottawa Tourism met with chefs. Michelin was on the table",
+                            "excerpt": "The globally renowned restaurant rating brand visits Toronto, Vancouver and Montreal, but ignores Ottawa.",
+                            "topic": "TRAVEL",
+                            "publisher": "ottawacitizen.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/733e4e94-5a65-432e-828a-b5751a016f96.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e3aefd94-6e95-4cf6-91e1-d06745f6efc5",
+                            "url": "https://www.afar.com/magazine/the-tourism-industrys-new-role-in-fighting-wildfires",
+                            "title": "The Tourism Industry\u2019s New Role in Fighting Wildfires",
+                            "excerpt": "Reacting to wildfires from L.A. to the wetlands of Brazil and forests of Costa Rica, tourism groups are increasingly stepping in to help safeguard the places and communities they cherish.",
+                            "topic": "TRAVEL",
+                            "publisher": "AFAR",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fac78f25-8632-479d-945a-7e3135d45f31.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0b8d92f8-ffc2-459f-a633-5738fd85ee52",
+                            "url": "https://o.canada.com/travel/dubai-getting-worlds-first-street-paved-with-gold",
+                            "title": "Dubai is getting the world\u2019s first street paved with real gold",
+                            "excerpt": "In Dubai, the world\u2019s first Gold Street is being created as a unique attraction for tourists and customers alike.",
+                            "topic": "TRAVEL",
+                            "publisher": "o.canada.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/95b2bd80-be2e-483c-bbd2-dbd92d5d4f81.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "hobbies__lEN_CA",
+                "active": true,
+                "title": "Gaming",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "596"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "8e2ae698-9361-4e35-81dc-c74e6058ef63",
+                            "url": "https://www.rockpapershotgun.com/generative-ai-plays-zero-part-in-gta-6-take-two-boss-confirms-but-the-company-do-have-hundreds-of-ai-pilots-and-implementations-on-the-go",
+                            "title": "Generative AI plays \u201czero part\u201d in GTA 6, Take-Two boss confirms, but the company do have \u201chundreds\u201d of AI \u201cpilots and implementations\u201d on the go",
+                            "excerpt": "Take-Two CEO Strauss Zelnick has said generative AI plays \u201czero part\u201d in GTA 6, but the company are piloting using AI in other areas.",
+                            "topic": "GAMING",
+                            "publisher": "Rock, Paper, Shotgun",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/886d22ab-7560-4c06-b944-b5fb0b4b5a9b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "979d8b3e-696e-4092-b152-c5db526c28cb",
+                            "url": "https://www.avclub.com/point-galaxy-board-game-review",
+                            "title": "Collect a universe of points in the board game Point Galaxy",
+                            "excerpt": "The latest sequel to Point Salad shoots for the stars.",
+                            "topic": "GAMING",
+                            "publisher": "The A.V. Club",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fa765494-f515-477f-bf70-024d29da20a3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9cc12bb3-b255-4e57-87e2-19274476ee15",
+                            "url": "https://www.polygon.com/the-sims-4-fallout-vault-build/",
+                            "title": "Sims 4 player spends 90+ hours painstakingly creating a Fallout vault",
+                            "excerpt": "One Sims 4 player spent 90 hours on this design",
+                            "topic": "GAMING",
+                            "publisher": "Polygon",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c34dfc62-597e-4bc2-a39b-4417eefce105.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bdc22d2a-fb9e-4a03-95c4-6bbd5497e1b3",
+                            "url": "https://www.eurogamer.net/pokemon-special-video-set-for-super-bowl-2026",
+                            "title": "Forget Pikachu, Pok\u00e9mon will kick off its 30th anniversary celebrations with Jigglypuff in \u201cspecial video\u201d for the Super Bowl",
+                            "excerpt": "Pok\u00e9mon has announced a Super Bowl 2026 \u201cspecial video\u201d with a teaser starring Jigglypuff.",
+                            "topic": "GAMING",
+                            "publisher": "Eurogamer",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/eba2b66f-0d54-460c-9525-661cdc37a76a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ace5308f-a95d-41ea-bdb7-f2abfbb1b444",
+                            "url": "https://www.gematsu.com/2026/02/overwatch-2-drops-2-as-year-long-narrative-arc-begins-with-10-new-heroes-coming-to-switch-2-this-spring",
+                            "title": "Overwatch 2 drops \u20182\u2019 as year-long narrative arc begins with 10 new heroes; coming to Switch 2 this spring",
+                            "excerpt": "Blizzard Entertainment is dropping to the \u201c2\u201d from free-to-play first-person shooter Overwatch 2, now Overwatch, as the game enters \u201ca bold new chapter\u201d with a year-long nar\u2026",
+                            "topic": "GAMING",
+                            "publisher": "Gematsu",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/04e01621-74a2-4871-a1b7-d801724d5b3b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9b70edfe-cefc-490d-b873-dcab91c76f7f",
+                            "url": "https://gameinformer.com/2026/02/04/nintendo-direct-partner-showcase-announced-for-tomorrow",
+                            "title": "Nintendo Direct: Partner Showcase Announced For Tomorrow",
+                            "excerpt": "It will air at 6 a.m. PT/9 a.m. ET.",
+                            "topic": "GAMING",
+                            "publisher": "Game Informer",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/dcb8eb1d-65b5-4d03-8c70-f5dfafe83fae.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "983fe018-289a-41ce-b54b-10818089a28e",
+                            "url": "https://www.nintendolife.com/news/2026/02/nintendo-explains-why-switch-games-are-still-getting-free-updates",
+                            "title": "Nintendo Explains Why Switch Games Are Still Getting Free Updates",
+                            "excerpt": "For the Greater Good",
+                            "topic": "GAMING",
+                            "publisher": "Nintendo Life",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b7542d00-230f-41bb-bd93-0d532665a23b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4d5c5636-bd24-46bb-8274-7663f612a55d",
+                            "url": "https://www.eurogamer.net/mystery-fallout-season-2-countdown-reveals-no-game-remasters",
+                            "title": "The mystery Fallout Season 2 countdown on Amazon\u2019s website revealed a remaster of sorts, but it\u2019s not a remake of New Vegas - it\u2019s a penthouse",
+                            "excerpt": "Fallout Season 2 is now over, and its mystery countdown on an interactive site revealed no new games or remasters, but fans got a nice little extra.",
+                            "topic": "GAMING",
+                            "publisher": "Eurogamer",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/59f98705-6bc9-4aa3-966d-86b9b0b84e9f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "aa531aaa-b88d-4d70-bd7d-3eb26bb9ad61",
+                            "url": "https://www.videogameschronicle.com/review/nioh-3-review/",
+                            "title": "Nioh 3 Review: Team Ninja on top form with one of its best \u2018masocore\u2019 games yet",
+                            "excerpt": "Some issues aside, this ninja action game feels like the culmination of everything Team Ninja has learned\u2026",
+                            "topic": "GAMING",
+                            "publisher": "VGC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/631ebc32-b2d8-48f1-82fa-e89683915d63.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "fa8f5745-3878-4b6f-b3e5-860a35e23fe5",
+                            "url": "https://www.nintendolife.com/news/2026/02/random-sun-and-moons-ultra-beasts-were-a-manifestation-of-my-own-resentment-explains-pokemon-artist",
+                            "title": "Random: Sun & Moon\u2019s Ultra Beasts Were \u201cA Manifestation Of My Own Resentment\u201d, Explains Pok\u00e9mon Artist",
+                            "excerpt": "Normal Poipole",
+                            "topic": "GAMING",
+                            "publisher": "Nintendo Life",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/6e651004-b44b-4e99-8155-d776d4b9dca6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bf0a14c2-6547-4c47-985f-71cc23846071",
+                            "url": "https://www.polygon.com/overwatch-jetpack-cat-new-hero/",
+                            "title": "Overwatch\u2019s Jetpack Cat was once \u2018too ridiculous for Overwatch\u2019 \u2014 but now she\u2019s in the game",
+                            "excerpt": "Blizzard promised more \u2018oddballs\u2019 were coming to Overwatch, so here\u2019s Fika",
+                            "topic": "GAMING",
+                            "publisher": "Polygon",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4bd48844-65f2-4242-80c3-139c0225cd6e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "09ff646e-f0f6-47c6-8e7b-0add687597e5",
+                            "url": "https://www.gematsu.com/2026/02/docked-launches-march-5",
+                            "title": "Docked launches March 5",
+                            "excerpt": "Port management simulation game Docked will launch for PlayStation 5, Xbox Series, and PC via Steam and Epic Games Store on March 5, Saber Interactive announced.",
+                            "topic": "GAMING",
+                            "publisher": "Gematsu",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c0bfd86e-c1d2-4950-8bb7-fcc482a9d1c9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "619083d4-b901-4659-a4d1-636e66f66edf",
+                            "url": "https://www.rockpapershotgun.com/the-steam-machine-is-still-on-track-for-its-original-release-window-according-to-valves-chosen-chipmakers",
+                            "title": "The Steam Machine is still \u201con track\u201d for its original release window, according to Valve\u2019s chosen chipmakers",
+                            "excerpt": "AMD\u2019s CEO says the Steam Machine is still set to launch in early 2026, despite ongoing component shortages.",
+                            "topic": "GAMING",
+                            "publisher": "Rock, Paper, Shotgun",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e85bb1e6-be87-4e36-97d5-cf05ccfba1a9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "64ca7076-3b2e-4ea4-b969-2224348af8c9",
+                            "url": "https://www.cnet.com/tech/gaming/xbox-cloud-gaming-ad-supported-tier-when-does-it-start-how-will-it-work/",
+                            "title": "Xbox Cloud Gaming Ad-Supported Tier: When Does It Start, How Much Will It Cost and More",
+                            "excerpt": "Ads could remove the sting of Xbox Game Pass price hikes, but will it be worth it?",
+                            "topic": "GAMING",
+                            "publisher": "CNET",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/18b02d64-9505-4712-bb99-1f41c9976dcc.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "eaad6eb3-ac4a-41e7-b84e-a7c41f1c4748",
+                            "url": "https://lifehacker.com/entertainment/these-switch-2-joy-cons-turn-your-handheld-into-a-portable-gamecube",
+                            "title": "These Switch 2 \u2018Joy-Cons\u2019 Turn Your Handheld Into a Portable GameCube",
+                            "excerpt": "Abxylute has two new controller options for the Nintendo Switch 2 that solve its poor ergonomics, including one that turns your console into a portable GameCube.",
+                            "topic": "GAMING",
+                            "publisher": "Lifehacker",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e1b538d5-14df-4ee7-aa72-67bd1d39af56.png"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "food__lEN_CA",
+                "active": true,
+                "title": "Food",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "210"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "38739d96-366e-41aa-9cda-efcb181a9350",
+                            "url": "https://www.cbc.ca/life/video/roasted-root-vegetable-soup-recipe-amina-al-saigh-9.7068765",
+                            "title": "Make roasted root-vegetable soup with a swirl of minted yogurt on top",
+                            "excerpt": "This simple recipe from Amina Al-Saigh is made for chilly days.",
+                            "topic": "FOOD",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/72df8d40-5563-417b-9f5c-22925a5d2f01.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f68f359f-8cf5-459f-a17b-fd2329d53616",
+                            "url": "https://chatelaine.com/food/the-education-of-jamie-oliver/",
+                            "title": "The Education of Jamie Oliver",
+                            "excerpt": "\u201cI started off being the edgy chef, and I\u2019m not edgy anymore,\u201d says the celebrity chef on his latest cookbook. \u201cMy job now is to be useful.\u201d",
+                            "topic": "FOOD",
+                            "publisher": "chatelaine.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/83cd55f4-cceb-47e8-94ff-cccc54c4bc88.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ed93014d-0af9-4d5c-92b0-d2e22a6e209b",
+                            "url": "https://www.realsimple.com/slow-cooker-birria-bowls-perfect-for-a-cozy-night-in-11896558",
+                            "title": "These Slow-Cooker Birria Bowls Practically Cook Themselves\u2014and They\u2019re Even Better As Leftovers",
+                            "excerpt": "See our recipe for Slow-Cooker Birria Bowls, which call for just 30 minutes of hands-on work and contain plenty of protein. The bowls are even better as leftovers.",
+                            "topic": "FOOD",
+                            "publisher": "Real Simple",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/eaf97113-a94c-4653-820e-33239749504e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c8c344af-aed8-48e6-a8cc-bcb063a380d7",
+                            "url": "https://ellegourmet.ca/team-canada-milano-cortina-2026/",
+                            "title": "The Italian dishes Team Canada athletes can\u2019t wait to try in Milan",
+                            "excerpt": "Competition may be fierce, but Italy\u2019s culinary traditions have won over Team Canada athletes heading to the Milano Cortina Winter Olympics.",
+                            "topic": "FOOD",
+                            "publisher": "ellegourmet.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d2cb5b12-4f9a-4d18-90ba-f2590f31c700.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0868440e-1251-40c3-8793-1455ddf17ace",
+                            "url": "https://www.foodandwine.com/soft-pretzels-11893477",
+                            "title": "Soft Pretzels",
+                            "excerpt": "This recipe makes two dozen soft pretzel sticks that are fluffy inside with golden, chewy, salt-crusted exteriors. The key is boiling the dough in an alkaline solution before baking; Achatz makes his pretzels without lye, using baking soda instead.",
+                            "topic": "FOOD",
+                            "publisher": "Food & Wine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/80186293-1761-4f08-9e59-5106b853439f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3e36db9d-57aa-4534-aa97-fb92c0a3b3e5",
+                            "url": "https://www.thekitchn.com/beef-tips-recipe-23578525",
+                            "title": "Beef Tips and Gravy",
+                            "excerpt": "\u201cWe eat it once a week.\u201d",
+                            "topic": "FOOD",
+                            "publisher": "The Kitchn",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/779bdbcc-a334-4685-9af9-430344072d46.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "2424c40e-da7e-46fe-8074-cb56164dd8a4",
+                            "url": "https://nationalpost.com/life/food/2026-canadian-state-of-restaurants-report",
+                            "title": "Canadian restaurants spending 37% more on food due to trade war with U.S., survey finds",
+                            "excerpt": "According to the Canadian State of Restaurants Report, operators are optimistic about the future despite rising costs",
+                            "topic": "FOOD",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f7939d7a-f393-4d83-95d4-e4dc0264e28c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8f378452-dba7-4554-9028-ba42e2eedcd0",
+                            "url": "https://www.allrecipes.com/best-chicken-wing-recipe-11884516",
+                            "title": "I Tested Our 5 Most Popular Buffalo Chicken Wing Recipes and Found My New Favorite Party Snack",
+                            "excerpt": "Five Buffalo wing recipes stand out as favorites on Allrecipes. Each recipe has been cooked countless times over the years and notched thousands of glowing reviews. Which one is the best, and why?",
+                            "topic": "FOOD",
+                            "publisher": "Allrecipes",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c53994da-8d52-4566-9512-c5f63a09b380.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c9e2b3a5-407b-4da7-a051-f49c14226c18",
+                            "url": "https://www.seriouseats.com/cuisinart-4-in-1-coffee-maker-review-11866397",
+                            "title": "Can a Single Coffee Maker Replace 4? I Tested the Cuisinart 4-in-1 to Find Out",
+                            "excerpt": "The Cuisinart 4-in-1 Coffee Maker works with K-Cups and Nespresso pods and makes regular coffee. But is it worth it? We tested it to find out.",
+                            "topic": "FOOD",
+                            "publisher": "Serious Eats",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fc081cfb-6f78-43d4-a844-8b9a769db17e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "71ba370f-ea68-4087-880d-bfdcb7d6a2ef",
+                            "url": "https://www.allrecipes.com/mother-in-laws-cheeseburger-slider-recipe-11898060",
+                            "title": "My Mother-In-Law\u2019s Slider Recipe Is Always the First To Go at a Potluck",
+                            "excerpt": "Cheeseburger sliders make for the best party appetizer or snack, and couldn\u2019t be easier to throw together. See why this recipe is so popular and irresistible.",
+                            "topic": "FOOD",
+                            "publisher": "Allrecipes",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/97b8e630-52a3-4141-9bc5-1f40f534472b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d8455ce2-41bb-464e-934b-8eaecdf87be5",
+                            "url": "https://vancouversun.com/life/vancouver-restaurant-nomo-nomo-izakaya",
+                            "title": "With Vancouver\u2019s Nomo Nomo, Benjamin Lim recreates the easygoing izakaya nights that shaped his cooking career",
+                            "excerpt": "\u2018The space felt right,\u2019 said Benjamin Lim, who is also the co-owner of the exceedingly popular Vietnamese restaurant, The Lunch Lady.",
+                            "topic": "FOOD",
+                            "publisher": "vancouversun.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f99921c7-3c8a-41a3-83ed-35607cf1b511.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f9d183b6-11f4-4476-b688-cb009e4dc36a",
+                            "url": "https://www.realsimple.com/foods-that-cause-inflammation-11888559",
+                            "title": "The 12 Most Inflammatory Foods, According to Nutrition Experts",
+                            "excerpt": "These are the worst foods for inflammation. Find out what experts say to avoid if you want to boost your body\u2019s anti-inflammatory response.",
+                            "topic": "FOOD",
+                            "publisher": "Real Simple",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/07326daf-41f2-4032-88f7-e874b42071b7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "98ea588b-e9ea-4a77-a670-5fd72e78b524",
+                            "url": "https://www.eater.com/trends/939871/british-food-trend-english-pub-dishoom-expansion",
+                            "title": "British Food Is Here",
+                            "excerpt": "\ufeffA new wave of English pub-inspired restaurants is opening across the United States",
+                            "topic": "FOOD",
+                            "publisher": "Eater",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fd345f4b-d462-486e-bb83-c39729da8a56.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "cb6f2e80-f671-4b90-acb0-e3df08a97aff",
+                            "url": "https://www.bonappetit.com/story/noma-los-angeles",
+                            "title": "Noma Has Landed in LA, Serving Up Desert Amaro, Honey Ants and More",
+                            "excerpt": "Here\u2019s what else we know about the famed restaurant\u2019s residency.",
+                            "topic": "FOOD",
+                            "publisher": "Bon App\u00e9tit",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/97c23b00-2e51-494d-88a6-9a5f851781df.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "605e22de-57da-42e8-b880-5884183e70fc",
+                            "url": "https://www.marthastewart.com/should-avocados-be-refrigerated-11896399",
+                            "title": "Should You Refrigerate Avocados? Here\u2019s What Chefs Recommend",
+                            "excerpt": "We talked to experts to find out if avocados should be refrigerated. Learn if refrigeration impacts ripening, and what you should do with cut avocados.",
+                            "topic": "FOOD",
+                            "publisher": "Martha Stewart",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/73620435-92fa-499c-905c-8b62d2610f25.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "health__lEN_CA",
+                "active": true,
+                "title": "Health",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "223"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "ba322043-2810-4b82-b26e-24c5a2822ffd",
+                            "url": "https://www.womenshealthmag.com/fitness/a70245415/yoga-vs-pilates-running-weight-lifting/",
+                            "title": "Which Is Better: Yoga or Pilates?",
+                            "excerpt": "Whether you\u2019re a runner, lifter, or somewhere in between, the modalities have their pros and cons. ",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Women\u2019s Health Magazine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c274e250-54ca-4863-8571-7c142810aab4.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "df4f4aae-2fc7-4048-b760-b6f86bd39c50",
+                            "url": "https://www.bustle.com/wellness/fabulous-app-good-habits-review-features-price",
+                            "title": "This App Helped Me Build & Finally Stick To Healthy Habits",
+                            "excerpt": "An honest review of the Fabulous app that is meant to help you build better habits and stick to them.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Bustle",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c4258dce-771d-4a16-9a78-6fd240eda4bb.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ecfa2e79-e1aa-4454-925c-232194c9e61a",
+                            "url": "https://www.outsideonline.com/health/nutrition/chinese-hot-water-trend/",
+                            "title": "The Health Benefits of Drinking Hot Water, According to a Registered Dietitian",
+                            "excerpt": "Plus, find out if it may enhance your workout performance.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Outside",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/527d200f-a92e-4234-ace3-1fe770c6db86.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e0d52cc0-23e1-4adc-81fe-320539bac24f",
+                            "url": "https://www.bustle.com/wellness/48-hour-rule-goal-setting-mindset-tiktok",
+                            "title": "\u201c48-Hour Rule\u201d Calls You Out In The Best Way Possible",
+                            "excerpt": "TikTok\u2019s \u201c48-hour rule\u201d helps you reach your goals and be more productive.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Bustle",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e0bd4b20-ca68-4290-843b-f74ef5d14c2e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6264bce1-2008-4e30-a715-e218dd8402be",
+                            "url": "https://www.popsugar.com/health/daylife-editor-experiment-49473542",
+                            "title": "I Replaced Nightlife With \u201cDaylife\u201d (and I\u2019m Never Going Back)",
+                            "excerpt": "I replaced nightlife with \u201cdaylife\u201d \u2014 here\u2019s how it went.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "PS",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/41494770-3208-421c-bb12-8a500beb5140.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c1b59021-3add-4d1d-acc6-2563153135b5",
+                            "url": "https://www.esquire.com/lifestyle/health/a70235588/hoka-rocket-x3-review/",
+                            "title": "A Durable Super Shoe? Could It Be?",
+                            "excerpt": "If it\u2019s biologically possible to develop an addiction to shoes, Hoka\u2019s best super shoe will do it.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Esquire",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8979b97e-087b-4ec8-b982-ce31269c449f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "da5d084b-f3ee-4138-901d-2311df99049b",
+                            "url": "https://www.cbc.ca/news/health/health-system-modernization-9.7074477",
+                            "title": "Federal bill wants to make it easier to share Canadians\u2019 electronic medical records",
+                            "excerpt": "The federal government is reviving proposed legislation that would allow digital health information to be shared safely across electronic systems.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e3b9f161-788e-46b8-9de2-c8a7cd9e39ef.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "finance__lEN_CA",
+                "active": true,
+                "title": "Money",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "391"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "c747785f-212c-4ed7-9029-e6bf94f626c0",
+                            "url": "https://www.bnnbloomberg.ca/investing/personal-finance/2026/01/28/think-you-cant-negotiate-many-of-lifes-daily-expenses-think-again-experts-say/",
+                            "title": "Think you can\u2019t negotiate many of life\u2019s daily expenses? Think again, experts say",
+                            "excerpt": "There are discounts out there that you aren\u2019t getting, because you aren\u2019t asking.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "bnnbloomberg.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/db48e7af-574c-4c70-a491-858d55d2b150.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8b856a67-7125-48fa-a0e2-8888331f0d1b",
+                            "url": "https://www.thecut.com/article/husband-lost-hundreds-thousands-day-trading.html",
+                            "title": "\u2018I Lost $300,000 to My Husband\u2019s Secret Day Trading\u2019",
+                            "excerpt": "How one woman recovered after her husband spent all their savings \u2014 and more.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "The Cut",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5f47fe73-1dad-413c-bc71-4a24a9c36075.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0df61bc4-1d3b-4bc4-b959-3bf27da53dec",
+                            "url": "https://globalnews.ca/news/11643131/canadian-government-cheques-not-cashed/",
+                            "title": "Canadians have billions in uncashed cheques, rebates. Are you one of them?",
+                            "excerpt": "Millions of paper cheques from the government valued at more than $2 billion dollars since 2022 that have been sent out to Canadians -- and have not been cashed.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/866156f4-cd0f-47fd-822c-e5dd261e0b5b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "792c292d-c5cc-4450-ac1a-31529b50d983",
+                            "url": "https://www.ellecanada.com/wealthness/the-fire-movement-rethinking-early-retirement",
+                            "title": "The FIRE Movement: Rethinking Early Retirement",
+                            "excerpt": "Welcome to Elle Canada, the fashion magazine covering fashion, style, beauty and guidance for fashion savvy Canadians.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "ellecanada.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f2bae878-7d73-4785-a7cc-be1675110224.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d965a5b2-03d2-4c44-8561-2a2f2b6bc875",
+                            "url": "https://globalnews.ca/news/11640027/bank-of-canada-rate-preview-january-2026/",
+                            "title": "The Bank of Canada\u2019s 1st rate decision of 2026 is almost here",
+                            "excerpt": "The Bank of Canada is set to make its first interest rate announcement of the year amid a number of mixed economic signals about the state of how consumers are doing.",
+                            "topic": "POLITICS",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8a69bf59-fcdd-422e-bfea-27a75e579486.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "388f33d2-6e6b-4c94-9d11-3ec93a30bf56",
+                            "url": "https://www.moneysense.ca/save/investing/best-gic-rates/",
+                            "title": "The best GIC rates in Canada for 2026",
+                            "excerpt": "Find the best GIC rates in Canada. Plus, everything you need to know about how they work.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "moneysense.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0cb79628-bc99-4f34-a7e3-8d12f673ba4c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "748097c3-3770-4e48-a5d4-f54318fe406b",
+                            "url": "https://nationalpost.com/news/canada/housing-starts-sizzle-in-alberta-fizzle-in-ontario-a-tale-of-two-provinces",
+                            "title": "Why housing starts are sizzling in Alberta, while they fizzle in Ontario",
+                            "excerpt": "Alberta and Ontario are two of Canada\u2019s biggest provincial economies, but they\u2019re going in opposite directions on housing starts",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8bd35173-e1ee-4d43-a0bb-427f826581a4.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "82f3d29d-c837-45b8-9961-8488c3935638",
+                            "url": "https://financialpost.com/news/more-canadians-believe-harder-save-for-retirement",
+                            "title": "Posthaste: It\u2019s getting harder to reach those retirement \u2018golden years\u2019",
+                            "excerpt": "Nearly 70% of Canadians believe retirement saving is more difficult than it was for their parents, according to BMO. Read more.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "financialpost.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0742265b-17f7-41b8-9e1d-a6776b27fc3d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "11964910-67c9-4d43-af64-2a931a2bcb32",
+                            "url": "https://nationalpost.com/life/food/mark-carney-gst-rebate-canada-groceries-and-essentials-benefit",
+                            "title": "What\u2019s the new Canada Groceries and Essentials Benefit? Find out who\u2019s eligible for Carney\u2019s increased GST rebate",
+                            "excerpt": "Prime Minister Mark Carney announced a new GST rebate that he says is aimed at making groceries more affordable",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/aaaca893-dcfd-42fa-b55d-af50e22ca7c0.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6f882378-affb-4369-badc-a0e71bd063b9",
+                            "url": "https://financialpost.com/personal-finance/new-gst-breaks-bad-idea-all-canadians-pay-for",
+                            "title": "The new GST breaks are a bad idea that we\u2019ll all pay for in the end",
+                            "excerpt": "Kim Moody: Rebranding the GST credit is not a tax policy improvement; it\u2019s politics, plain and simple. Find out more here",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "financialpost.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a382d78e-e583-4a03-877f-6746d759ab8f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f3426c88-6cc6-4249-a2c8-a765c81ff48b",
+                            "url": "https://www.ctvnews.ca/business/inflation/article/christopher-liew-how-much-money-should-you-have-saved-before-you-quit-your-job/",
+                            "title": "Christopher Liew: How much money should you have saved before you quit your job?",
+                            "excerpt": "How much money you should have set aside before handing in your resignation depends on a few things, writes personal finance contributor Christopher Liew.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "CTV News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fe3c404a-d602-46ca-9110-655d06f0c970.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "business__lEN_CA",
+                "active": true,
+                "title": "Business",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "52"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "b04f5d8d-5229-40eb-b547-ff2be65c3ca6",
+                            "url": "https://vancouversun.com/news/vancouver-developer-fights-keep-property-slated-filipino-centre",
+                            "title": "Vancouver developer fights in court to keep property slated for Filipino centre",
+                            "excerpt": "A Vancouver developer will fight in court this week to hold on to the property where he wants to build a Filipino cultural centre and hotel",
+                            "topic": "BUSINESS",
+                            "publisher": "vancouversun.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/da721d39-fd77-4397-a8db-f23d8ef13f96.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9424d28d-8d72-4fda-bc98-c14987c3001d",
+                            "url": "https://www.cbc.ca/news/business/washington-post-layoffs-one-third-staff-9.7073655",
+                            "title": "Washington Post to lay off a third of staff in newsroom and other departments",
+                            "excerpt": "The Washington Post is laying off one-third of its staff in the newsroom and other departments, a brutal blow to one of journalism\u2019s legendary brands.",
+                            "topic": "BUSINESS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8231c2cc-0cf1-49f1-bbed-8e38f768047e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1466769d-f9dd-4d7a-aa72-a9125e100cc4",
+                            "url": "https://financialpost.com/commodities/mining/gold-bugs-right-price-5000-big-bank-theory",
+                            "title": "Gold bugs were right about the price hitting US$5,000, but is their big bank conspiracy theory also right?",
+                            "excerpt": "As gold bugs\u2019 predictions of higher gold prices come true, some people are asking what else they may have been right about. Find out more.",
+                            "topic": "BUSINESS",
+                            "publisher": "financialpost.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0b15db77-3bc1-408e-8526-2983a40c149a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "42871472-92ca-4d4f-9b44-9767f333283d",
+                            "url": "https://www.bnnbloomberg.ca/business/2026/02/04/amd-falls-as-dour-forecast-shows-tough-competition-in-ai-trade/",
+                            "title": "AMD falls as dour forecast shows tough competition in AI trade",
+                            "excerpt": "Advanced Micro Devices shares sank 13 per cent on Wednesday after the company\u2019s lackluster sales forecast deepened investor doubts about its ability to take on AI chip bellwether Nvidia.",
+                            "topic": "BUSINESS",
+                            "publisher": "bnnbloomberg.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2c8e2dba-896e-404d-8b93-a89e497b515c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4f636759-febc-40ac-9457-65f572623803",
+                            "url": "https://globalnews.ca/news/11652435/save-max-real-estate-ontario/",
+                            "title": "Another Ontario real estate firm has trust accounts frozen by regulator",
+                            "excerpt": "Ontario\u2019s real estate regulator has taken action against four brokerages over the alleged unlawful disbursing of funds from trust accounts.",
+                            "topic": "BUSINESS",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b4405102-c0aa-4edc-943f-216aee5920ff.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "219c3ea4-b91f-492a-907f-0b830e8b2007",
+                            "url": "https://www.cbc.ca/news/canada/calgary/bakx-tmx-oil-alberta-bc-cer-9.7074250",
+                            "title": "Trans Mountain proceeding with first of three expansions of oil pipeline",
+                            "excerpt": "Trans Mountain is moving ahead with its first project to pump more oil through its pipeline system between Alberta and British Columbia.",
+                            "topic": "BUSINESS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/dc115106-334b-480a-bbdc-2bc9d133ea4e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "74e3d300-1048-4ea0-afc2-e93b4b99fa94",
+                            "url": "https://www.bnnbloomberg.ca/business/2026/02/04/hell-or-high-water-suncor-delivers-record-q4-output-despite-soggy-weather/",
+                            "title": "\u2018Hell or high water\u2019: Suncor delivers record Q4 output despite soggy weather",
+                            "excerpt": "The chief executive of Suncor Energy Inc. says it delivered record production during the fourth quarter of 2025 despite mucky conditions in northeastern Alberta that caused problems for at least one of its oilsands peers. ",
+                            "topic": "BUSINESS",
+                            "publisher": "bnnbloomberg.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/06850ad1-79be-49ca-b254-e2898186ba40.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "eeafd753-392f-4028-b9cc-ce1b5e50c65c",
+                            "url": "https://www.bbc.com/news/articles/c5y31vnnjepo",
+                            "title": "US probes Nike over white workers discrimination claims",
+                            "excerpt": "Court documents allege the sportswear company treated white employees less favourably.",
+                            "topic": "BUSINESS",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/aa39d344-0fde-4cb0-870b-4eca2407eaa2.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b938a6c6-ad05-4c44-8062-348f4fd35d7f",
+                            "url": "https://montrealgazette.com/opinion/columnists/dunlevy-city-settles-with-la-tulipe-neighbour-now-what",
+                            "title": "Dunlevy: City settles with La Tulipe neighbour for $350,000. Now what?",
+                            "excerpt": "While the path appears to finally be clearing for the Plateau concert hall to resume operations, big questions remain about how to protect other cultural venues from ending up in similar predicaments.",
+                            "topic": "BUSINESS",
+                            "publisher": "montrealgazette.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8f6539ba-50e4-49f3-97b0-8602b6855db0.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "cb784d94-7295-4974-9fc6-cbbc3e3a693e",
+                            "url": "https://www.bbc.com/news/articles/c5y2nn582l5o",
+                            "title": "Gold rebounds above $5,000 after US downs Iran drone",
+                            "excerpt": "Precious metal price voliatility continues as geopolitical tensions push investors to safe-haven assets.",
+                            "topic": "BUSINESS",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/76247b31-a8ee-423d-a671-af757f43071e.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "86754195-72c2-48ab-9740-6f7dd3c9cd14",
+                            "url": "https://calgaryherald.com/opinion/columnists/varcoe-oilsands-giants-smash-records-climb-list-world-biggest-producers",
+                            "title": "Varcoe: \u2018It\u2019s impressive\u2019: Oilsands giants smash records, climb list of world\u2019s biggest producers",
+                            "excerpt": "Setting records will grab attention, and the Canadian oil sector is putting up some mighty big numbers to jump-start 2026.",
+                            "topic": "BUSINESS",
+                            "publisher": "Calgary Herald",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d920f5cc-7877-4ea8-b13d-22be41eaa751.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a6733c1e-157a-4bff-8059-9e1bbd5dcc53",
+                            "url": "https://globalnews.ca/news/11651886/toys-r-us-gift-cards-bankruptcy/",
+                            "title": "Time is running out to use Toys \u2018R\u2019 Us Canada gift cards amid bankruptcy",
+                            "excerpt": "Customers still holding onto Toys \u2018R\u2019 Us Canada physical and digital gift cards are running out of time to use them after the retailer announced it filed for creditor protection.",
+                            "topic": "BUSINESS",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a43fd9ea-0c8b-4a4c-ab70-bd3fc55ab353.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4a3f3078-b313-4677-a333-fe229ca642cf",
+                            "url": "https://financialpost.com/news/suncor-ceo-cites-drop-in-safety-incidents",
+                            "title": "Suncor CEO cites drop in safety incidents and readies new long-term plan",
+                            "excerpt": "Suncor Energy Inc. CEO Rich Kruger says worker injuries and incidents are down 70 per cent in three years in the oilsands. Read more here",
+                            "topic": "BUSINESS",
+                            "publisher": "financialpost.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f888c0ff-8e8d-4e00-9db0-117a48b5b880.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "arts__lEN_CA",
+                "active": true,
+                "title": "Entertainment",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "JLBCU7"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "0270c09f-fa9f-4ae7-a2b3-e69a5644deb3",
+                            "url": "https://toronto.citynews.ca/2026/02/04/nancy-guthrie-missing-savannah-guthrie-today-show-latest/",
+                            "title": "What to know about the disappearance of Nancy Guthrie, mother of \u2018Today\u2019 show\u2019s Savannah Guthrie",
+                            "excerpt": "Nancy Guthrie was last seen Saturday at the affluent Catalina Foothills area home where she lived alone. She was reported missing Sunday.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "toronto.citynews.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d1963210-84c0-49cb-9844-38aa077d5227.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4df3db0d-80be-48be-8cad-f1aff69708e6",
+                            "url": "https://www.gq.com/story/every-x-men-movie-definitively-ranked",
+                            "title": "Every X-Men Movie, Definitively Ranked",
+                            "excerpt": "A look back at the highs and lows of the original Marvel blockbuster franchise, whose merry mutants will merge with the MCU in this year\u2019s Avengers: Doomsday.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "GQ",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/50142ee0-da48-4969-9165-c85a8414561e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f2b58ce4-adeb-4fd4-bcf9-c38c6c942de5",
+                            "url": "https://www.rollingstone.com/music/music-features/gia-margaret-new-album-singing-interview-1235507468/",
+                            "title": "How Gia Margaret Found Her Voice",
+                            "excerpt": "Gia Margaret lost her voice eight years ago. Now she\u2019s back with a new album called \u2018Singing\u2019 that shows what she learned from the experience",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Rolling Stone",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/113c2ed5-ed46-487c-a2ca-36024d84cf55.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8f488907-2cc4-4070-8062-334debbb3884",
+                            "url": "https://www.cbc.ca/music/tate-mcrae-team-usa-olympics-9.7073729",
+                            "title": "Tate McRae receives backlash for supporting Team USA in NBC Olympics ad",
+                            "excerpt": "Canadians took to social media to share their disappointment about the Calgary-born and raised singer promoting the American team.\u00a0",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8d2ae755-a438-40ba-b9ba-5db0e9fc6917.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3682fd88-775f-4384-8768-4588be250089",
+                            "url": "https://toronto.citynews.ca/2026/02/04/the-former-prince-andrew-moves-to-king-charles-private-estate-following-epstein-document-uproar/",
+                            "title": "The former Prince Andrew moves to King Charles\u2019 private estate following Epstein document uproar",
+                            "excerpt": "LONDON (AP) \u2014 The former Prince Andrew has moved out of his long-time home on crown-owned land near Windsor Castle earlier than expected after the latest release of documents from the U.S. investigation of Jeffrey Epstein revived questions about his frien",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "toronto.citynews.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ed06c281-e607-467e-9b94-f95f0a81c851.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ca368c9e-c05c-4fdf-bbd3-02603afd5e6a",
+                            "url": "https://www.hollywoodreporter.com/tv/tv-features/tell-me-lies-spencer-house-knew-wrigley-bree-spoiler-interview-1236494853/",
+                            "title": "\u2018Tell Me Lies\u2019 Star Has Known the Show\u2019s Biggest Mystery All Along",
+                            "excerpt": "\u201cSince day one, season one,\u201d Spencer House reveals to The Hollywood Reporter that he\u2019s been keeping a big secret \u2014 as he\u2019s joined by co-star Branden Cook to unpack the latest twist in the Hulu hit\u2019s love triangle.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Hollywood Reporter",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ec00e148-3bc9-4e2d-9f85-6da329df1bbb.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "067ace4b-fc4a-4006-b6c6-4e6c315aa242",
+                            "url": "https://www.hellomagazine.com/fashion/royal-style/881922/royal-style-watch-february-2026/",
+                            "title": "5 Best dressed royals in February 2026 \u2013 including Princess Kate in Victoria Beckham",
+                            "excerpt": "See all the best royal style photos of February 2026 \u2013 the Princess of Wales, Queen Maxima, Queen Mary, and Queen Camilla.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "hellomagazine.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/211c9c15-9d22-4777-9c9f-5ed10ac57625.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b2947ad2-bfd4-4977-afea-da93aa346722",
+                            "url": "https://calgaryherald.com/entertainment/local-arts/reflections-of-now-fruit-bats-newest-album-covers-a-week-and-a-half-of-eric-d-johnsons-life",
+                            "title": "Reflections of now: Fruit Bats newest album covers a week-and-a-half of Eric D. Johnson\u2019s life",
+                            "excerpt": "\u2018There was a neighbour\u2019s dog that was barking a lot. There was a full moon. I was having insomnia,\u2019 Johnson says about newest qlbum",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Calgary Herald",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/34a9fe30-d25d-4741-95af-6fe3a977d98b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "174d71a4-e4db-4dd0-9173-806824850903",
+                            "url": "https://calgaryherald.com/entertainment/music/review-puppetry-and-playfulness-bring-fresh-life-to-calgary-operas-hansel-and-gretel",
+                            "title": "Review: Puppetry and playfulness bring fresh life to Calgary Opera\u2019s Hansel and Gretel",
+                            "excerpt": "Puppetry and playfulness bring fresh life to Calgary Opera\u2019s Hansel and Gretel",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Calgary Herald",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/03096284-1056-4775-afcd-0d55cbb244bf.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1daab83f-0368-4284-85e4-e2429f730159",
+                            "url": "https://www.esquire.com/entertainment/tv/a70247374/blood-aces-cole-hauser-sylvester-stallone-cast-news/",
+                            "title": "Cole Hauser and Sylvester Stallone Are Teaming Up for a New TV Series",
+                            "excerpt": "The \u2018Yellowstone\u2019 and \u2018Tulsa King\u2019 stars will meet in \u2018Blood Aces,\u2019 a Las Vegas poker drama.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Esquire",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9f019ffd-5642-4705-aeca-3e7f39f1de1e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "22fdf6cb-5db7-4df5-a6b0-8a8c12f08561",
+                            "url": "https://www.eonline.com/ca/news/1428173/jessica-biel-on-celebrating-justin-timberlakes-45th-birthday",
+                            "title": "How Jessica Biel \u201cTried to Spoil\u201d Justin Timberlake for His 45th Birthday",
+                            "excerpt": "After Justin Timberlake celebrated his 45th birthday Jan. 31, his wife of nearly 12 years Jessica Biel detailed how she \u201ctried to spoil\u201d the former *NSYNC member.\u00a0",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "E! News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8f0db83e-3786-4a81-9d08-8001a55510a9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bb97b149-051c-4940-ac78-c1d81aebcd5d",
+                            "url": "https://slate.com/culture/2026/02/the-muppet-show-2026-sabrina-carpenter-disney-plus.html",
+                            "title": "Finally, a Muppet Show Reboot That Understands the Original Appeal of the Muppets",
+                            "excerpt": "After countless failed gimmicks, this time it\u2019s just like you remembered it.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Slate",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/71e46155-db01-44a6-ba09-68ed361ca00d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a92269da-127a-4919-9251-1fd7a41db0e5",
+                            "url": "https://www.hollywoodreporter.com/tv/tv-features/lox-pratt-14-year-old-star-lord-of-the-flies-harry-potter-1236492573/",
+                            "title": "Lox Pratt, 14, Unpacks His Starring Role in \u2018Lord of the Flies\u2019 \u2014 and Playing Draco Malfoy in HBO\u2019s \u2018Harry Potter\u2019",
+                            "excerpt": "In his first-ever interview, the up-and-coming actor talked to The Hollywood Reporter about approaching his character in Jack Thorne\u2019s new BBC show and bonding with his onscreen father in the HBO adaptation of J.K. Rowling\u2019s books: \u201cJohnny Flynn\u2019s got a l",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Hollywood Reporter",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/6b7975a9-9b62-43fa-a041-4393e31a00fe.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e106dd22-bf25-4f5e-b09e-eb9b7b7d3503",
+                            "url": "https://www.vulture.com/article/iron-lung-markiplier-movie-box-office-explained.html",
+                            "title": "So What\u2019s the Deal With Iron Lung?",
+                            "excerpt": "The indie horror hit didn\u2019t come out of nowhere, even if it might feel that way.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Vulture",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9e75ca21-7d08-48d1-b34a-8a6dc08e3a2e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "83c87ccc-8ec6-4093-9666-138420c2af48",
+                            "url": "https://apnews.com/article/lamonte-mclemore-dead-5th-dimension-8e44b4bdf27feb97619453ac150a5cd5",
+                            "title": "LaMonte McLemore, singer and founding member of the 5th Dimension, dies at 90",
+                            "excerpt": "Singer LaMonte McLemore has died at age 90. He was a founding member of the 5th Dimension, known for their smooth pop and soul hits in the 1960s and \u201870s.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/04352cf7-6e08-4f32-a70c-b282dc5aa8c4.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "government__lEN_CA",
+                "active": true,
+                "title": "Politics",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "386"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "758219e8-46d4-4506-88f9-3404dd8c15ff",
+                            "url": "https://www.ctvnews.ca/toronto/article/grassy-narrows-protesters-briefly-interrupt-doug-fords-speech-in-mississauga/",
+                            "title": "Grassy Narrows protesters briefly interrupt Doug Ford\u2019s speech in Mississauga",
+                            "excerpt": "Protesters concerned about mercury contamination in Grassy Narrows First Nation briefly interrupted a speech by Ontario Premier Doug Ford Wednesday. ",
+                            "topic": "POLITICS",
+                            "publisher": "CTV News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/19be4f31-caab-492d-8993-878314ebb73d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ff01b600-2cda-4792-b01a-c61121c2729b",
+                            "url": "https://globalnews.ca/news/11652558/scarborough-byelection-call-premier-ford/",
+                            "title": "Premier Ford \u2018not too sure\u2019 when he\u2019ll call Scarborough byelection",
+                            "excerpt": "Doly Begum triggered a wave of political activity Tuesday when she made the shock announcement that she would resign from the Ontario NDP.",
+                            "topic": "POLITICS",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/869764e4-69ed-44c8-8808-9fec27cd954f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1230fa3b-67e4-4efe-ad5e-8c48f26721c2",
+                            "url": "https://www.hilltimes.com/story/2026/02/04/ndp-calls-for-feds-to-pull-the-plug-on-american-f-35-order-and-buy-swedish-gripen-planes-instead/490756/",
+                            "title": "NDP calls for feds to pull the plug on American F-35 order, and buy Swedish Gripen planes instead",
+                            "excerpt": "Moving ahead with the contracted F-35 purchase in the face of aggression by U.S. President Donald Trump \u2018is fraught with risk, economically damaging to Canada, and contrary to the Carney government\u2019s own express policies,\u2019 say New Democrats.",
+                            "topic": "POLITICS",
+                            "publisher": "hilltimes.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ef4efa15-5f24-430a-80fd-05be61923dba.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "627b2d59-889c-485a-bf48-b00d2b5ea05d",
+                            "url": "https://www.ipolitics.ca/2026/02/04/fraser-rebuffs-suggestion-from-danielle-smith-to-give-alberta-more-say-over-judicial-appointments/",
+                            "title": "Fraser rebuffs suggestion from Danielle Smith to give Alberta more say over judicial appointments",
+                            "excerpt": "Speaking to reporters on Wednesday, Justice Minister Sean Fraser said no changes were forthcoming and he would \u201cmaintain the process\u201d which has led to \u201cstellar candidates being appointed,\u201d including in Alberta last week.\u00a0",
+                            "topic": "POLITICS",
+                            "publisher": "ipolitics.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c206614c-f013-4948-a8fa-6d2c4f65006b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f3793596-c6c6-4046-b762-e9b9428d9f6c",
+                            "url": "https://www.ctvnews.ca/world/trumps-tariffs/article/labour-groups-call-on-carney-to-adopt-a-true-team-canada-approach-to-trade-war/",
+                            "title": "Labour groups call on Carney to adopt a \u2018true Team Canada approach\u2019 to trade war",
+                            "excerpt": "Canadian labour leaders say Prime Minister Mark Carney\u2019s Liberal government is not being transparent enough with them on how trade talks are advancing with U.S. President Donald Trump\u2019s White House.",
+                            "topic": "POLITICS",
+                            "publisher": "CTV News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1916098b-a510-4568-a35d-beb454d69873.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "7579e1b1-a556-4af9-962f-8f2512be730f",
+                            "url": "https://nationalpost.com/news/politics/stephen-harper-speaks-gala-honouring-2006-election-win",
+                            "title": "Stephen Harper set to speak at gala honouring his 2006 election win",
+                            "excerpt": "Harper will deliver a speech at a gala that will celebrate the 20th anniversary of the election that put his party in power.",
+                            "topic": "POLITICS",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/33fd0f3c-bbf3-4f4d-8923-111e0d88ed8a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "15fd0c5d-2d8e-4627-90eb-a69f3f521502",
+                            "url": "https://nationalpost.com/news/stephen-harpers-portrait-is-loaded-with-secrets-and-clues-here-are-some-you-likely-missed",
+                            "title": "Stephen Harper\u2019s portrait is loaded with secrets and clues. Here are some you likely missed",
+                            "excerpt": "And if you look very closely you can see the tiny fix suggested by the former prime minister and amateur vexillologist (flag expert).",
+                            "topic": "POLITICS",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/30a615f9-2247-4602-b8b3-9ec67c2387a1.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "42892019-4175-4552-997b-b8d24efa8df3",
+                            "url": "https://www.cbc.ca/news/politics/taiwan-trade-deal-china-carney-9.7074067",
+                            "title": "Taiwan\u2019s envoy to Canada says fear of China may be delaying trade deal",
+                            "excerpt": "Taiwan\u2019s representative in Canada says he is concerned the Liberal government may be deliberately delaying the signing of a trade agreement with Taipei to preserve its relationship with China.",
+                            "topic": "POLITICS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/01a06782-f734-4e9f-9a54-d10074e98413.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4802ca65-a6eb-411f-ab7e-c624b674711e",
+                            "url": "https://www.cbc.ca/news/politics/ottawa-auto-strategy-announcement-evs-9.7073975",
+                            "title": "Government expected to announce it\u2019s scrapping EV mandate in favour of new fuel efficiency system: source",
+                            "excerpt": "The federal government is expected to announce its national automotive strategy on Thursday that includes scrapping Canada\u2019s electric vehicle mandate and replacing it with a new system of fuel efficiency standards and credits, CBC News has learned.",
+                            "topic": "POLITICS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/bd76d4e9-6f14-4b64-9cf4-fd4420ed1565.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8ce02592-dfa7-4d83-b419-6cd3f56abece",
+                            "url": "https://www.hilltimes.com/story/2026/02/04/minister-diab-hires-former-p-e-i-liberal-party-executive-director/490682/",
+                            "title": "Immigration Minister Diab hires former P.E.I. Liberal Party executive director",
+                            "excerpt": "Plus, Agriculture and Agri-Food Minister Heath MacDonald has a new special assistant on his team.",
+                            "topic": "POLITICS",
+                            "publisher": "hilltimes.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a3c58592-eb09-429e-8ceb-b1e92a379a6d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d6b0d9bb-0f8e-448e-a398-aa077d959ff9",
+                            "url": "https://www.ctvnews.ca/politics/article/carney-poilievre-say-they-want-to-work-together-after-one-on-one-meeting/",
+                            "title": "Carney, Poilievre say they want to work together after one-on-one meeting",
+                            "excerpt": "Prime Minister Mark Carney and Conservative Leader Pierre Poilievre are pushing for collaboration ahead of a one-on-one meeting on Parliament Hill on Wednesday.",
+                            "topic": "POLITICS",
+                            "publisher": "CTV News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a372cbc5-c680-4f49-bc28-e488ffae744b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "603d7bfa-0570-4b88-899a-76a9de4f87d2",
+                            "url": "https://edmontonjournal.com/news/local-news/a-serious-existential-threat-albertans-against-separatism-continue-to-rally",
+                            "title": "\u2018A serious existential threat,\u2019 Albertans against separatism continue to rally",
+                            "excerpt": "The Canadian Club is one group that\u2019s working to encourage Canadian unity amid calls to separate and threats to the country\u2019s sovereignty.",
+                            "topic": "POLITICS",
+                            "publisher": "edmontonjournal.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f08018ee-26eb-4473-a9ea-14a736e992e9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ab1ae86f-91cc-4d4a-8aaf-739c06712910",
+                            "url": "https://nationalpost.com/news/carney-says-government-has-briefed-conservative-mp-jamil-jivani-ahead-of-washington-visit",
+                            "title": "Carney says government has briefed Conservative MP Jamil Jivani ahead of Washington visit",
+                            "excerpt": "Prime Minister Mark Carney said Conservative MP Jamil Jivani received a briefing by Canada-U.S. Trade Minister Dominic LeBlanc.",
+                            "topic": "POLITICS",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d7aa42ee-faa3-4b6b-8768-e09b03b9c263.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9e3cad40-213a-4497-b8b2-f28a8f4131ab",
+                            "url": "https://vancouversun.com/news/vancouver-vpd-failed-protect-human-rights-blocking-media-hastings-decampment-commissioner",
+                            "title": "City of Vancouver, VPD failed to protect human rights in blocking media from Hastings camp teardown: Commissioner",
+                            "excerpt": "Kasari Govender said the city and police were overly restrictive in allowing media access to the site over two days in April 2023",
+                            "topic": "POLITICS",
+                            "publisher": "vancouversun.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/646cbfa4-136f-474e-9fd2-b36f3085e686.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "302f982d-1b77-4b0f-8b5f-b4759c2d96db",
+                            "url": "https://montrealgazette.com/news/provincial_politics/caq-tables-bill-rolling-back-last-chunks-of-controversial-doctor-law",
+                            "title": "CAQ tables bill rolling back more chunks of controversial doctor law",
+                            "excerpt": "The agreement with the FMOQ sets a target of 500,000 more patients to have access to a family doctor by June 30.",
+                            "topic": "POLITICS",
+                            "publisher": "montrealgazette.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/be3ee890-6890-4ff5-9cb3-6f114245ebf5.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "home__lEN_CA",
+                "active": true,
+                "title": "Home & Garden",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "274"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "606298e4-9a58-436a-920f-d9b429599d71",
+                            "url": "https://lifehacker.com/home/tool-accessories-every-diyer-should-own",
+                            "title": "Eight Useful Tool Accessories Every DIYer Should Own",
+                            "excerpt": "Even if you love doing work around the house, sometimes it can be a real chore. These new DIY accessories will make that work just a little bit easier.",
+                            "topic": "HOME",
+                            "publisher": "Lifehacker",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8583d4a2-7845-47e8-9d96-648c04929a09.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "60ecbcb5-1179-4ad5-a4e4-767d58aba8ce",
+                            "url": "https://www.architecturaldigest.com/story/georgia-pellegrini-catskills-a-frame",
+                            "title": "The Kitchen in This Catskills A-Frame Serves a Dual Purpose: TV Studio",
+                            "excerpt": "Built from scratch, PBS host Georgia Pellegrini\u2019s woodland home came to life when designer Jennifer Bienvenu layered in antiques, texture, and imperfection",
+                            "topic": "HOME",
+                            "publisher": "Architectural Digest",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/02a1ba15-3fa7-4eb9-9c4b-8d1fefa008d6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d843608f-6b8a-4139-a788-bf48858138e6",
+                            "url": "https://www.countryliving.com/gardening/outdoors/a70148284/hummingbird-feeder-heaters-necessary/",
+                            "title": "Does Your Hummingbird Feeder Need a Heater? Here\u2019s What Experts Say",
+                            "excerpt": "Cold snaps can freeze nectar fast. Here\u2019s what bird experts say about whether hummingbird feeder heaters are really needed.",
+                            "topic": "HOME",
+                            "publisher": "Country Living",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c5095137-49b0-4845-baed-d8c9cb4c7538.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3c0ac5a5-7eb3-4eed-9e39-dc4635b206bf",
+                            "url": "https://www.architecturaldigest.com/story/foothill-catalogue-foundation-san-gabriel-habitat-for-humanity-donate",
+                            "title": "AD Partners With San Gabriel Valley Habitat for Humanity and the Foothill Catalog Foundation to Help Rebuild Homes in Altadena",
+                            "excerpt": "The collaboration marks the latest project of AD\u2019s ongoing Design Making a Difference campaign",
+                            "topic": "HOME",
+                            "publisher": "Architectural Digest",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40e1051b-63cd-490f-b217-9dc246084fdb.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f4250ba0-075c-4145-b79a-0ffceca8c465",
+                            "url": "https://torontolife.com/real-estate/rental-renters-for-life-harbourfront-renovation/",
+                            "title": "Rental of the Week: Why this 30-something teacher will never leave his Harbourfront home",
+                            "excerpt": "The recently renovated apartment comes with technicolour furniture, handsome vintage pieces and space-saving tricks galore",
+                            "topic": "HOME",
+                            "publisher": "torontolife.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ac611467-821d-4a39-a607-d43a3643a0a7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8d24a755-cd00-4e3a-9ada-d65b7455cc34",
+                            "url": "https://www.countryliving.com/gardening/outdoors/a70212233/february-snow-moon-better-with-snow/",
+                            "title": "Why February\u2019s Snow Moon Will Be Even Better Tonight If You Have Snow",
+                            "excerpt": "Don\u2019t miss the full Snow Moon tonight, Sunday, February 1. \u2744\ufe0f \ud83c\udf15",
+                            "topic": "HOME",
+                            "publisher": "Country Living",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/126181b9-268b-43cb-a087-9e0c8dccd10c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ec557332-b37f-4954-ae97-fb712cc88420",
+                            "url": "https://theprovince.com/life/homes/how-to-start-a-container-vegetable-garden-on-your-deck",
+                            "title": "How to start a container vegetable garden on your deck",
+                            "excerpt": "A reader is downsizing and asks garden expert Helen Chesnut the best method for growing fresh produce outside on their new deck. Read more.",
+                            "topic": "HOME",
+                            "publisher": "theprovince.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/acef3cdd-0e97-4802-9806-b40ad1173689.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e38f7c29-bc0c-4183-8df2-3c6e3d28699d",
+                            "url": "https://www.domino.com/renovation/milwaukee-rental-lake-effect-club/",
+                            "title": "Before & After: A Milwaukee Rental Where Each Room\u2019s Paint Color Is Bolder Than the Last",
+                            "excerpt": "This 150-Year-Old Milwaukee rental property, dubbed The Lake Effect Club, is painted to be as fun and vibrant as the city itself.",
+                            "topic": "HOME",
+                            "publisher": "Domino",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/6beb0aae-b578-48ec-ab4d-67322e45016c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "38b9ee7b-c0be-408a-84fe-1dc5bb239419",
+                            "url": "https://nationalpost.com/life/homes/home-design-the-best-of-ids",
+                            "title": "Home design: The best of IDS",
+                            "excerpt": "Despite fewer marquee exhibitors than past years, the 27th annual Toronto Interior Design Show\u00a0offered a look at coming trends that range from fanciful to functional",
+                            "topic": "HOME",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/75ea6a27-f17e-4c96-8176-48d0f1aa7770.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "55b3c1f9-6294-4e40-a326-9db6c5c9adec",
+                            "url": "https://www.realsimple.com/why-this-low-maintenance-houseplant-is-my-favorite-11889845",
+                            "title": "I Love This Low-Maintenance Houseplant So Much, I Own 6 of Them",
+                            "excerpt": "This succulent is striking, unusual, and low maintenance. Plus, it reproduces on its own and lives for decades.",
+                            "topic": "HOME",
+                            "publisher": "Real Simple",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e9749de9-f037-43c6-a242-1ba1b4070a48.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1d45202e-8f3b-479a-bc9c-b0fc4e954171",
+                            "url": "https://www.marthastewart.com/things-minimalists-never-buy-11897634",
+                            "title": "10 Things Minimalists Never Buy\u2014and What They Use Instead",
+                            "excerpt": "Some d\u00e9cor items can contribute to clutter in your home. Here, we spoke to minimalist experts on what they\u2019d never buy\u2014and how to decorate instead.",
+                            "topic": "HOME",
+                            "publisher": "Martha Stewart",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/6acec021-0439-4bbe-95a2-26860939e759.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "179cfc99-3e44-4402-94dd-bed5a71dd7b0",
+                            "url": "https://www.goodhousekeeping.com/home/cleaning/a70195339/washing-soda-cleaning-hacks/",
+                            "title": "12 Genius Washing Soda Hacks Cleaning Pros Actually Use at Home",
+                            "excerpt": "This holy-grail product can be used to clean almost everything!",
+                            "topic": "HOME",
+                            "publisher": "Good Housekeeping",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2aa96812-96e4-4b79-94f2-84911aaf1c3f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5ef21275-05cb-4a89-a5f6-bf2bbb76ae59",
+                            "url": "https://www.bhg.com/wine-opener-drywall-hack-11893939",
+                            "title": "Use This Surprising Wine Opener Trick to Fix the Most Annoying Drywall Issue",
+                            "excerpt": "End the struggle to remove drywall anchors with this helpful (and unexpected) hack.",
+                            "topic": "HOME",
+                            "publisher": "Better Homes & Gardens",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e82eb917-e57a-4d03-8485-b5a66b6ebd64.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6fcb7c38-f7ae-4607-8c3d-3d9f690e6eb9",
+                            "url": "https://www.marthastewart.com/valuable-antiques-never-pass-up-11898146",
+                            "title": "7 Valuable Antiques You Should Never Pass Up",
+                            "excerpt": "Some antiques can elevate your home, and also be worthy investments. Here, experts share the valuable finds they always buy.",
+                            "topic": "HOME",
+                            "publisher": "Martha Stewart",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9a75da46-110b-46b3-8d82-bb96b51beaa1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9e8c373b-1bc5-42e5-94f6-043897155ceb",
+                            "url": "https://lifehacker.com/home/best-products-to-protect-your-house-from-snow-and-ice-damage",
+                            "title": "Seven Products to Protect Your House From Snow and Ice Damage",
+                            "excerpt": "In the cold temps, ice and snow accumulation can destroy your roof, your HVAC system, your plumbing, and your hardscapes. Along with regular maintenance, a few dollars and a few minutes is all you need to stop it.",
+                            "topic": "HOME",
+                            "publisher": "Lifehacker",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/272eda58-e0f6-4782-882a-ea8b1a2ae9a5.png"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "education-science__lEN_CA",
+                "active": true,
+                "title": "Science",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "464"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "ca1bc334-ef3c-41f7-a9eb-5be9bf6cd9ed",
+                            "url": "https://www.cbc.ca/news/canada/london/scientist-using-dogs-in-controversial-study-explains-for-the-first-time-what-was-going-on-9.7071014",
+                            "title": "Scientist using dogs in controversial study explains for the first time what was going on",
+                            "excerpt": "The lead scientist at the centre of a controversial cardiac study performed on dogs is defending the importance of his work for the first time since his London, Ont. lab was shut down and Ontario\u2019s premier threatened to ban canines in research. ",
+                            "topic": "SCIENCE",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5d667501-1ccb-49a6-af39-23be17dc6c60.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "06eb2886-3f5d-4e48-8ea9-1ab02c435b9f",
+                            "url": "https://thenarwhal.ca/canada-agricultural-science-cuts/",
+                            "title": "Federal cuts to agriculture science will hurt farmers and grocery shoppers, experts say",
+                            "excerpt": "The federal government is closing farm research centres and cutting back on agriculture science, leaving farmers scratching their heads",
+                            "topic": "SCIENCE",
+                            "publisher": "The Narwhal",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ef7f8abc-5092-4cd4-ae21-8a8858ec5a02.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "422b138b-4395-4794-a75b-d2cd3ff68bf6",
+                            "url": "https://www.smithsonianmag.com/science-nature/seals-are-seemingly-vanishing-off-the-dutch-coast-these-scientists-are-trying-to-get-to-the-bottom-of-the-mysterious-disappearances-180988134/",
+                            "title": "Seals Are Seemingly Vanishing Off the Dutch Coast. These Scientists Are Trying to Get to the Bottom of the Mysterious Disappearances",
+                            "excerpt": "Recent counts of the Wadden Sea\u2019s adult harbor seal population have revealed a surprising trend of decline, prompting a consortium of researchers to investigate whether the animals are dying off, relocating or experiencing something else altogether",
+                            "topic": "SCIENCE",
+                            "publisher": "Smithsonian Magazine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/34e8f802-08aa-4cc1-8cdd-9d9ea4e38f8a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d4389caf-c271-4cf1-b0bd-626d2e85a039",
+                            "url": "https://www.bbc.com/news/articles/cwyw787e0p4o",
+                            "title": "Zookeepers welcomes Clawdia the \u2018faithful\u2019 sloth",
+                            "excerpt": "Hamerton Zoo Park says the newborn is starting to take \u201ca few swings away from mum and dad\u201d.",
+                            "topic": "SCIENCE",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/17073b16-610a-4109-b010-9e6fe114b524.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6bfb061a-766b-42e7-95ac-0c3b1d05ba04",
+                            "url": "https://www.sciencenews.org/article/dung-beetles-dig-eggs-cool-climate",
+                            "title": "Some dung beetles dig deep to keep their eggs cool",
+                            "excerpt": "A temperate tunneling species of dung beetle seems capable of adapting to climate change, but their tropical cousins may be less resilient.",
+                            "topic": "SCIENCE",
+                            "publisher": "Science News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/54d44cd9-18af-4a3b-b621-22b64426982c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ef02fae7-fe68-4026-bca0-50a158f40e3d",
+                            "url": "https://time.com/7368806/colossal-biosciences-biovault-saving-species-dna/",
+                            "title": "The Company Behind the Dire Wolf Comeback Is on a Mission to Save the DNA of 10,000 Animals",
+                            "excerpt": "The company that brought back the dire wolf is launching a new biovault to store the genomes of the most at-risk species.",
+                            "topic": "SCIENCE",
+                            "publisher": "Time",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2242f400-0b6e-41c1-a5c2-9aefa7358953.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d2a27e75-9efe-4e3d-944a-387dfb71a37d",
+                            "url": "https://www.theweathernetwork.com/en/news/nature/animals/dramatic-caribou-ice-rescue-caught-on-camera-in-port-aux-choix-newfoundland-and-labrador",
+                            "title": "Dramatic caribou ice rescue unfolds in scenic Canadian village",
+                            "excerpt": "When a caribou found itself struggling for its life in the icy waters of a newly frozen harbor, a Newfoundland community didn\u2019t hesitate to help lead the trapped animal to freedom.",
+                            "topic": "SCIENCE",
+                            "publisher": "theweathernetwork.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/17b7abda-475d-4d1a-bc47-bf753afe43b9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9fb81381-1333-4e27-82d3-8f4eeff6e3c2",
+                            "url": "https://apnews.com/article/connecticut-swan-frozen-river-rescue-c6eb082ffc650c11db998220de27db5c",
+                            "title": "Firefighters rescue swan stuck in frozen Connecticut river",
+                            "excerpt": "Firefighters came to the rescue of a swan found stuck in a frozen Connecticut river this week. Norwalk Fire Department crews donned cold-water rescue suits and used ropes to carefully go out on the ice-covered Norwalk River on Tuesday.",
+                            "topic": "SCIENCE",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f94a766a-70cf-460f-a0bb-9369e13f30d1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "07fccbd3-e311-4f07-9971-ef4d7c8e3da3",
+                            "url": "https://arstechnica.com/space/2026/02/nasa-finally-acknowledges-the-elephant-in-the-room-with-the-sls-rocket/",
+                            "title": "NASA finally acknowledges the elephant in the room with the SLS rocket",
+                            "excerpt": "You know, you\u2019re right, the flight rate\u2014three years is a long time.\u201d",
+                            "topic": "SCIENCE",
+                            "publisher": "Ars Technica",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f6eb2883-105f-4d51-8bd8-d42b2f7977bf.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "96d6d193-d3af-456b-a151-9987349120af",
+                            "url": "https://montrealgazette.com/news/weather/montreal-weather-time-to-call-in-the-knights-who-say-nid-de-poule",
+                            "title": "Montreal weather: Time to call in the knights who say \u2018Nid-de-poule\u2019",
+                            "excerpt": "It\u2019s cold comfort knowing potholes are a byproduct of fluctuating temperatures.",
+                            "topic": "SCIENCE",
+                            "publisher": "montrealgazette.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/306533b6-584e-41c5-9b61-09876e7eca06.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a47fb886-2758-44d6-b627-f3c3fb7db056",
+                            "url": "https://www.popsci.com/environment/death-valley-truck-vandal/",
+                            "title": "Death Valley National Park needs help ID\u2019ing joyriding vandals",
+                            "excerpt": "A truck illegally tore through the California park, leaving five miles of tracks and damaging \u2018sensitive desert plants.\u2019",
+                            "topic": "SCIENCE",
+                            "publisher": "Popular Science",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/711d1beb-05dd-45b3-9d65-b7afe569716f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4f459c03-e653-44d6-9858-bb7a964b7859",
+                            "url": "https://nautil.us/the-farm-boy-who-found-pluto-1265718/",
+                            "title": "The Farm Boy Who Found Pluto",
+                            "excerpt": "The Farm Boy Who Found Pluto: Despite its demotion from planet status, the tiny but mighty world still captivates scientists.",
+                            "topic": "SCIENCE",
+                            "publisher": "Nautilus",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/cfc7966f-93ce-4a06-817e-b880db1747f2.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3cba1697-63d1-448d-8bd7-fe6ab025fae8",
+                            "url": "https://www.popsci.com/environment/cortisol-stress-dog-behavior/",
+                            "title": "Cortisol could impact your dog\u2019s behavior",
+                            "excerpt": "Just like in humans, stress and mood hormones might play a role in your pet\u2019s temperament.",
+                            "topic": "SCIENCE",
+                            "publisher": "Popular Science",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/97cb4e81-ffcb-4534-9167-bb6326bd85a3.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "06b3706c-2bee-43a8-a500-72dc3462ef10",
+                            "url": "https://www.cbc.ca/news/canada/montreal/quebec-fisherman-111-kilogram-atlantic-halibut-9.7073782",
+                            "title": "Quebec fisherman reels in 244-pound, record-breaking Atlantic halibut \u2014 for science",
+                            "excerpt": "Alain Hamel caught the largest Atlantic halibut ever recorded in the Saguenay Fjord on Saturday. Working with the local Fjord Museum, the ice fishing was part of a scientific project aiming to gain more information about the species.",
+                            "topic": "SCIENCE",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/3d1ef4ce-0b79-4da1-addd-f0d0cb603d99.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "96d33f78-ebfa-4922-ba3d-928583993cee",
+                            "url": "https://www.popularmechanics.com/science/a70236315/llm-cognitive-load-study/",
+                            "title": "Your Brain\u2019s \u2018Scaffolding\u2019 Could Collapse\u2014And It May Radically Alter the Way You Think",
+                            "excerpt": "A landmark study suggests that this daily habit may reshape the way your mind activates. ",
+                            "topic": "SCIENCE",
+                            "publisher": "Popular Mechanics",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/03d0b140-f6af-48ed-8b83-f1af9d7e6102.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "headlines__lEN_CA",
+                "active": true,
+                "title": "The Latest",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "386"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "4ad73b55-f6ed-4c16-b40c-e497f3f32aa7",
+                            "url": "https://apnews.com/article/amazon-layoffs-job-cuts-tech-74387fae2313ff7b0b1e638c00863443",
+                            "title": "Amazon cuts about 16,000 corporate jobs in the latest round of layoffs",
+                            "excerpt": "Amazon is cutting about 16,000 jobs in the latest round of tech industry layoffs. Beth Galetti, a senior vice president, announced this Wednesday in a blog post.",
+                            "topic": "POLITICS",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/05523c6b-5212-4fb8-806c-44ea6ed52fdf.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8ec81ca6-79aa-40ac-a0b2-8e438f3b8ae0",
+                            "url": "https://www.reuters.com/business/dollar-crumbles-after-trump-remarks-euro-yen-sterling-surge-2026-01-28/",
+                            "title": "Dollar crumbles after Trump remarks; euro, yen, sterling surge",
+                            "excerpt": "The U.S. dollar was grappling with a \u201ccrisis of confidence\u201d as it struggled near four-year lows on Wednesday after President Donald Trump brushed off its recent weakness, exacerbating the dollar selling and lifting the yen, euro and sterling.",
+                            "topic": "POLITICS",
+                            "publisher": "Reuters",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/73608865-a9f4-4e25-8e3f-4abaf2b48412.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "88026d3e-86c7-4f11-ba91-92d7c7c8ec8a",
+                            "url": "https://ca.news.yahoo.com/shrinking-season-3-gets-bolder-sadder-and-funnier--starting-with-harrison-ford-and-michael-j-fox-125112938.html",
+                            "title": "\u2018Shrinking\u2019 Season 3 gets bolder, sadder and funnier \u2014 starting with Harrison Ford and Michael J. Fox",
+                            "excerpt": "The Apple TV series Shrinking is back for Season 3 and better than ever, starring Jason Segel, Harrison Ford, Lukita Maxwell, Brett Goldstein, Jessica Williams Christa Miller, and guest starring Michael J. Fox.",
+                            "topic": "POLITICS",
+                            "publisher": "Yahoo",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b6303f0e-4a99-4995-864f-2ed77c15ce1c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1d331d91-1eb4-49aa-a1f3-4056da2f30bd",
+                            "url": "https://ca.news.yahoo.com/lotto-649-edmonton-couple-claims-1m-gold-ball-prize-just-before-the-ticket-was-set-to-expire-123017393.html",
+                            "title": "Lotto 6/49: Edmonton couple claims $1M Gold Ball prize just before the ticket was set to expire",
+                            "excerpt": "Judy and Dennis Korop waited nearly a year to discover their winning ticket, saying a difficult period and health challenges kept it unchecked",
+                            "topic": "POLITICS",
+                            "publisher": "Yahoo",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/3bdd261f-5259-418b-9547-3f1340729399.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c7690b5e-3635-4aed-98b1-2c75c64b5f49",
+                            "url": "https://www.bbc.com/news/articles/cz7y2gy4p24o",
+                            "title": "Mexico president asks South Korea for more BTS concerts",
+                            "excerpt": "About a million fans were vying for 150,000 concert tickets, which sold out in less than 40 minutes.",
+                            "topic": "POLITICS",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/999301cd-77d8-436a-9970-00be20ff8431.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6e6262a2-94c5-47a5-b07b-aa0145af13be",
+                            "url": "https://www.usatoday.com/story/entertainment/tv/2026/01/27/stephen-colbert-late-show-last-episode-end-date/88381997007/",
+                            "title": "Stephen Colbert\u2019s final day on \u2018The Late Show\u2019 revealed",
+                            "excerpt": "\u201cThe Late Show with Stephen Colbert,\u201d which CBS announced in July would end in 10 months\u2019 time, has finally set a final air date.",
+                            "topic": "POLITICS",
+                            "publisher": "USA TODAY",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/93d92b20-d322-419b-b191-7fc138a4082a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c9ebe641-6096-46c4-8e4a-bf3ffd0c9752",
+                            "url": "https://www.cbc.ca/news/business/amazon-prematurely-alerts-layoffs-canada-us-9.7064378",
+                            "title": "Amazon employees in Canada told about layoffs through premature internal email",
+                            "excerpt": "Amazon\u00a0on Tuesday appeared to have prematurely alerted\u00a0Amazon\u00a0Web Services cloud-computing employees to layoffs planned for Wednesday morning by sending a commiseration email and team-wide meeting invitation hours early.",
+                            "topic": "BUSINESS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/12ae908d-f71e-4536-86a7-b12713e622bc.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "504b3f0e-9521-4e7b-baf4-848e65d5cb5c",
+                            "url": "https://www.cbc.ca/news/world/southern-states-icy-power-outages-9.7063283",
+                            "title": "At least 35 dead after winter storm hits U.S., with more Arctic air expected for southern states",
+                            "excerpt": "At least 35 deaths have been reported in states afflicted with severe cold across the U.S., according to local officials.",
+                            "topic": "POLITICS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/561d854e-05a1-496f-a604-fd65348dd01d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d965a5b2-03d2-4c44-8561-2a2f2b6bc875",
+                            "url": "https://globalnews.ca/news/11640027/bank-of-canada-rate-preview-january-2026/",
+                            "title": "The Bank of Canada\u2019s 1st rate decision of 2026 is almost here",
+                            "excerpt": "The Bank of Canada is set to make its first interest rate announcement of the year amid a number of mixed economic signals about the state of how consumers are doing.",
+                            "topic": "POLITICS",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8a69bf59-fcdd-422e-bfea-27a75e579486.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "68a22067-5f41-4141-b5fa-c99ec28c7b8c",
+                            "url": "https://apnews.com/article/ladin-minority-olympics-opening-ceremony-diversity-exclusion-502c024bdf254dacf2e76dc703b352a0",
+                            "title": "Italy\u2019s Ladins take visibility into their own hands facing minimal exposure in Olympic celebrations",
+                            "excerpt": "Members of Italy\u2019s Ladin minority, which settled a millennium ago in the Dolomite mountain hamlet that's now an Olympic host city, are disappointed the Winter Games will not spotlight their culture.",
+                            "topic": "POLITICS",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/07c59892-bee7-40ee-86ff-00ea3cb97fb6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "738531d8-40a1-4f7d-9e52-956e48429dde",
+                            "url": "https://www.reuters.com/legal/government/meta-ceo-zuckerberg-blocked-curbs-sex-talking-chatbots-minors-court-filing-2026-01-27/",
+                            "title": "Meta CEO Zuckerberg blocked curbs on sex-talking chatbots for minors, court filing alleges",
+                            "excerpt": "Meta Chief Executive Mark Zuckerberg approved allowing minors to access AI chatbot companions that safety staffers warned were capable of sexual interactions, according to internal Meta documents filed in a New Mexico state court case and made public Mond",
+                            "topic": "POLITICS",
+                            "publisher": "Reuters",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2797ed8e-9cbb-4935-962e-365a96677943.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5dd2ef60-d141-41cf-8ded-ec0ac5e91753",
+                            "url": "https://globalnews.ca/news/11641263/european-countries-lose-measles-status/",
+                            "title": "Several European countries, including U.K. lose measles elimination status",
+                            "excerpt": "Outbreaks began in late 2023 and increased quickly throughout 2024, resulting in 2911 confirmed cased record in England that year alone. ",
+                            "topic": "POLITICS",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7af7756d-1901-4dd0-ba92-b8ce183e138b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "92e15aec-620a-49e5-9932-05d59a47d74d",
+                            "url": "https://www.bbc.com/news/articles/czx12q8qnweo",
+                            "title": "US YouTube star IShowSpeed to get Ghanaian passport as Africa tour ends",
+                            "excerpt": "Ghana\u2019s foreign minister says the influencer is a \u201cworthy ambassador\u201d, but some Ghanaians criticised the move.",
+                            "topic": "POLITICS",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ae84267a-8d52-42ec-bcde-816df7a03b57.webp"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "education__lEN_CA",
+                "active": true,
+                "title": "History",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "132"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "b645a5ed-20b3-4e0a-80a7-80cb5515193f",
+                            "url": "https://time.com/7358596/on-this-day-1776-american-revolution/",
+                            "title": "See the American Revolution in a New Light in On This Day\u20261776",
+                            "excerpt": "Depending on how it\u2019s told, a story a quarter of a millennium old can still feel fresh.",
+                            "topic": "EDUCATION",
+                            "publisher": "Time",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b9442bce-4545-49ca-a6c1-5cdcf59253c2.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ff6edeaf-1e2d-4059-b6f0-771758918f08",
+                            "url": "https://bigthink.com/high-culture/safeguarding-pasto-varnish/",
+                            "title": "The last masters: The international effort to preserve an ancient craft",
+                            "excerpt": "The revival of Pasto Varnish shows how living heritage can survive if knowledge is passed on in time.",
+                            "topic": "EDUCATION",
+                            "publisher": "Big Think",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2e001879-4bd4-4bbb-929f-807444db3d1c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "63375450-58bf-4602-b173-3e3a4215d19f",
+                            "url": "https://www.historytoday.com/archive/months-past/birth-dada",
+                            "title": "The Birth of Dada",
+                            "excerpt": "He persuaded the bar\u2019s owner that a literary cabaret would increase his sales of beer and sausages. Ball also wanted an aesthetically ecumenical art \u2013 international, polyglot, \u2018incessantly lively, new and naive\u2019. Each performer, the artist Hans Richter re",
+                            "topic": "EDUCATION",
+                            "publisher": "History Today",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9873fb81-3114-4d8d-8d8b-1a0db43c6e9d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "82dc1daf-6b8f-4a58-b18c-141e94422ec2",
+                            "url": "https://www.cbc.ca/news/canada/newfoundland-labrador/olie-bown-scrapbook-9.7064146",
+                            "title": "Scrapbook sheds light on what being a teen girl was like on Bell Island in the 1930s",
+                            "excerpt": "When Newfoundland was a British colony in the 1930s, it wasn\u2019t considered a place at the forefront of fashion. But for teenager Viola \u2018Olie\u2019 Bown, living in the small place of Bell Island didn\u2019t quell her passion for trends. Her scrapbook is now archived ",
+                            "topic": "EDUCATION",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/28ce1f0b-cc65-4c3a-a8f3-106f1d53f37e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3b5c6b58-81b3-4d56-9b12-00827af04955",
+                            "url": "https://www.cbc.ca/news/canada/newfoundland-labrador/the-muse-75-anniversary-print-launch-9.7069973",
+                            "title": "The Muse student newspaper returns to print to celebrate 75th anniversary",
+                            "excerpt": "Memorial University students are bringing The Muse back into print, something editor John Harris says reinforces community connections on campus.",
+                            "topic": "EDUCATION",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ce7b64ed-bb54-4f59-baec-fa293280fd5f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b6a0d9a1-2b26-45de-9749-18ae8313731f",
+                            "url": "http://daily.jstor.org/the-space-races-forgotten-theme-park/",
+                            "title": "The Space Race\u2019s Forgotten Theme Park",
+                            "excerpt": "Preserved documents and photographs trace the rise and fall of an ambitious space-themed park born of 1960s Space Race optimism.",
+                            "topic": "EDUCATION",
+                            "publisher": "JSTOR Daily",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ed5e515f-bef2-4509-872a-564a86437375.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "69217169-58fd-49fe-a0a0-08eb2c224cd4",
+                            "url": "https://lithub.com/how-the-ny-post-and-the-ny-daily-news-turned-victims-into-criminals/",
+                            "title": "Heather Ann Thompson on the Role of Tabloid Journalism in Shaping the Racist Narrative of the 1984 Bernie Goetz Subway Shooting",
+                            "excerpt": "Getting word that four Black teenagers from the South Bronx had been gunned down by a white guy on the New York City subway was like Christmas come early for both the New York Daily News and its ne\u2026",
+                            "topic": "EDUCATION",
+                            "publisher": "Literary Hub",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/276f7088-e413-4a94-ac26-da630c82813d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "eb857c1f-9947-4f9e-9f72-d25fd9f59a9c",
+                            "url": "https://www.themarginalian.org/2026/01/28/katharina-kepler-witchcraft-dream/",
+                            "title": "How Kepler Invented Science Fiction and Defended His Mother in a Witchcraft Trial While Revolutionizing Our Understanding of the Universe",
+                            "excerpt": "How many revolutions does the cog of culture make before a new truth about reality catches into gear?",
+                            "topic": "EDUCATION",
+                            "publisher": "The Marginalian",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/98ec9782-be2b-450b-b27a-be9e351812b5.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4203379e-f93d-47be-b5cd-bcd0b1a6a180",
+                            "url": "https://www.smithsonianmag.com/history/a-stunning-escape-from-slavery-told-on-tattered-pages-180988083/",
+                            "title": "A Stunning Escape From Slavery Told on Tattered Pages",
+                            "excerpt": "Thomas White\u2019s tale of finding freedom is discovered more than a century after it was documented",
+                            "topic": "EDUCATION",
+                            "publisher": "Smithsonian Magazine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/95de90c6-7820-4a3f-a999-d5e40200f3ba.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1eea1b72-f45c-48e7-8d75-1f369296ef57",
+                            "url": "https://daily.jstor.org/laura-secords-walk/",
+                            "title": "Laura Secord\u2019s Walk",
+                            "excerpt": "In 1813, Laura Secord walked 20 miles through enemy territory to warn British troops of an American attack, changing the course of the War of 1812.",
+                            "topic": "EDUCATION",
+                            "publisher": "JSTOR Daily",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/74491f25-452d-46e6-ad41-48d61b6fbeb6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ddd2327b-f312-461e-9af6-f4a5efba0fdf",
+                            "url": "https://www.mentalfloss.com/history/unusual-regency-era-hobbies",
+                            "title": "7 Unusual Regency-Era Hobbies That\u2019ll Make You Hug Your Smartphone",
+                            "excerpt": "From peculiar pastimes to strange obsessions, these Regency-era hobbies reveal just how differently free time was spent before screens and scrolling.",
+                            "topic": "EDUCATION",
+                            "publisher": "Mental Floss",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7fc9059d-c290-4931-b172-c44b990a8dbc.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "fd7d99a7-5ef4-4675-9bf9-40aa028c80e7",
+                            "url": "https://www.historytoday.com/archive/history-matters/roman-annexation-cyprus",
+                            "title": "History Matters The Roman Annexation of Cyprus",
+                            "excerpt": "During the first century BC the dynasty\u2019s grip on Egypt and the Eastern Mediterranean weakened as they grew increasingly reliant on Rome, by then firmly established as a Mediterranean superpower after the fall of Carthage in 146 BC. Cyprus was governed by",
+                            "topic": "EDUCATION",
+                            "publisher": "History Today",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/53a982bf-535d-437f-80e3-613920ad717d.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "403150ad-ec76-4f65-b2b2-0f9ffba488c7",
+                            "url": "https://www.smithsonianmag.com/history/archaeologists-discovered-the-holy-grail-of-shipwrecks-a-decade-ago-now-theyre-finally-beginning-to-unravel-the-secrets-of-the-san-jose-180988050/",
+                            "title": "Archaeologists Discovered the \u2018Holy Grail\u2019 of Shipwrecks a Decade Ago. Now, They\u2019re Finally Beginning to Unravel the Secrets of the \u2018San Jos\u00e9\u2019",
+                            "excerpt": "A new book by author Julian Sancton explores the lengthy quest to find the Spanish galleon\u2014and the political firestorm that has engulfed the wreck ever since",
+                            "topic": "EDUCATION",
+                            "publisher": "Smithsonian Magazine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fa274506-1891-49b5-97b1-d8a7dc3288a2.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "42650b58-a0a0-4d63-8309-8a7230525f1b",
+                            "url": "https://www.mentalfloss.com/history/medical-operations-around-world-huge-twists",
+                            "title": "5 Medical Operations From Around the World That Ran Into Huge Twists",
+                            "excerpt": "Due to unforeseen circumstances, these operations turned out much differently than expected.",
+                            "topic": "EDUCATION",
+                            "publisher": "Mental Floss",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d113413f-6878-4cf8-9784-c30299c434ae.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "35495b15-3e8a-4c91-815b-6bf45e1fd95d",
+                            "url": "https://lithub.com/how-w-e-b-dubois-and-james-mccune-smith-helped-combat-medical-racism-in-america/",
+                            "title": "How W.E.B. DuBois and James McCune Smith Helped Combat Medical Racism in America",
+                            "excerpt": "The most prominent of Du Bois\u2019s intellectual influences was James McCune Smith. Brilliant and uncompromising, Smith was a public intellectual with the distinction of being the United States\u2019 first \u2026",
+                            "topic": "EDUCATION",
+                            "publisher": "Literary Hub",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/481aa1f6-0cf6-4ccc-9a89-ed0d581600fc.png"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "tech__lEN_CA",
+                "active": true,
+                "title": "Tech",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "596"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "2dd0fcbe-be3e-4888-a602-a7e7aba066ed",
+                            "url": "https://www.makeuseof.com/100w-charger-useless-if-usb-c-cable-doesnt-have-this-spec/",
+                            "title": "Your 100W charger is useless if your USB-C cable doesn\u2019t have this spec",
+                            "excerpt": "Not all cables are built the same.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "MakeUseOf",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/3e929492-468a-4e53-ab56-cf8251a38a0b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9b93c162-b2fa-4781-b9e1-e251e66028ae",
+                            "url": "https://theconversation.com/does-the-exodus-to-upscrolled-signify-the-end-of-tiktok-274813",
+                            "title": "Does the exodus to UpScrolled signify the end of TikTok?",
+                            "excerpt": "Users began downloading Upscrolled after a group of American investors acquired a majority stake in TikTok\u2019s U.S. operations.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Conversation",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/434aed4f-e03f-478e-ba22-05802ddb0ea6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ffa5609c-2b77-44b5-9ff5-119ae576a6c1",
+                            "url": "https://arstechnica.com/security/2026/02/notepad-updater-was-compromised-for-6-months-in-supply-chain-attack/",
+                            "title": "Notepad++ users take note: It\u2019s time to check if you\u2019re hacked",
+                            "excerpt": "Suspected China-state hackers used update infrastructure to deliver backdoored version.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Ars Technica",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/34674c34-2e35-474f-b893-d1c8b3a1f8e6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "2b5553fe-8902-4927-b8e4-bf59f3004c61",
+                            "url": "https://www.cnbc.com/2026/02/04/microsoft-brings-back-hayete-gallot-to-run-security-new-role-for-bell.html",
+                            "title": "Microsoft brings back executive Hayete Gallot to run cybersecurity, as Charlie Bell takes new role",
+                            "excerpt": "Under Charlie Bell, Microsoft\u2019s cybersecurity business grew, but the company also dealt with the fallout from cyberattacks.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "CNBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/83a08f51-42a7-415f-9608-760bcb8ba176.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4f802064-ce8f-45b4-9f06-a15408b20624",
+                            "url": "https://www.theverge.com/news/873476/senator-elizabeth-warren-google-gemini-ai-shopping-privacy",
+                            "title": "Sen. Warren wants to know what Google Gemini\u2019s built-in checkout means for user privacy",
+                            "excerpt": "Warren is asking Google for more details about the kinds of data it will send to retail partners \u2014 and how much.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Verge",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7abc8c7f-b92a-44e1-920e-3b5a81fe72d5.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1566e6f2-0ad5-4a74-bff2-9ba4aa19a6d4",
+                            "url": "https://www.engadget.com/big-tech/bipartisan-scam-act-would-require-online-platforms-to-crack-down-on-fraudulent-ads-210316594.html",
+                            "title": "Bipartisan SCAM Act would require online platforms to crack down on fraudulent ads",
+                            "excerpt": "Senators Ruben Gallego and Bernie Moreno introduced the legislation on Wednesday.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Engadget",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5ea27479-9cb2-4171-94ad-217f37a6be44.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8f9c88cc-65e1-4a39-9318-b1878c023d27",
+                            "url": "https://www.reuters.com/business/autos-transportation/us-lawmakers-waymo-tesla-urge-congress-take-action-speed-deployment-self-driving-2026-02-04/",
+                            "title": "US lawmakers, Waymo, Tesla urge Congress to take action to speed deployment of self-driving cars",
+                            "excerpt": "Lawmakers, Waymo and Tesla will urge Congress to take action on long-stalled legislation to speed deployment of self-driving vehicles, warning of competitive threats from China.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Reuters",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d013d146-5b25-4655-af6f-ea04303bad3b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "aeccb172-90f8-47de-807d-61cfd06f8a6f",
+                            "url": "https://www.bbc.com/future/article/20260203-the-ai-that-quietly-edits-all-of-your-photos",
+                            "title": "Your phone edits all your photos with AI - is it changing your view of reality?",
+                            "excerpt": "From simple enhancements to hallucinated facial features, modern phones choose how our memories will look. You might love the results, but they could alter how we see the world.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/3e5b56fe-6a6f-48f3-8623-ce951dcf69d2.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f5c67f2c-659d-41a5-bcf2-ae6abcb36632",
+                            "url": "https://www.businessinsider.com/google-q4-2025-earnings-ai-spending-gemini-subscriptions-2026-2",
+                            "title": "5 of the biggest takeaways from Google\u2019s Q4 2025 earnings call",
+                            "excerpt": "Alphabet\u2019s Q4 results beat estimates. Google plans to double capex in 2026, while search and cloud remained strong.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Business Insider",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ac9bfccf-92d4-44d0-85e0-5c3382729333.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f3c47011-b9d8-4f6e-8f7e-bad2aa387d38",
+                            "url": "https://time.com/7362401/ai-stargate-data-center-abilene-housing-crisis/",
+                            "title": "How the AI Boom Sparked a Housing Crisis in One Texas City",
+                            "excerpt": "\u201cNobody can find a place to live. Our city fathers didn\u2019t think that AI center through very well.\u201d",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Time",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a84fcfc8-63b3-44bd-bddd-79acecc02306.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8367d56b-a245-42a9-962f-eda6269f2d46",
+                            "url": "https://www.cnbc.com/2026/02/04/anthropic-no-ads-claude-chatbot-openai-chatgpt.html",
+                            "title": "Anthropic says no to ads on Claude chatbot, weeks after OpenAI made move to test them",
+                            "excerpt": "Anthropic said the personal nature of users\u2019 conversations with Claude would make ads feel \u201cincongruous.\u201d ",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "CNBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/441c690c-e2dd-4d22-97bc-80bafdd43c86.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0e7629d2-dd62-4dcb-bc51-cc2dcdd6ef22",
+                            "url": "https://lifehacker.com/tech/how-much-amazon-alexa-plus-costs",
+                            "title": "Everyone Can Now Use Alexa+, but the Full Experience Might Cost You",
+                            "excerpt": "Amazon officially rolled out Alexa+ to users this week, which means the free early access is now over. Here\u2019s how much it might cost you to try it out.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Lifehacker",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8f98fb25-a86d-46bb-9a3e-739d79df0175.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f02eb6d7-95e9-4737-9273-e03f88587c94",
+                            "url": "https://www.cnet.com/tech/services-and-software/mistral-voxtral-ai-transcription-on-device/",
+                            "title": "These New AI Transcription Models Are Built for Speed and Privacy",
+                            "excerpt": "Mistral AI\u2019s new Voxtral Mini Transcribe 2 and Voxtral Realtime are intended to run on your device, meaning your conversations never find their way to a data center.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "CNET",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a8d83418-7143-4ca1-bac6-c1712463d26e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6f3bd094-ee23-44a7-a069-4cfdf85cca2d",
+                            "url": "https://www.theverge.com/tech/873973/ikea-matter-thread-smart-home-connectivity-issues",
+                            "title": "Ikea\u2019s cheap new smart home gear is struggling to get connected",
+                            "excerpt": "Onboarding and connectivity issues are plaguing the furniture retailer\u2019s new Matter-over-Thread products.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Verge",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/92068b02-0209-49ac-a513-52fb7a59a74d.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "society-parenting__lEN_CA",
+                "active": true,
+                "title": "Parenting",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "192"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "ac5f74da-7abd-40d0-9249-3c8d82464ae7",
+                            "url": "https://montrealgazette.com/entertainment_life/books/books-for-kids-bundle-up-for-three-winter-reads",
+                            "title": "Books for Kids: Bundle up for three winter reads",
+                            "excerpt": "Reviews of A Snow Day for Amos McGee, Brown Girl in the Snow and the latest in Amy Timberlake\u2019s Skunk and Badger series, Rock Paper Incisors.",
+                            "topic": "PARENTING",
+                            "publisher": "montrealgazette.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/68ba03c7-e994-420e-9b7c-aa6fb1f7f976.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "73b1979b-1a32-4e21-abd1-c44b3ad53293",
+                            "url": "https://slate.com/advice/2026/01/parenting-advice-toddler-insult.html",
+                            "title": "My Husband Wanted to \u201cTeach My Mom a Lesson.\u201d He Used Our Toddler to Do It.",
+                            "excerpt": "I\u2019m livid.",
+                            "topic": "PARENTING",
+                            "publisher": "Slate",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8e22d29f-cb35-4a2b-88dd-b1cc3c4cea2d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8cfbbfa4-095e-4737-a4da-0a495eb80fca",
+                            "url": "https://www.goodhousekeeping.com/life/parenting/a70202782/bedroom-kids-vs-living-room-kids/",
+                            "title": "I\u2019m a \u201cBedroom Kid\u201d Raising a \u201cLiving Room Kid,\u201d and I\u2019m Not Alone",
+                            "excerpt": "Younger generations are ditching solitude for more communal spaces.",
+                            "topic": "PARENTING",
+                            "publisher": "Good Housekeeping",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/da111d15-6fa2-4107-9e38-d9b5a6b879f3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1dd225f4-ccde-4f66-adbb-a44e11d8c6ea",
+                            "url": "https://www.thecut.com/article/pregnancy-trimester-zero.html",
+                            "title": "The Rise of Trimester Zero",
+                            "excerpt": "In certain corners of Instagram and TikTok, it\u2019s never too early to start thinking about the health of your future child.",
+                            "topic": "PARENTING",
+                            "publisher": "The Cut",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/79603de8-42c5-4efc-b09f-bc30d2f57e81.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1f04e70f-bbf8-4ccb-a77a-1b22664ef991",
+                            "url": "https://www.goodhousekeeping.com/life/parenting/a70145100/kids-safety-emotion-study/",
+                            "title": "The No. 1 Emotional Need Kids Have Isn\u2019t Acceptance or Adoration\u2014It\u2019s This",
+                            "excerpt": "Plus, how parents can make it happen.",
+                            "topic": "PARENTING",
+                            "publisher": "Good Housekeeping",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/153c6a57-3f7d-4d3d-8a78-394525c18b7f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "50bafcb0-73b0-4eaa-8279-7debc1f8d031",
+                            "url": "https://www.parents.com/movies-to-help-start-conversations-about-bullying-11890538",
+                            "title": "The 6 Best Movies to Start Conversations With Kids About Bullying",
+                            "excerpt": "From \u2018Mean Girls\u2019 to \u2018The Karate Kid,\u2019 these are six of the best films for kids about bullying. They all open up important conversations about navigating tricky social dynamics and standing up for yourself",
+                            "topic": "PARENTING",
+                            "publisher": "Parents",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/385a7bb2-8835-4432-8fd8-279df8f9883d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5e06064e-1720-46bf-84b4-8b9dd8a69e60",
+                            "url": "https://www.huffpost.com/entry/toxic-grandparenting-phrases-goog_l_697b7169e4b00b1deb8f9dec",
+                            "title": "It\u2019s Time To Stop Saying These 6 Phrases To Your Grandkids. Here\u2019s Why.",
+                            "excerpt": "You may think this kind of language is harmless, but therapists say it\u2019s best to avoid it.",
+                            "topic": "PARENTING",
+                            "publisher": "HuffPost",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/97abdba9-9ec1-4a15-b10b-54dbebdd0ff4.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "564e503b-3160-4ff9-8f8d-f3f3cc7e6003",
+                            "url": "https://www.todaysparent.com/baby/colostrum-harvesting/",
+                            "title": "Should You Harvest Colostrum Before Giving Birth?",
+                            "excerpt": "Is collecting colostrum before baby arrives a good idea? Experts share what you need to know.",
+                            "topic": "PARENTING",
+                            "publisher": "todaysparent.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e40a32fb-5bb4-4a52-841f-0123908058ff.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3477f0d4-ea87-43d3-a198-351cbe95c8a4",
+                            "url": "https://www.mother.ly/uncategorized/9-ways-to-help-your-tween-navigate-friend-groups/",
+                            "title": "9 ways to help your tween navigate friend groups",
+                            "excerpt": "Explore 9 helpful ways for your tween to manage friendships. Expert tips and stories await on Motherly!",
+                            "topic": "PARENTING",
+                            "publisher": "Motherly",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9af50691-e6cc-4408-9d07-c7d2e9b30f38.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "85bc5ae3-4a13-41f3-8b00-90d03e807d21",
+                            "url": "https://parentscanada.com/family-life/sex-relationships/understanding-emotional-literacy/",
+                            "title": "Emotional Literacy: Learning to Talk About Things We Never Learned to Say",
+                            "excerpt": "In this month\u2019s The Heart of the Matter, we explore emotional literacy\u2014and how learning to talk about the hard stuff can change our relationships.",
+                            "topic": "PARENTING",
+                            "publisher": "parentscanada.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d449fdf9-16a5-43e0-9939-c0c4b86182b8.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "369e99ec-cbeb-4d51-b87b-e480ee497329",
+                            "url": "https://www.mother.ly/uncategorized/10-ideas-for-answering-your-childs-big-questions/",
+                            "title": "10 ideas for answering your child\u2019s big questions",
+                            "excerpt": "Discover simple, honest responses to your child\u2019s big questions that nurture trust and critical thinking skills.",
+                            "topic": "PARENTING",
+                            "publisher": "Motherly",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b86222a2-738b-46fa-b792-15313b7d1e8a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e70d7e78-408c-4273-b645-c7eea5b380c3",
+                            "url": "https://parentscanada.com/grandparents/grandparent-baby-showers/",
+                            "title": "Should You Have a Grandparent Baby Shower?",
+                            "excerpt": "In this edition of Grandparenting Unfiltered, our columnist Kathy Buckworth makes the case for having a grandparent baby shower.",
+                            "topic": "PARENTING",
+                            "publisher": "parentscanada.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1628aac9-e534-4924-a992-a2beb0418c44.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e022f181-29b5-4c32-b4c6-663064c169b4",
+                            "url": "https://www.huffpost.com/entry/best-age-kids-smartphone_n_69691e5ee4b09fa9c797c5bd",
+                            "title": "This Might Be the Best Age To Give Kids A Phone \u2014 And Reduce Mental Health Risks",
+                            "excerpt": "Experts explain what families should do based on the study\u2019s findings.",
+                            "topic": "PARENTING",
+                            "publisher": "HuffPost",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/debb61ff-59d7-4277-954c-f391c42628e7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "520829f3-0216-4678-88e5-ffb382604219",
+                            "url": "https://slate.com/advice/2026/02/parent-advice-phones-kids-rules-socializing.html",
+                            "title": "I\u2019m Texting My Daughter\u2019s Friends for a Good Reason. I\u2019m Afraid of What Their Parents Will Think.",
+                            "excerpt": "It's leading to an awkward dynamic.",
+                            "topic": "PARENTING",
+                            "publisher": "Slate",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c56e77e4-d19d-4347-be4e-89db5cce45ba.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bef8748f-5a8c-4e89-bb92-1914920d3067",
+                            "url": "https://www.todaysparent.com/baby/tiktok-10-safe-foods-first-myth/",
+                            "title": "No, You Don\u2019t Have To Follow The TikTok \u201cSafe First Foods\u201d List",
+                            "excerpt": "Pregnancy, baby, toddler advice for Canadian parents",
+                            "topic": "PARENTING",
+                            "publisher": "todaysparent.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/dd5741e7-7173-4fb8-bfc6-6c1cbbced354.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "sports__lEN_CA",
+                "active": true,
+                "title": "Sports",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "483"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "8fedba83-bf5c-46b4-b591-b1981890b7b6",
+                            "url": "https://www.thecut.com/article/jordon-hudson-bill-belichick-pro-football-hall-of-fame-snub.html",
+                            "title": "Jordon Hudson Has Words for the Pro Football Hall of Fame",
+                            "excerpt": "The 24-year-old posted a shady screenshot after her boyfriend, Bill Belichick, was reportedly snubbed for an induction.",
+                            "topic": "SPORTS",
+                            "publisher": "The Cut",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/307db90b-3bd0-4adb-a085-29f8890513ee.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a13ae49a-099f-4a54-b880-ab3608e2dd8e",
+                            "url": "https://montrealgazette.com/news/local-news/quebec-at-the-games-snowboard-prodigy-eliot-grondin-guns-for-gold",
+                            "title": "Quebec at the Games: Snowboard prodigy \u00c9liot Grondin guns for gold",
+                            "excerpt": "Sainte-Marie native has been world\u2019s top-ranked cross racer for two years and aims to complete his Olympic trophy case in Milano Cortina.",
+                            "topic": "SPORTS",
+                            "publisher": "montrealgazette.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/977492a7-cf42-4ba6-8f51-94233857f682.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "cb82d8c4-8e1d-4560-8a34-6e1b5b4c870c",
+                            "url": "https://cyclingmagazine.ca/sections/news/mike-woods-had-charted-a-route-to-the-winter-olympics-this-year/",
+                            "title": "Mike Woods had a plan to race at the Winter Olympics this year",
+                            "excerpt": "And no, he wasn\u2019t banking on cyclocross Mike Woods had charted a route to the Winter Olympics this year And no, he wasn\u2019t banking on cyclocross",
+                            "topic": "SPORTS",
+                            "publisher": "cyclingmagazine.ca",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/6c78d81a-41d2-4a57-b7a0-c4e3a49efc68.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "be54d16c-954b-456c-a9a1-268c9f81aea0",
+                            "url": "https://nationalpost.com/sports/olympics/from-shingles-to-smiles-why-olympic-figure-skaters-learn-to-mask-their-pain",
+                            "title": "From shingles to smiles: Why Olympic figure skaters learn to mask their pain",
+                            "excerpt": "Hockey players are celebrated for playing hurt, figure skaters at the Milan-Cortina Olympics are trained to conceal their aches and pains",
+                            "topic": "SPORTS",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/06f1abff-7753-42f2-a215-b606c8d8a6c2.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "af0ebdc5-87c3-42ef-9319-e5452c8f62db",
+                            "url": "https://ottawacitizen.com/ottawa-senators/rally-in-raleigh-falls-short",
+                            "title": "Ottawa Senators rally in Raleigh falls short in 4-3 loss to Carolina Hurricanes",
+                            "excerpt": "The Senators battled back from a two-goal deficit to tie the game, only to let a pivotal two points slip away in a loss to Carolina.",
+                            "topic": "SPORTS",
+                            "publisher": "ottawacitizen.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8382937d-cbdc-4927-9ef4-690e1d5be308.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "872e5399-3c90-4de2-975e-d68a596f15d0",
+                            "url": "https://www.tsn.ca/nhl/article/penguins-defenceman-jones-suspended-20-games-for-drug-violation/",
+                            "title": "Penguins defenceman Jones suspended 20 games for drug violation",
+                            "excerpt": "Pittsburgh Penguins defenceman Caleb Jones has been suspended 20 games, without pay, for violating the terms of the NHL/NHLPA Performance Enhancing Substances Program, the NHL announced on Wednesday.",
+                            "topic": "SPORTS",
+                            "publisher": "TSN",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1293db80-5730-4a40-b73f-7c74557d552a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "07df778e-ed90-4058-b1ec-d2367f0d4e01",
+                            "url": "https://globalnews.ca/news/11652994/mcmorris-crash-olympics/",
+                            "title": "Mark McMorris crash overshadows Canada\u2019s opening curling win at Olympics",
+                            "excerpt": "Mark McMorris\u00a0was taken off the big air course on a stretcher Wednesday night following the\u00a0crash.",
+                            "topic": "SPORTS",
+                            "publisher": "Global News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b8cc4041-297f-47a3-a073-44d7910dbdab.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3b5a0335-a44d-470e-a44c-2ddd1cf6f680",
+                            "url": "https://www.cbc.ca/sports/olympics/winter/milano-cortina-olympics-washington-post-chris-jones-feb4-9.7073743",
+                            "title": "Washington Post staff laid off while in Milan still hope to find beauty in the Olympics",
+                            "excerpt": "In the last hours before these Olympics begin, and the flame is lit, and the cheering starts, a smaller, sad drama played out in a little white box of an office in the Main Media Centre in Milan. A sign on the door read: The Washington Post.",
+                            "topic": "SPORTS",
+                            "publisher": "CBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/335c0a7c-8fda-4f7d-97d8-31a4420c7f4c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "7c3603b4-eec9-4975-85b9-4907d44474fe",
+                            "url": "https://apnews.com/article/clippers-cavaliers-trade-harden-garland-8caf2285682a2d1098759b9a2710e3b3",
+                            "title": "James Harden to Cavs, Darius Garland to Clippers in deal of All-Star guards, AP source says",
+                            "excerpt": "James Harden is headed to the Cleveland Cavaliers. The Los Angeles Clippers have agreed to send the 11-time All-Star back to the Eastern Conference during his highest-scoring season in six years.",
+                            "topic": "SPORTS",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/873770cc-df32-4e86-a76a-8b42c5977027.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "67f4e769-5cd3-4f25-a2c5-b812ec6b6680",
+                            "url": "https://africa.espn.com/nba/story/_/id/47191162/nba-buzz-latest-live-updates-trades-intel-league",
+                            "title": "NBA buzz: Live updates, trades, intel ahead of Feb. 5 deadline",
+                            "excerpt": "Chris Paul is headed to Toronto, but will he stay there? Catch up on what we're hearing from insiders.",
+                            "topic": "SPORTS",
+                            "publisher": "ESPN",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ad5bdcb7-392c-4a7b-b50c-1bbf4d736705.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "564add58-a2ef-4c15-9a14-9d140ca45bc2",
+                            "url": "https://theprovince.com/sports/football/nfl/seahawks-sam-darnolds-season-as-a-49ers-backup-helped-him-reach-the-super-bowl",
+                            "title": "Seahawks: Sam Darnold\u2019s season as a 49ers\u2019 backup helped him reach the Super Bowl",
+                            "excerpt": "Despite crushing disappointment with Jets and Panthers, Seahawks QB has grown into a quality starter on the verge of winning the Super Bowl",
+                            "topic": "SPORTS",
+                            "publisher": "theprovince.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/13177a82-e125-41b6-b174-4844b7780cd8.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bfc7f522-aace-4e83-b497-7758d8fa8e6c",
+                            "url": "https://torontosun.com/sports/hockey/gavin-mckenna-accused-of-aggravated-assault",
+                            "title": "Gavin McKenna, NHL\u2019s top draft prospect, accused of aggravated assault",
+                            "excerpt": "Penn State star Gavin McKenna has been charged with aggravated assault and other offences, according to multiple reports. More here.",
+                            "topic": "SPORTS",
+                            "publisher": "torontosun.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9f0c7c94-82a5-46fa-b4aa-024823b9076e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "fabc855b-106c-4d75-a0d7-37f3d548fced",
+                            "url": "https://torontosun.com/sports/basketball/nba/wizards-anthony-davis-mavericks-trade",
+                            "title": "Wizards acquiring Anthony Davis from Mavericks in 8-player trade",
+                            "excerpt": "The Washington Wizards are acquiring Anthony Davis in an eight-player trade with the Mavericks that includes draft picks for Dallas.",
+                            "topic": "SPORTS",
+                            "publisher": "torontosun.com",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/124056ec-7766-44b4-bd76-7eba5da6b533.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6940f6bb-61c3-4d04-87ab-28d4c6a8f773",
+                            "url": "https://time.com/7362281/amber-glenn-olympics-figure-skating-interview-2026-milan-cortina/",
+                            "title": "How Figure Skater Amber Glenn Took Control of Her Life",
+                            "excerpt": "After leaving competitive skating for a few months as a teen, the three-time national champion is making her Olympic debut",
+                            "topic": "SPORTS",
+                            "publisher": "Time",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9efa3c37-0493-4c9c-9ec2-efdd06759132.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6653f182-a5b9-4d7c-b606-301ebd1fd145",
+                            "url": "https://nationalpost.com/sports/olympics/canadas-jocelyn-peterman-and-brett-gallant-open-md-curling-with-win-over-czechia",
+                            "title": "Canada\u2019s Jocelyn Peterman and Brett Gallant open MD curling with win over Czechia",
+                            "excerpt": "The Canadian curling couple rang up a relatively easy 10-5 victory Wednesday over Czechia\u2019s Julie Zelingrov\u00e1 and Vit Chabi\u010dovsk\u00fd.",
+                            "topic": "SPORTS",
+                            "publisher": "National Post",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e2bcac11-5afe-4667-add2-137dc6603c2b.jpeg"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
