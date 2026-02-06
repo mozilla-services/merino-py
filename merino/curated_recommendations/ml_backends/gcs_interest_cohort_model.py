@@ -16,6 +16,8 @@ from merino.utils.synced_gcs_blob import SyncedGcsBlob
 logger = logging.getLogger(__name__)
 
 DEFAULT_TARGET_COHORTS = 10
+DO_EMPTY_COHORT_FOR_NO_CLICKS = True
+NO_CLICKS_COHORT_ID = "-1"
 
 
 class GcsInterestCohortModel(CohortModelBackend):
@@ -82,6 +84,18 @@ class GcsInterestCohortModel(CohortModelBackend):
             normalized_chunks.append(replacement_map.get(chunk, "0000"))
         return "".join(normalized_chunks)
 
+    def _is_empty_cohort_for_no_clicks(self, normalized_interests: str) -> bool:
+        """Determine if the normalized interests correspond to the empty cohort for no clicks."""
+        if not DO_EMPTY_COHORT_FOR_NO_CLICKS:
+            return False
+        for k in range(self._num_bits // 4):
+            chunk = normalized_interests[k * 4 : (k + 1) * 4]
+            if (
+                chunk != "0000" and chunk != "1000"
+            ):  # if any chunk has more than the least significant bit set, it's not the no-clicks cohort
+                return False
+        return True
+
     def get_cohort_for_interests(
         self,
         interests: str,
@@ -101,6 +115,8 @@ class GcsInterestCohortModel(CohortModelBackend):
         if normalized_interests is None:
             return None
         else:
+            if self._is_empty_cohort_for_no_clicks(normalized_interests):
+                return NO_CLICKS_COHORT_ID
             return self._get_cohort_for_normalized_interests(normalized_interests)
 
     @lru_cache(maxsize=3000)
