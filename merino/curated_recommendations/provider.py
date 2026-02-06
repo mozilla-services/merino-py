@@ -33,6 +33,10 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.legacy.sections_adapter import (
     get_legacy_recommendations_from_sections,
 )
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CrawledContentRescaler,
+    UKCrawledContentRescaler,
+)
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
@@ -154,8 +158,8 @@ class CuratedRecommendationsProvider:
                 ml_backend=self.ml_recommendations_backend,
                 region=derive_region(request.locale, request.region),
             )
-        elif surface_id == SurfaceId.NEW_TAB_EN_US:
-            # US non-sections: fetch from sections backend instead of scheduler
+        elif surface_id in (SurfaceId.NEW_TAB_EN_US, SurfaceId.NEW_TAB_EN_GB):
+            # US/GB non-sections: fetch from sections backend instead of scheduler
             general_feed = await get_legacy_recommendations_from_sections(
                 sections_backend=self.sections_backend,
                 engagement_backend=self.engagement_backend,
@@ -163,9 +167,10 @@ class CuratedRecommendationsProvider:
                 surface_id=surface_id,
                 count=request.count,
                 region=derive_region(request.locale, request.region),
+                rescaler=UKCrawledContentRescaler() if surface_id == SurfaceId.NEW_TAB_EN_GB else CrawledContentRescaler(),
             )
         else:
-            # Non-US/CA markets: fetch from scheduled surface backend
+            # Other markets: fetch from scheduled surface backend
             corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
             recommendations = [
                 CuratedRecommendation(
