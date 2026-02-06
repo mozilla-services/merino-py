@@ -167,7 +167,9 @@ class CuratedRecommendationsProvider:
                 surface_id=surface_id,
                 count=request.count,
                 region=derive_region(request.locale, request.region),
-                rescaler=UKCrawledContentRescaler() if surface_id == SurfaceId.NEW_TAB_EN_GB else CrawledContentRescaler(),
+                rescaler=UKCrawledContentRescaler()
+                if surface_id == SurfaceId.NEW_TAB_EN_GB
+                else CrawledContentRescaler(),
             )
         else:
             # Other markets: fetch from scheduled surface backend

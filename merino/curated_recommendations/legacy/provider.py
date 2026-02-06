@@ -101,7 +101,8 @@ class LegacyCuratedRecommendationsProvider:
         if surface_id in (SurfaceId.NEW_TAB_EN_US, SurfaceId.NEW_TAB_EN_GB):
             # US/GB: fetch from sections backend instead of scheduler
             rescaler = (
-                UKCrawledContentRescaler() if surface_id == SurfaceId.NEW_TAB_EN_GB
+                UKCrawledContentRescaler()
+                if surface_id == SurfaceId.NEW_TAB_EN_GB
                 else CrawledContentRescaler()
             )
             return await get_legacy_recommendations_from_sections(
