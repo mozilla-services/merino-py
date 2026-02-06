@@ -12,6 +12,7 @@ from google.cloud.storage import Client, Bucket
 
 from merino.configs import settings
 from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import (
+    NO_CLICKS_COHORT_ID,
     GcsInterestCohortModel,
 )
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
@@ -116,7 +117,7 @@ async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client
     model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_model_is_updated(model_provider)
     result = model_provider.get_cohort_for_interests(
-        model_id="inferred-v3-model", interests="1" * model_provider._num_bits
+        model_id="inferred-v3-model", interests="0100" * (model_provider._num_bits // 4)
     )
     assert result is not None
     int_result: int | None = None
@@ -128,16 +129,11 @@ async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client
     assert int_result >= 0
     assert int_result < 20
 
-    # Test specific expected result for the v2 model, which has cohort of 1 for
-    # a no clicks cohort. This test can be adjusted when the model is updated.
+    # Special case with no interests
     result = model_provider.get_cohort_for_interests(
-        model_id="inferred-v3-model", interests="1000" * 8
+        model_id="inferred-v3-model", interests="1000" * (model_provider._num_bits // 4)
     )
-    assert result == "1"
-    result = model_provider.get_cohort_for_interests(
-        model_id="inferred-v3-model", interests="0000" * 8
-    )
-    assert result == "1"
+    assert result == NO_CLICKS_COHORT_ID
 
 
 @pytest.mark.asyncio
@@ -206,6 +202,20 @@ async def test_normalize_interests_raises_on_wrong_length(
 
     assert model_provider._num_bits == 32
     assert model_provider._normalize_interests("0" * (model_provider._num_bits - 1)) is None
+
+
+@pytest.mark.asyncio
+async def test_empty_interests(gcs_storage_client, gcs_bucket, metrics_client, blob):
+    """Test that _normalize_interests rejects strings of incorrect length."""
+    model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
+    await wait_until_model_is_updated(model_provider)
+
+    assert model_provider._num_bits == 32
+    assert model_provider._is_empty_cohort_for_no_clicks("1000" * 8) is True
+    assert model_provider._is_empty_cohort_for_no_clicks("0000" * 8) is True
+    assert model_provider._is_empty_cohort_for_no_clicks("0100" * 8) is False
+    assert model_provider._is_empty_cohort_for_no_clicks("0000" * 7 + "0100") is False
+    assert model_provider._is_empty_cohort_for_no_clicks("1000" * 7 + "0100") is False
 
 
 @pytest.mark.asyncio

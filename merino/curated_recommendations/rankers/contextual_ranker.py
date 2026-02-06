@@ -36,9 +36,6 @@ CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
     0.5  # Underscored items tend to scale higher, leading to too much fresh content
 )
 
-# Hard coded cohot for users with no clicks. We handle differently
-NO_CLICKS_COHORT_ID = "1"
-
 logger = logging.getLogger(__name__)
 
 
@@ -80,11 +77,7 @@ class ContextualRanker(Ranker):
             utcOffset = None
 
         contextual_scores: ContextualArticleRankings | None
-
-        if cohort == NO_CLICKS_COHORT_ID:
-            contextual_scores = self.ml_backend.get(region=region, utcOffset=None, cohort=None)
-        else:
-            contextual_scores = self.ml_backend.get(region, str(utcOffset), cohort)
+        contextual_scores = self.ml_backend.get(region, str(utcOffset), cohort)
 
         k = randint(0, contextual_scores.K - 1) if contextual_scores is not None else 0
         for rec in recs:
