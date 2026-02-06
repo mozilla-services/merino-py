@@ -61,13 +61,13 @@ async def get_legacy_recommendations_from_sections(
     region: str | None = None,
     rescaler: EngagementRescaler | None = None,
 ) -> list[CuratedRecommendation]:
-    """Fetch section items for NEW_TAB_EN_US and return as flat list.
+    """Fetch section items and return as a flat list for non-sections clients.
 
     Args:
         sections_backend: Backend to fetch corpus sections
         engagement_backend: Backend for engagement data (Thompson sampling)
         prior_backend: Backend for priors (Thompson sampling)
-        surface_id: Surface identifier (should be NEW_TAB_EN_US)
+        surface_id: Surface identifier (e.g. NEW_TAB_EN_US, NEW_TAB_EN_GB)
         count: Maximum number of recommendations to return
         region: Optional region for engagement filtering (e.g., 'US', 'CA')
         rescaler: Optional rescaler for Thompson sampling (applies pessimistic priors
