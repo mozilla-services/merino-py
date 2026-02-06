@@ -215,10 +215,14 @@ async def suggest(
 
     match pii_type:  # noqa
         case PIIType.EMAIL:
-            metrics_client.increment(f"suggestions.query.pii_detected.{pii_type.name.lower()}")
+            metrics_client.increment(
+                "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
+            )
             return build_suggestion_response(client_variants, search_from, [])
         case PIIType.NUMERIC:
-            metrics_client.increment(f"suggestions.query.pii_detected.{pii_type.name.lower()}")
+            metrics_client.increment(
+                "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
+            )
             is_soft_pii = True
         case _:
             pass
@@ -267,7 +271,8 @@ async def suggest(
 
     if is_soft_pii and len(suggestions):
         metrics_client.increment(
-            f"suggestions.query.pii_detected.{pii_type.name.lower()}.false_positive"
+            "suggestions.query.pii_detected.false_positive",
+            tags={"type": pii_type.name.lower()},
         )
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)

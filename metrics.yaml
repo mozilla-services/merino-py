@@ -2,18 +2,14 @@ version: 1.0
 
 service: Merino
 suggest:
-  query_pii_detected_email:
+  query_pii_detected:
     description: |
-      Measurement for queries that contain emails
+      Measurement for queries that contain pii
     type: counter
-    scope: |
-      The "api/v1/suggest" API endpoint.
-    alert_policy: []
-  query_pii_detected_numeric:
-    description: |
-      Measurement for queries that contain numbers
-    type:
-      counter
+    labels:
+      type:
+        - email
+        - numeric
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []

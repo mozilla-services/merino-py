@@ -369,7 +369,7 @@ def test_suggest_with_invalid_geolocation_ip(
         (
             "/api/v1/suggest?q=test@example.com",
             [
-                ("suggestions.pii.email", None),
+                ("suggestions.query.pii_detected", {"type": "email"}),
                 ("get.api.v1.suggest.timing", None),
                 (
                     "get.api.v1.suggest.status_codes.200",
@@ -384,8 +384,16 @@ def test_suggest_with_invalid_geolocation_ip(
         (
             "/api/v1/suggest?q=sp0ns0r3d-s0ft-p11",
             [
+                (
+                    "suggestions.query.pii_detected",
+                    {"type": "numeric"},
+                ),
                 ("providers.sponsored.query", None),
                 ("providers.non-sponsored.query", None),
+                (
+                    "suggestions.query.pii_detected.false_positive",
+                    {"type": "numeric"},
+                ),
                 ("suggestions-per.request", None),
                 ("suggestions-per.provider.sponsored", None),
                 ("suggestions-per.provider.non-sponsored", None),
