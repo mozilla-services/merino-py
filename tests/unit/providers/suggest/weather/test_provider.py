@@ -212,6 +212,28 @@ def test_query_with_no_request_type_param_returns_http_400(
 
 
 @pytest.mark.asyncio
+async def test_location_pii_query_returns_empty(
+    statsd_mock: Any,
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    weather_report: WeatherReport,
+) -> None:
+    """Test that the query method returns empty for pii location requests."""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(
+            query="123 Seasame Street",
+            geolocation=geolocation,
+            source="urlbar",
+            request_type="location",
+            is_soft_pii=True,
+        )
+    )
+
+    assert suggestions == []
+
+
+@pytest.mark.asyncio
 async def test_fetch_mapping(
     statsd_mock: Any,
     provider: Provider,
