@@ -218,6 +218,7 @@ async def suggest(
             metrics_client.increment(f"suggestions.query.pii_detected.{pii_type.name.lower()}")
             return build_suggestion_response(client_variants, search_from, [])
         case PIIType.NUMERIC:
+            metrics_client.increment(f"suggestions.query.pii_detected.{pii_type.name.lower()}")
             is_soft_pii = True
         case _:
             pass
@@ -236,6 +237,7 @@ async def suggest(
             languages=languages,
             user_agent=user_agent,
             source=source,
+            is_soft_pii=is_soft_pii,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
@@ -263,15 +265,18 @@ async def suggest(
     if len(suggestions) == 1 and suggestions[0] is NO_LOCATION_KEY_SUGGESTION:
         return Response(status_code=204)
 
-    if len(suggestions) == 0 and is_soft_pii:
-        metrics_client.increment(f"suggestions.query.pii_detected.{pii_type.name.lower()}")
-    else:
-        emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
+    if is_soft_pii and len(suggestions):
+        metrics_client.increment(
+            f"suggestions.query.pii_detected.{pii_type.name.lower()}.false_positive"
+        )
+
+    emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
     return build_suggestion_response(client_variants, search_from, suggestions)
 
 
-def build_suggestion_response(client_variants, search_from, suggestions):
+def build_suggestion_response(client_variants, search_from, suggestions) -> Response:
+    """Build the Suggestion Response."""
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),

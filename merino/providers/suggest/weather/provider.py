@@ -166,8 +166,12 @@ class Provider(BaseProvider):
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
         weather_context = WeatherContext(geolocation, languages, request_source=source)
+        is_soft_pii: bool = srequest.is_soft_pii
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
+                if is_location_completion_request and is_soft_pii:
+                    # location requests aren't location keys so they shouldn't contain pii
+                    return []
                 if is_location_completion_request:
                     location_completions = await self.backend.get_location_completion(
                         weather_context, search_term=srequest.query
