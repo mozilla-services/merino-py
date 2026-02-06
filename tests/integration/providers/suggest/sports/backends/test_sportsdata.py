@@ -140,10 +140,6 @@ async def test_sportsdata_na_query(sportsdata: SportsDataBackend, sports_league:
     await sportsdata.data_store.build_indexes(clear=True)
 
     await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
-    if sportsdata.data_store.client:
-        # refresh makes recent operations performed available for search
-        await sportsdata.data_store.client.indices.refresh()
-
     result = await sportsdata.query("fakehome")
 
     expected_result = SportSummary(
@@ -178,10 +174,6 @@ async def test_sportsdata_query_with_no_result(sportsdata: SportsDataBackend, sp
     await sportsdata.data_store.build_indexes(clear=True)
 
     await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
-    if sportsdata.data_store.client:
-        # refresh makes recent operations performed available for search
-        await sportsdata.data_store.client.indices.refresh()
-
     response = await sportsdata.query("something else")
     assert len(response) == 0
 
