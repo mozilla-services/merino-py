@@ -23,6 +23,7 @@ class SuggestionRequest(BaseModel):
     country: str | None = None
     user_agent: UserAgent | None = None
     source: str | None = None
+    forecast_hours: int | None = None
 
 
 class BaseSuggestion(BaseModel):

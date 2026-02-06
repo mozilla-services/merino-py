@@ -97,6 +97,7 @@ async def suggest(
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    forecast_hours: Annotated[int | None, Query(ge=5, le=5)] = None,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -138,6 +139,8 @@ async def suggest(
         "location" or "weather" string. For "location" it will get location completion
         suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
         to weather suggestions.
+    - `forecast_hours`: [Optional] Number of hourly forecast hours to return when requesting weather.
+        Only excepted value is 5 for now.
 
     **Headers:**
 
@@ -226,6 +229,7 @@ async def suggest(
             languages=languages,
             user_agent=user_agent,
             source=source,
+            forecast_hours=forecast_hours,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
