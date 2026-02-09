@@ -1008,7 +1008,6 @@ ALL_STOCK_TICKER_COMPANY_MAPPING: dict[str, dict[str, str]] = {
 # Tickers prone to eager matches (short symbols or company name-like); used to avoid
 # aggressive matches on partial queries.
 STOCK_TICKER_EAGER_MATCH_BLOCKLIST = [
-    # 2 letter tickers
     "AA",
     "AL",
     "AM",
@@ -1095,7 +1094,6 @@ STOCK_TICKER_EAGER_MATCH_BLOCKLIST = [
     "WU",
     "WY",
     "XP",
-    # 3 letter tickers
     "ACI",
     "ALL",
     "ALLY",
