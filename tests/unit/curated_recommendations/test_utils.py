@@ -184,11 +184,11 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
 class TestGetRecommendationSurfaceIdWithExperiment:
     """Unit tests for get_recommendation_surface_id with en-CA experiment gating."""
 
-    def test_ca_with_sections_in_experiment_returns_en_ca(self):
-        """Test CA → NEW_TAB_EN_CA when in 'sections' branch of 'sections-in-canada' experiment."""
+    def test_ca_sections_ca_content_returns_en_ca(self):
+        """Test CA → NEW_TAB_EN_CA when in 'sections-ca-content' branch."""
         req = SimpleNamespace(
             experimentName="sections-in-canada",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=["sections"],
         )
         assert (
@@ -196,23 +196,47 @@ class TestGetRecommendationSurfaceIdWithExperiment:
             == SurfaceId.NEW_TAB_EN_CA
         )
 
-    def test_ca_with_sections_in_optin_experiment_returns_en_ca(self):
+    def test_ca_sections_ca_content_optin_returns_en_ca(self):
         """Test CA → NEW_TAB_EN_CA with opt-in experiment prefix."""
         req = SimpleNamespace(
             experimentName="optin-sections-in-canada",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=["sections"],
         )
         assert (
             get_recommendation_surface_id(Locale.EN_CA, "CA", request=req)
             == SurfaceId.NEW_TAB_EN_CA
+        )
+
+    def test_ca_sections_layout_only_returns_en_us(self):
+        """Test CA → NEW_TAB_EN_US for 'sections-layout-only' branch (US content in sections)."""
+        req = SimpleNamespace(
+            experimentName="sections-in-canada",
+            experimentBranch="sections-layout-only",
+            feeds=["sections"],
+        )
+        assert (
+            get_recommendation_surface_id(Locale.EN_CA, "CA", request=req)
+            == SurfaceId.NEW_TAB_EN_US
+        )
+
+    def test_ca_control_returns_en_us(self):
+        """Test CA → NEW_TAB_EN_US for 'control' branch (flat list)."""
+        req = SimpleNamespace(
+            experimentName="sections-in-canada",
+            experimentBranch="control",
+            feeds=["sections"],
+        )
+        assert (
+            get_recommendation_surface_id(Locale.EN_CA, "CA", request=req)
+            == SurfaceId.NEW_TAB_EN_US
         )
 
     def test_ca_without_sections_feed_returns_en_us(self):
         """Test CA → NEW_TAB_EN_US when sections not in feeds (even if in experiment)."""
         req = SimpleNamespace(
             experimentName="sections-in-canada",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=["general"],
         )
         assert (
@@ -224,20 +248,8 @@ class TestGetRecommendationSurfaceIdWithExperiment:
         """Test CA → NEW_TAB_EN_US when feeds is None."""
         req = SimpleNamespace(
             experimentName="sections-in-canada",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=None,
-        )
-        assert (
-            get_recommendation_surface_id(Locale.EN_CA, "CA", request=req)
-            == SurfaceId.NEW_TAB_EN_US
-        )
-
-    def test_ca_in_wrong_branch_returns_en_us(self):
-        """Test CA → NEW_TAB_EN_US when in control branch (not 'sections')."""
-        req = SimpleNamespace(
-            experimentName="sections-in-canada",
-            experimentBranch="control",
-            feeds=["sections"],
         )
         assert (
             get_recommendation_surface_id(Locale.EN_CA, "CA", request=req)
@@ -248,7 +260,7 @@ class TestGetRecommendationSurfaceIdWithExperiment:
         """Test CA → NEW_TAB_EN_US when in different experiment."""
         req = SimpleNamespace(
             experimentName="other-experiment",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=["sections"],
         )
         assert (
@@ -267,7 +279,7 @@ class TestGetRecommendationSurfaceIdWithExperiment:
         """Test CA → NEW_TAB_EN_CA when region is derived from locale."""
         req = SimpleNamespace(
             experimentName="sections-in-canada",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=["sections"],
         )
         assert (
@@ -279,7 +291,7 @@ class TestGetRecommendationSurfaceIdWithExperiment:
         """Test en locale with CA region in experiment returns NEW_TAB_EN_CA."""
         req = SimpleNamespace(
             experimentName="sections-in-canada",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=["sections"],
         )
         assert (
@@ -291,7 +303,7 @@ class TestGetRecommendationSurfaceIdWithExperiment:
         """Test that US region is unaffected by CA experiment."""
         req = SimpleNamespace(
             experimentName="sections-in-canada",
-            experimentBranch="sections",
+            experimentBranch="sections-ca-content",
             feeds=["sections"],
         )
         assert (

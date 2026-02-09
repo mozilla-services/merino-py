@@ -41,13 +41,13 @@ def get_recommendation_surface_id(
         if derived_region == "CA":
             # Canada routing: Map to NEW_TAB_EN_CA only if:
             # 1. Request includes 'sections' in feeds
-            # 2. User is in 'sections' branch of 'sections-in-canada' experiment
+            # 2. User is in 'sections-ca-content' branch of 'sections-in-canada' experiment
             # Otherwise, default to NEW_TAB_EN_US
             if (
                 request is not None
                 and request.feeds is not None
                 and "sections" in request.feeds
-                and is_enrolled_in_experiment(request, "sections-in-canada", "sections")
+                and is_enrolled_in_experiment(request, "sections-in-canada", "sections-ca-content")
             ):
                 return SurfaceId.NEW_TAB_EN_CA
             else:

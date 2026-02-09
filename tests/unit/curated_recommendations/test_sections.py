@@ -24,6 +24,7 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CACrawledContentRescaler,
     SchedulerHoldbackRescaler,
     CrawledContentRescaler,
     UKCrawledContentRescaler,
@@ -311,6 +312,7 @@ class TestFilterSectionsByExperiment:
             (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
             (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
             (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CACrawledContentRescaler),
         ],
     )
     def test_get_ranking_rescaler_for_branch(
