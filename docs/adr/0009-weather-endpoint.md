@@ -1,6 +1,6 @@
 # Dedicated Weather Endpoint to Serve New Tab Weather Widget Requests
 
-* Status: proposed  
+* Status: Approved
 * Deciders: DISCO, Home & New Tab, Search & Suggest teams
 * Date: 2026-02-06
 
@@ -36,6 +36,9 @@ How should we separate New Tab Weather Widget weather requests from `v1/suggest`
 6. **Backward compatibility**  
    Avoid breaking existing search bar consumers and provider integrations.
 
+7. **Level of effort in separating HTTP traffic (for weather) from OHTTP (for suggest) in Merino**
+   Splitting traffic based on HTTP and OHTTP requests will be simpler and weather functionality relies on HTTP.
+
 ---
 
 ## Considered Options
@@ -62,9 +65,11 @@ How should we separate New Tab Weather Widget weather requests from `v1/suggest`
 * Continues tight coupling between search bar and new tab requirements.
 * Difficult to apply widget-specific caching/TTL and HTTP headers without impacting search bar behavior.
 * `v1/suggest` continues to grow in scope and operational complexity.
+* Serving HTTP requests will be very difficult since the `v1/suggest` endpoint will be used for OHTTP requests going forward.
+
 ---
 
-### B. Multiple endpoints under `v1/weather/*` (Recommended based on the crucial requirement above)
+### B. Multiple new endpoints under `v1/weather/*` (Recommended based on the crucial requirement above)
 
 **Pros**
 * Clear separation of concerns by resource and capability (Better alignment with REST/resource-oriented design).
@@ -75,6 +80,7 @@ Handlers don’t need branching logic based on include= flags. Each endpoint can
 
 **Cons**
 * Client will have to make more than one request depending on the weather data required.
+* Clients will have to migrate over to the new endpoints. Requests could be made to different endpoints i.e `v1/suggest` and `v1/weather` based on the data needed.
 * More client complexity: The client has to coordinate parallel fetches, retries, partial failures (e.g., report succeeds but alerts fail), and loading states.
 * More endpoints to document, monitor, version, and operate.
 
@@ -117,5 +123,5 @@ Handlers don’t need branching logic based on include= flags. Each endpoint can
 
 * Keep `v1/suggest` behavior stable. i.e it will serve the current weather report suggestion response (used by search bar and current weather widget).
 * Create a new endpoint `v1/weather/hourly-forecasts` to serve hourly forecasts first.
-* Eventually add functionality to serve the existing weather report and location completions via `v1/weather/*`. This will allow the new tab client engineers to move off of using the search and suggest code for the weather widget completely.
+* Eventually add functionality to serve the existing weather report and location completions via `v1/weather/*`. This will allow all weather data consumers to move off of using the search and suggest code. That will allow us to deprecate the `accuweather` provider for the `v1/suggest` endpoint.
 * Expand functionality for new weather features (e.g alerts) under the new endpoint.
