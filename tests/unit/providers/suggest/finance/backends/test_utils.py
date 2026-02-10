@@ -124,7 +124,7 @@ def test_lookup_ticker_exchange_fail() -> None:
     "test_keyword, expected_tickers",
     [
         (
-            "AAPL",
+            "GOOG",
             None,
         ),  # Valid stock ticker but it's on the ticker match block list, should return None.
         ("DDOG", ["DDOG"]),
