@@ -7,13 +7,18 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.protocol import CuratedRecommendationsRequest, Locale
 
 
-def get_recommendation_surface_id(locale: Locale, region: str | None = None) -> SurfaceId:
+def get_recommendation_surface_id(
+    locale: Locale,
+    region: str | None = None,
+    request: "CuratedRecommendationsRequest | None" = None,
+) -> SurfaceId:
     """Locale/region mapping is documented here:
     https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
 
     Args:
         locale: The language variant preferred by the user (e.g. 'en-US', or 'en')
         region: Optionally, the geographic region of the user, e.g. 'US'.
+        request: Optionally, the full request object for experiment checks.
 
     Return the most appropriate RecommendationSurfaceId for the given locale/region.
     A value is always returned here. A Firefox pref determines which locales are eligible, so in this
@@ -33,7 +38,21 @@ def get_recommendation_surface_id(locale: Locale, region: str | None = None) -> 
         return SurfaceId.NEW_TAB_IT_IT
     else:
         # Default to English language for all other values of language (including 'en' or None)
-        if derived_region is None or derived_region in ["US", "CA"]:
+        if derived_region == "CA":
+            # Canada routing: Map to NEW_TAB_EN_CA only if:
+            # 1. Request includes 'sections' in feeds
+            # 2. User is in 'sections-ca-content' branch of 'sections-in-canada' experiment
+            # Otherwise, default to NEW_TAB_EN_US
+            if (
+                request is not None
+                and request.feeds is not None
+                and "sections" in request.feeds
+                and is_enrolled_in_experiment(request, "sections-in-canada", "sections-ca-content")
+            ):
+                return SurfaceId.NEW_TAB_EN_CA
+            else:
+                return SurfaceId.NEW_TAB_EN_US
+        elif derived_region is None or derived_region == "US":
             return SurfaceId.NEW_TAB_EN_US
         elif derived_region in ["GB", "IE"]:
             return SurfaceId.NEW_TAB_EN_GB
