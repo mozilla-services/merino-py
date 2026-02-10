@@ -295,8 +295,7 @@ class TestGetRecommendationSurfaceIdWithExperiment:
             feeds=["sections"],
         )
         assert (
-            get_recommendation_surface_id(Locale.EN, "CA", request=req)
-            == SurfaceId.NEW_TAB_EN_CA
+            get_recommendation_surface_id(Locale.EN, "CA", request=req) == SurfaceId.NEW_TAB_EN_CA
         )
 
     def test_us_region_unaffected_by_ca_experiment(self):

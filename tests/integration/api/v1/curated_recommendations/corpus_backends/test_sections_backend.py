@@ -53,6 +53,6 @@ async def test_fetch_ca_strips_locale_suffix(sections_ca_backend: SectionsBacken
 
     # Verify no externalId retains the '__lEN_CA' suffix
     for section in sections:
-        assert "__" not in section.externalId, (
-            f"externalId '{section.externalId}' still contains locale suffix"
-        )
+        assert (
+            "__" not in section.externalId
+        ), f"externalId '{section.externalId}' still contains locale suffix"
