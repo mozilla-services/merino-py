@@ -371,7 +371,9 @@ def get_ranking_rescaler_for_branch(
     if surface_id == SurfaceId.NEW_TAB_EN_GB:
         return UKCrawledContentRescaler()
 
-    if surface_id == SurfaceId.NEW_TAB_EN_CA:
+    if surface_id == SurfaceId.NEW_TAB_EN_CA and is_enrolled_in_experiment(
+        request, "sections-in-canada", "sections-ca-content"
+    ):
         return CACrawledContentRescaler()
 
     # While we preivously returned None for non-US, we know there are some section users
