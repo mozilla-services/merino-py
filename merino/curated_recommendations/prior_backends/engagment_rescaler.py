@@ -76,6 +76,9 @@ class CACrawledContentRescaler(CrawledContentRescaler):
     to compensate for only 10% of CA traffic generating engagement data.
     """
 
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
     def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
         """Apply parent scaling (blocked-from-most-popular 5x), then divide by
         treatment percentage to compensate for small experiment size.
