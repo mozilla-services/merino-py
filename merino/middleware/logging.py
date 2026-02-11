@@ -14,7 +14,7 @@ from merino.utils.log_data_creators import (
     create_suggest_log_data,
 )
 from merino.configs import settings
-
+from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
 
 # web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
@@ -48,6 +48,7 @@ class LoggingMiddleware:
                     LOG_SUGGEST_REQUEST
                     and PATTERN.match(request.url.path)
                     and request.query_params.get("providers", "").strip().lower() != "accuweather"
+                    and pii_inspect(request.query_params.get("q", "")) == PIIType.NON_PII
                 ):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt
