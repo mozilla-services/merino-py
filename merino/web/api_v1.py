@@ -49,7 +49,7 @@ from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
 )
 from merino.utils.api.metrics import emit_suggestions_per_metrics
-from merino.utils.query_processing.pii_detect import pii_inspect
+from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
     refine_geolocation_for_suggestion,
@@ -196,8 +196,6 @@ async def suggest(
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
-    if pii_inspect(q):
-        pass
 
     active_providers, default_providers = sources
     if providers is not None:
@@ -211,6 +209,23 @@ async def suggest(
             search_from.extend(p for p in default_providers if p not in search_from)
     else:
         search_from = default_providers
+
+    pii_type = pii_inspect(q)
+    is_soft_pii = False
+
+    match pii_type:  # noqa
+        case PIIType.EMAIL:
+            metrics_client.increment(
+                "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
+            )
+            return build_suggestion_response(client_variants, search_from, [])
+        case PIIType.NUMERIC:
+            metrics_client.increment(
+                "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
+            )
+            is_soft_pii = True
+        case _:
+            pass
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
@@ -226,6 +241,7 @@ async def suggest(
             languages=languages,
             user_agent=user_agent,
             source=source,
+            is_soft_pii=is_soft_pii,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
@@ -253,8 +269,19 @@ async def suggest(
     if len(suggestions) == 1 and suggestions[0] is NO_LOCATION_KEY_SUGGESTION:
         return Response(status_code=204)
 
+    if is_soft_pii and len(suggestions):
+        metrics_client.increment(
+            "suggestions.query.pii_detected.false_positive",
+            tags={"type": pii_type.name.lower()},
+        )
+
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
+    return build_suggestion_response(client_variants, search_from, suggestions)
+
+
+def build_suggestion_response(client_variants, search_from, suggestions) -> Response:
+    """Build the Suggestion Response."""
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
@@ -265,14 +292,11 @@ async def suggest(
             else []
         ),
     )
-
     # response headers
     response_headers = {}
-
     # could be specific or default
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
     response_headers["Cache-control"] = f"private, max-age={ttl}"
-
     return ORJSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
