@@ -39,7 +39,20 @@ async def test_fetch(sections_backend: SectionsBackend):
     assert len(music.sectionItems) >= 15
 
     # Lookup Headlines section
-    headlines = next(s for s in sections if s.externalId == "headlines_section")
+    headlines = next(s for s in sections if s.externalId == "headlines")
     assert headlines is not None
     assert headlines.title == "Headlines"
     assert headlines.description == "Top Headlines today"
+
+
+@pytest.mark.asyncio
+async def test_fetch_ca_strips_locale_suffix(sections_ca_backend: SectionsBackend):
+    """Test that CA sections have '__lEN_CA' suffix stripped from externalId."""
+    sections = await sections_ca_backend.fetch(SurfaceId.NEW_TAB_EN_CA)
+    assert len(sections) > 0, "Expected CA sections from fixture"
+
+    # Verify no externalId retains the '__lEN_CA' suffix
+    for section in sections:
+        assert (
+            "__" not in section.externalId
+        ), f"externalId '{section.externalId}' still contains locale suffix"

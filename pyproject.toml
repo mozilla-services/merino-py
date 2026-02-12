@@ -1,3 +1,6 @@
+[tool.uv.pip]
+extra-index-url = ["https://download.pytorch.org/whl/cpu"]
+
 [project]
 name = "merino-py"
 version = "0.1.0"
@@ -30,6 +33,8 @@ dependencies = [
     "ua-parser>=1.0,<2.0",
     "redis[hiredis]>=5.2.1,<6",
     "circuitbreaker>=2.1.3",
+    "torch>=2.9.1,<3",
+    "safetensors>=0.7.0,<1",
     "mozilla-merino-ext>=0.2.0",
 ]
 
@@ -123,6 +128,8 @@ skips = ["B101", "B104", "B311"]
 exclude_dirs = [
   # Data file only
   "merino/utils/domain_categories/domain_category_mapping.py",
+  # Test utilities
+  "tests/utils/test_probe.py",
 ]
 
 [tool.mypy]
@@ -142,7 +149,17 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v -r s --cov=merino"
+norecursedirs = [
+  "tests/data/",
+  "tests/utils/",
+  "tests/load/",
+]
+addopts = [
+  "-v",
+  "-r s",
+  "--cov=merino",
+  "--import-mode=importlib",
+]
 filterwarnings = [
   # Transform warnings into errors.
   # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html

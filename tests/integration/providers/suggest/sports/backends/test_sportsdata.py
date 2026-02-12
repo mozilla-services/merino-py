@@ -7,9 +7,7 @@ from typing import Any
 
 import freezegun
 import pytest
-import pytest_asyncio
 from elasticsearch import AsyncElasticsearch
-from testcontainers.elasticsearch import ElasticSearchContainer
 
 from merino.configs import settings
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
@@ -31,25 +29,6 @@ from merino.providers.suggest.sports.backends.sportsdata.protocol import (
 
 logger = logging.getLogger(__name__)
 FROZEN_TIME = datetime(2025, 10, 27, tzinfo=timezone.utc)
-
-
-@pytest.fixture(scope="session")
-def es_url():
-    """ElasticSearch URL fixture."""
-    with ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4") as es:
-        url = es.get_url()
-        yield url
-
-
-@pytest_asyncio.fixture
-async def es_client(es_url):
-    """Elasticsearch client fixture."""
-    client = AsyncElasticsearch(es_url, verify_certs=False, ssl_show_warn=False)
-    try:
-        await client.cluster.health(wait_for_status="yellow", timeout="10s")
-        yield client
-    finally:
-        await client.close()
 
 
 @pytest.fixture(name="sportsdata_parameters")
@@ -106,6 +85,7 @@ def fixture_nfl() -> NFL:
         fullname="Fake Home",
         name="Home",
         key="HOM",
+        id=123,
         locale="Home City",
         aliases=["Fake Home"],
         colors=["000000", "FFFFFF"],
@@ -117,6 +97,7 @@ def fixture_nfl() -> NFL:
         fullname="Fake Away",
         name="Away",
         key="AWA",
+        id=456,
         locale="Away City",
         aliases=["Fake Away"],
         colors=["000000", "FFFFFF"],

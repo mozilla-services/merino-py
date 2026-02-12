@@ -107,6 +107,17 @@ class ExperimentName(str, Enum):
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
+    INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
+    INFERRED_LOCAL_EXPERIMENT_V4 = "new-tab-automated-personalization-v4"
+
+
+class DailyBriefingBranch(str, Enum):
+    """Treatment branches for the Daily Briefing experiment."""
+
+    # Show Daily Briefing (headlines) section WITH Popular Today section
+    BRIEFING_WITH_POPULAR = "briefing-with-popular"
+    # Show Daily Briefing (headlines) section WITHOUT Popular Today section
+    BRIEFING_WITHOUT_POPULAR = "briefing-without-popular"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
@@ -144,9 +155,12 @@ class ProcessedInterests(BaseModel):
     scores: dict[str, float] = Field(default_factory=dict)
     normalized_scores: dict[str, float] = Field(default_factory=dict)
     expected_keys: set[str] = Field(default_factory=set)
+    skip_normalization: bool = False
+    cohort: str | None = None
+    numerical_value: int = 0
 
     @model_validator(mode="after")
-    def compute_norm(self):
+    def compute_norm(self) -> "ProcessedInterests":
         """Set the normalized_scores dictionary with an L2-normalized (unit length) set
         of interests if the number of interests we have meets a minimum threshold,
         otherwise leave empty.
@@ -154,7 +168,14 @@ class ProcessedInterests(BaseModel):
         If any key is missing from the expected_keys, we set its value to the mean
         of the normalized values.
         """
-        if len(self.scores) >= self.minimum_value_count_for_normalization:
+        if self.skip_normalization and len(self.scores) > 0:
+            """ Note this scenarios is not being used but may be soon. If not used Jan 2026 it can be removed."""
+            pre_normalized_dict = self.scores.copy()
+            values = np.array(list(self.scores.values()), dtype=float)
+            for missing_key in self.expected_keys - pre_normalized_dict.keys():
+                pre_normalized_dict[missing_key] = values.mean()
+            object.__setattr__(self, "normalized_scores", pre_normalized_dict)
+        elif len(self.scores) >= self.minimum_value_count_for_normalization:
             keys = list(self.scores.keys())
             values = np.array(list(self.scores.values()), dtype=float)
 
@@ -168,7 +189,6 @@ class ProcessedInterests(BaseModel):
             mean_val = normalized.mean()
             for missing_key in self.expected_keys - normalized_dict.keys():
                 normalized_dict[missing_key] = mean_val
-
             object.__setattr__(self, "normalized_scores", normalized_dict)
         return self
 
@@ -221,6 +241,10 @@ class RankingData(BaseModel):
     is_fresh: bool = False  # Indicates it has relatively little impressions
 
 
+# Flags for in_experiment flags. Note that the name in_experiment is historical and should be migrated to a new name
+ITEM_SUBTOPIC_FLAG = "SUBTOPICS"
+
+
 class CuratedRecommendation(CorpusItem):
     """Extends CorpusItem with additional fields for a curated recommendation"""
 
@@ -247,6 +271,10 @@ class CuratedRecommendation(CorpusItem):
         if sid is not None and self.tileId is None:
             self.tileId = self._integer_hash(sid, MIN_TILE_ID, MAX_TILE_ID)
         self.scheduledCorpusItemId = sid
+
+    def is_story_blocked_for_top_stories(self) -> bool:
+        """Return true if the story should be blocked from most popular section."""
+        return self.in_experiment(ITEM_SUBTOPIC_FLAG) or self.topic == Topic.GAMING
 
     @model_validator(mode="before")
     def set_tileId(cls, values):

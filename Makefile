@@ -8,6 +8,10 @@ LOAD_TEST_DIR := $(TEST_DIR)/load
 APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR)
 INSTALL_STAMP := .install.stamp
 UV := $(shell command -v uv 2> /dev/null)
+ALL_TEST_FILES := $(shell $(UV) run python tests/utils/test_probe.py 2> /dev/null)
+DIRECT_TEST_FILES := $(shell $(UV) run python tests/utils/test_probe.py -q 2> /dev/null)
+# keyword for test selection, set it to an empty string if undefined
+keyword ?=
 
 # In order to be consumed by the ETE Test Metric Pipeline, files need to follow a strict naming
 # convention: {job_number}__{utc_epoch_datetime}__{repository}__{workflow}__{test_suite}__results{-index}.xml
@@ -86,6 +90,29 @@ unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	    MERINO_ENV=testing \
 	    $(UV) run pytest $(UNIT_TEST_DIR) \
 	    --junit-xml=$(UNIT_JUNIT_XML) -vv $(XTRA)
+
+.PHONY: quick-test
+quick-test: $(INSTALL_STAMP)  ## Run specific tests or ones that are only relevant to uncommitted source changes
+	@if [ -n "$(keyword)" ]; then \
+		echo "MERINO_ENV=testing $(UV) run pytest -k $(keyword) --capture=no"; \
+		MERINO_ENV=testing $(UV) run pytest -k $(keyword) --capture=no; \
+	elif [ -z "$(ALL_TEST_FILES)" ]; then \
+		echo "No change detected, skipping."; \
+		exit 0; \
+	else \
+		echo "MERINO_ENV=testing $(UV) run pytest $(ALL_TEST_FILES)"; \
+		MERINO_ENV=testing $(UV) run pytest $(ALL_TEST_FILES); \
+	fi
+
+.PHONY: quicker-test
+quicker-test: $(INSTALL_STAMP)  ## Same as "quick-test" but quicker
+	@if [ -z "$(DIRECT_TEST_FILES)" ]; then \
+		echo "No change detected, skipping."; \
+		exit 0; \
+	else \
+		echo "MERINO_ENV=testing $(UV) run pytest $(DIRECT_TEST_FILES)"; \
+		MERINO_ENV=testing $(UV) run pytest $(DIRECT_TEST_FILES); \
+	fi
 
 .PHONY: unit-test-fixtures
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test

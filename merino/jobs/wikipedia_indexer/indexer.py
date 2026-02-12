@@ -6,7 +6,6 @@ import time
 from itertools import islice
 from typing import Any, Dict, Mapping
 
-from elasticsearch import Elasticsearch
 from google.cloud.storage import Blob
 
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
@@ -17,6 +16,7 @@ from merino.jobs.wikipedia_indexer.settings.v1 import (
 )
 from merino.jobs.wikipedia_indexer.suggestion import Builder
 from merino.jobs.wikipedia_indexer.utils import ProgressReporter
+from merino.search.elastic import ElasticSearchAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class Indexer:
     export_file: Blob
     index_version: str
     file_manager: FileManager
-    client: Elasticsearch
+    elasticsearch: ElasticSearchAdapter
     category_blocklist: set[str]
     title_blocklist: set[str]
 
@@ -41,12 +41,12 @@ class Indexer:
         category_blocklist: set[str],
         title_blocklist: set[str],
         file_manager: FileManager,
-        client: Elasticsearch,
+        elasticsearch: ElasticSearchAdapter,
     ):
         self.queue = []
         self.index_version = index_version
         self.file_manager = file_manager
-        self.es_client = client
+        self.elasticsearch = elasticsearch
         self.suggestion_builder = Builder(index_version)
         self.category_blocklist = category_blocklist
         self.title_blocklist = {entry.lower() for entry in title_blocklist}
@@ -97,7 +97,7 @@ class Indexer:
             )
 
             # Refresh the new index
-            self.es_client.indices.refresh(index=index_name)
+            self.elasticsearch.refresh_index(index=index_name)
             logger.info("Refreshed index", extra={"index": index_name})
 
             # Flip the alias pointer to the new index and remove the previous index
@@ -129,12 +129,11 @@ class Indexer:
         item_count = 0
         if qlen > 0 and (qlen >= self.QUEUE_MAX_LENGTH or force):
             try:
-                res = self.es_client.bulk(operations=self.queue)
+                res = self.elasticsearch.bulk(operations=self.queue)
                 item_count = len(res.get("items", []))
-                if "errors" in res and res["errors"]:
-                    raise Exception(res["errors"])
-            except Exception as e:
-                raise e
+            except RuntimeError as e:
+                logger.error(f"Wiki bulk indexing failed: {e}")
+                raise
             finally:
                 self.queue.clear()
         return item_count
@@ -161,8 +160,7 @@ class Indexer:
         return f"{base_name}-{self.index_version}-{timestamp}"
 
     def _create_index(self, index_name: str) -> bool:
-        indices_client = self.es_client.indices
-        exists = indices_client.exists(index=index_name)
+        exists = self.elasticsearch.index_exists(index=index_name)
 
         version_settings = get_settings_for_version(self.index_version)
         language = self.file_manager.language  # e.g "fr"
@@ -170,12 +168,11 @@ class Indexer:
         if not exists and version_settings:
             logger.info(f"Creating index for language: {language}")
 
-            res = indices_client.create(
+            return self.elasticsearch.create_index(
                 index=index_name,
                 mappings=get_suggest_mapping(language),
                 settings=get_suggest_settings(language),
             )
-            return bool(res.get("acknowledged", False))
 
         return False
 
@@ -183,23 +180,15 @@ class Indexer:
         alias = alias.format(version=self.index_version)
 
         # fetch previous index using alias so we know what to delete
-        actions: list[Mapping[str, Any]] = [{"add": {"index": current_index, "alias": alias}}]
+        actions: list[dict[str, Any]] = [{"add": {"index": current_index, "alias": alias}}]
 
-        indices_to_close = []
-        if self.es_client.indices.exists_alias(name=alias):
-            indices = self.es_client.indices.get_alias(name=alias)
+        if self.elasticsearch.alias_exists(alias=alias):
+            indices = self.elasticsearch.get_indices_for_alias(alias=alias)
             for idx in indices:
                 logger.info(
                     "adding index to be removed from alias",
                     extra={"index": idx, "alias": alias},
                 )
                 actions.append({"remove": {"index": idx, "alias": alias}})
-                indices_to_close.append(idx)
 
-        self.es_client.indices.update_aliases(actions=actions)
-
-        # Close the indices that have been removed from the alias.
-        # This will improve the memory usage of the cluster.
-        if indices_to_close:
-            self.es_client.indices.close(index=indices_to_close)
-            logger.info("closed some indices", extra={"indices": indices_to_close})
+        self.elasticsearch.update_aliases(actions=actions)

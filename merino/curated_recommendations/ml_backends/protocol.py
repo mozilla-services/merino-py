@@ -181,8 +181,11 @@ class ContextualArticleRankings(BaseModel):
 
     @model_validator(mode="after")
     def set_k(self) -> "ContextualArticleRankings":
-        """Set K based on shards data. K represents the number of shards per article."""
-        self.K = len(self.shards.get("", [])) if "" in self.shards else 1
+        """Set K (number of shards per article) based on shards data"""
+        self.K = 1
+        for _key, v in self.shards.items():
+            self.K = len(v)
+            break
         return self
 
     def has_item_score(self, corpus_item_id: str) -> bool:
@@ -209,6 +212,9 @@ class LocalModelBackend(Protocol):
         ...
 
 
+NUM_ML_RECS_BACKEND_FILES = 10
+
+
 class MLRecsBackend(Protocol):
     """Protocol for ML Recommendations saved in GCS"""
 
@@ -217,9 +223,28 @@ class MLRecsBackend(Protocol):
         ...
 
     def get(
-        self,
-        region: str | None = None,
-        utcOffset: str | None = None,
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
+        ...
+
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return the impression count for a given corpus item id (adjusted for propensity)"""
+        ...
+
+    def get_cohort_training_run_id(self) -> str | None:
+        """Return the training run ID for the cohort model used."""
+        ...
+
+
+class CohortModelBackend(Protocol):
+    """Protocol for Cohort Model that maps interest vectors to cohorts"""
+
+    def get_cohort_for_interests(
+        self,
+        interests: str,
+        model_id: str,
+        training_run_id: str | None = None,
+    ) -> str | None:
+        """Fetch the contextual ranking cohort based on interests string."""
         ...

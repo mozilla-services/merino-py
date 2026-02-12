@@ -43,6 +43,8 @@ class Team(BaseModel):
     name: str
     # Team sport specific unique key
     key: str
+    # Team ID
+    id: int
     # Location of the team (city, state | country) if available
     locale: str | None
     # Alternate names for the team
@@ -79,9 +81,14 @@ class Team(BaseModel):
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
+        team_id = team_data.get("GlobalTeamID", team_data.get("GlobalTeamId"))
+        if not team_id:
+            logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
+            raise SportsDataError(f"No GlobalTeamID found for {fullname}")
         return cls(
             terms=" ".join(terms),
             key=team_data["Key"],
+            id=team_id,
             fullname=fullname,
             name=name,
             locale=locale,
@@ -184,7 +191,7 @@ class Sport:
 
     api_key: str
     name: str
-    teams: dict[str, Team] = {}
+    teams: dict[int, Team] = {}
     events: dict[int, Event] = {}
     base_url: str
     event_ttl: timedelta
@@ -227,13 +234,9 @@ class Sport:
         self.term_filter = term_filter
         self.cache_dir = cache_dir
 
-    def gen_key(self, key: str) -> str:
-        """Generate the internal sport:team key for unique lookup and storage."""
-        return f"{self.name.lower()}:{key.lower()}"
-
     @abstractmethod
-    async def get_team(self, key: str) -> Team | None:
-        """Return the team based on the key provided"""
+    async def get_team(self, id: int) -> Team | None:
+        """Return the team based on the id provided"""
 
     @abstractmethod
     async def get_season(self, client: AsyncClient):
@@ -247,7 +250,7 @@ class Sport:
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Fetch the list of current and upcoming events for this sport"""
 
-    def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[str, Team]:
+    def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
         """Create the Team entries from the data source
 
         This presumes that we are receiving data that complies with the SportsData.io
@@ -257,12 +260,15 @@ class Sport:
         SportData provider class.
         """
         for team_data in data:
-            team = Team.from_data(
-                team_data=team_data,
-                term_filter=self.term_filter,
-                team_ttl=self.team_ttl,
-            )
-            self.teams[team.key] = team
+            try:
+                team = Team.from_data(
+                    team_data=team_data,
+                    term_filter=self.term_filter,
+                    team_ttl=self.team_ttl,
+                )
+                self.teams[team.id] = team
+            except SportsDataError:
+                pass
         return self.teams
 
     def load_scores_from_source(
@@ -320,21 +326,30 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            home_team_minimal = {}
-            away_team_minimal = {}
-            terms = ""
-            if not allow_no_teams and not self.teams:
-                raise SportsDataError("No teams defined or found for Sports")
-            if self.teams:
-                home_team = self.teams[
-                    event_description.get("HomeTeam") or event_description["HomeTeamKey"]
-                ]
-                home_team_minimal = home_team.minimal()
-                away_team = self.teams[
-                    event_description.get("AwayTeam") or event_description["AwayTeamKey"]
-                ]
-                away_team_minimal = away_team.minimal()
-                terms = f"{home_team.terms} {away_team.terms}"
+            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
+                "GlobalHomeTeamId"
+            )
+            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
+                "GlobalAwayTeamId"
+            )
+            home_name = event_description.get("HomeTeam") or event_description.get(
+                "HomeTeamKey", "UNDEFINED_HOME"
+            )
+            away_name = event_description.get("AwayTeam") or event_description.get(
+                "AwayTeamKey", "UNDEFINED_AWAY"
+            )
+            if not home_id or not away_id:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+                )
+                continue
+            home_team = self.teams.get(home_id)
+            away_team = self.teams.get(away_id)
+            if not home_team or not away_team:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+                )
+                continue
             try:
                 if "DateTimeUTC" in event_description:
                     date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
@@ -364,11 +379,13 @@ class Sport:
             event = Event(
                 sport=self.name,
                 id=event_description["GlobalGameID"],
-                terms=terms,
+                terms=f"{home_team.terms} {away_team.terms}",
                 date=date,
-                original_date=event_description["DateTimeUTC"],
-                home_team=home_team_minimal,
-                away_team=away_team_minimal,
+                original_date=event_description.get(
+                    "DateTimeUTC", event_description.get("DateTime")
+                ),
+                home_team=home_team.minimal(),
+                away_team=away_team.minimal(),
                 home_score=event_description.get("HomeTeamScore")
                 or event_description.get("HomeScore"),
                 away_score=event_description.get("AwayTeamScore")
@@ -425,13 +442,23 @@ class Sport:
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
             # US sports use "(Away|Home)Team", Soccer uses "(Away|Home)TeamKey"
-            home_team = self.teams[
-                event_description.get("HomeTeamKey") or event_description["HomeTeam"]
-            ]
-            away_team = self.teams[
-                event_description.get("AwayTeamKey") or event_description["AwayTeam"]
-            ]
-            id = event_description.get("GlobalGameID") or event_description["GameId"]
+            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
+                "GlobalHomeTeamId"
+            )
+            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
+                "GlobalAwayTeamId"
+            )
+            if not home_id or not away_id:
+                logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
+                continue
+            home_team = self.teams.get(home_id)
+            away_team = self.teams.get(away_id)
+            if not home_team or not away_team:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not find team info for event: {event_description}"
+                )
+                continue
+            game_id = event_description.get("GlobalGameID") or event_description["GameId"]
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
             if status == GameStatus.Canceled:
@@ -451,7 +478,7 @@ class Sport:
                 # but if there's an error, it's probably wise to ignore this.
                 logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
                 logger.debug(
-                    f"{LOGGING_TAG} {self.name} Event {id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
+                    f"{LOGGING_TAG} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
                 continue
             # Ignore any events that are outside of the event interest window.
@@ -460,14 +487,15 @@ class Sport:
             terms = f"{home_team.terms} {away_team.terms}"
             # All "Updated" fields are always in ET.
             updated = None
-            if event_description.get("Updated"):
+            # The following code is exercised in unit tests, but is not included in coverage for some reason.
+            if event_description.get("Updated"):  # pragma: no cover
                 updated = datetime.fromisoformat(event_description["Updated"]).replace(
                     tzinfo=event_timezone
                 )
 
             event = Event(
                 sport=self.name,
-                id=id,
+                id=game_id,
                 terms=terms,
                 date=date,
                 original_date=event_description.get(

@@ -130,8 +130,12 @@ class SectionsBackend(SectionsProtocol):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
+            # Strip any suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present
+            # This handles locale suffixes and any future suffix patterns
+            external_id = section["externalId"].split("__")[0]
+
             section_obj = CorpusSection(
-                externalId=section["externalId"],
+                externalId=external_id,
                 title=section["title"],
                 description=section.get("description"),  # use .get (can be None)
                 heroTitle=section.get("heroTitle"),

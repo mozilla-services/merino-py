@@ -24,21 +24,27 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CACrawledContentRescaler,
     SchedulerHoldbackRescaler,
     CrawledContentRescaler,
+    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
     Section,
     SectionConfiguration,
     ExperimentName,
+    DailyBriefingBranch,
     CuratedRecommendation,
     RankingData,
 )
 from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
+    IS_COHORT_FEATURE_DISABLED,
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
+    is_daily_briefing_experiment,
+    should_show_popular_today_with_headlines,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
@@ -47,6 +53,7 @@ from merino.curated_recommendations.sections import (
     get_corpus_sections_for_legacy_topic,
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
+    HEADLINES_SECTION_KEY,
     get_top_story_list,
     get_legacy_topic_ids,
     put_headlines_first_then_top_stories,
@@ -224,33 +231,118 @@ class TestMlSectionsExperiment:
         assert is_subtopics_experiment(req) is expected
 
 
+class TestDailyBriefingExperiment:
+    """Tests covering is_daily_briefing_experiment and should_show_popular_today_with_headlines"""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            # briefing-with-popular branch enables daily briefing
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
+                True,
+            ),
+            # briefing-without-popular branch also enables daily briefing
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                True,
+            ),
+            # control branch does not enable daily briefing
+            (ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "control", False),
+            # other experiment does not enable daily briefing
+            ("other-experiment", "treatment", False),
+            # no experiment does not enable daily briefing
+            (None, None, False),
+        ],
+    )
+    def test_is_daily_briefing_experiment(self, name, branch, expected):
+        """Test that is_daily_briefing_experiment returns True for either treatment branch."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert is_daily_briefing_experiment(req) is expected
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            # briefing-with-popular shows Popular Today
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
+                True,
+            ),
+            # briefing-without-popular does NOT show Popular Today
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                False,
+            ),
+            # control branch does not show Popular Today with headlines
+            (ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "control", False),
+            # other experiment does not affect this
+            ("other-experiment", "treatment", False),
+        ],
+    )
+    def test_should_show_popular_today_with_headlines(self, name, branch, expected):
+        """Test that should_show_popular_today_with_headlines returns True only for briefing-with-popular."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert should_show_popular_today_with_headlines(req) is expected
+
+
 class TestFilterSectionsByExperiment:
     """Tests covering filter_sections_by_experiment"""
 
     @pytest.mark.parametrize(
-        "name,branch,region,expected_class",
+        "name,branch,region,surface_id,expected_class",
         [
             (
                 ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
                 "control",
                 "US",
+                None,
                 SchedulerHoldbackRescaler,
             ),
             # Whenever we launch sections somewhere else we'll have crawled content, so best
             # to set it as default.
-            ("other", "treatment", "US", CrawledContentRescaler),
-            ("other", "treatment", "CA", CrawledContentRescaler),
-            (None, None, "US", CrawledContentRescaler),
-            (None, None, "CA", CrawledContentRescaler),
+            ("other", "treatment", "US", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            ("other", "treatment", "US", None, CrawledContentRescaler),
+            ("other", "treatment", "CA", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            (None, None, "US", None, CrawledContentRescaler),
+            (None, None, "CA", None, CrawledContentRescaler),
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            # CA with sections-ca-content branch gets CACrawledContentRescaler
+            (
+                "sections-in-canada",
+                "sections-ca-content",
+                "CA",
+                SurfaceId.NEW_TAB_EN_CA,
+                CACrawledContentRescaler,
+            ),
+            # CA with wrong branch falls through to CrawledContentRescaler
+            (
+                "sections-in-canada",
+                "sections-layout-only",
+                "CA",
+                SurfaceId.NEW_TAB_EN_CA,
+                CrawledContentRescaler,
+            ),
+            # CA surface without experiment falls through to CrawledContentRescaler
+            (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CrawledContentRescaler),
         ],
     )
-    def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
+    def test_get_ranking_rescaler_for_branch(
+        self, name, branch, region, surface_id, expected_class
+    ):
         """Test that we get the appropriate rescaler"""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:
-            assert isinstance(get_ranking_rescaler_for_branch(req), expected_class)
+            assert isinstance(
+                get_ranking_rescaler_for_branch(req, surface_id=surface_id), expected_class
+            )
         else:
             assert get_ranking_rescaler_for_branch(req) is None
 
@@ -305,6 +397,33 @@ class TestFilterSectionsByExperiment:
         assert "nfl" in result
 
 
+class TestIsInferredContextualRankingExperiment:
+    """Tests covering is_inferred_contextual_ranking function"""
+
+    def test_inferred_contextual_ranking(self):
+        """Test that inferred contextual ranking is correctly identified."""
+        from merino.curated_recommendations.sections import is_inferred_contextual_ranking
+        from merino.curated_recommendations.protocol import ProcessedInterests
+
+        # Test case where personal_interests is None
+        assert not is_inferred_contextual_ranking(None)
+
+        # Test case where cohort is None
+        pi_no_cohort = ProcessedInterests(cohort=None, numerical_value=5)
+        assert not is_inferred_contextual_ranking(pi_no_cohort)
+
+        # Test case where numerical_value mod selector is not zero
+        pi_not_selected = ProcessedInterests(cohort="test", numerical_value=3)  # 3 % 4 != 0
+        not is_inferred_contextual_ranking(pi_not_selected)
+
+        # Test case where all conditions are met
+        pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0
+        if IS_COHORT_FEATURE_DISABLED:
+            assert not is_inferred_contextual_ranking(pi_selected)
+        else:
+            assert is_inferred_contextual_ranking(pi_selected)
+
+
 class TestUpdateReceivedFeedRank:
     """Tests covering update_received_feed_rank"""
 
@@ -345,11 +464,17 @@ class TestMapSectionItemToRecommendation:
         rec = map_section_item_to_recommendation(item, 3, section_id)
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
-        for k in rec.features.keys():
-            if k.startswith("t_"):
-                assert "." not in k  # Make sure we're not sending a type but actual value.
         assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
         assert not rec.in_experiment("unknown_experiment")
+
+    def test_basic_mapping_manual_section(self):
+        """Map a valid CorpusItem into a CuratedRecommendation."""
+        item = generate_corpus_item()
+        section_id = "secX"
+        rec = map_section_item_to_recommendation(item, 3, section_id, is_manual_section=True)
+        assert isinstance(rec, CuratedRecommendation)
+        assert rec.receivedRank == 3
+        assert rec.features == {f"t_{item.topic.value}": 1.0}
 
     def test_basic_mapping_experiment(self):
         """Map a valid CorpusItem into a CuratedRecommendation."""
@@ -880,13 +1005,13 @@ class TestPutHeadlinesFirstThenTopStories:
         top_stories_section.receivedFeedRank = 0
 
         # Insert headlines section at rank 3
-        feed["headlines_section"] = Section(
+        feed[HEADLINES_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
             title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed["headlines_section"]
+        headlines_section = feed[HEADLINES_SECTION_KEY]
 
         put_headlines_first_then_top_stories(feed)
 
@@ -896,12 +1021,12 @@ class TestPutHeadlinesFirstThenTopStories:
 
         # Get the other sections besides headlines & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
         # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
-        expected_order = ["headlines_section", "top_stories_section"] + remaining_sections
+        expected_order = [HEADLINES_SECTION_KEY, "top_stories_section"] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
@@ -911,17 +1036,17 @@ class TestPutHeadlinesFirstThenTopStories:
         feed = generate_sections_feed(section_count=6, has_top_stories=False)
 
         # Insert headlines section at rank 3
-        feed["headlines_section"] = Section(
+        feed[HEADLINES_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
             title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed["headlines_section"]
+        headlines_section = feed[HEADLINES_SECTION_KEY]
 
         # Get the other sections besides headlines & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
@@ -931,7 +1056,7 @@ class TestPutHeadlinesFirstThenTopStories:
         assert headlines_section.receivedFeedRank == 0
 
         # Expected: headlines first -> then rest in keys order without headlines & top
-        expected_order = ["headlines_section"] + remaining_sections
+        expected_order = [HEADLINES_SECTION_KEY] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
@@ -968,7 +1093,7 @@ class TestGetCorpusSections:
         sports.createSource = CreateSource.ML
 
         headlines = MagicMock()
-        headlines.externalId = "headlines_section"
+        headlines.externalId = HEADLINES_SECTION_KEY
         headlines.title = "Headlines"
         headlines.description = "Top Headlines today"
         headlines.heroTitle = None
@@ -1071,7 +1196,7 @@ class TestGetCorpusSections:
         assert headlines is not None
         assert headlines.title == "Headlines"
         assert headlines.subtitle == "Top Headlines today"
-        assert "headlines_section" not in sections
+        assert HEADLINES_SECTION_KEY not in sections
         # Remaining sections should still be mapped.
         assert set(sections.keys()) == {"sports"}
 

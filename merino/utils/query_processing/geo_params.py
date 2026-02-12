@@ -42,12 +42,9 @@ def validate_suggest_custom_location_params(
 ):
     """Validate that city, region & country params are either all present or all omitted."""
     if any([country, region, city]) and not all([country, region, city]):
-        logger.warning(
-            "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
-        )
-        logger.warning(
-            f"HTTP 400: source: {source} weather request params: city - {city}, region - {region}, country - {country}"
-        )
+        # logger.warning(
+        #     "HTTP 400: invalid query parameters: `city`, `region`, and `country` are either all present or all omitted."
+        # )
         raise HTTPException(
             status_code=400,
             detail="Invalid query parameters: `city`, `region`, and `country` are either all present or all omitted.",

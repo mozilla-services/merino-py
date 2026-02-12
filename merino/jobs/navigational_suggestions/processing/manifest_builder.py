@@ -2,7 +2,7 @@
 
 import base64
 from hashlib import md5
-from typing import Optional
+from typing import Any, Optional
 
 from httpx import URL
 
@@ -77,3 +77,38 @@ def construct_partner_manifest(
     ]
 
     return {"partners": result}
+
+
+def construct_errors_manifest(
+    domain_data: list[dict[str, Any]],
+    domain_metadata: list[dict[str, Any]],
+) -> dict[str, list[dict[str, str]]]:
+    """Extract domains that failed favicon extraction with error reasons.
+
+    Args:
+        domain_data: List of domain dictionaries with structure:
+            {"domain": str, "suffix": str, ...}
+        domain_metadata: List of metadata dictionaries with structure:
+            {"url": str|None, "title": str|None, "icon": str|None,
+             "domain": str|None, "error_reason": str|None}
+
+    Returns:
+        Dictionary with structure:
+            {"errors": [{"domain": str, "error_reason": str}, ...]}
+        Contains domains where favicon extraction failed along with the reason.
+    """
+    errors: list[dict[str, str]] = []
+
+    # Use zip to prevent IndexError when domain_metadata is shorter
+    for domain, metadata in zip(domain_data, domain_metadata):
+        # Check if this domain failed (no icon) and has an error reason
+        error_reason = metadata.get("error_reason")
+        if not metadata.get("icon") and error_reason:
+            errors.append(
+                {
+                    "domain": domain["domain"],
+                    "error_reason": str(error_reason),
+                }
+            )
+
+    return {"errors": errors}

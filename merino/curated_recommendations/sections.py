@@ -10,7 +10,6 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CorpusSection,
     CorpusItem,
     Topic,
-    ScheduledSurfaceProtocol,
     CreateSource,
 )
 from merino.curated_recommendations.layouts import (
@@ -26,17 +25,20 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CACrawledContentRescaler,
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
+    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, EngagementRescaler
 from merino.curated_recommendations.protocol import (
+    ITEM_SUBTOPIC_FLAG,
     CuratedRecommendationsRequest,
     CuratedRecommendation,
     Section,
     SectionConfiguration,
     ExperimentName,
+    DailyBriefingBranch,
     ProcessedInterests,
     Layout,
 )
@@ -60,13 +62,19 @@ LAYOUT_CYCLE = [layout_6_tiles, layout_4_large, layout_4_medium]
 TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
-HEADLINES_SECTION_KEY = "headlines_section"
+HEADLINES_SECTION_KEY = "headlines"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
+IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
+MAX_SECTIONS_PER_RESPONSE = 20
 
 
 def map_section_item_to_recommendation(
-    item: CorpusItem, rank: int, section_id: str, experiment_flags: set[str] | None = None
+    item: CorpusItem,
+    rank: int,
+    section_id: str,
+    experiment_flags: set[str] | None = None,
+    is_manual_section: bool = False,
 ) -> CuratedRecommendation:
     """Map a CorpusItem to a CuratedRecommendation.
 
@@ -79,7 +87,7 @@ def map_section_item_to_recommendation(
         A CuratedRecommendation.
     """
     # We use a feature prefix of "t_" for topics and "s_" for sections
-    features = {f"s_{section_id}": 1.0}
+    features = {} if is_manual_section else {f"s_{section_id}": 1.0}
     if item.topic is not None:
         features[f"t_{item.topic.value}"] = 1.0
 
@@ -112,7 +120,10 @@ def map_corpus_section_to_section(
     Returns:
         A Section model containing mapped recommendations and default layout.
     """
-    item_flags = set() if is_legacy_section else {SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG}
+    item_flags = set()
+    is_manual_section = corpus_section.createSource == CreateSource.MANUAL
+    if not is_legacy_section and not is_manual_section:
+        item_flags.add(ITEM_SUBTOPIC_FLAG)
     seen_ids: set[str] = set()
     section_items: list[CorpusItem] = []
     for item in corpus_section.sectionItems:
@@ -122,7 +133,11 @@ def map_corpus_section_to_section(
         section_items.append(item)
     recommendations = [
         map_section_item_to_recommendation(
-            item, rank, corpus_section.externalId, experiment_flags=item_flags
+            item,
+            rank,
+            corpus_section.externalId,
+            experiment_flags=item_flags,
+            is_manual_section=is_manual_section,
         )
         for rank, item in enumerate(section_items)
     ]
@@ -138,30 +153,19 @@ def map_corpus_section_to_section(
     )
 
 
-async def _process_corpus_sections(
+def _process_corpus_sections(
     corpus_sections_dict: dict[str, CorpusSection],
     min_feed_rank: int,
-    surface_id: SurfaceId,
-    scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
 ) -> dict[str, Section]:
-    """Process corpus sections into Section objects with scheduled corpus item mapping.
+    """Process corpus sections into Section objects.
 
     Args:
         corpus_sections_dict: Dict mapping section IDs to CorpusSection objects
         min_feed_rank: Starting rank offset for assigning receivedFeedRank
-        scheduled_surface_backend: Backend interface to fetch scheduled corpus items
-        surface_id: Surface ID for fetching scheduled corpus items
 
     Returns:
         A mapping from section IDs to Section objects, each with a unique receivedFeedRank
     """
-    sid_map: dict[str, str | None] = {}
-    if scheduled_surface_backend is not None:
-        legacy_corpus = await scheduled_surface_backend.fetch(surface_id)
-        for item in legacy_corpus:
-            if item.scheduledCorpusItemId is not None:
-                sid_map[item.corpusItemId] = item.scheduledCorpusItemId
-
     sections: dict[str, Section] = {}
     legacy_sections = get_legacy_topic_ids()
 
@@ -171,11 +175,6 @@ async def _process_corpus_sections(
             cs, rank, is_legacy_section=section_id in legacy_sections
         )
 
-    for section in sections.values():
-        for r in section.recommendations:
-            if r.corpusItemId in sid_map:
-                r.update_scheduled_corpus_item_id(sid_map[r.corpusItemId])
-
     return sections
 
 
@@ -184,7 +183,6 @@ async def get_corpus_sections(
     surface_id: SurfaceId,
     min_feed_rank: int,
     include_subtopics: bool = False,
-    scheduled_surface_backend: ScheduledSurfaceProtocol | None = None,
 ) -> tuple[Section | None, dict[str, Section]]:
     """Fetch curated sections.
 
@@ -193,7 +191,6 @@ async def get_corpus_sections(
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
         include_subtopics: Whether to include subtopic sections.
-        scheduled_surface_backend: Backend interface to fetch scheduled corpus items (temporary)
 
     Returns:
         A tuple of headlines section (if present) & a mapping from section IDs to Section objects, each with a unique receivedFeedRank.
@@ -222,13 +219,12 @@ async def get_corpus_sections(
         include_subtopics,
     )
 
-    # Process the sections using the shared logic, passing the dict directly
-    corpus_sections = await _process_corpus_sections(
+    # Process the sections using the shared logic
+    corpus_sections = _process_corpus_sections(
         filtered_corpus_sections,
         min_feed_rank,
-        surface_id,
-        scheduled_surface_backend,
     )
+
     return headlines_corpus_section, corpus_sections
 
 
@@ -297,10 +293,33 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
     )
 
 
+def is_inferred_contextual_ranking(personal_interests: ProcessedInterests | None) -> bool:
+    """Return True if inferred contextual ranking should be applied."""
+    if IS_COHORT_FEATURE_DISABLED:
+        return False
+    return personal_interests is not None and personal_interests.cohort is not None
+
+
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the Daily Briefing Section experiment is enabled."""
+    """Return True if the Daily Briefing Section experiment is enabled (either branch)."""
+    experiment_name = ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
     return is_enrolled_in_experiment(
-        request, ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "treatment"
+        request, experiment_name, DailyBriefingBranch.BRIEFING_WITH_POPULAR.value
+    ) or is_enrolled_in_experiment(
+        request, experiment_name, DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value
+    )
+
+
+def should_show_popular_today_with_headlines(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if Popular Today should be shown alongside the headlines section.
+
+    Returns True when user is in the 'briefing-with-popular' branch of the Daily Briefing experiment.
+    Returns False when user is in the 'briefing-without-popular' branch.
+    """
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+        DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
     )
 
 
@@ -311,8 +330,7 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     - ML sections experiment is enabled (treatment branch), OR
     """
     in_holdback = is_scheduler_holdback_experiment(request)
-    # Subtopics only in the US
-    return not in_holdback and request.region == "US"
+    return not in_holdback and request.region in ("US", "GB", "IE")
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -344,13 +362,24 @@ def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> 
 
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
+    surface_id: SurfaceId | None = None,
 ) -> EngagementRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
     if is_scheduler_holdback_experiment(request):
         return SchedulerHoldbackRescaler()
+
+    if surface_id == SurfaceId.NEW_TAB_EN_GB:
+        return UKCrawledContentRescaler()
+
+    if surface_id == SurfaceId.NEW_TAB_EN_CA and is_enrolled_in_experiment(
+        request, "sections-in-canada", "sections-ca-content"
+    ):
+        return CACrawledContentRescaler()
+
     # While we preivously returned None for non-US, we know there are some section users
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
+
     return CrawledContentRescaler()
 
 
@@ -437,12 +466,12 @@ def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict
 
 
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
-    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'headlines_section'."""
-    # Exclude top_stories_section & headlines_section(if present) from layout cycling
+    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'headlines'."""
+    # Exclude top_stories_section & headlines (if present) from layout cycling
     ranked_sections = [
         section
         for sid, section in sections.items()
-        if sid not in ("headlines_section", "top_stories_section")
+        if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")
     ]
     for idx, section in enumerate(ranked_sections):
         section.layout = deepcopy(layout_cycle[idx % len(layout_cycle)])
@@ -506,7 +535,7 @@ def rank_sections(
         engagement_rescaler: Rescaler that can rescale ranking data based on experiment size and content distribution
         do_section_personalization_reranking: Whether to implement section based reranking for personalization
         if interest vector is avialable.
-        include_headlines_section: If headlines_section experiment is enabled, don't put top_stories_section on top
+        include_headlines_section: If headlines experiment is enabled, don't put top_stories_section on top
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
@@ -525,15 +554,16 @@ def rank_sections(
     # 1st priority: always keep top stories at the very top
     sections = put_top_stories_first(sections)
 
-    # If headlines_section experiment enabled, put headlines section on top, followed by top_stories
+    # If headlines experiment enabled, put headlines section on top, followed by top_stories
     if include_headlines_section:
         put_headlines_first_then_top_stories(sections)
 
-    # Sort sections by receivedFeedRank
-    sections = {
-        sid: section
-        for sid, section in sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)
-    }
+    # Sort sections by receivedFeedRank and limit to MAX_SECTIONS_PER_RESPONSE
+    sorted_sections = sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)[
+        :MAX_SECTIONS_PER_RESPONSE
+    ]
+
+    sections = {sid: section for sid, section in sorted_sections}
 
     return sections
 
@@ -603,7 +633,6 @@ async def get_sections(
     surface_id: SurfaceId,
     sections_backend: SectionsProtocol,
     ml_backend: MLRecsBackend,
-    scheduled_surface_backend: ScheduledSurfaceProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     personal_interests: ProcessedInterests | None = None,
@@ -625,14 +654,13 @@ async def get_sections(
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
-    rescaler = get_ranking_rescaler_for_branch(request)
+    rescaler = get_ranking_rescaler_for_branch(request, surface_id)
 
     headlines_corpus_section, corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=include_subtopics,
-        scheduled_surface_backend=scheduled_surface_backend,
     )
 
     # Determine if we should include headlines section based on daily briefing experiment
@@ -670,11 +698,13 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    if (
-        is_contextual_ranking_experiment(request)
+    do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
+    use_contexual_ranker = (
+        (do_inferred_contextual or is_contextual_ranking_experiment(request))
         and ml_backend is not None
         and ml_backend.is_valid()
-    ):
+    )
+    if use_contexual_ranker:
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -708,7 +738,7 @@ async def get_sections(
         top_stories_count,
         TOP_STORIES_SECTION_EXTRA_COUNT,
         rescaler=rescaler,
-        relax_constraints_for_personalization=personal_interests is not None,
+        relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations
@@ -737,10 +767,15 @@ async def get_sections(
         )
     }
 
-    # 12. If headlines_section experiment enabled, insert headlines_section on top followed by top_stories
+    # 12. If headlines experiment enabled, insert headlines on top
     if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
-        sections["headlines_section"] = headlines_corpus_section
-        sections["top_stories_section"].layout = layout_4_medium
+        sections[HEADLINES_SECTION_KEY] = headlines_corpus_section
+        if should_show_popular_today_with_headlines(request):
+            # briefing-with-popular: show both headlines and top_stories (shrink top_stories)
+            sections["top_stories_section"].layout = layout_4_medium
+        else:
+            # briefing-without-popular: remove top_stories entirely
+            del sections["top_stories_section"]
 
     # 13. Add remaining corpus sections
     sections.update(corpus_sections)
@@ -755,6 +790,7 @@ async def get_sections(
         ranker,
         personal_interests,
         engagement_rescaler=rescaler,
+        do_section_personalization_reranking=not use_contexual_ranker,  # Contextual ranker already re-ranks all sections
         include_headlines_section=include_headlines_section,
     )
 

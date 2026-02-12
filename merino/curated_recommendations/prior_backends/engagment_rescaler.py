@@ -2,12 +2,10 @@
 
 from typing import Any
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler
-from merino.curated_recommendations.protocol import CuratedRecommendation
+from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
 
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
-SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG = "SUBTOPICS"
 
 # Looking at query of typical subtopic impressions outside of top stories
 # https://sql.telemetry.mozilla.org/queries/112921/source#276948
@@ -36,17 +34,15 @@ class CrawledContentRescaler(EngagementRescaler):
 
     @classmethod
     def is_subtopic_story(cls, rec: CuratedRecommendation) -> bool:
-        """Story is part of an experiment"""
-        return rec.in_experiment(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
+        """Story is a subtopic that is not manually curated. Currently this is true for all non-legacy sections that not manually curated"""
+        return rec.in_experiment(ITEM_SUBTOPIC_FLAG)
 
     @classmethod
     def is_blocked_from_most_popular(cls, rec: CuratedRecommendation) -> bool:
         """Return true if the story is blocked from most popular section.
         Note that this logic is duplicated in ArticleBalancer
         """
-        return (
-            cls.is_subtopic_story(rec) and rec.topic == Topic.SPORTS
-        ) or rec.topic == Topic.GAMING
+        return rec.is_story_blocked_for_top_stories()
 
     def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
         """Story is not allowed in most popular in some cases. We therefore will have to get by with many less impressions
@@ -70,6 +66,42 @@ class CrawledContentRescaler(EngagementRescaler):
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC, beta
         else:
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
+
+
+CA_EXPERIMENT_TREATMENT_PERCENT = 0.10
+
+
+class CACrawledContentRescaler(CrawledContentRescaler):
+    """Rescaler for CA experiment — scales engagement up by 1/0.10 = 10x
+    to compensate for only 10% of CA traffic generating engagement data.
+    """
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
+    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
+        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
+        treatment percentage to compensate for small experiment size.
+        """
+        opens, no_opens = super().rescale(rec, opens, no_opens)
+        return opens / CA_EXPERIMENT_TREATMENT_PERCENT, no_opens / CA_EXPERIMENT_TREATMENT_PERCENT
+
+
+class UKCrawledContentRescaler(CrawledContentRescaler):
+    """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
+    Special handling is added for certain content types that are blocked from most popular section
+    """
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
+    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
+        """Story is not allowed in most popular in some cases. We therefore will have to get by with many less impressions
+        If we don't do this, these stories will rely more on priors for ranking, causing poor exploration/exploitation balance
+        both in terms of section ranking and ranking within the section
+        """
+        opens, no_opens = super().rescale(rec, opens, no_opens)
+        return opens, no_opens
 
 
 class SchedulerHoldbackRescaler(EngagementRescaler):

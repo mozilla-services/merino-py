@@ -41,6 +41,9 @@ class TestWebScraperOpen:
         """Test successful URL opening."""
         scraper = WebScraper()
         mock_browser = mocker.MagicMock()
+        mock_response = mocker.MagicMock()
+        mock_response.status_code = 200
+        mock_browser.open.return_value = mock_response
         mock_browser.url = "https://example.com"
         scraper.browser = mock_browser
 
@@ -55,6 +58,9 @@ class TestWebScraperOpen:
         """Test opening URL that redirects."""
         scraper = WebScraper()
         mock_browser = mocker.MagicMock()
+        mock_response = mocker.MagicMock()
+        mock_response.status_code = 200
+        mock_browser.open.return_value = mock_response
         mock_browser.url = "https://www.example.com/redirected"
         scraper.browser = mock_browser
 

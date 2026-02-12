@@ -4,7 +4,10 @@ import logging
 from typing import cast
 
 from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
-from merino.curated_recommendations.ml_backends.protocol import LOCAL_MODEL_MODEL_ID_KEY
+from merino.curated_recommendations.ml_backends.protocol import (
+    LOCAL_MODEL_MODEL_ID_KEY,
+    CohortModelBackend,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
     SurfaceId,
@@ -26,6 +29,13 @@ from merino.curated_recommendations.rankers import (
     boost_preferred_topic,
     spread_publishers,
     ThompsonSamplingRanker,
+)
+from merino.curated_recommendations.legacy.sections_adapter import (
+    get_legacy_recommendations_from_sections,
+)
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CrawledContentRescaler,
+    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
@@ -53,6 +63,7 @@ class CuratedRecommendationsProvider:
         sections_backend: SectionsProtocol,
         local_model_backend: LocalModelBackend,
         ml_recommendations_backend: MLRecsBackend,
+        cohort_model_backend: CohortModelBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
@@ -60,18 +71,23 @@ class CuratedRecommendationsProvider:
         self.sections_backend = sections_backend
         self.local_model_backend = local_model_backend
         self.ml_recommendations_backend = ml_recommendations_backend
+        self.cohort_model_backend = cohort_model_backend
 
     @staticmethod
     def is_sections_experiment(
         request: CuratedRecommendationsRequest,
         surface_id: SurfaceId,
     ) -> bool:
-        """Check if the 'sections' experiment is enabled."""
-        return (
-            request.feeds is not None
-            and "sections" in request.feeds  # Clients must request "feeds": ["sections"]
-            and surface_id in LOCALIZED_SECTION_TITLES  # The locale must be supported
-        )
+        """Check if the 'sections' feed is enabled.
+
+        Sections are enabled when the request includes 'sections' in the feeds list
+        and the surface_id is supported (has localized section titles).
+        """
+        if request.feeds is None or "sections" not in request.feeds:
+            return False
+        if surface_id not in LOCALIZED_SECTION_TITLES:
+            return False
+        return True
 
     def rank_recommendations(
         self,
@@ -115,28 +131,24 @@ class CuratedRecommendationsProvider:
         self, request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
-        surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
-        corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-        recommendations = [
-            CuratedRecommendation(
-                **item.model_dump(),
-                receivedRank=rank,
-                # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                # interest vector. Data science work shows that using the topics as features
-                # is effective as a first pass at personalization.
-                # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                features={f"t_{item.topic.value}": 1.0} if item.topic else {},
-            )
-            for rank, item in enumerate(corpus_items)
-        ]
+        surface_id = get_recommendation_surface_id(
+            locale=request.locale, region=request.region, request=request
+        )
 
         sections_feeds = None
-        general_feed = []
-        is_sections_experiment = self.is_sections_experiment(request, surface_id)
-
-        if is_sections_experiment:
+        general_feed: list[CuratedRecommendation] = []
+        cohort_model_training_run_id = (
+            self.ml_recommendations_backend.get_cohort_training_run_id()
+            if self.ml_recommendations_backend
+            else None
+        )
+        if self.is_sections_experiment(request, surface_id):
             inferred_interests = self.process_request_interests(
-                request, surface_id, self.local_model_backend
+                request,
+                surface_id,
+                self.local_model_backend,
+                self.cohort_model_backend,
+                cohort_model_training_run_id=cohort_model_training_run_id,
             )
             sections_feeds = await get_sections(
                 request,
@@ -146,21 +158,49 @@ class CuratedRecommendationsProvider:
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
                 ml_backend=self.ml_recommendations_backend,
-                scheduled_surface_backend=self.scheduled_surface_backend,
                 region=derive_region(request.locale, request.region),
             )
+        elif surface_id in (SurfaceId.NEW_TAB_EN_US, SurfaceId.NEW_TAB_EN_GB):
+            # US/GB non-sections: fetch from sections backend instead of scheduler
+            general_feed = await get_legacy_recommendations_from_sections(
+                sections_backend=self.sections_backend,
+                engagement_backend=self.engagement_backend,
+                prior_backend=self.prior_backend,
+                surface_id=surface_id,
+                count=request.count,
+                region=derive_region(request.locale, request.region),
+                rescaler=UKCrawledContentRescaler()
+                if surface_id == SurfaceId.NEW_TAB_EN_GB
+                else CrawledContentRescaler(),
+            )
         else:
+            # Other markets: fetch from scheduled surface backend
+            corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
+            recommendations = [
+                CuratedRecommendation(
+                    **item.model_dump(),
+                    receivedRank=rank,
+                    # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
+                    # interest vector. Data science work shows that using the topics as features
+                    # is effective as a first pass at personalization.
+                    # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
+                    features={f"t_{item.topic.value}": 1.0} if item.topic else {},
+                )
+                for rank, item in enumerate(corpus_items)
+            ]
             general_feed = self.rank_recommendations(recommendations, request)
+        local_model = self.local_model_backend.get(
+            surface_id,
+            experiment_name=request.experimentName,
+            experiment_branch=request.experimentBranch,
+        )
+
         response = CuratedRecommendationsResponse(
             recommendedAt=get_millisecond_epoch_time(),
             surfaceId=surface_id,
             data=general_feed,
             feeds=sections_feeds,
-            inferredLocalModel=self.local_model_backend.get(
-                surface_id,
-                experiment_name=request.experimentName,
-                experiment_branch=request.experimentBranch,
-            )
+            inferredLocalModel=local_model
             if request.inferredInterests
             else None,  # Inferred interests being not none implies personalization
         )
@@ -175,6 +215,8 @@ class CuratedRecommendationsProvider:
         request: CuratedRecommendationsRequest,
         surface_id: str,
         local_model_backend: LocalModelBackend,
+        interest_cohort_model_backend: CohortModelBackend | None = None,
+        cohort_model_training_run_id: str | None = None,
     ) -> ProcessedInterests | None:
         """Convert the interest vector from the request into a clean internal representation
         with numeric scores. This does the unary decoding if necessary.
@@ -207,6 +249,9 @@ class CuratedRecommendationsProvider:
                 list[str] | None, request_interests.root.get(LOCAL_MODEL_DB_VALUES_KEY)
             )
             if dp_values is not None:
+                cohort: str | None = None
+                dp_values_joined = "".join(dp_values)  # Join the strings for cohort lookup
+                numerical_value = dp_values_joined.count("1")
                 # Decode the DP values
                 decoded = inferred_local_model.decode_dp_interests(dp_values, model_id)
                 # Extract just the numeric scores
@@ -215,9 +260,17 @@ class CuratedRecommendationsProvider:
                     for k, v in decoded.items()
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
+                if interest_cohort_model_backend is not None:
+                    cohort = interest_cohort_model_backend.get_cohort_for_interests(
+                        interests=dp_values_joined,
+                        model_id=model_id,
+                        training_run_id=cohort_model_training_run_id,
+                    )
                 return ProcessedInterests(
                     model_id=model_id,
                     scores=scores,
+                    cohort=cohort,
+                    numerical_value=numerical_value,
                     expected_keys=inferred_local_model.get_interest_keys(),
                 )
 
