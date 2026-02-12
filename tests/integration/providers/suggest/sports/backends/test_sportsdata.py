@@ -38,7 +38,7 @@ def fixture_sportsdata_parameters(
     """Create constructor parameters for sportsdata provider."""
     return {
         "metrics_client": statsd_mock,
-        "trigger_words": ["game", "game today"],
+        "intent_words": ["game", "game today"],
         "settings": {},
     }
 
