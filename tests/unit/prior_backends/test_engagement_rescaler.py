@@ -7,7 +7,8 @@ from unittest.mock import Mock
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     BLOCKED_FROM_MOST_POPULAR_SCALER,
-    UK_EXPERIMENT_TREATMENT_PERCENT,
+    CA_EXPERIMENT_TREATMENT_PERCENT,
+    CACrawledContentRescaler,
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
     PESSIMISTIC_PRIOR_ALPHA_SCALE,
@@ -154,8 +155,8 @@ class TestUKCrawledContentRescaler:
         expected_opens = 100
         expected_no_opens = 50
         opens, no_opens = self.rescaler.rescale(rec, expected_opens, expected_no_opens)
-        assert opens == expected_opens / UK_EXPERIMENT_TREATMENT_PERCENT
-        assert no_opens == expected_no_opens / UK_EXPERIMENT_TREATMENT_PERCENT
+        assert opens == expected_opens
+        assert no_opens == expected_no_opens
 
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
         assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
@@ -173,8 +174,8 @@ class TestUKCrawledContentRescaler:
         rec.is_story_blocked_for_top_stories.return_value = False
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
-        assert opens == 100 / UK_EXPERIMENT_TREATMENT_PERCENT
-        assert no_opens == 50 / UK_EXPERIMENT_TREATMENT_PERCENT
+        assert opens == 100
+        assert no_opens == 50
 
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
         assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
@@ -189,8 +190,54 @@ class TestUKCrawledContentRescaler:
         rec.is_story_blocked_for_top_stories.return_value = True
 
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
-        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / UK_EXPERIMENT_TREATMENT_PERCENT
-        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / UK_EXPERIMENT_TREATMENT_PERCENT
+        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER
+        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER
+
+
+class TestCACrawledContentRescaler:
+    """Test Rig for the CA experiment rescaler"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = CACrawledContentRescaler()
+
+    def test_rescale_regular_item(self):
+        """Test that regular items are scaled up by 1/0.10 = 10x for experiment size"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 / CA_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 / CA_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_blocked_item(self):
+        """Test that blocked items get parent 5x scaling then 10x experiment scaling"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.topic = Topic.GAMING
+        rec.is_story_blocked_for_top_stories.return_value = True
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / CA_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / CA_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_prior_inherits_parent(self):
+        """Test that prior rescaling is inherited from CrawledContentRescaler"""
+        rec = Mock()
+        rec.in_experiment.return_value = True
+        rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
+        assert beta == 20
+
+    def test_fresh_items_settings_inherited(self):
+        """Test that fresh item settings are inherited from parent"""
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
 
 
 class TestSchedulerHoldbackRescaler:

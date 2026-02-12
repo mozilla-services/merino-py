@@ -7,8 +7,6 @@ from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedR
 
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
 
-UK_EXPERIMENT_TREATMENT_PERCENT = 0.05
-
 # Looking at query of typical subtopic impressions outside of top stories
 # https://sql.telemetry.mozilla.org/queries/112921/source#276948
 # We can see that for a typical section like NFL, impressions are about 4x lower than the overall average
@@ -70,6 +68,25 @@ class CrawledContentRescaler(EngagementRescaler):
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
 
 
+CA_EXPERIMENT_TREATMENT_PERCENT = 0.10
+
+
+class CACrawledContentRescaler(CrawledContentRescaler):
+    """Rescaler for CA experiment — scales engagement up by 1/0.10 = 10x
+    to compensate for only 10% of CA traffic generating engagement data.
+    """
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
+    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
+        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
+        treatment percentage to compensate for small experiment size.
+        """
+        opens, no_opens = super().rescale(rec, opens, no_opens)
+        return opens / CA_EXPERIMENT_TREATMENT_PERCENT, no_opens / CA_EXPERIMENT_TREATMENT_PERCENT
+
+
 class UKCrawledContentRescaler(CrawledContentRescaler):
     """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
     Special handling is added for certain content types that are blocked from most popular section
@@ -84,7 +101,7 @@ class UKCrawledContentRescaler(CrawledContentRescaler):
         both in terms of section ranking and ranking within the section
         """
         opens, no_opens = super().rescale(rec, opens, no_opens)
-        return opens / UK_EXPERIMENT_TREATMENT_PERCENT, no_opens / UK_EXPERIMENT_TREATMENT_PERCENT
+        return opens, no_opens
 
 
 class SchedulerHoldbackRescaler(EngagementRescaler):

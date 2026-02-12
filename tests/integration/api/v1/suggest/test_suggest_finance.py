@@ -136,8 +136,8 @@ def test_suggest_for_finance_suggestion_returns_no_suggestion_for_eager_match_bl
     # not mocking any other backend methods since this should hit the branch in the provider
     # where it does find a valid (supported) ticker but it is on the eager match block list, and returns an empty list.
 
-    # testing for q="AAPL"
-    response = client.get("/api/v1/suggest?q=AAPL&providers=polygon")
+    # testing for q="GOOG"
+    response = client.get("/api/v1/suggest?q=GOOG&providers=polygon")
 
     assert response.status_code == 200
     body = response.json()
