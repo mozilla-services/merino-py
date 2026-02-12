@@ -67,34 +67,39 @@ async def test_updater(
     sport_data_store: SportsDataStore, httpx_client: AsyncClient, mocker: MockerFixture
 ):
     """Test provider functions:"""
+
+    def new_sport() -> MagicMock:
+        mock_sport = MagicMock(spec=Sport)
+        mock_sport.name = "mock"
+        mock_sport.events = {
+            0: Event(
+                sport=mock_sport.name,
+                id=0,
+                terms="",
+                date=now,
+                original_date="",
+                home_team=dict(key="HOM", id=123),
+                away_team=dict(key="AWY", id=456),
+                home_score=0,
+                away_score=0,
+                status=GameStatus.Unknown,
+                expiry=now + timedelta(seconds=300),
+                updated=now,
+            )
+        }
+        return mock_sport
+
     settings.providers.sports.sports = ["nfl", "NbA", "NHL", "NoneSuch"]
     updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
     assert list(updater.sports.keys()) == ["NFL", "NBA", "NHL"]
     assert updater.store == sport_data_store
 
     now = datetime.now(tz=timezone.utc)
-    mock_sport = MagicMock(spec=Sport)
-    mock_sport.name = "mock"
-    mock_sport.events = {
-        0: Event(
-            sport=mock_sport.name,
-            id=0,
-            terms="",
-            date=now,
-            original_date="",
-            home_team=dict(key="HOM", id=123),
-            away_team=dict(key="AWY", id=456),
-            home_score=0,
-            away_score=0,
-            status=GameStatus.Unknown,
-            expiry=now + timedelta(seconds=300),
-            updated=now,
-        )
-    }
+    mock_sport = new_sport()
     updater.sports = {"mock": mock_sport}
     updater.store.store_events = mocker.AsyncMock()  # type: ignore
 
-    await updater.update(include_teams=True, client=httpx_client)
+    await updater.update_data(include_teams=True, client=httpx_client)
     assert mock_sport.update_teams.called
     assert updater.store.store_events.called  # type: ignore
     # prune() is not called.
@@ -102,7 +107,18 @@ async def test_updater(
 
     sport_data_store.client.reset()  # type: ignore
     updater.store.store_events.reset()  # type: ignore
-    await updater.nightly(client=httpx_client)
+    mock_sport = new_sport()
+    updater.sports = {"mock": mock_sport}
+    await updater.nightly()
     assert mock_sport.update_teams.called
     assert sport_data_store.client.delete_by_query.called  # type: ignore
     assert not sport_data_store.client.store_events.called  # type: ignore
+
+    sport_data_store.client.reset()  # type: ignore
+    updater.store.store_events.reset()  # type: ignore
+    mock_sport = new_sport()
+    updater.sports = {"mock": mock_sport}
+    await updater.quick_update()
+    assert not mock_sport.update_teams.called
+    assert mock_sport.update_events.called
+    assert mock_sport.update_events.call_args_list[0][1]["allow_no_teams"]

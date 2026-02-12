@@ -24,6 +24,7 @@ import logging
 import typer
 import sys
 from time import time
+from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
 from dynaconf.base import LazySettings
 from typing import cast
@@ -31,7 +32,7 @@ from typing import cast
 from aiodogstatsd import Client
 
 from merino.configs import settings
-from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -75,6 +76,8 @@ class SportDataUpdater:
     store: SportsDataStore
     connect_timeout: int
     read_timeout: int
+    client: AsyncClient
+
     # Copy of the general configuration
     # settings: LazySettings
 
@@ -118,30 +121,33 @@ class SportDataUpdater:
         self.store = store
         self.connect_timeout = connect_timeout
         self.read_timeout = read_timeout
+        self.client = create_http_client(
+            connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
+        )
+
         logger.debug(f"{LOGGING_TAG}: Starting up...")
 
-    async def update(self, include_teams: bool = True, client: AsyncClient | None = None) -> bool:
+    async def update_data(
+        self, include_teams: bool = True, client: AsyncClient | None = None
+    ) -> bool:
         """Perform sport specific updates."""
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
         await self.store.build_indexes()
-        client = create_http_client(
-            connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
-        )
 
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
             # which matches the recommended query period for SportsData.
             if include_teams:  # pragma: no cover
                 start = time()
-                await sport.update_teams(client=client)
+                await sport.update_teams(client=self.client)
                 logger.info(
                     f"""{LOGGING_TAG} sports.time.update.team: ["sport": {sport.name}] = {time() - start}"""
                 )
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)
             start = time()
-            await sport.update_events(client=client)
+            await sport.update_events(client=self.client)
             logger.info(
                 f"""{LOGGING_TAG} sports.time.update.event: ["sport": {sport.name}] = {time() - start}"""
             )
@@ -151,10 +157,9 @@ class SportDataUpdater:
             logger.info(
                 f"""{LOGGING_TAG} sports.time.load.events ["sport": {sport.name}] = {time() - start}"""
             )
-        await self.store.shutdown()
         return True
 
-    async def nightly(self, client: AsyncClient | None = None) -> None:
+    async def nightly(self) -> None:
         """Perform the nightly maintenance tasks"""
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
@@ -165,13 +170,51 @@ class SportDataUpdater:
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
         logger.debug(f"{LOGGING_TAG} Nightly update...")
-        await self.update(include_teams=True, client=client)
+        await self.update_data(include_teams=True)
         await self.store.prune()
+        await self.store.shutdown()
 
     async def initialize(self) -> None:
         """Initialize the ElasticSearch data store"""
         await self.store.startup()
         await self.store.build_indexes(clear=True)
+
+    async def quick_update(self) -> None:
+        """Perform a 'quick' update for events that changed recently"""
+        logger = logging.getLogger(__name__)
+        logger.debug(f"{LOGGING_TAG} starting database")
+        await self.store.startup()
+        default_prior_update = datetime.now(tz=timezone.utc) - timedelta(
+            seconds=UPDATE_PERIOD_SECS
+        )
+        try:
+            last_update_str = (
+                await self.store.query_meta("last_update") or default_prior_update.isoformat()
+            )
+            last_update = datetime.fromisoformat(last_update_str)
+        except Exception as ex:
+            logger.error(f"{LOGGING_TAG} quick_update date error {ex}")
+            last_update = datetime.now(tz=timezone.utc) - timedelta(seconds=UPDATE_PERIOD_SECS)
+        for sport in self.sports.values():
+            start = time()
+            await sport.update_events(client=self.client, allow_no_teams=True)
+            logger.info(
+                f"""{LOGGING_TAG} sports.time.quick_update.event ["sport": {sport.name}] = {time() - start}"""
+            )
+            start = time()
+            await self.store.update_events(sport, language_code="en", last_update=last_update)
+            logger.info(
+                f"""{LOGGING_TAG} sports.time.quick_update.update ["sport": {sport.name}] = {time() - start}"""
+            )
+        await self.store.shutdown()
+
+    async def update(self) -> None:
+        """Perform just a data update"""
+        logger = logging.getLogger(__name__)
+        logger.debug(f"{LOGGING_TAG} Initializing database")
+        await self.store.startup()
+        await self.update_data()
+        await self.store.shutdown()
 
 
 logger = logging.getLogger(__name__)
@@ -216,7 +259,7 @@ else:
 def initialize():  # pragma: no cover
     """Build the indexes and initialize the ES tables"""
     if provider:
-        asyncio.run(provider.initialize(sports_settings))
+        asyncio.run(provider.initialize())
     else:
         logger.error("Sports provider unavailable.")
 
@@ -234,9 +277,18 @@ def nightly():  # pragma: no cover
 def update():  # pragma: no cover
     """Perform the frequently required tasks (Approx once every 5 min)"""
     if provider:
-        asyncio.run(provider.update())
+        asyncio.run(provider.update_data())
     else:
         logger.error("Sports provider unavailable.")
+
+
+@cli.command("quick_update")
+def quick_update():  # pragma: no cover
+    """Perform a 'quick' update, which only changes scores & status for known sport events that changed recently"""
+    if provider:
+        asyncio.run(provider.quick_update())
+    else:
+        logger.error("Sports provider unavailable")
 
 
 if __name__ == "__main__":

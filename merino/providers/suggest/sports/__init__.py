@@ -8,7 +8,9 @@ from merino.configs import settings
 
 LOGGING_TAG: Final[str] = "⚾"
 DEFAULT_LOGGING_LEVEL = "DEBUG"
-UPDATE_PERIOD_SECS = 60 * 60 * 4  # Four hours
+# How frequently do we expect the "update" job to run?
+# This will impact some things like the `quick-update` function
+UPDATE_PERIOD_SECS = 60 * 5  # Five minutes
 
 # The URL field in the returned suggestion is ignored. Use
 # a generic space-holder for this value for this provider.

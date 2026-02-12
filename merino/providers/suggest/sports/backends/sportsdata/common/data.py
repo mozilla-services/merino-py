@@ -24,7 +24,6 @@ from merino.providers.suggest.sports import (
 from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
 )
-
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
@@ -154,13 +153,37 @@ class Event(BaseModel):
     # UTC of last event update
     updated: datetime | None
 
-    def suggest_title(self) -> str:
-        """Event suggest title"""
-        return f"{self.away_team["name"]} at {self.home_team["name"]}"
-
     def key(self) -> str:
         """Generate semi-unique key for this event"""
         return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
+
+    def serialize(self) -> dict[str, Any]:
+        """Condition Event for JSON serialization. This converts dates from datetime and
+        skips potentially blank items.
+        """
+        result = {
+            "sport": self.sport,
+            "id": self.id,
+            "home_score": self.home_score,
+            "away_score": self.away_score,
+            "status": str(self.status),
+            "date": self.date.isoformat(),
+            "expiry": self.expiry.isoformat(),
+        }
+        # This may be a quick_update, meaning these values could be blank
+        # Do not destructively overwrite them!
+        if self.terms:
+            result["terms"] = self.terms
+        if self.home_team:
+            result["home_team"] = self.home_team
+        if self.away_team:
+            result["away_team"] = self.away_team
+        if self.original_date:
+            # NOTE: original_date is stored as a string value.
+            result["original_date"] = self.original_date
+        if self.updated:
+            result["updated"] = self.updated.isoformat()
+        return result
 
 
 class Sport:
@@ -224,7 +247,7 @@ class Sport:
         """Update team information and store in common storage (usually called nightly)"""
 
     @abstractmethod
-    async def update_events(self, client: AsyncClient):
+    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Fetch the list of current and upcoming events for this sport"""
 
     def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
@@ -249,7 +272,10 @@ class Sport:
         return self.teams
 
     def load_scores_from_source(
-        self, data: list[dict[str, Any]], event_timezone: ZoneInfo = ZoneInfo("UTC")
+        self,
+        data: list[dict[str, Any]],
+        event_timezone: ZoneInfo = ZoneInfo("UTC"),
+        allow_no_teams: bool = False,  # Allow no team information, useful for `quick updates`
     ) -> dict[int, "Event"]:
         """Scan the list of Event scores for any event within the 'current' window.
 
@@ -344,7 +370,6 @@ class Sport:
             # Ignore any events that are outside of the event interest window.
             if not start_window <= date <= end_window:
                 continue
-            terms = f"{home_team.terms} {away_team.terms}"
             updated = None
             # All "Updated" fields are always in ET.
             if event_description.get("Updated"):
@@ -354,7 +379,7 @@ class Sport:
             event = Event(
                 sport=self.name,
                 id=event_description["GlobalGameID"],
-                terms=terms,
+                terms=f"{home_team.terms} {away_team.terms}",
                 date=date,
                 original_date=event_description.get(
                     "DateTimeUTC", event_description.get("DateTime")
