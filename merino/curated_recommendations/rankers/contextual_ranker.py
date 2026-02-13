@@ -2,6 +2,8 @@
 
 from random import randint, random
 
+import numpy as np
+
 from merino.curated_recommendations.ml_backends.protocol import (
     ContextualArticleRankings,
     MLRecsBackend,
@@ -78,8 +80,8 @@ class ContextualRanker(Ranker):
 
         contextual_scores: ContextualArticleRankings | None
         contextual_scores = self.ml_backend.get(region, str(utcOffset), cohort)
+        rng = np.random.default_rng()
 
-        k = randint(0, contextual_scores.K - 1) if contextual_scores is not None else 0
         for rec in recs:
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
                 rec, rescaler, region
@@ -88,22 +90,24 @@ class ContextualRanker(Ranker):
             # add random value between 0 and 1 to break ties randomly
             score = None
             if contextual_scores:
-                score = contextual_scores.get_score(rec.corpusItemId, k)
+                mean, stdev = contextual_scores.get_score_pair(rec.corpusItemId)
 
             beta_value_for_fresh_check = non_rescaled_b_prior
 
-            if score is None:
+            if mean is None or stdev is None:
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)
                 beta_val = no_opens + max(b_prior, 1e-18)
                 score = float(beta.rvs(alpha_val, beta_val))
             else:
+                score = rng.normal(loc=mean, scale=stdev)
+
                 # Contextual ranker known imprssions override the computed no_opens based on engagement
                 # which runs on a different interval. We will need to potentially rescale the ml_backend
                 # impresions before completely ignoring the no_opens from the legacy engagement backend.
                 no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
-                score += random() * 0.0001
                 beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
+
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive

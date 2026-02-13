@@ -74,10 +74,14 @@ def blob(gcs_bucket):
         {
             "version": "1",
             "epoch_id": datetime.now(timezone.utc).strftime("%Y%m%d-%H%M"),
-            "K": 15,
             "topN": 500,
             "model": {"name": "ContextualLinTS", "version": None},
-            "slates": {"global": {"granularity": "global", "shards": {"": [1, 2], "aa": [3, 4]}}},
+            "slates": {
+                "global": {
+                    "granularity": "global",
+                    "shards": {"": {"mean": 1, "std": 1}, "aa": {"mean": 3, "std": 1}},
+                }
+            },
             "impressions_by_id": {"aa": 1},
         },
     )
@@ -91,10 +95,14 @@ def old_blob(gcs_bucket):
         {
             "version": "1",
             "epoch_id": "20250110-1537",
-            "K": 15,
             "topN": 500,
             "model": {"name": "ContextualLinTS", "version": None},
-            "slates": {"global": {"granularity": "global", "shards": {"": [1, 2], "aa": [3, 4]}}},
+            "slates": {
+                "global": {
+                    "granularity": "global",
+                    "shards": {"": {"mean": 1, "std": 1}, "aa": {"mean": 3, "std": 1}},
+                }
+            },
             "impressions_by_id": {"aa": 1},
         },
     )
@@ -139,11 +147,13 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
 
     assert gcs_engagement.is_valid()
 
-    rankings = gcs_engagement.get()  # global rankings
+    rankings = gcs_engagement.get()  # global ranking
+    print("Rankings fetched from GCS ML Recs:")
+    print(rankings)
     assert rankings.granularity == "global"
-    assert rankings.get_score("") == 1
-    assert rankings.get_score("aa") == 3
-    assert rankings.get_score("??") is None
+    assert rankings.get_score_pair("") == 1, 1
+    assert rankings.get_score_pair("aa") == 3, 1
+    assert rankings.get_score_pair("??") is None, None
 
     assert gcs_engagement.get_adjusted_impressions("aa") == 1
     assert gcs_engagement.get_adjusted_impressions("unknown") == 0
@@ -187,7 +197,7 @@ async def test_gcs_ml_recs_logs_error_for_missing_blob(
             record for record in caplog.records if record.levelname == expected_level_name
         ]
         # Assert that the expected message appears with the expected log level
-        expected_message = "Blob 'contextual_ts/latest.json' not found."
+        expected_message = "Blob 'contextual_ts/latest_stats.json' not found."
         return any(expected_message in record.message for record in log_records)
 
     # Ensure that this test runs quickly, by waiting only until the expected message is logged.

@@ -176,26 +176,18 @@ class ContextualArticleRankings(BaseModel):
     """Class that defines rankings for a given region and time"""
 
     granularity: str
-    shards: dict[str, list[float]]
-    K: int = Field(0, description="Number of shards per article")
-
-    @model_validator(mode="after")
-    def set_k(self) -> "ContextualArticleRankings":
-        """Set K (number of shards per article) based on shards data"""
-        self.K = 1
-        for _key, v in self.shards.items():
-            self.K = len(v)
-            break
-        return self
+    shards: dict[str, dict[str, float]]
 
     def has_item_score(self, corpus_item_id: str) -> bool:
         """Check if a given corpus item ID has a score entry"""
         return corpus_item_id in self.shards
 
-    def get_score(self, corpus_item_id: str, shard_index=0) -> float | None:
-        """Get the scores for a given shard, returning default score if not found"""
-        items = self.shards.get(corpus_item_id, None)
-        return float(items[shard_index % len(items)]) if items is not None else None
+    def get_score_pair(self, corpus_item_id: str) -> tuple[float | None, float | None]:
+        """Get mean and standard deviaion of the score as a tuple."""
+        item: dict[str, float] = self.shards.get(corpus_item_id, None)
+        if item is None:
+            return None, None
+        return item.get("mean", None), item.get("std", None)
 
 
 class LocalModelBackend(Protocol):
