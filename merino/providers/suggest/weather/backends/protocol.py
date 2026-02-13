@@ -1,6 +1,6 @@
 """Protocol for weather provider backends."""
 
-from typing import Protocol, Optional
+from typing import Protocol, Optional, NamedTuple
 
 from pydantic import BaseModel, HttpUrl
 
@@ -52,6 +52,23 @@ class Forecast(BaseModel):
     summary: str
     high: Temperature
     low: Temperature
+
+
+class HourlyForecast(BaseModel):
+    """Model for a single hourly weather forecast."""
+
+    date_time: str
+    epoch_date_time: int
+    temperature: Temperature
+    icon_id: int
+    url: HttpUrl
+
+
+class HourlyForecastsWithTTL(NamedTuple):
+    """Hourly forecasts and its TTL value that is used"""
+
+    hourly_forecasts: list[HourlyForecast]
+    ttl: int
 
 
 class WeatherReport(BaseModel):
@@ -110,6 +127,15 @@ class WeatherBackend(Protocol):
         """Get a list of locations (cities and country) from partner
         Raises:
             BackendError: Category of error specific to provider backends.
+        """
+        ...
+
+    async def get_hourly_forecasts(
+        self, weather_context: WeatherContext
+    ) -> HourlyForecastsWithTTL | None:  # pragma: no cover
+        """Get a list of hourly forecasts from partner with a ttl. Will return cached data if found.
+        Raises:
+            TODO
         """
         ...
 

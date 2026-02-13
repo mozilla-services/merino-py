@@ -103,6 +103,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                             setting.cache_ttls.current_condition_ttl_sec
                         ),
                         cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
+                        cached_hourly_forecast_ttl_sec=setting.cache_ttls.hourly_forecast_ttl_sec,
                         metrics_client=get_metrics_client(),
                         metrics_sample_rate=settings.accuweather.metrics_sampling_rate,
                         http_client=create_http_client(
@@ -123,6 +124,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         url_location_key_placeholder=(
                             settings.accuweather.url_location_key_placeholder
                         ),
+                        url_hourly_forecasts_path=settings.accuweather.url_hourly_forecasts_path,
                     )
                     if setting.backend == "accuweather"
                     else FakeWeatherBackend()
