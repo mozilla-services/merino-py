@@ -503,14 +503,14 @@ class TestLegacyEndpoints:
     """Test the legacy curated recommendations endpoints (fx114 and fx115-129).
 
     These endpoints have two code paths:
-    - US/CA locales (en-US, en-CA): use sections backend via get_legacy_recommendations_from_sections
-    - Other locales (de-DE, en-GB, etc.): use scheduler backend via CuratedRecommendationsProvider
+    - US/CA/GB locales (en-US, en-CA, en-GB): use sections backend via get_legacy_recommendations_from_sections
+    - Other locales (de-DE, fr-FR, etc.): use scheduler backend via CuratedRecommendationsProvider
     """
 
-    # Locales that use the sections backend (US/CA)
-    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA"]
-    # Locales that use the scheduler backend (non-US/CA)
-    SCHEDULER_BACKEND_LOCALES = ["de-DE", "en-GB", "fr-FR", "es-ES", "it-IT"]
+    # Locales that use the sections backend (US/CA/GB)
+    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA", "en-GB"]
+    # Locales that use the scheduler backend (non-US/CA/GB)
+    SCHEDULER_BACKEND_LOCALES = ["de-DE", "fr-FR", "es-ES", "it-IT"]
 
     @pytest.mark.parametrize(
         "locale",
@@ -626,6 +626,38 @@ class TestLegacyEndpoints:
 
         assert response.status_code == 200
         assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_US
+
+        # Non-sections request returns data in data[], not feeds
+        corpus_items = data["data"]
+        assert len(corpus_items) == 100
+
+        # Assert all items have expected fields
+        assert all(item["url"] for item in corpus_items)
+        assert all(item["publisher"] for item in corpus_items)
+        assert all(item["imageUrl"] for item in corpus_items)
+        assert all(item["tileId"] for item in corpus_items)
+        # scheduledCorpusItemId equals corpusItemId (sections backend behavior)
+        assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
+
+        # Assert receivedRank is sequential
+        for i, item in enumerate(corpus_items):
+            assert item["receivedRank"] == i
+
+    @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
+    @pytest.mark.parametrize("region", ["GB", "IE"])
+    def test_en_gb_non_sections_request(self, region: str, client: TestClient):
+        """Test en-GB non-sections request via main endpoint (backward-compatible path).
+
+        GB/IE clients without feeds=["sections"] use get_legacy_recommendations_from_sections.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-GB", "region": region},
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB
 
         # Non-sections request returns data in data[], not feeds
         corpus_items = data["data"]

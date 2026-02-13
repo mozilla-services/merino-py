@@ -348,7 +348,7 @@ event_index="sports-{lang}-event"
 team_index="sports-{lang}-team"
 max_suggestions = 5
 # Disable this provider by default
-enabled_by_default = false
+enabled_by_default = true
 # General timeout
 query_timeout_sec = 3.0
 # Temporary value to enable data pre-load "kickstart"
@@ -726,7 +726,7 @@ cache_db = 0
 
 # MERINO_PROVIDERS__POLYGON__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = false
+enabled_by_default = true
 
 # MERINO_PROVIDERS__POLYGON__SCORE
 # The ranking score for this provider as a floating point number.
@@ -866,7 +866,7 @@ cache = "none"
 
 # MERINO_PROVIDERS__FLIGHTAWARE__ENABLED_BY_DEFAULT
 # Whether this provider is enabled by default.
-enabled_by_default = false
+enabled_by_default = true
 
 # MERINO_PROVIDERS__FLIGHTAWARE__SCORE
 # The ranking score for this provider as a floating point number.

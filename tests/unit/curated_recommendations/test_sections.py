@@ -24,6 +24,7 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CACrawledContentRescaler,
     SchedulerHoldbackRescaler,
     CrawledContentRescaler,
     UKCrawledContentRescaler,
@@ -311,6 +312,24 @@ class TestFilterSectionsByExperiment:
             (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
             (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
             (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            # CA with sections-ca-content branch gets CACrawledContentRescaler
+            (
+                "sections-in-canada",
+                "sections-ca-content",
+                "CA",
+                SurfaceId.NEW_TAB_EN_CA,
+                CACrawledContentRescaler,
+            ),
+            # CA with wrong branch falls through to CrawledContentRescaler
+            (
+                "sections-in-canada",
+                "sections-layout-only",
+                "CA",
+                SurfaceId.NEW_TAB_EN_CA,
+                CrawledContentRescaler,
+            ),
+            # CA surface without experiment falls through to CrawledContentRescaler
+            (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CrawledContentRescaler),
         ],
     )
     def test_get_ranking_rescaler_for_branch(

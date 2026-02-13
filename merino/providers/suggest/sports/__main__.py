@@ -17,7 +17,7 @@ from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import SuggestionRequest
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
-    DEFAULT_TRIGGER_WORDS,
+    DEFAULT_INTENT_WORDS,
 )
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
@@ -36,6 +36,11 @@ from merino.utils.http_client import create_http_client
 
 # fool ruff into understanding that we really are importing this package.
 _ = FORCE_IMPORT
+
+
+# Set this value to `False` to prevent the loader functions
+# RUN_LOADER = False
+RUN_LOADER = True
 
 
 async def main_loader(
@@ -98,8 +103,8 @@ async def main_query(
     settings: LazySettings,
 ):
     """Pretend we're a query function"""
-    trigger_words = [
-        word.lower().strip() for word in settings.get("trigger_words", DEFAULT_TRIGGER_WORDS)
+    intent_words = [
+        word.lower().strip() for word in settings.get("intent_words", DEFAULT_INTENT_WORDS)
     ]
     if not credentials.validate():
         print("Failure")
@@ -114,7 +119,7 @@ async def main_query(
         backend=backend,
         metrics_client=get_metrics_client(),
         name="test_sports_provider_id",
-        trigger_words=trigger_words,
+        intent_words=intent_words,
         enabled_by_default=True,
     )
     await provider.initialize()
@@ -144,15 +149,16 @@ if __name__ == "__main__":
         log.error(f"Could not get credentials {ex}")
         raise ex
 
-    team_names = asyncio.run(
-        main_loader(
-            log=log,
-            credentials=credentials,
-            settings=settings.providers.sports,
-            platform=platform,
-            event_map=event_map,
+    if RUN_LOADER:
+        team_names = asyncio.run(
+            main_loader(
+                log=log,
+                credentials=credentials,
+                settings=settings.providers.sports,
+                platform=platform,
+                event_map=event_map,
+            )
         )
-    )
 
     # Perform a query and return the results.
     asyncio.run(
