@@ -14,7 +14,7 @@ Use the AskUserQuestion tool to ask ALL of these questions at once (combine into
 1. **Provider name** (snake_case, e.g. "movie_db"): What should the provider be called? This will be used for directory names, config keys, and the ProviderType enum.
 
 2. **Backend type**: Does this provider need an external API backend?
-   - "Yes - external API" (needs backend protocol, real + fake implementations, API config)
+   - "Yes - external API" (needs backend protocol, real + fake implementations, API config). A **fake backend** is a lightweight concrete class implementing the backend protocol that returns empty/hardcoded data. It serves as the default when the real API is not configured. This follows the codebase convention (`FakeWeatherBackend`, `FakeAdmBackend`, etc.) and is distinct from a mock (which uses `unittest.mock` to record and assert on calls).
    - "No - self-contained" (like geolocation, no external calls)
 
 3. **Caching**: Does this provider need Redis caching?
@@ -30,7 +30,7 @@ Wait for answers before proceeding.
 ## Step 2: Ask follow-up questions based on answers
 
 If the provider has an external API backend, ask:
-- What is the external API called? (for naming the backend, e.g. "TMDB", "Spotify")
+- What is the external API called? Provide the human-readable name (e.g., "Polygon", "TMDB"). This will be used to derive PascalCase class names (`PolygonBackend`) and lowercase file/directory names (`polygon/`).
 - Does it need a circuit breaker for resilience? (like Weather/FlightAware providers)
 - Does it need periodic background data refresh via cron? (like Finance/ADM/Weather providers)
 
@@ -41,7 +41,23 @@ Wait for answers before proceeding.
 
 ## Step 3: Create all files
 
-Create the following files. Use the exact patterns from existing providers.
+Create the following files. Follow these specific conventions from existing providers: class naming, module-level logger, `__init__` parameter ordering (provider-specific params first, `**kwargs: Any` last), import conventions, error handling in `query()`, and protocol compliance.
+
+### Naming conventions
+
+All derived names follow from the provider's `snake_case` name (`{name}`) and its `PascalCase` form (`{Name}`).
+
+`{Name}` = PascalCase derived by splitting on `_` and capitalizing each part: `movie_db` → `MovieDb`, `top_picks` → `TopPicks`.
+
+| Concept | Format | Example (`movie_db` / `TMDB`) |
+|---------|--------|-------------------------------|
+| Directory | `suggest/{name}/` | `suggest/movie_db/` |
+| Provider class | always `Provider` | `class Provider(BaseProvider)` |
+| Import alias | `{Name}Provider` | `MovieDbProvider` |
+| Backend protocol | `{Name}Backend` | `MovieDbBackend(Protocol)` |
+| Error class | `{Name}BackendError` | `MovieDbBackendError` |
+| Fake backend | `Fake{Name}Backend` | `FakeMovieDbBackend` |
+| Enum entry | `{NAME_UPPER} = "{name}"` | `MOVIE_DB = "movie_db"` |
 
 ### 3a. Provider directory structure
 
@@ -85,6 +101,8 @@ class {Name}Backend(Protocol):
 
 ### 3c. Fake backend (if external API)
 
+The fake backend is the default used in `_create_provider()`'s `else` branch when the real API is not configured (e.g., missing API key or `setting.backend` doesn't match the real backend name). See `FakeWeatherBackend` in `weather/backends/fake_backends.py`, `FakeWikipediaBackend` in `wikipedia/backends/fake_backends.py`, and `FakeAdmBackend` in `adm/backends/fake_backends.py` for existing examples.
+
 Create `merino/providers/suggest/{name}/backends/fake_backends.py`:
 ```python
 """Fake backends for testing."""
@@ -114,9 +132,9 @@ Create `merino/providers/suggest/{name}/provider.py`. Follow these exact pattern
 
 - Class must be named `Provider` and extend `BaseProvider`
 - Store `self._name`, `self._query_timeout_sec`, `self._enabled_by_default` in `__init__`
-- Call `super().__init__()` at end of `__init__`
+- Accept `**kwargs: Any` as the last `__init__` parameter, call `super().__init__(**kwargs)` at the end. This is the pattern used by the majority of providers (weather, wikipedia, geolocation, amo, top_picks, adm).
 - `initialize()` must be async, set up cron jobs if needed with `asyncio.create_task(cron_job())`
-- `query()` must return `list[BaseSuggestion]`, catch backend errors and return `[]`
+- `query()` must return `list[BaseSuggestion]`. Wrap backend calls in `try`/`except` catching the provider's `{Name}BackendError` (or the base `BackendError`), log at `warning` level, and return `[]`. See `wikipedia/provider.py:80-88` and `amo/provider.py:118-133` for the standard pattern. Note: providers with circuit breakers (weather, flightaware) intentionally let errors propagate so the breaker can track failures.
 - `normalize_query()` should at minimum do `query.lower().strip()`
 - Add `logger = logging.getLogger(__name__)` at module level
 - If using circuit breaker, decorate `query()` with the circuit breaker
