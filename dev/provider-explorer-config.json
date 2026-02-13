@@ -1,0 +1,132 @@
+{
+  "environments": {
+    "local": { "url": "http://localhost:8000", "label": "Local" },
+    "staging": { "url": "https://merino.services.allizom.org", "label": "Staging" },
+    "production": { "url": "https://prod.merino.prod.webservices.mozgcp.net", "label": "Production" }
+  },
+  "providers": [
+    {
+      "id": "adm",
+      "description": "Server-side AMP/sponsored suggestion matching via Remote Settings.",
+      "example_queries": ["amazon", "walmart", "disney"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Prefix keyword matching indexed by country+form_factor. Geo params (city/region/country) override IP-based geolocation. Pre-filled with US location since most adm data is US. Use the Datasets tab to browse the actual RS data.",
+      "enabled_by_default": true,
+      "score": 0.31,
+      "query_timeout_sec": null,
+      "runtime_disabled": false
+    },
+    {
+      "id": "amo",
+      "description": "Firefox Add-on suggestions. Min 4 chars, disabled by default.",
+      "example_queries": ["darkreader", "ublock", "privacy"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Disabled by default. Pass providers=amo to enable.",
+      "enabled_by_default": false,
+      "score": 0.25,
+      "query_timeout_sec": null,
+      "runtime_disabled": true
+    },
+    {
+      "id": "wikipedia",
+      "description": "Free-text Wikipedia article suggestions.",
+      "example_queries": ["Python programming", "mozilla", "Rome"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Supports en/fr/de/it/pl via Accept-Language header.",
+      "enabled_by_default": true,
+      "score": 0.23,
+      "query_timeout_sec": 5.0,
+      "runtime_disabled": false
+    },
+    {
+      "id": "accuweather",
+      "description": "Weather forecasts and location autocomplete.",
+      "example_queries": [
+        { "q": "", "label": "local weather", "params": { "request_type": "weather" } },
+        { "q": "New Y", "params": { "request_type": "location" } },
+        { "q": "London", "params": { "request_type": "location" } }
+      ],
+      "special_params": { "request_type": "weather", "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Empty q + weather = local weather. request_type=location for city autocomplete.",
+      "enabled_by_default": false,
+      "score": 0.3,
+      "query_timeout_sec": 5.0,
+      "runtime_disabled": false
+    },
+    {
+      "id": "top_picks",
+      "description": "Domain navigation / top site suggestions.",
+      "example_queries": ["github", "gmail", "reddit"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Min 2-4 chars depending on domain.",
+      "enabled_by_default": false,
+      "score": 0.25,
+      "query_timeout_sec": null,
+      "runtime_disabled": false
+    },
+    {
+      "id": "polygon",
+      "description": "Stock ticker snapshots from Polygon.io.",
+      "example_queries": ["AAPL", "$MSFT", "TSLA"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Stock tickers. $ prefix supported.",
+      "enabled_by_default": true,
+      "score": 0.29,
+      "query_timeout_sec": 5.0,
+      "runtime_disabled": false
+    },
+    {
+      "id": "yelp",
+      "description": "Local business search via Yelp API.",
+      "example_queries": ["pizza", "coffee shop", "sushi"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Requires geolocation triple (city+region+country). Location keywords stripped.",
+      "enabled_by_default": false,
+      "score": 0,
+      "query_timeout_sec": 5.0,
+      "runtime_disabled": false
+    },
+    {
+      "id": "flightaware",
+      "description": "Live flight tracking by flight number.",
+      "example_queries": ["AA100", "UAL456", "DL123"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Flight number pattern: airline code + digits.",
+      "enabled_by_default": true,
+      "score": 0.29,
+      "query_timeout_sec": 5.0,
+      "runtime_disabled": false
+    },
+    {
+      "id": "sports",
+      "description": "Live sports scores and game info (NFL, NBA, NHL).",
+      "example_queries": ["Patriots score", "Lakers game", "Celtics vs Lakers"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Query MUST contain a trigger word (score, game, vs, live, today, result, schedule, match, play, upcoming, final). Without one the provider returns nothing. Events expire after 2 weeks. Empty results likely means the Airflow sports_data job hasn't run or no games are in the current window.",
+      "enabled_by_default": true,
+      "score": null,
+      "query_timeout_sec": 3.0,
+      "runtime_disabled": false
+    },
+    {
+      "id": "geolocation",
+      "description": "Returns IP geolocation data (debug provider).",
+      "example_queries": ["test"],
+      "special_params": { "city": "Portland", "region": "OR", "country": "US" },
+      "notes": "Query content is irrelevant. Returns GeoIP-derived location.",
+      "enabled_by_default": false,
+      "score": null,
+      "query_timeout_sec": null,
+      "runtime_disabled": false
+    }
+  ],
+  "remote_settings": {
+    "server": "https://firefox.settings.services.mozilla.com/v1",
+    "bucket": "main",
+    "collections": {
+      "quicksuggest-amp": "quicksuggest-amp",
+      "quicksuggest-other": "quicksuggest-other",
+      "fakespot-suggest-products": "fakespot-suggest-products"
+    }
+  }
+}

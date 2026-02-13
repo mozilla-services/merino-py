@@ -170,6 +170,11 @@ profile:  ## Profile Merino with Scalene
 	MERINO_LOGGING__FORMAT=mozlog MERINO_LOGGING__LEVEL=INFO \
 	$(UV) run python -m scalene merino/main.py
 
+.PHONY: explorer
+explorer:  ## Serve the Provider Explorer UI at http://localhost:9000
+	@echo "Provider Explorer: http://localhost:9000/provider-explorer.html"
+	python3 -m http.server 9000 -d dev/
+
 .PHONY: docker-compose-up
 docker-compose-up:  ## Run `docker-compose up` in `./dev`
 	docker compose -f dev/docker-compose.yaml up

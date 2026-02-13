@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merino Provider Explorer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: #111;
+  background: #edeef1;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* Header */
+header {
+  margin-bottom: 20px;
+}
+header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #111;
+  margin-bottom: 2px;
+}
+header p {
+  font-size: 13px;
+  color: #555;
+}
+
+/* Tabs */
+nav.tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 20px;
+}
+nav.tabs button {
+  padding: 8px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #777;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s;
+}
+nav.tabs button:hover { color: #444; }
+nav.tabs button.active {
+  color: #111;
+  border-bottom-color: #111;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Cards */
+.card {
+  background: #fff;
+  border: 1px solid #c5c8ce;
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  min-width: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* Section headings */
+h2 {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+.card > h2:first-child { margin-bottom: 12px; }
+
+/* Environment selector */
+.env-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.env-links {
+  display: flex;
+  gap: 16px;
+}
+.env-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #777;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s;
+}
+.env-link:hover { color: #333; }
+.env-link.active {
+  color: #111;
+  border-bottom-color: #111;
+}
+.env-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #555;
+  font-weight: 500;
+  margin-left: auto;
+}
+.env-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ccc;
+  flex-shrink: 0;
+}
+.env-dot.ok { background: #34a853; }
+.env-dot.err { background: #d93025; }
+.env-dot.loading { background: #f9ab00; animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Provider select */
+.provider-select-row select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #b0b4bb;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  color: #111;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.provider-select-row select:focus { border-color: #0055bb; box-shadow: 0 0 0 2px rgba(0,85,187,0.15); }
+.provider-info {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #ddd;
+}
+.provider-desc {
+  font-size: 13px;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+/* Split pane */
+.split-pane {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .split-pane {
+    grid-template-columns: 1fr;
+  }
+  .split-right {
+    position: static;
+  }
+}
+
+/* Example queries */
+.examples-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.examples a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #111;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  padding: 4px 10px;
+  background: #e8eaee;
+  border: 1px solid #b8bcc3;
+  border-radius: 14px;
+  transition: background 0.12s, border-color 0.12s;
+}
+.examples a:hover { background: #dcdfe4; border-color: #999; }
+.examples a .eq-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #ddd;
+}
+.examples a .eq-dot.ok { background: #34a853; }
+.examples a .eq-dot.empty { background: #f9ab00; }
+.examples a .eq-dot.err { background: #d93025; }
+.examples a .eq-dot.loading { background: #ccc; animation: pulse 1s infinite; }
+.examples .empty-q { font-style: italic; color: #888; }
+
+/* Notes */
+.provider-notes {
+  font-size: 12px;
+  color: #555;
+  line-height: 1.4;
+}
+
+/* Form */
+.field {
+  margin-bottom: 10px;
+}
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #444;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.field input, .field select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #b0b4bb;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  color: #111;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field input:focus, .field select:focus { border-color: #0055bb; box-shadow: 0 0 0 2px rgba(0,85,187,0.15); }
+.field input::placeholder { color: #999; }
+.field select { cursor: pointer; }
+.field .hint {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.field-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.field-row .field, .field-row-3 .field { margin-bottom: 10px; }
+
+.hidden { display: none !important; }
+
+/* Hero row: Q + Country + Send */
+.hero-card { padding: 12px 16px; }
+.hero-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.hero-q { flex: 1; }
+.hero-country select {
+  height: 100%;
+  padding: 0 10px;
+  border: 2px solid #888;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+  outline: none;
+}
+.hero-country select:focus { border-color: #0055bb; }
+.hero-row .btn-send {
+  width: auto;
+  margin-top: 0;
+  padding: 0 28px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.q-input {
+  width: 100%;
+  font-size: 17px !important;
+  padding: 10px 14px !important;
+  border: 2px solid #888 !important;
+  border-radius: 4px;
+  background: #fff;
+  font-family: inherit;
+  color: #111;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.q-input:focus {
+  border-color: #0055bb !important;
+  box-shadow: 0 0 0 2px rgba(0,85,187,0.15);
+}
+.q-input::placeholder { color: #999; font-weight: 400; }
+
+/* Options toggle */
+.options-toggle {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+.options-toggle::before {
+  content: "\25B8 ";
+  font-size: 10px;
+  color: #888;
+}
+.options-toggle.open::before {
+  content: "\25BE ";
+}
+.options-toggle:hover { color: #222; }
+
+.options-panel {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #ddd;
+}
+
+.field-row-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.field-row-4 .field { margin-bottom: 0; }
+
+/* URL preview */
+.url-preview {
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  background: none;
+  border: none;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: #888;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* Button */
+.btn {
+  padding: 7px 20px;
+  border: 1px solid #1a1a1a;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.btn:hover { background: #333; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled:hover { background: #1a1a1a; }
+
+/* Response */
+.response-panel {
+  margin-top: 12px;
+}
+.response-meta {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.response-meta .status {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 600;
+}
+.response-meta .status.ok { color: #34a853; }
+.response-meta .status.err { color: #d93025; }
+.response-meta .status.warn { color: #f9ab00; }
+.response-meta .timing {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #999;
+}
+
+.response-body {
+  padding: 12px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  max-height: 500px;
+  overflow: auto;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #333;
+}
+.response-body.raw { white-space: pre-wrap; }
+
+/* Suggestion table between URL and JSON */
+.suggestion-table { margin-bottom: 12px; }
+.suggestion-table:empty { margin-bottom: 0; }
+
+/* JSON tree */
+.jt { list-style: none; padding-left: 18px; margin: 0; }
+.jt-root { padding-left: 0; }
+.jt-row { position: relative; }
+.jt-toggle {
+  position: absolute;
+  left: -15px;
+  top: 1px;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #999;
+  font-size: 10px;
+  user-select: none;
+  border-radius: 3px;
+}
+.jt-toggle:hover { background: #e0e0e0; color: #333; }
+.jt-key { color: #1a1a1a; font-weight: 600; }
+.jt-str { color: #0066cc; word-break: break-all; }
+.jt-num { color: #c7500f; }
+.jt-bool { color: #7b3db4; }
+.jt-null { color: #999; }
+.jt-brace { color: #666; }
+.jt-collapsed { display: none; }
+.jt-ellipsis {
+  color: #999;
+  cursor: pointer;
+  font-size: 11px;
+}
+.jt-ellipsis:hover { color: #666; }
+
+/* Suggestion table */
+.suggestion-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.suggestion-table th {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 2px solid #e0e0e0;
+  font-weight: 600;
+  color: #666;
+  font-size: 11px;
+}
+.suggestion-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+.suggestion-table td:first-child { font-weight: 600; }
+
+/* Right column sticky */
+.split-right {
+  position: sticky;
+  top: 24px;
+  min-width: 0;
+}
+
+/* Dataset section */
+.ds-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.ds-controls select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: #1a1a1a;
+  cursor: pointer;
+  outline: none;
+}
+.ds-controls select:focus { border-color: #0066cc; }
+.ds-note {
+  font-size: 12px;
+  color: #999;
+  margin-left: auto;
+}
+
+.ds-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.ds-stat .num {
+  font-size: 20px;
+  font-weight: 600;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #1a1a1a;
+}
+.ds-stat .lbl {
+  font-size: 12px;
+  color: #999;
+}
+
+.ds-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ds-filters select, .ds-filters input {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  color: #1a1a1a;
+  outline: none;
+}
+.ds-filters select:focus, .ds-filters input:focus { border-color: #0066cc; }
+.ds-filters input::placeholder { color: #ccc; }
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.records-table th {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 2px solid #e0e0e0;
+  font-weight: 600;
+  color: #666;
+  font-size: 12px;
+}
+.records-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+.records-table .id-col {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #999;
+}
+.records-table .size-col {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #999;
+  white-space: nowrap;
+}
+.records-table tbody tr { cursor: pointer; transition: background 0.1s; }
+.records-table tbody tr:hover { background: #fafafa; }
+
+.records-wrap {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 24px;
+}
+
+/* Attachment panel */
+.att-panel { margin-bottom: 24px; }
+.att-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.att-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.att-header a {
+  font-size: 13px;
+  color: #0066cc;
+  text-decoration: none;
+}
+.att-header a:hover { text-decoration: underline; }
+
+.att-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.att-search {
+  margin-bottom: 12px;
+}
+.att-search input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  color: #1a1a1a;
+  outline: none;
+}
+.att-search input:focus { border-color: #0066cc; }
+.att-search input::placeholder { color: #ccc; }
+
+.att-items {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+.att-item {
+  border-bottom: 1px solid #f0f0f0;
+}
+.att-item:last-child { border-bottom: none; }
+.att-summary {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #333;
+  line-height: 1.5;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  transition: background 0.1s;
+}
+.att-summary:hover { background: #f0f2f5; }
+.att-summary strong { font-weight: 600; color: #1a1a1a; }
+.att-arrow {
+  color: #999;
+  font-size: 10px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.att-item.open .att-arrow { transform: rotate(90deg); }
+.att-detail {
+  display: none;
+  padding: 0 12px 8px;
+  border-top: 1px solid #f0f0f0;
+  background: #fff;
+}
+.att-item.open .att-detail { display: block; }
+.att-detail .response-body {
+  margin: 8px 0 0;
+  max-height: 300px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Merino Provider Explorer</h1>
+  <p>Dev tool for testing Merino suggest providers and browsing Remote Settings datasets.</p>
+</header>
+
+<nav class="tabs">
+  <button class="active" data-tab="suggest">Suggest</button>
+  <button data-tab="dataset">Datasets</button>
+</nav>
+
+<!-- Suggest tab -->
+<div class="tab-panel active" id="tab-suggest">
+
+  <div class="card">
+    <div class="env-row">
+      <div class="env-links" id="envLinks"></div>
+      <div class="env-status">
+        <span class="env-dot" id="envDot"></span>
+        <span id="envStatusText">Not checked</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Provider</h2>
+    <div class="provider-select-row">
+      <select id="providerSelect"><option value="">Select a provider...</option></select>
+    </div>
+    <div class="provider-info" id="providerInfo" style="display:none">
+      <div class="provider-desc" id="providerDesc"></div>
+      <div class="examples-label">Try an example</div>
+      <div class="examples" id="queryExamples"></div>
+      <div class="provider-notes" id="providerNotes"></div>
+    </div>
+  </div>
+
+  <!-- Hero: Q + Country + Send -->
+  <div class="card hero-card" id="queryForm">
+    <div class="hero-row">
+      <div class="hero-q">
+        <input type="text" id="fQ" class="q-input" placeholder="Search query..." autofocus>
+      </div>
+      <div class="hero-country">
+        <select id="fCountry">
+          <option value="US">US</option>
+          <option value="GB">GB</option>
+          <option value="DE">DE</option>
+          <option value="FR">FR</option>
+          <option value="CA">CA</option>
+          <option value="AU">AU</option>
+          <option value="IT">IT</option>
+          <option value="ES">ES</option>
+          <option value="PL">PL</option>
+          <option value="BR">BR</option>
+          <option value="MX">MX</option>
+          <option value="JP">JP</option>
+          <option value="">&mdash;</option>
+        </select>
+      </div>
+      <button class="btn btn-send" id="btnSend">Send</button>
+    </div>
+    <input type="hidden" id="fProviders">
+
+    <div class="options-toggle" id="optionsToggle">Options</div>
+    <div class="options-panel" id="optionsPanel" style="display:none">
+      <div class="field-row-4">
+        <div class="field">
+          <label for="fProvidersVisible">providers</label>
+          <input type="text" id="fProvidersVisible" placeholder="e.g. adm,wikipedia">
+        </div>
+        <div class="field" id="fRequestTypeGroup">
+          <label for="fRequestType">request_type</label>
+          <select id="fRequestType">
+            <option value="">(default)</option>
+            <option value="weather">weather</option>
+            <option value="location">location</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fSource">source</label>
+          <select id="fSource">
+            <option value="unknown">unknown</option>
+            <option value="urlbar">urlbar</option>
+            <option value="newtab">newtab</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fVariants">client_variants</label>
+          <input type="text" id="fVariants" placeholder="e.g. experiment-a,rollout-b">
+        </div>
+      </div>
+      <div class="field-row-4">
+        <div class="field">
+          <label for="fCity">city</label>
+          <input type="text" id="fCity" placeholder="Portland">
+        </div>
+        <div class="field">
+          <label for="fRegion">region</label>
+          <input type="text" id="fRegion" placeholder="OR">
+        </div>
+        <div class="field">
+          <label for="fAcceptLang">Accept-Language</label>
+          <input type="text" id="fAcceptLang" value="en-US" placeholder="en-US">
+        </div>
+        <div class="field">
+          <label for="fXFF">X-Forwarded-For</label>
+          <input type="text" id="fXFF" placeholder="216.160.83.56">
+          <div class="hint" id="xffNote">US IP for local MMDB.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- URL preview -->
+  <div class="url-preview" id="urlPreview">Select a provider and enter a query...</div>
+
+  <!-- Response -->
+  <div class="card" id="responsePanel" style="display:none">
+    <div class="response-meta">
+      <span class="status" id="respStatus"></span>
+      <span class="timing" id="respTime"></span>
+      <span id="respSummary" style="color:#555"></span>
+    </div>
+    <table class="suggestion-table" id="respTable"></table>
+    <div class="response-body" id="respBody"></div>
+  </div>
+</div>
+
+<!-- Datasets tab -->
+<div class="tab-panel" id="tab-dataset">
+
+  <h2>Collection</h2>
+  <div class="ds-controls">
+    <select id="dsCollection">
+      <option value="">Select collection...</option>
+    </select>
+    <button class="btn" id="dsFetch">Fetch</button>
+    <span class="ds-note">Public Kinto REST API, no auth needed</span>
+  </div>
+
+  <div class="ds-stats" id="dsStats"></div>
+
+  <div class="ds-filters" id="dsFilters" style="display:none">
+    <select id="dsFilterType"><option value="">All types</option></select>
+    <select id="dsFilterCountry"><option value="">All countries</option></select>
+    <select id="dsFilterFF"><option value="">All form_factors</option></select>
+    <input type="text" id="dsSearch" placeholder="Search records...">
+  </div>
+
+  <div class="records-wrap" id="dsRecordsWrap">
+    <table class="records-table" id="dsRecords">
+      <thead>
+        <tr><th>ID</th><th>Type</th><th>Country</th><th>Form factor</th><th>Size</th></tr>
+      </thead>
+      <tbody id="dsRecordsBody">
+        <tr><td colspan="5" class="empty-state">Select a collection and click Fetch</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="att-panel" id="dsAttachment" style="display:none">
+    <div class="att-header">
+      <h3 id="attTitle">Attachment</h3>
+      <a id="attDirectLink" href="#" target="_blank" rel="noopener">Open JSON</a>
+    </div>
+    <div class="att-stats" id="attStats"></div>
+    <div class="att-search">
+      <input type="text" id="attSearch" placeholder="Search within attachment...">
+    </div>
+    <div class="att-items" id="attItems"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ── Config & state ──
+let CONFIG = null;
+let PROVIDERS = [];
+let REMOTE_SETTINGS = {};
+let ENVIRONMENTS = {};
+let currentEnv = 'production';
+let currentBaseUrl = 'https://prod.merino.prod.webservices.mozgcp.net';
+let selectedProvider = null;
+let liveProviders = null;
+let dsAllRecords = [];
+let dsAttachmentBaseUrl = null;
+
+// ── Load config ──
+(async function init() {
+  try {
+    const resp = await fetch('provider-explorer-config.json');
+    CONFIG = await resp.json();
+    PROVIDERS = CONFIG.providers;
+    REMOTE_SETTINGS = CONFIG.remote_settings;
+    ENVIRONMENTS = CONFIG.environments;
+    bootstrap();
+  } catch (e) {
+    document.querySelector('.container').innerHTML =
+      '<p style="color:#d93025;margin-top:40px">Failed to load provider-explorer-config.json: ' + escHtml(e.message) + '</p>'
+      + '<p style="color:#666;margin-top:8px">Make sure this file is served from a web server (not file://). '
+      + 'Try: <code style="font-family:SF Mono,Menlo,monospace">python3 -m http.server 9000 -d dev/</code></p>';
+  }
+})();
+
+function bootstrap() {
+  renderEnvLinks();
+  renderProviderSelect();
+  initDatasetExplorer();
+  document.getElementById('fRequestTypeGroup').classList.add('hidden');
+  if (currentEnv === 'local') {
+    document.getElementById('fXFF').value = '216.160.83.56';
+    document.getElementById('xffNote').textContent = 'Sent with request. US test IP for local MMDB.';
+  } else {
+    document.getElementById('fXFF').value = '';
+    document.getElementById('xffNote').textContent = 'Not sent (triggers CORS preflight). Server uses your real IP.';
+  }
+  updateUrlPreview();
+  checkEnvConnectivity();
+  bindEvents();
+}
+
+// ── Tab switching ──
+function bindEvents() {
+  document.querySelectorAll('nav.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Options toggle
+  const toggle = document.getElementById('optionsToggle');
+  const panel = document.getElementById('optionsPanel');
+  toggle.addEventListener('click', () => {
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? '' : 'none';
+    toggle.classList.toggle('open', open);
+  });
+
+  // Sync visible providers input -> hidden fProviders
+  const provVis = document.getElementById('fProvidersVisible');
+  const provHid = document.getElementById('fProviders');
+  provVis.addEventListener('input', () => { provHid.value = provVis.value; updateUrlPreview(); });
+
+  // Country presets: update city/region/accept-language when country changes
+  const COUNTRY_PRESETS = {
+    US: { city: 'Portland', region: 'OR', lang: 'en-US' },
+    GB: { city: 'London', region: 'ENG', lang: 'en-GB' },
+    DE: { city: 'Berlin', region: 'BE', lang: 'de' },
+    FR: { city: 'Paris', region: 'IDF', lang: 'fr' },
+    CA: { city: 'Toronto', region: 'ON', lang: 'en-CA' },
+    AU: { city: 'Sydney', region: 'NSW', lang: 'en-AU' },
+    IT: { city: 'Rome', region: 'RM', lang: 'it' },
+    ES: { city: 'Madrid', region: 'MD', lang: 'es' },
+    PL: { city: 'Warsaw', region: 'MZ', lang: 'pl' },
+    BR: { city: 'São Paulo', region: 'SP', lang: 'pt-BR' },
+    MX: { city: 'Mexico City', region: 'CMX', lang: 'es-MX' },
+    JP: { city: 'Tokyo', region: '13', lang: 'ja' },
+  };
+  document.getElementById('fCountry').addEventListener('change', () => {
+    const code = document.getElementById('fCountry').value;
+    const preset = COUNTRY_PRESETS[code] || { city: '', region: '', lang: 'en-US' };
+    document.getElementById('fCity').value = preset.city;
+    document.getElementById('fRegion').value = preset.region;
+    document.getElementById('fAcceptLang').value = preset.lang;
+    updateUrlPreview();
+  });
+
+  // Form change listeners
+  document.querySelectorAll('#queryForm input, #queryForm select').forEach(el => {
+    el.addEventListener('input', updateUrlPreview);
+  });
+
+  // Enter key sends
+  document.querySelectorAll('#queryForm input[type="text"]').forEach(el => {
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') sendRequest(); });
+  });
+
+  document.getElementById('btnSend').addEventListener('click', sendRequest);
+  document.getElementById('dsFetch').addEventListener('click', fetchCollection);
+
+  // DS filter listeners
+  ['dsFilterType', 'dsFilterCountry', 'dsFilterFF', 'dsSearch'].forEach(id => {
+    document.getElementById(id).addEventListener('input', renderDsRecords);
+  });
+}
+
+// ── Environment ──
+function renderEnvLinks() {
+  const container = document.getElementById('envLinks');
+  container.innerHTML = '';
+  Object.entries(ENVIRONMENTS).forEach(([key, env]) => {
+    const btn = document.createElement('button');
+    btn.className = 'env-link' + (key === currentEnv ? ' active' : '');
+    btn.textContent = env.label;
+    btn.addEventListener('click', () => {
+      currentEnv = key;
+      currentBaseUrl = env.url;
+      container.querySelectorAll('.env-link').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const xffInput = document.getElementById('fXFF');
+      if (currentEnv === 'local') {
+        xffInput.value = '216.160.83.56';
+        document.getElementById('xffNote').textContent = 'Sent with request. US test IP for local MMDB.';
+      } else {
+        xffInput.value = '';
+        document.getElementById('xffNote').textContent = 'Not sent (triggers CORS preflight). Server uses your real IP.';
+      }
+
+      checkEnvConnectivity();
+      updateUrlPreview();
+    });
+    container.appendChild(btn);
+  });
+}
+
+async function checkEnvConnectivity() {
+  const dot = document.getElementById('envDot');
+  const text = document.getElementById('envStatusText');
+  dot.className = 'env-dot loading';
+  text.textContent = 'Checking...';
+  try {
+    const resp = await fetch(currentBaseUrl + '/api/v1/providers', { signal: AbortSignal.timeout(5000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      liveProviders = data;
+      dot.className = 'env-dot ok';
+      text.textContent = data.length + ' providers live';
+      renderProviderSelect();
+    } else {
+      dot.className = 'env-dot err';
+      text.textContent = 'HTTP ' + resp.status;
+      liveProviders = null;
+    }
+  } catch {
+    dot.className = 'env-dot err';
+    text.textContent = 'Unreachable';
+    liveProviders = null;
+  }
+}
+
+// ── Provider select ──
+function renderProviderSelect() {
+  const sel = document.getElementById('providerSelect');
+  // Keep first placeholder option, clear the rest
+  while (sel.options.length > 1) sel.remove(1);
+
+  PROVIDERS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+
+    let statusText = '';
+    const live = liveProviders ? liveProviders.find(lp => lp.id === p.id) : null;
+    if (live) {
+      statusText = live.availability === 'enabled_by_default' ? 'default' : 'opt-in';
+    } else if (p.runtime_disabled) {
+      statusText = 'runtime disabled';
+    } else if (p.enabled_by_default) {
+      statusText = 'default';
+    } else {
+      statusText = 'opt-in';
+    }
+
+    opt.textContent = p.id + ' \u2014 ' + p.description + ' (' + statusText + ')';
+    if (selectedProvider && selectedProvider.id === p.id) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  sel.onchange = function() {
+    const p = PROVIDERS.find(pr => pr.id === this.value);
+    if (p) selectProvider(p);
+  };
+}
+
+function selectProvider(p) {
+  selectedProvider = p;
+
+  // Sync dropdown
+  document.getElementById('providerSelect').value = p.id;
+
+  // Show provider info
+  document.getElementById('providerInfo').style.display = '';
+  document.getElementById('providerDesc').textContent = p.description;
+
+  document.getElementById('fProviders').value = p.id;
+  const provVis = document.getElementById('fProvidersVisible');
+  if (provVis) provVis.value = p.id;
+
+  // request_type visibility
+  const rtGroup = document.getElementById('fRequestTypeGroup');
+  if (p.id === 'accuweather') {
+    rtGroup.classList.remove('hidden');
+    document.getElementById('fRequestType').value = p.special_params.request_type || '';
+  } else {
+    rtGroup.classList.add('hidden');
+    document.getElementById('fRequestType').value = '';
+  }
+
+  // Geo fields for yelp
+  if (p.special_params.city) {
+    document.getElementById('fCity').value = p.special_params.city;
+    document.getElementById('fRegion').value = p.special_params.region || '';
+    document.getElementById('fCountry').value = p.special_params.country || '';
+  } else {
+    document.getElementById('fCity').value = '';
+    document.getElementById('fRegion').value = '';
+    document.getElementById('fCountry').value = '';
+  }
+
+  // First example query
+  if (p.example_queries.length > 0) {
+    const first = normalizeExample(p.example_queries[0]);
+    document.getElementById('fQ').value = first.q;
+  }
+
+  renderExamples(p);
+  updateUrlPreview();
+}
+
+// Examples can be strings ("firefox") or objects ({q, label, params})
+function normalizeExample(ex) {
+  if (typeof ex === 'string') return { q: ex, label: null, params: {} };
+  return { q: ex.q || '', label: ex.label || null, params: ex.params || {} };
+}
+
+function renderExamples(p) {
+  const container = document.getElementById('queryExamples');
+  const notes = document.getElementById('providerNotes');
+  container.innerHTML = '';
+  notes.textContent = '';
+  if (!p) return;
+
+  p.example_queries.forEach(raw => {
+    const ex = normalizeExample(raw);
+    const link = document.createElement('a');
+    const dot = document.createElement('span');
+    dot.className = 'eq-dot loading';
+
+    if (ex.q === '') {
+      link.className = 'empty-q';
+      link.textContent = ex.label || '(empty)';
+    } else {
+      link.textContent = ex.q;
+    }
+    link.prepend(dot);
+
+    link.addEventListener('click', () => {
+      document.getElementById('fQ').value = ex.q;
+      // Apply example-specific params to the form
+      if (ex.params.request_type !== undefined) {
+        document.getElementById('fRequestType').value = ex.params.request_type;
+      }
+      updateUrlPreview();
+    });
+    container.appendChild(link);
+
+    // Test this example in the background
+    testExampleQuery(p, ex, dot);
+  });
+
+  if (p.notes) {
+    notes.textContent = p.notes;
+  }
+}
+
+async function testExampleQuery(provider, ex, dotEl) {
+  const params = new URLSearchParams();
+  params.set('q', ex.q);
+  params.set('providers', provider.id);
+
+  // Merge: provider special_params first, then example-specific params override
+  const merged = Object.assign({}, provider.special_params, ex.params);
+  if (merged.request_type) params.set('request_type', merged.request_type);
+  if (merged.city) params.set('city', merged.city);
+  if (merged.region) params.set('region', merged.region);
+  if (merged.country) params.set('country', merged.country);
+
+  const url = currentBaseUrl + '/api/v1/suggest?' + params.toString();
+  try {
+    const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) { dotEl.className = 'eq-dot err'; return; }
+    const data = await resp.json();
+    const count = (data.suggestions || []).length;
+    dotEl.className = count > 0 ? 'eq-dot ok' : 'eq-dot empty';
+    dotEl.title = count > 0 ? count + ' suggestion(s)' : 'No suggestions';
+  } catch {
+    dotEl.className = 'eq-dot err';
+    dotEl.title = 'Request failed';
+  }
+}
+
+// ── URL preview ──
+function buildUrl() {
+  const base = currentBaseUrl + '/api/v1/suggest';
+  const params = new URLSearchParams();
+  params.set('q', document.getElementById('fQ').value);
+
+  const providers = document.getElementById('fProviders').value.trim();
+  if (providers) params.set('providers', providers);
+
+  const rt = document.getElementById('fRequestType').value;
+  if (rt) params.set('request_type', rt);
+
+  const source = document.getElementById('fSource').value;
+  if (source && source !== 'unknown') params.set('source', source);
+
+  const city = document.getElementById('fCity').value.trim();
+  const region = document.getElementById('fRegion').value.trim();
+  const country = document.getElementById('fCountry').value.trim();
+  // API requires city, region, and country to be all present or all omitted.
+  if (city && region && country) {
+    params.set('city', city);
+    params.set('region', region);
+    params.set('country', country);
+  }
+
+  const variants = document.getElementById('fVariants').value.trim();
+  if (variants) params.set('client_variants', variants);
+
+  return base + '?' + params.toString();
+}
+
+function updateUrlPreview() {
+  document.getElementById('urlPreview').textContent = buildUrl();
+}
+
+// ── Send request ──
+async function sendRequest() {
+  const url = buildUrl();
+  const btn = document.getElementById('btnSend');
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  const headers = {};
+  const al = document.getElementById('fAcceptLang').value.trim();
+  if (al) headers['Accept-Language'] = al;
+  const xff = document.getElementById('fXFF').value.trim();
+  if (xff && currentEnv === 'local') headers['X-Forwarded-For'] = xff;
+
+  const panel = document.getElementById('responsePanel');
+  panel.style.display = '';
+
+  const t0 = performance.now();
+  try {
+    const resp = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+    const elapsed = Math.round(performance.now() - t0);
+    const text = await resp.text();
+
+    const statusEl = document.getElementById('respStatus');
+    statusEl.textContent = resp.status + ' ' + resp.statusText;
+    statusEl.className = 'status ' + (resp.status < 300 ? 'ok' : resp.status < 500 ? 'warn' : 'err');
+
+    document.getElementById('respTime').textContent = elapsed + 'ms';
+
+    let data;
+    try { data = JSON.parse(text); } catch { data = null; }
+
+    const body = document.getElementById('respBody');
+    if (data) {
+      body.classList.remove('raw');
+      body.innerHTML = '';
+      body.appendChild(buildJsonTree(data));
+      const suggestions = data.suggestions || [];
+      document.getElementById('respSummary').textContent = suggestions.length + ' suggestion(s)';
+      renderSummaryTable(suggestions);
+    } else {
+      body.classList.add('raw');
+      body.textContent = text || '(empty response)';
+      document.getElementById('respSummary').textContent = '';
+      document.getElementById('respTable').innerHTML = '';
+    }
+  } catch (e) {
+    const elapsed = Math.round(performance.now() - t0);
+    const statusEl = document.getElementById('respStatus');
+    statusEl.textContent = 'Error';
+    statusEl.className = 'status err';
+    document.getElementById('respTime').textContent = elapsed + 'ms';
+    const body = document.getElementById('respBody');
+    body.classList.add('raw');
+    body.textContent = e.message;
+    document.getElementById('respSummary').textContent = '';
+    document.getElementById('respTable').innerHTML = '';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Send';
+}
+
+function renderSummaryTable(suggestions) {
+  const table = document.getElementById('respTable');
+  if (!suggestions.length) { table.innerHTML = ''; return; }
+  let html = '<tr><th>Provider</th><th>Title</th><th>URL</th><th>Score</th></tr>';
+  suggestions.forEach(s => {
+    html += '<tr><td>' + escHtml(s.provider || '') + '</td><td>' + escHtml(truncate(s.title || '', 50))
+      + '</td><td>' + escHtml(truncate(s.url || '', 60)) + '</td><td>' + (s.score ?? '') + '</td></tr>';
+  });
+  table.innerHTML = html;
+}
+
+// ── Collapsible JSON tree ──
+function buildJsonTree(data) {
+  const ul = document.createElement('ul');
+  ul.className = 'jt jt-root';
+  renderNode(ul, data, null, false);
+  return ul;
+}
+
+function renderNode(parent, value, key, addComma) {
+  const li = document.createElement('li');
+  li.className = 'jt-row';
+
+  if (value === null) {
+    li.innerHTML = (key !== null ? '<span class="jt-key">"' + escHtml(key) + '"</span>: ' : '')
+      + '<span class="jt-null">null</span>' + (addComma ? ',' : '');
+    parent.appendChild(li);
+    return;
+  }
+
+  if (typeof value === 'object') {
+    const isArr = Array.isArray(value);
+    const entries = isArr ? value : Object.entries(value);
+    const count = isArr ? value.length : entries.length;
+    const open = isArr ? '[' : '{';
+    const close = isArr ? ']' : '}';
+
+    // Toggle button
+    const toggle = document.createElement('span');
+    toggle.className = 'jt-toggle';
+    toggle.textContent = '\u25BE'; // ▾
+    li.appendChild(toggle);
+
+    // Key + opening brace
+    const head = document.createElement('span');
+    head.innerHTML = (key !== null ? '<span class="jt-key">"' + escHtml(key) + '"</span>: ' : '')
+      + '<span class="jt-brace">' + open + '</span>';
+    li.appendChild(head);
+
+    // Collapsed placeholder
+    const ellipsis = document.createElement('span');
+    ellipsis.className = 'jt-ellipsis jt-collapsed';
+    ellipsis.textContent = ' ' + count + (count === 1 ? ' item' : ' items') + ' ';
+    li.appendChild(ellipsis);
+
+    // Closing brace (collapsed, inline)
+    const closeInline = document.createElement('span');
+    closeInline.className = 'jt-brace jt-collapsed';
+    closeInline.textContent = close + (addComma ? ',' : '');
+    li.appendChild(closeInline);
+
+    // Child list
+    const childUl = document.createElement('ul');
+    childUl.className = 'jt';
+    if (isArr) {
+      value.forEach((item, i) => renderNode(childUl, item, null, i < count - 1));
+    } else {
+      entries.forEach(([k, v], i) => renderNode(childUl, v, k, i < count - 1));
+    }
+    li.appendChild(childUl);
+
+    // Closing brace (expanded)
+    const closeLi = document.createElement('li');
+    closeLi.className = 'jt-row';
+    closeLi.innerHTML = '<span class="jt-brace">' + close + '</span>' + (addComma ? ',' : '');
+    childUl.appendChild(closeLi);
+
+    // Toggle behavior
+    toggle.addEventListener('click', () => {
+      const collapsed = childUl.classList.toggle('jt-collapsed');
+      ellipsis.classList.toggle('jt-collapsed', !collapsed);
+      closeInline.classList.toggle('jt-collapsed', !collapsed);
+      toggle.textContent = collapsed ? '\u25B8' : '\u25BE'; // ▸ or ▾
+    });
+    ellipsis.addEventListener('click', () => toggle.click());
+
+    parent.appendChild(li);
+    return;
+  }
+
+  // Primitives
+  let valHtml;
+  if (typeof value === 'string') {
+    valHtml = '<span class="jt-str">"' + escHtml(value) + '"</span>';
+  } else if (typeof value === 'number') {
+    valHtml = '<span class="jt-num">' + value + '</span>';
+  } else if (typeof value === 'boolean') {
+    valHtml = '<span class="jt-bool">' + value + '</span>';
+  } else {
+    valHtml = escHtml(String(value));
+  }
+  li.innerHTML = (key !== null ? '<span class="jt-key">"' + escHtml(key) + '"</span>: ' : '')
+    + valHtml + (addComma ? ',' : '');
+  parent.appendChild(li);
+}
+
+// ── Dataset Explorer ──
+function initDatasetExplorer() {
+  const sel = document.getElementById('dsCollection');
+  Object.entries(REMOTE_SETTINGS.collections).forEach(([label, coll]) => {
+    const opt = document.createElement('option');
+    opt.value = coll;
+    opt.textContent = coll;
+    sel.appendChild(opt);
+  });
+}
+
+async function fetchCollection() {
+  const coll = document.getElementById('dsCollection').value;
+  if (!coll) return;
+  const btn = document.getElementById('dsFetch');
+  btn.disabled = true;
+  btn.textContent = 'Fetching...';
+
+  try {
+    if (!dsAttachmentBaseUrl) {
+      try {
+        const infoResp = await fetch(REMOTE_SETTINGS.server.replace(/\/v1\/?$/, '/v1/'));
+        const info = await infoResp.json();
+        dsAttachmentBaseUrl = info.capabilities?.attachments?.base_url || '';
+      } catch { dsAttachmentBaseUrl = ''; }
+    }
+
+    const url = REMOTE_SETTINGS.server + '/buckets/' + REMOTE_SETTINGS.bucket + '/collections/' + coll + '/records?_limit=9999';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    dsAllRecords = data.data || [];
+    renderDsStats();
+    populateDsFilters();
+    renderDsRecords();
+    document.getElementById('dsFilters').style.display = '';
+    document.getElementById('dsAttachment').style.display = 'none';
+  } catch (e) {
+    document.getElementById('dsRecordsBody').innerHTML =
+      '<tr><td colspan="5" class="empty-state">Error: ' + escHtml(e.message) + '</td></tr>';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Fetch';
+}
+
+function renderDsStats() {
+  const stats = document.getElementById('dsStats');
+  const records = dsAllRecords;
+
+  const countries = {};
+  const formFactors = {};
+  let totalAttSize = 0;
+  records.forEach(r => {
+    const c = r.country || 'unknown';
+    const ff = r.form_factor || 'unknown';
+    countries[c] = (countries[c] || 0) + 1;
+    formFactors[ff] = (formFactors[ff] || 0) + 1;
+    if (r.attachment) totalAttSize += (r.attachment.size || 0);
+  });
+
+  let html = '<div class="ds-stat"><div class="num">' + records.length + '</div><div class="lbl">Records</div></div>';
+  html += '<div class="ds-stat"><div class="num">' + Object.keys(countries).length + '</div><div class="lbl">Countries</div></div>';
+  html += '<div class="ds-stat"><div class="num">' + Object.keys(formFactors).length + '</div><div class="lbl">Form factors</div></div>';
+  if (totalAttSize > 0) {
+    html += '<div class="ds-stat"><div class="num">' + formatBytes(totalAttSize) + '</div><div class="lbl">Total attachments</div></div>';
+  }
+
+  stats.innerHTML = html;
+}
+
+function populateDsFilters() {
+  const types = new Set(), countries = new Set(), ffs = new Set();
+  dsAllRecords.forEach(r => {
+    if (r.type) types.add(r.type);
+    if (r.country) countries.add(r.country);
+    if (r.form_factor) ffs.add(r.form_factor);
+  });
+  fillSelect('dsFilterType', types, 'All types');
+  fillSelect('dsFilterCountry', countries, 'All countries');
+  fillSelect('dsFilterFF', ffs, 'All form_factors');
+}
+
+function fillSelect(id, values, defaultLabel) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">' + defaultLabel + '</option>';
+  [...values].sort().forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  });
+}
+
+function renderDsRecords() {
+  const container = document.getElementById('dsRecordsBody');
+  const filterType = document.getElementById('dsFilterType').value;
+  const filterCountry = document.getElementById('dsFilterCountry').value;
+  const filterFF = document.getElementById('dsFilterFF').value;
+  const search = document.getElementById('dsSearch').value.toLowerCase();
+
+  const filtered = dsAllRecords.filter(r => {
+    if (filterType && r.type !== filterType) return false;
+    if (filterCountry && r.country !== filterCountry) return false;
+    if (filterFF && r.form_factor !== filterFF) return false;
+    if (search) {
+      const text = JSON.stringify(r).toLowerCase();
+      if (!text.includes(search)) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = '<tr><td colspan="5" class="empty-state">No records match filters</td></tr>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(r => {
+    const size = r.attachment ? formatBytes(r.attachment.size || 0) : '';
+    return '<tr data-id="' + escAttr(r.id) + '">'
+      + '<td class="id-col">' + escHtml(truncate(r.id, 14)) + '</td>'
+      + '<td>' + escHtml(r.type || '') + '</td>'
+      + '<td>' + escHtml(r.country || '') + '</td>'
+      + '<td>' + escHtml(r.form_factor || '') + '</td>'
+      + '<td class="size-col">' + size + '</td>'
+      + '</tr>';
+  }).join('');
+
+  container.querySelectorAll('tr').forEach(row => {
+    row.addEventListener('click', () => {
+      const rec = dsAllRecords.find(r => r.id === row.dataset.id);
+      if (rec && rec.attachment) loadAttachment(rec);
+    });
+  });
+}
+
+const CORS_PROXY = 'https://corsproxy.io/?';
+
+async function fetchWithCorsRetry(url) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    return { data: await resp.json(), proxied: false };
+  } catch {
+    // CORS blocked — retry through proxy
+    const resp = await fetch(CORS_PROXY + encodeURIComponent(url));
+    if (!resp.ok) throw new Error('Proxy HTTP ' + resp.status);
+    return { data: await resp.json(), proxied: true };
+  }
+}
+
+async function loadAttachment(record) {
+  const panel = document.getElementById('dsAttachment');
+  panel.style.display = '';
+  document.getElementById('attTitle').textContent = 'Attachment: ' + (record.type || record.id);
+  document.getElementById('attStats').innerHTML = '<div class="ds-stat"><div class="lbl">Loading...</div></div>';
+  document.getElementById('attItems').innerHTML = '';
+  document.getElementById('attSearch').value = '';
+
+  const attUrl = dsAttachmentBaseUrl + record.attachment.location;
+  document.getElementById('attDirectLink').href = attUrl;
+
+  try {
+    const { data, proxied } = await fetchWithCorsRetry(attUrl);
+    const items = Array.isArray(data) ? data : [data];
+
+    const advertisers = new Set();
+    let totalKeywords = 0;
+    const categories = new Set();
+    items.forEach(item => {
+      if (item.advertiser) advertisers.add(item.advertiser);
+      if (item.keywords) totalKeywords += item.keywords.length;
+      if (item.iab_category) categories.add(item.iab_category);
+    });
+
+    let statsHtml = '<div class="ds-stat"><div class="num">' + items.length + '</div><div class="lbl">Suggestions</div></div>';
+    if (advertisers.size) statsHtml += '<div class="ds-stat"><div class="num">' + advertisers.size + '</div><div class="lbl">Advertisers</div></div>';
+    if (totalKeywords) statsHtml += '<div class="ds-stat"><div class="num">' + totalKeywords + '</div><div class="lbl">Keywords</div></div>';
+    if (categories.size) statsHtml += '<div class="ds-stat"><div class="num">' + categories.size + '</div><div class="lbl">IAB Categories</div></div>';
+    if (proxied) statsHtml += '<div class="ds-stat"><div class="lbl" style="color:#f9ab00">via CORS proxy</div></div>';
+    document.getElementById('attStats').innerHTML = statsHtml;
+
+    renderAttItems(items);
+
+    document.getElementById('attSearch').oninput = function() {
+      const q = this.value.toLowerCase();
+      const f = q ? items.filter(i => JSON.stringify(i).toLowerCase().includes(q)) : items;
+      renderAttItems(f);
+    };
+  } catch (e) {
+    document.getElementById('attStats').innerHTML =
+      '<div class="ds-stat"><div class="lbl">Failed to load: ' + escHtml(e.message) + '</div></div>';
+    document.getElementById('attItems').innerHTML =
+      '<div class="att-item" style="user-select:all">curl -sL "' + escHtml(attUrl) + '" | python3 -m json.tool | head -80</div>';
+  }
+}
+
+function renderAttItems(items) {
+  const container = document.getElementById('attItems');
+  container.innerHTML = '';
+  const shown = items.slice(0, 200);
+  shown.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'att-item';
+
+    const title = item.title || item.advertiser || item.url || '(no title)';
+    const kw = item.keywords ? item.keywords.slice(0, 8).join(', ') + (item.keywords.length > 8 ? '...' : '') : '';
+
+    // Summary row
+    const summary = document.createElement('div');
+    summary.className = 'att-summary';
+    summary.innerHTML = '<span class="att-arrow">\u25B6</span><span><strong>' + escHtml(title) + '</strong>'
+      + (item.advertiser ? ' \u2014 ' + escHtml(item.advertiser) : '')
+      + (item.iab_category ? ' [' + escHtml(item.iab_category) + ']' : '')
+      + (kw ? '<br>Keywords: ' + escHtml(kw) : '')
+      + '</span>';
+
+    // Detail (lazy-rendered JSON tree)
+    const detail = document.createElement('div');
+    detail.className = 'att-detail';
+    let rendered = false;
+
+    summary.addEventListener('click', () => {
+      div.classList.toggle('open');
+      if (!rendered) {
+        rendered = true;
+        const body = document.createElement('div');
+        body.className = 'response-body';
+        body.appendChild(buildJsonTree(item));
+        detail.appendChild(body);
+      }
+    });
+
+    div.appendChild(summary);
+    div.appendChild(detail);
+    container.appendChild(div);
+  });
+  if (items.length > 200) {
+    const more = document.createElement('div');
+    more.className = 'att-item';
+    more.innerHTML = '<div class="att-summary" style="color:#999;cursor:default">...and ' + (items.length - 200) + ' more</div>';
+    container.appendChild(more);
+  }
+}
+
+// ── Utilities ──
+function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function escAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+function truncate(s, n) { return s.length > n ? s.slice(0, n) + '...' : s; }
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+</script>
+</body>
+</html>
