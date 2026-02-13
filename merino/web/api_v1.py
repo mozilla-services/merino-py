@@ -38,10 +38,12 @@ from merino.curated_recommendations.legacy.protocol import (
 from merino.middleware import ScopeKey
 from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest import get_providers as get_suggest_providers
+from merino.providers.suggest import get_weather_provider
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.suggest.base import BaseProvider, SuggestionRequest
 
 from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.suggest.weather.backends.protocol import HourlyForecast, WeatherContext
 from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
 from merino.utils import task_runner
 
@@ -58,6 +60,7 @@ from merino.utils.query_processing.geo_params import (
 
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 from merino.providers.manifest.provider import Provider as ManifestProvider
+from merino.providers.suggest.weather.provider import Provider as WeatherProvider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -472,4 +475,37 @@ async def get_manifest(
         return ORJSONResponse(
             content=jsonable_encoder(manifest_data),
             status_code=404,
+        )
+
+
+@router.get(
+    "/weather/hourly-forecasts",
+    tags=["weather"],
+    summary="Get hourly Forecasts",
+    response_model=HourlyForecast,
+)
+async def get_hourly_forecasts(
+    request: Request, provider: WeatherProvider = Depends(get_weather_provider)
+) -> ORJSONResponse:
+    """Query merino for hourly forecast data."""
+    # TODO expand method comment
+
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+    metrics_client.increment("weather.hourly_forecasts.request.get")
+
+    with metrics_client.timeit("weather.hourly_forecasts.request.timing"):
+        geolocation = refine_geolocation_for_suggestion(request, None, None, None)
+        weather_context = WeatherContext(geolocation, [])
+        hourly_forecasts = None
+        ttl = None
+
+        # TODO explain
+        if (
+            hourly_forecasts_with_ttl := await provider.get_hourly_forecasts(weather_context)
+        ) is not None:
+            hourly_forecasts, ttl = hourly_forecasts_with_ttl
+
+        return ORJSONResponse(
+            content=jsonable_encoder(hourly_forecasts),
+            headers={"Cache-Control": (f"private, max-age={ttl}")},
         )

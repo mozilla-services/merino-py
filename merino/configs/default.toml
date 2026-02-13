@@ -338,6 +338,10 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__FORECAST_TTL_SEC
 forecast_ttl_sec = 3600 # 1 hr
 
+# MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__HOURLY_FORECAST_TTL_SEC
+# Cache TTL for hourly forecasts (1 hour).
+hourly_forecast_ttl_sec = 3600
+
 [default.providers.sports]
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
@@ -423,6 +427,10 @@ url_current_conditions_path = "/currentconditions/v1/{location_key}.json"
 # MERINO_ACCUWEATHER__URL_FORECASTS_PATH
 # The URL path for forecasts.
 url_forecasts_path = "/forecasts/v1/daily/1day/{location_key}.json"
+
+# MERINO_ACCUWEATHER__URL_HOURLY_FORECASTS_PATH
+# The URL path for hourly forecasts (always fetches 12 hours, filtered by forecast_hours param).
+url_hourly_forecasts_path = "/forecasts/v1/hourly/12hour/{location_key}.json"
 
 # MERINO_ACCUWEATHER__URL_PARAM_PARTNER_CODE
 # The name of the partner code query param appended to the current conditions and forecast links in

@@ -28,6 +28,7 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecastsWithTTL,
     LocationCompletion,
     WeatherBackend,
     WeatherReport,
@@ -221,6 +222,16 @@ class Provider(BaseProvider):
                 icon=None,
                 locations=data,
             )
+
+    async def get_hourly_forecasts(
+        self, weather_context: WeatherContext
+    ) -> HourlyForecastsWithTTL | None:
+        """TODO"""
+        hourly_forecsts_with_ttl: (
+            HourlyForecastsWithTTL | None
+        ) = await self.backend.get_hourly_forecasts(weather_context)
+
+        return hourly_forecsts_with_ttl
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
