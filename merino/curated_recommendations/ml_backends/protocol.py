@@ -2,7 +2,6 @@
 
 from enum import Enum
 from typing import Protocol, cast
-from pydantic import Field, model_validator
 
 import numpy as np
 from pydantic import BaseModel
@@ -184,7 +183,7 @@ class ContextualArticleRankings(BaseModel):
 
     def get_score_pair(self, corpus_item_id: str) -> tuple[float | None, float | None]:
         """Get mean and standard deviaion of the score as a tuple."""
-        item: dict[str, float] = self.shards.get(corpus_item_id, None)
+        item: dict[str, float] | None = self.shards.get(corpus_item_id, None)
         if item is None:
             return None, None
         return item.get("mean", None), item.get("std", None)

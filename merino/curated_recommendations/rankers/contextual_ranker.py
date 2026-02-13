@@ -1,7 +1,5 @@
 """Algorithms for ranking curated recommendations."""
 
-from random import randint, random
-
 import numpy as np
 
 from merino.curated_recommendations.ml_backends.protocol import (
