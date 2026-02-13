@@ -31,7 +31,7 @@ Wait for answers before proceeding.
 
 If the provider has an external API backend, ask:
 - What is the external API called? Provide the human-readable name (e.g., "Polygon", "TMDB"). This will be used to derive PascalCase class names (`PolygonBackend`) and lowercase file/directory names (`polygon/`).
-- Does it need a circuit breaker for resilience? (like Weather/FlightAware providers)
+- Does it need a circuit breaker for resilience? A circuit breaker monitors backend call failures and, after a threshold is reached, temporarily short-circuits all calls (returning `[]`) for a recovery period. Only Weather and FlightAware use this currently.
 - Does it need periodic background data refresh via cron? (like Finance/ADM/Weather providers)
 
 If the provider has custom details, ask:
@@ -45,7 +45,7 @@ Create the following files. Follow these specific conventions from existing prov
 
 ### Naming conventions
 
-All derived names follow from the provider's `snake_case` name (`{name}`) and its `PascalCase` form (`{Name}`).
+All derived names follow from the **provider name** given in Step 1 (`{name}`, the snake_case value, e.g. `movie_db`) and its PascalCase form (`{Name}`).
 
 `{Name}` = PascalCase derived by splitting on `_` and capitalizing each part: `movie_db` → `MovieDb`, `top_picks` → `TopPicks`.
 
@@ -131,18 +131,55 @@ Create `merino/providers/suggest/{name}/backends/{api_name_lower}.py` with the r
 Create `merino/providers/suggest/{name}/provider.py`. Follow these exact patterns:
 
 - Class must be named `Provider` and extend `BaseProvider`
-- Store `self._name`, `self._query_timeout_sec`, `self._enabled_by_default` in `__init__`
+- Set these required instance variables in `__init__` (declared on `BaseProvider` in `base.py:124-126`):
+  - `self._name: str` — provider name (typically passed as a parameter)
+  - `self._enabled_by_default: bool` — whether the provider is on by default
+  - `self._query_timeout_sec: float` — query timeout in seconds (has a default in `BaseProvider` but most providers set it explicitly)
 - Accept `**kwargs: Any` as the last `__init__` parameter, call `super().__init__(**kwargs)` at the end. This is the pattern used by the majority of providers (weather, wikipedia, geolocation, amo, top_picks, adm).
 - `initialize()` must be async, set up cron jobs if needed with `asyncio.create_task(cron_job())`
 - `query()` must return `list[BaseSuggestion]`. Wrap backend calls in `try`/`except` catching the provider's `{Name}BackendError` (or the base `BackendError`), log at `warning` level, and return `[]`. See `wikipedia/provider.py:80-88` and `amo/provider.py:118-133` for the standard pattern. Note: providers with circuit breakers (weather, flightaware) intentionally let errors propagate so the breaker can track failures.
 - `normalize_query()` should at minimum do `query.lower().strip()`
-- Add `logger = logging.getLogger(__name__)` at module level
-- If using circuit breaker, decorate `query()` with the circuit breaker
+- Add `logger = logging.getLogger(__name__)` at module level. Use this for logging backend errors in `query()` (e.g., `logger.warning(...)`) and any diagnostic messages in `initialize()` or cron jobs.
 
 Reference implementations:
 - Simple: `merino/providers/suggest/geolocation/provider.py`
 - With backend + cron: `merino/providers/suggest/finance/provider.py`
 - With circuit breaker: `merino/providers/suggest/weather/provider.py`
+
+#### Circuit breaker setup (if needed)
+
+If the provider uses a circuit breaker, follow these steps. Reference file: `merino/governance/circuitbreakers.py`.
+
+1. **Define the breaker class** in `merino/governance/circuitbreakers.py`. Subclass `CircuitBreaker` (from the `circuitbreaker` library) with four class constants:
+   ```python
+   class {Name}CircuitBreaker(CircuitBreaker):
+       """Circuit Breaker for the {name} provider."""
+
+       FAILURE_THRESHOLD = settings.providers.{name}.circuit_breaker_failure_threshold
+       RECOVERY_TIMEOUT = settings.providers.{name}.circuit_breaker_recover_timeout_sec
+       EXPECTED_EXCEPTION = ({Name}BackendError, BackendError)
+       FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+   ```
+   - `FAILURE_THRESHOLD` (int): number of failures before the breaker opens.
+   - `RECOVERY_TIMEOUT` (int): seconds the breaker stays open before allowing a retry.
+   - `EXPECTED_EXCEPTION`: tuple of exception types the breaker tracks. Include both the provider-specific error and the base `BackendError`.
+   - `FALLBACK_FUNCTION`: use the existing `_suggest_provider_fallback_fn` (returns `[]`).
+
+2. **Add config settings** for the thresholds in `merino/configs/app_configs/default.toml` under the provider's section:
+   ```toml
+   circuit_breaker_failure_threshold = 3
+   circuit_breaker_recover_timeout_sec = 120
+   ```
+
+3. **Decorate `query()`** in the provider class:
+   ```python
+   from merino.governance.circuitbreakers import {Name}CircuitBreaker
+
+   @{Name}CircuitBreaker(name="{name}")
+   async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+   ```
+
+4. **Do NOT catch backend errors in `query()`** when using a circuit breaker. Errors must propagate so the breaker can track failures. The breaker's `FALLBACK_FUNCTION` handles returning `[]` when the circuit is open. See `weather/provider.py:153-183` and `flightaware/provider.py:120-163` for this pattern.
 
 ### 3f. Custom details (if needed)
 
