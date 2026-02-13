@@ -211,6 +211,7 @@ async def suggest(
         search_from = default_providers
 
     pii_type = pii_inspect(q)
+    request.scope[ScopeKey.PII_DETECTION] = pii_type
     is_soft_pii = False
 
     match pii_type:  # noqa
