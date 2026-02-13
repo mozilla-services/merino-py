@@ -995,7 +995,7 @@ max_size = 2_000_000
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
 # GCS path of the priors JSON file.
-blob_name = "contextual_ts/latest.json"
+blob_name = "contextual_ts/latest_stats.json"
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains updated prior data.
