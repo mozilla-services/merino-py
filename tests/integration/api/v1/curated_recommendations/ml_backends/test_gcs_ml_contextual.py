@@ -151,9 +151,9 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     print("Rankings fetched from GCS ML Recs:")
     print(rankings)
     assert rankings.granularity == "global"
-    assert rankings.get_score_pair("") == 1, 1
-    assert rankings.get_score_pair("aa") == 3, 1
-    assert rankings.get_score_pair("??") is None, None
+    assert rankings.get_score_pair("") == (1, 1)
+    assert rankings.get_score_pair("aa") == (3, 1)
+    assert rankings.get_score_pair("??") == (None, None)
 
     assert gcs_engagement.get_adjusted_impressions("aa") == 1
     assert gcs_engagement.get_adjusted_impressions("unknown") == 0
