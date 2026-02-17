@@ -148,8 +148,6 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     assert gcs_engagement.is_valid()
 
     rankings = gcs_engagement.get()  # global ranking
-    print("Rankings fetched from GCS ML Recs:")
-    print(rankings)
     assert rankings.granularity == "global"
     assert rankings.get_score_pair("") == (1, 1)
     assert rankings.get_score_pair("aa") == (3, 1)

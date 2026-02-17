@@ -64,7 +64,6 @@ class GcsMLRecs(MLRecsBackend):
         self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
-        print("Fetching ML Recs with region:", region, "utcOffset:", utcOffset, "cohort:", cohort)
         keys = self._generate_cache_keys(region, utcOffset, cohort)
         # Probe in order of specificity
         ro = keys["region_cohort"]
