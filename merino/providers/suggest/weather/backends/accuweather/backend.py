@@ -967,6 +967,9 @@ class AccuweatherBackend:
             weather_context, self.get_location_by_geolocation
         )
 
+        # TODO remove
+        print(f"\n\n #### accuweather_location: {accuweather_location}")
+
         accuweather_location_key = (
             accuweather_location.key if accuweather_location is not None else None
         )
@@ -1001,6 +1004,7 @@ class AccuweatherBackend:
         # cache miss, set up url for upstream request
 
         # Build URL and parameters
+        # TODO fix fallback url
         url_path: str = self.url_hourly_forecasts_path.replace(
             self.url_location_key_placeholder,
             accuweather_location_key if accuweather_location_key is not None else "TODO",

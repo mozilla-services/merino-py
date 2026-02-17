@@ -485,7 +485,12 @@ async def get_manifest(
     response_model=HourlyForecast,
 )
 async def get_hourly_forecasts(
-    request: Request, provider: WeatherProvider = Depends(get_weather_provider)
+    request: Request,
+    country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
+    region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
+    provider: WeatherProvider = Depends(get_weather_provider)
 ) -> ORJSONResponse:
     """Query merino for hourly forecast data."""
     # TODO expand method comment
@@ -493,9 +498,12 @@ async def get_hourly_forecasts(
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     metrics_client.increment("weather.hourly_forecasts.request.get")
 
+    validate_suggest_custom_location_params(city, region, country)
+    geolocation = refine_geolocation_for_suggestion(request, city, region, country)
+    languages = get_accepted_languages(accept_language)
+
     with metrics_client.timeit("weather.hourly_forecasts.request.timing"):
-        geolocation = refine_geolocation_for_suggestion(request, None, None, None)
-        weather_context = WeatherContext(geolocation, [])
+        weather_context = WeatherContext(geolocation, languages)
         hourly_forecasts = None
         ttl = None
 
