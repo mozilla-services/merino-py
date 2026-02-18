@@ -708,6 +708,9 @@ class SportsDataStore(ElasticDataStore):
 
         # Write the fields to Elasticsearch.
         # The `_source` _MUST_ match the previously specified `mapping`
+        if not sport.events:
+            logger.info(f"{LOGGING_TAG} No events")
+            return
         for event in sport.events.values():
             action = {
                 "_index": index,

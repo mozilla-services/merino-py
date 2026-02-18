@@ -28,7 +28,7 @@ class NFL(Sport):
     """National Football League"""
 
     season: str | None = None
-    week: int = 0
+    week: int | None = 0
     _lock: asyncio.Lock
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
@@ -100,6 +100,9 @@ class NFL(Sport):
             # The ProBowl interferes with displaying the Superbowl.
             self.season = response[0].get("ApiSeason").replace("STAR", "POST")
             self.week = 4
+        if self.week is None:
+            logger.debug(f"{LOGGING_TAG} No week, no events")
+            return
         start = response[0].get("StartDate")
         end = response[0].get("EndDate")
         logger.debug(f"{LOGGING_TAG} {self.name} {self.season} week {self.week} {start} to {end}")
@@ -126,6 +129,9 @@ class NFL(Sport):
         logger.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
         local_timezone = ZoneInfo("America/New_York")
         # get this week and next week
+        if self.week is None:
+            logger.debug(f"{LOGGING_TAG} No events (No week)")
+            return
         for week in [int(self.week), int(self.week) + 1]:
             url = f"{self.base_url}/ScoresBasic/{self.season}/{week}?key={self.api_key}"
             response = await get_data(
