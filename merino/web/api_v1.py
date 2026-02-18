@@ -490,11 +490,36 @@ async def get_hourly_forecasts(
     region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
-    provider: WeatherProvider = Depends(get_weather_provider)
+    provider: WeatherProvider = Depends(get_weather_provider),
 ) -> ORJSONResponse:
-    """Query merino for hourly forecast data."""
-    # TODO expand method comment
+    """Query merino for hourly forecast data.
 
+    **Args**:
+    - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,
+        Accuweather provider returns hourly forecasts based on this country. Note: If provided,
+        `city` and `region` must also be provided to successfully return hourly forecasts.
+    - `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes
+        and/or iso codes. If provided, Accuweather provider will try to return hourly forecasts based on this region(s).
+        Note: If provided,`city` and `country` must also be provided to successfully return hourly forecasts.
+    - `city`: [Optional] City name. E.g. “New York”. If provided,
+        Accuweather provider returns hourly forecasts based on this city. Note: If provided,
+        `region` and `country` must also be provided to successfully return hourly forecasts.
+    - provider: Injected weather provider dependecy used to fetch hourly forecasts data.
+
+    **Headers**:
+    - `Accept-Language` - The locale preferences expressed in this header in
+      accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to
+      determine suggestions. Merino maintains a list of supported locales. Merino
+      will choose the locale from its list that has the highest `q` (quality) value
+      in the user's `Accept-Language` header. Locales with `q=0` will not be used.
+
+      If no locales match, Merino will not return any suggestions. If the header is
+      not included or empty, Merino will default to the `en-US` locale.
+
+      If the highest quality, compatible language produces no suggestion results,
+      Merino will return an empty list instead of attempting to query other
+      languages.
+    """
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     metrics_client.increment("weather.hourly_forecasts.request.get")
 
@@ -507,7 +532,6 @@ async def get_hourly_forecasts(
         hourly_forecasts = None
         ttl = None
 
-        # TODO explain
         if (
             hourly_forecasts_with_ttl := await provider.get_hourly_forecasts(weather_context)
         ) is not None:

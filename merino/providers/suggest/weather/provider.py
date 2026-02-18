@@ -226,10 +226,13 @@ class Provider(BaseProvider):
     async def get_hourly_forecasts(
         self, weather_context: WeatherContext
     ) -> HourlyForecastsWithTTL | None:
-        """TODO"""
-        hourly_forecsts_with_ttl: (
-            HourlyForecastsWithTTL | None
-        ) = await self.backend.get_hourly_forecasts(weather_context)
+        """Provide hourly forecasts."""
+        try:
+            hourly_forecsts_with_ttl: (
+                HourlyForecastsWithTTL | None
+            ) = await self.backend.get_hourly_forecasts(weather_context)
+        except MissingLocationKeyError:
+            return None
 
         return hourly_forecsts_with_ttl
 

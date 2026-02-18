@@ -967,18 +967,16 @@ class AccuweatherBackend:
             weather_context, self.get_location_by_geolocation
         )
 
-        # TODO remove
-        print(f"\n\n #### accuweather_location: {accuweather_location}")
+        # early exit if we can't find a location for hourly forecasts.
+        if accuweather_location is None:
+            raise MissingLocationKeyError(weather_context.geolocation)
 
-        accuweather_location_key = (
-            accuweather_location.key if accuweather_location is not None else None
-        )
+        # generate a cache key.
         cache_key = self.cache_key_template(WeatherDataType.HOURLY_FORECAST, language).format(
-            location_key=accuweather_location_key
+            location_key=accuweather_location.key
         )
 
-        # check cache
-        # if present --> process cached --> return cached
+        # read from cache.
         cached_data: list[bytes | None] = await self.cache.run_script(
             sid=SCRIPT_HOURLY_FORECAST_ID,
             keys=[],
@@ -986,35 +984,43 @@ class AccuweatherBackend:
             readonly=True,
         )
 
+        # pull out the cached json and its ttl.
         hourly_forecasts_cached, ttl_cached = cached_data
-        if hourly_forecasts_cached and ttl_cached != -2:
-            # TODO format it from binary to list[HourlyForecast] type
 
+        # cache hit scenario.
+        # ttl is returned as -2 if it does not exist.
+        if hourly_forecasts_cached and ttl_cached != -2:
+            # convert it from binary json to json
             hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)
-            # Create HourlyForecast objects from raw JSON data
-            # TODO make this readable
+
+            # Slice the hourly forecasts based on how many were requested. Using default (5) for now.
+            sliced_hourly_forecasts_as_json = hourly_forecasts_as_json.get("hourly_forecasts", [])[
+                :DEFAULT_FORECAST_HOURS
+            ]
+
+            # Create HourlyForecast objects from the sliced json
             hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
-                hourly_forecasts_as_json.get("hourly_forecasts", [])[:DEFAULT_FORECAST_HOURS]
+                sliced_hourly_forecasts_as_json
             )
 
+            # this is needed to satisfy the types
             ttl = cast(int, ttl_cached)
 
             return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=ttl)
 
-        # cache miss, set up url for upstream request
-
-        # Build URL and parameters
-        # TODO fix fallback url
+        # cache miss scenario.
+        # set up url for upstream request.
         url_path: str = self.url_hourly_forecasts_path.replace(
             self.url_location_key_placeholder,
-            accuweather_location_key if accuweather_location_key is not None else "TODO",
+            accuweather_location.key,
         )
+
         params: dict[str, str] = {
             self.url_param_api_key: self.api_key,
             "language": language,
         }
 
-        # Call upstream API
+        # Call upstream API.
         processed_response = await self.request_upstream(
             url_path=url_path,
             params=params,
@@ -1026,17 +1032,19 @@ class AccuweatherBackend:
         if processed_response is None:
             return None
 
-        # Pass the processed JSON response to the helper method that returns a list of HourlyForecast objects
+        # Pass the processed json response to the helper method that returns a list of HourlyForecast objects
         try:
-            hourly_forecasts_json = processed_response.get("hourly_forecasts")
+            # Slice the hourly forecasts based on how many were requested. Using default (5) for now.
+            sliced_hourly_forecasts_as_json = processed_response.get("hourly_forecasts")[
+                :DEFAULT_FORECAST_HOURS
+            ]
             ttl = processed_response.get("cached_request_ttl")
 
-            # TODO make this readable
-            hourly_forecasts = create_hourly_forecasts_from_json(
-                hourly_forecasts_json[:DEFAULT_FORECAST_HOURS]
-            )
+            # Create HourlyForecast objects from the sliced json
+            hourly_forecasts = create_hourly_forecasts_from_json(sliced_hourly_forecasts_as_json)
 
         except (KeyError, ValidationError):
+            # TODO @herraj re throw for circuit breaker
             return None
 
         return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=ttl)
