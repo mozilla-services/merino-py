@@ -117,7 +117,7 @@ class MockMLRecommendationsBackend(MLRecsBackend):
 
     def __init__(self) -> None:
         super().__init__()
-        HIGH_CONTEXUAL_SCORES = {k: {"mean": 1.0, "std": 0.0} for k in REC_HIGH_CTR_IDS}
+        HIGH_CONTEXUAL_SCORES = {k: [1.0, 1.0] for k in REC_HIGH_CTR_IDS}
 
         self.data: dict[str, ContextualArticleRankings] = {}
         rankings = ContextualArticleRankings(
@@ -125,7 +125,7 @@ class MockMLRecommendationsBackend(MLRecsBackend):
             # Give low scores to all except high CTR items
             shards={
                 **HIGH_CONTEXUAL_SCORES,
-                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": {"mean": 0.001, "std": 0.0},
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [0.001, 0.001],
             },
         )
         self.data["global"] = rankings
@@ -135,7 +135,7 @@ class MockMLRecommendationsBackend(MLRecsBackend):
             # Extra item is crazy high
             shards={
                 **HIGH_CONTEXUAL_SCORES,
-                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": {"mean": 10000.0, "std": 0.0},
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
             },
         )
         cohort_rankings = ContextualArticleRankings(
@@ -143,7 +143,7 @@ class MockMLRecommendationsBackend(MLRecsBackend):
             # Extra item is crazy high
             shards={
                 **HIGH_CONTEXUAL_SCORES,
-                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": {"mean": 10000.0, "std": 0.0},
+                "1ac64aea-fdce-41e7-b017-0dc2103bb3fd": [10000, 10000],
             },
         )
 
