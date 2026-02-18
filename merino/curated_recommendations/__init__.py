@@ -121,6 +121,11 @@ def init_ml_recommendations_backend(num_files=NUM_ML_RECS_BACKEND_FILES) -> MLRe
     instance"""
 
     blob_name = settings.ml_recommendations.gcs.blob_name
+
+    if num_files > 1:
+        file_index = random.randint(1, num_files)
+        base = blob_name.removesuffix(".json")
+        blob_name = f"{base}_{file_index}.json"
     try:
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
