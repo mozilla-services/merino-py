@@ -46,11 +46,13 @@ from merino.providers.suggest.weather.backends.accuweather.utils import (
     RequestType,
     add_partner_code,
     get_language,
+    process_hourly_forecast_response,
     update_weather_url_with_suggest_partner_code,
 )
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecastsWithTTL,
     LocationCompletion,
     LocationCompletionGeoDetails,
     Temperature,
@@ -750,6 +752,27 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
             "low": {"f": 57.0},
         }
     )
+
+
+@pytest.fixture(name="accuweather_hourly_forecast_response")
+def fixture_accuweather_hourly_forecast_response() -> bytes:
+    """AccuWeather API response with 12 hourly forecasts."""
+    forecasts = []
+    base_time = 1708281600  # Example epoch time
+
+    for i in range(12):
+        hour = 14 + i
+        forecasts.append(
+            {
+                "DateTime": f"2026-02-18T{hour:02d}:00:00-05:00",
+                "EpochDateTime": base_time + (i * 3600),
+                "Temperature": {"Unit": "F", "Value": 60 + i},
+                "WeatherIcon": 6,
+                "Link": f"http://www.accuweather.com/en/us/san-francisco/94105/hourly-weather-forecast/39376?day=1&hbhhour={hour}&lang=en-us",
+            }
+        )
+
+    return orjson.dumps(forecasts)
 
 
 @pytest.fixture(name="accuweather_cached_data_hits")
@@ -2731,3 +2754,224 @@ async def test_get_region_for_weather_report_outside_north_america(
     )
     region = accuweather.get_region_for_weather_report(location, modified_weather_context)
     assert region == expected_region
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    weather_context_with_location_key: WeatherContext,
+    accuweather_hourly_forecast_response: bytes,
+    response_header: dict[str, str],
+) -> None:
+    """Test that get_hourly_forecasts returns HourlyForecastsWithTTL with valid API response."""
+    # Mock pathfinder.explore to return AccuweatherLocation
+    accuweather_location = AccuweatherLocation(
+        key="39376",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
+    )
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (accuweather_location, None)
+
+    # Mock cache run_script to return cache miss (None, -2)
+    mocker.patch.object(accuweather.cache, "run_script", return_value=[None, -2])
+
+    # Mock store_request_into_cache to return TEST_CACHE_TTL_SEC
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.AccuweatherBackend"
+        ".store_request_into_cache"
+    ).return_value = TEST_CACHE_TTL_SEC
+
+    # Mock HTTP client to return hourly forecast response
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=accuweather_hourly_forecast_response,
+        request=Request(
+            method="GET",
+            url="http://www.accuweather.com/forecasts/v1/hourly/12hour/39376.json?apikey=test",
+        ),
+    )
+
+    # Call get_hourly_forecasts
+    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
+        weather_context_with_location_key
+    )
+
+    # Assertions
+    assert result is not None
+    assert isinstance(result, HourlyForecastsWithTTL)
+    assert len(result.hourly_forecasts) == 5  # DEFAULT_FORECAST_HOURS
+    assert result.ttl == TEST_CACHE_TTL_SEC
+
+    # Verify first forecast structure
+    first_forecast = result.hourly_forecasts[0]
+    assert first_forecast.date_time == "2026-02-18T14:00:00-05:00"
+    assert first_forecast.epoch_date_time == 1708281600
+    assert first_forecast.temperature.f == 60
+    assert first_forecast.temperature.c == 16
+    assert first_forecast.icon_id == 6
+    assert "hourly-weather-forecast/39376?day=1&hbhhour=14" in str(first_forecast.url)
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_missing_location_key(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    weather_context_without_location_key: WeatherContext,
+) -> None:
+    """Test that get_hourly_forecasts raises MissingLocationKeyError when location key is None."""
+    # Mock pathfinder.explore to return (None, None)
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (None, None)
+
+    # Assert that MissingLocationKeyError is raised
+    with pytest.raises(MissingLocationKeyError):
+        await accuweather.get_hourly_forecasts(weather_context_without_location_key)
+
+    # Verify HTTP client was never called
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_cache_hit(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    weather_context_with_location_key: WeatherContext,
+    accuweather_hourly_forecast_response: bytes,
+) -> None:
+    """Test that get_hourly_forecasts returns cached data when available."""
+    # Mock pathfinder.explore to return AccuweatherLocation
+    accuweather_location = AccuweatherLocation(
+        key="39376",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
+    )
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (accuweather_location, None)
+
+    # Process the API response fixture to get cached format
+    api_response = orjson.loads(accuweather_hourly_forecast_response)
+    processed_data = process_hourly_forecast_response(api_response)
+    cached_data = orjson.dumps(processed_data)
+    cached_ttl = 1800
+
+    # Mock cache run_script to return cache hit
+    mocker.patch.object(
+        accuweather.cache,
+        "run_script",
+        return_value=[cached_data, cached_ttl]
+    )
+
+    # Call get_hourly_forecasts
+    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
+        weather_context_with_location_key
+    )
+
+    # Assertions
+    assert result is not None
+    assert isinstance(result, HourlyForecastsWithTTL)
+    assert len(result.hourly_forecasts) == 5  # DEFAULT_FORECAST_HOURS
+    assert result.ttl == cached_ttl
+
+    # Verify first forecast structure from cache
+    first_forecast = result.hourly_forecasts[0]
+    assert first_forecast.date_time == "2026-02-18T14:00:00-05:00"
+    assert first_forecast.temperature.f == 60
+
+    # Verify HTTP client was never called (cache hit)
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_api_returns_none(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    weather_context_with_location_key: WeatherContext,
+) -> None:
+    """Test that get_hourly_forecasts returns None when API returns invalid response."""
+    # Mock pathfinder.explore to return AccuweatherLocation
+    accuweather_location = AccuweatherLocation(
+        key="39376",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
+    )
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (accuweather_location, None)
+
+    # Mock cache run_script to return cache miss
+    mocker.patch.object(
+        accuweather.cache,
+        "run_script",
+        return_value=[None, -2]
+    )
+
+    # Mock request_upstream to return None (simulating invalid API response)
+    mocker.patch.object(
+        accuweather,
+        "request_upstream",
+        return_value=None
+    )
+
+    # Call get_hourly_forecasts
+    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
+        weather_context_with_location_key
+    )
+
+    # Assert result is None
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_validation_error(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    weather_context_with_location_key: WeatherContext,
+) -> None:
+    """Test that get_hourly_forecasts returns None when response validation fails."""
+    # Mock pathfinder.explore to return AccuweatherLocation
+    accuweather_location = AccuweatherLocation(
+        key="39376",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
+    )
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (accuweather_location, None)
+
+    # Mock cache run_script to return cache miss
+    mocker.patch.object(
+        accuweather.cache,
+        "run_script",
+        return_value=[None, -2]
+    )
+
+    # Mock request_upstream to return malformed data (hourly_forecasts with invalid structure)
+    mocker.patch.object(
+        accuweather,
+        "request_upstream",
+        return_value={
+            "hourly_forecasts": [{"invalid": "data"}],  # Missing required fields
+            "cached_request_ttl": 1800
+        }
+    )
+
+    # Call get_hourly_forecasts
+    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
+        weather_context_with_location_key
+    )
+
+    # Assert result is None due to KeyError
+    assert result is None
