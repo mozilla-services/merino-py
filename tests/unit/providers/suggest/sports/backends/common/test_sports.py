@@ -403,6 +403,29 @@ async def test_ucl_update_teams(
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
+async def test_nfl_update_events_no_week(
+    nfl_teams_payload: list[dict],
+    nfl_scores_payload: list[dict[str, Any]],
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Test NFL event updates."""
+    nfl = NFL(settings=settings.providers.sports)
+    nfl.load_teams_from_source(nfl_teams_payload)
+    nfl.season = "Scouting"
+    nfl.week = None
+    nfl.event_ttl = timedelta(weeks=2)
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[nfl_scores_payload, nfl_scores_payload[:0]],
+    )
+
+    await nfl.update_events(client=mock_client)
+    assert not get_data.called
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
 async def test_nfl_update_events(
     nfl_teams_payload: list[dict],
     nfl_scores_payload: list[dict[str, Any]],
