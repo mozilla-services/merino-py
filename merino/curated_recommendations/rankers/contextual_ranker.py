@@ -86,6 +86,7 @@ class ContextualRanker(Ranker):
             is_fresh = False
             # add random value between 0 and 1 to break ties randomly
             score = None
+            mean, stdev = None, None
             if contextual_scores:
                 mean, stdev = contextual_scores.get_score_pair(rec.corpusItemId)
 
