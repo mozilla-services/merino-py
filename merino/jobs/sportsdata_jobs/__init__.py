@@ -142,20 +142,23 @@ class SportDataUpdater:
             if include_teams:  # pragma: no cover
                 start = time()
                 await sport.update_teams(client=self.client)
+                # metric
                 logger.info(
-                    f"""{LOGGING_TAG} sports.time.update.team: ["sport": {sport.name}] = {time() - start}"""
+                    f"""sports.time.update.team: ["sport": {sport.name}] = {time() - start}"""
                 )
             # Update the current and upcoming game schedules (using a cache with a lifespan of 5 minutes)
             start = time()
             await sport.update_events(client=self.client)
+            # metric
             logger.info(
-                f"""{LOGGING_TAG} sports.time.update.event: ["sport": {sport.name}] = {time() - start}"""
+                f"""sports.time.update.event: ["sport": {sport.name}] = {time() - start}"""
             )
             # Put the data in the shared storage for the live query.
             start = time()
             await self.store.store_events(sport, language_code="en")
+            # metric
             logger.info(
-                f"""{LOGGING_TAG} sports.time.load.events ["sport": {sport.name}] = {time() - start}"""
+                f"""sports.time.load.events ["sport": {sport.name}] = {time() - start}"""
             )
         return True
 
@@ -198,13 +201,15 @@ class SportDataUpdater:
         for sport in self.sports.values():
             start = time()
             await sport.update_events(client=self.client, allow_no_teams=True)
+            # metric
             logger.info(
-                f"""{LOGGING_TAG} sports.time.quick_update.event ["sport": {sport.name}] = {time() - start}"""
+                f"""sports.time.quick_update.event ["sport": {sport.name}] = {time() - start}"""
             )
             start = time()
             await self.store.update_events(sport, language_code="en", last_update=last_update)
+            # metric
             logger.info(
-                f"""{LOGGING_TAG} sports.time.quick_update.update ["sport": {sport.name}] = {time() - start}"""
+                f"""sports.time.quick_update.update ["sport": {sport.name}] = {time() - start}"""
             )
         await self.store.shutdown()
 
@@ -279,7 +284,7 @@ def update():  # pragma: no cover
     if provider:
         asyncio.run(provider.update_data())
     else:
-        logger.error("Sports provider unavailable.")
+        logger.error( provider unavailable.")
 
 
 @cli.command("quick_update")
