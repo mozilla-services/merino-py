@@ -326,6 +326,40 @@ def test_suggest_request_log_data(
     assert log_data == expected_log_data
 
 
+@freeze_time("1998-03-31")
+def test_suggest_request_pii_does_not_log_data(
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    client: TestClient,
+) -> None:
+    """Tests that the request that do contain PII does not produce logs."""
+    caplog.set_level(logging.INFO)
+
+    # The IP address is taken from `GeoLite2-City-Test.mmdb`
+    mock_client = mocker.patch("fastapi.Request.client")
+    mock_client.host = "216.160.83.56"
+
+    client.get(
+        url="/api/v1/suggest",
+        params={
+            "q": "n0p3",
+            "sid": "deadbeef-0000-1111-2222-333344445555",
+            "seq": 0,
+        },
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) "
+                "Gecko/20100101 Firefox/103.0"
+            ),
+            "x-request-id": "1b11844c52b34c33a6ad54b7bc2eb7c7",
+        },
+    )
+
+    records = filter_caplog(caplog.records, "web.suggest.request")
+    assert len(records) == 0
+
+
 def test_suggest_with_invalid_geolocation_ip(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
