@@ -962,6 +962,7 @@ class AccuweatherBackend:
         # Does all the stuff needed to generate a cache key
         language = get_language(weather_context.languages)
 
+        # TODO @herraj catch and rethrow any exceptions from this
         accuweather_location, _ = await pathfinder.explore(
             weather_context, self.get_location_by_geolocation
         )
@@ -976,6 +977,7 @@ class AccuweatherBackend:
         )
 
         # read from cache.
+        # TODO @herraj catch and rethrow any exceptions from cache read for circuit breaker
         cached_data: list[bytes | None] = await self.cache.run_script(
             sid=SCRIPT_HOURLY_FORECAST_ID,
             keys=[],

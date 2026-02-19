@@ -231,7 +231,8 @@ class Provider(BaseProvider):
             hourly_forecsts_with_ttl: (
                 HourlyForecastsWithTTL | None
             ) = await self.backend.get_hourly_forecasts(weather_context)
-        except MissingLocationKeyError:
+        except (MissingLocationKeyError, Exception):
+            # TODO @herraj remove exception when adding circuit breaker
             return None
 
         return hourly_forecsts_with_ttl
