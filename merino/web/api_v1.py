@@ -529,8 +529,8 @@ async def get_hourly_forecasts(
 
     with metrics_client.timeit("weather.hourly_forecasts.request.timing"):
         weather_context = WeatherContext(geolocation, languages)
-        hourly_forecasts = None
-        ttl = None
+        hourly_forecasts: list[HourlyForecast] = []
+        ttl = 0
 
         if (
             hourly_forecasts_with_ttl := await provider.get_hourly_forecasts(weather_context)

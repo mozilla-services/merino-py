@@ -2865,11 +2865,7 @@ async def test_get_hourly_forecasts_cache_hit(
     cached_ttl = 1800
 
     # Mock cache run_script to return cache hit
-    mocker.patch.object(
-        accuweather.cache,
-        "run_script",
-        return_value=[cached_data, cached_ttl]
-    )
+    mocker.patch.object(accuweather.cache, "run_script", return_value=[cached_data, cached_ttl])
 
     # Call get_hourly_forecasts
     result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
@@ -2886,6 +2882,7 @@ async def test_get_hourly_forecasts_cache_hit(
     first_forecast = result.hourly_forecasts[0]
     assert first_forecast.date_time == "2026-02-18T14:00:00-05:00"
     assert first_forecast.temperature.f == 60
+    assert first_forecast.temperature.c == 16
 
     # Verify HTTP client was never called (cache hit)
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
@@ -2911,18 +2908,10 @@ async def test_get_hourly_forecasts_api_returns_none(
     ).return_value = (accuweather_location, None)
 
     # Mock cache run_script to return cache miss
-    mocker.patch.object(
-        accuweather.cache,
-        "run_script",
-        return_value=[None, -2]
-    )
+    mocker.patch.object(accuweather.cache, "run_script", return_value=[None, -2])
 
     # Mock request_upstream to return None (simulating invalid API response)
-    mocker.patch.object(
-        accuweather,
-        "request_upstream",
-        return_value=None
-    )
+    mocker.patch.object(accuweather, "request_upstream", return_value=None)
 
     # Call get_hourly_forecasts
     result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
@@ -2952,11 +2941,7 @@ async def test_get_hourly_forecasts_validation_error(
     ).return_value = (accuweather_location, None)
 
     # Mock cache run_script to return cache miss
-    mocker.patch.object(
-        accuweather.cache,
-        "run_script",
-        return_value=[None, -2]
-    )
+    mocker.patch.object(accuweather.cache, "run_script", return_value=[None, -2])
 
     # Mock request_upstream to return malformed data (hourly_forecasts with invalid structure)
     mocker.patch.object(
@@ -2964,8 +2949,8 @@ async def test_get_hourly_forecasts_validation_error(
         "request_upstream",
         return_value={
             "hourly_forecasts": [{"invalid": "data"}],  # Missing required fields
-            "cached_request_ttl": 1800
-        }
+            "cached_request_ttl": 1800,
+        },
     )
 
     # Call get_hourly_forecasts
