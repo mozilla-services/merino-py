@@ -993,16 +993,14 @@ class AccuweatherBackend:
         if hourly_forecasts_cached and ttl_cached != -2:
             try:
                 # convert it from binary json to json
-                hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)
-
-                # Slice the hourly forecasts based on how many were requested. Using default (5) for now.
-                sliced_hourly_forecasts_as_json = hourly_forecasts_as_json["hourly_forecasts"][
-                    :DEFAULT_FORECAST_HOURS
+                hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)[
+                    "hourly_forecasts"
                 ]
 
+                # Slice the hourly forecasts for default length (5).
                 # Create HourlyForecast objects from the sliced json
                 hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
-                    sliced_hourly_forecasts_as_json
+                    hourly_forecasts_as_json[:DEFAULT_FORECAST_HOURS]
                 )
 
                 # this is needed to satisfy the types

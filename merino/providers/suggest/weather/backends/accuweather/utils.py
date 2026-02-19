@@ -240,6 +240,7 @@ def process_hourly_forecast_response(response: Any) -> dict[str, list[dict[str, 
                     }
                 )
 
+            # NOTE: it's written to cache in this shape as well.
             return {"hourly_forecasts": hourly_forecasts}
         case _:
             return None
