@@ -228,14 +228,14 @@ class Provider(BaseProvider):
     ) -> HourlyForecastsWithTTL | None:
         """Provide hourly forecasts."""
         try:
-            hourly_forecsts_with_ttl: (
+            hourly_forecasts_with_ttl: (
                 HourlyForecastsWithTTL | None
             ) = await self.backend.get_hourly_forecasts(weather_context)
         except (MissingLocationKeyError, Exception):
-            # TODO @herraj remove exception when adding circuit breaker
+            # TODO @herraj remove Exception when adding circuit breaker
             return None
 
-        return hourly_forecsts_with_ttl
+        return hourly_forecasts_with_ttl
 
     async def shutdown(self) -> None:
         """Shut down the provider."""

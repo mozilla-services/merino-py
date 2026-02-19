@@ -269,8 +269,6 @@ def create_hourly_forecasts_from_json(
             url=HttpUrl(forecast["url"]),
         )
 
-        HourlyForecast.model_validate(hourly_forecast)
-
         valid_hourly_forecasts.append(hourly_forecast)
 
     return valid_hourly_forecasts

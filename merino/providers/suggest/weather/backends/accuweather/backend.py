@@ -996,9 +996,9 @@ class AccuweatherBackend:
                 hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)
 
                 # Slice the hourly forecasts based on how many were requested. Using default (5) for now.
-                sliced_hourly_forecasts_as_json = hourly_forecasts_as_json.get(
-                    "hourly_forecasts", []
-                )[:DEFAULT_FORECAST_HOURS]
+                sliced_hourly_forecasts_as_json = hourly_forecasts_as_json["hourly_forecasts"][
+                    :DEFAULT_FORECAST_HOURS
+                ]
 
                 # Create HourlyForecast objects from the sliced json
                 hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
@@ -1040,10 +1040,10 @@ class AccuweatherBackend:
         # Pass the processed json response to the helper method that returns a list of HourlyForecast objects
         try:
             # Slice the hourly forecasts based on how many were requested. Using default (5) for now.
-            sliced_hourly_forecasts_as_json = processed_response.get("hourly_forecasts")[
+            sliced_hourly_forecasts_as_json = processed_response["hourly_forecasts"][
                 :DEFAULT_FORECAST_HOURS
             ]
-            ttl = processed_response.get("cached_request_ttl")
+            ttl = processed_response["cached_request_ttl"]
 
             # Create HourlyForecast objects from the sliced json
             hourly_forecasts = create_hourly_forecasts_from_json(sliced_hourly_forecasts_as_json)

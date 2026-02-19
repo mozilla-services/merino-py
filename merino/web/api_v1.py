@@ -482,7 +482,7 @@ async def get_manifest(
     "/weather/hourly-forecasts",
     tags=["weather"],
     summary="Get hourly Forecasts",
-    response_model=HourlyForecast,
+    response_model=list[HourlyForecast],
 )
 async def get_hourly_forecasts(
     request: Request,

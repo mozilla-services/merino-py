@@ -65,7 +65,7 @@ class HourlyForecast(BaseModel):
 
 
 class HourlyForecastsWithTTL(NamedTuple):
-    """Hourly forecasts and its TTL value that is used"""
+    """Hourly forecasts and its TTL value that is used for the cache-control response header."""
 
     hourly_forecasts: list[HourlyForecast]
     ttl: int
@@ -135,7 +135,7 @@ class WeatherBackend(Protocol):
     ) -> HourlyForecastsWithTTL | None:  # pragma: no cover
         """Get a list of hourly forecasts from partner with a ttl. Will return cached data if found.
         Raises:
-            TODO
+            BackendError: Category of error specific to provider backends.
         """
         ...
 
