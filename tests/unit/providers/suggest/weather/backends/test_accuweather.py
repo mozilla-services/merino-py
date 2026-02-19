@@ -64,6 +64,7 @@ from tests.types import FilterCaplogFixture
 ACCUWEATHER_CACHE_EXPIRY_DATE_FORMAT = "%a, %d %b %Y %H:%M:%S %Z"
 TEST_CACHE_TTL_SEC = 1800
 TEST_DEFAULT_WEATHER_REPORT_CACHE_TTL_SEC = 300
+TEST_HOURLY_FORECASTS_CACHE_TTL_SEC = 3600
 ACCUWEATHER_METRICS_SAMPLE_RATE = 0.9
 
 
@@ -2862,7 +2863,7 @@ async def test_get_hourly_forecasts_cache_hit(
     api_response = orjson.loads(accuweather_hourly_forecast_response)
     processed_data = process_hourly_forecast_response(api_response)
     cached_data = orjson.dumps(processed_data)
-    cached_ttl = 1800
+    cached_ttl = TEST_HOURLY_FORECASTS_CACHE_TTL_SEC
 
     # Mock cache run_script to return cache hit
     mocker.patch.object(accuweather.cache, "run_script", return_value=[cached_data, cached_ttl])
@@ -2949,7 +2950,7 @@ async def test_get_hourly_forecasts_validation_error(
         "request_upstream",
         return_value={
             "hourly_forecasts": [{"invalid": "data"}],  # Missing required fields
-            "cached_request_ttl": 1800,
+            "cached_request_ttl": TEST_HOURLY_FORECASTS_CACHE_TTL_SEC,
         },
     )
 

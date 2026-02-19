@@ -32,6 +32,9 @@ from merino.providers.suggest.weather.backends.accuweather import (
     WeatherDataType,
 )
 from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
+from merino.providers.suggest.weather.backends.accuweather.utils import (
+    process_hourly_forecast_response,
+)
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
@@ -352,25 +355,14 @@ def fixture_accuweather_hourly_forecast_response() -> bytes:
 
 
 @pytest.fixture(name="accuweather_cached_hourly_forecasts")
-def fixture_accuweather_cached_hourly_forecasts() -> bytes:
+def fixture_accuweather_cached_hourly_forecasts(
+    accuweather_hourly_forecast_response: bytes,
+) -> bytes:
     """Return cached AccuWeather hourly forecasts (processed format)."""
-    base_time = 1708281600
-    hourly_forecasts = []
-
-    for i in range(12):
-        hour = 14 + i
-        hourly_forecasts.append(
-            {
-                "date_time": f"2026-02-18T{hour:02d}:00:00-05:00",
-                "epoch_date_time": base_time + (i * 3600),
-                "temperature_unit": "f",
-                "temperature_value": 60 + i,
-                "icon_id": 6,
-                "url": f"http://www.accuweather.com/en/us/san-francisco/94105/hourly-weather-forecast/39376?day=1&hbhhour={hour}&lang=en-us",
-            }
-        )
-
-    return json.dumps({"hourly_forecasts": hourly_forecasts}).encode("utf-8")
+    # Process the API response to get the cached format
+    api_response = json.loads(accuweather_hourly_forecast_response)
+    processed_data = process_hourly_forecast_response(api_response)
+    return json.dumps(processed_data).encode("utf-8")
 
 
 @pytest.fixture(scope="module")

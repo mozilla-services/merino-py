@@ -70,7 +70,7 @@ def test_hourly_forecasts_with_custom_location(
     result = response.json()
     assert len(result) == 5
     assert result[0]["temperature"]["f"] == 60
-    assert result[0]["temperature"]["c"] == 16  # Auto-converted from F: round((60-32)*5/9)
+    assert result[0]["temperature"]["c"] == 16
 
 
 def test_hourly_forecasts_missing_required_location_params(

@@ -962,7 +962,6 @@ class AccuweatherBackend:
         # Does all the stuff needed to generate a cache key
         language = get_language(weather_context.languages)
 
-        # TODO clarify why we need to go through the pathfinder and why the direct call does not work?
         accuweather_location, _ = await pathfinder.explore(
             weather_context, self.get_location_by_geolocation
         )
@@ -990,21 +989,25 @@ class AccuweatherBackend:
         # cache hit scenario.
         # ttl is returned as -2 if it does not exist.
         if hourly_forecasts_cached and ttl_cached != -2:
-            # convert it from binary json to json
-            hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)
+            try:
+                # convert it from binary json to json
+                hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)
 
-            # Slice the hourly forecasts based on how many were requested. Using default (5) for now.
-            sliced_hourly_forecasts_as_json = hourly_forecasts_as_json.get("hourly_forecasts", [])[
-                :DEFAULT_FORECAST_HOURS
-            ]
+                # Slice the hourly forecasts based on how many were requested. Using default (5) for now.
+                sliced_hourly_forecasts_as_json = hourly_forecasts_as_json.get(
+                    "hourly_forecasts", []
+                )[:DEFAULT_FORECAST_HOURS]
 
-            # Create HourlyForecast objects from the sliced json
-            hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
-                sliced_hourly_forecasts_as_json
-            )
+                # Create HourlyForecast objects from the sliced json
+                hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
+                    sliced_hourly_forecasts_as_json
+                )
 
-            # this is needed to satisfy the types
-            ttl = cast(int, ttl_cached)
+                # this is needed to satisfy the types
+                ttl = cast(int, ttl_cached)
+            except (KeyError, ValidationError):
+                # TODO @herraj re throw for circuit breaker
+                return None
 
             return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=ttl)
 
