@@ -521,12 +521,12 @@ async def get_hourly_forecasts(
       languages.
     """
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
-    metrics_client.increment("weather.hourly_forecasts.request.get")
 
     validate_suggest_custom_location_params(city, region, country)
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
     languages = get_accepted_languages(accept_language)
 
+    # Note: this timing metric also covers the count metric.
     with metrics_client.timeit("weather.hourly_forecasts.request.timing"):
         weather_context = WeatherContext(geolocation, languages)
         hourly_forecasts: list[HourlyForecast] = []
