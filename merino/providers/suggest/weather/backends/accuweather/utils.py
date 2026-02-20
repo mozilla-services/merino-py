@@ -8,12 +8,18 @@ from httpx import URL, InvalidURL
 from pydantic import HttpUrl
 
 from merino.configs import settings
-from merino.providers.suggest.weather.backends.protocol import CurrentConditions, Forecast
+from merino.providers.suggest.weather.backends.protocol import (
+    CurrentConditions,
+    Forecast,
+    HourlyForecast,
+    Temperature,
+)
 
 PARTNER_PARAM_ID: str | None = settings.accuweather.get("url_param_partner_code")
 PARTNER_CODE_NEWTAB: str | None = settings.accuweather.get("partner_code_newtab_value")
 PARTNER_FFSUGGEST_CODE: str | None = settings.accuweather.get("partner_code_ffsuggest_value")
 VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
+DEFAULT_FORECAST_HOURS = 5
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +34,7 @@ class RequestType(StrEnum):
     CURRENT_CONDITIONS = "currentconditions"
     FORECASTS = "forecasts"
     AUTOCOMPLETE = "autocomplete"
+    HOURLY_FORECASTS = "hourlyforecasts"
 
 
 class ProcessedLocationResponse(TypedDict):
@@ -209,3 +216,60 @@ def update_weather_url_with_suggest_partner_code(
         current_conditions.url = HttpUrl(str(cc_modified_url))
         forecast.url = HttpUrl(str(f_modified_url))
         return current_conditions, forecast
+
+
+def process_hourly_forecast_response(response: Any) -> dict[str, list[dict[str, Any]]] | None:
+    """Process the API response for hourly forecasts."""
+    match response:
+        case list():
+            hourly_forecasts: list[dict[str, Any]] = []
+
+            for forecast in response:
+                url = add_partner_code(forecast["Link"], PARTNER_PARAM_ID, PARTNER_CODE_NEWTAB)
+                temperature_unit = forecast["Temperature"]["Unit"].lower()
+                temperature_value = forecast["Temperature"]["Value"]
+
+                hourly_forecasts.append(
+                    {
+                        "date_time": forecast["DateTime"],
+                        "epoch_date_time": forecast["EpochDateTime"],
+                        "temperature_unit": temperature_unit,
+                        "temperature_value": temperature_value,
+                        "icon_id": forecast["WeatherIcon"],
+                        "url": url,
+                    }
+                )
+
+            # NOTE: it's written to cache in this shape as well.
+            return {"hourly_forecasts": hourly_forecasts}
+        case _:
+            return None
+
+
+def create_hourly_forecasts_from_json(
+    hourly_forecast_json: list[dict[str, Any]],
+) -> list[HourlyForecast]:
+    """Create and return a list of HourlyForecast objects from processed api response JSON."""
+    valid_hourly_forecasts = []
+
+    for forecast in hourly_forecast_json:
+        temperature_unit = forecast["temperature_unit"]
+        temperature_value = forecast["temperature_value"]
+        temperature = None
+
+        if temperature_unit == "c":
+            temperature = Temperature(c=temperature_value)
+        else:
+            temperature = Temperature(f=temperature_value)
+
+        hourly_forecast = HourlyForecast(
+            date_time=forecast["date_time"],
+            epoch_date_time=forecast["epoch_date_time"],
+            temperature=temperature,
+            icon_id=forecast["icon_id"],
+            url=HttpUrl(forecast["url"]),
+        )
+
+        valid_hourly_forecasts.append(hourly_forecast)
+
+    return valid_hourly_forecasts

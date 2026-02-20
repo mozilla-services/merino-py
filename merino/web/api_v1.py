@@ -38,10 +38,12 @@ from merino.curated_recommendations.legacy.protocol import (
 from merino.middleware import ScopeKey
 from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest import get_providers as get_suggest_providers
+from merino.providers.suggest import get_weather_provider
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.suggest.base import BaseProvider, SuggestionRequest
 
 from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.suggest.weather.backends.protocol import HourlyForecast, WeatherContext
 from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
 from merino.utils import task_runner
 
@@ -49,7 +51,8 @@ from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
 )
 from merino.utils.api.metrics import emit_suggestions_per_metrics
-from merino.utils.api.query_params import (
+from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
+from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
@@ -57,6 +60,7 @@ from merino.utils.api.query_params import (
 
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 from merino.providers.manifest.provider import Provider as ManifestProvider
+from merino.providers.suggest.weather.provider import Provider as WeatherProvider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -209,6 +213,24 @@ async def suggest(
     else:
         search_from = default_providers
 
+    pii_type = pii_inspect(q)
+    request.scope[ScopeKey.PII_DETECTION] = pii_type
+    is_soft_pii = False
+
+    match pii_type:  # noqa
+        case PIIType.EMAIL:
+            metrics_client.increment(
+                "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
+            )
+            return build_suggestion_response(client_variants, search_from, [])
+        case PIIType.NUMERIC:
+            metrics_client.increment(
+                "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
+            )
+            is_soft_pii = True
+        case _:
+            pass
+
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
 
@@ -223,6 +245,7 @@ async def suggest(
             languages=languages,
             user_agent=user_agent,
             source=source,
+            is_soft_pii=is_soft_pii,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
@@ -250,8 +273,19 @@ async def suggest(
     if len(suggestions) == 1 and suggestions[0] is NO_LOCATION_KEY_SUGGESTION:
         return Response(status_code=204)
 
+    if is_soft_pii and len(suggestions):
+        metrics_client.increment(
+            "suggestions.query.pii_detected.false_positive",
+            tags={"type": pii_type.name.lower()},
+        )
+
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
+    return build_suggestion_response(client_variants, search_from, suggestions)
+
+
+def build_suggestion_response(client_variants, search_from, suggestions) -> Response:
+    """Build the Suggestion Response."""
     response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
@@ -262,14 +296,11 @@ async def suggest(
             else []
         ),
     )
-
     # response headers
     response_headers = {}
-
     # could be specific or default
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
     response_headers["Cache-control"] = f"private, max-age={ttl}"
-
     return ORJSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
@@ -445,4 +476,69 @@ async def get_manifest(
         return ORJSONResponse(
             content=jsonable_encoder(manifest_data),
             status_code=404,
+        )
+
+
+@router.get(
+    "/weather/hourly-forecasts",
+    tags=["weather"],
+    summary="Get hourly Forecasts",
+    response_model=list[HourlyForecast],
+)
+async def get_hourly_forecasts(
+    request: Request,
+    country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
+    region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
+    provider: WeatherProvider = Depends(get_weather_provider),
+) -> ORJSONResponse:
+    """Query merino for hourly forecast data.
+
+    **Args**:
+    - `country`: [Optional] ISO 3166-2 country code. E.g.: “US”. If provided,
+        Accuweather provider returns hourly forecasts based on this country. Note: If provided,
+        `city` and `region` must also be provided to successfully return hourly forecasts.
+    - `region`: [Optional] Comma separated string of subdivision code(s). This may contain FIPs codes
+        and/or iso codes. If provided, Accuweather provider will try to return hourly forecasts based on this region(s).
+        Note: If provided,`city` and `country` must also be provided to successfully return hourly forecasts.
+    - `city`: [Optional] City name. E.g. “New York”. If provided,
+        Accuweather provider returns hourly forecasts based on this city. Note: If provided,
+        `region` and `country` must also be provided to successfully return hourly forecasts.
+    - provider: Injected weather provider dependecy used to fetch hourly forecasts data.
+
+    **Headers**:
+    - `Accept-Language` - The locale preferences expressed in this header in
+      accordance with [RFC 2616 section 14.4][rfc-2616-14-4] will be used to
+      determine suggestions. Merino maintains a list of supported locales. Merino
+      will choose the locale from its list that has the highest `q` (quality) value
+      in the user's `Accept-Language` header. Locales with `q=0` will not be used.
+
+      If no locales match, Merino will not return any suggestions. If the header is
+      not included or empty, Merino will default to the `en-US` locale.
+
+      If the highest quality, compatible language produces no suggestion results,
+      Merino will return an empty list instead of attempting to query other
+      languages.
+    """
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+
+    validate_suggest_custom_location_params(city, region, country)
+    geolocation = refine_geolocation_for_suggestion(request, city, region, country)
+    languages = get_accepted_languages(accept_language)
+
+    # Note: this timing metric also covers the count metric.
+    with metrics_client.timeit("weather.hourly_forecasts.request.timing"):
+        weather_context = WeatherContext(geolocation, languages)
+        hourly_forecasts: list[HourlyForecast] = []
+        ttl = 0
+
+        if (
+            hourly_forecasts_with_ttl := await provider.get_hourly_forecasts(weather_context)
+        ) is not None:
+            hourly_forecasts, ttl = hourly_forecasts_with_ttl
+
+        return ORJSONResponse(
+            content=jsonable_encoder(hourly_forecasts),
+            headers={"Cache-Control": (f"private, max-age={ttl}")},
         )

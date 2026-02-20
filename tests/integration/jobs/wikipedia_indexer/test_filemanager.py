@@ -214,7 +214,7 @@ def test_get_latest_dump_fallback_used_when_current_empty(requests_mock):
     requests_mock.get(base_url, text="<html><body>No matches</body></html>")  # nosec
 
     # fallback listing has one match
-    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20251027/"
+    fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20251229/"
     file_name = "enwiki-20251027-cirrussearch-content.json.gz"
     requests_mock.get(
         fallback_url,

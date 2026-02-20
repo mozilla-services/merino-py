@@ -2,6 +2,8 @@
 
 import json
 import logging
+
+# import sys
 from abc import abstractmethod, ABC
 from datetime import datetime, timezone
 from typing import Any, Final
@@ -10,6 +12,7 @@ from dynaconf import LazySettings
 from elasticsearch import (
     AsyncElasticsearch,
     BadRequestError,
+    NotFoundError,
     ConflictError,
     helpers,
 )
@@ -183,58 +186,63 @@ class ElasticCredentials:
         logger = logging.getLogger(__name__)
         self.dsn = dsn
         self.api_key = api_key
-        if not settings:
+        # We check here to see if `settings` is needed, however mypy ignores this.
+        # Add appropriate mypy `# type: ignore` remarks to lines
+        if not (self.dsn and self.api_key) and not settings:
             logger.warning(f"{LOGGING_TAG} Empty settings.")
             return
-        try:
-            logger.info(
-                f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or "None"}"
-            )
-            self.dsn = settings.providers.sports.es.dsn
-        except AttributeError:
-            # fail to next candidate
-            pass
+        else:
+            # Try to get the data from the settings
+            try:
+                logger.info(
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or "None"}"  # type: ignore
+                )
+                self.dsn = settings.providers.sports.es.dsn  # type: ignore
+            except AttributeError:
+                # fail to next candidate
+                pass
+            try:
+                logger.info(
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or "None"}"  # type: ignore
+                )
+                self.api_key = settings.providers.sports.es.api_key  # type: ignore
+            except AttributeError:
+                # fail to next candidate
+                pass
+        # Fall back to pulling from wikipedia.
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or "None"}"
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or "None"}"  # type: ignore
                 )
-                self.dsn = settings.providers.wikipedia.es_url
+                self.dsn = settings.providers.wikipedia.es_url  # type: ignore
             except AttributeError:
                 # fail to next candidate
                 pass
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or "None"}"
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or "None"}"  # type: ignore
                 )
-                self.dsn = settings.jobs.wikipedia_indexer.es_url
+                self.dsn = settings.jobs.wikipedia_indexer.es_url  # type: ignore
             except AttributeError:
                 # remember to call `.validate()` to ensure valid
                 pass
-        try:
-            logger.info(
-                f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or "None"}"
-            )
-            self.api_key = settings.providers.sports.es.api_key
-        except AttributeError:
-            # fail to next candidate
-            pass
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or "None"}"
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or "None"}"  # type: ignore
                 )
-                self.api_key = settings.providers.wikipedia.es_api_key
+                self.api_key = settings.providers.wikipedia.es_api_key  # type: ignore
             except AttributeError:
                 # fail to next candidate
                 pass
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or "None"}"
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or "None"}"  # type: ignore
                 )
-                self.api_key = settings.jobs.wikipedia_indexer.es_api_key
+                self.api_key = settings.jobs.wikipedia_indexer.es_api_key  # type: ignore
             except AttributeError:
                 # remember to call `.validate()` to ensure valid
                 pass
@@ -389,7 +397,7 @@ class SportsDataStore(ElasticDataStore):
         """Kick start the data store for Sports"""
         await super().startup()
         # logger = logging.getLogger(__name__)
-        # val = await self.query_meta("update")
+        # val = await self.query_meta("last_update")
         # if val is None or (float(val) or 0 < datetime.now(tz=timezone.utc).timestamp()):
         #    logger.info(f"{LOGGING_TAG} fetching data")
 
@@ -399,61 +407,59 @@ class SportsDataStore(ElasticDataStore):
     #       eventually impact how often we pull data. More investigation will
     #       be needed.
     #
-    #    async def query_meta(self, key: str) -> None | str:
-    #        """Get value from meta table"""
-    #        if not self.client:
-    #            return None
-    #        try:
-    #            res = await self.client.search(
-    #                index=self.meta_map,
-    #                query={"term": {"_id": key.lower()}},
-    #                # query={"term": {"key": key.lower()}},
-    #                # query={"match_all": {}},
-    #                source_includes=["meta_value"],
-    #                size=1,
-    #            )
-    #            hits = res["hits"]["hits"]
-    #            if not len(hits):
-    #                return None
-    #            return hits[0]["_source"].get("meta_value") or None
-    #        except Exception as ex:
-    #            logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
-    #            return None
-    #
-    #    async def store_meta(self, key: str, value: str):
-    #        """Store value into meta table"""
-    #        if not self.client:
-    #            return
-    #        try:
-    #            try:
-    #                await self.client.create(
-    #                    index=self.meta_map,
-    #                    id=key.lower(),
-    #                    document={"meta_key": key, "meta_value": value},
-    #                )
-    #            except ConflictError:
-    #                await self.client.update(
-    #                    index=self.meta_map,
-    #                    id=key.lower(),
-    #                    doc={"meta_key": key, "meta_value": value},
-    #                )
-    #        except Exception as ex:
-    #            logging.getLogger(__name__).error(
-    #                f"{LOGGING_TAG} Error: storing meta {key}:{value} {ex}"
-    #            )
-    #        await self.client.indices.refresh(index=self.meta_map)
-    #
-    #    async def del_meta(self, key) -> None:
-    #        """Remove data from the meta table"""
-    #        if not self.client:
-    #            return
-    #        try:
-    #            await self.client.delete(index=self.meta_map, id=key.lower())
-    #            await self.client.indices.refresh(index=self.meta_map)
-    #        except Exception as ex:
-    #            logging.getLogger(__name__).error(
-    #                f"{LOGGING_TAG} Error: delete meta {key} {ex}"
-    #            )
+    async def query_meta(self, key: str) -> None | str:
+        """Get value from meta table"""
+        if not self.client:
+            return None
+        try:
+            res = await self.client.search(
+                index=self.meta_map,
+                query={"term": {"_id": key.lower()}},
+                # query={"term": {"key": key.lower()}},
+                # query={"match_all": {}},
+                source_includes=["meta_value"],
+                size=1,
+            )
+            hits = res["hits"]["hits"]
+            if not len(hits):
+                return None
+            return hits[0]["_source"].get("meta_value") or None
+        except Exception as ex:
+            logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
+            return None
+
+    async def store_meta(self, key: str, value: str):
+        """Store value into meta table"""
+        if not self.client:
+            return
+        try:
+            try:
+                await self.client.create(
+                    index=self.meta_map,
+                    id=key.lower(),
+                    document={"meta_key": key, "meta_value": value},
+                )
+            except ConflictError:
+                await self.client.update(
+                    index=self.meta_map,
+                    id=key.lower(),
+                    doc={"meta_key": key, "meta_value": value},
+                )
+        except Exception as ex:
+            logging.getLogger(__name__).error(
+                f"{LOGGING_TAG} Error: storing meta {key}:{value} {ex}"
+            )
+        await self.client.indices.refresh(index=self.meta_map)
+
+    async def del_meta(self, key) -> None:
+        """Remove data from the meta table"""
+        if not self.client:
+            return
+        try:
+            await self.client.delete(index=self.meta_map, id=key.lower())
+            await self.client.indices.refresh(index=self.meta_map)
+        except Exception as ex:
+            logging.getLogger(__name__).error(f"{LOGGING_TAG} Error: delete meta {key} {ex}")
 
     async def build_meta(self) -> None:
         """Create the meta data index. This is a very simple
@@ -505,7 +511,7 @@ class SportsDataStore(ElasticDataStore):
                     ignore_unavailable=True,
                 )
             await self.build_meta()
-        except BadRequestError as ex:
+        except BadRequestError as ex:  # pragma: no cover
             if ex.error != "resource_already_exists_exception":
                 raise SportsDataError(f"Could not create {self.meta_map}") from ex
             else:
@@ -547,7 +553,8 @@ class SportsDataStore(ElasticDataStore):
                 "dynamic": False,
                 "properties": {
                     # The serialized event data
-                    "event": {"type": "keyword", "index": False},
+                    "id": {"type": "integer"},
+                    "event": {"type": "object"},
                     "status_type": {"type": "keyword"},
                     "expiry": {"type": "date"},
                     "sport": {"type": "keyword"},
@@ -632,7 +639,11 @@ class SportsDataStore(ElasticDataStore):
             try:
                 filter: dict[str, dict] = {}
                 for doc in res["hits"]["hits"]:
-                    event = json.loads((doc["_source"]["event"]))
+                    # We previously stored events as strings. Handle the potential transition.
+                    if isinstance(doc["_source"]["event"], str):
+                        event = json.loads(doc["_source"]["event"])
+                    else:
+                        event = doc["_source"]["event"]
                     # Add the elastic search score as a baseline score for the return result.
                     event["es_score"] = doc.get("_score", 0)
                     event["touched"] = doc["_source"].get("touched", "None")
@@ -663,7 +674,21 @@ class SportsDataStore(ElasticDataStore):
                             filter[sport]["previous"] = event
                             continue
                         # get the most recently "finalized" game
-                        if datetime.fromisoformat(filter[sport]["previous"]["date"]) < event_date:
+                        # This uses the "updated" time, which will be after the prior event's start time,
+                        # but could also potentially overlap with the current event's start time (for mixed
+                        # sport results). There is a risk that a much earlier game is updated long after the
+                        # the events closure or the next event's closure (e.g. there is a contested score
+                        # that is adjusted), but this should be an anomalous event.
+                        # Note, in spite of what test coverage says, this is being exercised by
+                        # `test_sports_search_event_hits` & `test_sports_search_event_hits_no_current`,
+                        if filter.get(sport, {}).get(  # pragma: no cover
+                            "previous", {}
+                        ).get("updated") and (
+                            datetime.fromisoformat(filter[sport]["previous"]["updated"])
+                            < datetime.fromisoformat(event.get("updated", event_date))
+                        ):
+                            # if "unittest" in sys.modules.keys():
+                            #    print("\n👀👀 LOOK AT ME! RUNNING IN UNIT TESTS! 👀👀")
                             filter[sport]["previous"] = event
                             continue
                     # If only show the next upcoming game.
@@ -685,13 +710,43 @@ class SportsDataStore(ElasticDataStore):
                             continue
                         if datetime.fromisoformat(
                             filter[sport]["current"]["updated"]
-                        ) > datetime.fromisoformat(event["updated"]):
+                        ) < datetime.fromisoformat(event["updated"]):
                             filter[sport]["current"] = event
             except Exception as ex:
                 logger.error(f"{LOGGING_TAG} search_event: Unexpected error {ex}")
             return filter
         else:
             return {}
+
+    async def update_events(
+        self,
+        sport: Sport,
+        language_code: str,
+        last_update: datetime,
+    ) -> None:
+        """Update existing events (used to change status and scores)"""
+        logger = logging.getLogger(__name__)
+        if not self.client:
+            return
+        index = (self.index_map["event"]).format(lang=language_code)
+        for event in sport.events.values():
+            if event.updated and event.updated > last_update:
+                new_event = event.serialize()
+                try:
+                    await self.client.update(
+                        index=index,
+                        id=str(event.id),
+                        body={
+                            "doc": {
+                                "status_type": event.status.status_type(),
+                                "event": new_event,
+                            }
+                        },
+                    )
+                except NotFoundError:
+                    logger.warning(f"{LOGGING_TAG} 🤷 Unknown event: {event.id}, skipping")
+                except Exception as ex:
+                    logger.error(f"{LOGGING_TAG} {ex}")
 
     async def store_events(
         self,
@@ -708,6 +763,9 @@ class SportsDataStore(ElasticDataStore):
 
         # Write the fields to Elasticsearch.
         # The `_source` _MUST_ match the previously specified `mapping`
+        if not sport.events:
+            logger.info(f"{LOGGING_TAG} No events")
+            return
         for event in sport.events.values():
             action = {
                 "_index": index,
@@ -719,9 +777,10 @@ class SportsDataStore(ElasticDataStore):
                     "expiry": event.expiry,
                     "updated": event.updated or event.date,
                     "id": event.id,
+                    # NOTE: Do not call `event.key()` if there is no team data.
                     "event_key": event.key(),
                     "status_type": event.status.status_type(),
-                    "event": event.model_dump_json(),
+                    "event": event.serialize(),
                     "touched": datetime.now(tz=timezone.utc),
                 },
             }
@@ -740,8 +799,11 @@ class SportsDataStore(ElasticDataStore):
                     f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
                 ) from ex
         start = datetime.now()
+        try:
+            await self.store_meta("last_update", datetime.now(tz=timezone.utc).isoformat())
+        except Exception as ex:
+            logger.error(f"{LOGGING_TAG} could not update meta data: {ex}")
         await self.client.indices.refresh(index=index)
-        # await self.store_meta("update", str(start.timestamp()))
         logger.info(
             f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"
         )

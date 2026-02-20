@@ -38,7 +38,7 @@ def fixture_sportsdata_parameters(
     """Create constructor parameters for sportsdata provider."""
     return {
         "metrics_client": statsd_mock,
-        "trigger_words": ["game", "game today"],
+        "intent_words": ["game", "game today"],
         "settings": {},
     }
 
@@ -85,6 +85,7 @@ def fixture_nfl() -> NFL:
         fullname="Fake Home",
         name="Home",
         key="HOM",
+        id=123,
         locale="Home City",
         aliases=["Fake Home"],
         colors=["000000", "FFFFFF"],
@@ -96,6 +97,7 @@ def fixture_nfl() -> NFL:
         fullname="Fake Away",
         name="Away",
         key="AWA",
+        id=456,
         locale="Away City",
         aliases=["Fake Away"],
         colors=["000000", "FFFFFF"],

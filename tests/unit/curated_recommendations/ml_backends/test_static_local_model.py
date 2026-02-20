@@ -12,6 +12,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CTR_SECTION_MODEL_ID,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
+    CohortModelBackend,
     InferredLocalModel,
     LOCAL_MODEL_MODEL_ID_KEY,
 )
@@ -24,9 +25,30 @@ from merino.curated_recommendations.provider import (
 
 from merino.curated_recommendations.protocol import ExperimentName
 
-INFERRED_V3_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value
+INFERRED_V4_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value
 
 TEST_SURFACE = "test_surface"
+COHORT_TRAINING_RUN = "test-cohort-training-run-id"
+
+
+class MockCohortModelBackend(CohortModelBackend):
+    """Mock class implementing the protocol for CohortModelBackend."""
+
+    def get_cohort_for_interests(
+        self,
+        interests: str,
+        model_id: str | None = None,
+        training_run_id: str | None = None,
+    ) -> str | None:
+        """Return a sample cohort based on simple hash of interests string."""
+        if not interests:
+            return None
+        if training_run_id is not None and training_run_id != COHORT_TRAINING_RUN:
+            return None
+        # Simple hash to assign deterministic cohort
+        return str(
+            sum((ord(c) - ord("0")) for c in interests) % 10
+        )  # Assume 10 cohorts for testing
 
 
 @pytest.fixture
@@ -39,6 +61,12 @@ def model_limited():
 def local_model_backend():
     """Create static model  - used for more generic tests than model_limited"""
     return SuperInferredModel()
+
+
+@pytest.fixture
+def cohort_model_backend():
+    """Create mock cohort model backend"""
+    return MockCohortModelBackend()
 
 
 @pytest.fixture
@@ -130,7 +158,7 @@ def test_model_experiment_name_and_branch_name(model_limited):
     """Caller should not decode when the model id doesn't match."""
     model = model_limited.get(
         "surface",
-        experiment_name=INFERRED_V3_EXPERIMENT_NAME,
+        experiment_name=INFERRED_V4_EXPERIMENT_NAME,
         experiment_branch="any",
     )
     assert model.model_matches_interests(SERVER_V3_MODEL_ID)
@@ -468,6 +496,59 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
             assert out.normalized_scores[key] == 0.0
 
 
+def test_gets_cohort(inferred_model, local_model_backend, cohort_model_backend):
+    """When model_id matches and values are present, decode into floats."""
+    # Build a valid dp_values array aligned with the model's interest_vector order
+    iv = inferred_model.model_data.interest_vector
+    dp_values = []
+    for _key, cfg in iv.items():
+        n = len(cfg.thresholds) + 1
+        dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
+
+    interests = InferredInterests.empty()
+    interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
+    interests.root[LOCAL_MODEL_DB_VALUES_KEY] = dp_values
+    req = make_request(interests)
+
+    out = CuratedRecommendationsProvider.process_request_interests(
+        req,
+        SurfaceId.NEW_TAB_EN_US,
+        local_model_backend,
+        cohort_model_backend,
+        cohort_model_training_run_id=COHORT_TRAINING_RUN,
+    )
+    assert isinstance(out, ProcessedInterests)
+    # model_id is preserved
+    assert out.model_id == SERVER_V3_MODEL_ID
+    assert out.cohort is not None
+    assert out.numerical_value is not None
+    assert len(out.cohort) > 0
+
+    # No cohort model training run id passed.
+    out = CuratedRecommendationsProvider.process_request_interests(
+        req, SurfaceId.NEW_TAB_EN_US, local_model_backend, cohort_model_backend
+    )
+    assert isinstance(out, ProcessedInterests)
+    # model_id is preserved
+    assert out.model_id == SERVER_V3_MODEL_ID
+    assert out.cohort is not None
+    assert out.numerical_value is not None
+    assert len(out.cohort) > 0
+
+    out = CuratedRecommendationsProvider.process_request_interests(
+        req,
+        SurfaceId.NEW_TAB_EN_US,
+        local_model_backend,
+        cohort_model_backend,
+        cohort_model_training_run_id="some-other-id",
+    )
+    assert isinstance(out, ProcessedInterests)
+    # model_id is preserved
+    assert out.model_id == SERVER_V3_MODEL_ID
+    assert out.cohort is None
+    assert out.numerical_value is not None
+
+
 def test_process_passthrough_when_values_missing_even_with_matching_model(
     inferred_model, local_model_backend
 ):
@@ -492,13 +573,13 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
     "experiment,branch,model_id,expect_private_nonempty",
     [
         (
-            "optin-" + INFERRED_V3_EXPERIMENT_NAME,
+            "optin-" + INFERRED_V4_EXPERIMENT_NAME,
             "any_branch",
             SERVER_V3_MODEL_ID,
             True,
         ),
         (
-            INFERRED_V3_EXPERIMENT_NAME,
+            INFERRED_V4_EXPERIMENT_NAME,
             "any_branch",
             SERVER_V3_MODEL_ID,
             True,

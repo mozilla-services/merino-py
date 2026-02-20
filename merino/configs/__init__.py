@@ -74,6 +74,14 @@ _validators = [
         must_exist=True,
         env=["production", "staging", "development"],
     ),
+    Validator(
+        "interest_cohort_model.gcs.bucket_name",
+        "interest_cohort_model.gcs.gcp_project",
+        "interest_cohort_model.gcs.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
     Validator(
@@ -118,7 +126,7 @@ _validators = [
     Validator("providers.sports.mix_sports", is_type_of=bool, required=False),
     Validator("providers.sports.max_suggestions", is_type_of=int, gte=1, required=True),
     Validator("providers.sports.event_ttl_weeks", is_type_of=int, gte=1, required=False),
-    Validator("providers.sports.trigger_words", is_type_of=list),
+    Validator("providers.sports.intent_words", is_type_of=list),
     # TODO: Break these out into a generic "elastic search" set?
     Validator("providers.sports.es.dsn", is_type_of=str, required=True),
     Validator("providers.sports.es.api_key", is_type_of=str, required=True),

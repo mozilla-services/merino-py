@@ -25,8 +25,10 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CACrawledContentRescaler,
     CrawledContentRescaler,
     SchedulerHoldbackRescaler,
+    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import PriorBackend, EngagementRescaler
 from merino.curated_recommendations.protocol import (
@@ -63,6 +65,8 @@ TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later secti
 HEADLINES_SECTION_KEY = "headlines"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
+IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
+MAX_SECTIONS_PER_RESPONSE = 20
 
 
 def map_section_item_to_recommendation(
@@ -289,6 +293,13 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
     )
 
 
+def is_inferred_contextual_ranking(personal_interests: ProcessedInterests | None) -> bool:
+    """Return True if inferred contextual ranking should be applied."""
+    if IS_COHORT_FEATURE_DISABLED:
+        return False
+    return personal_interests is not None and personal_interests.cohort is not None
+
+
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled (either branch)."""
     experiment_name = ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
@@ -319,8 +330,7 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     - ML sections experiment is enabled (treatment branch), OR
     """
     in_holdback = is_scheduler_holdback_experiment(request)
-    # Subtopics only in the US
-    return not in_holdback and request.region == "US"
+    return not in_holdback and request.region in ("US", "GB", "IE")
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -352,13 +362,24 @@ def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> 
 
 def get_ranking_rescaler_for_branch(
     request: CuratedRecommendationsRequest,
+    surface_id: SurfaceId | None = None,
 ) -> EngagementRescaler | None:
     """Get the correct interactions and prior rescaler for the current experiment"""
     if is_scheduler_holdback_experiment(request):
         return SchedulerHoldbackRescaler()
+
+    if surface_id == SurfaceId.NEW_TAB_EN_GB:
+        return UKCrawledContentRescaler()
+
+    if surface_id == SurfaceId.NEW_TAB_EN_CA and is_enrolled_in_experiment(
+        request, "sections-in-canada", "sections-ca-content"
+    ):
+        return CACrawledContentRescaler()
+
     # While we preivously returned None for non-US, we know there are some section users
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
+
     return CrawledContentRescaler()
 
 
@@ -537,11 +558,12 @@ def rank_sections(
     if include_headlines_section:
         put_headlines_first_then_top_stories(sections)
 
-    # Sort sections by receivedFeedRank
-    sections = {
-        sid: section
-        for sid, section in sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)
-    }
+    # Sort sections by receivedFeedRank and limit to MAX_SECTIONS_PER_RESPONSE
+    sorted_sections = sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)[
+        :MAX_SECTIONS_PER_RESPONSE
+    ]
+
+    sections = {sid: section for sid, section in sorted_sections}
 
     return sections
 
@@ -632,7 +654,7 @@ async def get_sections(
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
-    rescaler = get_ranking_rescaler_for_branch(request)
+    rescaler = get_ranking_rescaler_for_branch(request, surface_id)
 
     headlines_corpus_section, corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
@@ -676,11 +698,13 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    if (
-        is_contextual_ranking_experiment(request)
+    do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
+    use_contexual_ranker = (
+        (do_inferred_contextual or is_contextual_ranking_experiment(request))
         and ml_backend is not None
         and ml_backend.is_valid()
-    ):
+    )
+    if use_contexual_ranker:
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -766,6 +790,7 @@ async def get_sections(
         ranker,
         personal_interests,
         engagement_rescaler=rescaler,
+        do_section_personalization_reranking=not use_contexual_ranker,  # Contextual ranker already re-ranks all sections
         include_headlines_section=include_headlines_section,
     )
 

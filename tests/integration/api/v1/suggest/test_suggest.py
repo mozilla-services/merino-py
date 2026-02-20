@@ -326,6 +326,40 @@ def test_suggest_request_log_data(
     assert log_data == expected_log_data
 
 
+@freeze_time("1998-03-31")
+def test_suggest_request_pii_does_not_log_data(
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    client: TestClient,
+) -> None:
+    """Tests that the request that do contain PII does not produce logs."""
+    caplog.set_level(logging.INFO)
+
+    # The IP address is taken from `GeoLite2-City-Test.mmdb`
+    mock_client = mocker.patch("fastapi.Request.client")
+    mock_client.host = "216.160.83.56"
+
+    client.get(
+        url="/api/v1/suggest",
+        params={
+            "q": "n0p3",
+            "sid": "deadbeef-0000-1111-2222-333344445555",
+            "seq": 0,
+        },
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11.2; rv:85.0) "
+                "Gecko/20100101 Firefox/103.0"
+            ),
+            "x-request-id": "1b11844c52b34c33a6ad54b7bc2eb7c7",
+        },
+    )
+
+    records = filter_caplog(caplog.records, "web.suggest.request")
+    assert len(records) == 0
+
+
 def test_suggest_with_invalid_geolocation_ip(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -367,6 +401,48 @@ def test_suggest_with_invalid_geolocation_ip(
             ],
         ),
         (
+            "/api/v1/suggest?q=test@example.com",
+            [
+                ("suggestions.query.pii_detected", {"type": "email"}),
+                ("get.api.v1.suggest.timing", None),
+                (
+                    "get.api.v1.suggest.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+                (
+                    "response.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+            ],
+        ),
+        (
+            "/api/v1/suggest?q=sp0ns0r3d-s0ft-p11",
+            [
+                (
+                    "suggestions.query.pii_detected",
+                    {"type": "numeric"},
+                ),
+                ("providers.sponsored.query", None),
+                ("providers.non-sponsored.query", None),
+                (
+                    "suggestions.query.pii_detected.false_positive",
+                    {"type": "numeric"},
+                ),
+                ("suggestions-per.request", None),
+                ("suggestions-per.provider.sponsored", None),
+                ("suggestions-per.provider.non-sponsored", None),
+                ("get.api.v1.suggest.timing", None),
+                (
+                    "get.api.v1.suggest.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+                (
+                    "response.status_codes.200",
+                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                ),
+            ],
+        ),
+        (
             "/api/v1/suggest",
             [
                 ("get.api.v1.suggest.timing", None),
@@ -381,7 +457,7 @@ def test_suggest_with_invalid_geolocation_ip(
             ],
         ),
     ],
-    ids=["status_code_200", "status_code_400"],
+    ids=["status_code_200", "status_code_200_pii", "status_code_200_soft_pii", "status_code_400"],
 )
 def test_suggest_metrics(
     mocker: MockerFixture,

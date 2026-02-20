@@ -24,8 +24,10 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CACrawledContentRescaler,
     SchedulerHoldbackRescaler,
     CrawledContentRescaler,
+    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
     Section,
@@ -37,6 +39,7 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
+    IS_COHORT_FEATURE_DISABLED,
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
@@ -290,29 +293,56 @@ class TestFilterSectionsByExperiment:
     """Tests covering filter_sections_by_experiment"""
 
     @pytest.mark.parametrize(
-        "name,branch,region,expected_class",
+        "name,branch,region,surface_id,expected_class",
         [
             (
                 ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
                 "control",
                 "US",
+                None,
                 SchedulerHoldbackRescaler,
             ),
             # Whenever we launch sections somewhere else we'll have crawled content, so best
             # to set it as default.
-            ("other", "treatment", "US", CrawledContentRescaler),
-            ("other", "treatment", "CA", CrawledContentRescaler),
-            (None, None, "US", CrawledContentRescaler),
-            (None, None, "CA", CrawledContentRescaler),
+            ("other", "treatment", "US", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            ("other", "treatment", "US", None, CrawledContentRescaler),
+            ("other", "treatment", "CA", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            (None, None, "US", None, CrawledContentRescaler),
+            (None, None, "CA", None, CrawledContentRescaler),
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            # CA with sections-ca-content branch gets CACrawledContentRescaler
+            (
+                "sections-in-canada",
+                "sections-ca-content",
+                "CA",
+                SurfaceId.NEW_TAB_EN_CA,
+                CACrawledContentRescaler,
+            ),
+            # CA with wrong branch falls through to CrawledContentRescaler
+            (
+                "sections-in-canada",
+                "sections-layout-only",
+                "CA",
+                SurfaceId.NEW_TAB_EN_CA,
+                CrawledContentRescaler,
+            ),
+            # CA surface without experiment falls through to CrawledContentRescaler
+            (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CrawledContentRescaler),
         ],
     )
-    def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
+    def test_get_ranking_rescaler_for_branch(
+        self, name, branch, region, surface_id, expected_class
+    ):
         """Test that we get the appropriate rescaler"""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:
-            assert isinstance(get_ranking_rescaler_for_branch(req), expected_class)
+            assert isinstance(
+                get_ranking_rescaler_for_branch(req, surface_id=surface_id), expected_class
+            )
         else:
             assert get_ranking_rescaler_for_branch(req) is None
 
@@ -365,6 +395,33 @@ class TestFilterSectionsByExperiment:
         assert "custom-section-1" in result
         assert "health" in result
         assert "nfl" in result
+
+
+class TestIsInferredContextualRankingExperiment:
+    """Tests covering is_inferred_contextual_ranking function"""
+
+    def test_inferred_contextual_ranking(self):
+        """Test that inferred contextual ranking is correctly identified."""
+        from merino.curated_recommendations.sections import is_inferred_contextual_ranking
+        from merino.curated_recommendations.protocol import ProcessedInterests
+
+        # Test case where personal_interests is None
+        assert not is_inferred_contextual_ranking(None)
+
+        # Test case where cohort is None
+        pi_no_cohort = ProcessedInterests(cohort=None, numerical_value=5)
+        assert not is_inferred_contextual_ranking(pi_no_cohort)
+
+        # Test case where numerical_value mod selector is not zero
+        pi_not_selected = ProcessedInterests(cohort="test", numerical_value=3)  # 3 % 4 != 0
+        not is_inferred_contextual_ranking(pi_not_selected)
+
+        # Test case where all conditions are met
+        pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0
+        if IS_COHORT_FEATURE_DISABLED:
+            assert not is_inferred_contextual_ranking(pi_selected)
+        else:
+            assert is_inferred_contextual_ranking(pi_selected)
 
 
 class TestUpdateReceivedFeedRank:

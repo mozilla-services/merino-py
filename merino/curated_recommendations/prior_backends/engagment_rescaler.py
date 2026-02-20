@@ -68,6 +68,42 @@ class CrawledContentRescaler(EngagementRescaler):
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
 
 
+CA_EXPERIMENT_TREATMENT_PERCENT = 0.10
+
+
+class CACrawledContentRescaler(CrawledContentRescaler):
+    """Rescaler for CA experiment — scales engagement up by 1/0.10 = 10x
+    to compensate for only 10% of CA traffic generating engagement data.
+    """
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
+    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
+        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
+        treatment percentage to compensate for small experiment size.
+        """
+        opens, no_opens = super().rescale(rec, opens, no_opens)
+        return opens / CA_EXPERIMENT_TREATMENT_PERCENT, no_opens / CA_EXPERIMENT_TREATMENT_PERCENT
+
+
+class UKCrawledContentRescaler(CrawledContentRescaler):
+    """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
+    Special handling is added for certain content types that are blocked from most popular section
+    """
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
+    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
+        """Story is not allowed in most popular in some cases. We therefore will have to get by with many less impressions
+        If we don't do this, these stories will rely more on priors for ranking, causing poor exploration/exploitation balance
+        both in terms of section ranking and ranking within the section
+        """
+        opens, no_opens = super().rescale(rec, opens, no_opens)
+        return opens, no_opens
+
+
 class SchedulerHoldbackRescaler(EngagementRescaler):
     """Scales experiment based content on relative size of experiment, as a fractional percentage"""
 

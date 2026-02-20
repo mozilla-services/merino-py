@@ -59,3 +59,8 @@ async def shutdown_providers() -> None:
 def get_providers() -> tuple[dict[str, BaseProvider], list[BaseProvider]]:
     """Return a tuple of all providers and default providers"""
     return providers, default_providers
+
+
+def get_weather_provider() -> BaseProvider:
+    """Return the weather provider"""
+    return providers["accuweather"]

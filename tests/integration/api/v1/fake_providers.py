@@ -86,6 +86,22 @@ def query_sponsored(provider_name: str) -> QueryCallable:
                     score=0.5,
                 )
             ]
+        elif srequest.query.lower() == "sp0ns0r3d-s0ft-p11":
+            return [
+                SponsoredSuggestion(
+                    block_id=0,
+                    full_keyword="sp0ns0r3d-s0ft-p11",
+                    title="sponsored title",
+                    url=HttpUrl("https://www.sponsored.com"),
+                    impression_url=HttpUrl("https://www.sponsoredimpression.com"),
+                    click_url=HttpUrl("https://www.sponsoredclick.com"),
+                    provider=provider_name,
+                    advertiser="test advertiser",
+                    is_sponsored=True,
+                    icon="https://www.sponsoredicon.com",
+                    score=0.5,
+                )
+            ]
         else:
             return []
 

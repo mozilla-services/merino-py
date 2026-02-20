@@ -201,6 +201,8 @@ class PolygonBackend:
         params = {"ticker": ticker, self.url_param_api_key: self.api_key}
 
         try:
+            self.metrics_client.increment("polygon.request.snapshot.get")
+
             with self.metrics_client.timeit("polygon.request.snapshot.get.latency"):
                 response: Response = await self.http_client.get(
                     self.url_single_ticker_snapshot, params=params
@@ -214,7 +216,6 @@ class PolygonBackend:
             self.metrics_client.increment("polygon.request.snapshot.get.failed")
             return None
 
-        self.metrics_client.increment("polygon.request.snapshot.get")
         return response.json()
 
     async def get_ticker_image_url(self, ticker: str) -> str | None:

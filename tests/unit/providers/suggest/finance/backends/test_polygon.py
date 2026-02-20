@@ -270,7 +270,10 @@ async def test_fetch_ticker_snapshot_failure_for_http_500(
 
     assert records[0].message.startswith("Polygon request error")
     assert "500 Internal Server Error" in records[0].message
-    increment_metric_mock.assert_called_once_with("polygon.request.snapshot.get.failed")
+    increment_metric_mock.assert_has_calls(
+        [call("polygon.request.snapshot.get"), call("polygon.request.snapshot.get.failed")],
+        any_order=False,
+    )
 
 
 @pytest.mark.asyncio

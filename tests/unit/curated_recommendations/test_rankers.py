@@ -28,11 +28,13 @@ from merino.curated_recommendations.protocol import (
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
 )
+from merino.curated_recommendations.ml_backends.protocol import ContextualArticleRankings
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
     filter_fresh_items_with_probability,
     ThompsonSamplingRanker,
 )
+from merino.curated_recommendations.rankers.contextual_ranker import ContextualRanker
 from merino.curated_recommendations.rankers.utils import (
     spread_publishers,
     boost_preferred_topic,
@@ -1174,8 +1176,8 @@ class TestTopStoriesArticleBalancer:
         assert balancer.add_story(stories[3]) is False
         assert len(balancer.get_stories()) == 3
 
-    def test_rejects_blocked_topics_until_limits_raise(self):
-        """Blocked topics should be excluded until relaxed limits allow them."""
+    def test_rejects_blocked_topics_after_limits_raise(self):
+        """Blocked topics should be excluded, even after limits are raised."""
         balancer = TopStoriesArticleBalancer(expected_num_articles=9)
         allowed_story = self._build_recommendation("0", Topic.BUSINESS)
         blocked_story = self._build_recommendation("1", Topic.GAMING)
@@ -1184,8 +1186,8 @@ class TestTopStoriesArticleBalancer:
         assert balancer.add_story(blocked_story) is False
 
         balancer.set_limits_for_expected_articles(15)
-        assert balancer.add_story(blocked_story)
-        assert len(balancer.get_stories()) == 2
+        assert balancer.add_story(blocked_story) is False
+        assert len(balancer.get_stories()) == 1  # Story wasn't allowed
 
     def test_add_stories_supports_raising_limits_and_capacity(self):
         """Add a second batch after increasing both limit and balancing constraints."""
@@ -1207,3 +1209,82 @@ class TestTopStoriesArticleBalancer:
         assert discarded_second == []
         assert remaining_second == batch_one[4:]
         assert len(balancer.get_stories()) == 4
+
+
+class StubMLRecsBackend:
+    """Stub MLRecsBackend returning configurable contextual rankings."""
+
+    def __init__(self, rankings: ContextualArticleRankings | None = None):
+        """Initialize with optional pre-set rankings."""
+        self._rankings = rankings
+
+    def is_valid(self) -> bool:
+        """Return True."""
+        return True
+
+    def get(
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
+    ) -> ContextualArticleRankings | None:
+        """Return pre-configured rankings."""
+        return self._rankings
+
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return 0 impressions."""
+        return 0
+
+    def get_cohort_training_run_id(self) -> str | None:
+        """Return None."""
+        return None
+
+
+class TestContextualRanker:
+    """Tests for the ContextualRanker."""
+
+    def test_rank_items_falls_back_to_thompson_when_no_contextual_scores(self):
+        """When ml_backend.get() returns None, rank_items must not raise
+        any errors and must fall back to Thompson sampling for every recommendation.
+        """
+        recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(rankings=None)
+
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs)
+
+        assert len(ranked) == 2
+        assert all(rec.ranking_data is not None for rec in ranked)
+        assert all(isinstance(rec.ranking_data.score, float) for rec in ranked)
+
+    def test_rank_items_falls_back_to_thompson_when_item_not_in_rankings(self):
+        """When rankings exist but the item's corpusItemId is absent, fall back to Thompson sampling."""
+        recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        # Rankings present but no data for the particular items.
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(granularity="region", shards={})
+        )
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs)
+        assert len(ranked) == 2
+        assert all(rec.ranking_data is not None for rec in ranked)
+        assert all(isinstance(rec.ranking_data.score, float) for rec in ranked)
+
+    def test_rank_items_uses_ml_score_when_item_in_rankings(self, monkeypatch):
+        """When rankings contain the item, the ML (normal-sampled) score is used."""
+        recs = generate_recommendations(item_ids=["a"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(
+                granularity="region",
+                shards={"a": {"mean": 0.8, "std": 0.0}},
+            )
+        )
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs)
+
+        assert len(ranked) == 1
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.score == pytest.approx(0.8)
