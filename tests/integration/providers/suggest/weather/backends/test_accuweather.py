@@ -28,12 +28,17 @@ from merino.exceptions import CacheAdapterError
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.weather.backends.accuweather import (
     AccuweatherBackend,
+    AccuweatherLocation,
     WeatherDataType,
 )
 from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
+from merino.providers.suggest.weather.backends.accuweather.utils import (
+    process_hourly_forecast_response,
+)
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecastsWithTTL,
     Temperature,
     WeatherReport,
     WeatherContext,
@@ -47,6 +52,7 @@ ACCUWEATHER_METRICS_SAMPLE_RATE = 0.9
 WEATHER_REPORT_TTL_SEC = 1800
 CURRENT_CONDITIONS_TTL_SEC = 1800
 FORECAST_TTL_SEC = 3600
+HOURLY_FORECAST_TTL_SEC = 3600
 LOCATION_KEY_TTL_SEC = 2592000
 
 TEST_CACHE_ERROR = "test cache error"
@@ -63,6 +69,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "cached_location_key_ttl_sec": LOCATION_KEY_TTL_SEC,
         "cached_current_condition_ttl_sec": CURRENT_CONDITIONS_TTL_SEC,
         "cached_forecast_ttl_sec": FORECAST_TTL_SEC,
+        "cached_hourly_forecast_ttl_sec": HOURLY_FORECAST_TTL_SEC,
         "metrics_client": statsd_mock,
         "http_client": mocker.AsyncMock(spec=AsyncClient),
         "url_param_api_key": "apikey",
@@ -71,6 +78,7 @@ def fixture_accuweather_parameters(mocker: MockerFixture, statsd_mock: Any) -> d
         "url_cities_param_query": "q",
         "url_current_conditions_path": "/currentconditions/v1/{location_key}.json",
         "url_forecasts_path": "/forecasts/v1/daily/1day/{location_key}.json",
+        "url_hourly_forecasts_path": "/forecasts/v1/hourly/12hour/{location_key}.json",
         "url_location_completion_path": "/locations/v1/cities/{country_code}/autocomplete.json",
         "url_location_key_placeholder": "{location_key}",
         "metrics_sample_rate": ACCUWEATHER_METRICS_SAMPLE_RATE,
@@ -323,6 +331,38 @@ def fixture_accuweather_cached_forecast_fahrenheit() -> bytes:
             "low": {"f": 57.0},
         }
     ).encode("utf-8")
+
+
+@pytest.fixture(name="accuweather_hourly_forecast_response")
+def fixture_accuweather_hourly_forecast_response() -> bytes:
+    """AccuWeather API response with 12 hourly forecasts."""
+    forecasts = []
+    base_time = 1708281600
+
+    for i in range(12):
+        hour = 14 + i
+        forecasts.append(
+            {
+                "DateTime": f"2026-02-18T{hour:02d}:00:00-05:00",
+                "EpochDateTime": base_time + (i * 3600),
+                "Temperature": {"Unit": "F", "Value": 60 + i},
+                "WeatherIcon": 6,
+                "Link": f"http://www.accuweather.com/en/us/san-francisco/94105/hourly-weather-forecast/39376?day=1&hbhhour={hour}&lang=en-us",
+            }
+        )
+
+    return json.dumps(forecasts).encode("utf-8")
+
+
+@pytest.fixture(name="accuweather_cached_hourly_forecasts")
+def fixture_accuweather_cached_hourly_forecasts(
+    accuweather_hourly_forecast_response: bytes,
+) -> bytes:
+    """Return cached AccuWeather hourly forecasts (processed format)."""
+    # Process the API response to get the cached format
+    api_response = json.loads(accuweather_hourly_forecast_response)
+    processed_data = process_hourly_forecast_response(api_response)
+    return json.dumps(processed_data).encode("utf-8")
 
 
 @pytest.fixture(scope="module")
@@ -918,3 +958,111 @@ async def test_get_weather_report_with_location_key_with_cache_error(
     assert metrics_increment_called == [
         "accuweather.cache.fetch-via-location-key.error",
     ]
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_cache_hit(
+    mocker: MockerFixture,
+    redis_client: Redis,
+    weather_context_with_location_key: WeatherContext,
+    accuweather_parameters: dict[str, Any],
+    accuweather_cached_hourly_forecasts: bytes,
+) -> None:
+    """Test that we can get hourly forecasts from cache with a valid TTL."""
+    # set up the accuweather backend object with the testcontainer redis client
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_client), **accuweather_parameters
+    )
+
+    # generate cache key for hourly forecasts
+    language = weather_context_with_location_key.languages[0]
+    cache_key = accuweather.cache_key_template(WeatherDataType.HOURLY_FORECAST, language).format(
+        location_key=ACCUWEATHER_LOCATION_KEY
+    )
+
+    # set the cache key with the fixture value
+    await set_redis_keys(
+        redis_client, [(cache_key, accuweather_cached_hourly_forecasts, HOURLY_FORECAST_TTL_SEC)]
+    )
+
+    # this http client mock isn't used to make any calls, but we do assert below on it not being
+    # called
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+
+    # mock pathfinder to avoid needing location lookup
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (
+        AccuweatherLocation(
+            key=ACCUWEATHER_LOCATION_KEY,
+            localized_name="San Francisco",
+            administrative_area_id="CA",
+            country_name="United States",
+        ),
+        None,
+    )
+
+    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
+        weather_context_with_location_key
+    )
+
+    assert result is not None
+    assert isinstance(result, HourlyForecastsWithTTL)
+    assert len(result.hourly_forecasts) == 5
+    assert result.hourly_forecasts[0].date_time == "2026-02-18T14:00:00-05:00"
+    assert result.hourly_forecasts[0].temperature.f == 60
+    assert result.hourly_forecasts[0].temperature.c == 16
+    client_mock.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_with_cache_miss(
+    mocker: MockerFixture,
+    redis_client: Redis,
+    weather_context_with_location_key: WeatherContext,
+    accuweather_parameters: dict[str, Any],
+    accuweather_hourly_forecast_response: bytes,
+    response_header: dict[str, str],
+) -> None:
+    """Test that hourly forecasts are fetched from API and cached when not in Redis."""
+    # set up the accuweather backend object with the testcontainer redis client
+    accuweather: AccuweatherBackend = AccuweatherBackend(
+        cache=RedisAdapter(redis_client), **accuweather_parameters
+    )
+
+    # mock pathfinder to return location
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (
+        AccuweatherLocation(
+            key=ACCUWEATHER_LOCATION_KEY,
+            localized_name="San Francisco",
+            administrative_area_id="CA",
+            country_name="United States",
+        ),
+        None,
+    )
+
+    # mock HTTP client to return hourly forecast API response
+    client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        headers=response_header,
+        content=accuweather_hourly_forecast_response,
+        request=Request(
+            method="GET",
+            url=f"http://www.accuweather.com/forecasts/v1/hourly/12hour/{ACCUWEATHER_LOCATION_KEY}.json?apikey=test",
+        ),
+    )
+
+    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
+        weather_context_with_location_key
+    )
+
+    assert result is not None
+    assert isinstance(result, HourlyForecastsWithTTL)
+    assert len(result.hourly_forecasts) == 5
+    assert result.hourly_forecasts[0].date_time == "2026-02-18T14:00:00-05:00"
+    assert result.hourly_forecasts[0].temperature.f == 60
+    assert result.hourly_forecasts[0].temperature.c == 16
+    client_mock.get.assert_called_once()
