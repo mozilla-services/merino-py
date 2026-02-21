@@ -322,7 +322,7 @@ class SuperInferredModel(LocalModelBackend):
                 # We don't have to check for branch here as control won't call inferred code
                 return self._build_local(SERVER_V3_MODEL_ID, surface_id)
             else:
-                # We are part of an experiment, so we need to tweak privacy
+                # We are part of an unkown experiment, so we need to tweak privacy.
                 return self._build_local(
                     SERVER_V3_MODEL_ID + "_exp", surface_id, small_experiment=True
                 )
