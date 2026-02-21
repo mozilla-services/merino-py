@@ -58,6 +58,15 @@ class ModelData(BaseModel):
     private_features: list | None = None
 
 
+class PrivacyOverrides(BaseModel):
+    """Defines privacy overrides, so they can be applied automatically for Merino based experiments to reduce risk of privacy issues"""
+
+    iv_in_telemetry: bool | None = None
+    random_content_click_probability_epsilon_micro: int | None = None
+    daily_click_event_cap: int | None = None
+    local_popular_today_rerank: bool | None = None
+
+
 class InferredLocalModel(BaseModel):
     """Class that defines parameters on the local Firefox client for defining an interest vector from interaction
     events
@@ -70,6 +79,7 @@ class InferredLocalModel(BaseModel):
     surface_id: str
 
     model_data: ModelData
+    privacy_overrides: PrivacyOverrides | None = None
 
     def get_unary_encoded_index(self, encoded_string: str, support_two: bool = False) -> list[int]:
         """Decode a unary encoded string with differential privacy added.

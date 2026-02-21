@@ -55,6 +55,8 @@ class EngagementRescaler(BaseModel):
         float  # Max number of fresh items to use when considering section rank
     ) = 0
 
+    local_rerank_scalar: float = 0
+
     def __init__(self, **data: Any):
         super().__init__(**data)
 

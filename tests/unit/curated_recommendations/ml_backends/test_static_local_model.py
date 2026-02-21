@@ -5,8 +5,10 @@ from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
+    EXPERIMENT_PRODUCTION_MODEL_ID,
     SERVER_V3_MODEL_ID,
     THRESHOLDS_V3_NORMALIZED,
+    TIME_ZONE_OFFSET_INFERRED_KEY,
     FakeLocalModelSections,
     SuperInferredModel,
     CTR_SECTION_MODEL_ID,
@@ -356,8 +358,9 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
 
     values = []
-    for _key, feature in model.model_data.interest_vector.items():
-        values.append(pattern_func(feature.thresholds))
+    for key, feature in model.model_data.interest_vector.items():
+        if key in model.model_data.private_features:
+            values.append(pattern_func(feature.thresholds))
     interests.root["values"] = values
 
     updated = model.decode_dp_interests(
@@ -367,7 +370,8 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
     )
 
     for key, feature in model.model_data.interest_vector.items():
-        assert assertion_func(updated, key, feature.thresholds)
+        if key in model.model_data.private_features:
+            assert assertion_func(updated, key, feature.thresholds)
 
 
 @pytest.mark.parametrize(
@@ -440,9 +444,10 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
     # Build a valid dp_values array aligned with the model's interest_vector order
     iv = inferred_model.model_data.interest_vector
     dp_values = []
-    for _key, cfg in iv.items():
-        n = len(cfg.thresholds) + 1
-        dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
+    for key, cfg in iv.items():
+        if key in inferred_model.model_data.private_features:
+            n = len(cfg.thresholds) + 1
+            dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
 
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
@@ -458,7 +463,8 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
 
     # spot-check a couple of features decode to the last threshold
     for key, cfg in iv.items():
-        assert out.scores[key] == cfg.thresholds[-1]
+        if key in inferred_model.model_data.private_features:
+            assert out.scores[key] == cfg.thresholds[-1]
 
 
 def test_process_decodes_when_different_present(inferred_model, local_model_backend):
@@ -466,12 +472,13 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
     # Build a valid dp_values array aligned with the model's interest_vector order
     iv = inferred_model.model_data.interest_vector
     dp_values = []
-    for idx, (_key, cfg) in enumerate(iv.items()):
-        n = len(cfg.thresholds) + 1
-        if idx == 0:
-            dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
-        else:
-            dp_values.append("1" + (n - 1) * "0")  # lowest (0) value
+    for idx, (key, cfg) in enumerate(iv.items()):
+        if key in inferred_model.model_data.private_features:
+            n = len(cfg.thresholds) + 1
+            if idx == 0:
+                dp_values.append("0" * (n - 1) + "1")  # choose highest index for determinism
+            else:
+                dp_values.append("1" + (n - 1) * "0")  # lowest (0) value
 
     interests = InferredInterests.empty()
     interests.root[LOCAL_MODEL_MODEL_ID_KEY] = SERVER_V3_MODEL_ID
@@ -486,14 +493,15 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
     assert out.model_id == SERVER_V3_MODEL_ID
     # spot-check a couple of features decode to the last threshold
     for idx, (key, cfg) in enumerate(iv.items()):
-        if idx == 0:
-            assert out.scores[key] == cfg.thresholds[-1]
-            assert (
-                out.normalized_scores[key] > 0.9  # Normalizaiton moves it close to 1.0
-            )
-        else:
-            assert out.scores[key] == 0.0
-            assert out.normalized_scores[key] == 0.0
+        if key in inferred_model.model_data.private_features:
+            if idx == 0:
+                assert out.scores[key] == cfg.thresholds[-1]
+                assert (
+                    out.normalized_scores[key] > 0.9  # Normalizaiton moves it close to 1.0
+                )
+            else:
+                assert out.scores[key] == 0.0
+                assert out.normalized_scores[key] == 0.0
 
 
 def test_gets_cohort(inferred_model, local_model_backend, cohort_model_backend):
@@ -585,8 +593,14 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
             True,
         ),
         (
-            "sdfs",
+            "sdfs",  # Unkonwn experiment
             "any_branch",
+            SERVER_V3_MODEL_ID,
+            True,
+        ),
+        (
+            None,  # this is now default
+            None,
             SERVER_V3_MODEL_ID,
             True,
         ),
@@ -625,7 +639,8 @@ def test_get_dummy_experiment_name(model_limited):
         experiment_branch="cow",
     )
     assert result is not None
-    assert result.model_id == SERVER_V3_MODEL_ID
+    assert result.model_id == EXPERIMENT_PRODUCTION_MODEL_ID
     assert isinstance(result, InferredLocalModel)
     # basic payload sanity
-    assert Topic.SPORTS.value in result.model_data.interest_vector
+    assert Topic.SPORTS.value not in result.model_data.private_features
+    assert TIME_ZONE_OFFSET_INFERRED_KEY in result.model_data.private_features
