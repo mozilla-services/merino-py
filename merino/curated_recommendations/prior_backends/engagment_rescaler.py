@@ -19,7 +19,10 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
-LOCAL_RERANK_WEGHT = 50.0
+LOCAL_RERANK_WEGHT = (
+    30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
+)
+# the normalized interest vector is added if there is an interest match.
 
 
 class CrawledContentRescaler(EngagementRescaler):
