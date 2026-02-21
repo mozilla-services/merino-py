@@ -36,6 +36,8 @@ CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID}
 
 DEFAULT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID
+EXPERIMENT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID + "_exp"
+
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -324,7 +326,7 @@ class SuperInferredModel(LocalModelBackend):
             else:
                 # We are part of an unknown experiment, so we need to tweak privacy.
                 return self._build_local(
-                    SERVER_V3_MODEL_ID + "_exp", surface_id, small_experiment=True
+                    EXPERIMENT_PRODUCTION_MODEL_ID, surface_id, small_experiment=True
                 )
         # Normally we would pick the model based on model_id here, but we are supporting only one right now
         return self._build_local(SERVER_V3_MODEL_ID, surface_id)

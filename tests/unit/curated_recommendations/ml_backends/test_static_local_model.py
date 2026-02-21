@@ -5,8 +5,10 @@ from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
+    EXPERIMENT_PRODUCTION_MODEL_ID,
     SERVER_V3_MODEL_ID,
     THRESHOLDS_V3_NORMALIZED,
+    TIME_ZONE_OFFSET_INFERRED_KEY,
     FakeLocalModelSections,
     SuperInferredModel,
     CTR_SECTION_MODEL_ID,
@@ -591,8 +593,14 @@ def test_process_passthrough_when_values_missing_even_with_matching_model(
             True,
         ),
         (
-            "sdfs",
+            "sdfs",  # Unkonwn experiment
             "any_branch",
+            SERVER_V3_MODEL_ID,
+            True,
+        ),
+        (
+            None,  # this is now default
+            None,
             SERVER_V3_MODEL_ID,
             True,
         ),
@@ -631,7 +639,8 @@ def test_get_dummy_experiment_name(model_limited):
         experiment_branch="cow",
     )
     assert result is not None
-    assert result.model_id == SERVER_V3_MODEL_ID
+    assert result.model_id == EXPERIMENT_PRODUCTION_MODEL_ID
     assert isinstance(result, InferredLocalModel)
     # basic payload sanity
-    assert Topic.SPORTS.value in result.model_data.interest_vector
+    assert Topic.SPORTS.value not in result.model_data.private_features
+    assert TIME_ZONE_OFFSET_INFERRED_KEY in result.model_data.private_features
