@@ -19,6 +19,8 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
+LOCAL_RERANK_WEGHT = 50.0
+
 
 class CrawledContentRescaler(EngagementRescaler):
     """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
@@ -30,6 +32,7 @@ class CrawledContentRescaler(EngagementRescaler):
         data.setdefault("fresh_items_top_stories_max_percentage", 0.15)
         data.setdefault("fresh_items_section_ranking_max_percentage", 0.15)
         data.setdefault("fresh_items_limit_prior_threshold_multiplier", 1)
+        data.setdefault("local_rerank_scalar", LOCAL_RERANK_WEGHT)
         super().__init__(**data)
 
     @classmethod

@@ -625,6 +625,13 @@ def get_top_story_list(
         top_stories = top_stories + remaining_items[: total_story_count - len(top_stories)]
     for idx, rec in enumerate(top_stories):
         rec.receivedRank = idx
+    if rescaler:
+        for rec in top_stories:
+            rec.serverScore = (
+                round(rec.ranking_data.score * rescaler.local_rerank_scalar, 2)
+                if rec.ranking_data and rec.ranking_data.score
+                else 0
+            )
     return top_stories
 
 
