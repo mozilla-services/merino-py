@@ -222,3 +222,44 @@ class TestStaleWhileRevalidate:
         """Propagate error when no cached value exists during an update failure."""
         with pytest.raises(ValueError):
             await self.failing_compute(3)
+
+    @pytest.mark.asyncio
+    async def test_failed_update_causes_retry_storm(self):
+        """Reproduce: Failed cache updates cause a continuous retry storm.
+
+        When _update_cache fails and stale data exists, entry.expiration is not
+        updated. This means every subsequent request (after the background task
+        completes) sees the cache as expired and triggers a new update attempt,
+        creating a retry storm instead of waiting for the next TTL window.
+
+        In the Feb 21 2026 incident, this caused ~2.82 million retry warnings
+        across 268 Merino pods over 4h47m when curated-corpus-api was down.
+        """
+        with freeze_time("2022-01-01 00:00:00", tick=True) as frozen_datetime:
+            # 1. Populate cache with valid data
+            result = await self.failing_compute_after_first_call(5)
+            assert result == 15
+            assert self.call_count == 1
+
+            # 2. Expire the cache
+            frozen_datetime.tick(121.0)
+
+            # 3. Simulate multiple sequential requests, each separated by enough
+            #    time for the background update task to complete and release the lock
+            num_requests = 5
+            for _ in range(num_requests):
+                result = await self.failing_compute_after_first_call(5)
+                assert result == 15  # Stale data is always returned (correct)
+                await asyncio.sleep(0.05)  # Let background task finish
+
+            # 4. BUG: call_count == 1 + 5 = 6
+            #    (each request triggers a new backend call because expiration was never extended)
+            #    FIXED: call_count == 1 + 1 = 2
+            #    (only the first request after expiration triggers an update; subsequent ones
+            #     see the extended expiration and return stale data without retrying)
+            assert self.call_count == 2, (
+                f"Expected 2 backend calls (1 initial + 1 failed retry), but got {self.call_count}. "
+                f"Each request after a failed cache update is triggering a new backend call, "
+                f"creating a retry storm. The cache expiration should be extended on failure "
+                f"to rate-limit retries to once per TTL window."
+            )
