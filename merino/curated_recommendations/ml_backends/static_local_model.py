@@ -202,6 +202,7 @@ class SuperInferredModel(LocalModelBackend):
         # Time zone is added for 8th private feature
     ]
 
+    # These are the only features supported in a small experiment (in addition to time zone)
     v3_small_experiment_topics = {
         Topic.SPORTS.value,
         Topic.PARENTING.value,
@@ -211,7 +212,25 @@ class SuperInferredModel(LocalModelBackend):
     limited_topics_set = set(v3_limited_topics)
 
     @staticmethod
-    def _get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
+    def _get_topic(
+        topic: str, thresholds: list[float], disable_feature=False
+    ) -> InterestVectorConfig:
+        """Return feature for a topic, with a disabled (constant 0 output) feature
+        if disabled_feature is True.
+
+        Sometimes for privacy purposes we want to keep the feature in the list for
+        interest vector consistency issues, but hard code to 0 for a particual privacy profile,
+        such as within an experiment
+        """
+        if disable_feature:
+            print("disabled a feature " + topic)
+            a = InterestVectorConfig(
+                features={f"t_{topic}": 1},
+                thresholds=[1000 for _ in range(len(thresholds))],
+                diff_p=1.0,
+                diff_q=0.0,
+            )
+            print(a)
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
             thresholds=thresholds,
@@ -254,17 +273,20 @@ class SuperInferredModel(LocalModelBackend):
             if a not in limited_topics_set
         }
 
-        privacy_overrides = None
+        private_features = self.v3_limited_topics + [TIME_ZONE_OFFSET_INFERRED_KEY]
+
         if small_experiment:
-            private_features = [TIME_ZONE_OFFSET_INFERRED_KEY]
-            # TODO - We could apply privacy overrides here when supported in future Firefox versions
-            topic_features = {}
+            print("SMALL EXPERIMENT")
+            topic_features = {
+                a: self._get_topic(
+                    a, model_thresholds, disable_feature=a not in self.v3_small_experiment_topics
+                )
+                for a in self.v3_limited_topics
+            }
         else:
             topic_features = {
                 a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics
             }
-            ## private features are sent to merino have differential privacy applied
-            private_features = self.v3_limited_topics + [TIME_ZONE_OFFSET_INFERRED_KEY]
 
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
@@ -281,6 +303,9 @@ class SuperInferredModel(LocalModelBackend):
             },
             private_features=private_features,
         )
+        # No privacy overrides until this is implemented in Merino
+        privacy_overrides = None
+
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,

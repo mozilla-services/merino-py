@@ -631,7 +631,7 @@ def test_get_with_experiment_and_model_id_correct_branch_returns_model(
 
 
 def test_get_dummy_experiment_name(model_limited):
-    """Control check: an unknown experiment name and no model_id defaults to no model."""
+    """Control check: an unknown experiment name and no model_id defaults to reduced model."""
     result = model_limited.get(
         TEST_SURFACE,
         model_id=None,
@@ -641,6 +641,18 @@ def test_get_dummy_experiment_name(model_limited):
     assert result is not None
     assert result.model_id == EXPERIMENT_PRODUCTION_MODEL_ID
     assert isinstance(result, InferredLocalModel)
-    # basic payload sanity
-    assert Topic.SPORTS.value not in result.model_data.private_features
+    # Important interest is there
+    assert Topic.SPORTS.value in result.model_data.private_features
     assert TIME_ZONE_OFFSET_INFERRED_KEY in result.model_data.private_features
+
+    assert result.model_data.private_features and len(result.model_data.private_features) > 0
+
+    # Some interests have been removed
+    zeroed_interest = result.model_data.interest_vector[Topic.POLITICS.value]
+    assert len(zeroed_interest.thresholds) == len(THRESHOLDS_V3_NORMALIZED)
+    assert zeroed_interest.thresholds[0] > 10
+
+    # others have not
+    other_interest = result.model_data.interest_vector[Topic.SCIENCE.value]
+    assert len(other_interest.thresholds) == len(THRESHOLDS_V3_NORMALIZED)
+    assert other_interest.thresholds[0] < 0.9
