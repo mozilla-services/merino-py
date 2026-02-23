@@ -223,14 +223,12 @@ class SuperInferredModel(LocalModelBackend):
         such as within an experiment
         """
         if disable_feature:
-            print("disabled a feature " + topic)
-            a = InterestVectorConfig(
+            return InterestVectorConfig(
                 features={f"t_{topic}": 1},
                 thresholds=[1000 for _ in range(len(thresholds))],
                 diff_p=1.0,
                 diff_q=0.0,
             )
-            print(a)
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
             thresholds=thresholds,
@@ -266,17 +264,15 @@ class SuperInferredModel(LocalModelBackend):
         model_thresholds = THRESHOLDS_V3_NORMALIZED
         private_features: list[str] | None = None
 
-        limited_topics_set = self.limited_topics_set if not small_experiment else set()
         section_features = {
             a: self._get_section(a, model_thresholds)
             for a in BASE_SECTIONS_FOR_LOCAL_MODEL
-            if a not in limited_topics_set
+            if a not in self.limited_topics_set
         }
 
         private_features = self.v3_limited_topics + [TIME_ZONE_OFFSET_INFERRED_KEY]
 
         if small_experiment:
-            print("SMALL EXPERIMENT")
             topic_features = {
                 a: self._get_topic(
                     a, model_thresholds, disable_feature=a not in self.v3_small_experiment_topics
