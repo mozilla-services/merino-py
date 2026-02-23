@@ -224,7 +224,7 @@ class TestStaleWhileRevalidate:
             await self.failing_compute(3)
 
     @pytest.mark.asyncio
-    async def test_failed_update_causes_retry_storm(self):
+    async def test_failed_update_does_not_cause_retry_storm(self):
         """Reproduce: Failed cache updates cause a continuous retry storm.
 
         When _update_cache fails and stale data exists, entry.expiration is not
