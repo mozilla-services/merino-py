@@ -836,6 +836,10 @@ class TestGetTopStoryList:
         assert [rec.corpusItemId for rec in result] == ["a", "b", "c"]
         assert [rec.receivedRank for rec in result] == [0, 1, 2]
 
+        # Check that the server score of the top stories is always descending
+        scores = [rec.ranking_data.score if rec.ranking_data else 0 for rec in result]
+        assert scores == sorted(scores, reverse=True)
+
     def test_rescaler_backfills_fresh_when_random_never_allows(self, monkeypatch):
         """When probability never allows fresh picks, backlog of fresh picks fill the quota
         See - filter_fresh_items_with_probability for additional tests
@@ -852,6 +856,10 @@ class TestGetTopStoryList:
         result = get_top_story_list(
             items, top_count=2, extra_count=0, extra_source_depth=0, rescaler=rescaler
         )
+
+        # Check that the server score of the top stories is always descending
+        scores = [rec.ranking_data.score if rec.ranking_data else 0 for rec in result]
+        assert scores == sorted(scores, reverse=True)
 
         assert [rec.corpusItemId for rec in result] == ["a", "b"]
         assert [rec.receivedRank for rec in result] == [0, 1]
@@ -871,6 +879,9 @@ class TestGetTopStoryList:
             assert len(result) == min(len(items), 10 + 3)
             picked_ids = set([rec.corpusItemId for rec in result])
             assert len(picked_ids) == len(result)  # Check no duplicates
+            # Check that the server score of the top stories is always descending
+            scores = [rec.ranking_data.score if rec.ranking_data else 0 for rec in result]
+            assert scores == sorted(scores, reverse=True)
 
 
 class DummyTrackingEngagementBackend:
