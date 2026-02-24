@@ -202,7 +202,8 @@ class TestStaleWhileRevalidate:
             frozen_datetime.tick(121.0)  # Force staleness. Max ttl is 120 seconds.
             result2 = await self.failing_compute_after_first_call(5)
             assert result2 == 15
-            await asyncio.sleep(2 * self.backend_call_duration)  # 2x margin for event loop overhead
+            # 2x margin for event loop overhead
+            await asyncio.sleep(2 * self.backend_call_duration)
 
         assert any(
             record.message
@@ -245,7 +246,8 @@ class TestStaleWhileRevalidate:
             for _ in range(num_requests):
                 result = await self.failing_compute_after_first_call(5)
                 assert result == 15  # Stale data is always returned (correct)
-                await asyncio.sleep(2 * self.backend_call_duration)  # 2x margin for event loop overhead
+                # 2x margin for event loop overhead
+                await asyncio.sleep(2 * self.backend_call_duration)
 
             # Only the first request after expiration triggers an update; subsequent ones
             # see the extended expiration and return stale data without retrying.
