@@ -115,26 +115,28 @@ class TestStaleWhileRevalidate:
 
     # Use a fixed wait expiration that returns a future time.
     wait_exp = WaitRandomExpiration(timedelta(seconds=60), timedelta(seconds=120))
+    # Simulated duration of a backend call in the test helpers below.
+    backend_call_duration = 0.005
 
     @stale_while_revalidate(wait_exp, lambda self: self._cache, lambda self: self._jobs)
     async def compute_value(self, x):
         """Compute and return x multiplied by 2."""
         self.call_count += 1
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(self.backend_call_duration)
         return x * 2
 
     @stale_while_revalidate(wait_exp, lambda self: self._cache, lambda self: self._jobs)
     async def failing_compute(self, x):
         """Compute and always raise an error."""
         self.call_count += 1
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(self.backend_call_duration)
         raise ValueError("Computation failed")
 
     @stale_while_revalidate(wait_exp, lambda self: self._cache, lambda self: self._jobs)
     async def failing_compute_after_first_call(self, x):
         """Compute and return x multiplied by 3 on first call, then raise an error on subsequent calls."""
         self.call_count += 1
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(self.backend_call_duration)
         if self.call_count > 1:
             raise ValueError("Computation failed after first call")
         return x * 3
@@ -200,7 +202,7 @@ class TestStaleWhileRevalidate:
             frozen_datetime.tick(121.0)  # Force staleness. Max ttl is 120 seconds.
             result2 = await self.failing_compute_after_first_call(5)
             assert result2 == 15
-            await asyncio.sleep(0.01)  # Allow background update to complete.
+            await asyncio.sleep(2 * self.backend_call_duration)  # 2x margin for event loop overhead
 
         assert any(
             record.message
@@ -234,7 +236,7 @@ class TestStaleWhileRevalidate:
             assert result == 15
             assert self.call_count == 1
 
-            # 2. Expire the cache
+            # 2. Expire the cache. Max TTL is 120 seconds.
             frozen_datetime.tick(121.0)
 
             # 3. Simulate multiple sequential requests, each separated by enough
@@ -243,7 +245,7 @@ class TestStaleWhileRevalidate:
             for _ in range(num_requests):
                 result = await self.failing_compute_after_first_call(5)
                 assert result == 15  # Stale data is always returned (correct)
-                await asyncio.sleep(0.05)  # Let background task finish
+                await asyncio.sleep(2 * self.backend_call_duration)  # 2x margin for event loop overhead
 
             # Only the first request after expiration triggers an update; subsequent ones
             # see the extended expiration and return stale data without retrying.
