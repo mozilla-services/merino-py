@@ -2764,6 +2764,7 @@ async def test_get_hourly_forecasts(
     weather_context_with_location_key: WeatherContext,
     accuweather_hourly_forecast_response: bytes,
     response_header: dict[str, str],
+    statsd_mock: Any,
 ) -> None:
     """Test that get_hourly_forecasts returns HourlyForecastsWithTTL with valid API response."""
     # Mock pathfinder.explore to return AccuweatherLocation
@@ -2818,6 +2819,12 @@ async def test_get_hourly_forecasts(
     assert first_forecast.icon_id == 6
     assert "hourly-weather-forecast/39376?day=1&hbhhour=14" in str(first_forecast.url)
 
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
+    assert metrics_called == [
+        "accuweather.cache.fetch.miss.hourly_forecasts",
+        f"accuweather.upstream.request.{RequestType.HOURLY_FORECASTS}.get",
+    ]
+
 
 @pytest.mark.asyncio
 async def test_get_hourly_forecasts_missing_location_key(
@@ -2846,6 +2853,7 @@ async def test_get_hourly_forecasts_cache_hit(
     accuweather: AccuweatherBackend,
     weather_context_with_location_key: WeatherContext,
     accuweather_hourly_forecast_response: bytes,
+    statsd_mock: Any,
 ) -> None:
     """Test that get_hourly_forecasts returns cached data when available."""
     # Mock pathfinder.explore to return AccuweatherLocation
@@ -2889,12 +2897,16 @@ async def test_get_hourly_forecasts_cache_hit(
     client_mock: AsyncMock = cast(AsyncMock, accuweather.http_client)
     client_mock.get.assert_not_called()
 
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
+    assert metrics_called == ["accuweather.cache.hit.hourly_forecasts"]
+
 
 @pytest.mark.asyncio
 async def test_get_hourly_forecasts_api_returns_none(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
     weather_context_with_location_key: WeatherContext,
+    statsd_mock: Any,
 ) -> None:
     """Test that get_hourly_forecasts returns None when API returns invalid response."""
     # Mock pathfinder.explore to return AccuweatherLocation
@@ -2921,6 +2933,9 @@ async def test_get_hourly_forecasts_api_returns_none(
 
     # Assert result is None
     assert result is None
+
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
+    assert metrics_called == ["accuweather.cache.fetch.miss.hourly_forecasts"]
 
 
 @pytest.mark.asyncio
@@ -2955,9 +2970,7 @@ async def test_get_hourly_forecasts_validation_error(
     )
 
     # Call get_hourly_forecasts
-    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
-        weather_context_with_location_key
-    )
+    with pytest.raises(AccuweatherError) as exc:
+        await accuweather.get_hourly_forecasts(weather_context_with_location_key)
 
-    # Assert result is None due to KeyError
-    assert result is None
+    assert "Failed to parse hourly forecast data: KeyError" in str(exc.value)
