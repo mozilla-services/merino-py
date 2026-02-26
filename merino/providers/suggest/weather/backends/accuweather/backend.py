@@ -1032,11 +1032,6 @@ class AccuweatherBackend:
             raise
 
         except CacheAdapterError as exc:
-            logger.warning(
-                AccuweatherErrorMessages.CACHE_READ_HOURLY_FORECAST_ERROR.format_message(
-                    exception=exc
-                )
-            )
             self.metrics_client.increment("accuweather.cache.hourly_forecast.read.error")
             raise AccuweatherError(
                 AccuweatherErrorMessages.CACHE_READ_HOURLY_FORECAST_ERROR, exception=exc

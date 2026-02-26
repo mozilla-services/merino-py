@@ -2974,3 +2974,38 @@ async def test_get_hourly_forecasts_validation_error(
         await accuweather.get_hourly_forecasts(weather_context_with_location_key)
 
     assert "Failed to parse hourly forecast data: KeyError" in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_cache_read_error(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    weather_context_with_location_key: WeatherContext,
+    statsd_mock: Any,
+) -> None:
+    """Test that get_hourly_forecasts increments the error metric and raises AccuweatherError
+    when the cache raises a CacheAdapterError.
+    """
+    accuweather_location = AccuweatherLocation(
+        key="39376",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
+    )
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (accuweather_location, None)
+
+    mocker.patch.object(
+        accuweather.cache, "run_script", side_effect=CacheAdapterError("Redis error")
+    )
+
+    with pytest.raises(AccuweatherError) as exc:
+        await accuweather.get_hourly_forecasts(weather_context_with_location_key)
+
+    assert AccuweatherErrorMessages.CACHE_READ_HOURLY_FORECAST_ERROR.format_message(
+        exception="Redis error"
+    ) in str(exc.value)
+
+    metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]
+    assert "accuweather.cache.hourly_forecast.read.error" in metrics_called
