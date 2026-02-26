@@ -1,0 +1,2409 @@
+{
+    "data": {
+        "getSections": [
+            {
+                "createSource": "ML",
+                "externalId": "travel__lEN_IE",
+                "active": true,
+                "title": "Travel",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "653"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "195ba110-e520-49e2-a07c-0bf6d61c9a4d",
+                            "url": "https://www.euronews.com/travel/2026/02/25/must-see-sights-on-la-voie-bleue-europes-top-cycling-route-for-2026",
+                            "title": "Must-see sights on La Voie Bleue \u2013 Europe\u2019s top cycling route for 2026",
+                            "excerpt": "The 700km-long journey from Luxembourg to Lyon \u2018showcases France at its finest\u2019, passing through villages, vineyards and heritage sites.",
+                            "topic": "TRAVEL",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9e7e7daf-95de-4b4c-a7d0-2ef76707f6a6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c3fcfb77-bff7-4f80-8279-53aaf51c8e03",
+                            "url": "https://www.independent.co.uk/travel/uk/bridgerton-filming-locations-season-4-netflix-b2927253.html",
+                            "title": "Where is Bridgerton filmed? The real-life Regency locations from the Netflix show",
+                            "excerpt": "Here are the palaces, parks and stately homes that form the programme\u2019s regal backdrop",
+                            "topic": "TRAVEL",
+                            "publisher": "The Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/80c5045a-04d0-4aae-b25b-d4879778db41.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "2ad21058-817d-4952-b40b-c7e0631154cd",
+                            "url": "https://www.rte.ie/lifestyle/travel/2026/0225/1560359-mayo-hotel-receives-double-5-star-rating-in-forbes-travel-guide/",
+                            "title": "Mayo hotel receives double 5-star rating in Forbes Travel Guide",
+                            "excerpt": "Forbes has launched its 2026 travel guide, giving one Irish hotel a double 5-star rating for yet another year.",
+                            "topic": "TRAVEL",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/db823ff7-ca38-4cd2-ad64-a29b005dccb1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ce2e7419-d446-468e-8f0c-b3813d7d2f86",
+                            "url": "https://www.afar.com/magazine/is-drinking-coffee-and-washing-your-hands-on-a-plane-safe",
+                            "title": "You May Want to Think Twice About Drinking Coffee on a Plane",
+                            "excerpt": "Pack extra bottled water and hand sanitizer, folks.",
+                            "topic": "TRAVEL",
+                            "publisher": "AFAR",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ed6f4ba8-ef2f-4635-9c1b-81ab368c9b81.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6306df08-10b4-40d3-89f3-e9328c9d84a6",
+                            "url": "https://www.irishnews.com/life/holidays/5-of-the-best-long-weekend-breaks-to-take-this-spring-6LV64ZJ7NFM6DLCAFVDVNCDAPY/",
+                            "title": "5 of the best long weekend breaks to take this spring",
+                            "excerpt": "It\u2019s a short flight to these easy-to-access destinations.",
+                            "topic": "TRAVEL",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/efd31013-eb5e-4fa1-a205-ef77480098e9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1289ccaf-1871-4613-ae1b-c1f6f762ac72",
+                            "url": "https://www.lonelyplanet.com/articles/how-to-see-new-york-city-on-a-budget",
+                            "title": "How to see the best of New York City on a budget",
+                            "excerpt": "Executing an excellent trip to NYC doesn\u2019t require busting your budget. There are countless bargains (and freebies) in the city if you know where to look.",
+                            "topic": "TRAVEL",
+                            "publisher": "Lonely Planet",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5ee90232-4ca3-4ef2-ba1e-9da6e9489c17.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0e441e51-d160-4e9e-992e-e5c681d5b76c",
+                            "url": "https://www.euronews.com/travel/2026/02/25/brazil-more-than-a-destination-a-lifestyle",
+                            "title": "Brazil: more than a destination, a lifestyle",
+                            "excerpt": "From tropical coastlines to vast canyons, from cascading waterfalls to crystal-clear freshwater springs, Brazil offers a diversity of experiences that go far beyond the vibrant energy of its major cities. #Destinations",
+                            "topic": "TRAVEL",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/40aa27ad-7767-43af-a8dd-f2c877df101d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "25245ffd-2053-4689-abee-11fb6b8015f1",
+                            "url": "https://www.afar.com/magazine/highline-milano-has-opened-atop-milans-famous-galleria",
+                            "title": "An 820-Foot Skywalk Just Reopened Atop One of Milan\u2019s Most Beloved Landmarks",
+                            "excerpt": "The new Highline Milano delivers panoramic vistas and a fresh perspective on the Italian city.",
+                            "topic": "TRAVEL",
+                            "publisher": "AFAR",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/711de226-b020-4b73-a36f-909fbf9acef7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "46fb2403-6730-463f-aab2-96d335485c4b",
+                            "url": "https://www.lonelyplanet.com/articles/best-beaches-europe",
+                            "title": "20 of the best beaches in Europe",
+                            "excerpt": "With surf-filled shores in Portugal, calm seas for swimming in Italy and sun-drenched beauty spots in Greece, here\u2019s our pick of Europe\u2019s best beaches.",
+                            "topic": "TRAVEL",
+                            "publisher": "Lonely Planet",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/14801dbd-7065-4971-ac8a-65fe817b160c.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "food__lEN_IE",
+                "active": true,
+                "title": "Food",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "210"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "a856105b-d5fc-431c-851f-ac748e978f6b",
+                            "url": "https://www.bbcgoodfood.com/howto/guide/mary-berrys-top-10-baking-tips-for-perfect-cakes-every-time",
+                            "title": "Mary Berry\u2019s top 10 baking tips for perfect cakes every time",
+                            "excerpt": "The biggest name in British baking, Mary Berry shares her top 10 tips for cake success with Good Food...",
+                            "topic": "FOOD",
+                            "publisher": "BBC Good Food",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e551f701-dc48-4907-b0b7-f7ba5b8c3874.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bb6f54ef-61c3-4220-bbbd-a5d77d07af7c",
+                            "url": "https://www.irishexaminer.com/food/arid-41797601.html",
+                            "title": "Joe McNamee: Good broth is the magic gold elixir we all need",
+                            "excerpt": "My Glasgow Granny used to tell me when we\u2019d visit that I was her \u2018wee broth of a boy\u2019 even though, a sickly wain, I was more akin to watery gruel",
+                            "topic": "FOOD",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/dbae07dc-344b-4f66-9686-a9df042355a3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "afbfb966-a3fe-48f3-9df3-c6a1fc5a68c9",
+                            "url": "https://www.foodandwine.com/how-to-cook-frozen-shrimp-11910030",
+                            "title": "Why Frozen Shrimp Is the Smartest Buy at the Seafood Counter \u2014 and How to Cook It",
+                            "excerpt": "Learn the safest way to thaw frozen shrimp, plus cooking times by size for tender, never mushy results.",
+                            "topic": "FOOD",
+                            "publisher": "Food & Wine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/987ff5b8-a57e-4a72-90c9-24786a40fdc3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "79b1facf-4212-4936-ae7a-85935c8cbe0e",
+                            "url": "https://theweek.com/culture-life/food-drink/2026-cabbage-health-benefits-fibre-pinterest",
+                            "title": "\u2018Chic\u2019 cabbages are having a moment",
+                            "excerpt": "Gone are the days of \u2018WWII boiled cabbage recipes\u2019. The humble vegetable is enjoying a resurgence",
+                            "topic": "FOOD",
+                            "publisher": "The Week",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fb964da0-8881-43fc-a30c-f360c84e8621.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e486e69b-35f9-4208-9f87-a6857f5a9c78",
+                            "url": "https://www.theguardian.com/food/2026/feb/23/nadiya-hussain-recipes-chicken-half-moons-rice-paper-tteokbokki",
+                            "title": "Nadiya Hussain\u2019s Recipes for Chicken Half-Moons and Rice Paper Tteokbokki",
+                            "excerpt": "Aromatic snacks stuffed full of flavourful chicken mince, and a comforting Korean stew",
+                            "topic": "FOOD",
+                            "publisher": "The Guardian",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/884d451f-2fb4-4b39-baa3-bfa5adca2c08.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "36142a80-daef-4f30-8acb-619712389cc7",
+                            "url": "https://thegloss.ie/sweet-and-savoury-breakfast-recipes-with-protein-packed-cottage-cheese/",
+                            "title": "Sweet And Savoury Breakfast Recipes With Protein Packed Cottage Cheese",
+                            "excerpt": "Save these recipes for protein-filled breakfasts with cottage cheese, tomatoes and fudgy eggs or toasted honey oats",
+                            "topic": "FOOD",
+                            "publisher": "The Gloss",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d8894885-2cdc-4280-8278-12ad988ab236.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d6700267-2714-4d60-8be7-3e4c42de35ae",
+                            "url": "https://www.rte.ie/lifestyle/recipes/2026/0225/1560373-nadiya-hussains-goats-cheese-and-onion-tart/",
+                            "title": "Nadiya Hussain\u2019s goat\u2019s cheese and onion tart",
+                            "excerpt": "Whip this impressive-looking dish out when you have guests to feed.",
+                            "topic": "FOOD",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/275219a5-ee5c-4628-b000-41c94210f290.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "098e7686-f134-476a-b9b6-4418e7dc740e",
+                            "url": "https://www.irishtimes.com/food/recipes/2026/02/21/mark-moriartys-vegan-recipe-for-cauliflower-roasted-in-malaysian-spices/",
+                            "title": "Mark Moriarty\u2019s vegan recipe for cauliflower roasted in Malaysian spices",
+                            "excerpt": "This flavourful dish is finished with coconut, crispy chilli and garlic, cashew and lime",
+                            "topic": "FOOD",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fe7ec60a-789f-426e-8c93-90551de7bf06.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b66df949-c66e-441b-87e2-36e09ef9c6f9",
+                            "url": "https://www.rte.ie/lifestyle/recipes/2026/0223/1560001-eunices-tagliata-salad-with-blood-orange-today/",
+                            "title": "Eunice Power\u2019s tagliata salad with blood orange: Today",
+                            "excerpt": "This Italian inspired dish is perfect for welcoming in (hopefully) sunnier days!",
+                            "topic": "FOOD",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/eb38a290-fc5c-4f0f-a056-6c82b8aea2da.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "59a0d776-4e9c-4662-b81c-22094e91e394",
+                            "url": "https://www.the-independent.com/life-style/food-and-drink/recipes/how-to-cook-rice-ping-coombes-recipe-b2918132.html",
+                            "title": "\u2018In the West, rice is an afterthought\u2019: Ping Coombes\u2019 guide to getting it right every time",
+                            "excerpt": "Rice may be one of the world\u2019s most basic ingredients, yet few home cooks treat it with much respect. Ping Coombes disagrees. The Malaysian-born chef and MasterChef winner talks texture, technique and why badly cooked rice undermines even the best dishes",
+                            "topic": "FOOD",
+                            "publisher": "The Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5fd040ce-bbcd-4fca-8f39-0c0bdd598d46.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ef1a8729-ec6a-4d89-84b1-d90578cc096d",
+                            "url": "https://www.countrylife.co.uk/lifestyle/food-drink/french-pastries-all-look-amazing-but-i-wish-more-british-bakers-would-look-at-what-we-used-to-have-richard-hart-on-the-joys-of-jammy-dodgers-and-iced-buns",
+                            "title": "\u2018French pastries all look amazing\u2026 but I wish more British bakers would look at what we used to have\u2019: Richard Hart on the joys of jammy dodgers and iced buns",
+                            "excerpt": "Richard Hart has made his name as one of the world\u2019s best breadmakers, but as Oliver Berry finds out, his latest project marks a return to his British roots.",
+                            "topic": "FOOD",
+                            "publisher": "Country Life",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f982ee3d-8ab5-4d3e-8d81-b9d4799d71a6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b8f58dc3-c979-40d7-a480-5798415e033e",
+                            "url": "https://theweek.com/culture-life/food-drink/fine-food-michelin-budget-bib-gourmand-2026",
+                            "title": "Bib Gourmand restaurants for fine dining on a budget",
+                            "excerpt": "Excellent value eateries with the Michelin inspectors\u2019 seal of approval",
+                            "topic": "FOOD",
+                            "publisher": "The Week",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1869765e-8fc2-4944-9e56-6e574b36c558.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "health__lEN_IE",
+                "active": true,
+                "title": "Health",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "223"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "3de544fa-a584-497d-a445-e75327304db9",
+                            "url": "https://www.newscientist.com/article/2516893-rapamycin-can-add-years-to-your-life-or-none-at-all-its-a-lottery/",
+                            "title": "Rapamycin can add years to your life, or none at all \u2013 it\u2019s a lottery",
+                            "excerpt": "The drug rapamycin has been held up for its life-extending properties, but whether this treatment \u2013 or fasting \u2013 actually adds years to your life isn\u2019t guaranteed",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "New Scientist",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c9263466-8d00-4fa2-88a2-79488971b1a6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a8b4d0f0-8a50-4a3d-8fb2-b508a140bea9",
+                            "url": "https://www.independent.ie/life/health-wellbeing/health-features/ask-the-doctor-i-am-considering-getting-the-coil-instead-of-the-pill-but-ive-heard-horror-stories-how-bad-is-it/a1522700571.html",
+                            "title": "Ask The Doctor: I am considering getting the coil instead of the pill but I\u2019ve heard horror stories. How bad is it?",
+                            "excerpt": "Question: I\u2019m considering getting the coil instead of going back on the pill. I like the idea of something long-term, but I\u2019ve heard horror stories about very painful insertion, heavy bleeding, mood changes and even the coil moving. How common are these p",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4f7138bf-e32b-430c-a9cb-63a151e03126.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "393632dd-9712-4d0e-82eb-e402f309069f",
+                            "url": "https://www.theguardian.com/lifeandstyle/2026/feb/25/moment-that-changed-me-hit-by-suv-drinking-screen-time",
+                            "title": "A moment that changed me: I was hit by an SUV \u2013 and it made me reconsider my drinking and screen time",
+                            "excerpt": "I was in New Orleans for work, without travel insurance, when the car crashed into me. In the months I spent recovering, I began to think seriously about how I treated my health",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "The Guardian",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/05d9be1b-0c40-471a-ab41-ddf99de41bc6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "82d16701-f72e-4ed1-b18a-52be8fdee863",
+                            "url": "https://www.irishtimes.com/health/2026/02/25/he-was-failed-when-he-needed-help-the-most-calls-for-separate-units-for-mental-health-emergencies/",
+                            "title": "\u2018He was failed when he needed help the most\u2019: Calls for separate units for mental health emergencies",
+                            "excerpt": "Joe Loughnane says his brother Alan died in 2025 after being let down by an inadequate system ",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7c781958-7304-470e-b5d0-91bc3e885091.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "df881d63-4984-4380-9a95-e40e044663c4",
+                            "url": "https://www.independent.ie/regionals/leitrim/news/new-leitrim-community-nursing-unit-awarded-further-investment-of-2m/a789339130.html",
+                            "title": "New Leitrim community nursing unit awarded further investment of \u20ac2m",
+                            "excerpt": "The new 90 bed community nursing unit in Carrick-on-Shannon has received a further investment of \u20ac2m.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a7b30e6b-68a8-449b-bdac-fd388f6b56af.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d35a2fc8-1715-40b0-a291-ab715ce12398",
+                            "url": "https://www.euronews.com/health/2026/02/25/simple-blood-test-may-help-predict-who-is-most-likely-to-live-longer-new-study-finds",
+                            "title": "Simple blood test may help predict who is most likely to live longer, new study finds",
+                            "excerpt": "Scientists found that tiny RNA molecules in the bloodstream - known as piRNAs - were stronger predictors of short-term survival than age, cholesterol or lifestyle factors.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8c55986c-d2aa-4670-8971-24cc92003620.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3c97f27b-be42-4050-86b9-14e7b6ad5cae",
+                            "url": "https://stellar.ie/real-talk/wellness/is-anti-anxiety-jewellery-just-another-marketing-ploy/122484",
+                            "title": "Is Anti-Anxiety Jewellery Just Another Marketing Ploy?",
+                            "excerpt": "Or can they actually be useful?",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "STELLAR",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/83eecc34-8ff0-469a-abcd-8d622c8c8a59.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6b45bf03-1369-4b42-a92d-c5670edd23d5",
+                            "url": "https://www.irishtimes.com/health/2026/02/25/plan-to-relocate-rotunda-maternity-hospital-to-blanchardstown-some-distance-in-the-future/",
+                            "title": "Plan to relocate Rotunda maternity hospital to Blanchardstown \u2018some distance in the future\u2019",
+                            "excerpt": "Oireachtas committee told move is based on \u2018real patient safety reasons and rationale\u2019 on co-location policy",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/bd67250b-ac3d-41d4-9136-bffebf95b5c4.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c92e7bda-90ca-4f62-9dd6-5c0dd724844d",
+                            "url": "https://www.euronews.com/health/2026/02/25/spain-to-ban-the-sale-of-energy-drinks-to-children-under-the-age-of-16",
+                            "title": "Spain to ban the sale of energy drinks to children under the age of 16",
+                            "excerpt": "The Spanish government is moving ahead with a ban on energy drinks for minors, based on data that warns of the risks of caffeine in adolescents.",
+                            "topic": "HEALTH_FITNESS",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0387e6fe-eca2-43a9-86ec-fd9c8560c6ec.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "arts__lEN_IE",
+                "active": true,
+                "title": "Entertainment",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "JLBCU7"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "7fae61e7-5876-4266-9a94-169a0ae4122d",
+                            "url": "https://www.the-independent.com/arts-entertainment/tv/features/bridgerton-season-four-review-b2927257.html",
+                            "title": "Bridgerton\u2019s season four romance is exactly what the show needed",
+                            "excerpt": "The Netflix show has finally got its mojo back \u2014 and given us the best romance since Reg\u00e9-Jean Page\u2019s hunk Simon Basset and Phoebe Dynevor\u2019s Daphne Bridgerton got together. We\u2019re all rooting for this Cinderella storyline to work out, writes Ellie Muir",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/010d5805-a902-4e78-9bf6-cbacf440b2d1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bc537536-69c1-442b-8932-13f8343fa031",
+                            "url": "https://stellar.ie/trending/yep-new-niall-horan-music-is-coming/147742",
+                            "title": "Yep, New Niall Horan Music Is Coming",
+                            "excerpt": "Album is DONE",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "STELLAR",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/11c1b960-dae9-43c3-989f-0b1b7fe2be08.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b9e57698-7566-454c-aa50-b422c5400911",
+                            "url": "https://www.rte.ie/entertainment/2026/0225/1560293-kneecaps-mo-chara-says-new-album-reflects-crazy-year/",
+                            "title": "Kneecap\u2019s Mo Chara says new album looks back on \u2018crazy year\u2019",
+                            "excerpt": "Kneecap frontman Mo Chara has said the hip-hop trio\u2019s new record is a \u201cmore mature album\u201d which looks back on a \u201ccrazy year\u201d.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f31ca980-2e22-41e8-905b-924bf850f0f7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f96405f6-aec7-48e3-8995-c0b782ffd970",
+                            "url": "https://www.image.ie/living/jade-jordan-this-industry-needs-more-voices-more-perspectives-and-more-lived-experiences-983401",
+                            "title": "Jade Jordan: \u2018This industry needs more voices, more perspectives and more lived experiences\u2019",
+                            "excerpt": "Irish actor Jade Jordan talks about the empathy and connection at the root of all good stories, the unseen effort that goes into...",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Image",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0441a804-9822-470f-be89-8929af121b37.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d369f7f3-9a25-4447-85ac-4256f217431d",
+                            "url": "https://www.hotpress.com/music/jacqui-mcshees-pentangle-to-play-dublin-this-summer-23131584",
+                            "title": "Jacqui McShee\u2019s Pentangle to play Dublin this summer",
+                            "excerpt": "Tickets for the gig are on sale now",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Hot Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d8c27156-7eb2-4e4b-8b92-b43ce5339149.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3c01b4c9-77f9-4f3f-8b18-81bb279149d7",
+                            "url": "https://www.nme.com/features/music-interviews/kiii-kiii-delulu-pack-ep-interview-radar-3931228",
+                            "title": "KiiiKiii want you to lock in on being delulu: \u201cIt is a really optimistic driving force\u201d",
+                            "excerpt": "The K-pop rookie girl group are making being delusional a motivational benchmark as they talk their new EP \u2018Delulu Pack\u2019 and celebrate their first year together",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "NME",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/54c1bbbf-eb05-4a88-8daf-02145cd50f40.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "77eb3e10-b594-45a0-b3c8-5403d13f609e",
+                            "url": "https://theface.com/music/carhartt-wip-audio-archives-interviews",
+                            "title": "The community stations reshaping radio",
+                            "excerpt": "Across the globe, independent broadcasters are providing a platform for rising talent and homegrown heroes. Here, we meet the founding hosts from a half a\u2026",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Face",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7c382d5a-13d6-4697-a93a-19286be37570.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ed519057-2dac-4a83-bdbf-c3cc5d694c35",
+                            "url": "https://faroutmagazine.co.uk/doctors-orders-whitney-prescribe-nine-favourite-albums/",
+                            "title": "Doctor\u2019s Orders: Whitney prescribe their nine favourite albums",
+                            "excerpt": "American indie rockers Whitney are busy on the road, but they stopped by to prescribe their nine favourite albums which have formed their journey.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Far Out Magazine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4e725242-d8b3-4f67-87e0-f49249c19ff1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e3ae56fe-befa-48db-b78f-374154355292",
+                            "url": "https://www.irishnews.com/news/uk/movie-lovers-given-a-bite-at-jaws-movie-prop-and-star-wars-memorabilia-VQDLQRC3DBME3CBTHH3SHJQCMQ/",
+                            "title": "Movie lovers given a bite at Jaws movie prop and Star Wars memorabilia",
+                            "excerpt": "An arena helmet and mask worn in Sir Ridley Scott\u2019s Oscar-winning epic Gladiator is also due to go under the hammer next month.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7d0c3a2c-7964-4f9e-98bb-399732c2ffe1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ae7abdbf-d88e-4baf-801d-db2679a5af45",
+                            "url": "https://www.rollingstone.com/music/music-news/hilary-duff-ashley-tisdale-celeb-mom-group-drama-response-1235521974/",
+                            "title": "Hilary Duff Was \u2018Taken Aback\u2019 by Ashley Tisdale\u2019s Mom Group Essay: \u2018I Felt Used\u2019",
+                            "excerpt": "Hilary Duff said she felt used and sad after seeing the essay Ashley Tisdale published in The Cut about feeling iced out of a celebrity mom group.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "Rolling Stone",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/829b346e-e1b0-44bd-9a4f-4b0c346d5e89.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "dd47d6e6-0789-4bbc-889b-9c2c3858813d",
+                            "url": "https://www.theguardian.com/film/2026/feb/25/source-rolling-stones-song-melania-documentary-mick-jagger-gimme-shelter",
+                            "title": "Source close to Rolling Stones disputes Melania producer\u2019s claim Mick Jagger \u2018gave his blessing\u2019 to use song",
+                            "excerpt": "Spokesperson for Rolling Stones tells Guardian band did not liaise with Marc Beckman and his team on use of Gimme Shelter in first lady documentary",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Guardian",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/eacff2d6-cb76-41df-89c2-d427d1e2496b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ada99fdc-1ae7-4a3b-bcda-432f633e52bc",
+                            "url": "https://apnews.com/article/rock-hall-2026-nominees-04ba9dbcb039ca6c8c3e5ad5bb122c2a",
+                            "title": "Phil Collins, Lauryn Hill, INXS, Iron Maiden, Luther Vandross and Shakira get Rock Hall nominations",
+                            "excerpt": "The Rock &amp; Roll Hall of Fame has announced its 2026 list of nominees, and it mixes pop, rap, metal, R&amp;B and more. The Hall released the list on Wednesday.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/18c2a2d7-3fc1-40ee-a677-ac5bf2a45a50.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5b9c5a29-d6cf-4e0f-9814-be85def20fe1",
+                            "url": "https://www.irishnews.com/news/uk/fast-tracked-investigation-launched-into-bbc-bafta-broadcast-serious-mistake-EM5PXLDH4JLK5CDEPMKH6PAXKE/",
+                            "title": "\u2018Fast-tracked investigation\u2019 launched into BBC Bafta broadcast \u2018serious mistake\u2019",
+                            "excerpt": "Alan Cumming apologised during the broadcast for language viewers may have heard.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e341806f-bcbc-4f31-a8e1-b986e421c639.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d4524424-0bc1-4326-b82f-f228e3701178",
+                            "url": "https://www.hollywoodreporter.com/movies/movie-features/robert-duvall-oscars-tender-mercies-1236511069/",
+                            "title": "Robert Duvall Struck a Chord \u2014 and Oscar Gold \u2014 With \u2018Tender Mercies\u2019",
+                            "excerpt": "The venerated actor, who died Feb. 16 at 95, won his only Academy Award for playing an alcoholic country singer trying to rebuild his life in Bruce Beresford\u2019s indie drama.",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Hollywood Reporter",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2549890f-3963-43fa-a879-816d188a1b54.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e9894533-10ee-4272-be4e-2165a0458dd6",
+                            "url": "https://www.the-independent.com/arts-entertainment/films/news/john-davidson-baftas-n-word-controversy-tourette-tics-b2927046.html",
+                            "title": "John Davidson says Tourette\u2019s misconceptions are more challenging than the disorder",
+                            "excerpt": "Tourette syndrome campaigner involuntarily shouted the n-word while Delroy Lindo and Michael B Jordan were on stage at the Baftas ",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5a29274c-57df-4793-b53a-6db27a69d362.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "business__lEN_IE",
+                "active": true,
+                "title": "Business",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "52"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "c1022f65-e91d-4303-9cd8-da5450827af0",
+                            "url": "https://www.independent.ie/business/us-data-centre-giant-equinix-to-invest-up-to-700m-in-dundalk-facility/a794191846.html",
+                            "title": "US data centre giant Equinix to invest up to $700m in Dundalk facility",
+                            "excerpt": "US data centre giant Equinix will spend at least $350m (\u20ac297m) over the next five years to support the development of an advanced manufacturing facility in Dundalk, Co Louth, that will make specialised equipment for the sector.",
+                            "topic": "BUSINESS",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/794f6260-b075-4cb0-a986-2506b65cc807.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d92386a1-11cd-4450-a13b-bb08c9fe4aaf",
+                            "url": "https://www.independent.ie/business/guinness-owner-diageo-cuts-outlook-as-new-ceo-takes-over/a555362806.html",
+                            "title": "Guinness owner Diageo cuts outlook as new CEO takes over",
+                            "excerpt": "Diageo Plc cut its guidance for the second time this fiscal year as the British distiller struggles to revive demand in the US and China, in an early challenge for new Chief Executive Officer Dave Lewis.",
+                            "topic": "BUSINESS",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/11914138-2576-4880-8013-41f17a0bee40.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3d7f64c2-ab52-4b4c-9b21-3915c2ce6bd6",
+                            "url": "https://www.derrynow.com/news/local-news/2024464/majority-of-people-in-derry-and-donegal-support-single-north-west-economic-sub-region.html",
+                            "title": "Majority of people in Derry and Donegal support single north west economic sub region",
+                            "excerpt": "90% of poll respondents believe unified transport infrastructure across Derry and Donegal would benefit the local economy and community",
+                            "topic": "BUSINESS",
+                            "publisher": "Derry Now",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/cd39c74d-c06f-4369-a71e-0cef19c9b783.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "90138a02-beed-4312-891b-f4145276e384",
+                            "url": "https://www.farmersjournal.ie/agribusiness/news/revenue-rises-profit-falls-at-glanbia-905653",
+                            "title": "Revenue rises, profit falls, at Glanbia",
+                            "excerpt": "Revenue rises, profit falls, at Glanbia  - 25 February 2026",
+                            "topic": "BUSINESS",
+                            "publisher": "Farmer's Journal",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/85cd107b-1ade-4d3c-860d-c7e10b4bb0df.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3430280d-ab94-49dc-807f-924f59b1eb17",
+                            "url": "https://www.irishnews.com/news/uk/hsbc-to-meet-11bn-cost-savings-target-early-after-cutting-back-senior-roles-ZP3L5FPTDROWBD77HNKN5NES2E/",
+                            "title": "HSBC to meet \u00a31.1bn cost savings target early after cutting back senior roles",
+                            "excerpt": "HSBC\u2019s chief executive said the \u2018deduplication\u2019 of jobs had resulted in a net 15% reduction of managing director positions.",
+                            "topic": "BUSINESS",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4ece13a4-5e5f-4c9b-9499-2440ee51dd47.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "7e8ec1b7-d645-4c5f-91c7-26fc7ca5c59c",
+                            "url": "https://www.derrynow.com/news/local-news/2024587/urgent-action-needed-to-reverse-funding-cuts-for-local-charities.html",
+                            "title": "Urgent action needed to reverse funding cuts for local charities",
+                            "excerpt": "Radical and damaging funding change taking place on April 1 - UK Shared Prosperity Fund  to be  replaced by the Local Growth Fund",
+                            "topic": "BUSINESS",
+                            "publisher": "Derry Now",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a994429b-1fdb-472f-98ea-f24cf8b7aeef.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0d7d39fb-c4ff-4bfb-b274-39410704bfdd",
+                            "url": "https://businessplus.ie/media-plus/lidl-employees-pay-increases/",
+                            "title": "5,500 Lidl employees to recieve share of \u20ac11m investment in pay increases",
+                            "excerpt": "Lidl Ireland has announced an \u20ac11m investment in pay increases for its workforce in the Republic, alongside a further \u00a32.3m for its operations in Northern",
+                            "topic": "BUSINESS",
+                            "publisher": "Business Plus",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/3d887a9c-4cbf-4074-b51e-838bbd6ac16c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "54479864-04fd-4e7d-8844-9c6706fada54",
+                            "url": "https://www.rte.ie/news/business/2026/0225/1560318-normal-opens-new-dublin-store/",
+                            "title": "Normal opens in Dublin Northside Shopping Centre as Irish expansion continues",
+                            "excerpt": "Danish retailer Normal continues its expansion in Ireland with the opening of a new store in Dublin\u2019s Northside Shopping Centre today.",
+                            "topic": "BUSINESS",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a0c74485-a130-410e-ad63-a8ba4cd7d26e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "cd9ac810-f662-4fa7-8b19-e8adaf2d2753",
+                            "url": "https://www.irishtimes.com/business/2026/02/25/stripe-is-weighing-up-possible-acquisition-of-payments-pioneer-paypal/",
+                            "title": "Stripe is weighing up possible acquisition of payments pioneer PayPal",
+                            "excerpt": "Sources say Irish-founded company has expressed preliminary interest in a potential acquisition of the digital payments pioneer or its assets",
+                            "topic": "BUSINESS",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/876439d0-cef1-4984-aeb7-201f4d36c931.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f3ccb2e7-6103-453b-8e17-2a13624b142f",
+                            "url": "https://www.rte.ie/news/politics/2026/0225/1560370-dail-housing/",
+                            "title": "Private landlords could raise new rents by 25%, D\u00e1il told",
+                            "excerpt": "The D\u00e1il has heard that one of the largest landlords in the State, the investment fund I-RES REIT, has told investors that changed rental laws mean they can increase new rents by 25%.",
+                            "topic": "BUSINESS",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/eb35c4b1-6a38-4460-b76b-830d60fa1aa8.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b91b9328-9386-408b-983f-a97d316602b7",
+                            "url": "https://www.euronews.com/2026/02/25/italy-calls-for-restraint-as-eu-puts-us-tariff-deal-on-ice",
+                            "title": "Italy calls for restraint as EU puts US tariff deal on ice",
+                            "excerpt": "Rome warned against a trade clash and urged continuity, with Foreign Minister Antonio Tajani stressing the need to protect export-heavy Italy.",
+                            "topic": "BUSINESS",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f111017e-e600-4792-a3e3-bf9f90fe734b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ad27ad86-c7fa-472d-ba8a-6872538f4352",
+                            "url": "https://www.irishtimes.com/business/2026/02/25/andrew-heffernan-husband-to-dunnes-stores-matriarch-margaret-has-died/",
+                            "title": "Andrew Heffernan, husband to Dunnes Stores matriarch Margaret, has died",
+                            "excerpt": "Margaret Heffernan (83) is the eldest of six children born to Ben Dunne snr and his wife Nora Dunne",
+                            "topic": "BUSINESS",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ed9da0e7-b1ec-4aff-a271-5423d6cdca75.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5630c8bb-2ce3-4b29-a05d-4fd549d50d95",
+                            "url": "https://www.irishnews.com/news/business/work-starts-on-new-state-of-the-art-medical-clinic-in-belfast-EJYFN3GRJNFIHJ6MQ2E7SCWNUY/",
+                            "title": "Work starts on new state-of-the-art medical clinic in Belfast",
+                            "excerpt": "Purpose-built 100,000sq ft facility at Boucher Road will complement Affidea\u2019s existing four clinics in north and 24 in the Republic",
+                            "topic": "BUSINESS",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/77586083-98b6-4223-b6ce-6e4b9a8199c3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "89b3430b-3fa7-45ca-8c30-c856db94b835",
+                            "url": "https://www.euronews.com/my-europe/2026/02/25/european-parliament-backs-new-rules-for-mid-cap-businesses-in-simplification-effort",
+                            "title": "European Parliament backs new rules for \u2018mid-cap\u2019 businesses in simplification effort",
+                            "excerpt": "EU lawmakers adopted new rules to simplify the legislative framework for so-called \u201cmid-cap\u201d companies on Wednesday as part of its general effort to cut red tape for businesses in Europe. #EuropeNews",
+                            "topic": "BUSINESS",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7e3f7d7a-3441-42b1-a9f8-df8b322902ec.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "2bc9301d-21d9-484b-a8b6-34242d09fd55",
+                            "url": "https://www.irishexaminer.com/business/companies/arid-41799842.html",
+                            "title": "Weak US demand for Panadol maker Haleon\u2019s products pushes 2026 target below forecast",
+                            "excerpt": "Haleon, British healthcare group which also produces products like Sensodyne toothpaste, employs 1,700 people across four locations in Ireland",
+                            "topic": "BUSINESS",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f47602b1-e94d-41de-a427-31b39b3d1df3.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "home__lEN_IE",
+                "active": true,
+                "title": "Home & Garden",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "274"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "20ea6c6a-cfff-434a-a05b-27ae15114569",
+                            "url": "https://www.countryliving.com/uk/homes-interiors/gardens/a70432324/vegetables-plant-before-end-february/",
+                            "title": "Ready, steady, sow: 5 vegetables to plant before the end of February",
+                            "excerpt": "The next few weeks are key to kickstarting your crop for the rest of the year ",
+                            "topic": "HOME",
+                            "publisher": "Country Living",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/87d2c92e-272b-4800-b87a-c3eeb906a397.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0cb8af80-debf-4066-96a8-d5c041a8d36a",
+                            "url": "https://thegloss.ie/see-inside-a-north-london-home-recalibrated-as-an-alpine-sanctuary/",
+                            "title": "See Inside A North London Home Recalibrated As An Alpine Sanctuary",
+                            "excerpt": "Simon Mayhew, founder and creative director of TXTURED, describes this North London home redesign as \u201ca quiet recalibration\u201d",
+                            "topic": "HOME",
+                            "publisher": "thegloss.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/16179a3f-b6e5-4700-a7c0-79023802e730.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a6a87a19-64d3-43d6-ae8b-83d6289b648d",
+                            "url": "https://www.houseandgarden.co.uk/gallery/garth-gell-farmhouse-snowdonia",
+                            "title": "A charmingly layered off-grid cottage in rural Wales",
+                            "excerpt": "For knitwear and interior designer Kathleen Holland, this consciously off-grid cottage \u2013 sensitively restored by her brother-in-law Johnny Holland \u2013 provided a chance to layer vintage textiles and antique finds alongside chalky, lime washed walls.",
+                            "topic": "HOME",
+                            "publisher": "House & Garden",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a5fc4608-9235-480a-b258-dd0939d3ebd8.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "20c66b49-7be7-48b5-8846-80d0a8546c30",
+                            "url": "https://www.countryliving.com/uk/homes-interiors/gardens/a70427957/plants-get-ground-before-spring/",
+                            "title": "Don\u2019t miss the window: 7 plants to get in the ground before spring",
+                            "excerpt": "Late winter offers the ideal conditions for a host of plants to establish roots before spring",
+                            "topic": "HOME",
+                            "publisher": "Country Living",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fa24141c-33c6-40c3-8e4d-65c86df5eed2.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "01eef59d-d7a1-40fe-9932-e4589c757070",
+                            "url": "https://www.irishtimes.com/property/interiors/2026/02/17/quick-home-maintenance-fixes-to-avoid-future-costly-repairs/",
+                            "title": "A guide to quick home maintenance fixes that avoid future costly repairs",
+                            "excerpt": "How to keep on top of things to prevent more disruptive work later on",
+                            "topic": "HOME",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b310c288-17df-4fed-8940-3f1cd5d3cb9f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9b5f9194-4d54-47c6-b0b6-be1fa1214e4a",
+                            "url": "https://www.goodhousekeeping.com/uk/house-and-home/household-advice/a70462737/ways-to-reuse-silica-gel-packets/",
+                            "title": "Don\u2019t chuck them! 8 clever ways to reuse silica gel packets to keep your home fresh, clean and damp-free",
+                            "excerpt": "Those tiny packets that come in your shoe box are secretly a household wonder",
+                            "topic": "HOME",
+                            "publisher": "Good Housekeeping",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/38ef5217-3284-434d-b7a3-5c32cd197b30.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3606f206-d35b-408d-8f9e-6d90574e1e24",
+                            "url": "https://www.housebeautiful.com/uk/garden/designs/a70270827/before-after-narrow-garden-chiswick/",
+                            "title": "Before & After: This long, narrow garden is now a blossom-filled woodland retreat",
+                            "excerpt": "This narrow, once-featureless London garden has been transformed into a beautiful wildlife-friendly space",
+                            "topic": "HOME",
+                            "publisher": "House Beautiful",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fe092944-8012-4845-8d0e-0f10765607c3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a80dc5be-3084-497a-8a0c-0c132521449e",
+                            "url": "https://www.independent.ie/life/home-garden/interiors/my-favourite-room-i-was-45-years-in-the-last-house-i-decided-to-look-for-a-smaller-place-i-first-came-to-see-this-one-for-the-craic-simona-doyles-dublin-mews/a955971203.html",
+                            "title": "My favourite room: \u2018I was 45 years in the last house. I decided to look for a smaller place. I first came to see this one for the craic\u2019 \u2013 Simona Doyle\u2019s Dublin mews",
+                            "excerpt": "The living room in Simona Doyle\u2019s period home is like the rest of the house \u2013 tastefully and stylishly furnished. Everything is subtle so it\u2019s only when Simona herself points out the bases of her two black and white table lamps that it becomes apparent th",
+                            "topic": "HOME",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/94562472-e4bd-4f74-8e62-2838506820b8.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "af512e92-1167-4f22-9fc8-33fd39a2033f",
+                            "url": "https://www.independent.ie/life/home-garden/homes/fix-it-up-tranquil-ranelagh-home-with-original-features-awaits-restoration-to-its-former-glory/a447017388.html",
+                            "title": "Fix it up: Tranquil Ranelagh home with original features awaits restoration to its former glory",
+                            "excerpt": "Tell me more about the place... No 6 Chester Road is just off Oxford Road in the chi chi Dublin 6 neighbourhood, discreetly removed from the bustle but within an amble of all the caf\u00e9s, restaurants, bars and independent shops Ranelagh has to offer.",
+                            "topic": "HOME",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/80825f86-069a-4680-a0d7-77c63fa81fed.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "77106cec-f8fe-4950-8349-dd505bf84f32",
+                            "url": "https://observer.co.uk/style/gardens/article/the-whole-world-in-my-pocket",
+                            "title": "The whole world in my pocket",
+                            "excerpt": "Even on a fairly ordinary day, the writer secrets about her person various buds, leaves, shells, pebbles\u2026",
+                            "topic": "HOME",
+                            "publisher": "The Observer",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4dea2e0c-8c5d-4b2e-84e9-707ecac852dc.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "7aac0fed-65d8-4767-9458-d209257b4fab",
+                            "url": "https://www.irishtimes.com/life-style/gardening/2026/02/21/how-to-encourage-biodiversity-in-your-home-garden/",
+                            "title": "How to encourage biodiversity in your home garden",
+                            "excerpt": "For award-winning garden designer Adam Hunt, the garden should be \u2018a living dialogue between the natural and the cultivated world\u2019",
+                            "topic": "HOME",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ff89b145-eea5-4a5e-9205-4165d6eaa383.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a41931f0-dfc5-440d-9736-9833439dd162",
+                            "url": "https://www.elledecor.com/design-decorate/trends/a70406010/dining-room-trends-2026/",
+                            "title": "The Biggest Dining Room Trends of 2026, According to Designers",
+                            "excerpt": "It\u2019s built for hosting, lingering, and actually using the \u201cgood\u201d plates.",
+                            "topic": "HOME",
+                            "publisher": "ELLE Decor",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/935cb5fc-a21f-45c8-bb24-fe5b25a175ef.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "743e4566-2ac7-44ac-8abe-05a7bfeef3f1",
+                            "url": "https://www.livingetc.com/advice/most-impractical-kitchen-cabinet-colors",
+                            "title": "I Asked Kitchen Designers: \u201cWhat Are the Most Impractical Kitchen Cabinet Colors to Actually Live With?\u201d These Are the 3 They Picked",
+                            "excerpt": "A durable, long-lasting kitchen is always the goal, but these three cabinet colors could be keeping you from achieving it \u2014 designers share the hues that are holding your space back",
+                            "topic": "HOME",
+                            "publisher": "Livingetc",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9b3c5422-f33c-41c7-9144-62de4432f6d3.png"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "education-science__lEN_IE",
+                "active": true,
+                "title": "Science",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "464"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "580e2d69-3599-458d-987f-3377799eddb3",
+                            "url": "https://nautil.us/researchers-map-uranus-atmosphere-in-stunning-detail-1270213/",
+                            "title": "Researchers Map Uranus\u2019 Atmosphere in Stunning Detail",
+                            "excerpt": "Researchers Map Uranus\u2019 Atmosphere in Stunning Detail: The James Webb Space telescope captured stunning images of the ice giant.",
+                            "topic": "SCIENCE",
+                            "publisher": "Nautilus",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7ad7467d-cd98-4a61-96e8-99cc1448f071.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "84dd202b-d88b-4e5b-88be-9b82ab06b1d1",
+                            "url": "https://www.euronews.com/2026/02/25/global-crackdown-on-the-eel-mafias-behind-a-billion-euro-wildlife-crime",
+                            "title": "Global crackdown on the \u2018Eel Mafias\u2019 behind a billion-euro wildlife crime",
+                            "excerpt": "The population of the European eel has collapsed by more than 90% since the 1980s. Yet, dozens of tonnes of juveniles, known as glass eels, are thought to be poached each year and shipped live to aquaculture farms outside Europe. #TheRoadToGreen",
+                            "topic": "SCIENCE",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/bfb068dc-3617-41ee-8649-1b0c880bcd32.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4f85ce45-94fa-4452-9a6c-4e23745576e8",
+                            "url": "https://extra.ie/2026/02/25/news/more-rain-on-the-way",
+                            "title": "\u2018Heavy rain again\u2019 \u2013 More torrid weather on the way after record downpours",
+                            "excerpt": "Forecasters are warning yet more rain and even hail are on the way this weekend.",
+                            "topic": "SCIENCE",
+                            "publisher": "Extra.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/baa4e44d-7b68-4b0c-a34d-94dd144d5bec.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c8487680-814f-4abf-aebd-858a67799482",
+                            "url": "https://www.popularmechanics.com/science/health/a70361638/spine-organoid/",
+                            "title": "Scientists Used \u2019Dancing Molecules\u2018 to Heal Lab-Grown Mini-Spines. One Day, They Could Cure Paralysis.",
+                            "excerpt": "By fine tuning the motion of molecules, scientists created an injectable therapy that encouraged the growth of neurites and neurons in damaged spinal organoids.",
+                            "topic": "SCIENCE",
+                            "publisher": "Popular Mechanics",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/bf4bbf99-b471-46c5-9b05-b4dea3646054.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6753ec3f-df56-486a-a727-dc70c30c1dd6",
+                            "url": "https://www.livescience.com/archaeology/human-evolution/neanderthals",
+                            "title": "Neanderthals: Facts, news, features and articles about our extinct human relatives",
+                            "excerpt": "Discover the latest news, features and articles about who Neanderthals were, whether they mated with modern humans and when they died out.",
+                            "topic": "SCIENCE",
+                            "publisher": "Live Science",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f156a9cb-632d-4c5f-8e35-b6464e665d71.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1f8e49a7-4739-4065-ab53-c775ed317fb2",
+                            "url": "https://www.newscientist.com/article/2514410-the-worlds-most-elusive-colour-is-worth-billions-if-we-can-find-it/",
+                            "title": "The world\u2019s most elusive colour is worth billions \u2013 if we can find it",
+                            "excerpt": "The discovery of bright yet stable pigments is vanishingly rare, making them hugely valuable. Now chemist Mas Subramanian is unpicking the atomic code of colour and homing in on our most-wanted hue",
+                            "topic": "SCIENCE",
+                            "publisher": "New Scientist",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1a33eccd-2f1a-4a65-bb17-71b1e24171ee.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5484cd6c-6ecc-470f-a18b-0d4838975dcb",
+                            "url": "https://www.bbc.co.uk/news/articles/ce827jy54g3o",
+                            "title": "Targets and watchdog for nature as Senedd passes new law",
+                            "excerpt": "A new law designed to better protect nature and reverse the loss of wildlife in Wales is passed.",
+                            "topic": "SCIENCE",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/13b8fb4c-cb99-4460-9d31-2f6b657b5d26.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "308d20e4-ecac-4774-8dcf-b449085cd8fa",
+                            "url": "https://www.newscientist.com/article/mg26935840-200-amazing-sneak-peek-of-nasas-spacesuit-tests-as-moon-mission-nears/",
+                            "title": "Amazing sneak peek of NASA\u2019s spacesuit tests as moon mission nears",
+                            "excerpt": "NASA crew members practise emergency rescue drills in a 40-foot-deep pool simulating the lunar surface, as part of tests on a new generation of spacesuit, the Axiom Extravehicular Mobility Unit",
+                            "topic": "SCIENCE",
+                            "publisher": "New Scientist",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/df44df0c-7b62-4506-ac45-7b5503d0f971.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "522a64af-2f7c-411c-9ef0-df725add333e",
+                            "url": "https://www.popularmechanics.com/science/a70355588/primordial-ooze-life-on-earth/",
+                            "title": "Primordial Ooze May Have Given Rise to Life on Earth\u2014and Across the Universe",
+                            "excerpt": "Compared to previous theories, the current research emphasizes the complexity of the biological and chemical processes that brought about life.",
+                            "topic": "SCIENCE",
+                            "publisher": "Popular Mechanics",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/34fae18a-5bd2-4537-b900-d14f287fa6af.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e023e0bf-9547-438d-9e70-70f91e334202",
+                            "url": "https://www.popsci.com/environment/leaf-tips-glow-blue-thunderstorms/",
+                            "title": "Leaf tips glow blue in thunderstorms",
+                            "excerpt": "For the first time, meteorologists caught the shocking phenomenon during a real storm.",
+                            "topic": "SCIENCE",
+                            "publisher": "Popular Science",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d7c2bbdd-392f-4fc8-94a2-703d5e555e99.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c73e467e-e165-4a72-aead-f148365d1020",
+                            "url": "https://nautil.us/imaging-the-most-far-out-jellyfish-galaxy-ever-observed-1270218/",
+                            "title": "Imaging the Most Far-Out Jellyfish Galaxy Ever Observed",
+                            "excerpt": "Imaging the Most Far-Out Jellyfish Galaxy Ever Observed: \u2026 and shaking up our view of the universe 8.5 billion years ago.",
+                            "topic": "SCIENCE",
+                            "publisher": "Nautilus",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/44016e23-b00b-4e56-850e-972448031ada.png"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0532ce40-161d-455b-9454-84e842be1404",
+                            "url": "https://news.sky.com/story/uk-records-hottest-day-of-the-year-so-far-13512122",
+                            "title": "UK records hottest day of the year so far",
+                            "excerpt": "Temperatures at Kew Gardens in London hit a 2026 record of 18.6C on Wednesday afternoon.",
+                            "topic": "SCIENCE",
+                            "publisher": "Sky News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a3ea6142-085b-4186-9753-16a797907f1c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0ce706f5-89a7-4066-9a7b-1c763e9ba02b",
+                            "url": "https://www.popsci.com/science/why-sneakers-squeak-physics/",
+                            "title": "Physics discovery explains why sneakers squeak",
+                            "excerpt": "And helped researchers play a \u2018Star Wars\u2019 song on glass.",
+                            "topic": "SCIENCE",
+                            "publisher": "Popular Science",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c56d18ee-db92-4b09-bc52-c4c0f0d20bc3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5bd0cc5b-7d48-4aed-9d05-7605fbb7022e",
+                            "url": "https://theconversation.com/how-russia-is-intercepting-communications-from-european-satellites-276094",
+                            "title": "How Russia is intercepting communications from European satellites",
+                            "excerpt": "Two Russian satellites appear to have been shadowing European spacecraft in Earth orbit.",
+                            "topic": "SCIENCE",
+                            "publisher": "The Conversation",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8a0a31ee-c1bc-47f4-af18-58e64c0c8cc0.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "558cc278-44e3-4299-aab6-5173f609ed9d",
+                            "url": "https://www.livescience.com/space/space-exploration/chinese-astronauts-describe-moment-a-crack-was-discovered-on-shenzhou-20-spacecraft",
+                            "title": "Chinese astronauts describe moment a crack was discovered on Shenzhou-20 spacecraft",
+                            "excerpt": "Taikonauts from the fated Shenzhou-20 mission have described what happened when they discovered cracks on their spacecraft as they prepared to depart China\u2019s Tiangong space station last year.",
+                            "topic": "SCIENCE",
+                            "publisher": "Live Science",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2931623c-f6b7-486d-b354-0e0b4e0598d3.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "society-parenting__lEN_IE",
+                "active": true,
+                "title": "Parenting",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "192"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "ae7817a7-b726-4ae1-ae6c-0809c0d8ad9c",
+                            "url": "https://www.stylist.co.uk/motherhood/parental-health-anxiety/1060124",
+                            "title": "Worried about the current measles outbreak? Here\u2019s how to deal with parental health anxiety",
+                            "excerpt": "It\u2019s normal to feel concerned, but if your worry is keeping you up at night, it could take its toll on your mental and physical wellbeing.",
+                            "topic": "PARENTING",
+                            "publisher": "Stylist",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/53e6b788-8d6c-4caf-8ca5-f6f704eebe36.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "dc947029-3322-4d35-8be9-c671943bbb15",
+                            "url": "https://www.irishtimes.com/life-style/people/2026/02/21/parents-on-posting-people-will-think-something-is-wrong-with-your-baby-if-you-dont-share-photos-online/",
+                            "title": "Parents on posting: \u2018People will think something is wrong with your baby if you don\u2019t share photos online\u2019",
+                            "excerpt": "As concerns grow around safety, identity theft, consent and AI, attitudes to sharing images on social media are changing",
+                            "topic": "PARENTING",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/02b67280-f9be-4466-9b2a-fc5f928e213e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bb353bf6-8179-475e-a7c1-da598e118963",
+                            "url": "https://www.irishexaminer.com/lifestyle/parenting/arid-41798747.html",
+                            "title": "Why a sing-song voice helps babies learn to talk",
+                            "excerpt": "Speaking \u2018parentese\u2019 can help to foster good speech and language development, and encourage clear communication",
+                            "topic": "PARENTING",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/63f837da-c986-4d02-a419-b5db8d35d6c9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c783bc42-263b-4ae6-84f4-e10d26dbd33c",
+                            "url": "https://www.stylist.co.uk/relationships/mothers-day-relationships-mother-daughter/1058263",
+                            "title": "\u201cBuilding my relationship with my mum has been the most rewarding part of adulthood \u2013 here\u2019s how to carve out more time for the bonds that matter\u201d",
+                            "excerpt": "Mother\u2019s day advice \u2013 how to strengthen the bond with your mum and find time to do things together",
+                            "topic": "PARENTING",
+                            "publisher": "Stylist",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2d967aa2-d0e9-4f1a-b3c4-642d41d39281.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9c936831-f7c8-42e2-a265-5a8cff626754",
+                            "url": "https://www.irishtimes.com/health/your-family/2026/02/23/i-wonder-if-i-made-a-mistake-giving-up-work-my-two-year-old-can-be-really-intense-and-demanding/",
+                            "title": "\u2018I wonder if I made a mistake giving up work. My son can be really demanding\u2019",
+                            "excerpt": "Ask the Expert: He is not a great sleeper and wants my attention all day long",
+                            "topic": "PARENTING",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/bdf24192-c10b-4c9e-90d5-4a31c1d0b250.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a418ada6-852f-4e38-9f7c-85ffab485bb1",
+                            "url": "https://www.irishexaminer.com/news/munster/arid-41800121.html",
+                            "title": "Survivors devastated by council\u2019s permission for 140 apartments at Bessborough",
+                            "excerpt": "Between 1922 and 1998, the Congregation of the Sacred Hearts of Jesus and Mary ran Bessborough as a mother and baby institution, during which time 9,768 mothers and 8,938 babies were admitted",
+                            "topic": "PARENTING",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1d1e4b1b-a3fb-42d4-8147-f707c49591a0.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "government__lEN_IE",
+                "active": true,
+                "title": "Politics",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "386"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "20803d27-c487-444b-89c7-bef9d035860b",
+                            "url": "https://www.rte.ie/news/2026/0224/1560265-fianna-fail-centenary/",
+                            "title": "Taoiseach confident in Fianna F\u00e1il\u2019s future at centenary launch",
+                            "excerpt": "Taoiseach Miche\u00e1l Martin has said he is confident in Fianna F\u00e1il\u2019s future existence, as he launched a programme to commemorate the centenary of the foundation of the party.",
+                            "topic": "POLITICS",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/dddd6afb-41af-49b9-868e-1bb3fc10c360.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "78229300-d6b2-4da6-9e0c-5feea57aa36e",
+                            "url": "https://extra.ie/2026/02/24/news/government-teen-trafficked",
+                            "title": "Government have \u2018no knowledge\u2019 of teen \u2018trafficked to Ireland by Epstein\u2019",
+                            "excerpt": "Taoiseach Mich\u00e9al Martin has said the Government have \u2018no knowledge\u2019 relating to the alleged trafficking of a woman to Ireland by Jeffrey Epstein.",
+                            "topic": "POLITICS",
+                            "publisher": "Extra.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/be9d4edc-8fab-4071-a46b-f678750616c6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a1e8464b-867e-4dcd-aea6-7bf83fe9637b",
+                            "url": "https://www.irishtimes.com/politics/2026/02/25/mary-lou-mcdonald-brings-wow-factor-to-dail-as-she-attacks-taoiseach-over-snas-reform/",
+                            "title": "Mary Lou McDonald brings wow factor to D\u00e1il as she attacks Taoiseach over SNAs reform",
+                            "excerpt": "Miche\u00e1l Martin takes robust stance, accusing her of \u2018empty soundbites\u2019 and grandstanding",
+                            "topic": "POLITICS",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d38406af-9bc7-4ff9-8dda-d5c6d92363bf.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1d55b1ee-bf8c-4d56-bb8d-2e310690b99b",
+                            "url": "https://www.irishnews.com/news/northern-ireland/stormont-scaffolding-bill-almost-250000-for-repairs-that-havent-started-yet-JSAKHH5JVZED3GB5KHMJI4HI5U/",
+                            "title": "Stormont scaffolding bill almost \u00a3250,000 for repairs that haven\u2019t started yet",
+                            "excerpt": "Structure has stood at rear of Parliament Buildings for 18 months at a cost of \u00a39,400 a month while contractors are yet to be appointed",
+                            "topic": "POLITICS",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c104c899-e9a4-49b5-abd2-8c122718e064.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0f51215f-10db-43a7-8d73-8eca1e528fe5",
+                            "url": "https://extra.ie/2026/02/25/news/trumps-state-of-the-union-address",
+                            "title": "The key takeaways from Trump\u2019s two-hour State of the Union",
+                            "excerpt": "US President Donald Trump delivered the longest-ever State of the Union address on Tuesday night at the US Capitol.",
+                            "topic": "POLITICS",
+                            "publisher": "Extra.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/11ef656e-f9cc-408a-8fa0-a3d338c7c74f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c78a9f74-4f30-4eb1-a8d2-792f13016f6f",
+                            "url": "https://www.irishtimes.com/politics/2026/02/25/gerry-hutch-launches-byelection-campaign-by-calling-on-supporters-to-register-to-vote/",
+                            "title": "Gerry Hutch launches byelection campaign by calling on supporters to register to vote",
+                            "excerpt": "Veteran criminal has announced his intention to seek seat in Dublin Central constituency",
+                            "topic": "POLITICS",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/3d395db4-81cd-4d58-85ed-26b9796320ae.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c3f6445d-c697-4692-a532-83b6bd5c068d",
+                            "url": "https://www.thejournal.ie/commons-speaker-confirms-he-warned-police-about-peter-mandelson-flight-risk-6967210-Feb2026/",
+                            "title": "Commons speaker confirms he warned police about Peter Mandelson \u2018flight risk\u2019 ahead of arrest",
+                            "excerpt": "Mandelson\u2019s lawyers said the report to the Met that he was planning to leave the country was \u2018baseless\u2019.",
+                            "topic": "POLITICS",
+                            "publisher": "The Journal",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0f12f0a0-bb44-4f8e-ba8d-9f020e7448a2.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9b9e48ce-97e4-4150-8898-7fbe4b0c0aa8",
+                            "url": "https://www.thejournal.ie/gino-kenny-darragh-adelaide-people-before-profit-6967146-Feb2026/",
+                            "title": "Former TD Gino Kenny co-opted onto council after PBP colleague resigns",
+                            "excerpt": "The party announced that Darragh Adelaide has resigned from South Dublin County Council \u201cfor personal reasons\u201d. ",
+                            "topic": "POLITICS",
+                            "publisher": "The Journal",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/50496bce-0e43-471e-bebb-14d9ffa17401.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e89d5b38-1a71-4fe7-9f70-57824f058b9d",
+                            "url": "https://www.irishnews.com/news/northern-ireland/stormont-minister-rejects-ludicrous-claim-she-is-neglecting-pothole-repairs-to-make-constitutional-point-GE3S7HNLAZG7NLEVDLBRADIS3A/",
+                            "title": "Stormont minister rejects \u2018ludicrous\u2019 claim she is neglecting pothole repairs to make \u2018constitutional point\u2019",
+                            "excerpt": "Liz Kimmins appeared before infrastructure committee as 49,000 defects have been reported on roads in last three months",
+                            "topic": "POLITICS",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0f922d01-7b30-4b97-ad3f-43808a47b7c9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8bb208ec-97b6-4c9b-bd8d-4c1f8c11152a",
+                            "url": "https://www.irishexaminer.com/news/politics/arid-41800124.html",
+                            "title": "\u2018Wrong, shocking, and should never have happened\u2019: Government apology for institutional abuse",
+                            "excerpt": "Miche\u00e1l Martin said that the abuse suffered by those in residential institutions \u201cwas wrong, shocking and should never have happened\u201d",
+                            "topic": "POLITICS",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/69556c30-9663-4e7c-844a-b45c71351028.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "69ca97c7-4a1e-4a61-be9c-cb6a939c9eb2",
+                            "url": "https://www.rte.ie/news/politics/2026/0225/1560437-ministers-nsso-overpayments/",
+                            "title": "Arrangements in place for ministers to return overpayments from NSSO - Chambers",
+                            "excerpt": "All Government ministers and ministers of state have either concluded or have arrangements in place to return any overpayments made to them by the National Shared Service Office, according to the Minister for Public Expenditure.",
+                            "topic": "POLITICS",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9f4f7bc7-6cb6-4a15-9aa8-eae7e9889f59.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b305592b-b851-4c74-8fbf-e57eb5416701",
+                            "url": "https://www.irishexaminer.com/news/courtandcrime/arid-41800196.html",
+                            "title": "Cork motorist who assaulted garda at drink driving check jailed for three years",
+                            "excerpt": "Accused could have opted for a short sentence at the district court but opted for trial by jury at Cork Circuit Criminal Court and was found guilty",
+                            "topic": "POLITICS",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/35a560a2-7771-4036-8a76-60cbd6f09216.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "hobbies__lEN_IE",
+                "active": true,
+                "title": "Gaming",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "596"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "5062746a-3a49-4561-bb63-916c1efa2219",
+                            "url": "https://www.eurogamer.net/amazon-abandons-upcoming-racing-game-from-former-forza-devs-as-its-departure-from-triple-a-publishing-continues",
+                            "title": "Amazon abandons upcoming racing game from former Forza devs, as its departure from triple-A publishing continues",
+                            "excerpt": "Amazon Game Studios will no longer be publishing the upcoming driving title from Maverick Games.",
+                            "topic": "GAMING",
+                            "publisher": "Eurogamer",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c1774935-30ad-413e-891b-10411ad6665c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "067c65da-091d-4168-be31-d6ac1abd2817",
+                            "url": "https://www.videogameschronicle.com/news/we-missed-the-mark-discord-is-delaying-global-age-verification-until-its-improved-the-process/",
+                            "title": "\u2018We missed the mark\u2019: Discord is delaying global age verification until it\u2019s improved the process",
+                            "excerpt": "Verification company Persona \u201cdid not meet the bar\u201d for Discord\u2019s privacy policy, its co-founder says\u2026",
+                            "topic": "GAMING",
+                            "publisher": "VGC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/eb617802-049f-4d7b-87d1-2c96d47cac1f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a7a3cbc9-5912-419d-b52e-53a45a530d2d",
+                            "url": "https://www.polygon.com/final-fantasy-7-new-edition-remastered-steam-bad-reviews/",
+                            "title": "Final Fantasy 7 just got a new version, and fans aren\u2019t loving it",
+                            "excerpt": "Shall I give you dispair?",
+                            "topic": "GAMING",
+                            "publisher": "Polygon",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0acaca25-2e49-4656-a680-f584ada1d753.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "aa885356-5584-4580-8f89-87ddc5baf67e",
+                            "url": "https://www.nme.com/news/gaming-news/chappell-roan-cried-tears-fortnite-skin-merch-festival-3931373",
+                            "title": "Chappell Roan cried after getting her own \u2018Fortnite\u2019 skin: \u201cIt just looks so awesome\u201d",
+                            "excerpt": "\u201cIt just looks so awesome\u201d",
+                            "topic": "GAMING",
+                            "publisher": "NME",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e4cd1f15-cca1-4952-b621-aad0adcf21f3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "fd54ff76-70c8-4a35-9916-8009d94ea3dc",
+                            "url": "https://gameinformer.com/2026/02/25/greedfall-2-publisher-nacon-files-for-insolvency-weeks-before-the-rpg-sequels-launch",
+                            "title": "GreedFall 2 Publisher Nacon Files For Insolvency Weeks Before The RPG Sequel\u2019s Launch",
+                            "excerpt": "GreedFall launches March 12, but today, its publisher filed for insolvency.",
+                            "topic": "GAMING",
+                            "publisher": "Game Informer",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/88c72dcc-cecd-4eff-ad7b-c44a8790266c.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "89c8db5d-10a2-45eb-b874-e2266ea358b9",
+                            "url": "https://www.videogameschronicle.com/news/ps5-and-pc-players-can-try-playstations-two-big-upcoming-live-service-games-this-weekend/",
+                            "title": "PS5 and PC players can try PlayStation\u2019s two big upcoming live service games this weekend",
+                            "excerpt": "Both Marathon and Horizon Hunters Gathering will have PSN trials\u2026",
+                            "topic": "GAMING",
+                            "publisher": "VGC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4d5d1f7c-d09f-466b-970a-a256635fce5d.webp"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5d5d0815-164f-4541-ae83-8edc90a57ee0",
+                            "url": "https://www.polygon.com/nintendo-pokemon-business-history-ownership/",
+                            "title": "Nintendo and Pok\u00e9mon owe everything to each other",
+                            "excerpt": "The history of both brands reveals an unusual partnership",
+                            "topic": "GAMING",
+                            "publisher": "Polygon",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/05a63f37-a167-4298-9bfb-a0451406123b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bcc16d4e-9c8d-4c02-ae13-62c74ae771d9",
+                            "url": "https://metro.co.uk/2026/02/25/sony-gran-turismo-7-running-switch-2-claims-insider-27109828/",
+                            "title": "Sony has Gran Turismo 7 running on Switch 2 claims insider \u2013 but why?",
+                            "excerpt": "An insider claims Sony has got Gran Turismo 7 working on the Nintendo Switch 2, in what could be a test drive for its rumoured handheld.",
+                            "topic": "GAMING",
+                            "publisher": "Metro",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1b6b463d-53d2-48a0-af16-45c8379a12c4.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "214e4a04-e24a-4e3f-adfe-ad1c91af6036",
+                            "url": "https://www.rockpapershotgun.com/four-years-after-the-last-one-baldurs-gate-1-and-2s-enhanced-editions-have-a-new-patch-out-in-steam-beta",
+                            "title": "Four years after the last one, Baldur\u2019s Gate 1 and 2\u2019s enhanced editions have a new patch out in Steam beta",
+                            "excerpt": "Beamdog have released patch 2.7 for the enhanced editions of Baldur\u2019s Gate 1, 2, and Icewind Dale in Steam beta form.",
+                            "topic": "GAMING",
+                            "publisher": "Rock, Paper, Shotgun",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b7ae0cb0-896a-4d9d-8636-72bb07b11006.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "98ffb635-d4d6-4dd1-9479-a30695131a71",
+                            "url": "https://www.nintendolife.com/reviews/nintendo-switch-2/resident-evil-requiem",
+                            "title": "Resident Evil Requiem Review (Switch 2)",
+                            "excerpt": "Blood, blood, gallons of the stuff",
+                            "topic": "GAMING",
+                            "publisher": "Nintendo Life",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b29e9c54-240e-4b9c-a908-9945813d34c6.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "1c3aac8f-4e00-4c0b-a46d-fb304e7e117d",
+                            "url": "https://www.eurogamer.net/despite-likening-new-xbox-heads-job-to-a-palliative-care-doctor-original-co-creator-doesnt-actually-think-xbox-is-dead",
+                            "title": "Despite likening new Xbox head\u2019s job to a \u201cpalliative care doctor\u201d, original co-creator doesn\u2019t actually think Xbox is dead",
+                            "excerpt": "Seamus Blackley, one of the co-creators of the original Xbox, has assured the community he doesn\u2019t actually think Xbox is \u201cdead\u201d.",
+                            "topic": "GAMING",
+                            "publisher": "Eurogamer",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c83599e2-45ec-4ab3-b364-b708eb33e484.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a54a9c87-3b61-4307-b951-62d14e776786",
+                            "url": "https://www.nintendolife.com/news/2026/02/video-weve-played-fallout-4-on-switch-2-heres-12-minutes-of-gameplay",
+                            "title": "Video: We\u2019ve Played Fallout 4 On Switch 2 - Here\u2019s 12 Minutes Of Gameplay",
+                            "excerpt": "Okey dokey",
+                            "topic": "GAMING",
+                            "publisher": "Nintendo Life",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/65e31614-1d9b-4f48-a047-5092db920387.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "30caba99-1afa-4aa1-bc5e-2d341fbad075",
+                            "url": "https://www.nme.com/news/gaming-news/malevolence-share-world-of-warcraft-anthem-twelve-to-zero-3931394",
+                            "title": "Metal titans Malevolence share \u2018World Of Warcraft\u2019 anthem \u2018Twelve To Zero\u2019",
+                            "excerpt": "The \u2018Midnight\u2019 expansion track was written in just 12 hours",
+                            "topic": "GAMING",
+                            "publisher": "NME",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/195e9280-b266-4d27-a2ce-d644ed219771.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "10c2c717-b878-4e86-9b56-8c2d9e3db7eb",
+                            "url": "https://www.rockpapershotgun.com/looking-for-fael-is-the-witness-for-people-who-need-more-tetris-in-their-life-and-you-can-try-it-for-yourself-now",
+                            "title": "Looking for Fael is The Witness for people who need more Tetris in their life, and you can try it for yourself now",
+                            "excerpt": "Puzzles, as far as the eye can see.",
+                            "topic": "GAMING",
+                            "publisher": "Rock, Paper, Shotgun",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8d264f91-1460-45cb-8859-203d8eff2fee.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e2854d39-2c6b-4e2d-8b9b-dddbc8ce68be",
+                            "url": "https://metro.co.uk/2026/02/25/sony-adds-ps5-price-feature-new-playstation-store-sale-kicks-off-27104919/",
+                            "title": "Sony adds PS5 price feature as new PlayStation Store sale kicks off",
+                            "excerpt": "An update on the PlayStation Store aims to provide greater transparency on the price of PS5 games, as another sale begins. ",
+                            "topic": "GAMING",
+                            "publisher": "Metro",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0aeb4f0b-57e3-41a1-a7bd-609e527d6710.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "sports__lEN_IE",
+                "active": true,
+                "title": "Sports",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "483"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "8cf41304-b928-44a7-ada9-22c3e64315cb",
+                            "url": "https://www.independent.co.uk/sport/football/leah-williamson-strike-player-schedule-welfare-b2926886.html",
+                            "title": "Leah Williamson says player strikes cannot be \u2018taken off the table\u2019 amid schedule row",
+                            "excerpt": "Williamson believes there is still time for governing bodies to address fixture congestion",
+                            "topic": "SPORTS",
+                            "publisher": "The Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b5551737-b796-489f-aecd-0df37c84d270.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "5a8f289a-a02d-4c8b-a2e7-58494e7d6595",
+                            "url": "https://www.aljazeera.com/sports/2026/2/25/bodo-glimt-knock-out-inter-milan-continue-fairytale-champions-league",
+                            "title": "Bodo/Glimt knock out Inter Milan, continue fairytale Champions League run",
+                            "excerpt": "The Norwegian team of no stars with a tiny budget have moved onto the last 16 of the world\u2019s biggest club competition.",
+                            "topic": "SPORTS",
+                            "publisher": "Al Jazeera English",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/63124089-2c76-4f46-868f-9b4640791765.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "222f8cd4-98cc-4d8a-bce6-467118e08360",
+                            "url": "https://www.irishnews.com/sport/soccer/benfica-lose-appeal-against-gianluca-prestianni-ban-over-racism-allegations-PVG2NGBT4FOQRENSBE2GEKW7EQ/",
+                            "title": "Benfica lose appeal against Gianluca Prestianni ban over racism allegations",
+                            "excerpt": "UEFA imposed the provisional sanction on Monday.",
+                            "topic": "SPORTS",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/de2a27bd-ef5f-45cf-87a7-c8e868f44b7a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "df13559c-3466-4c91-a125-72a353280f11",
+                            "url": "https://www.aljazeera.com/sports/2026/2/25/pakistani-players-in-the-hundred-whats-the-cricket-controversy-all-about",
+                            "title": "Pakistani players in the Hundred: What\u2019s the cricket controversy all about?",
+                            "excerpt": "Breaking down row involving Pakistani cricketers\u2019 presence in a franchise league in which Indian businesses own teams.",
+                            "topic": "SPORTS",
+                            "publisher": "Al Jazeera English",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/373be1df-50d5-4096-97d7-bd026c9ff739.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4fbbd6eb-ff26-42ab-b840-3d668e7febba",
+                            "url": "https://www.independent.ie/sport/soccer/international-soccer/fifas-gianni-infantino-expresses-absolute-confidence-in-mexico-staging-world-cup-matches-despite-cartel-violence/a429270387.html",
+                            "title": "Fifa\u2019s Gianni Infantino expresses \u2018absolute confidence\u2019 in Mexico staging World Cup matches despite cartel violence",
+                            "excerpt": "Fifa president Gianni Infantino says he has \u201ctotal confidence\u201d in Mexico safely staging World Cup finals and play-off matches despite an outbreak of violence close to one of the host cities.",
+                            "topic": "SPORTS",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4a14dcd2-6089-4c2c-9fd3-c4707f40fc0f.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "58ac000c-4cce-4fd8-8c32-b955ca05fe56",
+                            "url": "https://www.irishtimes.com/sport/boxing/2026/02/25/katie-taylors-impact-on-her-sport-wasnt-just-enormous-it-was-defining/",
+                            "title": "Katie Taylor\u2019s impact on her sport wasn\u2019t just enormous, it was defining",
+                            "excerpt": "We owe her plenty for the memories, while her sport owes her everything",
+                            "topic": "SPORTS",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/9bf16595-30f7-4a10-bb8f-2d6f57efec06.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "813896e8-e478-4a34-a363-17881d94ec92",
+                            "url": "https://www.irishexaminer.com/sport/business-of-sport/arid-41800184.html",
+                            "title": "Dublin GAA CCO Marcus \u00d3 Buachalla: \u2018We are competing for the hearts and minds of young people\u2019",
+                            "excerpt": "A qualified solicitor, \u00d3 Buachalla was Head of Communications & Media with Leinster Rugby for twelve years prior to joining Dublin",
+                            "topic": "SPORTS",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2d2a02f9-1e71-4a13-996a-6e29989a1e7d.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e99a2126-290a-4718-8ce9-7c2f7261094d",
+                            "url": "https://www.rte.ie/sport/darts/2026/0225/1560420-greaves-becomes-first-female-to-make-nine-dart-finish/",
+                            "title": "Beau Greaves becomes first female to make nine-dart finish",
+                            "excerpt": "Beau Greaves created history by becoming the first woman to hit a nine-dart finish on the PDC ProTour.",
+                            "topic": "SPORTS",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/04396b92-8075-473a-bd4b-0620dd9ae5c7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "0ecdcf49-071d-4734-8d99-68daa0a2cd34",
+                            "url": "https://www.independent.ie/sport/soccer/the-smell-of-weed-in-the-tunnel-the-impact-of-snoop-doggs-visit-to-swansea-according-to-the-preston-boss/a966506266.html",
+                            "title": "\u2018The smell of weed in the tunnel\u2019 \u2013 the impact of Snoop Dogg\u2019s visit to Swansea, according to the Preston boss",
+                            "excerpt": "Preston boss Paul Heckingbottom has claimed \u201cthe smell of weed\u201d in the tunnel made his players clock on to the presence of Snoop Dogg as Swansea gave their celebrity co-owner a rapturous welcome.",
+                            "topic": "SPORTS",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/2979999c-f0b2-4bf4-bc6c-0fef29e51d95.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "dfa9bef1-ea1c-4b26-ab84-480cb3f50ea8",
+                            "url": "https://www.espn.co.uk/football/story/_/id/48031337/man-united-ceo-berrada-hails-club-progress-latest-financial-results",
+                            "title": "Man United CEO Berrada hails club progress after latest financial results",
+                            "excerpt": "Manchester United CEO Omar Berrada has said extensive cost-cutting measures are starting to pay off as the club released their latest financial results.",
+                            "topic": "SPORTS",
+                            "publisher": "ESPN UK",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/3d9cf49d-003a-4764-b3ce-218432ede930.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d0562c50-abf5-4899-bca0-b9cf1d2340cd",
+                            "url": "https://www.echolive.ie/nationalsport/arid-41800223.html",
+                            "title": "Ireland to fulfil fixtures against Israel after taking legal advice",
+                            "excerpt": "Former Ireland boss Brian Kerr and current Shamrock Rovers manager Stephen Bradley are among those who have called for a boycott of the two games",
+                            "topic": "SPORTS",
+                            "publisher": "The Echo",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fceda212-67d8-4704-8179-f5be72b2b5dc.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e0c41449-ef88-472e-a153-e934236cf0d3",
+                            "url": "https://www.the42.ie/fai-israel-david-courell-6967657-Feb2026/",
+                            "title": "\u2018They have not threatened anything\u2019 - FAI CEO insists no Uefa pressure to play Israel",
+                            "excerpt": "David Courell says it\u2019s within best interests of Irish football to host Israelis and insists people can \u201chave their voices heard\u201d in protest.",
+                            "topic": "SPORTS",
+                            "publisher": "The 42",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8eb11741-a245-4d06-9691-deadf71c90fd.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "839cb2e6-e179-434d-bf1f-ab6d0021e92d",
+                            "url": "https://www.irishexaminer.com/sport/business-of-sport/arid-41800109.html",
+                            "title": "Football \u2018has eaten almost every sport\u2019 due to digital dominance, says podcast chief",
+                            "excerpt": "Goalhanger\u2019s Tony Pastor says Serie A has \u2018disappeared\u2019",
+                            "topic": "SPORTS",
+                            "publisher": "Irish Examiner",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d954f573-9c4f-4b17-a0a3-ef5c8c6e4380.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6e2d58a8-27ca-4ac8-b452-3f0af6d0cf20",
+                            "url": "https://extra.ie/2026/02/25/sport/stephen-carr-champions-league-newcastle",
+                            "title": "Stephen Carr outlines \u2018shock\u2019 Champions League run for former side",
+                            "excerpt": "Ex-Premier League defender Stephen Carr has predicted a \u2018shock\u2019 run for his former side in this year\u2019s UEFA Champions League.",
+                            "topic": "SPORTS",
+                            "publisher": "Extra.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/0b455775-29f3-41eb-90d3-0111cf459233.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "technology__lEN_IE",
+                "active": true,
+                "title": "Tech",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "596"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "d3e5c7a7-5e0d-41df-b31f-b3ef565a5d38",
+                            "url": "https://www.bbc.co.uk/news/articles/cjrq1vwe73po",
+                            "title": "US threatens Anthropic with deadline in dispute on AI safeguards",
+                            "excerpt": "The AI developer laid out red lines on military use of its products, a source said.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/72876792-c9e1-4b69-84ba-bb6b0ceb1bf3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "b9c40bf1-c3a0-42f0-9df2-2c3e6c951afe",
+                            "url": "https://www.rte.ie/news/ireland/2026/0225/1560344-ai-navy-funding/",
+                            "title": "AI vessel tracking system awarded funding",
+                            "excerpt": "An AI-enhanced vessel detection system developed by researchers from Trinity College Dublin, has been awarded funding to help enhance the Irish Naval Service\u2019s defence capabilities.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e79a5446-b9b6-4503-b026-848c6a0422c9.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "eaa38f67-d05f-46f7-a66f-6f9531fd10d1",
+                            "url": "https://www.newscientist.com/article/2516404-breaking-encryption-with-a-quantum-computer-just-got-10-times-easier/",
+                            "title": "Breaking encryption with a quantum computer just got 10 times easier",
+                            "excerpt": "The commonly used RSA encryption algorithm can now be cracked by a quantum computer with only 100,000 qubits, but the technical challenges to building such a machine remain numerous",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "New Scientist",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ea85576d-921c-48fe-8a12-be5c59e767a1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9b17d8eb-ddab-4f0a-bcb4-edda38fa8973",
+                            "url": "https://www.theguardian.com/technology/2026/feb/25/tech-legend-stewart-brand-on-musk-bezos-and-his-extraordinary-life-we-dont-need-to-passively-accept-our-fate",
+                            "title": "Tech legend Stewart Brand on Musk, Bezos and his extraordinary life: \u2018We don\u2019t need to passively accept our fate\u2019",
+                            "excerpt": "He was at the heart of 1960s counterculture, then paved the way for the libertarian mindset of Silicon Valley. At 87, Brand is still keen to ensure the world is maintained properly \u2013 not just today, but for the next 10,000 years",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Guardian",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/405d44bb-8ac2-45ee-881e-d820fc681cc2.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "607ece3c-932d-4624-8db0-40a080fb0caf",
+                            "url": "https://www.bbc.co.uk/news/articles/cx2drw12z51o",
+                            "title": "Not even potholes will hold up self-driving cars, UK firm predicts",
+                            "excerpt": "Wayve says it\u2019s confident all cars will one day be autonomous, as it announced more than a \u00a31bn in additional investment.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/cf772127-5b75-4b23-b3d7-224c7da88b97.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "08cdc09c-5989-4915-b5ba-a57c8e32c86a",
+                            "url": "https://www.theverge.com/tech/884136/apple-age-verification-assurance-underage-app-downloads",
+                            "title": "Apple\u2019s new age verification tools block underage app downloads where required by law",
+                            "excerpt": "Users in Australia, Brazil, and Singapore can\u2019t download apps rated 18-plus unless their age has been confirmed.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Verge",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7fa97e75-06a5-443d-91aa-00f42a038f3b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "ed281a1c-13a9-48cd-b04d-12508da10524",
+                            "url": "https://apnews.com/article/discord-global-age-verification-privacy-f508653aad57f9f1b45175acee1ebcde",
+                            "title": "Discord pushes back global age verification rollout amid criticism, promises transparency",
+                            "excerpt": "Discord is postponing its controversial age verification policy after users of the popular platform for gamers to communicate online expressed strong objections and privacy concerns.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c2fdab2d-7614-4777-b96c-4281f70609c3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "7917cd46-f3bb-495a-8806-1bab02927e8f",
+                            "url": "https://www.makeuseof.com/google-deepmind-study-morality/",
+                            "title": "Google is trying to teach its AI about morality",
+                            "excerpt": "Current models mimic morality, but researchers say real ethical thinking is still out of reach.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "MakeUseOf",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/85fdcf91-2b95-4c09-848d-963bf7b49bfc.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "61a10e9e-1c94-43e9-b8e2-6f4a4fdec19f",
+                            "url": "https://www.techcentral.ie/panasonic-outsources-television-production-to-chinese-partner/",
+                            "title": "Panasonic outsources television production to Chinese partner Plasma and LCD pioneer steps away from manufacturing but product develop will be unaffected Trade",
+                            "excerpt": "Panasonic is ceasing production of its own TVs and will henceforth have its televisions made by Chinese company Shenzhen Skyworth. The Japanese electronics brand is taking a striking strategic step to bolster its competitive position in the global flatscr",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "TechCentral.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1f8879be-d6c5-4bd5-b671-d8694b436c49.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "6d6c20d2-9ee5-4be1-8a8e-169e999d2ded",
+                            "url": "https://www.techcentral.ie/trinity-college-dublin-team-spearheads-ai-based-vessel-detection-system/",
+                            "title": "Trinity College Dublin team spearheads AI-based vessel detection system Sea-Scan strengthens naval security through greater situational awareness Life",
+                            "excerpt": "More than \u20ac1.8 million has been awarded to two projects funding under the co-funded Research Ireland-Defence Innovation Challenge, a national initiative aimed at unlocking the power of research to develop enhance the capabilities of the Defence Forces.\u00a0 T",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "TechCentral.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a85e4814-d18b-4164-b44d-112ac247edbc.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "7e5a6978-155c-4592-8ccf-2dfaa291ba25",
+                            "url": "https://www.theguardian.com/technology/2026/feb/25/trtreasury-blair-thinktank-advise-on-ai-use-public-services",
+                            "title": "Treasury calls in Blair thinktank to advise on using AI across public services",
+                            "excerpt": "Unimpressed tech equity campaigners compare move to \u2018inviting in foxes to consult on the future of the henhouse\u2019",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Guardian",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7f801be8-5396-42b8-8c9d-0894a3d4ae71.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "3f0afd12-4e55-4a33-bf31-aa614d70c5fe",
+                            "url": "https://www.euronews.com/next/2026/02/25/is-social-media-addictive-by-design-and-can-you-beat-the-algorithm",
+                            "title": "Is social media addictive by design and can you beat the algorithm?",
+                            "excerpt": "Social media features such as infinite scroll and personalised feeds can drive compulsive use. Experts argue that Big Tech should change its business models for meaningful change.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Euronews",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d5d07bcb-6be1-4c11-b316-b20775afa250.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f5f59009-6f1e-4df9-b7a5-4a62367e8fbb",
+                            "url": "https://apnews.com/article/samsung-galaxy-s26-artificial-intelligence-b23e8c9c51c2d09e772fe8709b867ca7",
+                            "title": "Samsung rolls out more AI, new privacy shield mode with the new Galaxy S26 lineup",
+                            "excerpt": "Samsung on Wednesday unveiled its latest Galaxy smartphones, which boast an even bigger toolbox of artificial intelligence technology than the previous two generations and introduce a new privacy shield that blocks snoopy bystanders from sneaking a peek a",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Associated Press",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/b5875f88-5eef-4012-be52-3e493434f38a.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "eb930cc2-737f-4a92-8a60-fce97429bc9e",
+                            "url": "https://www.theverge.com/tech/883816/honor-magicpad-4-android-16-tablet-oled-ultra-thin",
+                            "title": "Honor\u2019s new MagicPad 4 is the world\u2019s thinnest Android tablet",
+                            "excerpt": "At just 4.8mm thick, the MagicPad 4 is also thinner than Apple\u2019s slimmest iPad.",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "The Verge",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4cce502e-32c6-4d56-b7b6-2db61e955e2b.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8c63e917-4ba5-4608-ae96-7dcd10ea02e2",
+                            "url": "https://time.com/7380854/exclusive-anthropic-drops-flagship-safety-pledge/",
+                            "title": "Exclusive: Anthropic Drops Flagship Safety Pledge",
+                            "excerpt": "In an abrupt shift, the company\u00a0may release future AI models without safety guarantees",
+                            "topic": "TECHNOLOGY",
+                            "publisher": "Time",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e2698cc6-342c-4060-ad0e-cd1753a873e0.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "finance__lEN_IE",
+                "active": true,
+                "title": "Money",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "347"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "684deab2-0352-41af-b30f-dc65220235bb",
+                            "url": "https://www.irishtimes.com/your-money/2026/02/19/lessons-from-abroad-on-irelands-new-savings-scheme-for-the-middle-class/",
+                            "title": "Lessons from abroad on Ireland\u2019s new savings scheme for the \u2018middle class\u2019",
+                            "excerpt": "Experiences in the UK, Canada and Sweden show what an Irish scheme might mean for savers ",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/dd6ca981-c291-4406-9f5d-60eb810ddab7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "aef576fe-9503-481f-a1c1-64d7a7eb4f0d",
+                            "url": "https://www.rte.ie/news/business/2026/0216/1558713-investment-finance-consumer/",
+                            "title": "Work underway on consumer investment platform - FSI",
+                            "excerpt": "Financial Services Ireland says it is developing a platform to make it easier for Irish consumers to make investments.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/82293458-22d2-496d-a165-4ee05cc274a8.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "65415e45-d9fc-470c-aedf-95211d05d9da",
+                            "url": "https://www.irishnews.com/news/business/smart-tax-planning-steps-for-company-owners-as-the-tax-year-end-nears-MGE7VLECAZFMFGN643EOWYHQQQ/",
+                            "title": "Smart tax planning steps for company owners as the tax year end nears",
+                            "excerpt": "Malachy McLernon: \u201cThe period before April 5 2026 is an ideal time to pause, reflect, and make strategic decisions.\u201d",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/5350c1e2-3996-4d01-a480-d2f81146907c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "573cb5f9-fad0-45cb-aef6-e1dab481f054",
+                            "url": "https://www.irishtimes.com/your-money/2026/02/17/small-businesses-set-to-be-hit-with-huge-an-post-price-hikes/",
+                            "title": "Small businesses set to be hit with huge An Post price hikes",
+                            "excerpt": "A national stamp now costs \u20ac1.85, while the \u20ac3.50 stamp for letters to Europe represents a rise of 85c",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/d5601ee5-3acf-487c-96fe-99b9b36f79b7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4fefea18-873c-44bf-829e-b637a771eea8",
+                            "url": "https://www.rte.ie/news/business/2026/0221/1559561-simon-harriss-savings-plan-wont-be-get-rich-quick/",
+                            "title": "Simon Harris\u2019s savings plan won\u2019t be get rich quick",
+                            "excerpt": "A new state-backed savings scheme is on the way for those fortunate enough to have money to invest, amid warnings it must not be a tax break that\u2019s primarily useful to the wealthy.",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/55d5fb14-09a1-49a1-b106-515246e35fbf.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9859b852-a154-4ead-8ff5-3c3e28419ed9",
+                            "url": "https://www.irishnews.com/news/business/house-prices-in-newry-surged-by-12-last-year-but-still-half-the-price-of-buying-in-dublin-OLQHU35KRFCGRANBQGFX2KGH6Q/",
+                            "title": "House prices in Newry surged by 12% last year but still half the price of buying in Dublin",
+                            "excerpt": "Newry, Mourne and Down recorded the biggest increase in house prices last year amid growing interest from cross-border commuters",
+                            "topic": "PERSONAL_FINANCE",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/00363251-bd54-415e-9063-031fd706265d.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "education__lEN_IE",
+                "active": true,
+                "title": "History",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "132"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "51322f59-9573-458b-99ba-cc58fee7dba8",
+                            "url": "https://www.nationalgeographic.com/history/article/david-stuart-maya-archaeology-exploration",
+                            "title": "The Maya civilization was a mystery. Our family business was solving it.",
+                            "excerpt": "As the son of archaeologists, National Geographic Explorer David Stuart spent his childhood wandering ancient Maya ruins\u2014and helped shape what we know about the civilization today.",
+                            "topic": "EDUCATION",
+                            "publisher": "National Geographic",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/8ab8e7b0-7e48-4518-b1a9-8cb2a2866257.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "9b13cc9d-3804-4505-affc-cf8e6ff01aad",
+                            "url": "https://theconversation.com/heart-shaped-locket-discovery-offers-rare-glimpse-into-henry-viii-and-katharine-of-aragons-marriage-276123",
+                            "title": "Heart-shaped locket discovery offers rare glimpse into Henry VIII and Katharine of Aragon\u2019s marriage",
+                            "excerpt": "The recently discovered heart-shaped locket may offer a rare glimpse into the king\u2019s personal affections.",
+                            "topic": "EDUCATION",
+                            "publisher": "The Conversation",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c645b55d-65af-46dc-a49b-28cacaa96f14.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "bf14c647-836a-4c1f-a4a2-a5ad0539ef1e",
+                            "url": "https://theconversation.com/5-weird-armours-from-history-273580",
+                            "title": "5 weird armours from history",
+                            "excerpt": "From ram\u2019s horns to steel parading as silk, renaissance armour doubled as a form of high art.",
+                            "topic": "EDUCATION",
+                            "publisher": "The Conversation",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/43309a5f-8304-485f-95a2-404e781309ad.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "8a2fa38e-fa3b-4c14-8007-ae3a64222380",
+                            "url": "https://www.mentalfloss.com/history/mystery/five-maritime-mysteries-that-have-actually-been-solved",
+                            "title": "5 Maritime Mysteries That Have Actually Been Solved",
+                            "excerpt": "The world\u2019s oceans have been the source of countless mysteries over the course of human history. From ships that have inexplicably disappeared to strange creatu",
+                            "topic": "EDUCATION",
+                            "publisher": "Mental Floss",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/21b1412b-373c-4e18-98b8-94295558ec97.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "e2b10af5-b618-4313-acf0-c93d8a317800",
+                            "url": "https://www.smithsonianmag.com/smithsonian-institution/helmet-kept-air-force-pilot-safe-soaring-through-glass-ceiling-180988091/",
+                            "title": "This Helmet Kept an Air Force Pilot Safe as She Was Soaring Through the Glass Ceiling",
+                            "excerpt": "When a young Nicole Malachowski was dreaming about becoming a fighter pilot, she couldn\u2019t have imagined the heights she\u2019d fly as part of the elite Thunderbirds",
+                            "topic": "EDUCATION",
+                            "publisher": "Smithsonian Magazine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/76167f9d-77e8-4bad-a922-1d61aa386c87.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "c354779c-0707-4313-8c4e-7b252fb9f170",
+                            "url": "https://www.rte.ie/history/100/2026/0223/1559588-rte-guide-flashback-dreaming-of-the-sun-with-marty-whelan/",
+                            "title": "RT\u00c9 Guide flashback: dreaming of the sun with Marty Whelan",
+                            "excerpt": "The RT\u00c9 Guide archives offer glimpses of Irish telly and radio over the decades. On this week back in 1989, a still familiar face (and moustache) was on the cover, promising readers a trip to sunnier climes.",
+                            "topic": "EDUCATION",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/e344679a-c891-4498-abe2-5d562abb605e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "66144288-bd99-4339-af3d-a0d9b436cdd2",
+                            "url": "https://www.nationalgeographic.com/culture/article/year-of-fire-horse-lunar-chinese-new-year",
+                            "title": "The Year of the Fire Horse is back\u2014for the first time in 60 years",
+                            "excerpt": "In addition to cycling through 12 animals each year, the Chinese zodiac also rotates between the five traditional Chinese elements\u2014earth, wood, fire, metal and water.",
+                            "topic": "EDUCATION",
+                            "publisher": "National Geographic",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1672c379-fbe6-4750-86aa-46ba52f2bb95.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "f0f98e00-3468-48b0-9c32-17adc170e24a",
+                            "url": "https://www.bbc.co.uk/news/articles/cvgjr9vzlw4o",
+                            "title": "Viking invader\u2019s gold coin pendant found in field",
+                            "excerpt": "The pierced coin was probably lost by a member of the Viking Great Army, says a coin expert.",
+                            "topic": "EDUCATION",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/16013539-1445-4229-b648-dcf9849d3296.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "d258391a-f52b-492f-942a-b5371983403b",
+                            "url": "https://www.historyextra.com/membership/10-children-and-12000-pieces-of-art-the-remarkable-life-of-lady-charlotte-schreiber/",
+                            "title": "10 children and 12,000 pieces of art: the remarkable life of Lady Charlotte Schreiber",
+                            "excerpt": "She was a headstrong scholar who contributed hugely to the study of medieval literature and challenged the societal norms of the 19th century. So why isn\u2019t she better known? Caroline McCaffrey-Howarth traces the adventures of an unsung heroine",
+                            "topic": "EDUCATION",
+                            "publisher": "History Extra",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f6f32657-2a05-461f-962a-4ceaebeb8679.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "22e70373-3ab3-43be-b314-d420155c9561",
+                            "url": "https://www.smithsonianmag.com/history/yankee-doodle-was-one-of-americas-earliest-protest-songs-but-its-origins-are-shrouded-in-mystery-180988157/",
+                            "title": "\u2018Yankee Doodle\u2019 Was One of America\u2019s Earliest Protest Songs. But Its Origins Are Shrouded in Mystery",
+                            "excerpt": "Historians have debunked many of the popular theories surrounding the tune\u2019s creation. Still, its legacy as a patriotic anthem endures",
+                            "topic": "EDUCATION",
+                            "publisher": "Smithsonian Magazine",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/4364487e-f495-4311-a822-622717c5cee7.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "56a1050a-625a-47bb-b98a-f8b950fc1628",
+                            "url": "https://www.historyextra.com/period/roman/ancient-roman-object-still-used-during-childhood/",
+                            "title": "This ordinary ancient Roman object is still used today \u2013 and has hardly changed",
+                            "excerpt": "From dealing with nits to learning the three Rs, ancient Roman childhood bore some striking similarities to the modern experience",
+                            "topic": "EDUCATION",
+                            "publisher": "History Extra",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/c0a98db6-7e79-40ad-a118-ff146b260f39.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a9c9e9a8-e499-4e90-abbb-7190fc1e22b6",
+                            "url": "https://www.mentalfloss.com/history/maritime-disasters-worse-than-the-titanic",
+                            "title": "7 Forgotten Maritime Disasters Worse Than the Titanic",
+                            "excerpt": "These seven nautical tragedies surpassed the horror of the RMS Titanic, yet few people know their names.",
+                            "topic": "EDUCATION",
+                            "publisher": "Mental Floss",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/1cc8b860-bf9c-48ce-b7b5-55ca9977aba4.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4eca8a74-d6b7-4c2e-9ebb-38a2393675e8",
+                            "url": "https://www.bbc.co.uk/culture/article/20260220-the-darkness-behind-british-artist-ls-lowrys-famous-city-scenes",
+                            "title": "\u2018I sensed an enormous inner desolation\u2019: The darkness behind British artist LS Lowry\u2019s famous city scenes",
+                            "excerpt": "In 1957, the painter showed the BBC how he built up his pictures of industrial urban life from his imagination, and described the loneliness that informed them.",
+                            "topic": "EDUCATION",
+                            "publisher": "BBC",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/29a0ac1d-4437-4ef5-a4df-8cac9824d66e.jpeg"
+                        }
+                    }
+                ]
+            },
+            {
+                "createSource": "ML",
+                "externalId": "headlines__lEN_IE",
+                "active": true,
+                "title": "The Latest",
+                "description": null,
+                "heroTitle": null,
+                "heroDescription": null,
+                "iab": {
+                    "taxonomy": "IAB-3.0",
+                    "categories": [
+                        "386"
+                    ]
+                },
+                "sectionItems": [
+                    {
+                        "corpusItem": {
+                            "id": "dcacfcfe-b57c-4c19-aaf0-8ad16eb10014",
+                            "url": "https://www.irishnews.com/sport/boxing/conlans-reckoning-promoter-kalle-sauerland-predicts-night-of-emotion-and-drama-as-belfast-fighter-returns-to-sse-H4EAUVQI3RDSXOQ7WZKVQGILOI/",
+                            "title": "Michael Conlan\u2019s promoter Kalle Sauerland predicts night of \u2018emotion and drama\u2019 as Belfast fighter returns to SSE",
+                            "excerpt": "Boxing needs world champions like Mick Conlan says Kalle Sauerland",
+                            "topic": "SPORTS",
+                            "publisher": "The Irish News",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/83d6d1b8-1053-4967-877f-5fc1cab34b0c.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "408e4b17-96ac-4a64-9882-30d0c05fb628",
+                            "url": "https://extra.ie/2026/02/25/news/irish-news/dublin-gaa-facility-templeogue",
+                            "title": "Game on for Dublin GAA as new state-of-the-art facility approved",
+                            "excerpt": "Dublin GAA have been given approval to develop a major new state-of-the-art training facility with a 500-seater stand and floodlit pitches.",
+                            "topic": "SPORTS",
+                            "publisher": "Extra.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/f481ffd9-99c4-47ae-b5df-189c5766df51.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "646d0c09-4e2b-44fe-9e65-3358735a72cc",
+                            "url": "https://www.independent.ie/irish-news/met-eireann-forecasts-wet-weather-to-continue-into-next-week-as-we-head-towards-60-consecutive-days-of-rain/a987085174.html",
+                            "title": "Met \u00c9ireann forecasts wet weather to continue into next week \u2013 as we head towards 60 consecutive days of rain",
+                            "excerpt": "The ongoing rainy spell will carry on into at least early next week, as the country will be exposed to \u201cmixed and changeable\u201d conditions.",
+                            "topic": "SCIENCE",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/6726a92f-676a-459d-9589-a9e3f4ba03d1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "2b205b72-26d8-4944-b408-b8cc778621e5",
+                            "url": "https://www.rte.ie/news/2026/0225/1560238-pupils-tackle-fast-fashion/",
+                            "title": "Meath pupils tackle fast fashion with new initiative",
+                            "excerpt": "Secondary school pupils in Co Meath are launching a new \u2018Wear Again Wednesday\u2019 initiative to promote sustainable fashion.",
+                            "topic": "EDUCATION",
+                            "publisher": "RT\u00c9",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/7bbd2e83-858b-4ff7-aee4-e1858f303e09.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "cb47a574-9334-466e-8e42-e9f94dfedef9",
+                            "url": "https://extra.ie/2026/02/25/news/irish-news/irish-anthem-mandatory",
+                            "title": "Calls for Irish National Anthem to become mandatory learning in classrooms",
+                            "excerpt": "A Sinn F\u00e9in councillor has called for the Irish anthem, Amhr\u00e1n na bhFiann, to be mandatory learning in schools.",
+                            "topic": "EDUCATION",
+                            "publisher": "Extra.ie",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/ae6f0954-4b2e-4d1e-bbcf-bb377370e2b3.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "84faf75a-358f-4c56-85a4-cd1d4370ba7f",
+                            "url": "https://www.reuters.com/world/china/germanys-merz-lands-beijing-hoping-reset-ties-china-boasts-its-massive-market-2026-02-25/",
+                            "title": "Germany wants deeper, fairer economic cooperation with China, Chancellor Merz tells Chinese premier Li",
+                            "excerpt": "China and Germany want to deepen cooperation, German Chancellor Friedrich Merz and Chinese Premier Li Qiang said in Beijing on Wednesday, as Merz began a visit aimed at resetting ties against the backdrop of a widening trade imbalance.",
+                            "topic": "BUSINESS",
+                            "publisher": "Reuters",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/fc08ffc2-e3d1-4fe3-b79d-eee8f2e85ab1.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "58f8ad07-60df-424f-b6b8-379d9844b706",
+                            "url": "https://www.thejournal.ie/rental-sector-ireland-6966431-Feb2026/",
+                            "title": "Ireland\u2019s biggest landlord tells investors new rent rules will be major boost for shareholders",
+                            "excerpt": "Sinn F\u00e9in finance spokesperson Pearse Doherty said the details of Ires Reit\u2019s projections would \u201csend a shiver down the spine of all renters\u201d.",
+                            "topic": "BUSINESS",
+                            "publisher": "The Journal",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/267e1856-cff3-4419-85b9-630c04a0a4e8.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "a7bca0da-02cb-4112-983c-e13eb258d557",
+                            "url": "https://www.independent.ie/irish-news/met-eireanns-new-localised-weather-warning-system-aimed-to-be-in-place-later-this-year/a1675768986.html",
+                            "title": "Met \u00c9ireann\u2019s new localised weather warning system aimed to be in place later this year",
+                            "excerpt": "A more localised system for weather warnings is set to replace the current county-based system.",
+                            "topic": "SCIENCE",
+                            "publisher": "Irish Independent",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/6fe16615-43ea-4a94-a596-7bbda8564335.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "4d626637-e0cf-482b-b127-80b7b790100b",
+                            "url": "https://www.irishtimes.com/world/us/2026/02/25/bill-gates-admits-affairs-and-takes-responsibility-for-his-actions-over-epstein-links/",
+                            "title": "Bill Gates admits affairs and takes \u2018responsibility for his actions\u2019 over Epstein links",
+                            "excerpt": "Microsoft founder apologises to staff during \u200bmeeting over his ties with dead sex offender",
+                            "topic": "ENTERTAINMENT",
+                            "publisher": "The Irish Times",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/34f44d8c-0817-4585-8c8c-ce3ea30a540e.jpeg"
+                        }
+                    },
+                    {
+                        "corpusItem": {
+                            "id": "7e8ec1b7-d645-4c5f-91c7-26fc7ca5c59c",
+                            "url": "https://www.derrynow.com/news/local-news/2024587/urgent-action-needed-to-reverse-funding-cuts-for-local-charities.html",
+                            "title": "Urgent action needed to reverse funding cuts for local charities",
+                            "excerpt": "Radical and damaging funding change taking place on April 1 - UK Shared Prosperity Fund  to be  replaced by the Local Growth Fund",
+                            "topic": "BUSINESS",
+                            "publisher": "Derry Now",
+                            "isTimeSensitive": false,
+                            "imageUrl": "https://s3.us-east-1.amazonaws.com/pocket-curatedcorpusapi-prod-images/a994429b-1fdb-472f-98ea-f24cf8b7aeef.jpeg"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -56,3 +56,16 @@ async def test_fetch_ca_strips_locale_suffix(sections_ca_backend: SectionsBacken
         assert (
             "__" not in section.externalId
         ), f"externalId '{section.externalId}' still contains locale suffix"
+
+
+@pytest.mark.asyncio
+async def test_fetch_ie_strips_locale_suffix(sections_ie_backend: SectionsBackend):
+    """Test that IE sections have '__lEN_IE' suffix stripped from externalId."""
+    sections = await sections_ie_backend.fetch(SurfaceId.NEW_TAB_EN_IE)
+    assert len(sections) > 0, "Expected IE sections from fixture"
+
+    # Verify no externalId retains the '__lEN_IE' suffix
+    for section in sections:
+        assert (
+            "__" not in section.externalId
+        ), f"externalId '{section.externalId}' still contains locale suffix"
