@@ -11,7 +11,7 @@ from pydantic import HttpUrl
 from merino.providers.suggest.weather.backends.accuweather.errors import (
     MissingLocationKeyError,
 )
-from merino.governance.circuitbreakers import WeatherCircuitBreaker
+from merino.governance.circuitbreakers import WeatherCircuitBreaker, _hourly_forecasts_fallback
 from merino.utils import cron
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import (
@@ -223,7 +223,9 @@ class Provider(BaseProvider):
                 locations=data,
             )
 
-    # TODO add circuit breaker
+    @WeatherCircuitBreaker(
+        name="weather", fallback_function=_hourly_forecasts_fallback
+    )  # Expect `AccuweatherError`
     async def get_hourly_forecasts(
         self, weather_context: WeatherContext
     ) -> HourlyForecastsWithTTL | None:

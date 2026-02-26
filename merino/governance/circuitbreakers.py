@@ -42,6 +42,11 @@ async def _suggest_provider_fallback_fn(*args, **kwargs) -> list[BaseSuggestion]
     return []
 
 
+async def _hourly_forecasts_fallback(*args, **kwargs) -> None:
+    """Define a fallback function that returns None when the circuit breaker is open for get_hourly_forecasts."""
+    return None
+
+
 class WeatherCircuitBreaker(CircuitBreaker):
     """Circuit Breaker for the weather provider."""
 
