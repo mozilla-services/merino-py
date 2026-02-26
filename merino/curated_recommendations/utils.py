@@ -52,11 +52,25 @@ def get_recommendation_surface_id(
                 return SurfaceId.NEW_TAB_EN_CA
             else:
                 return SurfaceId.NEW_TAB_EN_US
+        elif derived_region == "IE":
+            # Ireland routing: Map to NEW_TAB_EN_IE only if:
+            # 1. Request includes 'sections' in feeds
+            # 2. User is in 'sections' branch of 'sections-in-ie' experiment
+            # Otherwise, default to NEW_TAB_EN_GB
+            if (
+                request is not None
+                and request.feeds is not None
+                and "sections" in request.feeds
+                and is_enrolled_in_experiment(request, "sections-in-ie", "sections")
+            ):
+                return SurfaceId.NEW_TAB_EN_IE
+            else:
+                return SurfaceId.NEW_TAB_EN_GB
         elif derived_region is None or derived_region == "US":
             return SurfaceId.NEW_TAB_EN_US
-        elif derived_region in ["GB", "IE"]:
+        elif derived_region == "GB":
             return SurfaceId.NEW_TAB_EN_GB
-        elif derived_region in ["IN"]:
+        elif derived_region == "IN":
             return SurfaceId.NEW_TAB_EN_INTL
         else:
             # Default to the en-US New Tab if no 2-letter region can be derived from locale or region.

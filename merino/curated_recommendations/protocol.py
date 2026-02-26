@@ -53,6 +53,7 @@ class Locale(str, Enum):
     EN = ("en",)
     EN_CA = ("en-CA",)
     EN_GB = ("en-GB",)
+    EN_IE = ("en-IE",)
     EN_US = ("en-US",)
     DE = ("de",)
     DE_DE = ("de-DE",)
