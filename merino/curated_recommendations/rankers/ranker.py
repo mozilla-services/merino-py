@@ -112,7 +112,7 @@ class Ranker:
     def rank_sections(
         self,
         sections: dict[str, Section],
-        top_n: int = 6,
+        top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
     ) -> dict[str, Section]:
         """Rank sections."""
