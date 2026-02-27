@@ -42,7 +42,9 @@ async def _suggest_provider_fallback_fn(*args, **kwargs) -> list[BaseSuggestion]
     return []
 
 
-async def _hourly_forecasts_fallback(*args, **kwargs) -> None:
+# This method is exported and used as the override for WeatherCircuitBreaker decorater for get_hourly_foreacasts.
+# This is because we are sharing the WeatherCircuitBreaker but only one fall back function can be registered per circuit breaker definition.
+async def hourly_forecasts_fallback(*args, **kwargs) -> None:
     """Define a fallback function that returns None when the circuit breaker is open for get_hourly_forecasts."""
     return None
 
