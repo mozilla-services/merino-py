@@ -110,6 +110,8 @@ class ExperimentName(str, Enum):
     INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
     INFERRED_LOCAL_EXPERIMENT_V4 = "new-tab-automated-personalization-v4"
 
+    FIXED_POSITION_FRESH_ITEMS_EXPERIMENT = "new-tab-fixed-position-fresh-items"
+
 
 class DailyBriefingBranch(str, Enum):
     """Treatment branches for the Daily Briefing experiment."""
