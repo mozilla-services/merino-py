@@ -19,6 +19,9 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
+FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 5000
+EST_TOP_STORY_TILE_IMP_PER_CYCLE = 260000
+
 
 class CrawledContentRescaler(EngagementRescaler):
     """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
@@ -66,6 +69,24 @@ class CrawledContentRescaler(EngagementRescaler):
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC, beta
         else:
             return alpha * PESSIMISTIC_PRIOR_ALPHA_SCALE, beta
+
+
+class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
+    """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
+    Special handling is added for certain content types that are blocked from most popular section
+    """
+
+    def __init__(self, **data: Any):
+        data.setdefault("fresh_items_top_stories_fixed_position", 0.15)
+        data.setdefault(
+            "fresh_items_top_stories_fixed_max_imp_per_cycle",
+            FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS,
+        )
+        data.setdefault(
+            "fresh_items_top_stories_fixed_est_imp_per_cycle", EST_TOP_STORY_TILE_IMP_PER_CYCLE
+        )
+        data.setdefault("fresh_items_top_stories_max_percentage", 0.01)
+        super().__init__(**data)
 
 
 CA_EXPERIMENT_TREATMENT_PERCENT = 0.10
