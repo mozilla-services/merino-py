@@ -196,6 +196,35 @@ countries = ["US"]
 # MERINO_REMOTE_SETTINGS__FORM_FACTORS
 form_factors = ["desktop"]
 
+[default.mars]
+# MERINO_MARS__BASE_URL
+# The base URL for the MARS API.
+base_url = "https://ads.mozilla.org/"
+
+# MERINO_MARS__SUGGESTION_URL_PATH
+# The URL path for fetching suggestions from the MARS API.
+suggestion_url_path = "suggestions"
+
+# MERINO_MARS__ICON_URL_PATH
+# The URL path prefix for fetching icons from the MARS API.
+icon_url_path = "icons"
+
+# MERINO_MARS__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to the MARS API.
+connect_timeout_sec = 5.0
+
+# MERINO_MARS__REQUEST_TIMEOUT_SEC
+# Timeout in seconds for a request to the MARS API.
+request_timeout_sec = 10.0
+
+# MERINO_MARS__COUNTRIES
+# Countries to fetch suggestions for from the MARS API.
+countries = ["US"]
+
+# MERINO_MARS__FORM_FACTORS
+# Form factors to fetch suggestions for from the MARS API.
+form_factors = ["desktop"]
+
 # Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
 [default.redis]
 # MERINO_REDIS__SERVER - URI to the Redis primary endpoint.
@@ -533,7 +562,7 @@ type = "adm"
 enabled_by_default = true
 
 # MERINO_PROVIDERS__ADM__BACKEND
-# The backend of the provider. Either "remote-settings" or "test".
+# The backend of the provider. Either "remote-settings", "mars", or "test".
 backend = "remote-settings"
 
 # MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC

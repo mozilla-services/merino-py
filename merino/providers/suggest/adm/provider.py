@@ -1,4 +1,4 @@
-"""AdM integration that uses the remote-settings provided data."""
+"""AdM integration that provides sponsored suggestions."""
 
 import asyncio
 import logging
@@ -10,7 +10,7 @@ from moz_merino_ext.amp import AmpIndexManager
 
 from pydantic import HttpUrl
 
-from merino.providers.suggest.adm.backends.remotesettings import FormFactor
+from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
@@ -65,7 +65,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
 
 
 class Provider(BaseProvider):
-    """Suggestion provider for adMarketplace through Remote Settings."""
+    """Suggestion provider for adMarketplace via Remote Settings or MARS."""
 
     suggestion_content: SuggestionContent
     # Store the value to avoid fetching it from settings every time as that'd
