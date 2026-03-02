@@ -3,6 +3,7 @@
 import logging
 from typing import cast
 
+
 from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
 from merino.curated_recommendations.ml_backends.protocol import (
     LOCAL_MODEL_MODEL_ID_KEY,
@@ -17,7 +18,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.interest_picker import create_interest_picker
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
-from merino.curated_recommendations.prior_backends.protocol import PriorBackend
+from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler, PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
@@ -34,6 +35,7 @@ from merino.curated_recommendations.legacy.sections_adapter import (
     get_legacy_recommendations_from_sections,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     UKCrawledContentRescaler,
 )
@@ -72,6 +74,18 @@ class CuratedRecommendationsProvider:
         self.local_model_backend = local_model_backend
         self.ml_recommendations_backend = ml_recommendations_backend
         self.cohort_model_backend = cohort_model_backend
+
+    @staticmethod
+    def is_fixed_position_fresh_item_experiment(
+        request: CuratedRecommendationsRequest,
+        surface_id: SurfaceId,
+    ) -> bool:
+        """Check if the fixed position/fresh item experiment is enabled."""
+        return (
+            request.experimentName == "fixed_position_fresh_item"
+            and request.experimentBranch == "treatment"
+            and surface_id == SurfaceId.NEW_TAB_EN_US
+        )
 
     @staticmethod
     def is_sections_experiment(
@@ -162,6 +176,14 @@ class CuratedRecommendationsProvider:
             )
         elif surface_id in (SurfaceId.NEW_TAB_EN_US, SurfaceId.NEW_TAB_EN_GB):
             # US/GB non-sections: fetch from sections backend instead of scheduler
+            rescaler: EngagementRescaler | None = None
+            if surface_id == SurfaceId.NEW_TAB_EN_GB:
+                rescaler = UKCrawledContentRescaler()
+            else:
+                if self.is_fixed_position_fresh_item_experiment(request, surface_id):
+                    rescaler = CrawledContentPinnedFreshRescaler()
+                else:
+                    rescaler = CrawledContentRescaler()
             general_feed = await get_legacy_recommendations_from_sections(
                 sections_backend=self.sections_backend,
                 engagement_backend=self.engagement_backend,
@@ -169,9 +191,7 @@ class CuratedRecommendationsProvider:
                 surface_id=surface_id,
                 count=request.count,
                 region=derive_region(request.locale, request.region),
-                rescaler=UKCrawledContentRescaler()
-                if surface_id == SurfaceId.NEW_TAB_EN_GB
-                else CrawledContentRescaler(),
+                rescaler=rescaler,
             )
         else:
             # Other markets: fetch from scheduled surface backend
