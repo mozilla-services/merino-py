@@ -33,7 +33,7 @@ def test_hourly_forecasts_endpoint_success(
     response = client.get("/api/v1/weather/hourly-forecasts")
 
     assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "private, max-age=3600"
+    assert response.headers["Cache-Control"] == "private, max-age=1800"
 
     result = response.json()
     assert len(result) == 5
@@ -73,7 +73,7 @@ def test_hourly_forecasts_with_custom_location(
     )
 
     assert response.status_code == 200
-    assert response.headers["Cache-Control"] == "private, max-age=3600"
+    assert response.headers["Cache-Control"] == "private, max-age=1800"
 
     result = response.json()
     assert len(result) == 5
