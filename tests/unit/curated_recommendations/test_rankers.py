@@ -1316,8 +1316,14 @@ class TestContextualRanker:
         assert ranked[0].corpusItemId == "a"
         assert ranked[0].ranking_data.score == pytest.approx(0.0021)
 
-        tech_interests = ProcessedInterests(scores={Topic.TECHNOLOGY.value: 0.9, Topic.ARTS.value: 0.3, Topic.POLITICS.value: 0.0,
-                                                    Topic.SCIENCE.value: 0.3 })
+        tech_interests = ProcessedInterests(
+            scores={
+                Topic.TECHNOLOGY.value: 0.9,
+                Topic.ARTS.value: 0.3,
+                Topic.POLITICS.value: 0.0,
+                Topic.SCIENCE.value: 0.3,
+            }
+        )
         ranked = ranker.rank_items(recs, personal_interests=tech_interests)
         assert len(ranked) == 3
         assert ranked[0].ranking_data is not None

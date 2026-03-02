@@ -68,6 +68,14 @@ SECTION_FALLBACK_BUFFER = 1
 IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
 MAX_SECTIONS_PER_RESPONSE = 20
 
+# Number of articles to use when ranking the section. We choose 4 because there are typically only
+# 4 stories shown for each section. For a period we had the number as 6.
+# In a live test the weighted standard deviation on sectior rank was 0.65 with 4, vs 0.8 with 6.
+# Therefore with 4 items there seems to be less exploration in most cases.
+# This Gist runs an eval script on localhost https://gist.github.com/rolf-moz/cfd1062016f1898869248b27af009830
+
+SECTION_ITEM_RANKING_TOP_N = 4
+
 
 def map_section_item_to_recommendation(
     item: CorpusItem,
@@ -541,7 +549,9 @@ def rank_sections(
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
     """
     # 4th priority: reorder for exploration via Thompson sampling on engagement
-    sections = ranker.rank_sections(sections, rescaler=engagement_rescaler)
+    sections = ranker.rank_sections(
+        sections, rescaler=engagement_rescaler, top_n=SECTION_ITEM_RANKING_TOP_N
+    )
 
     # 3rd priority: reorder based on inferred interest vector
     if do_section_personalization_reranking and personal_interests is not None:
