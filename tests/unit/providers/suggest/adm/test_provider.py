@@ -12,7 +12,7 @@ from pytest import LogCaptureFixture
 
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
-from merino.providers.suggest.adm.backends.remotesettings import FormFactor
+from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
 
 from tests.types import FilterCaplogFixture

@@ -15,7 +15,7 @@ from merino.providers.suggest.adm.backends.protocol import (
     AdmBackend,
     SuggestionContent,
 )
-from merino.providers.suggest.adm.backends.remotesettings import FormFactor
+from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.provider import Provider
 
 

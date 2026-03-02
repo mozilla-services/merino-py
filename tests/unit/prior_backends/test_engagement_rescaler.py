@@ -12,6 +12,8 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS,
     CACrawledContentRescaler,
     CrawledContentRescaler,
+    IE_EXPERIMENT_TREATMENT_PERCENT,
+    IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
     PESSIMISTIC_PRIOR_ALPHA_SCALE,
     PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC,
@@ -245,6 +247,52 @@ class TestCACrawledContentRescaler:
         opens, no_opens = self.rescaler.rescale(rec, 100, 50)
         assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / CA_EXPERIMENT_TREATMENT_PERCENT
         assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / CA_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_prior_inherits_parent(self):
+        """Test that prior rescaling is inherited from CrawledContentRescaler"""
+        rec = Mock()
+        rec.in_experiment.return_value = True
+        rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
+        assert beta == 20
+
+    def test_fresh_items_settings_inherited(self):
+        """Test that fresh item settings are inherited from parent"""
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
+
+class TestIECrawledContentRescaler:
+    """Test Rig for the IE experiment rescaler"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = IECrawledContentRescaler()
+
+    def test_rescale_regular_item(self):
+        """Test that regular items are scaled up by 1/0.10 = 10x for experiment size"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 / IE_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 / IE_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_blocked_item(self):
+        """Test that blocked items get parent 5x scaling then 10x experiment scaling"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.topic = Topic.GAMING
+        rec.is_story_blocked_for_top_stories.return_value = True
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / IE_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / IE_EXPERIMENT_TREATMENT_PERCENT
 
     def test_rescale_prior_inherits_parent(self):
         """Test that prior rescaling is inherited from CrawledContentRescaler"""

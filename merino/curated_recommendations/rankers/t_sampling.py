@@ -114,7 +114,7 @@ class ThompsonSamplingRanker(Ranker):
     def rank_sections(
         self,
         sections: dict[str, Section],
-        top_n: int = 6,
+        top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
     ) -> dict[str, Section]:
         """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.

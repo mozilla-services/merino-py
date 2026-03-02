@@ -25,8 +25,9 @@ from merino.curated_recommendations.layouts import (
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CACrawledContentRescaler,
-    SchedulerHoldbackRescaler,
     CrawledContentRescaler,
+    IECrawledContentRescaler,
+    SchedulerHoldbackRescaler,
     UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
@@ -312,6 +313,24 @@ class TestFilterSectionsByExperiment:
             (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
             (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
             (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            # IE with sections branch gets IECrawledContentRescaler
+            (
+                "sections-in-ie",
+                "sections",
+                "IE",
+                SurfaceId.NEW_TAB_EN_IE,
+                IECrawledContentRescaler,
+            ),
+            # IE with wrong branch falls through to CrawledContentRescaler
+            (
+                "sections-in-ie",
+                "control",
+                "IE",
+                SurfaceId.NEW_TAB_EN_IE,
+                CrawledContentRescaler,
+            ),
+            # IE surface without experiment falls through to CrawledContentRescaler
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_IE, CrawledContentRescaler),
             # CA with sections-ca-content branch gets CACrawledContentRescaler
             (
                 "sections-in-canada",

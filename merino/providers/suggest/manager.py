@@ -12,6 +12,8 @@ from merino.providers.suggest.finance.backends.polygon.backend import PolygonBac
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.metrics import get_metrics_client
 from merino.providers.suggest.adm.backends.fake_backends import FakeAdmBackend
+from merino.providers.suggest.adm.backends.mars import MarsBackend
+from merino.providers.suggest.adm.backends.protocol import AdmBackend
 from merino.providers.suggest.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.suggest.adm.provider import Provider as AdmProvider
 from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
@@ -150,24 +152,35 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.ADM:
-            return AdmProvider(
-                backend=(
-                    RemoteSettingsBackend(
-                        server=settings.remote_settings.server,
-                        collection=settings.remote_settings.collection_amp,
-                        bucket=settings.remote_settings.bucket,
-                        icon_processor=IconProcessor(
-                            gcs_project=settings.image_gcs.gcs_project,
-                            gcs_bucket=settings.image_gcs.gcs_bucket,
-                            cdn_hostname=settings.image_gcs.cdn_hostname,
-                            http_client=create_http_client(
-                                request_timeout=settings.icon.http_timeout,
-                            ),
-                        ),
-                    )
-                    if setting.backend == "remote-settings"
-                    else FakeAdmBackend()
+            icon_processor = IconProcessor(
+                gcs_project=settings.image_gcs.gcs_project,
+                gcs_bucket=settings.image_gcs.gcs_bucket,
+                cdn_hostname=settings.image_gcs.cdn_hostname,
+                http_client=create_http_client(
+                    request_timeout=settings.icon.http_timeout,
                 ),
+            )
+            backend: AdmBackend
+            if setting.backend == "remote-settings":
+                backend = RemoteSettingsBackend(
+                    server=settings.remote_settings.server,
+                    collection=settings.remote_settings.collection_amp,
+                    bucket=settings.remote_settings.bucket,
+                    icon_processor=icon_processor,
+                )
+            elif setting.backend == "mars":
+                backend = MarsBackend(
+                    base_url=settings.mars.base_url,
+                    icon_processor=icon_processor,
+                    connect_timeout=settings.mars.connect_timeout_sec,
+                    request_timeout=settings.mars.request_timeout_sec,
+                    suggestion_url_path=settings.mars.suggestion_url_path,
+                    icon_url_path=settings.mars.icon_url_path,
+                )
+            else:
+                backend = FakeAdmBackend()
+            return AdmProvider(
+                backend=backend,
                 score=setting.score,
                 name=provider_id,
                 resync_interval_sec=setting.resync_interval_sec,
