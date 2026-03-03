@@ -21,16 +21,16 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
-FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 5000
+FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 13000
 EST_TOP_STORY_TILE_IMP_PER_CYCLE = 220_000_000 // 24 // 4  # Assuming 4 ETL data cycles per hour
 
 # Normalized relative impresions per hour. Generated via https://sql.telemetry.mozilla.org/queries/115220
 US_UTC_RELATIVE_IMPRESSIONS_NORM = [
-    0.4,
-    1.1,
+    1.0,
+    1.0,
     1.0,
     0.9,
-    0.8,
+    0.7,
     0.6,
     0.4,
     0.3,
@@ -40,12 +40,16 @@ US_UTC_RELATIVE_IMPRESSIONS_NORM = [
     0.3,
     0.5,
     0.9,
-    1.4,
+    1.3,
     1.6,
     1.7,
     1.7,
     1.7,
-    1.8,
+    1.7,
+    1.7,
+    1.7,
+    1.5,
+    1.3,
 ]
 
 

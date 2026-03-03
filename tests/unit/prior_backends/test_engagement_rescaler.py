@@ -10,6 +10,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CA_EXPERIMENT_TREATMENT_PERCENT,
     EST_TOP_STORY_TILE_IMP_PER_CYCLE,
     FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS,
+    US_UTC_RELATIVE_IMPRESSIONS_NORM,
     CACrawledContentRescaler,
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
@@ -141,6 +142,7 @@ class TestCrawledContentPinnedFreshRescaler:
             self.rescaler.fresh_items_top_stories_fixed_est_imp_per_cycle
             == EST_TOP_STORY_TILE_IMP_PER_CYCLE
         )
+        assert len(US_UTC_RELATIVE_IMPRESSIONS_NORM) == 24
         # Sanity check computed target value for tile is in range
         assert (
             0.1 * EST_TOP_STORY_TILE_IMP_PER_CYCLE

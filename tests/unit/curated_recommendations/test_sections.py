@@ -1004,6 +1004,9 @@ class TestPickRandomFreshStory:
         assert result_item is items[1]
         assert result_item not in remaining
         assert len(remaining) == 2
+        # Check that item was spliced out
+        assert items[0] == remaining[0]
+        assert items[2] == remaining[1]
 
 
 class DummyTrackingEngagementBackend:
