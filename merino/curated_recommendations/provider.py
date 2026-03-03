@@ -35,7 +35,6 @@ from merino.curated_recommendations.legacy.sections_adapter import (
     get_legacy_recommendations_from_sections,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     UKCrawledContentRescaler,
 )
@@ -74,18 +73,6 @@ class CuratedRecommendationsProvider:
         self.local_model_backend = local_model_backend
         self.ml_recommendations_backend = ml_recommendations_backend
         self.cohort_model_backend = cohort_model_backend
-
-    @staticmethod
-    def is_fixed_position_fresh_item_experiment(
-        request: CuratedRecommendationsRequest,
-        surface_id: SurfaceId,
-    ) -> bool:
-        """Check if the fixed position/fresh item experiment is enabled."""
-        return (
-            request.experimentName == "fixed_position_fresh_item"
-            and request.experimentBranch == "treatment"
-            and surface_id == SurfaceId.NEW_TAB_EN_US
-        )
 
     @staticmethod
     def is_sections_experiment(
@@ -180,10 +167,7 @@ class CuratedRecommendationsProvider:
             if surface_id == SurfaceId.NEW_TAB_EN_GB:
                 rescaler = UKCrawledContentRescaler()
             else:
-                if self.is_fixed_position_fresh_item_experiment(request, surface_id):
-                    rescaler = CrawledContentPinnedFreshRescaler()
-                else:
-                    rescaler = CrawledContentRescaler()
+                rescaler = CrawledContentRescaler()
             general_feed = await get_legacy_recommendations_from_sections(
                 sections_backend=self.sections_backend,
                 engagement_backend=self.engagement_backend,

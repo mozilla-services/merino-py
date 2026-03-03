@@ -5,6 +5,8 @@ from typing import Any
 from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler
 from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
 
+from datetime import datetime, timezone
+
 SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
 
 # Looking at query of typical subtopic impressions outside of top stories
@@ -20,7 +22,31 @@ PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 5000
-EST_TOP_STORY_TILE_IMP_PER_CYCLE = 260000
+EST_TOP_STORY_TILE_IMP_PER_CYCLE = 220_000_000 // 24 // 4  # Assuming 4 ETL data cycles per hour
+
+# Normalized relative impresions per hour. Generated via https://sql.telemetry.mozilla.org/queries/115220
+US_UTC_RELATIVE_IMPRESSIONS_NORM = [
+    0.4,
+    1.1,
+    1.0,
+    0.9,
+    0.8,
+    0.6,
+    0.4,
+    0.3,
+    0.2,
+    0.2,
+    0.2,
+    0.3,
+    0.5,
+    0.9,
+    1.4,
+    1.6,
+    1.7,
+    1.7,
+    1.7,
+    1.8,
+]
 
 
 class CrawledContentRescaler(EngagementRescaler):
@@ -77,7 +103,9 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
     """
 
     def __init__(self, **data: Any):
-        data.setdefault("fresh_items_top_stories_fixed_position", 0.15)
+        data.setdefault(
+            "fresh_items_top_stories_fixed_position", 6
+        )  # Position # 7 counting from 1
         data.setdefault(
             "fresh_items_top_stories_fixed_max_imp_per_cycle",
             FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS,
@@ -87,6 +115,17 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         )
         data.setdefault("fresh_items_top_stories_max_percentage", 0.01)
         super().__init__(**data)
+
+    def compute_estimated_fresh_per_cycle(self) -> int:
+        """Compute the estimated number of impressions for fresh items in each telemetry update cycle,
+        based on the fixed estimate for top story tile impressions and normalized by hour.
+        """
+        utc_hour = datetime.now(tz=timezone.utc).hour
+        if utc_hour >= 0 and utc_hour < len(US_UTC_RELATIVE_IMPRESSIONS_NORM):
+            scale = US_UTC_RELATIVE_IMPRESSIONS_NORM[utc_hour]
+        else:
+            scale = 1.0
+        return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
 
 
 CA_EXPERIMENT_TREATMENT_PERCENT = 0.10

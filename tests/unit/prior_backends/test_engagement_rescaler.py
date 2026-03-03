@@ -55,6 +55,7 @@ class TestCrawledContentRescaler:
         assert not self.rescaler.is_blocked_from_most_popular(rec)
 
         assert self.rescaler.fresh_items_top_stories_fixed_position is None
+        assert self.rescaler.compute_estimated_fresh_per_cycle() >= 0
 
     def test_rescale_with_subtopic_item(self):
         """Test rescaling of priors for relative experiment size."""
@@ -137,6 +138,12 @@ class TestCrawledContentPinnedFreshRescaler:
         assert (
             self.rescaler.fresh_items_top_stories_fixed_est_imp_per_cycle
             == EST_TOP_STORY_TILE_IMP_PER_CYCLE
+        )
+        # Sanity check computed target value for tile is in range
+        assert (
+            0.1 * EST_TOP_STORY_TILE_IMP_PER_CYCLE
+            < self.rescaler.compute_estimated_fresh_per_cycle()
+            < 2.5 * EST_TOP_STORY_TILE_IMP_PER_CYCLE
         )
 
 

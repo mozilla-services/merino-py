@@ -79,3 +79,9 @@ class EngagementRescaler(BaseModel):
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Update priors values based on whether item is unique to the experiment."""
         return alpha, beta
+
+    def compute_estimated_fresh_per_cycle(self) -> int:
+        """Compute the estimated number of impressions for fresh items in each telemetry update cycle,
+        based on the fixed estimate for top story tile impressions and normalized by hour.
+        """
+        return self.fresh_items_top_stories_fixed_est_imp_per_cycle
