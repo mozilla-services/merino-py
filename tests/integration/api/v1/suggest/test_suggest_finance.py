@@ -14,6 +14,9 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerSnapshot,
     TickerSummary,
 )
+from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
+    STOCKS_WIDGET_DEFAULT_ETFS,
+)
 from merino.providers.suggest.finance.provider import Provider as FinanceProvider
 from merino.providers.suggest.finance.backends import FinanceBackend
 
@@ -123,6 +126,54 @@ def test_suggest_for_finance_suggestion_returns_no_suggestion_for_invalid_ticker
     body = response.json()
 
     assert len(body["suggestions"]) == 0
+
+
+def test_suggest_finance_returns_default_etfs_for_newtab_source(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that the suggest endpoint returns the 4 default ETF suggestions when source=newtab and q is empty."""
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+
+    etf_snapshots = [
+        TickerSnapshot(ticker=ticker, last_trade_price="100", todays_change_percent="1.0")
+        for ticker in STOCKS_WIDGET_DEFAULT_ETFS
+    ]
+    etf_summaries = [
+        TickerSummary(
+            ticker=ticker,
+            name=f"{ticker} ETF",
+            last_price="$100 USD",
+            todays_change_perc="+1.0",
+            query=f"{ticker} stock",
+            image_url=None,
+            exchange="NYSE",
+        )
+        for ticker in STOCKS_WIDGET_DEFAULT_ETFS
+    ]
+    backend_mock.get_snapshots.return_value = etf_snapshots
+    backend_mock.get_ticker_summary.side_effect = etf_summaries
+
+    response = client.get("/api/v1/suggest?q=&providers=polygon&source=newtab")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["suggestions"]) == 1
+    values = body["suggestions"][0]["custom_details"]["polygon"]["values"]
+    assert len(values) == len(STOCKS_WIDGET_DEFAULT_ETFS)
+    assert [v["ticker"] for v in values] == STOCKS_WIDGET_DEFAULT_ETFS
+
+
+def test_suggest_finance_returns_400_for_empty_query_without_newtab_source(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that the suggest endpoint returns 400 when q is empty and source is not newtab."""
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+
+    response = client.get("/api/v1/suggest?q=&providers=polygon")
+
+    assert response.status_code == 400
 
 
 def test_suggest_for_finance_suggestion_returns_no_suggestion_for_eager_match_blocked_ticker(

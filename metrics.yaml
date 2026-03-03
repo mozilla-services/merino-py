@@ -89,6 +89,18 @@ suggest/polygon:
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 
+  polygon_provider_query_new_tab:
+    description: |
+      A counter for stocks widget requests via the newtab source
+    type: counter
+    labels:
+      - name: source
+        description: |
+          Origin of the stock info request
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
 suggest/yelp:
   yelp_request_business_search_get:
     description: |
