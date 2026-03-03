@@ -412,6 +412,9 @@ NI225_POPULAR_3_ETF = ["EWJ", "FLJP", "DXJ"]
 # NOTE: This index only has 2 ETF tickers listed on the US market and supported by Polygon.
 HSI_POPULAR_2_ETF = ["EWH", "KTEC"]
 
+# Default ETFs shown in the Firefox New Tab stocks widget, representing the four major US indices:
+# S&P 500, Nasdaq Composite, Dow Jones Industrial Average, Russell 2000
+STOCKS_WIDGET_DEFAULT_ETFS: list[str] = ["SPY", "ONEQ", "DIA", "IWM"]
 
 # ETF Tickers prone to eager matches (company name-like or typos for common words); used to avoid
 # aggressive matches on partial queries.

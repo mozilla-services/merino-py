@@ -23,6 +23,9 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerSnapshot,
     TickerSummary,
 )
+from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
+    STOCKS_WIDGET_DEFAULT_ETFS,
+)
 from merino.providers.suggest.finance.provider import (
     Provider,
     BaseSuggestion,
@@ -152,7 +155,7 @@ def test_validate_fails_on_missing_query_param(
     provider: Provider,
     geolocation: Location,
 ) -> None:
-    """Test that the validate method raises HTTP 400 execption."""
+    """Test that validate raises HTTP 400 when query is empty and source is not newtab."""
     with pytest.raises(HTTPException):
         provider.validate(SuggestionRequest(query="", geolocation=geolocation))
 
@@ -266,6 +269,77 @@ async def test_query_ticker_summary_for_etf_keyword_not_returned(
     )
 
     assert suggestions == []
+
+
+def test_validate_passes_for_newtab_with_empty_query(
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that validate does not raise when source is newtab and query is empty."""
+    provider.validate(SuggestionRequest(query="", geolocation=geolocation, source="newtab"))
+
+
+@pytest.mark.asyncio
+async def test_query_returns_default_etfs_for_newtab_source_with_empty_query(
+    backend_mock: Any,
+    provider: Provider,
+    statsd_mock: Any,
+    geolocation: Location,
+) -> None:
+    """Test that query returns summaries for STOCKS_WIDGET_DEFAULT_ETFS when source is newtab and query is empty."""
+    etf_snapshots = [
+        TickerSnapshot(ticker=ticker, last_trade_price="100", todays_change_percent="+1.0")
+        for ticker in STOCKS_WIDGET_DEFAULT_ETFS
+    ]
+    etf_summaries = [
+        TickerSummary(
+            ticker=ticker,
+            name=f"{ticker} ETF",
+            last_price="$100 USD",
+            todays_change_perc="+1.0",
+            query=f"{ticker} stock",
+            image_url=None,
+            exchange="NYSE",
+        )
+        for ticker in STOCKS_WIDGET_DEFAULT_ETFS
+    ]
+    backend_mock.get_snapshots.return_value = etf_snapshots
+    backend_mock.get_ticker_summary.side_effect = etf_summaries
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="", geolocation=geolocation, source="newtab")
+    )
+
+    backend_mock.get_snapshots.assert_awaited_once_with(STOCKS_WIDGET_DEFAULT_ETFS)
+    assert len(suggestions) == 1
+    assert suggestions[0].custom_details is not None
+    assert suggestions[0].custom_details.polygon is not None
+    values = suggestions[0].custom_details.polygon.values
+    assert [s.ticker for s in values] == STOCKS_WIDGET_DEFAULT_ETFS
+
+    statsd_mock.increment.assert_called_once_with(
+        "polygon.provider.query.new_tab", tags={"source": "newtab"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_uses_ticker_lookup_for_newtab_source_with_non_empty_query(
+    backend_mock: Any,
+    provider: Provider,
+    ticker_summary: TickerSummary,
+    ticker_snapshot: TickerSnapshot,
+    geolocation: Location,
+) -> None:
+    """Test that query uses get_tickers_for_query when source is newtab but query is non-empty."""
+    backend_mock.get_snapshots.return_value = [ticker_snapshot]
+    backend_mock.get_ticker_summary.return_value = ticker_summary
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="ddog", geolocation=geolocation, source="newtab")
+    )
+
+    backend_mock.get_snapshots.assert_awaited_once_with(["DDOG"])
+    assert len(suggestions) == 1
 
 
 # TODO add test for when backend.get_snapshots returns []
