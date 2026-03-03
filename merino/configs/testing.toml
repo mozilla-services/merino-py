@@ -71,7 +71,7 @@ kickstart = false
 
 [testing.providers.sports.es]
 dsn = "http://localhost:9200"
-request_timeout_ms = 100
+request_timeout_ms = 1000
 api_key = "test"
 
 [testing.polygon]
