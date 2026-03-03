@@ -11,6 +11,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     EST_TOP_STORY_TILE_IMP_PER_CYCLE,
     FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS,
     CACrawledContentRescaler,
+    CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     IE_EXPERIMENT_TREATMENT_PERCENT,
     IECrawledContentRescaler,
@@ -54,8 +55,9 @@ class TestCrawledContentRescaler:
         rec.is_story_blocked_for_top_stories.return_value = False
         assert not self.rescaler.is_blocked_from_most_popular(rec)
 
-        assert self.rescaler.fresh_items_top_stories_fixed_position is None
+        assert self.rescaler.fresh_items_top_stories_fixed_max_imp_per_cycle == 0
         assert self.rescaler.compute_estimated_fresh_per_cycle() >= 0
+        assert self.rescaler.fresh_items_top_stories_fixed_position is None
 
     def test_rescale_with_subtopic_item(self):
         """Test rescaling of priors for relative experiment size."""
@@ -126,7 +128,7 @@ class TestCrawledContentPinnedFreshRescaler:
 
     def setup_method(self):
         """Set up test"""
-        self.rescaler = TestCrawledContentPinnedFreshRescaler()
+        self.rescaler = CrawledContentPinnedFreshRescaler()
 
     def test_basic_stuff(self):
         """Test detection of blocked from most popular"""

@@ -113,7 +113,7 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         data.setdefault(
             "fresh_items_top_stories_fixed_est_imp_per_cycle", EST_TOP_STORY_TILE_IMP_PER_CYCLE
         )
-        data.setdefault("fresh_items_top_stories_max_percentage", 0.01)
+        data.setdefault("fresh_items_top_stories_max_percentage", 0.02)
         super().__init__(**data)
 
     def compute_estimated_fresh_per_cycle(self) -> int:
