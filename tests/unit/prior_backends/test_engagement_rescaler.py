@@ -133,7 +133,7 @@ class TestCrawledContentPinnedFreshRescaler:
 
     def test_basic_stuff(self):
         """Test detection of blocked from most popular"""
-        assert self.rescaler.fresh_items_top_stories_fixed_position == 6
+        assert self.rescaler.fresh_items_top_stories_fixed_position == 4
         assert (
             self.rescaler.fresh_items_top_stories_fixed_max_imp_per_cycle
             == FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS

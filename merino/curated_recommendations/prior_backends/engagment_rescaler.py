@@ -108,8 +108,8 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
 
     def __init__(self, **data: Any):
         data.setdefault(
-            "fresh_items_top_stories_fixed_position", 6
-        )  # Position # 7 counting from 1
+            "fresh_items_top_stories_fixed_position", 4
+        )  # Because there are 2 ads, typically 4 is position 6 (0 based)
         data.setdefault(
             "fresh_items_top_stories_fixed_max_imp_per_cycle",
             FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS,
