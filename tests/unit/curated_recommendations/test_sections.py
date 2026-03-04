@@ -909,33 +909,35 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
     """
 
     # Six diverse topics for the non-fresh items so topic-limiting doesn't filter them.
-    _stale_topics = [
-        Topic.CAREER,
-        Topic.POLITICS,
-        Topic.PERSONAL_FINANCE,
-        Topic.ARTS,
-        Topic.BUSINESS,
-        Topic.EDUCATION,
+    _non_fresh_topics = [
+        Topic.CAREER.value,
+        Topic.POLITICS.value,
+        Topic.PERSONAL_FINANCE.value,
+        Topic.ARTS.value,
+        Topic.BUSINESS.value,
+        Topic.EDUCATION.value,
     ]
 
-    def _make_items(self, fresh_remaining_impressions: int = 4_000_000) -> list[CuratedRecommendation]:
-        """Create 6 stale + 1 fresh recommendation.
+    def _make_items(
+        self, fresh_remaining_impressions: int = 4_000_000
+    ) -> list[CuratedRecommendation]:
+        """Create 6 non_fresh + 1 fresh recommendation.
 
         Args:
             fresh_remaining_impressions: remaining_impressions for the fresh item.
                 Use a value > EST_TOP_STORY_TILE_IMP_PER_CYCLE * max_scale (~3.9M) to guarantee
                 the fresh item is always picked; use 0 to guarantee it is never picked.
         """
-        stale = generate_recommendations(
+        non_fresh = generate_recommendations(
             item_ids=["a", "b", "c", "d", "e", "f"],
-            topics=self._stale_topics,
+            topics=self._non_fresh_topics,
             time_sensitive_count=0,
         )
-        for rec in stale:
+        for rec in non_fresh:
             rec.ranking_data = RankingData(alpha=1.0, beta=1.0, score=0.5, is_fresh=False)
 
         fresh = generate_recommendations(
-            item_ids=["fresh"], topics=[Topic.SPORTS], time_sensitive_count=0
+            item_ids=["fresh"], topics=[Topic.SPORTS.value], time_sensitive_count=0
         )[0]
         fresh.ranking_data = RankingData(
             alpha=1.0,
@@ -944,7 +946,7 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
             is_fresh=True,
             remaining_impressions=fresh_remaining_impressions,
         )
-        return stale + [fresh]
+        return non_fresh + [fresh]
 
     def test_fresh_story_placed_at_fixed_position(self):
         """Fresh story should appear at the rescaler's fixed position (index 4)."""
@@ -971,7 +973,7 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
         assert len(result) == 5
 
     def test_received_ranks_sequential_after_insertion(self):
-        """receivedRank should be 0..N-1 regardless of fresh-item insertion."""
+        """ReceivedRank should be 0..N-1 regardless of fresh-item insertion."""
         result = get_top_story_list(
             self._make_items(),
             top_count=5,
