@@ -3,7 +3,7 @@
 import logging
 from copy import deepcopy
 
-from random import randint, random
+import random
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
@@ -596,7 +596,7 @@ def rank_sections(
 
 
 def pick_random_fresh_story(
-    items: list[CuratedRecommendation], est_imp_per_cycle: int, max_imp_per_item_per_cycle: int
+    items: list[CuratedRecommendation], est_imp_per_cycle: int
 ) -> tuple[CuratedRecommendation | None, list[CuratedRecommendation]]:
     """Pick a random fresh story (not blocked from most popular). The chance of picking a fresh story is based on the number of leftover
     impressions after accounting for max impressions per item, and the number of items. The number of
@@ -606,7 +606,6 @@ def pick_random_fresh_story(
     Args:
         items: List of CuratedRecommendation objects
         est_imp_per_cycle: Estimated number of impressions at a position in a cycle (e.g. a run of the ETL job getting updated data)
-        max_imp_per_item_per_cycle: Maximum number of impressions desired per item in a cycle
     """
     fresh_items = list(
         filter(
@@ -618,17 +617,28 @@ def pick_random_fresh_story(
     )
     if len(fresh_items) == 0:
         return None, items
-    number_of_leftover_impressions = est_imp_per_cycle - max_imp_per_item_per_cycle * len(items)
-    if number_of_leftover_impressions > 0:
-        probability_of_non_fresh_item = min(
-            number_of_leftover_impressions / est_imp_per_cycle, 1.0
-        )
-        if random() < probability_of_non_fresh_item:
-            return None, items
-    item_index = randint(0, len(fresh_items) - 1)
-    fresh_item = fresh_items[item_index]
-    rest_of_items = items[:item_index] + items[item_index + 1 :]
-    return fresh_item, rest_of_items
+
+    total_remaining = sum(
+        it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
+    )
+
+    # Chance to *not* pick a fresh item if there are "leftover" impressions
+    # after accounting for remaining impressions among fresh items.
+    if est_imp_per_cycle > 0:
+        leftover = est_imp_per_cycle - total_remaining
+        if leftover > 0:
+            p_non_fresh = min(leftover / est_imp_per_cycle, 1.0)
+            if random.random() < p_non_fresh:
+                return None, items
+    # Weighted pick by remaining impressions
+    weights = [
+        it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
+    ]
+    picked = random.choices(fresh_items, weights=weights, k=1)[0]
+
+    # Remove the picked object from the original items list
+    remaining_items = [it for it in items if it is not picked]
+    return picked, remaining_items
 
 
 def get_top_story_list(
@@ -665,9 +675,7 @@ def get_top_story_list(
     if rescaler and rescaler.fresh_items_top_stories_fixed_position is not None:
         fixed_fresh_item_position = rescaler.fresh_items_top_stories_fixed_position or 0
         fresh_story_for_fixed_position, rest_of_stories = pick_random_fresh_story(
-            items,
-            rescaler.compute_estimated_fresh_per_cycle(),
-            rescaler.fresh_items_top_stories_fixed_max_imp_per_cycle,
+            items, rescaler.compute_estimated_fresh_per_cycle()
         )
         items = rest_of_stories
 

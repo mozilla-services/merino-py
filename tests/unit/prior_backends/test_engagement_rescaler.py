@@ -9,7 +9,6 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     BLOCKED_FROM_MOST_POPULAR_SCALER,
     CA_EXPERIMENT_TREATMENT_PERCENT,
     EST_TOP_STORY_TILE_IMP_PER_CYCLE,
-    FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS,
     US_UTC_RELATIVE_IMPRESSIONS_NORM,
     CACrawledContentRescaler,
     CrawledContentPinnedFreshRescaler,
@@ -56,7 +55,6 @@ class TestCrawledContentRescaler:
         rec.is_story_blocked_for_top_stories.return_value = False
         assert not self.rescaler.is_blocked_from_most_popular(rec)
 
-        assert self.rescaler.fresh_items_top_stories_fixed_max_imp_per_cycle == 0
         assert self.rescaler.compute_estimated_fresh_per_cycle() >= 0
         assert self.rescaler.fresh_items_top_stories_fixed_position is None
 
@@ -134,10 +132,6 @@ class TestCrawledContentPinnedFreshRescaler:
     def test_basic_stuff(self):
         """Test detection of blocked from most popular"""
         assert self.rescaler.fresh_items_top_stories_fixed_position == 4
-        assert (
-            self.rescaler.fresh_items_top_stories_fixed_max_imp_per_cycle
-            == FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS
-        )
         assert (
             self.rescaler.fresh_items_top_stories_fixed_est_imp_per_cycle
             == EST_TOP_STORY_TILE_IMP_PER_CYCLE

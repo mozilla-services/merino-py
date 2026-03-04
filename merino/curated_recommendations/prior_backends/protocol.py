@@ -59,10 +59,6 @@ class EngagementRescaler(BaseModel):
         int | None  # Fixed position to host bulk of fresh stories
     ) = None
 
-    fresh_items_top_stories_fixed_max_imp_per_cycle: (
-        int  # Max number of impressions we want in a period (eg 20 mints)
-    ) = 0
-
     fresh_items_top_stories_fixed_est_imp_per_cycle: (
         int  # Estimated number of impressions for this tile in a period (eg 20 mins)
     ) = 0
