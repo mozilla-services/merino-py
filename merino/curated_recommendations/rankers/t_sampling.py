@@ -91,7 +91,6 @@ class ThompsonSamplingRanker(Ranker):
                 alpha=alpha_val,
                 beta=beta_val,
             )
-            print("non rescaled b prior non_rescaled_b_prior", non_rescaled_b_prior)
             if (
                 (fresh_items_limit_prior_threshold_multiplier > 0)
                 and not rec.isTimeSensitive
