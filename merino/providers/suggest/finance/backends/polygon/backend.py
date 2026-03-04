@@ -142,26 +142,39 @@ class PolygonBackend:
         cached = await self.get_snapshots_from_cache(tickers)
         # each tuple has the shape of `(snapshot, ttl)` and ignore the none tuples for now.
         cached_snapshots = [tupl[0] for tupl in cached if tupl is not None]
-        if cached_snapshots:
+
+        # Determine which tickers were cached and which were not.
+        cached_ticker_set = {s.ticker for s in cached_snapshots}
+        missed_tickers = [t for t in tickers if t not in cached_ticker_set]
+
+        # Emit metrics based on cache coverage.
+        if not missed_tickers:
             self.metrics_client.increment("polygon.snapshot.cache.hit")
-            return cached_snapshots
+        elif cached_snapshots:
+            self.metrics_client.increment("polygon.snapshot.cache.partial_hit")
+        else:
+            self.metrics_client.increment("polygon.snapshot.cache.miss")
 
-        self.metrics_client.increment("polygon.snapshot.cache.miss")
-
-        # request from the vendor on cache misses.
-        snapshots: list[TickerSnapshot] = []
-
-        for ticker in tickers:
+        # Fetch any missing tickers from the API.
+        fetched_snapshots: list[TickerSnapshot] = []
+        for ticker in missed_tickers:
             if (
                 snapshot := extract_snapshot_if_valid(await self.fetch_ticker_snapshot(ticker))
             ) is not None:
-                snapshots.append(snapshot)
+                fetched_snapshots.append(snapshot)
             else:
                 self.metrics_client.increment("polygon.snapshot.invalid")
 
-        await self.store_snapshots_in_cache(snapshots)
+        # Cache only the newly fetched snapshots.
+        await self.store_snapshots_in_cache(fetched_snapshots)
 
-        return snapshots
+        # Merge cached and freshly fetched snapshots into a lookup by ticker symbol.
+        all_snapshots = cached_snapshots + fetched_snapshots
+        snapshot_by_ticker: dict[str, TickerSnapshot] = {s.ticker: s for s in all_snapshots}
+
+        # Return results in the original requested order, skipping any tickers
+        # that failed to load from both cache and API.
+        return [snapshot_by_ticker[t] for t in tickers if t in snapshot_by_ticker]
 
     def get_ticker_summary(
         self, snapshot: TickerSnapshot, image_url: HttpUrl | None

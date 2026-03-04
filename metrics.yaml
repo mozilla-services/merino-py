@@ -80,6 +80,15 @@ suggest/polygon:
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 
+  polygon_snapshot_cache_partial_hit:
+    description: |
+      A counter for partial snapshot cache hits where some tickers are cached and others are not
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
   polygon_snapshot_cache_miss:
     description: |
       A counter for snapshot cache misses

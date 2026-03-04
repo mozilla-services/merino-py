@@ -308,15 +308,17 @@ async def test_get_snapshots_success(
     mocker,
     polygon: PolygonBackend,
     single_ticker_snapshot_response: dict[str, Any],
-    ticker_snapshot: TickerSnapshot,
 ) -> None:
     """Test get_snapshots method. Mocks the fetch_ticker_snapshot and extract_snapshot_if_valid methods.
     Asserts on all three valid snapshots. Also asserts on metric not emitted for invalid snapshot.
     """
     tickers = ["AAPL", "MSFT", "TSLA"]
+    snapshots = [
+        TickerSnapshot(ticker=t, last_trade_price="120.47", todays_change_percent="0.82")
+        for t in tickers
+    ]
 
     # Mocking the fetch_ticker_snapshot method to return single_ticker_snapshot_response fixture for two of the calls.
-    # Returns None for one of the calls.
     fetch_mock = mocker.patch.object(
         polygon,
         "fetch_ticker_snapshot",
@@ -330,7 +332,7 @@ async def test_get_snapshots_success(
     # Patch extract_snapshot_if_valid to map payloads -> snapshots/None.
     extract_mock = mocker.patch(
         "merino.providers.suggest.finance.backends.polygon.backend.extract_snapshot_if_valid",
-        side_effect=[ticker_snapshot, ticker_snapshot, ticker_snapshot],
+        side_effect=snapshots,
     )
 
     # Mock metrics client.
@@ -342,7 +344,7 @@ async def test_get_snapshots_success(
 
     # Asserts
     increment_metric_mock.assert_called_once_with("polygon.snapshot.cache.miss")
-    assert result == [ticker_snapshot] * 3
+    assert [s.ticker for s in result] == ["AAPL", "MSFT", "TSLA"]
 
     assert fetch_mock.await_count == 3
     assert fetch_mock.await_args_list == [call("AAPL"), call("MSFT"), call("TSLA")]
@@ -355,12 +357,17 @@ async def test_get_snapshots_success_and_fail(
     mocker,
     polygon: PolygonBackend,
     single_ticker_snapshot_response: dict[str, Any],
-    ticker_snapshot: TickerSnapshot,
 ) -> None:
     """Test get_snapshots method. Mocks the fetch_ticker_snapshot and extract_snapshot_if_valid methods.
     Asserts on two valid snapshots and one invalid. Also asserts on metric emitted for invalid.
     """
     tickers = ["AAPL", "MSFT", "TSLA"]
+    aapl_snap = TickerSnapshot(
+        ticker="AAPL", last_trade_price="120.47", todays_change_percent="0.82"
+    )
+    tsla_snap = TickerSnapshot(
+        ticker="TSLA", last_trade_price="200.00", todays_change_percent="1.50"
+    )
 
     # Mocking the fetch_ticker_snapshot method to return single_ticker_snapshot_response fixture for two of the calls.
     # Returns None for one of the calls.
@@ -377,7 +384,7 @@ async def test_get_snapshots_success_and_fail(
     # Patch extract_snapshot_if_valid to map payloads -> snapshots/None.
     extract_mock = mocker.patch(
         "merino.providers.suggest.finance.backends.polygon.backend.extract_snapshot_if_valid",
-        side_effect=[ticker_snapshot, None, ticker_snapshot],
+        side_effect=[aapl_snap, None, tsla_snap],
     )
 
     # Mock metrics client.
@@ -387,8 +394,8 @@ async def test_get_snapshots_success_and_fail(
     # Call the method being tested.
     result = await polygon.get_snapshots(tickers)
 
-    # Asserts
-    assert result == [ticker_snapshot] * 2
+    # Asserts — using distinct ticker snapshots to verify results are returned in the requested order.
+    assert [s.ticker for s in result] == ["AAPL", "TSLA"]
 
     assert fetch_mock.await_count == 3
     assert fetch_mock.await_args_list == [call("AAPL"), call("MSFT"), call("TSLA")]
@@ -396,8 +403,164 @@ async def test_get_snapshots_success_and_fail(
     assert extract_mock.call_count == 3
 
     increment_metric_mock.assert_has_calls(
-        [call("polygon.snapshot.cache.miss"), call("polygon.snapshot.invalid")], any_order=False
+        [call("polygon.snapshot.cache.miss"), call("polygon.snapshot.invalid")],
+        any_order=False,
     )
+
+
+@pytest.mark.asyncio
+async def test_get_snapshots_full_cache_hit(
+    mocker,
+    polygon: PolygonBackend,
+) -> None:
+    """Test get_snapshots when all tickers are in the cache. No API calls should be made."""
+    tickers = ["AAPL", "MSFT"]
+    aapl_snap = TickerSnapshot(
+        ticker="AAPL", last_trade_price="150.00", todays_change_percent="0.50"
+    )
+    msft_snap = TickerSnapshot(
+        ticker="MSFT", last_trade_price="300.00", todays_change_percent="-0.20"
+    )
+
+    # Mocking cache to return both tickers.
+    mocker.patch.object(
+        polygon,
+        "get_snapshots_from_cache",
+        return_value=[(aapl_snap, 300), (msft_snap, 300)],
+    )
+    fetch_mock = mocker.patch.object(polygon, "fetch_ticker_snapshot")
+    store_mock = mocker.patch.object(polygon, "store_snapshots_in_cache")
+
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_mock = polygon.metrics_client.increment
+
+    # Call the method being tested.
+    result = await polygon.get_snapshots(tickers)
+
+    # Asserts
+    increment_mock.assert_called_once_with("polygon.snapshot.cache.hit")
+    fetch_mock.assert_not_awaited()
+    store_mock.assert_awaited_once_with([])
+    assert [s.ticker for s in result] == ["AAPL", "MSFT"]
+
+
+@pytest.mark.asyncio
+async def test_get_snapshots_partial_cache_hit(
+    mocker,
+    polygon: PolygonBackend,
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
+    """Test get_snapshots with partial cache: AAPL is cached, MSFT and TSLA are fetched."""
+    tickers = ["AAPL", "MSFT", "TSLA"]
+    aapl_snap = TickerSnapshot(
+        ticker="AAPL", last_trade_price="150.00", todays_change_percent="0.50"
+    )
+    msft_snap = TickerSnapshot(
+        ticker="MSFT", last_trade_price="300.00", todays_change_percent="-0.20"
+    )
+    tsla_snap = TickerSnapshot(
+        ticker="TSLA", last_trade_price="200.00", todays_change_percent="1.50"
+    )
+
+    # Mocking cache to return only AAPL.
+    mocker.patch.object(
+        polygon,
+        "get_snapshots_from_cache",
+        return_value=[(aapl_snap, 300)],
+    )
+
+    # Mocking the fetch_ticker_snapshot method to return the generic single_ticker_snapshot_response
+    # fixture for the missed tickers, not the specific ticker snapshots defined above.
+    # The specific snapshots are returned by extract_snapshot_if_valid below.
+    fetch_mock = mocker.patch.object(
+        polygon,
+        "fetch_ticker_snapshot",
+        side_effect=[single_ticker_snapshot_response, single_ticker_snapshot_response],
+    )
+
+    # Patch extract_snapshot_if_valid to map the generic payloads -> specific ticker snapshots.
+    mocker.patch(
+        "merino.providers.suggest.finance.backends.polygon.backend.extract_snapshot_if_valid",
+        side_effect=[msft_snap, tsla_snap],
+    )
+    store_mock = mocker.patch.object(polygon, "store_snapshots_in_cache")
+
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_mock = polygon.metrics_client.increment
+
+    # Call the method being tested.
+    result = await polygon.get_snapshots(tickers)
+
+    # Asserts
+    increment_mock.assert_called_once_with("polygon.snapshot.cache.partial_hit")
+
+    # Only MSFT and TSLA should be fetched from API.
+    assert fetch_mock.await_count == 2
+    assert fetch_mock.await_args_list == [call("MSFT"), call("TSLA")]
+
+    # Only newly fetched snapshots should be cached.
+    store_mock.assert_awaited_once_with([msft_snap, tsla_snap])
+
+    # Results are in the original requested order.
+    assert [s.ticker for s in result] == ["AAPL", "MSFT", "TSLA"]
+
+
+@pytest.mark.asyncio
+async def test_get_snapshots_partial_cache_hit_with_api_failure(
+    mocker,
+    polygon: PolygonBackend,
+    single_ticker_snapshot_response: dict[str, Any],
+) -> None:
+    """Test partial cache hit where one missed ticker returns an invalid API response."""
+    tickers = ["SPY", "ONEQ", "DIA", "IWM"]
+    spy_snap = TickerSnapshot(
+        ticker="SPY", last_trade_price="450.00", todays_change_percent="0.50"
+    )
+    dia_snap = TickerSnapshot(
+        ticker="DIA", last_trade_price="350.00", todays_change_percent="-0.25"
+    )
+    oneq_snap = TickerSnapshot(
+        ticker="ONEQ", last_trade_price="500.00", todays_change_percent="1.20"
+    )
+
+    # Mocking cache to return SPY and DIA. ONEQ and IWM are missed.
+    mocker.patch.object(
+        polygon,
+        "get_snapshots_from_cache",
+        return_value=[(spy_snap, 300), (dia_snap, 300)],
+    )
+
+    # Mocking the fetch_ticker_snapshot method. Returns valid response for ONEQ, None for IWM.
+    fetch_mock = mocker.patch.object(
+        polygon,
+        "fetch_ticker_snapshot",
+        side_effect=[single_ticker_snapshot_response, None],
+    )
+
+    # Patch extract_snapshot_if_valid to map payloads -> snapshots/None.
+    mocker.patch(
+        "merino.providers.suggest.finance.backends.polygon.backend.extract_snapshot_if_valid",
+        side_effect=[oneq_snap, None],  # ONEQ valid, IWM invalid
+    )
+
+    # Mock metrics client.
+    polygon.metrics_client = MagicMock()
+    increment_mock = polygon.metrics_client.increment
+
+    # Call the method being tested.
+    result = await polygon.get_snapshots(tickers)
+
+    # Asserts — IWM failed, so 3 results in original order.
+    assert [s.ticker for s in result] == ["SPY", "ONEQ", "DIA"]
+
+    increment_mock.assert_any_call("polygon.snapshot.cache.partial_hit")
+    increment_mock.assert_any_call("polygon.snapshot.invalid")
+
+    # Only ONEQ and IWM should have been fetched.
+    assert fetch_mock.await_count == 2
+    assert fetch_mock.await_args_list == [call("ONEQ"), call("IWM")]
 
 
 @pytest.mark.asyncio
