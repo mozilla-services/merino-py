@@ -661,7 +661,7 @@ def get_top_story_list(
     fixed_fresh_item_position: int = 0
     fresh_story_for_fixed_position = None
 
-    # Pick a fresh story at random for position 6
+    # Pick a fresh story at random for position
     if rescaler and rescaler.fresh_items_top_stories_fixed_position is not None:
         fixed_fresh_item_position = rescaler.fresh_items_top_stories_fixed_position or 0
         fresh_story_for_fixed_position, rest_of_stories = pick_random_fresh_story(
