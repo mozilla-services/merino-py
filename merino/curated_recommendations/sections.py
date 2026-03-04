@@ -77,7 +77,7 @@ MAX_SECTIONS_PER_RESPONSE = 20
 
 # Number of articles to use when ranking the section. We choose 4 because there are typically only
 # 4 stories shown for each section. For a period we had the number as 6.
-# In a live test the weighted standard deviation on sectior rank was 0.65 with 4, vs 0.8 with 6.
+# In a live test the weighted standard deviation on section rank was 0.65 with 4, vs 0.8 with 6.
 # Therefore with 4 items there seems to be less exploration in most cases.
 # This Gist runs an eval script on localhost https://gist.github.com/rolf-moz/cfd1062016f1898869248b27af009830
 
@@ -713,7 +713,7 @@ def get_top_story_list(
         top_stories = (
             top_stories[0:fixed_fresh_item_position]
             + [fresh_story_for_fixed_position]
-            + top_stories[fixed_fresh_item_position:-1]
+            + top_stories[fixed_fresh_item_position:-1]  # Drops last element in most cases
         )
 
     for idx, rec in enumerate(top_stories):

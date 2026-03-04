@@ -25,6 +25,7 @@ from merino.curated_recommendations.layouts import (
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CACrawledContentRescaler,
+    CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
@@ -892,6 +893,111 @@ class TestGetTopStoryList:
             assert len(result) == min(len(items), 10 + 3)
             picked_ids = set([rec.corpusItemId for rec in result])
             assert len(picked_ids) == len(result)  # Check no duplicates
+
+
+class TestGetTopStoryListWithPinnedFreshRescaler:
+    """End-to-end tests for get_top_story_list with CrawledContentPinnedFreshRescaler.
+
+    CrawledContentPinnedFreshRescaler places one fresh story at a fixed position (default: 4)
+    and removes the story that was previously there, keeping the list length constant.
+
+    pick_random_fresh_story skips the random.random() gate when
+    total_remaining >= est_imp_per_cycle (leftover <= 0), so using a very large
+    remaining_impressions value guarantees the fresh item is always selected without
+    any monkeypatching.  Conversely, remaining_impressions=0 sets p_non_fresh=1.0,
+    which ensures the fresh item is never selected.
+    """
+
+    # Six diverse topics for the non-fresh items so topic-limiting doesn't filter them.
+    _stale_topics = [
+        Topic.CAREER,
+        Topic.POLITICS,
+        Topic.PERSONAL_FINANCE,
+        Topic.ARTS,
+        Topic.BUSINESS,
+        Topic.EDUCATION,
+    ]
+
+    def _make_items(self, fresh_remaining_impressions: int = 4_000_000) -> list[CuratedRecommendation]:
+        """Create 6 stale + 1 fresh recommendation.
+
+        Args:
+            fresh_remaining_impressions: remaining_impressions for the fresh item.
+                Use a value > EST_TOP_STORY_TILE_IMP_PER_CYCLE * max_scale (~3.9M) to guarantee
+                the fresh item is always picked; use 0 to guarantee it is never picked.
+        """
+        stale = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e", "f"],
+            topics=self._stale_topics,
+            time_sensitive_count=0,
+        )
+        for rec in stale:
+            rec.ranking_data = RankingData(alpha=1.0, beta=1.0, score=0.5, is_fresh=False)
+
+        fresh = generate_recommendations(
+            item_ids=["fresh"], topics=[Topic.SPORTS], time_sensitive_count=0
+        )[0]
+        fresh.ranking_data = RankingData(
+            alpha=1.0,
+            beta=1.0,
+            score=0.5,
+            is_fresh=True,
+            remaining_impressions=fresh_remaining_impressions,
+        )
+        return stale + [fresh]
+
+    def test_fresh_story_placed_at_fixed_position(self):
+        """Fresh story should appear at the rescaler's fixed position (index 4)."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert result[4].corpusItemId == "fresh"
+
+    def test_list_length_unchanged_after_insertion(self):
+        """Inserting at the fixed position should not change the total list length."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert len(result) == 5
+
+    def test_received_ranks_sequential_after_insertion(self):
+        """receivedRank should be 0..N-1 regardless of fresh-item insertion."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert [rec.receivedRank for rec in result] == list(range(len(result)))
+
+    def test_no_fresh_story_inserted_when_remaining_is_zero(self):
+        """When remaining_impressions=0, p_non_fresh is 1.0 so the fresh item is never picked
+        and the output list should not contain it.
+        """
+        # remaining_impressions=0 → total_remaining=0 → leftover=est_imp_per_cycle > 0
+        # → p_non_fresh = min(1.0, 1.0) = 1.0 → random.random() < 1.0 always → skip
+        result = get_top_story_list(
+            self._make_items(fresh_remaining_impressions=0),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert len(result) == 5
+        assert all(rec.corpusItemId != "fresh" for rec in result)
 
 
 REMAINING_DEFAULT = 10

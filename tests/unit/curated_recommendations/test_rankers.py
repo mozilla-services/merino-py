@@ -414,6 +414,60 @@ class TestThompsonSampling:
         assert by_id["fresh1"].ranking_data is not None
         assert by_id["fresh2"].ranking_data.is_fresh is True
 
+    def test_remaining_impressions_set_on_fresh_item(self, monkeypatch):
+        """remaining_impressions should equal int(target_no_opens - no_opens) for a fresh item.
+
+        With prior beta=10 and fresh_items_limit_prior_threshold_multiplier=1,
+        target_no_opens = 10.  An item with 4 impressions (no_opens=4) needs 6 more.
+        """
+        recs = generate_recommendations(
+            item_ids=["fresh"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        recs[0].isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({"fresh": (0, 4)})  # no_opens = 4
+        rescaler = CrawledContentRescaler()  # fresh_items_limit_prior_threshold_multiplier = 1
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
+
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.is_fresh is True
+        assert ranked[0].ranking_data.remaining_impressions == 6  # int(10 - 4)
+
+    def test_remaining_impressions_zero_on_stale_item(self, monkeypatch):
+        """remaining_impressions should stay 0 when an item is not fresh.
+
+        With prior beta=10, an item with 12 impressions (no_opens=12) exceeds target_no_opens=10,
+        so it is not marked fresh and remaining_impressions is left at its default of 0.
+        """
+        recs = generate_recommendations(
+            item_ids=["stale"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        recs[0].isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({"stale": (0, 12)})  # no_opens = 12
+        rescaler = CrawledContentRescaler()
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
+
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.is_fresh is False
+        assert ranked[0].ranking_data.remaining_impressions == 0
+
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""
         recs = generate_recommendations(item_ids=["1", "2", "3", "4"])
