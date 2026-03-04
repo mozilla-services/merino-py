@@ -25,12 +25,14 @@ from merino.curated_recommendations.layouts import (
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CACrawledContentRescaler,
+    CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
     UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
+    ITEM_SUBTOPIC_FLAG,
     Section,
     SectionConfiguration,
     ExperimentName,
@@ -57,6 +59,7 @@ from merino.curated_recommendations.sections import (
     HEADLINES_SECTION_KEY,
     get_top_story_list,
     get_legacy_topic_ids,
+    pick_random_fresh_story,
     put_headlines_first_then_top_stories,
     dedupe_recommendations_across_sections,
 )
@@ -890,6 +893,246 @@ class TestGetTopStoryList:
             assert len(result) == min(len(items), 10 + 3)
             picked_ids = set([rec.corpusItemId for rec in result])
             assert len(picked_ids) == len(result)  # Check no duplicates
+
+
+class TestGetTopStoryListWithPinnedFreshRescaler:
+    """End-to-end tests for get_top_story_list with CrawledContentPinnedFreshRescaler.
+
+    CrawledContentPinnedFreshRescaler places one fresh story at a fixed position (default: 4)
+    and removes the story that was previously there, keeping the list length constant.
+
+    pick_random_fresh_story skips the random.random() gate when
+    total_remaining >= est_imp_per_cycle (leftover <= 0), so using a very large
+    remaining_impressions value guarantees the fresh item is always selected without
+    any monkeypatching.  Conversely, remaining_impressions=0 sets p_non_fresh=1.0,
+    which ensures the fresh item is never selected.
+    """
+
+    # Six diverse topics for the non-fresh items so topic-limiting doesn't filter them.
+    _non_fresh_topics = [
+        Topic.CAREER.value,
+        Topic.POLITICS.value,
+        Topic.PERSONAL_FINANCE.value,
+        Topic.ARTS.value,
+        Topic.BUSINESS.value,
+        Topic.EDUCATION.value,
+    ]
+
+    def _make_items(
+        self, fresh_remaining_impressions: int = 4_000_000
+    ) -> list[CuratedRecommendation]:
+        """Create 6 non_fresh + 1 fresh recommendation.
+
+        Args:
+            fresh_remaining_impressions: remaining_impressions for the fresh item.
+                Use a value > EST_TOP_STORY_TILE_IMP_PER_CYCLE * max_scale (~3.9M) to guarantee
+                the fresh item is always picked; use 0 to guarantee it is never picked.
+        """
+        non_fresh = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e", "f"],
+            topics=self._non_fresh_topics,
+            time_sensitive_count=0,
+        )
+        for rec in non_fresh:
+            rec.ranking_data = RankingData(alpha=1.0, beta=1.0, score=0.5, is_fresh=False)
+
+        fresh = generate_recommendations(
+            item_ids=["fresh"], topics=[Topic.SPORTS.value], time_sensitive_count=0
+        )[0]
+        fresh.ranking_data = RankingData(
+            alpha=1.0,
+            beta=1.0,
+            score=0.5,
+            is_fresh=True,
+            remaining_impressions=fresh_remaining_impressions,
+        )
+        return non_fresh + [fresh]
+
+    def test_fresh_story_placed_at_fixed_position(self):
+        """Fresh story should appear at the rescaler's fixed position (index 4)."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert result[4].corpusItemId == "fresh"
+
+    def test_list_length_unchanged_after_insertion(self):
+        """Inserting at the fixed position should not change the total list length."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert len(result) == 5
+
+    def test_received_ranks_sequential_after_insertion(self):
+        """ReceivedRank should be 0..N-1 regardless of fresh-item insertion."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert [rec.receivedRank for rec in result] == list(range(len(result)))
+
+    def test_no_fresh_story_inserted_when_remaining_is_zero(self):
+        """When remaining_impressions=0, p_non_fresh is 1.0 so the fresh item is never picked
+        and the output list should not contain it.
+        """
+        # remaining_impressions=0 → total_remaining=0 → leftover=est_imp_per_cycle > 0
+        # → p_non_fresh = min(1.0, 1.0) = 1.0 → random.random() < 1.0 always → skip
+        result = get_top_story_list(
+            self._make_items(fresh_remaining_impressions=0),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert len(result) == 5
+        assert all(rec.corpusItemId != "fresh" for rec in result)
+
+
+REMAINING_DEFAULT = 10
+
+
+class TestPickRandomFreshStory:
+    """Tests for pick_random_fresh_story."""
+
+    def _fresh_rec(self, corpus_id: str) -> CuratedRecommendation:
+        """Create a fresh, unblocked recommendation."""
+        rec = generate_recommendations(item_ids=[corpus_id])[0]
+        rec.ranking_data = RankingData(
+            alpha=1.0,
+            beta=1.0,
+            score=0.5,
+            is_fresh=True,
+            remaining_impressions=REMAINING_DEFAULT,
+        )
+        rec.topic = Topic.SPORTS
+        return rec
+
+    def test_returns_none_when_no_items(self):
+        """Empty list returns (None, []) without error."""
+        result_item, remaining = pick_random_fresh_story([], 100)
+        assert result_item is None
+        assert remaining == []
+
+    def test_returns_none_when_no_ranking_data(self):
+        """Items with ranking_data=None are never treated as fresh."""
+        items = generate_recommendations(item_ids=["a", "b"])
+        for item in items:
+            item.ranking_data = None
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_returns_none_when_not_fresh(self):
+        """Items with is_fresh=False are not picked."""
+        items = generate_recommendations(item_ids=["a", "b"])
+        for item in items:
+            item.ranking_data = RankingData(alpha=1, beta=1, score=0.5, is_fresh=False)
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_returns_none_when_fresh_items_have_subtopic_flag(self):
+        """Fresh items with ITEM_SUBTOPIC_FLAG are blocked from top stories and not picked."""
+        items = [self._fresh_rec(f"item-{i}") for i in range(3)]
+        for item in items:
+            item.experiment_flags = {ITEM_SUBTOPIC_FLAG}
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_returns_none_when_fresh_items_are_gaming(self):
+        """Fresh gaming-topic items are blocked from top stories and not picked."""
+        items = [self._fresh_rec(f"item-{i}") for i in range(3)]
+        for item in items:
+            item.topic = Topic.GAMING
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_always_picks_fresh_when_no_leftover_impressions(self, monkeypatch):
+        """When est_imp_per_cycle <= total impressions, a fresh item is always picked."""
+        items = [self._fresh_rec("a")]
+        # leftover = 10 - 10*1 = 0, not > 0, so random() is never consulted
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is items[0]
+        assert remaining == []
+
+    def test_returns_none_when_random_below_probability_of_non_fresh(self, monkeypatch):
+        """When leftover impressions exist and random() falls below the non-fresh probability, returns (None, items)."""
+        items = [self._fresh_rec("a")]
+        # leftover = 100 - 10*1 = 90; probability_of_non_fresh = 90/100 = 0.9
+        # random() = 0.5 < 0.9 → returns (None, items)
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.5)
+        result_item, remaining = pick_random_fresh_story(items, est_imp_per_cycle=100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_picks_fresh_when_random_above_probability_of_non_fresh(self, monkeypatch):
+        """When random() exceeds the non-fresh probability, the fresh item is picked."""
+        items = [self._fresh_rec("a")]
+        # probability_of_non_fresh = 90/100 = 0.9; random() = 0.95 ≥ 0.9 → pick fresh
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.95)
+        result_item, remaining = pick_random_fresh_story(items, est_imp_per_cycle=100)
+        assert result_item is items[0]
+        assert remaining == []
+
+    def test_probability_of_non_fresh_capped_at_one(self, monkeypatch):
+        """Probability of skipping a fresh item is capped at 1.0."""
+        items = [self._fresh_rec("a")]
+        items[0].ranking_data.remaining_impressions = 8
+        # random() = 8 out of 10  impressions would suggest 0.8 probability of non-fresh
+
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.99)
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is not None
+        assert remaining == []
+
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.5)
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is not None
+        assert remaining == []
+
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.15)
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is None
+        assert remaining == items
+
+    def test_fresh_item_removed_from_remaining(self, monkeypatch):
+        """The picked fresh item is absent from the remaining items list."""
+        items = [self._fresh_rec(f"item-{i}") for i in range(3)]
+        monkeypatch.setattr(
+            "merino.curated_recommendations.sections.random.choices",
+            lambda items, weights, k: [items[1]],
+        )
+        result_item, remaining = pick_random_fresh_story(items, est_imp_per_cycle=30)
+        assert result_item is items[1]
+        assert result_item not in remaining
+        assert len(remaining) == 2
+        # Check that item was spliced out
+        assert items[0] == remaining[0]
+        assert items[2] == remaining[1]
 
 
 class DummyTrackingEngagementBackend:

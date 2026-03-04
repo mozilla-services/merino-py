@@ -55,6 +55,14 @@ class EngagementRescaler(BaseModel):
         float  # Max number of fresh items to use when considering section rank
     ) = 0
 
+    fresh_items_top_stories_fixed_position: (
+        int | None  # Fixed position to host bulk of fresh stories
+    ) = None
+
+    fresh_items_top_stories_fixed_est_imp_per_cycle: (
+        int  # Estimated number of impressions for this tile in a period (eg 20 mins)
+    ) = 0
+
     def __init__(self, **data: Any):
         super().__init__(**data)
 
@@ -67,3 +75,9 @@ class EngagementRescaler(BaseModel):
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Update priors values based on whether item is unique to the experiment."""
         return alpha, beta
+
+    def compute_estimated_fresh_per_cycle(self) -> int:
+        """Compute the estimated number of impressions for fresh items in each telemetry update cycle,
+        based on the fixed estimate for top story tile impressions and normalized by hour.
+        """
+        return self.fresh_items_top_stories_fixed_est_imp_per_cycle

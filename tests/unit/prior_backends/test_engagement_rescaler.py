@@ -8,7 +8,10 @@ from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     BLOCKED_FROM_MOST_POPULAR_SCALER,
     CA_EXPERIMENT_TREATMENT_PERCENT,
+    EST_TOP_STORY_TILE_IMP_PER_CYCLE,
+    US_UTC_RELATIVE_IMPRESSIONS_NORM,
     CACrawledContentRescaler,
+    CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     IE_EXPERIMENT_TREATMENT_PERCENT,
     IECrawledContentRescaler,
@@ -51,6 +54,9 @@ class TestCrawledContentRescaler:
         rec.topic = Topic.TECHNOLOGY
         rec.is_story_blocked_for_top_stories.return_value = False
         assert not self.rescaler.is_blocked_from_most_popular(rec)
+
+        assert self.rescaler.compute_estimated_fresh_per_cycle() >= 0
+        assert self.rescaler.fresh_items_top_stories_fixed_position is None
 
     def test_rescale_with_subtopic_item(self):
         """Test rescaling of priors for relative experiment size."""
@@ -114,6 +120,29 @@ class TestCrawledContentRescaler:
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
         assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
         assert beta == 20
+
+
+class TestCrawledContentPinnedFreshRescaler:
+    """Test pinned rescalar"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = CrawledContentPinnedFreshRescaler()
+
+    def test_basic_stuff(self):
+        """Test detection of blocked from most popular"""
+        assert self.rescaler.fresh_items_top_stories_fixed_position == 4
+        assert (
+            self.rescaler.fresh_items_top_stories_fixed_est_imp_per_cycle
+            == EST_TOP_STORY_TILE_IMP_PER_CYCLE
+        )
+        assert len(US_UTC_RELATIVE_IMPRESSIONS_NORM) == 24
+        # Sanity check computed target value for tile is in range
+        assert (
+            0.1 * EST_TOP_STORY_TILE_IMP_PER_CYCLE
+            < self.rescaler.compute_estimated_fresh_per_cycle()
+            < 2.5 * EST_TOP_STORY_TILE_IMP_PER_CYCLE
+        )
 
 
 class TestUKCrawledContentRescaler:

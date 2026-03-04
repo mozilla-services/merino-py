@@ -134,21 +134,21 @@ class ContextualRanker(Ranker):
                 no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
                 beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
             score += boost_interest(rec)
-            if (
-                (fresh_items_limit_prior_threshold_multiplier > 0)
-                and not rec.isTimeSensitive
-                and (
-                    no_opens
-                    < beta_value_for_fresh_check * fresh_items_limit_prior_threshold_multiplier
+            remaining_fresh_impressions = 0
+            if fresh_items_limit_prior_threshold_multiplier > 0 and not rec.isTimeSensitive:
+                target_no_opens = (
+                    beta_value_for_fresh_check * fresh_items_limit_prior_threshold_multiplier
                 )
-            ):
-                is_fresh = True
+                if no_opens < target_no_opens:
+                    is_fresh = True
+                    remaining_fresh_impressions = int(target_no_opens - no_opens)
 
             rec.ranking_data = RankingData(
                 score=score,
                 alpha=0,
                 beta=0,
                 is_fresh=is_fresh,
+                remaining_impressions=remaining_fresh_impressions,
             )
 
         sorted_recs = sorted(

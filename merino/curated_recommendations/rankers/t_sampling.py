@@ -91,14 +91,13 @@ class ThompsonSamplingRanker(Ranker):
                 alpha=alpha_val,
                 beta=beta_val,
             )
-            if (
-                (fresh_items_limit_prior_threshold_multiplier > 0)
-                and not rec.isTimeSensitive
-                and (
-                    no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
+            if fresh_items_limit_prior_threshold_multiplier > 0 and not rec.isTimeSensitive:
+                target_no_opens = (
+                    non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
                 )
-            ):
-                rec.ranking_data.is_fresh = True
+                if no_opens < target_no_opens:
+                    rec.ranking_data.is_fresh = True
+                    rec.ranking_data.remaining_impressions = int(target_no_opens - no_opens)
 
         for rec in recs:
             compute_ranking_scores(rec)

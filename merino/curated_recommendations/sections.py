@@ -3,6 +3,8 @@
 import logging
 from copy import deepcopy
 
+import random
+
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
@@ -26,12 +28,16 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CACrawledContentRescaler,
+    CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
     UKCrawledContentRescaler,
 )
-from merino.curated_recommendations.prior_backends.protocol import PriorBackend, EngagementRescaler
+from merino.curated_recommendations.prior_backends.protocol import (
+    PriorBackend,
+    EngagementRescaler,
+)
 from merino.curated_recommendations.protocol import (
     ITEM_SUBTOPIC_FLAG,
     CuratedRecommendationsRequest,
@@ -71,7 +77,7 @@ MAX_SECTIONS_PER_RESPONSE = 20
 
 # Number of articles to use when ranking the section. We choose 4 because there are typically only
 # 4 stories shown for each section. For a period we had the number as 6.
-# In a live test the weighted standard deviation on sectior rank was 0.65 with 4, vs 0.8 with 6.
+# In a live test the weighted standard deviation on section rank was 0.65 with 4, vs 0.8 with 6.
 # Therefore with 4 items there seems to be less exploration in most cases.
 # This Gist runs an eval script on localhost https://gist.github.com/rolf-moz/cfd1062016f1898869248b27af009830
 
@@ -394,6 +400,11 @@ def get_ranking_rescaler_for_branch(
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
 
+    if is_enrolled_in_experiment(
+        request, ExperimentName.FIXED_POSITION_FRESH_ITEMS_EXPERIMENT.value, "treatment"
+    ):
+        return CrawledContentPinnedFreshRescaler()
+
     return CrawledContentRescaler()
 
 
@@ -584,6 +595,52 @@ def rank_sections(
     return sections
 
 
+def pick_random_fresh_story(
+    items: list[CuratedRecommendation], est_imp_per_cycle: int
+) -> tuple[CuratedRecommendation | None, list[CuratedRecommendation]]:
+    """Pick a random fresh story (not blocked from most popular). The chance of picking a fresh story is based on the number of leftover
+    impressions after accounting for max impressions per item, and the number of items. The number of
+    impressions in a period is max_imp_per_item_per_cycle.
+
+    Returns an picked story, and the remaining items, with the story removed if one was picked.
+    Args:
+        items: List of CuratedRecommendation objects
+        est_imp_per_cycle: Estimated number of impressions at a position in a cycle (e.g. a run of the ETL job getting updated data)
+    """
+    fresh_items = list(
+        filter(
+            lambda a: a.ranking_data
+            and a.ranking_data.is_fresh
+            and not a.is_story_blocked_for_top_stories(),
+            items,
+        )
+    )
+    if len(fresh_items) == 0:
+        return None, items
+
+    total_remaining = sum(
+        it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
+    )
+
+    # Chance to *not* pick a fresh item if there are "leftover" impressions
+    # after accounting for remaining impressions among fresh items.
+    if est_imp_per_cycle > 0:
+        leftover = est_imp_per_cycle - total_remaining
+        if leftover > 0:
+            p_non_fresh = min(leftover / est_imp_per_cycle, 1.0)
+            if random.random() < p_non_fresh:
+                return None, items
+    # Weighted pick by remaining impressions
+    weights = [
+        it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
+    ]
+    picked = random.choices(fresh_items, weights=weights, k=1)[0]
+
+    # Remove the picked object from the original items list
+    remaining_items = [it for it in items if it is not picked]
+    return picked, remaining_items
+
+
 def get_top_story_list(
     items: list[CuratedRecommendation],
     top_count: int,
@@ -611,6 +668,17 @@ def get_top_story_list(
     fresh_story_prob = rescaler.fresh_items_top_stories_max_percentage if rescaler else 0
     total_story_count = top_count + extra_count
 
+    fixed_fresh_item_position: int = 0
+    fresh_story_for_fixed_position = None
+
+    # Pick a fresh story at random for position
+    if rescaler and rescaler.fresh_items_top_stories_fixed_position is not None:
+        fixed_fresh_item_position = rescaler.fresh_items_top_stories_fixed_position or 0
+        fresh_story_for_fixed_position, rest_of_stories = pick_random_fresh_story(
+            items, rescaler.compute_estimated_fresh_per_cycle()
+        )
+        items = rest_of_stories
+
     # "Fresh" items are low-impression/new. We throttle (downsample) them to limit their share.
     items_throttled_fresh, unused_fresh = filter_fresh_items_with_probability(
         items,
@@ -636,9 +704,18 @@ def get_top_story_list(
     top_stories = balancer.get_stories()
     after_second_pass_candidates = topic_limited_stories + remaining_stories
     # If constraints are constraining too much, drop remainder of stories in
+    remaining_items = after_second_pass_candidates + non_throttled + unused_fresh
     if len(top_stories) < total_story_count:
-        remaining_items = after_second_pass_candidates + non_throttled + unused_fresh
         top_stories = top_stories + remaining_items[: total_story_count - len(top_stories)]
+
+    # Insert the fresh story at the special position, and remove the other story
+    if fresh_story_for_fixed_position is not None:
+        top_stories = (
+            top_stories[0:fixed_fresh_item_position]
+            + [fresh_story_for_fixed_position]
+            + top_stories[fixed_fresh_item_position:-1]  # Drops last element in most cases
+        )
+
     for idx, rec in enumerate(top_stories):
         rec.receivedRank = idx
     return top_stories
