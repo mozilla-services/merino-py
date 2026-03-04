@@ -88,6 +88,8 @@ class SectionsBackend(SectionsProtocol):
                 description
                 heroTitle
                 heroDescription
+                followable
+                allowAds
                 iab {
                     taxonomy
                     categories
@@ -142,6 +144,8 @@ class SectionsBackend(SectionsProtocol):
                 heroSubtitle=section.get("heroDescription"),
                 iab=section["iab"],
                 createSource=section["createSource"],
+                followable=section["followable"],
+                allowAds=section["allowAds"],
                 sectionItems=[
                     build_corpus_item(
                         section_item["corpusItem"], self.manifest_provider, utm_source

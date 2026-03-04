@@ -397,8 +397,12 @@ def boost_followed_sections(
     initial_section_ids = [section.sectionId for section in req_sections]
 
     # 2. Extract followed section ids & followedAt from req_sections param & store in a dict for quick lookup
+    # Skip sections where followable=False to enforce editorial intent
+    non_followable_ids = {sid for sid, sec in sections.items() if not sec.followable}
     followed_sections_info = {
-        section.sectionId: section.followedAt for section in req_sections if section.isFollowed
+        section.sectionId: section.followedAt
+        for section in req_sections
+        if section.isFollowed and section.sectionId not in non_followable_ids
     }
 
     # 3. Extract blocked section ids from req_sections param

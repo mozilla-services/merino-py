@@ -3,6 +3,8 @@
         "getSections": [
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "travel__lEN_CA",
                 "active": true,
                 "title": "Travel",
@@ -152,6 +154,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "hobbies__lEN_CA",
                 "active": true,
                 "title": "Gaming",
@@ -349,6 +353,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "food__lEN_CA",
                 "active": true,
                 "title": "Food",
@@ -546,6 +552,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "health__lEN_CA",
                 "active": true,
                 "title": "Health",
@@ -647,6 +655,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "finance__lEN_CA",
                 "active": true,
                 "title": "Money",
@@ -796,6 +806,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "business__lEN_CA",
                 "active": true,
                 "title": "Business",
@@ -969,6 +981,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "arts__lEN_CA",
                 "active": true,
                 "title": "Entertainment",
@@ -1166,6 +1180,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "government__lEN_CA",
                 "active": true,
                 "title": "Politics",
@@ -1363,6 +1379,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "home__lEN_CA",
                 "active": true,
                 "title": "Home & Garden",
@@ -1560,6 +1578,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "education-science__lEN_CA",
                 "active": true,
                 "title": "Science",
@@ -1757,6 +1777,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "headlines__lEN_CA",
                 "active": true,
                 "title": "The Latest",
@@ -1930,6 +1952,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "education__lEN_CA",
                 "active": true,
                 "title": "History",
@@ -2127,6 +2151,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "tech__lEN_CA",
                 "active": true,
                 "title": "Tech",
@@ -2312,6 +2338,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "society-parenting__lEN_CA",
                 "active": true,
                 "title": "Parenting",
@@ -2509,6 +2537,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "sports__lEN_CA",
                 "active": true,
                 "title": "Sports",

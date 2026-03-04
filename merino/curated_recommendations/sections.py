@@ -165,6 +165,8 @@ def map_corpus_section_to_section(
         heroSubtitle=corpus_section.heroSubtitle,
         iab=corpus_section.iab,
         layout=deepcopy(layout),
+        followable=corpus_section.followable,
+        allowAds=corpus_section.allowAds,
     )
 
 
@@ -275,7 +277,10 @@ def exclude_recommendations_from_blocked_sections(
 
 
 def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
-    """Disable ads in all sections except the first, second, third, fifth, seventh, and ninth.
+    """Disable ads based on section rank position and the allowAds flag.
+
+    Ads are allowed in sections at ranks {0, 1, 2, 4, 6, 8} only.
+    Sections with allowAds=False have all ad tiles disabled regardless of rank.
 
     Args:
         sections: Mapping of section IDs to Section objects.
@@ -283,13 +288,12 @@ def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
     Returns:
         None. Mutates tile.hasAd flags in-place.
     """
-    allowed = {0, 1, 2, 4, 6, 8}
+    allowed_ranks = {0, 1, 2, 4, 6, 8}
     for sec in sections.values():
-        if sec.receivedFeedRank in allowed:
-            continue
-        for rl in sec.layout.responsiveLayouts:
-            for tile in rl.tiles:
-                tile.hasAd = False
+        if not sec.allowAds or sec.receivedFeedRank not in allowed_ranks:
+            for rl in sec.layout.responsiveLayouts:
+                for tile in rl.tiles:
+                    tile.hasAd = False
 
 
 def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool:
