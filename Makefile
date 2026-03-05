@@ -118,10 +118,11 @@ quicker-test: $(INSTALL_STAMP)  ## Same as "quick-test" but quicker
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
 	MERINO_ENV=testing $(UV) run pytest $(UNIT_TEST_DIR) --fixtures-per-test
 
-.PHONY: integration-tests
+.PHONY: integration-tests ## ryuk is a container that helps with clean up, need it disabled to run two test containers at once.
 integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
 	    MERINO_ENV=testing \
+	    TESTCONTAINERS_RYUK_DISABLED=true \
 	    $(UV) run pytest $(INTEGRATION_TEST_DIR) $(XTRA) \
 	    --junit-xml=$(INTEGRATION_JUNIT_XML)
 
