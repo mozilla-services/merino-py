@@ -148,9 +148,6 @@ class Provider(BaseProvider):
         tickers: list[str] | None
         if srequest.source == "newtab" and not srequest.query:
             tickers = STOCKS_WIDGET_DEFAULT_ETFS
-            self.metrics_client.increment(
-                "polygon.provider.query.new_tab", tags={"source": "newtab"}
-            )
         else:
             # Get the list of tickers (0 to 3) for the query string.
             tickers = get_tickers_for_query(srequest.query)
@@ -159,7 +156,9 @@ class Provider(BaseProvider):
             if not tickers:
                 return []
             else:
-                with self.metrics_client.timeit("polygon.provider.query.latency"):
+                # Tag requests from the New Tab stocks widget with "newtab".
+                tags = {"source": "newtab"} if srequest.source == "newtab" else {}
+                with self.metrics_client.timeit("polygon.provider.query.latency", tags=tags):
                     ticker_summaries: list[TickerSummary] = []
                     # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
                     ticker_snapshots = await self.backend.get_snapshots(tickers)
