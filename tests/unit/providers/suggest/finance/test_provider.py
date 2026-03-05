@@ -164,6 +164,7 @@ def test_validate_fails_on_missing_query_param(
 async def test_query_ticker_summary_for_ticker_symbol_returned(
     backend_mock: Any,
     provider: Provider,
+    statsd_mock: Any,
     ticker_summary: TickerSummary,
     ticker_snapshot: TickerSnapshot,
     geolocation: Location,
@@ -187,6 +188,8 @@ async def test_query_ticker_summary_for_ticker_symbol_returned(
     )
 
     assert suggestions == expected_suggestions
+    # Verify non-newtab requests emit the latency metric with no source tag.
+    statsd_mock.timeit.assert_called_once_with("polygon.provider.query.latency", tags={})
 
 
 @pytest.mark.asyncio
@@ -317,8 +320,9 @@ async def test_query_returns_default_etfs_for_newtab_source_with_empty_query(
     values = suggestions[0].custom_details.polygon.values
     assert [s.ticker for s in values] == STOCKS_WIDGET_DEFAULT_ETFS
 
-    statsd_mock.increment.assert_called_once_with(
-        "polygon.provider.query.new_tab", tags={"source": "newtab"}
+    # Verify that the source tag is tracked on default ETF requests from newtab.
+    statsd_mock.timeit.assert_called_once_with(
+        "polygon.provider.query.latency", tags={"source": "newtab"}
     )
 
 
@@ -326,6 +330,7 @@ async def test_query_returns_default_etfs_for_newtab_source_with_empty_query(
 async def test_query_uses_ticker_lookup_for_newtab_source_with_non_empty_query(
     backend_mock: Any,
     provider: Provider,
+    statsd_mock: Any,
     ticker_summary: TickerSummary,
     ticker_snapshot: TickerSnapshot,
     geolocation: Location,
@@ -340,6 +345,11 @@ async def test_query_uses_ticker_lookup_for_newtab_source_with_non_empty_query(
 
     backend_mock.get_snapshots.assert_awaited_once_with(["DDOG"])
     assert len(suggestions) == 1
+
+    # Verify source=newtab is tracked on individual ticker lookups from newtab.
+    statsd_mock.timeit.assert_called_once_with(
+        "polygon.provider.query.latency", tags={"source": "newtab"}
+    )
 
 
 # TODO add test for when backend.get_snapshots returns []

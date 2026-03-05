@@ -30,7 +30,10 @@ suggest/polygon:
     description: |
       A gauge to track the latency for the polygon provider to return a finance suggestion
     type: gauge
-    labels: [] # no labels
+    labels:
+      - name: source
+        description: |
+          Origin of the finance suggestion request
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
@@ -94,18 +97,6 @@ suggest/polygon:
       A counter for snapshot cache misses
     type: counter
     labels: [] # no labels
-    scope: |
-      The "api/v1/suggest" API endpoint.
-    alert_policy: []
-
-  polygon_provider_query_new_tab:
-    description: |
-      A counter for stocks widget requests via the newtab source
-    type: counter
-    labels:
-      - name: source
-        description: |
-          Origin of the stock info request
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
