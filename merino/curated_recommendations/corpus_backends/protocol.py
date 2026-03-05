@@ -95,6 +95,10 @@ class CorpusSection(BaseModel):
     iab: IABMetadata | None = None
     externalId: str
     createSource: CreateSource
+    followable: bool = Field(default=True, description="Whether users can follow this section.")
+    allowAds: bool = Field(
+        default=True, description="Whether ads can be displayed in this section."
+    )
 
 
 class SectionsProtocol(Protocol):

@@ -3,6 +3,8 @@
         "getSections": [
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "technology",
                 "active": true,
                 "title": "Technology",
@@ -200,6 +202,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "entertainment",
                 "active": true,
                 "title": "Entertainment",
@@ -373,6 +377,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "politics",
                 "active": true,
                 "title": "Politics",
@@ -558,6 +564,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "gaming",
                 "active": true,
                 "title": "Gaming",
@@ -755,6 +763,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "science",
                 "active": true,
                 "title": "Science",
@@ -952,6 +962,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "personal-finance",
                 "active": true,
                 "title": "Money",
@@ -1137,6 +1149,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "travel__lEN_GB",
                 "active": true,
                 "title": "Travel",
@@ -1322,6 +1336,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "food__lEN_GB",
                 "active": true,
                 "title": "Food",
@@ -1495,6 +1511,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "gaming__lEN_GB",
                 "active": true,
                 "title": "Gaming",
@@ -1692,6 +1710,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "personal-finance__lEN_GB",
                 "active": true,
                 "title": "Money",
@@ -1877,6 +1897,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "entertainment__lEN_GB",
                 "active": true,
                 "title": "Entertainment",
@@ -2062,6 +2084,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "education__lEN_GB",
                 "active": true,
                 "title": "History",
@@ -2259,6 +2283,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "technology__lEN_GB",
                 "active": true,
                 "title": "Technology",
@@ -2456,6 +2482,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "science__lEN_GB",
                 "active": true,
                 "title": "Science",
@@ -2653,6 +2681,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "business__lEN_GB",
                 "active": true,
                 "title": "Business",
@@ -2826,6 +2856,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "sports__lEN_GB",
                 "active": true,
                 "title": "Sports",
@@ -3023,6 +3055,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "politics__lEN_GB",
                 "active": true,
                 "title": "Politics",
@@ -3208,6 +3242,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "health__lEN_GB",
                 "active": true,
                 "title": "Health",
@@ -3381,6 +3417,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "home-garden__lEN_GB",
                 "active": true,
                 "title": "Home & Garden",
@@ -3566,6 +3604,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "parenting__lEN_GB",
                 "active": true,
                 "title": "Parenting",

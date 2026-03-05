@@ -458,6 +458,10 @@ class Section(BaseModel):
         "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
     isInitiallyVisible: bool = True
+    followable: bool = Field(default=True, description="Whether users can follow this section.")
+    allowAds: bool = Field(
+        default=True, description="Whether ads can be displayed in this section."
+    )
 
 
 class InterestPickerSection(BaseModel):

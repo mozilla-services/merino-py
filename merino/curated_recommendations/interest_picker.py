@@ -40,8 +40,11 @@ def _set_section_initial_visibility(
             visible_count += 1
         else:
             section.isInitiallyVisible = False
-    invisible_count = sum(1 for section in sorted_sections if not section.isInitiallyVisible)
-    if invisible_count < min_picker:
+    # Only count followable hidden sections, since non-followable ones are excluded from the picker
+    eligible_hidden = sum(
+        1 for section in sorted_sections if not section.isInitiallyVisible and section.followable
+    )
+    if eligible_hidden < min_picker:
         for section in sections.values():
             section.isInitiallyVisible = True
 
@@ -78,9 +81,14 @@ def _build_picker(
     sections: dict[str, Section],
     min_picker_sections: int,
 ) -> InterestPicker | None:
-    """Create an InterestPicker if enough sections are eligible, by not being visible initially."""
+    """Create an InterestPicker if enough sections are eligible, by not being visible initially.
+
+    Sections with followable=False are excluded from the picker.
+    """
     section_ids = [
-        section_id for section_id, section in sections.items() if not section.isInitiallyVisible
+        section_id
+        for section_id, section in sections.items()
+        if not section.isInitiallyVisible and section.followable
     ]
     if len(section_ids) < min_picker_sections:
         return None

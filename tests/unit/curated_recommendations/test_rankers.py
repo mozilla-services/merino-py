@@ -1007,6 +1007,33 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         assert not new_feed["travel"].isFollowed
         assert new_feed["travel"].isBlocked
 
+    @freeze_time("2025-03-20 12:00:00", tz_offset=0)
+    def test_non_followable_section_not_boosted(self):
+        """Test that a section with followable=False is not boosted even if client sends isFollowed=True."""
+        req_sections = [
+            SectionConfiguration(
+                sectionId="business",
+                isFollowed=True,
+                isBlocked=False,
+                followedAt=datetime(2025, 3, 19, tzinfo=timezone.utc),
+            ),
+        ]
+        feed = self.generate_sections(
+            [0, 1, 2, 3],
+            ["top_stories_section", "business", "arts", "food"],
+        )
+        feed["business"].followable = False
+
+        new_feed = boost_followed_sections(req_sections, feed)
+
+        # business should NOT be marked as followed
+        assert not new_feed["business"].isFollowed
+        # Original rank order should be preserved since no section was boosted
+        assert new_feed["top_stories_section"].receivedFeedRank == 0
+        assert new_feed["business"].receivedFeedRank == 1
+        assert new_feed["arts"].receivedFeedRank == 2
+        assert new_feed["food"].receivedFeedRank == 3
+
 
 class TestPutTopStoriesFirst:
     """Tests covering put_top_stories_first"""

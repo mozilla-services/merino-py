@@ -3,6 +3,8 @@
         "getSections": [
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "travel__lEN_IE",
                 "active": true,
                 "title": "Travel",
@@ -128,6 +130,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "food__lEN_IE",
                 "active": true,
                 "title": "Food",
@@ -289,6 +293,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "health__lEN_IE",
                 "active": true,
                 "title": "Health",
@@ -414,6 +420,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "arts__lEN_IE",
                 "active": true,
                 "title": "Entertainment",
@@ -611,6 +619,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "business__lEN_IE",
                 "active": true,
                 "title": "Business",
@@ -808,6 +818,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "home__lEN_IE",
                 "active": true,
                 "title": "Home & Garden",
@@ -981,6 +993,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "education-science__lEN_IE",
                 "active": true,
                 "title": "Science",
@@ -1178,6 +1192,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "society-parenting__lEN_IE",
                 "active": true,
                 "title": "Parenting",
@@ -1267,6 +1283,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "government__lEN_IE",
                 "active": true,
                 "title": "Politics",
@@ -1428,6 +1446,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "hobbies__lEN_IE",
                 "active": true,
                 "title": "Gaming",
@@ -1625,6 +1645,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "sports__lEN_IE",
                 "active": true,
                 "title": "Sports",
@@ -1810,6 +1832,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "technology__lEN_IE",
                 "active": true,
                 "title": "Tech",
@@ -2007,6 +2031,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "finance__lEN_IE",
                 "active": true,
                 "title": "Money",
@@ -2096,6 +2122,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "education__lEN_IE",
                 "active": true,
                 "title": "History",
@@ -2269,6 +2297,8 @@
             },
             {
                 "createSource": "ML",
+                "followable": true,
+                "allowAds": true,
                 "externalId": "headlines__lEN_IE",
                 "active": true,
                 "title": "The Latest",

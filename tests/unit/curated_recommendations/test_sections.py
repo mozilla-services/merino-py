@@ -186,15 +186,15 @@ class TestAdjustAdsInSections:
             tile.hasAd for layout in section.layout.responsiveLayouts for tile in layout.tiles
         )
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "section_count, expected_section_ranks_with_ads",
         [
             (11, {0, 1, 2, 4, 6, 8}),  # All 6 expected sections (1,2,3,5,7,9) to have ads
             (4, {0, 1, 2}),  # Partially expected sections to have ads
         ],
+        ids=["all-allowed-ranks", "partial-allowed-ranks"],
     )
-    async def test_ads_adjusted_in_sections_by_section_count(
+    def test_ads_adjusted_in_sections_by_section_count(
         self, section_count, expected_section_ranks_with_ads
     ):
         """Test that ads show up only in expected sections."""
@@ -214,6 +214,17 @@ class TestAdjustAdsInSections:
                 assert self.ads_in_section(section)
             else:
                 assert not self.ads_in_section(section)
+
+    def test_allow_ads_false_disables_ads_at_allowed_rank(self):
+        """Test that allowAds=False disables ads even at normally allowed ranks."""
+        sample_feed = generate_sections_feed(section_count=4)
+        sample_feed["top_stories_section"].allowAds = False
+        assert self.ads_in_section(sample_feed["top_stories_section"])
+
+        adjust_ads_in_sections(sample_feed)
+
+        # Rank 0 normally allows ads, but allowAds=False should override
+        assert not self.ads_in_section(sample_feed["top_stories_section"])
 
 
 class TestMlSectionsExperiment:
@@ -570,6 +581,25 @@ class TestMapCorpusSectionToSection:
 
         assert [rec.corpusItemId for rec in sec.recommendations] == ["dup", "unique"]
         assert [rec.receivedRank for rec in sec.recommendations] == [0, 1]
+
+    @pytest.mark.parametrize(
+        "followable,allow_ads",
+        [(True, True), (False, True), (True, False), (False, False)],
+        ids=["both-true", "not-followable", "no-ads", "neither"],
+    )
+    def test_followable_and_allow_ads_passthrough(self, followable, allow_ads):
+        """Test that followable and allowAds are passed from CorpusSection to Section."""
+        cs = CorpusSection(
+            sectionItems=[generate_corpus_item("item1", "sched1")],
+            title="Test",
+            externalId="test-section",
+            createSource=CreateSource.MANUAL,
+            followable=followable,
+            allowAds=allow_ads,
+        )
+        sec = map_corpus_section_to_section(cs, 0)
+        assert sec.followable == followable
+        assert sec.allowAds == allow_ads
 
 
 class TestGetCorpusSectionsForLegacyTopics:
