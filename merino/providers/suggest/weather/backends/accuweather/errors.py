@@ -25,6 +25,10 @@ class AccuweatherErrorMessages(Enum):
     UNEXPECTED_CURRENT_CONDITIONS_ERROR = "Unexpected error occurred when requesting current conditions from Accuweather: {exception_class_name}"
     UNEXPECTED_FORECAST_ERROR = "Unexpected error occurred when requesting forecast from Accuweather: {exception_class_name}"
     UNEXPECTED_LOCATION_COMPLETION_ERROR = "Unexpected error occurred when requesting location completion from Accuweather: {exception_class_name}"
+    CACHE_READ_HOURLY_FORECAST_ERROR = "Failed to read hourly forecast from cache: {exception}"
+    HTTP_UNEXPECTED_HOURLY_FORECAST_RESPONSE = "Unexpected hourly forecast response"
+    HOURLY_FORECAST_PARSE_ERROR = "Failed to parse hourly forecast data: {exception_class_name}"
+    UNEXPECTED_HOURLY_FORECAST_ERROR = "Unexpected error occurred when requesting hourly forecasts from AccuWeather: {exception_class_name}"
 
     def format_message(self, **kwargs) -> str:
         """Format the enum string value with the passed in keyword arguments"""

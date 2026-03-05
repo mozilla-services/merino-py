@@ -368,8 +368,8 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 forecast_ttl_sec = 3600 # 1 hr
 
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__HOURLY_FORECAST_TTL_SEC
-# Cache TTL for hourly forecasts (1 hour).
-hourly_forecast_ttl_sec = 3600
+# Cache TTL for hourly forecasts (30 minutes).
+hourly_forecast_ttl_sec = 1800
 
 [default.providers.sports]
 type="sports"

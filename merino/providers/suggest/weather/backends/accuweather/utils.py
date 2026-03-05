@@ -20,6 +20,8 @@ PARTNER_CODE_NEWTAB: str | None = settings.accuweather.get("partner_code_newtab_
 PARTNER_FFSUGGEST_CODE: str | None = settings.accuweather.get("partner_code_ffsuggest_value")
 VALID_LANGUAGES: frozenset = frozenset(settings.accuweather.default_languages)
 DEFAULT_FORECAST_HOURS = 5
+# The ttl value returned for an expired redis key.
+REDIS_EXPIRED_KEY_TTL = -2
 
 logger = logging.getLogger(__name__)
 
