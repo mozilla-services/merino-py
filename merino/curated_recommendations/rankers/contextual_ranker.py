@@ -42,9 +42,10 @@ logger = logging.getLogger(__name__)
 # These topics are in the current interest vector but not being used to determine the
 # cohort selection.
 CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING = {
-    Topic.PERSONAL_FINANCE: 1.0,
+    Topic.PERSONAL_FINANCE: 1.2,
     Topic.TECHNOLOGY: 1.0,
-    Topic.BUSINESS: 1.0,
+    Topic.POLITICS: 0.6,
+    Topic.ARTS: 0.6,
 }
 
 CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0007
