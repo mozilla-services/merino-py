@@ -21,6 +21,11 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
+LOCAL_RERANK_WEGHT = (
+    30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
+)
+# the normalized interest vector is added if there is an interest match.
+
 FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 13000
 EST_TOP_STORY_TILE_IMP_PER_CYCLE = 220_000_000 // 24 // 4  # Assuming 4 ETL data cycles per hour
 
@@ -63,6 +68,7 @@ class CrawledContentRescaler(EngagementRescaler):
         data.setdefault("fresh_items_top_stories_max_percentage", 0.15)
         data.setdefault("fresh_items_section_ranking_max_percentage", 0.15)
         data.setdefault("fresh_items_limit_prior_threshold_multiplier", 1)
+        data.setdefault("local_rerank_scalar", LOCAL_RERANK_WEGHT)
         super().__init__(**data)
 
     @classmethod

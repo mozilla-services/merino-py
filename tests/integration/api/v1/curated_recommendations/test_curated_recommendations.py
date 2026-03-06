@@ -1925,10 +1925,11 @@ class TestSections:
         assert "top_stories_section" in sections
         # Confirm that we have different content than for our 0 cohort item, indicating we
         # got data from aother cohort or have fallen back to global US rankings
-        assert sections["top_stories_section"]["recommendations"][0][
+        top_item = sections["top_stories_section"]["recommendations"][0]
+        assert top_item[
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
-
+        assert isinstance(top_item["serverScore"], float)
         response = client.post(
             "/api/v1/curated-recommendations",
             json={
