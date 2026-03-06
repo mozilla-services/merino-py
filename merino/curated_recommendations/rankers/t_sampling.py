@@ -91,14 +91,13 @@ class ThompsonSamplingRanker(Ranker):
                 alpha=alpha_val,
                 beta=beta_val,
             )
-            if (
-                (fresh_items_limit_prior_threshold_multiplier > 0)
-                and not rec.isTimeSensitive
-                and (
-                    no_opens < non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
+            if fresh_items_limit_prior_threshold_multiplier > 0 and not rec.isTimeSensitive:
+                target_no_opens = (
+                    non_rescaled_b_prior * fresh_items_limit_prior_threshold_multiplier
                 )
-            ):
-                rec.ranking_data.is_fresh = True
+                if no_opens < target_no_opens:
+                    rec.ranking_data.is_fresh = True
+                    rec.ranking_data.remaining_impressions = int(target_no_opens - no_opens)
 
         for rec in recs:
             compute_ranking_scores(rec)
@@ -114,7 +113,7 @@ class ThompsonSamplingRanker(Ranker):
     def rank_sections(
         self,
         sections: dict[str, Section],
-        top_n: int = 6,
+        top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
     ) -> dict[str, Section]:
         """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.

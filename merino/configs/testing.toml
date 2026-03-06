@@ -55,6 +55,9 @@ partner_code_newtab_value = "test_newtab"
 form_factors = ["desktop", "phone"]
 countries = ["US", "DE"]
 
+[testing.mars]
+base_url = "http://test-mars-api"
+
 [testing.providers.accuweather]
 enabled_by_default = false
 backend = "test_weather"
@@ -71,7 +74,7 @@ kickstart = false
 
 [testing.providers.sports.es]
 dsn = "http://localhost:9200"
-request_timeout_ms = 100
+request_timeout_ms = 10000
 api_key = "test"
 
 [testing.polygon]

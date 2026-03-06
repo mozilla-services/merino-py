@@ -1,5 +1,6 @@
 """Protocol for the AdM provider backends."""
 
+from enum import Enum
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
@@ -7,6 +8,13 @@ from moz_merino_ext.amp import AmpIndexManager
 
 SegmentType = tuple[int]
 IndexType = dict[str, dict[SegmentType, tuple[int, int]]]
+
+
+class FormFactor(Enum):
+    """Enum for form factor."""
+
+    DESKTOP = 0
+    PHONE = 1
 
 
 class SuggestionContent(BaseModel):

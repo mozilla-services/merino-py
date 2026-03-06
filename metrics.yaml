@@ -30,7 +30,10 @@ suggest/polygon:
     description: |
       A gauge to track the latency for the polygon provider to return a finance suggestion
     type: gauge
-    labels: [] # no labels
+    labels:
+      - name: source
+        description: |
+          Origin of the finance suggestion request
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
@@ -74,6 +77,15 @@ suggest/polygon:
   polygon_snapshot_cache_hit:
     description: |
       A counter for snapshot cache hits
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  polygon_snapshot_cache_partial_hit:
+    description: |
+      A counter for partial snapshot cache hits where some tickers are cached and others are not
     type: counter
     labels: [] # no labels
     scope: |

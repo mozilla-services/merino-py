@@ -1,0 +1,424 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the MARS backend module."""
+
+import json
+from collections import defaultdict
+
+import httpx
+import moz_merino_ext.amp
+import pytest
+from pytest import LogCaptureFixture
+from pytest_mock import MockerFixture
+
+from merino.exceptions import BackendError
+from merino.providers.suggest.adm.backends.mars import MarsBackend
+from merino.providers.suggest.adm.backends.protocol import (
+    FormFactor,
+    SegmentType,
+    SuggestionContent,
+)
+from merino.utils.icon_processor import IconProcessor
+from tests.types import FilterCaplogFixture
+
+
+@pytest.fixture(name="mock_icon_processor")
+def fixture_mock_icon_processor(mocker: MockerFixture) -> IconProcessor:
+    """Create a mock IconProcessor for testing."""
+    mock_processor: IconProcessor = mocker.create_autospec(IconProcessor, instance=True)
+
+    async def mock_process(url: str, fallback_url: str | None = None) -> str:
+        return url
+
+    mock_processor.process_icon_url.side_effect = mock_process  # type: ignore
+    return mock_processor
+
+
+@pytest.fixture(name="mars_backend")
+def fixture_mars_backend(mock_icon_processor: IconProcessor) -> MarsBackend:
+    """Create a MarsBackend object for test."""
+    return MarsBackend(
+        base_url="http://test-mars-api",
+        icon_processor=mock_icon_processor,
+        connect_timeout=5.0,
+        request_timeout=10.0,
+    )
+
+
+@pytest.fixture(name="suggestion_json")
+def fixture_suggestion_json() -> str:
+    """Return suggestion JSON as returned by the MARS API.
+
+    Uses the same structure as the RS test fixture ``rs_attachment``.
+    """
+    return json.dumps(
+        [
+            {
+                "id": 2,
+                "advertiser": "Example.org",
+                "click_url": "https://example.org/click/mozilla",
+                "full_keywords": [
+                    ["firefox accounts", 3],
+                    ["mozilla firefox accounts", 4],
+                ],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "impression_url": "https://example.org/impression/mozilla",
+                "keywords": [
+                    "firefox",
+                    "firefox account",
+                    "firefox accounts",
+                    "mozilla",
+                    "mozilla firefox",
+                    "mozilla firefox account",
+                    "mozilla firefox accounts",
+                ],
+                "title": "Mozilla Firefox Accounts",
+                "url": "https://example.org/target/mozfirefoxaccounts",
+            }
+        ]
+    )
+
+
+@pytest.fixture(name="suggestion_response")
+def fixture_suggestion_response(suggestion_json: str) -> httpx.Response:
+    """Return a successful MARS suggestion response with ETag."""
+    return httpx.Response(
+        status_code=200,
+        text=suggestion_json,
+        headers={"ETag": '"etag-v1"'},
+        request=httpx.Request(
+            method="GET",
+            url="http://test-mars-api/suggestions?country=US&form_factor=desktop",
+        ),
+    )
+
+
+# Default config has 1 country (US) x 1 form_factor (desktop) = 1 segment.
+# Tests use this to keep mock setup predictable.
+DEFAULT_SEGMENT = (FormFactor.DESKTOP.value,)
+DEFAULT_IDX_ID = f"US/{DEFAULT_SEGMENT}"
+
+
+def test_init_invalid_base_url(mock_icon_processor: IconProcessor) -> None:
+    """Test that a ValueError is raised if initializing with an empty base_url."""
+    with pytest.raises(ValueError, match="The MARS 'base_url' parameter is not specified"):
+        MarsBackend(
+            base_url="",
+            icon_processor=mock_icon_processor,
+            connect_timeout=5.0,
+            request_timeout=10.0,
+        )
+
+
+@pytest.mark.asyncio
+async def test_fetch(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that the fetch method returns the proper suggestion content."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    suggestion_content: SuggestionContent = await mars_backend.fetch()
+
+    assert suggestion_content.index_manager.has(DEFAULT_IDX_ID)
+    assert suggestion_content.index_manager.stats(DEFAULT_IDX_ID) == {
+        "keyword_index_size": 5,
+        "suggestions_count": 1,
+        "icons_count": 1,
+        "advertisers_count": 1,
+        "url_templates_count": 1,
+    }
+
+
+@pytest.mark.asyncio
+async def test_fetch_skip(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that cached content is preserved when all segments return 304.
+
+    Mirrors RS ``test_fetch_skip``: first fetch populates data and icons,
+    second fetch with 304 responses skips processing entirely and preserves
+    the cached ``suggestion_content`` (including icons).
+    """
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    suggestion_content_1st: SuggestionContent = await mars_backend.fetch()
+    assert suggestion_content_1st.index_manager.has(DEFAULT_IDX_ID)
+    assert mars_backend.etags[DEFAULT_IDX_ID] == '"etag-v1"'
+    assert "01" in suggestion_content_1st.icons
+
+    # Second fetch: server returns 304 for all segments.
+    not_modified_response = httpx.Response(
+        status_code=304,
+        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+    )
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=not_modified_response,
+    )
+
+    suggestion_content_2nd: SuggestionContent = await mars_backend.fetch()
+
+    # Index and icons should be preserved — early return with cached content.
+    assert suggestion_content_2nd.index_manager.has(DEFAULT_IDX_ID)
+    assert "01" in suggestion_content_2nd.icons
+
+
+@pytest.mark.asyncio
+async def test_fetch_partial_update(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_json: str,
+) -> None:
+    """Test that a partial update (some 304, some 200) merges icons.
+
+    Simulates 2 segments: US/desktop uses icon "01", DE/desktop uses icon
+    "02". On second fetch, US returns 304 (unchanged) and DE returns 200
+    with new data. Icons from both segments must be preserved.
+    """
+    us_json = suggestion_json  # uses icon "01"
+    de_json = json.dumps(
+        [
+            {
+                "id": 3,
+                "advertiser": "DE-Example.org",
+                "click_url": "https://de.example.org/click",
+                "full_keywords": [["berlin", 3]],
+                "iab_category": "5 - Education",
+                "icon": "02",
+                "serp_categories": [],
+                "impression_url": "https://de.example.org/impression",
+                "keywords": ["berlin"],
+                "title": "Berlin Guide",
+                "url": "https://de.example.org/target/berlin",
+            }
+        ]
+    )
+
+    us_response = httpx.Response(
+        status_code=200,
+        text=us_json,
+        headers={"ETag": '"etag-us-v1"'},
+        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+    )
+    de_response = httpx.Response(
+        status_code=200,
+        text=de_json,
+        headers={"ETag": '"etag-de-v1"'},
+        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+    )
+
+    # Patch settings so fetch() iterates over US + DE.
+    mocker.patch(
+        "merino.providers.suggest.adm.backends.mars.settings.mars.countries",
+        ["US", "DE"],
+    )
+    mocker.patch(
+        "merino.providers.suggest.adm.backends.mars.settings.mars.form_factors",
+        ["desktop"],
+    )
+
+    # First fetch: both segments return 200.
+    mocker.patch.object(httpx.AsyncClient, "get", side_effect=[us_response, de_response])
+
+    suggestion_content_1st = await mars_backend.fetch()
+
+    de_idx_id = f"DE/{DEFAULT_SEGMENT}"
+    assert suggestion_content_1st.index_manager.has(DEFAULT_IDX_ID)
+    assert suggestion_content_1st.index_manager.has(de_idx_id)
+    assert "01" in suggestion_content_1st.icons
+    assert "02" in suggestion_content_1st.icons
+
+    # Second fetch: US returns 304, DE returns 200 with new data.
+    us_304 = httpx.Response(
+        status_code=304,
+        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+    )
+    mocker.patch.object(httpx.AsyncClient, "get", side_effect=[us_304, de_response])
+
+    suggestion_content_2nd = await mars_backend.fetch()
+
+    # Both icons preserved: "01" from cached US, "02" from refreshed DE.
+    assert "01" in suggestion_content_2nd.icons
+    assert "02" in suggestion_content_2nd.icons
+
+
+@pytest.mark.asyncio
+async def test_fetch_with_index_build_fail(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test logging when building the index fails."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+    mocker.patch.object(
+        moz_merino_ext.amp.AmpIndexManager,
+        "build",
+        side_effect=Exception("Build Index Error"),
+    )
+
+    await mars_backend.fetch()
+
+    records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.mars")
+    assert len(records) == 1
+    assert records[0].__dict__["error message"] == "Build Index Error"
+
+
+@pytest.mark.asyncio
+async def test_fetch_http_error(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+) -> None:
+    """Test that MarsError is raised on HTTP failures."""
+    error_response = httpx.Response(
+        status_code=500,
+        text="Internal Server Error",
+        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+    )
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=error_response,
+    )
+
+    with pytest.raises(BackendError):
+        await mars_backend.fetch()
+
+
+@pytest.mark.asyncio
+async def test_fetch_icons(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    mock_icon_processor: IconProcessor,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that IconProcessor is called for icons in use."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    suggestion_content = await mars_backend.fetch()
+
+    # The suggestion has icon "01", so it should be in icons.
+    assert "01" in suggestion_content.icons
+    mock_icon_processor.process_icon_url.assert_called()  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_fetch_icon_processing_failure(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that icon processing failure falls back to the original URL."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    async def mock_process_fail(url: str, fallback_url: str | None = None) -> str:
+        raise Exception("GCS upload failed")
+
+    mars_backend.icon_processor.process_icon_url = mock_process_fail  # type: ignore[method-assign]
+
+    suggestion_content = await mars_backend.fetch()
+
+    # Icon should fall back to original URL.
+    assert "01" in suggestion_content.icons
+    assert suggestion_content.icons["01"] == "http://test-mars-api/icons/01"
+
+    records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.mars")
+    error_records = [r for r in records if r.levelname == "ERROR"]
+    assert len(error_records) >= 1
+
+
+@pytest.mark.asyncio
+async def test_get_suggestions(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_json: str,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that get_suggestions returns the proper structure."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    segments = [("US", DEFAULT_SEGMENT, "desktop", DEFAULT_IDX_ID)]
+    suggestions: defaultdict[str, dict[SegmentType, str]] = await mars_backend.get_suggestions(
+        segments
+    )
+
+    assert "US" in suggestions
+    assert list(suggestions["US"].keys()) == [DEFAULT_SEGMENT]
+    assert suggestions["US"][DEFAULT_SEGMENT] == suggestion_json
+
+
+@pytest.mark.asyncio
+async def test_get_suggestion_data(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_json: str,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that get_suggestion_data returns raw JSON text."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    result = await mars_backend.get_suggestion_data("US", "desktop", DEFAULT_IDX_ID)
+
+    assert result == suggestion_json
+
+
+@pytest.mark.asyncio
+async def test_get_suggestion_data_backend_error(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+) -> None:
+    """Test that MarsError is raised on connection failures."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        side_effect=httpx.ConnectError("Connection refused"),
+    )
+
+    with pytest.raises(BackendError):
+        await mars_backend.get_suggestion_data("US", "desktop", DEFAULT_IDX_ID)
+
+
+def test_get_segment_invalid_form_factor(mars_backend: MarsBackend) -> None:
+    """Test that get_segment raises KeyError for unknown form factors."""
+    with pytest.raises(KeyError):
+        mars_backend.get_segment("tablet")

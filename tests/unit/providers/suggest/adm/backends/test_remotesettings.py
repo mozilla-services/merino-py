@@ -20,10 +20,10 @@ from pytest_mock import MockerFixture
 
 from merino.exceptions import BackendError
 from merino.providers.suggest.adm.backends.protocol import SuggestionContent
+from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.backends.remotesettings import (
     KintoSuggestion,
     RemoteSettingsBackend,
-    FormFactor,
 )
 from merino.utils.icon_processor import IconProcessor
 from tests.types import FilterCaplogFixture

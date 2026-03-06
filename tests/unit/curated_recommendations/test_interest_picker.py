@@ -167,3 +167,52 @@ def test_set_section_initial_visibility_with_followed():
     for s in sections.values():
         if s.isFollowed:
             assert s.isInitiallyVisible is True
+
+
+def test_non_followable_sections_excluded_from_picker():
+    """Test that sections with followable=False are excluded from the interest picker."""
+    total = 20
+    sections = generate_sections_feed(total)
+
+    # Pick 3 non-top-stories sections to make non-followable
+    non_followable_ids = set()
+    candidates = [k for k in sections if k != "top_stories_section"]
+    for key in candidates[-3:]:
+        sections[key].followable = False
+        non_followable_ids.add(key)
+
+    picker = create_interest_picker(sections)
+    assert picker is not None, "Picker should be created with enough followable hidden sections"
+
+    picker_ids = {ps.sectionId for ps in picker.sections}
+    assert picker_ids.isdisjoint(non_followable_ids)
+    assert all(sections[sid].followable for sid in picker_ids)
+
+
+def test_non_followable_hidden_sections_dont_trigger_picker():
+    """Test that non-followable hidden sections don't count toward picker eligibility.
+
+    If many sections are hidden but most are non-followable, the picker should not be created
+    and all sections should be made visible instead.
+    """
+    # Enough sections so that hidden count >= MIN_INTEREST_PICKER_COUNT before followable filter
+    total = MIN_INITIALLY_VISIBLE_SECTION_COUNT + MIN_INTEREST_PICKER_COUNT + 1
+    sections = generate_sections_feed(total)
+
+    # Mark most hidden sections as non-followable, leaving only 2 followable hidden
+    followable_hidden_to_keep = 2
+    hidden_sections = sorted(
+        [
+            (k, s)
+            for k, s in sections.items()
+            if s.receivedFeedRank >= MIN_INITIALLY_VISIBLE_SECTION_COUNT
+        ],
+        key=lambda kv: kv[1].receivedFeedRank,
+    )
+    for key, section in hidden_sections[followable_hidden_to_keep:]:
+        section.followable = False
+
+    picker = create_interest_picker(sections)
+    # Not enough followable hidden sections -> no picker, all visible
+    assert picker is None
+    assert all(s.isInitiallyVisible for s in sections.values())

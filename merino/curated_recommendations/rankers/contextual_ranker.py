@@ -1,5 +1,6 @@
 """Algorithms for ranking curated recommendations."""
 
+from merino.curated_recommendations.corpus_backends.protocol import Topic
 import numpy as np
 
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -38,6 +39,17 @@ CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
 
 logger = logging.getLogger(__name__)
 
+# These topics are in the current interest vector but not being used to determine the
+# cohort selection.
+CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING = {
+    Topic.PERSONAL_FINANCE: 1.0,
+    Topic.TECHNOLOGY: 1.0,
+    Topic.BUSINESS: 1.0,
+}
+
+CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0007
+CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_OFFSET = 0.2
+
 
 class ContextualRanker(Ranker):
     """Base class for ranking curated recommendations"""
@@ -66,6 +78,22 @@ class ContextualRanker(Ranker):
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region and utcOffset.
         """
+
+        def boost_interest(rec: CuratedRecommendation) -> float:
+            if personal_interests is None or rec.topic is None:
+                return 0.0
+            if rec.topic.value in personal_interests.normalized_scores:
+                return (
+                    max(
+                        personal_interests.normalized_scores[rec.topic.value]
+                        * CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING.get(rec.topic, 0.0)
+                        - CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_OFFSET,
+                        0.0,
+                    )
+                    * CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT
+                )
+            return 0.0
+
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
         )
@@ -105,22 +133,22 @@ class ContextualRanker(Ranker):
                 # impresions before completely ignoring the no_opens from the legacy engagement backend.
                 no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
                 beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
-
-            if (
-                (fresh_items_limit_prior_threshold_multiplier > 0)
-                and not rec.isTimeSensitive
-                and (
-                    no_opens
-                    < beta_value_for_fresh_check * fresh_items_limit_prior_threshold_multiplier
+            score += boost_interest(rec)
+            remaining_fresh_impressions = 0
+            if fresh_items_limit_prior_threshold_multiplier > 0 and not rec.isTimeSensitive:
+                target_no_opens = (
+                    beta_value_for_fresh_check * fresh_items_limit_prior_threshold_multiplier
                 )
-            ):
-                is_fresh = True
+                if no_opens < target_no_opens:
+                    is_fresh = True
+                    remaining_fresh_impressions = int(target_no_opens - no_opens)
 
             rec.ranking_data = RankingData(
                 score=score,
                 alpha=0,
                 beta=0,
                 is_fresh=is_fresh,
+                remaining_impressions=remaining_fresh_impressions,
             )
 
         sorted_recs = sorted(
@@ -133,7 +161,7 @@ class ContextualRanker(Ranker):
     def rank_sections(
         self,
         sections: dict[str, Section],
-        top_n: int = 6,
+        top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
     ) -> dict[str, Section]:
         """Re-rank sections using average score of top items."""

@@ -180,6 +180,7 @@ async def _update_cache(
             await _fetch_and_store(func, entry, args, kwargs, wait_expiration)
         except Exception as e:
             if entry.value is not None:
+                entry.expiration = wait_expiration()
                 logger.error(f"Error updating cache for key {key}: {e}. Returning stale data.")
             else:
                 raise

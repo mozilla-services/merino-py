@@ -79,7 +79,7 @@ QUERY_CHARACTER_MAX = settings.web.api.v1.query_character_max
 CLIENT_VARIANT_CHARACTER_MAX = settings.web.api.v1.client_variant_character_max
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 WEATHER_PROVIDER = settings.providers.accuweather.backend
-WEATHER_SOURCE_TYPE = Literal["urlbar", "newtab", "unknown"]
+SOURCE_TYPE = Literal["urlbar", "newtab", "unknown"]
 
 
 @router.get(
@@ -94,7 +94,7 @@ async def suggest(
     country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
     region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
-    source: Annotated[WEATHER_SOURCE_TYPE, Query(max_length=QUERY_CHARACTER_MAX)] = "unknown",
+    source: Annotated[SOURCE_TYPE, Query(max_length=QUERY_CHARACTER_MAX)] = "unknown",
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),

@@ -414,6 +414,60 @@ class TestThompsonSampling:
         assert by_id["fresh1"].ranking_data is not None
         assert by_id["fresh2"].ranking_data.is_fresh is True
 
+    def test_remaining_impressions_set_on_fresh_item(self, monkeypatch):
+        """remaining_impressions should equal int(target_no_opens - no_opens) for a fresh item.
+
+        With prior beta=10 and fresh_items_limit_prior_threshold_multiplier=1,
+        target_no_opens = 10.  An item with 4 impressions (no_opens=4) needs 6 more.
+        """
+        recs = generate_recommendations(
+            item_ids=["fresh"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        recs[0].isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({"fresh": (0, 4)})  # no_opens = 4
+        rescaler = CrawledContentRescaler()  # fresh_items_limit_prior_threshold_multiplier = 1
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
+
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.is_fresh is True
+        assert ranked[0].ranking_data.remaining_impressions == 6  # int(10 - 4)
+
+    def test_remaining_impressions_zero_on_stale_item(self, monkeypatch):
+        """remaining_impressions should stay 0 when an item is not fresh.
+
+        With prior beta=10, an item with 12 impressions (no_opens=12) exceeds target_no_opens=10,
+        so it is not marked fresh and remaining_impressions is left at its default of 0.
+        """
+        recs = generate_recommendations(
+            item_ids=["stale"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        recs[0].isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({"stale": (0, 12)})  # no_opens = 12
+        rescaler = CrawledContentRescaler()
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
+
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.is_fresh is False
+        assert ranked[0].ranking_data.remaining_impressions == 0
+
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""
         recs = generate_recommendations(item_ids=["1", "2", "3", "4"])
@@ -953,6 +1007,33 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         assert not new_feed["travel"].isFollowed
         assert new_feed["travel"].isBlocked
 
+    @freeze_time("2025-03-20 12:00:00", tz_offset=0)
+    def test_non_followable_section_not_boosted(self):
+        """Test that a section with followable=False is not boosted even if client sends isFollowed=True."""
+        req_sections = [
+            SectionConfiguration(
+                sectionId="business",
+                isFollowed=True,
+                isBlocked=False,
+                followedAt=datetime(2025, 3, 19, tzinfo=timezone.utc),
+            ),
+        ]
+        feed = self.generate_sections(
+            [0, 1, 2, 3],
+            ["top_stories_section", "business", "arts", "food"],
+        )
+        feed["business"].followable = False
+
+        new_feed = boost_followed_sections(req_sections, feed)
+
+        # business should NOT be marked as followed
+        assert not new_feed["business"].isFollowed
+        # Original rank order should be preserved since no section was boosted
+        assert new_feed["top_stories_section"].receivedFeedRank == 0
+        assert new_feed["business"].receivedFeedRank == 1
+        assert new_feed["arts"].receivedFeedRank == 2
+        assert new_feed["food"].receivedFeedRank == 3
+
 
 class TestPutTopStoriesFirst:
     """Tests covering put_top_stories_first"""
@@ -1288,3 +1369,52 @@ class TestContextualRanker:
         assert len(ranked) == 1
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.score == pytest.approx(0.8)
+
+    def test_boosts_inferred_item_score(self, monkeypatch):
+        """When rankings contain the item, the ML (normal-sampled) score is used."""
+        recs = generate_recommendations(
+            item_ids=["a", "b", "c"],
+            topics=[Topic.ARTS, Topic.TECHNOLOGY, Topic.SCIENCE],
+            time_sensitive_count=0,
+        )
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(
+                granularity="region",
+                shards={
+                    "a": {"mean": 0.0021, "std": 0.0},
+                    "b": {"mean": 0.002, "std": 0.0},
+                    "c": {"mean": 0.001, "std": 0.0},
+                },
+            )
+        )
+
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs, personal_interests=None)
+        assert len(ranked) == 3
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].corpusItemId == "a"
+        assert ranked[0].ranking_data.score == pytest.approx(0.0021)
+
+        tech_interests = ProcessedInterests(
+            scores={
+                Topic.TECHNOLOGY.value: 0.9,
+                Topic.ARTS.value: 0.3,
+                Topic.POLITICS.value: 0.0,
+                Topic.SCIENCE.value: 0.3,
+            }
+        )
+        ranked = ranker.rank_items(recs, personal_interests=tech_interests)
+        assert len(ranked) == 3
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].corpusItemId == "b"
+        assert ranked[0].ranking_data.score > 0.0021
+
+        tech_interests = ProcessedInterests(scores={Topic.TECHNOLOGY.value: 0.0})
+        ranked = ranker.rank_items(recs, personal_interests=tech_interests)
+        assert len(ranked) == 3
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].corpusItemId == "a"
+        assert ranked[1].corpusItemId == "b"
+        assert ranked[1].ranking_data.score == 0.002

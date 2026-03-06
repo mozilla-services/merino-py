@@ -3,7 +3,6 @@
 import asyncio
 from asyncio import Task
 from collections import defaultdict
-from enum import Enum
 from typing import Any, Literal, cast
 from urllib.parse import urljoin
 
@@ -16,6 +15,7 @@ from pydantic import BaseModel
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.adm.backends.protocol import (
+    FormFactor,
     SuggestionContent,
     SegmentType,
 )
@@ -28,13 +28,6 @@ RS_CONNECT_TIMEOUT: float = 5.0
 
 
 RecordType = Literal["amp", "icon"]
-
-
-class FormFactor(Enum):
-    """Enum for form factor."""
-
-    DESKTOP = 0
-    PHONE = 1
 
 
 class KintoSuggestion(BaseModel):

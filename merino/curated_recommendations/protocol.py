@@ -53,6 +53,7 @@ class Locale(str, Enum):
     EN = ("en",)
     EN_CA = ("en-CA",)
     EN_GB = ("en-GB",)
+    EN_IE = ("en-IE",)
     EN_US = ("en-US",)
     DE = ("de",)
     DE_DE = ("de-DE",)
@@ -109,6 +110,8 @@ class ExperimentName(str, Enum):
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
     INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
     INFERRED_LOCAL_EXPERIMENT_V4 = "new-tab-automated-personalization-v4"
+
+    FIXED_POSITION_FRESH_ITEMS_EXPERIMENT = "new-tab-fixed-position-fresh-items"
 
 
 class DailyBriefingBranch(str, Enum):
@@ -239,6 +242,9 @@ class RankingData(BaseModel):
     beta: float
     score: float
     is_fresh: bool = False  # Indicates it has relatively little impressions
+    remaining_impressions: int = (
+        0  # If is_fresh is True, this indicates how many more impressions it needs
+    )
 
 
 # Flags for in_experiment flags. Note that the name in_experiment is historical and should be migrated to a new name
@@ -453,6 +459,10 @@ class Section(BaseModel):
         "e.g. '2024-03-24T12:34:56Z' or '2024-03-24T14:34:56+02:00'.",
     )
     isInitiallyVisible: bool = True
+    followable: bool = Field(default=True, description="Whether users can follow this section.")
+    allowAds: bool = Field(
+        default=True, description="Whether ads can be displayed in this section."
+    )
 
 
 class InterestPickerSection(BaseModel):
