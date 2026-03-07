@@ -23,6 +23,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NHL,
     NBA,
     UCL,
+    MLB,
 )
 
 
@@ -56,6 +57,34 @@ def nfl_teams_payload() -> list[dict]:
             "FullName": "Minnesota Vikings",
             "PrimaryColor": "4F2683",
             "SecondaryColor": "FFC62F",
+        },
+    ]
+
+
+@pytest.fixture
+def generic_teams_payload() -> list[dict]:
+    """Provide Generic team payload (for US based sports)."""
+    return [
+        {
+            "Key": "HOM",
+            "Name": "Homebodies",
+            "City": "Springfield",
+            "AreaName": "US",
+            "FullName": "Springfield Homebodies",
+            "Nickname1": "Homers",
+            "GlobalTeamId": 98,
+            "PrimaryColor": "000000",
+            "SecondaryColor": "FFFFFF",
+        },
+        {
+            "Key": "AWY",
+            "Name": "Visitors",
+            "City": "Elsewhere",
+            "AreaName": "OS",
+            "GlobalTeamId": 99,
+            "FullName": "Visitors from Elsewhere",
+            "PrimaryColor": "FFFFFF",
+            "SecondaryColor": "000000",
         },
     ]
 
@@ -168,6 +197,61 @@ def schedules_payload() -> list[dict]:
             "DateTimeUTC": "2000-09-22T01:30:00",
             "AwayTeamID": 41,
             "HomeTeamID": 19,
+            "SeriesInfo": None,
+        },
+    ]
+
+
+@pytest.fixture
+def generic_schedules_payload() -> list[dict]:
+    """Provide Generic team Schedules payload that are out and in window."""
+    return [
+        {
+            "GameId": 67890,
+            "Season": 2026,
+            "SeasonType": 2,
+            "Status": "Final",
+            "Day": "2025-09-21T00:00:00",
+            "DateTime": "2025-09-21T21:30:00",
+            "Updated": "2025-09-29T04:10:57",
+            "IsClosed": True,
+            "AwayTeam": "AWY",
+            "HomeTeam": "HOM",
+            "StadiumID": 9,
+            "AwayTeamScore": 2,
+            "HomeTeamScore": 3,
+            "GlobalGameID": 12345678,
+            "GlobalAwayTeamID": 99,
+            "GlobalHomeTeamID": 98,
+            "GameEndDateTime": "2025-09-22T00:10:17",
+            "NeutralVenue": False,
+            "DateTimeUTC": "2025-09-22T01:30:00",
+            "AwayTeamID": 99,
+            "HomeTeamID": 98,
+            "SeriesInfo": None,
+        },
+        {
+            "GameId": 11111,
+            "Season": 2000,
+            "SeasonType": 2,
+            "Status": "Final",
+            "Day": "2000-01-01T00:00:00",
+            "DateTime": "2000-01-01T21:30:00",
+            "Updated": "2000-01-01T04:10:57",
+            "IsClosed": True,
+            "AwayTeam": "AWY",
+            "HomeTeam": "HOM",
+            "StadiumID": 9,
+            "AwayTeamScore": 0,
+            "HomeTeamScore": 0,
+            "GlobalGameID": 0,
+            "GlobalAwayTeamID": 99,
+            "GlobalHomeTeamID": 98,
+            "GameEndDateTime": "2000-09-22T00:10:17",
+            "NeutralVenue": False,
+            "DateTimeUTC": "2000-09-22T01:30:00",
+            "AwayTeamID": 99,
+            "HomeTeamID": 98,
             "SeriesInfo": None,
         },
     ]
@@ -379,6 +463,23 @@ async def test_nba_update_teams(
     assert get_data.call_count == 2
 
 
+@pytest.mark.asyncio
+async def test_mlb_update_teams(
+    generic_teams_payload: list[dict], mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """Test MLB team updates."""
+    sport = MLB(settings=settings.providers.sports)
+    current_season = {"ApiSeason": "2026PRE"}
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[current_season, generic_teams_payload],
+    )
+    await sport.update_teams(client=mock_client)
+    assert sport.season == "2026PRE"
+    assert set(sport.teams.keys()) == {98, 99}
+    assert get_data.call_count == 2
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_ucl_update_teams(
@@ -531,6 +632,31 @@ async def test_nba_update_events(
     await nba.update_events(client=mock_client)
     assert 30023869 in nba.events and 0 not in nba.events
     assert nba.events[30023869].status == GameStatus.Final
+    get_data.assert_called_once()
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_mlb_update_events(
+    generic_teams_payload: list[dict],
+    generic_schedules_payload: list[dict],
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Test MLB event updates."""
+    sport = MLB(settings=settings.providers.sports)
+    sport.load_teams_from_source(generic_teams_payload)
+    sport.season = "2026PRE"
+    sport.event_ttl = timedelta(weeks=2)
+
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        return_value=generic_schedules_payload,
+    )
+
+    await sport.update_events(client=mock_client)
+    assert 12345678 in sport.events and 0 not in sport.events
+    assert sport.events[12345678].status == GameStatus.Final
     get_data.assert_called_once()
 
 
