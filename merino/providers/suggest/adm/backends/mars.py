@@ -5,6 +5,7 @@ from asyncio import Task
 from collections import defaultdict
 import json
 import logging
+from urllib.parse import urljoin
 
 import httpx
 from moz_merino_ext.amp import AmpIndexManager
@@ -221,7 +222,7 @@ class MarsBackend:
         if idx_id in self.etags:
             headers["If-None-Match"] = self.etags[idx_id]
 
-        url = f"{self.base_url.rstrip('/')}/{self.suggestion_url_path}"
+        url = urljoin(self.base_url, self.suggestion_url_path)
         try:
             response = await self.http_client.get(
                 url,
@@ -248,14 +249,10 @@ class MarsBackend:
                 ) from exc
 
             if "suggestions" not in data:
-                logger.warning(
-                    "MARS response missing 'suggestions' key for %s/%s, "
-                    "passing full payload to index builder",
-                    country,
-                    form_factor,
+                raise MarsError(
+                    f"MARS response missing 'suggestions' key for {country}/{form_factor}"
                 )
 
-            suggestions = data.get("suggestions", data)
-            return json.dumps(suggestions)
+            return json.dumps(data["suggestions"])
         except httpx.HTTPError as error:
             raise MarsError(f"Failed to fetch suggestions for {country}/{form_factor}") from error

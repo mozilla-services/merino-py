@@ -343,15 +343,11 @@ async def test_fetch_invalid_json(
 
 @pytest.mark.asyncio
 async def test_fetch_missing_suggestions_key(
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
     mocker: MockerFixture,
     mars_backend: MarsBackend,
-    mock_icon_processor: IconProcessor,
 ) -> None:
-    """Test that a warning is logged when the 'suggestions' key is missing."""
-    # Response is a raw array instead of {"suggestions": [...]}.
-    raw_array_response = httpx.Response(
+    """Test that MarsError is raised when the 'suggestions' key is missing."""
+    bad_shape_response = httpx.Response(
         status_code=200,
         text=json.dumps({"data": []}),
         headers={"ETag": '"etag-v1"', "Content-Type": "application/json"},
@@ -360,14 +356,11 @@ async def test_fetch_missing_suggestions_key(
     mocker.patch.object(
         httpx.AsyncClient,
         "get",
-        return_value=raw_array_response,
+        return_value=bad_shape_response,
     )
 
-    await mars_backend.fetch()
-
-    records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.mars")
-    warning_records = [r for r in records if r.levelname == "WARNING"]
-    assert any("missing 'suggestions' key" in r.message for r in warning_records)
+    with pytest.raises(BackendError, match="missing 'suggestions' key"):
+        await mars_backend.fetch()
 
 
 @pytest.mark.asyncio
