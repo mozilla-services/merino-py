@@ -175,7 +175,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     connect_timeout=settings.mars.connect_timeout_sec,
                     request_timeout=settings.mars.request_timeout_sec,
                     suggestion_url_path=settings.mars.suggestion_url_path,
-                    icon_url_path=settings.mars.icon_url_path,
                 )
             else:
                 backend = FakeAdmBackend()
