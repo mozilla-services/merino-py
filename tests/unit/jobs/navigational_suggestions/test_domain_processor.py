@@ -7,6 +7,34 @@
 from merino.jobs.navigational_suggestions.processing.domain_processor import DomainProcessor
 
 
+class TestDomainProcessorIsMatchingDomain:
+    """Tests for DomainProcessor._is_matching_domain static method."""
+
+    def test_exact_substring_match(self):
+        """Test original behavior: domain substring found in URL."""
+        assert DomainProcessor._is_matching_domain("example.com", "https://www.example.com/page")
+
+    def test_tld_change_accepted(self):
+        """Test TLD changes are accepted (e.g., zoom.us -> zoom.com)."""
+        assert DomainProcessor._is_matching_domain("zoom.us", "https://www.zoom.com")
+
+    def test_cctld_change_accepted(self):
+        """Test country-code TLD changes (e.g., wired.co.uk -> wired.com)."""
+        assert DomainProcessor._is_matching_domain("wired.co.uk", "https://www.wired.com/")
+
+    def test_different_domain_rejected(self):
+        """Test genuinely different domains are rejected."""
+        assert not DomainProcessor._is_matching_domain("t.me", "https://telegram.org/")
+
+    def test_different_brand_redirect_rejected(self):
+        """Test redirects to different brands are rejected."""
+        assert not DomainProcessor._is_matching_domain("uw.edu", "https://www.washington.edu/")
+
+    def test_subdomain_in_redirect(self):
+        """Test domain with www prefix in redirect URL."""
+        assert DomainProcessor._is_matching_domain("example.com", "https://www.example.com/")
+
+
 class TestDomainProcessorExtractTitle:
     """Tests for DomainProcessor._extract_title method."""
 

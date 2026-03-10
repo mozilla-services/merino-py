@@ -500,6 +500,7 @@ class TestProcessBitmapFavicons:
         bitmap_indices = [0]
         all_favicons = [{"href": "https://example.com/favicon.ico", "_source": "link"}]
 
+        mock_image.content_type = "image/png"
         mock_image.get_dimensions.side_effect = Exception("Dimension error")
         mock_favicon_downloader.download_multiple_favicons = AsyncMock(return_value=[mock_image])
 
@@ -508,6 +509,50 @@ class TestProcessBitmapFavicons:
         )
 
         assert result == ("", 0, 1)  # One image failed validation
+
+    @pytest.mark.asyncio
+    async def test_process_bitmap_favicons_svg_without_extension(
+        self, favicon_processor, mock_uploader, mock_favicon_downloader
+    ):
+        """Test that SVGs served without .svg extension are detected and uploaded."""
+        bitmap_urls = ["https://example.com/icon.png"]  # Not .svg extension
+        bitmap_indices = [0]
+        all_favicons = [{"href": "https://example.com/icon.png", "_source": "link"}]
+
+        # Image has SVG content type but PIL can't get dimensions
+        mock_svg = MagicMock()
+        mock_svg.content_type = "image/svg+xml"
+        mock_svg.get_dimensions.side_effect = Exception("Not a bitmap")
+        mock_favicon_downloader.download_multiple_favicons = AsyncMock(return_value=[mock_svg])
+
+        result = await favicon_processor._process_bitmap_favicons(
+            bitmap_urls, bitmap_indices, all_favicons, 48, mock_uploader
+        )
+
+        # Should detect SVG via content-type and upload it
+        assert result[0] == "https://cdn.example.com/test_favicon.png"
+        assert result[1] == 48  # Returns min_width since SVGs are scalable
+
+    @pytest.mark.asyncio
+    async def test_process_bitmap_favicons_svg_upload_failure(
+        self, favicon_processor, mock_uploader, mock_favicon_downloader
+    ):
+        """Test SVG content-type detection with upload failure falls back gracefully."""
+        bitmap_urls = ["https://example.com/icon.png"]
+        bitmap_indices = [0]
+        all_favicons = [{"href": "https://example.com/icon.png", "_source": "link"}]
+
+        mock_svg = MagicMock()
+        mock_svg.content_type = "image/svg+xml"
+        mock_svg.get_dimensions.side_effect = Exception("Not a bitmap")
+        mock_favicon_downloader.download_multiple_favicons = AsyncMock(return_value=[mock_svg])
+        mock_uploader.upload_image.side_effect = Exception("Upload failed")
+
+        result = await favicon_processor._process_bitmap_favicons(
+            bitmap_urls, bitmap_indices, all_favicons, 48, mock_uploader
+        )
+
+        assert result == ("", 0, 1)  # Falls through to failed validation
 
     @pytest.mark.asyncio
     async def test_process_bitmap_favicons_upload_failure_fallback(
