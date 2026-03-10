@@ -166,6 +166,26 @@ class DomainProcessor:
         )
         return scraping_result
 
+    @staticmethod
+    def _is_matching_domain(expected_domain: str, actual_url: str) -> bool:
+        """Check if the redirected URL belongs to the same base domain.
+
+        Handles TLD changes (e.g., zoom.us -> zoom.com) by comparing the
+        registered domain name via tldextract, in addition to the original
+        substring check.
+        """
+        # Original check: exact substring match
+        if expected_domain in actual_url:
+            return True
+
+        # Relaxed check: same registered domain name (handles TLD changes)
+        expected = tldextract.extract(expected_domain)
+        actual = tldextract.extract(actual_url)
+        if expected.domain and expected.domain == actual.domain:
+            return True
+
+        return False
+
     async def _try_custom_favicon(
         self,
         domain_key: str,
@@ -234,7 +254,7 @@ class DomainProcessor:
                     full_url = web_scraper.open(url)
 
                 # Check if we successfully opened a page on the correct domain
-                if full_url and domain in full_url:
+                if full_url and self._is_matching_domain(domain, full_url):
                     # Check for bot blocking before processing
                     if web_scraper.is_bot_blocked():
                         status_code = web_scraper.get_status_code()
