@@ -244,9 +244,7 @@ class MarsBackend:
             try:
                 data = response.json()
             except ValueError as exc:
-                raise MarsError(
-                    f"Invalid JSON in response for {country}/{form_factor}"
-                ) from exc
+                raise MarsError(f"Invalid JSON in response for {country}/{form_factor}") from exc
 
             if "suggestions" not in data:
                 raise MarsError(
