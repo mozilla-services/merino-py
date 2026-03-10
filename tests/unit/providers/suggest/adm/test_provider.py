@@ -148,9 +148,31 @@ async def test_query_success(
     ]
 
 
+@pytest.mark.parametrize("query", ["firefox"])
 @pytest.mark.asyncio
-async def test_query_with_missing_key(srequest: SuggestionRequestFixture, adm: Provider) -> None:
-    """Test for the query() method of the adM provider with a missing key."""
+async def test_query_with_missing_key(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    query: str,
+    adm_parameters: dict[str, Any],
+) -> None:
+    """Test for the query() method of the adM provider with missing keys, the fallback should be used"""
     await adm.initialize()
 
-    assert await adm.query(srequest("nope", None, None)) == []
+    res = await adm.query(srequest(query, None, None))
+    assert res == [
+        NonsponsoredSuggestion(
+            block_id=2,
+            full_keyword="firefox accounts",
+            title="Mozilla Firefox Accounts",
+            url=HttpUrl("https://example.org/target/mozfirefoxaccounts"),
+            categories=[],
+            impression_url=HttpUrl("https://example.org/impression/mozilla"),
+            click_url=HttpUrl("https://example.org/click/mozilla"),
+            provider="adm",
+            advertiser="Example.org",
+            is_sponsored=False,
+            icon="attachment-host/main-workspace/quicksuggest/icon-01",
+            score=adm_parameters["score"],
+        )
+    ]

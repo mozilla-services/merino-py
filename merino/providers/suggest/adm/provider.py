@@ -39,6 +39,9 @@ FORM_FACTORS_FALLBACK_MAPPING = {
     "phone": FormFactor.PHONE.value,
 }
 
+FALLBACK_FORM_FACTOR: str = "other"
+FALLBACK_COUNTRY_CODE: str = "US"
+
 
 class SponsoredSuggestion(BaseSuggestion):
     """Model for sponsored suggestions."""
@@ -142,37 +145,41 @@ class Provider(BaseProvider):
         q: str = srequest.query
         form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
         country = srequest.geolocation.country
-        if country and form_factor:
-            segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
-            idx_id = f"{country}/{segment}"
-            if self.suggestion_content.index_manager.has(idx_id) and (
-                suggest_look_ups := self.suggestion_content.index_manager.query(idx_id, q)
-            ):
-                res = suggest_look_ups[0]
 
-                is_sponsored = res.iab_category == IABCategory.SHOPPING
+        # Set the fallback country code and form factor if absent. See "DISCO-3971" for details.
+        form_factor = form_factor or FALLBACK_FORM_FACTOR
+        country = country or FALLBACK_COUNTRY_CODE
 
-                url: str = res.url
+        segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
+        idx_id = f"{country}/{segment}"
+        if self.suggestion_content.index_manager.has(idx_id) and (
+            suggest_look_ups := self.suggestion_content.index_manager.query(idx_id, q)
+        ):
+            res = suggest_look_ups[0]
 
-                suggestion_dict: dict[str, Any] = {
-                    "block_id": res.block_id,
-                    "full_keyword": res.full_keyword,
-                    "title": res.title,
-                    "url": url,
-                    "categories": res.serp_categories,
-                    "impression_url": res.impression_url,
-                    "click_url": res.click_url,
-                    "provider": self.name,
-                    "advertiser": res.advertiser,
-                    "is_sponsored": is_sponsored,
-                    "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
-                    "score": self.score,
-                }
-                return [
-                    (
-                        SponsoredSuggestion(**suggestion_dict)
-                        if is_sponsored
-                        else NonsponsoredSuggestion(**suggestion_dict)
-                    )
-                ]
+            is_sponsored = res.iab_category == IABCategory.SHOPPING
+
+            url: str = res.url
+
+            suggestion_dict: dict[str, Any] = {
+                "block_id": res.block_id,
+                "full_keyword": res.full_keyword,
+                "title": res.title,
+                "url": url,
+                "categories": res.serp_categories,
+                "impression_url": res.impression_url,
+                "click_url": res.click_url,
+                "provider": self.name,
+                "advertiser": res.advertiser,
+                "is_sponsored": is_sponsored,
+                "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
+                "score": self.score,
+            }
+            return [
+                (
+                    SponsoredSuggestion(**suggestion_dict)
+                    if is_sponsored
+                    else NonsponsoredSuggestion(**suggestion_dict)
+                )
+            ]
         return []
