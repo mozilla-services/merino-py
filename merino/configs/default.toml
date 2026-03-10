@@ -199,15 +199,11 @@ form_factors = ["desktop"]
 [default.mars]
 # MERINO_MARS__BASE_URL
 # The base URL for the MARS API.
-base_url = "https://ads.mozilla.org/"
+base_url = "https://ads.mozilla.org/v1/suggest/"
 
 # MERINO_MARS__SUGGESTION_URL_PATH
 # The URL path for fetching suggestions from the MARS API.
-suggestion_url_path = "suggestions"
-
-# MERINO_MARS__ICON_URL_PATH
-# The URL path prefix for fetching icons from the MARS API.
-icon_url_path = "icons"
+suggestion_url_path = "data"
 
 # MERINO_MARS__CONNECT_TIMEOUT_SEC
 # Timeout in seconds for establishing a connection to the MARS API.

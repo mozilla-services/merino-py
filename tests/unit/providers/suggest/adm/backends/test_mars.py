@@ -47,12 +47,12 @@ def fixture_mars_backend(mock_icon_processor: IconProcessor) -> MarsBackend:
     )
 
 
-@pytest.fixture(name="suggestion_json")
-def fixture_suggestion_json() -> str:
-    """Return suggestion JSON as returned by the MARS API.
+ICON_URL = "https://mars-cdn.mozilla.com/icons/01.png"
 
-    Uses the same structure as the RS test fixture ``rs_attachment``.
-    """
+
+@pytest.fixture(name="suggestion_array_json")
+def fixture_suggestion_array_json() -> str:
+    """Return the inner suggestions array as JSON (what AmpIndexManager expects)."""
     return json.dumps(
         [
             {
@@ -64,7 +64,7 @@ def fixture_suggestion_json() -> str:
                     ["mozilla firefox accounts", 4],
                 ],
                 "iab_category": "5 - Education",
-                "icon": "01",
+                "icon": ICON_URL,
                 "serp_categories": [],
                 "impression_url": "https://example.org/impression/mozilla",
                 "keywords": [
@@ -83,16 +83,25 @@ def fixture_suggestion_json() -> str:
     )
 
 
+@pytest.fixture(name="suggestion_json")
+def fixture_suggestion_json(suggestion_array_json: str) -> str:
+    """Return suggestion JSON as returned by the MARS API.
+
+    MARS wraps the array in ``{"suggestions": [...]}``.
+    """
+    return json.dumps({"suggestions": json.loads(suggestion_array_json)})
+
+
 @pytest.fixture(name="suggestion_response")
 def fixture_suggestion_response(suggestion_json: str) -> httpx.Response:
     """Return a successful MARS suggestion response with ETag."""
     return httpx.Response(
         status_code=200,
         text=suggestion_json,
-        headers={"ETag": '"etag-v1"'},
+        headers={"ETag": '"etag-v1"', "Content-Type": "application/json"},
         request=httpx.Request(
             method="GET",
-            url="http://test-mars-api/suggestions?country=US&form_factor=desktop",
+            url="http://test-mars-api/data?country=US&form_factor=desktop",
         ),
     )
 
@@ -160,12 +169,12 @@ async def test_fetch_skip(
     suggestion_content_1st: SuggestionContent = await mars_backend.fetch()
     assert suggestion_content_1st.index_manager.has(DEFAULT_IDX_ID)
     assert mars_backend.etags[DEFAULT_IDX_ID] == '"etag-v1"'
-    assert "01" in suggestion_content_1st.icons
+    assert ICON_URL in suggestion_content_1st.icons
 
     # Second fetch: server returns 304 for all segments.
     not_modified_response = httpx.Response(
         status_code=304,
-        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
     )
     mocker.patch.object(
         httpx.AsyncClient,
@@ -177,7 +186,7 @@ async def test_fetch_skip(
 
     # Index and icons should be preserved — early return with cached content.
     assert suggestion_content_2nd.index_manager.has(DEFAULT_IDX_ID)
-    assert "01" in suggestion_content_2nd.icons
+    assert ICON_URL in suggestion_content_2nd.icons
 
 
 @pytest.mark.asyncio
@@ -188,40 +197,43 @@ async def test_fetch_partial_update(
 ) -> None:
     """Test that a partial update (some 304, some 200) merges icons.
 
-    Simulates 2 segments: US/desktop uses icon "01", DE/desktop uses icon
-    "02". On second fetch, US returns 304 (unchanged) and DE returns 200
+    Simulates 2 segments: US/desktop uses one icon URL, DE/desktop uses
+    another. On second fetch, US returns 304 (unchanged) and DE returns 200
     with new data. Icons from both segments must be preserved.
     """
-    us_json = suggestion_json  # uses icon "01"
+    de_icon_url = "https://mars-cdn.mozilla.com/icons/02.png"
+    us_json = suggestion_json  # uses ICON_URL
     de_json = json.dumps(
-        [
-            {
-                "id": 3,
-                "advertiser": "DE-Example.org",
-                "click_url": "https://de.example.org/click",
-                "full_keywords": [["berlin", 3]],
-                "iab_category": "5 - Education",
-                "icon": "02",
-                "serp_categories": [],
-                "impression_url": "https://de.example.org/impression",
-                "keywords": ["berlin"],
-                "title": "Berlin Guide",
-                "url": "https://de.example.org/target/berlin",
-            }
-        ]
+        {
+            "suggestions": [
+                {
+                    "id": 3,
+                    "advertiser": "DE-Example.org",
+                    "click_url": "https://de.example.org/click",
+                    "full_keywords": [["berlin", 3]],
+                    "iab_category": "5 - Education",
+                    "icon": de_icon_url,
+                    "serp_categories": [],
+                    "impression_url": "https://de.example.org/impression",
+                    "keywords": ["berlin"],
+                    "title": "Berlin Guide",
+                    "url": "https://de.example.org/target/berlin",
+                }
+            ]
+        }
     )
 
     us_response = httpx.Response(
         status_code=200,
         text=us_json,
-        headers={"ETag": '"etag-us-v1"'},
-        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+        headers={"ETag": '"etag-us-v1"', "Content-Type": "application/json"},
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
     )
     de_response = httpx.Response(
         status_code=200,
         text=de_json,
-        headers={"ETag": '"etag-de-v1"'},
-        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+        headers={"ETag": '"etag-de-v1"', "Content-Type": "application/json"},
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
     )
 
     # Patch settings so fetch() iterates over US + DE.
@@ -242,21 +254,21 @@ async def test_fetch_partial_update(
     de_idx_id = f"DE/{DEFAULT_SEGMENT}"
     assert suggestion_content_1st.index_manager.has(DEFAULT_IDX_ID)
     assert suggestion_content_1st.index_manager.has(de_idx_id)
-    assert "01" in suggestion_content_1st.icons
-    assert "02" in suggestion_content_1st.icons
+    assert ICON_URL in suggestion_content_1st.icons
+    assert de_icon_url in suggestion_content_1st.icons
 
     # Second fetch: US returns 304, DE returns 200 with new data.
     us_304 = httpx.Response(
         status_code=304,
-        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
     )
     mocker.patch.object(httpx.AsyncClient, "get", side_effect=[us_304, de_response])
 
     suggestion_content_2nd = await mars_backend.fetch()
 
-    # Both icons preserved: "01" from cached US, "02" from refreshed DE.
-    assert "01" in suggestion_content_2nd.icons
-    assert "02" in suggestion_content_2nd.icons
+    # Both icons preserved: ICON_URL from cached US, de_icon_url from refreshed DE.
+    assert ICON_URL in suggestion_content_2nd.icons
+    assert de_icon_url in suggestion_content_2nd.icons
 
 
 @pytest.mark.asyncio
@@ -295,7 +307,7 @@ async def test_fetch_http_error(
     error_response = httpx.Response(
         status_code=500,
         text="Internal Server Error",
-        request=httpx.Request(method="GET", url="http://test-mars-api/suggestions"),
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
     )
     mocker.patch.object(
         httpx.AsyncClient,
@@ -305,6 +317,57 @@ async def test_fetch_http_error(
 
     with pytest.raises(BackendError):
         await mars_backend.fetch()
+
+
+@pytest.mark.asyncio
+async def test_fetch_invalid_json(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+) -> None:
+    """Test that MarsError is raised when the response body is not valid JSON."""
+    bad_response = httpx.Response(
+        status_code=200,
+        text="not json",
+        headers={"Content-Type": "application/json"},
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
+    )
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=bad_response,
+    )
+
+    with pytest.raises(BackendError, match="Invalid JSON"):
+        await mars_backend.fetch()
+
+
+@pytest.mark.asyncio
+async def test_fetch_missing_suggestions_key(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    mock_icon_processor: IconProcessor,
+) -> None:
+    """Test that a warning is logged when the 'suggestions' key is missing."""
+    # Response is a raw array instead of {"suggestions": [...]}.
+    raw_array_response = httpx.Response(
+        status_code=200,
+        text=json.dumps({"data": []}),
+        headers={"ETag": '"etag-v1"', "Content-Type": "application/json"},
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
+    )
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=raw_array_response,
+    )
+
+    await mars_backend.fetch()
+
+    records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.mars")
+    warning_records = [r for r in records if r.levelname == "WARNING"]
+    assert any("missing 'suggestions' key" in r.message for r in warning_records)
 
 
 @pytest.mark.asyncio
@@ -323,8 +386,8 @@ async def test_fetch_icons(
 
     suggestion_content = await mars_backend.fetch()
 
-    # The suggestion has icon "01", so it should be in icons.
-    assert "01" in suggestion_content.icons
+    # The suggestion has a full icon URL, so it should be in icons.
+    assert ICON_URL in suggestion_content.icons
     mock_icon_processor.process_icon_url.assert_called()  # type: ignore[attr-defined]
 
 
@@ -351,8 +414,8 @@ async def test_fetch_icon_processing_failure(
     suggestion_content = await mars_backend.fetch()
 
     # Icon should fall back to original URL.
-    assert "01" in suggestion_content.icons
-    assert suggestion_content.icons["01"] == "http://test-mars-api/icons/01"
+    assert ICON_URL in suggestion_content.icons
+    assert suggestion_content.icons[ICON_URL] == ICON_URL
 
     records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.mars")
     error_records = [r for r in records if r.levelname == "ERROR"]
@@ -363,7 +426,7 @@ async def test_fetch_icon_processing_failure(
 async def test_get_suggestions(
     mocker: MockerFixture,
     mars_backend: MarsBackend,
-    suggestion_json: str,
+    suggestion_array_json: str,
     suggestion_response: httpx.Response,
 ) -> None:
     """Test that get_suggestions returns the proper structure."""
@@ -380,17 +443,18 @@ async def test_get_suggestions(
 
     assert "US" in suggestions
     assert list(suggestions["US"].keys()) == [DEFAULT_SEGMENT]
-    assert suggestions["US"][DEFAULT_SEGMENT] == suggestion_json
+    # get_suggestion_data unwraps {"suggestions": [...]} and returns the array.
+    assert json.loads(suggestions["US"][DEFAULT_SEGMENT]) == json.loads(suggestion_array_json)
 
 
 @pytest.mark.asyncio
 async def test_get_suggestion_data(
     mocker: MockerFixture,
     mars_backend: MarsBackend,
-    suggestion_json: str,
+    suggestion_array_json: str,
     suggestion_response: httpx.Response,
 ) -> None:
-    """Test that get_suggestion_data returns raw JSON text."""
+    """Test that get_suggestion_data extracts the suggestions array."""
     mocker.patch.object(
         httpx.AsyncClient,
         "get",
@@ -399,7 +463,8 @@ async def test_get_suggestion_data(
 
     result = await mars_backend.get_suggestion_data("US", "desktop", DEFAULT_IDX_ID)
 
-    assert result == suggestion_json
+    assert result is not None
+    assert json.loads(result) == json.loads(suggestion_array_json)
 
 
 @pytest.mark.asyncio

@@ -3,8 +3,8 @@
 import asyncio
 from asyncio import Task
 from collections import defaultdict
+import json
 import logging
-from urllib.parse import urljoin
 
 import httpx
 from moz_merino_ext.amp import AmpIndexManager
@@ -32,7 +32,6 @@ class MarsBackend:
     icon_processor: IconProcessor
     base_url: str
     suggestion_url_path: str
-    icon_url_path: str
     http_client: httpx.AsyncClient
     # Cache the latest suggestion content.
     suggestion_content: SuggestionContent
@@ -45,8 +44,7 @@ class MarsBackend:
         icon_processor: IconProcessor,
         connect_timeout: float,
         request_timeout: float,
-        suggestion_url_path: str = "suggestions",
-        icon_url_path: str = "icons",
+        suggestion_url_path: str = "data",
     ) -> None:
         """Initialize the MARS backend.
 
@@ -56,7 +54,6 @@ class MarsBackend:
             connect_timeout: Timeout in seconds for establishing a connection.
             request_timeout: Timeout in seconds for a request.
             suggestion_url_path: The URL path for fetching suggestions.
-            icon_url_path: The URL path prefix for fetching icons.
 
         Raises:
             ValueError: If base_url is empty.
@@ -66,7 +63,6 @@ class MarsBackend:
 
         self.base_url = base_url
         self.suggestion_url_path = suggestion_url_path
-        self.icon_url_path = icon_url_path
         self.icon_processor = icon_processor
         self.http_client = create_http_client(
             connect_timeout=connect_timeout,
@@ -133,13 +129,13 @@ class MarsBackend:
                         extra={"error message": f"{e}"},
                     )
 
-        # Process icons concurrently.
+        # Process icons concurrently. MARS provides full CDN URLs in the
+        # icon field, so we use them directly for re-hosting.
         icon_data: list[tuple[str, str]] = []
         tasks: list[Task[str]] = []
 
-        for icon_id in icons_in_use:
-            icon_url = urljoin(self.base_url, f"{self.icon_url_path}/{icon_id}")
-            icon_data.append((icon_id, icon_url))
+        for icon_url in icons_in_use:
+            icon_data.append((icon_url, icon_url))
 
         try:
             async with asyncio.TaskGroup() as task_group:
@@ -203,8 +199,11 @@ class MarsBackend:
     ) -> str | None:
         """Fetch suggestions for a single country/form_factor segment.
 
-        Returns raw JSON text that is passed directly to
-        ``AmpIndexManager.build()``. Adds ETag-based conditional fetching
+        The MARS API returns ``{"suggestions": [...]}``. This method extracts
+        the inner array and returns it as a JSON string suitable for
+        ``AmpIndexManager.build()``.
+
+        Adds ETag-based conditional fetching
         (HTTP ``If-None-Match`` / ``304 Not Modified``).
 
         Args:
@@ -213,7 +212,7 @@ class MarsBackend:
             idx_id: The index identifier for ETag tracking.
 
         Returns:
-            The raw JSON response text, or None if not modified (304).
+            A JSON array string of suggestions, or None if not modified (304).
 
         Raises:
             MarsError: Failed request to the MARS API.
@@ -222,7 +221,7 @@ class MarsBackend:
         if idx_id in self.etags:
             headers["If-None-Match"] = self.etags[idx_id]
 
-        url = urljoin(self.base_url, self.suggestion_url_path)
+        url = f"{self.base_url.rstrip('/')}/{self.suggestion_url_path}"
         try:
             response = await self.http_client.get(
                 url,
@@ -239,6 +238,24 @@ class MarsBackend:
             if etag:
                 self.etags[idx_id] = etag
 
-            return response.text
+            # MARS wraps suggestions in {"suggestions": [...]}.
+            # Extract the array for AmpIndexManager.build().
+            try:
+                data = response.json()
+            except ValueError as exc:
+                raise MarsError(
+                    f"Invalid JSON in response for {country}/{form_factor}"
+                ) from exc
+
+            if "suggestions" not in data:
+                logger.warning(
+                    "MARS response missing 'suggestions' key for %s/%s, "
+                    "passing full payload to index builder",
+                    country,
+                    form_factor,
+                )
+
+            suggestions = data.get("suggestions", data)
+            return json.dumps(suggestions)
         except httpx.HTTPError as error:
             raise MarsError(f"Failed to fetch suggestions for {country}/{form_factor}") from error
