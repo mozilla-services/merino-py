@@ -56,6 +56,23 @@ class TestCorpusCacheConfig:
         with pytest.raises(ValueError, match="hard_ttl_sec.*must be greater than.*lock_ttl_sec"):
             CorpusCacheConfig(soft_ttl_sec=10, hard_ttl_sec=20, lock_ttl_sec=30, key_prefix="test")
 
+    @pytest.mark.parametrize(
+        "soft,hard,lock",
+        [
+            (0, 600, 30),
+            (120, 0, 30),
+            (120, 600, 0),
+            (-1, 600, 30),
+        ],
+        ids=["zero_soft", "zero_hard", "zero_lock", "negative_soft"],
+    )
+    def test_ttl_values_must_be_positive(self, soft: int, hard: int, lock: int) -> None:
+        """Reject zero or negative TTL values."""
+        with pytest.raises(ValueError, match="must be positive"):
+            CorpusCacheConfig(
+                soft_ttl_sec=soft, hard_ttl_sec=hard, lock_ttl_sec=lock, key_prefix="test"
+            )
+
 
 def _make_corpus_item(**overrides: object) -> CorpusItem:
     """Create a CorpusItem with sensible defaults."""
@@ -301,24 +318,54 @@ class TestRedisCorpusCache:
         self.mock_cache.delete.assert_called_once_with("lock:key")
 
     @pytest.mark.asyncio
-    async def test_serialize_error_releases_lock(self) -> None:
-        """Release the lock when serialize_fn raises an error."""
+    async def test_serialize_error_returns_items_and_releases_lock(self) -> None:
+        """Return fetched items even when serialize_fn fails (best-effort cache write)."""
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.return_value = True
 
         def bad_serialize(items: list) -> list[dict]:
             raise TypeError("cannot serialize")
 
-        with pytest.raises(TypeError, match="cannot serialize"):
-            await self.redis_cache.get_or_fetch(
-                "data:key",
-                "lock:key",
-                self.fetch_fn,
-                bad_serialize,
-                self.deserialize_fn,
-            )
+        result = await self.redis_cache.get_or_fetch(
+            "data:key",
+            "lock:key",
+            self.fetch_fn,
+            bad_serialize,
+            self.deserialize_fn,
+        )
 
+        assert result == ["item1", "item2"]
         self.mock_cache.delete.assert_called_once_with("lock:key")
+
+    @pytest.mark.asyncio
+    async def test_deserialize_fn_error_on_fresh_hit_falls_through(self) -> None:
+        """Fall through to backend when deserialize_fn raises on fresh cached data."""
+        items_data = [{"v": "item1"}]
+        self.mock_cache.get.return_value = _make_fresh_envelope(items_data)
+        self.mock_cache.set_nx.return_value = True
+
+        def bad_deserialize(data: list[dict]) -> list:
+            raise ValueError("validation error")
+
+        result = await self.redis_cache.get_or_fetch(
+            "data:key", "lock:key", self.fetch_fn, self.serialize_fn, bad_deserialize
+        )
+
+        assert result == ["item1", "item2"]
+        self.fetch_fn.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_malformed_envelope_missing_key_falls_through(self) -> None:
+        """Treat a JSON blob missing required keys as a cache miss."""
+        self.mock_cache.get.return_value = orjson.dumps({"wrong_key": 123})
+        self.mock_cache.set_nx.return_value = True
+
+        result = await self.redis_cache.get_or_fetch(
+            "data:key", "lock:key", self.fetch_fn, self.serialize_fn, self.deserialize_fn
+        )
+
+        assert result == ["item1", "item2"]
+        self.fetch_fn.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_empty_list_is_cached(self) -> None:

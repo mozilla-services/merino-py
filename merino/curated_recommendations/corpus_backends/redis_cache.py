@@ -41,7 +41,13 @@ class CorpusCacheConfig:
     key_prefix: str
 
     def __post_init__(self) -> None:
-        """Validate that TTL values are consistent."""
+        """Validate that TTL values are consistent and positive."""
+        if self.soft_ttl_sec <= 0:
+            raise ValueError(f"soft_ttl_sec ({self.soft_ttl_sec}) must be positive")
+        if self.hard_ttl_sec <= 0:
+            raise ValueError(f"hard_ttl_sec ({self.hard_ttl_sec}) must be positive")
+        if self.lock_ttl_sec <= 0:
+            raise ValueError(f"lock_ttl_sec ({self.lock_ttl_sec}) must be positive")
         if self.hard_ttl_sec <= self.soft_ttl_sec:
             raise ValueError(
                 f"hard_ttl_sec ({self.hard_ttl_sec}) must be greater than "
@@ -118,11 +124,27 @@ class _RedisCorpusCache:
         if cached is not None:
             expires_at, items_data = cached
             if time.time() < expires_at:
-                return deserialize_fn(items_data)
-            # Stale — try to revalidate
-            if await self._try_acquire_lock(lock_key):
-                return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
-            return deserialize_fn(items_data)
+                try:
+                    return deserialize_fn(items_data)
+                except Exception:
+                    logger.warning(
+                        "Deserialization failed for corpus cache key %s",
+                        data_key,
+                        exc_info=True,
+                    )
+                    # Fall through to revalidation/fetch below
+            else:
+                # Stale — try to revalidate
+                if await self._try_acquire_lock(lock_key):
+                    return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
+                try:
+                    return deserialize_fn(items_data)
+                except Exception:
+                    logger.warning(
+                        "Deserialization of stale data failed for corpus cache key %s",
+                        data_key,
+                        exc_info=True,
+                    )
 
         # Cache miss — try to acquire lock and fetch
         if await self._try_acquire_lock(lock_key):
@@ -140,10 +162,14 @@ class _RedisCorpusCache:
         """Fetch from the backend, write to Redis, and release the lock."""
         try:
             items = await fetch_fn()
-            await self._redis_set(data_key, serialize_fn(items))
         except Exception:
             await self._release_lock(lock_key)
             raise
+        # Cache write is best-effort: don't lose successfully fetched items on write failure.
+        try:
+            await self._redis_set(data_key, serialize_fn(items))
+        except Exception:
+            logger.warning("Failed to write to corpus cache key %s", data_key, exc_info=True)
         await self._release_lock(lock_key)
         return items
 
