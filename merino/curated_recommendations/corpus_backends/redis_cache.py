@@ -208,7 +208,14 @@ class _RedisCorpusCache:
             return False
 
     async def _release_lock(self, lock_key: str) -> None:
-        """Release the distributed lock by deleting the key."""
+        """Release the distributed lock by deleting the key.
+
+        Note: This uses unconditional DELETE rather than owner-aware release
+        (compare-and-delete via Lua script). If revalidation exceeds lock_ttl_sec
+        (30s default), another pod's lock could be deleted. The consequence is at
+        most one extra redundant API call, not a stampede, because the SWR pattern
+        ensures other pods serve stale/cached data regardless of lock state.
+        """
         try:
             await self._cache.delete(lock_key)
         except CacheAdapterError:

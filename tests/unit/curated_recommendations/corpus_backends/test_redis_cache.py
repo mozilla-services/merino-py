@@ -355,6 +355,24 @@ class TestRedisCorpusCache:
         self.fetch_fn.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_stale_hit_lock_loser_deserialize_error_falls_through(self) -> None:
+        """Fall through to backend when stale data can't be deserialized and lock is held."""
+        items_data = [{"v": "stale"}]
+        self.mock_cache.get.return_value = _make_stale_envelope(items_data)
+        # First set_nx returns False (lock loser), second returns True (lock released)
+        self.mock_cache.set_nx.side_effect = [False, True]
+
+        def bad_deserialize(data: list[dict]) -> list:
+            raise ValueError("schema changed")
+
+        result = await self.redis_cache.get_or_fetch(
+            "data:key", "lock:key", self.fetch_fn, self.serialize_fn, bad_deserialize
+        )
+
+        assert result == ["item1", "item2"]
+        self.fetch_fn.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_malformed_envelope_missing_key_falls_through(self) -> None:
         """Treat a JSON blob missing required keys as a cache miss."""
         self.mock_cache.get.return_value = orjson.dumps({"wrong_key": 123})
