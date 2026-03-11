@@ -29,7 +29,6 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CACrawledContentRescaler,
     CrawledContentPinnedFreshRescaler,
-    CrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
     UKCrawledContentRescaler,
@@ -404,12 +403,9 @@ def get_ranking_rescaler_for_branch(
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
 
-    if is_enrolled_in_experiment(
-        request, ExperimentName.FIXED_POSITION_FRESH_ITEMS_EXPERIMENT.value, "treatment"
-    ):
-        return CrawledContentPinnedFreshRescaler()
-
-    return CrawledContentRescaler()
+    # The pinned fresh content rescaler is only available for the US market right now.
+    # Some additional work would be needed to make it work for other markets.
+    return CrawledContentPinnedFreshRescaler()
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
