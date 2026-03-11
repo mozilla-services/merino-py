@@ -954,64 +954,53 @@ class AccuweatherBackend:
             else None
         )
 
-    async def get_hourly_forecasts(
-        self,
-        weather_context: WeatherContext,
+    async def _get_hourly_forecasts_from_cache(
+        self, cache_key: str
     ) -> HourlyForecastsWithTTL | None:
-        """Fetch hourly forecast from AccuWeather API. Process API response JSON and return a list of HourlyForecast objects."""
-        language = get_language(weather_context.languages)
+        """Return cached hourly forecasts or None on cache miss/expiry.
 
+        Raises:
+            AccuweatherError: Cache read failed.
+        """
         try:
-            accuweather_location, _ = await pathfinder.explore(
-                weather_context, self.get_location_by_geolocation
-            )
-
-            if accuweather_location is None:
-                raise MissingLocationKeyError(weather_context.geolocation)
-
-            cache_key = self.cache_key_template(WeatherDataType.HOURLY_FORECAST, language).format(
-                location_key=accuweather_location.key
-            )
-
             cached_data: list[bytes | None] = await self.cache.run_script(
                 sid=SCRIPT_HOURLY_FORECAST_ID,
                 keys=[],
                 args=[cache_key],
                 readonly=True,
             )
+        except CacheAdapterError as exc:
+            self.metrics_client.increment("accuweather.cache.hourly_forecast.read.error")
+            raise AccuweatherError(
+                AccuweatherErrorMessages.CACHE_READ_HOURLY_FORECAST_ERROR, exception=exc
+            ) from exc
 
-            hourly_forecasts_cached, ttl_cached = cached_data
+        hourly_forecasts_cached, ttl_cached = cached_data
 
-            # cache hit.
-            if hourly_forecasts_cached and ttl_cached != REDIS_EXPIRED_KEY_TTL:
-                self.metrics_client.increment("accuweather.cache.hit.hourly_forecasts")
+        if not hourly_forecasts_cached or ttl_cached == REDIS_EXPIRED_KEY_TTL:
+            return None
 
-                # cache hit — convert from binary json and build HourlyForecast objects
-                hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)[
-                    "hourly_forecasts"
-                ]
-                hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
-                    hourly_forecasts_as_json[:DEFAULT_FORECAST_HOURS]
-                )
-                ttl = cast(int, ttl_cached)
-                return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=ttl)
+        self.metrics_client.increment("accuweather.cache.hit.hourly_forecasts")
+        hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)["hourly_forecasts"]
+        hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
+            hourly_forecasts_as_json[:DEFAULT_FORECAST_HOURS]
+        )
+        return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=cast(int, ttl_cached))
 
-            # cache miss — fetch from upstream.
-            self.metrics_client.increment("accuweather.cache.fetch.miss.hourly_forecasts")
+    async def _fetch_hourly_forecasts_from_upstream(
+        self, location_key: str, language: str
+    ) -> HourlyForecastsWithTTL | None:
+        """Fetch hourly forecasts from AccuWeather API and return result or None.
 
-            url_path = self.url_hourly_forecasts_path.replace(
-                self.url_location_key_placeholder,
-                accuweather_location.key,
-            )
+        Raises:
+            AccuweatherError: HTTP request failed or response could not be parsed.
+        """
+        self.metrics_client.increment("accuweather.cache.fetch.miss.hourly_forecasts")
 
-            params: dict[str, str] = {
-                self.url_param_api_key: self.api_key,
-                "language": language,
-            }
-
+        try:
             processed_response: dict[str, Any] | None = await self.request_upstream(
-                url_path=url_path,
-                params=params,
+                url_path=self.url_hourly_forecasts_path.format(location_key=location_key),
+                params={self.url_param_api_key: self.api_key, LANGUAGE_PARAM: language},
                 request_type=RequestType.HOURLY_FORECASTS,
                 process_api_response=process_hourly_forecast_response,
                 cache_ttl_sec=self.cached_hourly_forecast_ttl_sec,
@@ -1020,39 +1009,58 @@ class AccuweatherBackend:
             if processed_response is None:
                 return None
 
-            sliced_hourly_forecasts_as_json = processed_response["hourly_forecasts"][
-                :DEFAULT_FORECAST_HOURS
-            ]
-            ttl = processed_response["cached_request_ttl"]
-            hourly_forecasts = create_hourly_forecasts_from_json(sliced_hourly_forecasts_as_json)
-
-            return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=ttl)
-
-        except MissingLocationKeyError:
-            raise
-
-        except CacheAdapterError as exc:
-            self.metrics_client.increment("accuweather.cache.hourly_forecast.read.error")
-            raise AccuweatherError(
-                AccuweatherErrorMessages.CACHE_READ_HOURLY_FORECAST_ERROR, exception=exc
-            ) from exc
-
+            hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
+                processed_response["hourly_forecasts"][:DEFAULT_FORECAST_HOURS]
+            )
+            return HourlyForecastsWithTTL(
+                hourly_forecasts=hourly_forecasts, ttl=processed_response["cached_request_ttl"]
+            )
         except HTTPError as exc:
             raise AccuweatherError(
                 AccuweatherErrorMessages.HTTP_UNEXPECTED_HOURLY_FORECAST_RESPONSE
             ) from exc
-
         except (KeyError, ValidationError) as exc:
             raise AccuweatherError(
                 AccuweatherErrorMessages.HOURLY_FORECAST_PARSE_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
 
+    async def get_hourly_forecasts(
+        self,
+        weather_context: WeatherContext,
+    ) -> HourlyForecastsWithTTL | None:
+        """Fetch hourly forecasts for the location in weather_context.
+        Checks the Redis cache before making an upstream request.
+
+        Raises:
+            MissingLocationKeyError: Location key not found for the given geolocation.
+            AccuweatherError: Cache error, failed HTTP request, or parse failure.
+        Reference:
+            https://developer.accuweather.com/accuweather-forecast-api/apis/get/forecasts/v1/hourly/12hour/{locationKey}
+        """
+        language = get_language(weather_context.languages)
+
+        try:
+            accuweather_location, _ = await pathfinder.explore(
+                weather_context, self.get_location_by_geolocation
+            )
         except Exception as exc:
             raise AccuweatherError(
                 AccuweatherErrorMessages.UNEXPECTED_HOURLY_FORECAST_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
+
+        if accuweather_location is None:
+            raise MissingLocationKeyError(weather_context.geolocation)
+
+        cache_key = self.cache_key_template(WeatherDataType.HOURLY_FORECAST, language).format(
+            location_key=accuweather_location.key
+        )
+
+        if cached := await self._get_hourly_forecasts_from_cache(cache_key):
+            return cached
+
+        return await self._fetch_hourly_forecasts_from_upstream(accuweather_location.key, language)
 
     async def get_location_completion(
         self, weather_context: WeatherContext, search_term: str
