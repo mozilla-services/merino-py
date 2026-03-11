@@ -30,9 +30,9 @@ from merino.curated_recommendations.rankers.utils import (
 )
 
 # We are still learning how to compute how many impressions before we can trust the ranker score completely
-# So far, 4000 impressions seems to be a reasonable average beta value to use as a threshold
-# This means that items with less than 4000 impressions will be marked as fresh.
-CONTEXUAL_AVG_BETA_VALUE = 4000
+# So far, 12000 impressions seems to be a reasonable average beta value to use as a threshold
+# This means that items with less than 12000 impressions will be marked as fresh.
+CONTEXUAL_AVG_BETA_VALUE = 12000
 CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
     0.5  # Underscored items tend to scale higher, leading to too much fresh content
 )
