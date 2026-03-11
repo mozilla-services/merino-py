@@ -104,8 +104,9 @@ class _RedisCorpusCache:
 
     async def get_or_fetch(
         self,
-        data_key: str,
-        lock_key: str,
+        backend_type: str,
+        surface_id: str,
+        *extra: str,
         fetch_fn: Callable[[], Awaitable[list[T]]],
         serialize_fn: Callable[[list[T]], list[dict]],
         deserialize_fn: Callable[[list[dict]], list[T]],
@@ -113,12 +114,15 @@ class _RedisCorpusCache:
         """Check Redis, returning cached data or fetching from the backend.
 
         Args:
-            data_key: Redis key for the cached data.
-            lock_key: Redis key for the distributed revalidation lock.
+            backend_type: Type identifier for key namespacing (e.g. "scheduled", "sections").
+            surface_id: Surface ID value for the cache key.
+            *extra: Additional key segments (e.g. days_offset).
             fetch_fn: Async callable that fetches fresh data from the backend.
             serialize_fn: Converts typed models to dicts for Redis storage.
             deserialize_fn: Converts dicts from Redis back to typed models.
         """
+        data_key = _build_data_key(self._config, backend_type, surface_id, *extra)
+        lock_key = _build_lock_key(self._config, backend_type, surface_id, *extra)
         # Try reading from Redis
         cached = await self._redis_get(data_key)
         if cached is not None:
@@ -238,15 +242,13 @@ class RedisCachedScheduledSurface(ScheduledSurfaceProtocol):
     ) -> None:
         self._backend = backend
         self._redis_cache = _RedisCorpusCache(cache, config)
-        self._config = config
 
     async def fetch(self, surface_id: SurfaceId, days_offset: int = 0) -> list[CorpusItem]:
         """Fetch corpus items, checking Redis L2 cache first."""
-        data_key = _build_data_key(self._config, "scheduled", surface_id.value, str(days_offset))
-        lock_key = _build_lock_key(self._config, "scheduled", surface_id.value, str(days_offset))
         return await self._redis_cache.get_or_fetch(
-            data_key=data_key,
-            lock_key=lock_key,
+            "scheduled",
+            surface_id.value,
+            str(days_offset),
             fetch_fn=lambda: self._backend.fetch(surface_id, days_offset),
             serialize_fn=lambda items: [item.model_dump(mode="json") for item in items],
             deserialize_fn=lambda data: [CorpusItem.model_validate(d) for d in data],
@@ -267,15 +269,12 @@ class RedisCachedSections(SectionsProtocol):
     ) -> None:
         self._backend = backend
         self._redis_cache = _RedisCorpusCache(cache, config)
-        self._config = config
 
     async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
         """Fetch corpus sections, checking Redis L2 cache first."""
-        data_key = _build_data_key(self._config, "sections", surface_id.value)
-        lock_key = _build_lock_key(self._config, "sections", surface_id.value)
         return await self._redis_cache.get_or_fetch(
-            data_key=data_key,
-            lock_key=lock_key,
+            "sections",
+            surface_id.value,
             fetch_fn=lambda: self._backend.fetch(surface_id),
             serialize_fn=lambda sections: [s.model_dump(mode="json") for s in sections],
             deserialize_fn=lambda data: [CorpusSection.model_validate(d) for d in data],

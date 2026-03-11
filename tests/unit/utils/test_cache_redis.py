@@ -61,6 +61,7 @@ class TestSetNx:
         result = await adapter.set_nx("lock:key", 30)
 
         assert result is False
+        mock_primary.set.assert_called_once_with("lock:key", b"1", nx=True, ex=30)
 
     @pytest.mark.asyncio
     async def test_raises_cache_adapter_error_on_redis_error(self) -> None:
