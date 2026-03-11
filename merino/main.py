@@ -51,6 +51,7 @@ async def lifespan(app: FastAPI):
     governance.shutdown()
     # Shut down providers and clean up.
     await suggest.shutdown_providers()
+    await curated_recommendations.shutdown()
     await get_metrics_client().close()
 
 

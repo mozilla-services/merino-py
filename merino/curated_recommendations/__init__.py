@@ -58,6 +58,7 @@ logger = logging.getLogger(__name__)
 
 _provider: CuratedRecommendationsProvider
 _legacy_provider: LegacyCuratedRecommendationsProvider
+_corpus_cache_adapter: RedisAdapter | None = None
 
 
 def init_local_model_backend() -> LocalModelBackend:
@@ -187,12 +188,14 @@ def _wrap_with_redis_cache(
 
     Returns the backends unchanged if corpus_cache.backend is not "redis".
     """
+    global _corpus_cache_adapter
+
     cache_settings = settings.curated_recommendations.corpus_cache
     if cache_settings.backend != "redis":
         return scheduled_surface_backend, sections_backend
 
     logger.info("Initializing Redis L2 cache for corpus backends")
-    redis_adapter = RedisAdapter(
+    _corpus_cache_adapter = RedisAdapter(
         *create_redis_clients(
             primary=settings.redis.server,
             replica=settings.redis.replica,
@@ -208,8 +211,8 @@ def _wrap_with_redis_cache(
         key_prefix=cache_settings.key_prefix,
     )
     return (
-        RedisCachedScheduledSurface(scheduled_surface_backend, redis_adapter, config),
-        RedisCachedSections(sections_backend, redis_adapter, config),
+        RedisCachedScheduledSurface(scheduled_surface_backend, _corpus_cache_adapter, config),
+        RedisCachedSections(sections_backend, _corpus_cache_adapter, config),
     )
 
 
@@ -260,6 +263,14 @@ def get_provider() -> CuratedRecommendationsProvider:
 
 
 def get_legacy_provider() -> LegacyCuratedRecommendationsProvider:
-    """Return the legacy curated recommendations provider"""
+    """Return the legacy curated recommendations provider."""
     global _legacy_provider
     return _legacy_provider
+
+
+async def shutdown() -> None:
+    """Clean up resources used by curated recommendations."""
+    global _corpus_cache_adapter
+    if _corpus_cache_adapter is not None:
+        await _corpus_cache_adapter.close()
+        _corpus_cache_adapter = None

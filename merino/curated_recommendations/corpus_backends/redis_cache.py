@@ -40,6 +40,19 @@ class CorpusCacheConfig:
     lock_ttl_sec: int
     key_prefix: str
 
+    def __post_init__(self) -> None:
+        """Validate that TTL values are consistent."""
+        if self.hard_ttl_sec <= self.soft_ttl_sec:
+            raise ValueError(
+                f"hard_ttl_sec ({self.hard_ttl_sec}) must be greater than "
+                f"soft_ttl_sec ({self.soft_ttl_sec})"
+            )
+        if self.hard_ttl_sec <= self.lock_ttl_sec:
+            raise ValueError(
+                f"hard_ttl_sec ({self.hard_ttl_sec}) must be greater than "
+                f"lock_ttl_sec ({self.lock_ttl_sec})"
+            )
+
 
 def _build_data_key(
     config: CorpusCacheConfig, backend_type: str, surface_id: str, *extra: str
@@ -127,10 +140,10 @@ class _RedisCorpusCache:
         """Fetch from the backend, write to Redis, and release the lock."""
         try:
             items = await fetch_fn()
+            await self._redis_set(data_key, serialize_fn(items))
         except Exception:
             await self._release_lock(lock_key)
             raise
-        await self._redis_set(data_key, serialize_fn(items))
         await self._release_lock(lock_key)
         return items
 

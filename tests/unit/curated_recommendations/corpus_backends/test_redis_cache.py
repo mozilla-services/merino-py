@@ -34,6 +34,29 @@ CONFIG = CorpusCacheConfig(
 )
 
 
+class TestCorpusCacheConfig:
+    """Tests for CorpusCacheConfig validation."""
+
+    def test_valid_config(self) -> None:
+        """Accept valid TTL ordering."""
+        config = CorpusCacheConfig(
+            soft_ttl_sec=120, hard_ttl_sec=600, lock_ttl_sec=30, key_prefix="test"
+        )
+        assert config.soft_ttl_sec == 120
+
+    def test_hard_ttl_must_exceed_soft_ttl(self) -> None:
+        """Reject hard_ttl_sec <= soft_ttl_sec."""
+        with pytest.raises(ValueError, match="hard_ttl_sec.*must be greater than.*soft_ttl_sec"):
+            CorpusCacheConfig(
+                soft_ttl_sec=600, hard_ttl_sec=120, lock_ttl_sec=30, key_prefix="test"
+            )
+
+    def test_hard_ttl_must_exceed_lock_ttl(self) -> None:
+        """Reject hard_ttl_sec <= lock_ttl_sec."""
+        with pytest.raises(ValueError, match="hard_ttl_sec.*must be greater than.*lock_ttl_sec"):
+            CorpusCacheConfig(soft_ttl_sec=10, hard_ttl_sec=20, lock_ttl_sec=30, key_prefix="test")
+
+
 def _make_corpus_item(**overrides: object) -> CorpusItem:
     """Create a CorpusItem with sensible defaults."""
     defaults = {
@@ -276,6 +299,40 @@ class TestRedisCorpusCache:
             )
 
         self.mock_cache.delete.assert_called_once_with("lock:key")
+
+    @pytest.mark.asyncio
+    async def test_serialize_error_releases_lock(self) -> None:
+        """Release the lock when serialize_fn raises an error."""
+        self.mock_cache.get.return_value = None
+        self.mock_cache.set_nx.return_value = True
+
+        def bad_serialize(items: list) -> list[dict]:
+            raise TypeError("cannot serialize")
+
+        with pytest.raises(TypeError, match="cannot serialize"):
+            await self.redis_cache.get_or_fetch(
+                "data:key",
+                "lock:key",
+                self.fetch_fn,
+                bad_serialize,
+                self.deserialize_fn,
+            )
+
+        self.mock_cache.delete.assert_called_once_with("lock:key")
+
+    @pytest.mark.asyncio
+    async def test_empty_list_is_cached(self) -> None:
+        """Cache and return an empty list from the backend."""
+        self.mock_cache.get.return_value = None
+        self.mock_cache.set_nx.return_value = True
+        self.fetch_fn.return_value = []
+
+        result = await self.redis_cache.get_or_fetch(
+            "data:key", "lock:key", self.fetch_fn, self.serialize_fn, self.deserialize_fn
+        )
+
+        assert result == []
+        self.mock_cache.set.assert_called_once()
 
 
 class TestRedisCachedScheduledSurface:
