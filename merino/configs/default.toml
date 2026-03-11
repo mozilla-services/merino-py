@@ -1254,6 +1254,28 @@ blob_name = "contextual_ts/cohort_model_v2.safetensors"
 cron_interval_seconds = 600
 
 
+[default.curated_recommendations.corpus_cache]
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__BACKEND
+# Backend for shared corpus caching. "redis" enables Redis as an L2 cache
+# between in-memory SWR (L1) and the Corpus GraphQL API. "none" disables it.
+backend = "none"
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__SOFT_TTL_SEC
+# Soft TTL in seconds. After this, one pod revalidates while others serve stale data.
+soft_ttl_sec = 120
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__HARD_TTL_SEC
+# Hard TTL in seconds. Redis evicts the key after this. Should be much longer than soft TTL.
+hard_ttl_sec = 600
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__LOCK_TTL_SEC
+# Distributed lock TTL in seconds. Auto-releases if the lock holder crashes.
+lock_ttl_sec = 30
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__KEY_PREFIX
+# Prefix for all Redis keys. Bump the version on schema changes.
+key_prefix = "curated:v1"
+
 
 [default.curated_recommendations.corpus_api]
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_API__RETRY_COUNT
