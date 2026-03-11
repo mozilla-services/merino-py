@@ -759,6 +759,16 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/unit/utils/test_log_data_creator.py",
         ],
     },
+    "merino/optimizers/models.py": {
+        "direct": ["tests/unit/optimizers/test_models.py"],
+        "indirect": [
+            "tests/unit/optimizers/test_thompson.py",
+        ],
+    },
+    "merino/optimizers/thompson.py": {
+        "direct": ["tests/unit/optimizers/test_thompson.py"],
+        "indirect": [],
+    },
     "merino/providers/manifest/__init__.py": {
         "direct": [],
         "indirect": [
