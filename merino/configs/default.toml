@@ -1255,10 +1255,10 @@ cron_interval_seconds = 600
 
 
 [default.curated_recommendations.corpus_cache]
-# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__BACKEND
-# Backend for shared corpus caching. "redis" enables Redis as an L2 cache
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CACHE
+# Shared corpus cache backend. "redis" enables Redis as an L2 cache
 # between in-memory SWR (L1) and the Corpus GraphQL API. "none" disables it.
-backend = "none"
+cache = "none"
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__SOFT_TTL_SEC
 # Soft TTL in seconds. After this, one pod revalidates while others serve stale data.

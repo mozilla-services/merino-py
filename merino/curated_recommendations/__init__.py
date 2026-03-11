@@ -191,7 +191,7 @@ def _wrap_with_redis_cache(
     global _corpus_cache_adapter
 
     cache_settings = settings.curated_recommendations.corpus_cache
-    if cache_settings.backend != "redis":
+    if cache_settings.cache != "redis":
         return scheduled_surface_backend, sections_backend
 
     logger.info("Initializing Redis L2 cache for corpus backends")
