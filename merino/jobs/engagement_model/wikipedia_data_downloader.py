@@ -1,7 +1,5 @@
 """Download engagement metrics for Wikipedia from Biq Query table"""
 
-from typing import Any
-
 from google.cloud.bigquery import Client
 
 
@@ -27,14 +25,13 @@ AND normalized_channel = "release"
     def __init__(self, source_gcp_project: str) -> None:
         self.client = Client(source_gcp_project)
 
-    def download_data(self) -> dict[str, Any]:
+    def download_data(self) -> dict[str, int]:
         """Download engagement data from BigQuery and return formatted JSON objects"""
-
         query_job = self.client.query(self.QUERY)
         row = next(query_job.result(), None)
         if row is None:
             return {"impressions": 0, "clicks": 0}
         return {
-            "impressions": row["impressions"],
-            "clicks": row["clicks"],
+            "impressions": int(row["impressions"]),
+            "clicks": int(row["clicks"]),
         }

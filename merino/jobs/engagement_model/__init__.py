@@ -1,5 +1,8 @@
+"""CLI command to fetch engagement data."""
+
 import json
 import logging
+from datetime import datetime
 from typing import Any
 
 import typer
@@ -19,12 +22,12 @@ logger = logging.getLogger(__name__)
 
 cli = typer.Typer(
     name="upload_engagement_data",
-    help="Commands to fetch and upload user engagemend data to GCS",
+    help="Commands to fetch and upload user engagement data to GCS",
 )
 
 
 @cli.command()
-def upload_engagement_data():  # pragma: no cover
+def upload_engagement_data() -> None:
     """Fetch AMP + Wikipedia engagement data and upload a JSON payload to GCS."""
     logger.info("Starting engagement data pipeline...")
 
@@ -54,10 +57,9 @@ def upload_engagement_data():  # pragma: no cover
 
     content = json.dumps(payload, indent=2)
 
-    timestamp = ""  # TODO
-    destination_name = (
-        f"suggest-merino-exports/engagement/engagement_data_{timestamp}.json"
-    )
+    timestamp = datetime.now().strftime("%Y%m%d")
+    destination_name = f"suggest-merino-exports/engagement/engagement_data_{timestamp}.json"
+    latest_name = "suggest-merino-exports/engagement/engagement_data_latest.json"
 
     uploader = GcsUploader(
         destination_gcp_project=gcs_storage_project,
@@ -68,6 +70,13 @@ def upload_engagement_data():  # pragma: no cover
     uploader.upload_content(
         content=content,
         destination_name=destination_name,
+        content_type="application/json",
+        forced_upload=True,
+    )
+
+    uploader.upload_content(
+        content=content,
+        destination_name=latest_name,
         content_type="application/json",
         forced_upload=True,
     )
