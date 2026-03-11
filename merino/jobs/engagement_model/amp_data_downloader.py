@@ -31,7 +31,6 @@ ORDER BY 1, 5 DESC, 4 DESC
 
     def download_data(self) -> list[dict[str, Any]]:
         """Download engagement data from BigQuery and return formatted JSON objects"""
-
         query_job = self.client.query(self.QUERY)
         results = query_job.result()
 
