@@ -78,3 +78,22 @@ class CacheAdapter(Protocol):
     async def scard(self, key: str) -> int:
         """Get the number of members in a Redis set."""
         ...
+
+    async def set_nx(self, key: str, ttl_sec: int) -> bool:
+        """Set the key only if it does not already exist, with a TTL in seconds.
+
+        Returns:
+            True if the key was set, False if it already existed.
+
+        Raises:
+            - `CacheAdapterError` for cache backend errors.
+        """
+        ...
+
+    async def delete(self, key: str) -> None:
+        """Delete a key from the cache.
+
+        Raises:
+            - `CacheAdapterError` for cache backend errors.
+        """
+        ...

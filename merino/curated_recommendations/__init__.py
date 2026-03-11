@@ -6,7 +6,17 @@
 import logging
 import random
 
+from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
+from merino.curated_recommendations.corpus_backends.protocol import (
+    ScheduledSurfaceProtocol,
+    SectionsProtocol,
+)
+from merino.curated_recommendations.corpus_backends.redis_cache import (
+    CorpusCacheConfig,
+    RedisCachedScheduledSurface,
+    RedisCachedSections,
+)
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
     ScheduledSurfaceBackend,
     CorpusApiGraphConfig,
@@ -169,6 +179,40 @@ def init_ml_cohort_model_backend() -> CohortModelBackend:
         return EmptyCohortModel()
 
 
+def _wrap_with_redis_cache(
+    scheduled_surface_backend: ScheduledSurfaceProtocol,
+    sections_backend: SectionsProtocol,
+) -> tuple[ScheduledSurfaceProtocol, SectionsProtocol]:
+    """Optionally wrap corpus backends with a Redis L2 cache layer.
+
+    Returns the backends unchanged if corpus_cache.backend is not "redis".
+    """
+    cache_settings = settings.curated_recommendations.corpus_cache
+    if cache_settings.backend != "redis":
+        return scheduled_surface_backend, sections_backend
+
+    logger.info("Initializing Redis L2 cache for corpus backends")
+    redis_adapter = RedisAdapter(
+        *create_redis_clients(
+            primary=settings.redis.server,
+            replica=settings.redis.replica,
+            max_connections=settings.redis.max_connections,
+            socket_connect_timeout=settings.redis.socket_connect_timeout_sec,
+            socket_timeout=settings.redis.socket_timeout_sec,
+        )
+    )
+    config = CorpusCacheConfig(
+        soft_ttl_sec=cache_settings.soft_ttl_sec,
+        hard_ttl_sec=cache_settings.hard_ttl_sec,
+        lock_ttl_sec=cache_settings.lock_ttl_sec,
+        key_prefix=cache_settings.key_prefix,
+    )
+    return (
+        RedisCachedScheduledSurface(scheduled_surface_backend, redis_adapter, config),
+        RedisCachedSections(sections_backend, redis_adapter, config),
+    )
+
+
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -179,18 +223,22 @@ def init_provider() -> None:
     ml_recommendations_backend = init_ml_recommendations_backend()
     cohort_model_backend = init_ml_cohort_model_backend()
 
-    scheduled_surface_backend = ScheduledSurfaceBackend(
+    scheduled_surface_backend: ScheduledSurfaceProtocol = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=get_manifest_provider(),
     )
 
-    sections_backend = SectionsBackend(
+    sections_backend: SectionsProtocol = SectionsBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=get_manifest_provider(),
+    )
+
+    scheduled_surface_backend, sections_backend = _wrap_with_redis_cache(
+        scheduled_surface_backend, sections_backend
     )
 
     _provider = CuratedRecommendationsProvider(
