@@ -981,10 +981,16 @@ class AccuweatherBackend:
             return None
 
         self.metrics_client.increment("accuweather.cache.hit.hourly_forecasts")
+
+        # convert binary json from cache to regular json.
         hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)["hourly_forecasts"]
+
+        # build HourlyForecast objects from the converted json above.
         hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
             hourly_forecasts_as_json[:DEFAULT_FORECAST_HOURS]
         )
+
+        # casting the ttl to an int even though it is an int because linter does not trust binary int.
         return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=cast(int, ttl_cached))
 
     async def _fetch_hourly_forecasts_from_upstream(
@@ -1005,25 +1011,27 @@ class AccuweatherBackend:
                 process_api_response=process_hourly_forecast_response,
                 cache_ttl_sec=self.cached_hourly_forecast_ttl_sec,
             )
-
-            if processed_response is None:
-                return None
-
-            hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
-                processed_response["hourly_forecasts"][:DEFAULT_FORECAST_HOURS]
-            )
-            return HourlyForecastsWithTTL(
-                hourly_forecasts=hourly_forecasts, ttl=processed_response["cached_request_ttl"]
-            )
         except HTTPError as exc:
             raise AccuweatherError(
                 AccuweatherErrorMessages.HTTP_UNEXPECTED_HOURLY_FORECAST_RESPONSE
             ) from exc
+
+        if processed_response is None:
+            return None
+
+        try:
+            hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
+                processed_response["hourly_forecasts"][:DEFAULT_FORECAST_HOURS]
+            )
         except (KeyError, ValidationError) as exc:
             raise AccuweatherError(
                 AccuweatherErrorMessages.HOURLY_FORECAST_PARSE_ERROR,
                 exception_class_name=exc.__class__.__name__,
             ) from exc
+
+        return HourlyForecastsWithTTL(
+            hourly_forecasts=hourly_forecasts, ttl=processed_response["cached_request_ttl"]
+        )
 
     async def get_hourly_forecasts(
         self,
