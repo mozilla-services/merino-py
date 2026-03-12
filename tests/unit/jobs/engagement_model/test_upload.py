@@ -8,7 +8,7 @@ import freezegun
 from merino.jobs.engagement_model import upload_engagement_data
 
 
-@freezegun.freeze_time("2026-03-10")
+@freezegun.freeze_time("2026-03-10 12:34:56")
 def test_gcs_uploader() -> None:
     """Test gcs uploader aggregates and uploads data correctly."""
     mock_uploader = MagicMock()
@@ -56,10 +56,8 @@ def test_gcs_uploader() -> None:
             {"amp": amp_data, "wiki_aggregated": wiki_data, "amp_aggregated": amp_aggregated},
             indent=2,
         )
-        expected_destination_name = (
-            "suggest-merino-exports/engagement/engagement_data_20260310.json"
-        )
-        expected_latest_name = "suggest-merino-exports/engagement/engagement_data_latest.json"
+        expected_destination_name = "suggest-merino-exports/engagement/20260310123456.json"
+        expected_latest_name = "suggest-merino-exports/engagement/latest.json"
 
         assert mock_uploader.upload_content.call_count == 2
         mock_uploader.upload_content.assert_has_calls(

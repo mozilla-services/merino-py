@@ -57,9 +57,9 @@ def upload_engagement_data() -> None:
 
     content = json.dumps(payload, indent=2)
 
-    timestamp = datetime.now().strftime("%Y%m%d")
-    destination_name = f"suggest-merino-exports/engagement/engagement_data_{timestamp}.json"
-    latest_name = "suggest-merino-exports/engagement/engagement_data_latest.json"
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    destination_name = f"suggest-merino-exports/engagement/{timestamp}.json"
+    latest_name = "suggest-merino-exports/engagement/latest.json"
 
     uploader = GcsUploader(
         destination_gcp_project=gcs_storage_project,

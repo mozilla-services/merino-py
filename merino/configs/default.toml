@@ -304,11 +304,11 @@ cdn_hostname = ""
 gcs_enabled = true
 
 [default.engagement]
-gcs_storage_bucket = "merino-airflow-data-prod"
+gcs_storage_bucket = ""
 
-gcs_bq_project = "moz-fx-data-shared-prod"
+gcs_bq_project = ""
 
-gcs_storage_project = "moz-fx-merino-prod-5de4"
+gcs_storage_project = ""
 
 [default.icon]
 # Subdirectory within bucket for favicons
