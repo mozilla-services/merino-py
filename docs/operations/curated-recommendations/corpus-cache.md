@@ -45,7 +45,7 @@ flowchart TB
 
     acquire_lock -- "LOCK ACQUIRED" --> api
     acquire_lock -. "LOCK HELD + stale exists" .-> serve_stale["Return stale data"]
-    acquire_lock -. "LOCK HELD + no data" .-> fetch_direct["Fetch from API (no write to Redis)"]
+    acquire_lock -. "LOCK HELD + no data" .-> retry["Wait, retry Redis, or raise"]
 
     api --> write --> done_api["Update L1 cache"]
 
@@ -58,7 +58,7 @@ flowchart TB
     style respond_fresh fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
     style respond_stale fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
     style serve_stale fill:#f4d03f,stroke:#d4ac0f,color:#333
-    style fetch_direct fill:#f4d03f,stroke:#d4ac0f,color:#333
+    style retry fill:#e74c3c,stroke:#c0392b,color:#fff
     style done_l2 fill:#27ae60,stroke:#1e8449,color:#fff
     style done_api fill:#27ae60,stroke:#1e8449,color:#fff
     style L1 fill:#eaf2f8,stroke:#2980b9,stroke-width:2px,color:#2c3e50

@@ -1,5 +1,6 @@
 """Redis L2 cache for corpus backends with distributed stale-while-revalidate."""
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     SurfaceId,
 )
-from merino.exceptions import CacheAdapterError
+from merino.exceptions import BackendError, CacheAdapterError
 
 logger = logging.getLogger(__name__)
 
@@ -163,8 +164,14 @@ class _RedisCorpusCache:
         # Cache miss — try to acquire lock and fetch
         if await self._try_acquire_lock(lock_key):
             return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
-        # Another pod is populating; fall through to backend
-        return await fetch_fn()
+        # Another pod is populating; wait briefly then retry Redis
+        await asyncio.sleep(0.1)
+        cached = await self._redis_get(data_key)
+        if cached is not None:
+            _, items_data = cached
+            if items_data is not None:
+                return deserialize_fn(items_data)
+        raise BackendError(f"Cache miss and lock held for {data_key}")
 
     async def _revalidate(
         self,
