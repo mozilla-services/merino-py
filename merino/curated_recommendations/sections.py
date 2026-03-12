@@ -31,7 +31,6 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
@@ -387,7 +386,7 @@ def get_ranking_rescaler_for_branch(
         return SchedulerHoldbackRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_GB:
-        return UKCrawledContentRescaler()
+        return CrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_IE and is_enrolled_in_experiment(
         request, "sections-in-ie", "sections"

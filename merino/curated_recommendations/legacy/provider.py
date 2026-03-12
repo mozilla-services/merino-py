@@ -23,7 +23,6 @@ from merino.curated_recommendations.legacy.sections_adapter import (
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
-    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
@@ -100,11 +99,7 @@ class LegacyCuratedRecommendationsProvider:
 
         if surface_id in (SurfaceId.NEW_TAB_EN_US, SurfaceId.NEW_TAB_EN_GB):
             # US/GB: fetch from sections backend instead of scheduler
-            rescaler = (
-                UKCrawledContentRescaler()
-                if surface_id == SurfaceId.NEW_TAB_EN_GB
-                else CrawledContentRescaler()
-            )
+            rescaler = CrawledContentRescaler()
             return await get_legacy_recommendations_from_sections(
                 sections_backend=curated_corpus_provider.sections_backend,
                 engagement_backend=curated_corpus_provider.engagement_backend,

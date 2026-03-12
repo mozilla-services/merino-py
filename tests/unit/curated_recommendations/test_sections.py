@@ -28,7 +28,6 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
     ITEM_SUBTOPIC_FLAG,
@@ -323,9 +322,9 @@ class TestFilterSectionsByExperiment:
             ("other", "treatment", "CA", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
             (None, None, "US", None, CrawledContentRescaler),
             (None, None, "CA", None, CrawledContentRescaler),
-            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
-            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
-            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
+            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
+            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
             # IE with sections branch gets IECrawledContentRescaler
             (
                 "sections-in-ie",
