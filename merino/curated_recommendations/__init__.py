@@ -192,27 +192,31 @@ def _init_corpus_cache(
     if cache_settings.cache != "redis":
         return scheduled_surface_backend, sections_backend, None
 
-    logger.info("Initializing Redis L2 cache for corpus backends")
-    adapter = RedisAdapter(
-        *create_redis_clients(
-            primary=settings.redis.server,
-            replica=settings.redis.replica,
-            max_connections=settings.redis.max_connections,
-            socket_connect_timeout=settings.redis.socket_connect_timeout_sec,
-            socket_timeout=settings.redis.socket_timeout_sec,
+    try:
+        logger.info("Initializing Redis L2 cache for corpus backends")
+        adapter = RedisAdapter(
+            *create_redis_clients(
+                primary=settings.redis.server,
+                replica=settings.redis.replica,
+                max_connections=settings.redis.max_connections,
+                socket_connect_timeout=settings.redis.socket_connect_timeout_sec,
+                socket_timeout=settings.redis.socket_timeout_sec,
+            )
         )
-    )
-    config = CorpusCacheConfig(
-        soft_ttl_sec=cache_settings.soft_ttl_sec,
-        hard_ttl_sec=cache_settings.hard_ttl_sec,
-        lock_ttl_sec=cache_settings.lock_ttl_sec,
-        key_prefix=cache_settings.key_prefix,
-    )
-    return (
-        RedisCachedScheduledSurface(scheduled_surface_backend, adapter, config),
-        RedisCachedSections(sections_backend, adapter, config),
-        adapter,
-    )
+        config = CorpusCacheConfig(
+            soft_ttl_sec=cache_settings.soft_ttl_sec,
+            hard_ttl_sec=cache_settings.hard_ttl_sec,
+            lock_ttl_sec=cache_settings.lock_ttl_sec,
+            key_prefix=cache_settings.key_prefix,
+        )
+        return (
+            RedisCachedScheduledSurface(scheduled_surface_backend, adapter, config),
+            RedisCachedSections(sections_backend, adapter, config),
+            adapter,
+        )
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis corpus cache, proceeding without it: {e}")
+        return scheduled_surface_backend, sections_backend, None
 
 
 def init_provider() -> None:
@@ -263,11 +267,14 @@ def get_provider() -> CuratedRecommendationsProvider:
 
 
 def get_legacy_provider() -> LegacyCuratedRecommendationsProvider:
-    """Return the legacy curated recommendations provider."""
+    """Return the legacy curated recommendations provider"""
     global _legacy_provider
     return _legacy_provider
 
 
 async def shutdown() -> None:
     """Clean up resources used by curated recommendations."""
-    await _provider.shutdown()
+    try:
+        await _provider.shutdown()
+    except NameError:
+        pass

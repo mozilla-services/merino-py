@@ -79,7 +79,7 @@ class CacheAdapter(Protocol):
         """Get the number of members in a Redis set."""
         ...
 
-    async def set_nx(self, key: str, ttl_sec: int) -> bool:
+    async def set_nx(self, key: str, ttl_sec: int) -> bool:  # pragma: no cover
         """Set the key only if it does not already exist, with a TTL in seconds.
 
         Returns:
@@ -90,7 +90,7 @@ class CacheAdapter(Protocol):
         """
         ...
 
-    async def delete(self, key: str) -> None:
+    async def delete(self, key: str) -> None:  # pragma: no cover
         """Delete a key from the cache.
 
         Raises:

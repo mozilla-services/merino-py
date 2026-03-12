@@ -126,8 +126,18 @@ class _RedisCorpusCache:
         # Try reading from Redis
         cached = await self._redis_get(data_key)
         if cached is not None:
-            expires_at, items_data = cached
-            if time.time() < expires_at:
+            try:
+                expires_at, items_data = cached
+                is_fresh = time.time() < expires_at
+            except TypeError:
+                # expires_at is not numeric (corrupted envelope)
+                logger.warning(
+                    "Invalid expires_at in corpus cache key %s", data_key, exc_info=True
+                )
+                is_fresh = False
+                items_data = None
+
+            if is_fresh and items_data is not None:
                 try:
                     return deserialize_fn(items_data)
                 except Exception:
@@ -137,7 +147,7 @@ class _RedisCorpusCache:
                         exc_info=True,
                     )
                     # Fall through to revalidation/fetch below
-            else:
+            elif items_data is not None:
                 # Stale — try to revalidate
                 if await self._try_acquire_lock(lock_key):
                     return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
@@ -163,19 +173,21 @@ class _RedisCorpusCache:
         fetch_fn: Callable[[], Awaitable[list[T]]],
         serialize_fn: Callable[[list[T]], list[dict]],
     ) -> list[T]:
-        """Fetch from the backend, write to Redis, and release the lock."""
+        """Fetch from the backend, write to Redis, and release the lock.
+
+        Uses try/finally to ensure the lock is released even on cancellation
+        (asyncio.CancelledError is a BaseException, not caught by except Exception).
+        """
         try:
             items = await fetch_fn()
-        except Exception:
+            # Cache write is best-effort: don't lose fetched items on write failure.
+            try:
+                await self._redis_set(data_key, serialize_fn(items))
+            except Exception:
+                logger.warning("Failed to write to corpus cache key %s", data_key, exc_info=True)
+            return items
+        finally:
             await self._release_lock(lock_key)
-            raise
-        # Cache write is best-effort: don't lose successfully fetched items on write failure.
-        try:
-            await self._redis_set(data_key, serialize_fn(items))
-        except Exception:
-            logger.warning("Failed to write to corpus cache key %s", data_key, exc_info=True)
-        await self._release_lock(lock_key)
-        return items
 
     async def _redis_get(self, key: str) -> tuple[float, list[dict]] | None:
         """Read and deserialize from Redis. Returns None on any error."""
@@ -200,7 +212,7 @@ class _RedisCorpusCache:
         try:
             value = _serialize_envelope(data, self._config.soft_ttl_sec)
             await self._cache.set(key, value, ttl=timedelta(seconds=self._config.hard_ttl_sec))
-        except CacheAdapterError:
+        except Exception:
             logger.warning("Redis write error for corpus cache key %s", key, exc_info=True)
 
     async def _try_acquire_lock(self, lock_key: str) -> bool:
