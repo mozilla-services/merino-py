@@ -182,81 +182,54 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
 
 
 class TestGetRecommendationSurfaceIdWithExperiment:
-    """Unit tests for experiment-gated surface ID routing (CA and IE)."""
+    """Unit tests for surface ID routing with feeds and experiments (CA and IE)."""
 
     @pytest.mark.parametrize(
         "locale,region,exp_name,exp_branch,feeds,expected",
         [
-            # --- CA experiment: sections-in-canada ---
-            # Treatment branch
+            # --- CA: sections feed routes to NEW_TAB_EN_CA (no experiment needed) ---
+            # CA with sections feed
             (
                 Locale.EN_CA,
                 "CA",
-                "sections-in-canada",
-                "sections-ca-content",
+                None,
+                None,
                 ["sections"],
                 SurfaceId.NEW_TAB_EN_CA,
             ),
-            # Optin prefix
+            # CA with sections feed and any experiment still routes to CA
             (
                 Locale.EN_CA,
                 "CA",
-                "optin-sections-in-canada",
-                "sections-ca-content",
+                "some-experiment",
+                "some-branch",
                 ["sections"],
                 SurfaceId.NEW_TAB_EN_CA,
             ),
-            # Layout-only branch falls back
+            # No sections feed falls back to US
             (
                 Locale.EN_CA,
                 "CA",
-                "sections-in-canada",
-                "sections-layout-only",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # Control branch falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "sections-in-canada",
-                "control",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # No sections feed falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "sections-in-canada",
-                "sections-ca-content",
+                None,
+                None,
                 ["general"],
                 SurfaceId.NEW_TAB_EN_US,
             ),
-            # None feeds falls back
+            # None feeds falls back to US
             (
                 Locale.EN_CA,
                 "CA",
-                "sections-in-canada",
-                "sections-ca-content",
                 None,
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # Different experiment falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "other-experiment",
-                "sections-ca-content",
-                ["sections"],
+                None,
+                None,
                 SurfaceId.NEW_TAB_EN_US,
             ),
             # Region derived from locale
             (
                 Locale.EN_CA,
                 None,
-                "sections-in-canada",
-                "sections-ca-content",
+                None,
+                None,
                 ["sections"],
                 SurfaceId.NEW_TAB_EN_CA,
             ),
@@ -264,17 +237,17 @@ class TestGetRecommendationSurfaceIdWithExperiment:
             (
                 Locale.EN,
                 "CA",
-                "sections-in-canada",
-                "sections-ca-content",
+                None,
+                None,
                 ["sections"],
                 SurfaceId.NEW_TAB_EN_CA,
             ),
-            # US region unaffected
+            # US region unaffected by CA routing
             (
                 Locale.EN_US,
                 "US",
-                "sections-in-canada",
-                "sections-ca-content",
+                None,
+                None,
                 ["sections"],
                 SurfaceId.NEW_TAB_EN_US,
             ),
@@ -330,13 +303,10 @@ class TestGetRecommendationSurfaceIdWithExperiment:
             ),
         ],
         ids=[
-            "ca-treatment",
-            "ca-optin",
-            "ca-layout-only-fallback",
-            "ca-control-fallback",
+            "ca-sections-feed",
+            "ca-sections-with-experiment",
             "ca-no-sections-feed",
             "ca-none-feeds",
-            "ca-different-experiment",
             "ca-region-from-locale",
             "ca-en-locale",
             "ca-us-unaffected",

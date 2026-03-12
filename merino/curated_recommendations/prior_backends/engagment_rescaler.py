@@ -128,25 +128,6 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
 
 
-CA_EXPERIMENT_TREATMENT_PERCENT = 1.0
-
-
-class CACrawledContentRescaler(CrawledContentRescaler):
-    """Rescaler for CA experiment — scales engagement up by 1/0.10 = 10x
-    to compensate for only 10% of CA traffic generating engagement data.
-    """
-
-    def __init__(self, **data: Any):
-        super().__init__(**data)
-
-    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
-        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
-        treatment percentage to compensate for small experiment size.
-        """
-        opens, no_opens = super().rescale(rec, opens, no_opens)
-        return opens / CA_EXPERIMENT_TREATMENT_PERCENT, no_opens / CA_EXPERIMENT_TREATMENT_PERCENT
-
-
 IE_EXPERIMENT_TREATMENT_PERCENT = 0.10
 
 
