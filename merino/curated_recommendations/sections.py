@@ -718,6 +718,25 @@ def get_top_story_list(
 
     for idx, rec in enumerate(top_stories):
         rec.receivedRank = idx
+    if rescaler:
+        last_score = 1000.0
+        tiny_delta = 0.0001
+        for rec in top_stories:
+            """
+            It is possible that the served article order is different than the score order.
+            due to article balancer having different constraints after certain article counts.
+            For local re-ranking we would like the order preserved, absent user preferences, so
+            we need to make sure the serverScore is always descending
+            """
+            cur_score = (
+                round(rec.ranking_data.score * rescaler.local_rerank_scalar, 3)
+                if rec.ranking_data and rec.ranking_data.score
+                else 0
+            )
+            if cur_score >= last_score:  # Unexpected non-descending scores
+                cur_score = last_score - tiny_delta
+            last_score = cur_score
+            rec.serverScore = cur_score
     return top_stories
 
 

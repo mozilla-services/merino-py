@@ -8,6 +8,7 @@ from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     BLOCKED_FROM_MOST_POPULAR_SCALER,
     CA_EXPERIMENT_TREATMENT_PERCENT,
+    LOCAL_RERANK_WEGHT,
     EST_TOP_STORY_TILE_IMP_PER_CYCLE,
     US_UTC_RELATIVE_IMPRESSIONS_NORM,
     CACrawledContentRescaler,
@@ -103,6 +104,8 @@ class TestCrawledContentRescaler:
         assert self.rescaler.fresh_items_max == 0
         assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
         assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
+        assert self.rescaler.local_rerank_scalar == LOCAL_RERANK_WEGHT
 
     def test_rescale_when_not_subtopic_item(self):
         """Test normal case for normal item"""

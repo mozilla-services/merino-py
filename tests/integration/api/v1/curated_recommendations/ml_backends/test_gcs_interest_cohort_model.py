@@ -214,8 +214,17 @@ async def test_empty_interests(gcs_storage_client, gcs_bucket, metrics_client, b
     assert model_provider._is_empty_cohort_for_no_clicks("1000" * 8) is True
     assert model_provider._is_empty_cohort_for_no_clicks("0000" * 8) is True
     assert model_provider._is_empty_cohort_for_no_clicks("0100" * 8) is False
-    assert model_provider._is_empty_cohort_for_no_clicks("0000" * 7 + "0100") is False
-    assert model_provider._is_empty_cohort_for_no_clicks("1000" * 7 + "0100") is False
+    assert model_provider._is_empty_cohort_for_no_clicks("0000" * 7 + "0100") is True
+    assert (
+        model_provider._is_empty_cohort_for_no_clicks("0000" * 7 + "0100", skip_last_interest=True)
+        is True
+    )
+    assert (
+        model_provider._is_empty_cohort_for_no_clicks(
+            "1000" * 7 + "0100", skip_last_interest=False
+        )
+        is False
+    )
 
 
 @pytest.mark.asyncio

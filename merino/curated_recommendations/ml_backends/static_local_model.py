@@ -36,6 +36,8 @@ CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID}
 
 DEFAULT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID
+EXPERIMENT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID + "_exp"
+
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -167,10 +169,13 @@ MODEL_Q_VALUE_V1 = 0.030
 MODEL_P_VALUE_V3 = 0.91
 MODEL_Q_VALUE_V3 = 0.030
 
+OFF_THRESH_VALUE = 100
 
 THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
+
+TIME_ZONE_OFFSET_INFERRED_KEY = "timeZoneOffset"
 
 
 # Creates a limited model based on topics. Topics features are stored with a t_
@@ -194,15 +199,51 @@ class SuperInferredModel(LocalModelBackend):
         Topic.BUSINESS.value,
         Topic.TECHNOLOGY.value,
         Topic.SCIENCE.value,
-        Topic.PERSONAL_FINANCE.value,
+        # Time zone is added for 8th private feature
     ]
+
+    # These are the only features supported in a small experiment (in addition to time zone)
+    v3_small_experiment_topics = {
+        Topic.SPORTS.value,
+        Topic.PARENTING.value,
+        Topic.SCIENCE.value,
+    }
+
     limited_topics_set = set(v3_limited_topics)
 
     @staticmethod
-    def _get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
+    def _get_topic(
+        topic: str, thresholds: list[float], disable_feature=False
+    ) -> InterestVectorConfig:
+        """Return feature for a topic, with a disabled (constant 0 output) feature
+        if disabled_feature is True.
+
+        Sometimes for privacy purposes we want to keep the feature in the list for
+        interest vector consistency issues, but hard code to 0 for a particual privacy profile,
+        such as within an experiment
+        """
+        if disable_feature:
+            return InterestVectorConfig(
+                features={f"t_{topic}": 1},
+                thresholds=[1000 for _ in range(len(thresholds))],
+                diff_p=1.0,
+                diff_q=0.0,
+            )
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
             thresholds=thresholds,
+            diff_p=MODEL_P_VALUE_V3,
+            diff_q=MODEL_Q_VALUE_V3,
+        )
+
+    @staticmethod
+    def _get_time_zone() -> InterestVectorConfig:
+        """Time zone key has special functionality in Firefox, but we must specifiy privacy and offset here"""
+        return InterestVectorConfig(
+            features={},
+            # TODO - add daylight savings time check so model can switch based on daylight savings time
+            # Below are thresholds in 24 offset format so that results are one of current bucketed PST -> EDT
+            thresholds=[16.1, 17.1, 18.1],
             diff_p=MODEL_P_VALUE_V3,
             diff_q=MODEL_Q_VALUE_V3,
         )
@@ -217,23 +258,32 @@ class SuperInferredModel(LocalModelBackend):
             diff_q=MODEL_Q_VALUE_V3,  # Note since these section features are non-private features, p/q are ignored
         )
 
-    def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
+    def _build_local(
+        self, model_id, surface_id, small_experiment=False
+    ) -> InferredLocalModel | None:
         model_thresholds = THRESHOLDS_V3_NORMALIZED
         private_features: list[str] | None = None
 
-        if model_id == SERVER_V3_MODEL_ID:
-            ## private features are sent to merino, "private" from differentially private
-            private_features = self.v3_limited_topics
-        """
-            Section features are disabled but will be returned soon when we have the ability to scale their influence
-            locally via the server_score parameter
-            _section_features = {
-                a: self._get_section(a, model_thresholds)
-                for a in BASE_SECTIONS_FOR_LOCAL_MODEL
-                if a not in self.limited_topics_set
+        section_features = {
+            a: self._get_section(a, model_thresholds)
+            for a in BASE_SECTIONS_FOR_LOCAL_MODEL
+            if a not in self.limited_topics_set
+        }
+
+        private_features = self.v3_limited_topics + [TIME_ZONE_OFFSET_INFERRED_KEY]
+
+        if small_experiment:
+            topic_features = {
+                a: self._get_topic(
+                    a, model_thresholds, disable_feature=a not in self.v3_small_experiment_topics
+                )
+                for a in self.v3_limited_topics
             }
-        """
-        topic_features = {a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics}
+        else:
+            topic_features = {
+                a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics
+            }
+
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=True,
@@ -242,14 +292,22 @@ class SuperInferredModel(LocalModelBackend):
                 days=[30],
                 relative_weight=[1],
             ),
-            interest_vector={**topic_features},  # **_section_features},
+            interest_vector={
+                **topic_features,
+                TIME_ZONE_OFFSET_INFERRED_KEY: self._get_time_zone(),
+                **section_features,
+            },
             private_features=private_features,
         )
+        # No privacy overrides until this is implemented in Merino
+        privacy_overrides = None
+
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
             model_data=model_data,
             model_version=0,
+            privacy_overrides=privacy_overrides,
         )
 
     def get(
@@ -274,18 +332,22 @@ class SuperInferredModel(LocalModelBackend):
             ## there will be another call to "get" with model_id=None
             ## where the next model is built+returned
             return None
-        supported_model = self._build_local(SERVER_V3_MODEL_ID, surface_id)
+
         if model_id is None:  ## this is the "get" call for building the model sent in the response
             ## switch on experiment name, not using util because we have string name instead of request object
             if (
-                experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V4
+                experiment_name is None  # Default
+                or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V4
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V4}"
                 or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V3}"
             ):
                 # We don't have to check for branch here as control won't call inferred code
-                return supported_model
+                return self._build_local(SERVER_V3_MODEL_ID, surface_id)
             else:
-                return supported_model  # this is the default model
+                # We are part of an unknown experiment, so we need to tweak privacy.
+                return self._build_local(
+                    EXPERIMENT_PRODUCTION_MODEL_ID, surface_id, small_experiment=True
+                )
         # Normally we would pick the model based on model_id here, but we are supporting only one right now
-        return supported_model
+        return self._build_local(SERVER_V3_MODEL_ID, surface_id)
