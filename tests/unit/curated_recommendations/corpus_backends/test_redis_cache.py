@@ -1,5 +1,6 @@
 """Unit tests for the Redis L2 corpus cache layer."""
 
+import asyncio
 import time
 from typing import Any
 from unittest.mock import AsyncMock
@@ -426,6 +427,45 @@ class TestRedisCorpusCache:
 
         assert result == ["item1", "item2"]
         self.fetch_fn.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_non_numeric_expires_at_treated_as_miss(self) -> None:
+        """Treat an envelope with non-numeric expires_at as a cache miss."""
+        self.mock_cache.get.return_value = orjson.dumps(
+            {"expires_at": "not-a-number", "data": [{"v": "corrupted"}]}
+        )
+        self.mock_cache.set_nx.return_value = True
+
+        result = await self.redis_cache.get_or_fetch(
+            "test",
+            "surface",
+            fetch_fn=self.fetch_fn,
+            serialize_fn=self.serialize_fn,
+            deserialize_fn=self.deserialize_fn,
+        )
+
+        assert result == ["item1", "item2"]
+        self.fetch_fn.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_cancelled_error_releases_lock(self) -> None:
+        """Release the lock even when the task is cancelled (BaseException)."""
+        self.mock_cache.get.return_value = None
+        self.mock_cache.set_nx.return_value = True
+
+        async def cancelled_fetch() -> list:
+            raise asyncio.CancelledError()
+
+        with pytest.raises(asyncio.CancelledError):
+            await self.redis_cache.get_or_fetch(
+                "test",
+                "surface",
+                fetch_fn=cancelled_fetch,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
+
+        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:test:surface")
 
     @pytest.mark.asyncio
     async def test_malformed_envelope_missing_key_falls_through(self) -> None:
