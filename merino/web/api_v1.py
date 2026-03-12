@@ -43,6 +43,7 @@ from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.suggest.base import BaseProvider, SuggestionRequest
 
 from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
 from merino.providers.suggest.weather.backends.protocol import HourlyForecast, WeatherContext
 from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
 from merino.utils import task_runner
@@ -533,10 +534,15 @@ async def get_hourly_forecasts(
         hourly_forecasts: list[HourlyForecast] = []
         ttl = 0
 
-        if (
-            hourly_forecasts_with_ttl := await provider.get_hourly_forecasts(weather_context)
-        ) is not None:
-            hourly_forecasts, ttl = hourly_forecasts_with_ttl
+        try:
+            if (
+                hourly_forecasts_with_ttl := await provider.get_hourly_forecasts(weather_context)
+            ) is not None:
+                hourly_forecasts, ttl = hourly_forecasts_with_ttl
+        except AccuweatherError:
+            # The circuit breaker on provider.get_hourly_forecasts has already recorded
+            # this failure before re-raising, so the breaker will still trip as expected.
+            pass
 
         return ORJSONResponse(
             content=jsonable_encoder(hourly_forecasts),
