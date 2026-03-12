@@ -257,6 +257,27 @@ class TestRedisCorpusCache:
         self.fetch_fn.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_cache_miss_lock_loser_retry_deserialize_error_raises(self) -> None:
+        """Raise BackendError when retry data exists but deserialization fails."""
+        items_data = [{"v": "item1"}]
+        self.mock_cache.get.side_effect = [None, _make_fresh_envelope(items_data)]
+        self.mock_cache.set_nx.return_value = False
+
+        def bad_deserialize(data: list[dict]) -> list:
+            raise ValueError("schema changed")
+
+        with pytest.raises(BackendError, match="Cache miss and lock held"):
+            await self.redis_cache.get_or_fetch(
+                "test",
+                "surface",
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=bad_deserialize,
+            )
+
+        self.fetch_fn.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_redis_read_error_falls_through(self) -> None:
         """Fall through to backend when Redis read fails."""
         self.mock_cache.get.side_effect = CacheAdapterError("connection refused")
