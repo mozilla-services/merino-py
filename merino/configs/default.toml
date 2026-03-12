@@ -299,6 +299,12 @@ cdn_hostname = ""
 # Set to `true` in production and `false` in staging or development.
 gcs_enabled = true
 
+[default.engagement]
+gcs_storage_bucket = ""
+
+gcs_bq_project = ""
+
+gcs_storage_project = ""
 
 [default.icon]
 # Subdirectory within bucket for favicons
