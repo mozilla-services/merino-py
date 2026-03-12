@@ -215,7 +215,7 @@ def _init_corpus_cache(
             adapter,
         )
     except Exception as e:
-        logger.error(f"Failed to initialize Redis corpus cache, proceeding without it: {e}")
+        logger.error("Failed to initialize Redis corpus cache, proceeding without it: %s", e)
         return scheduled_surface_backend, sections_backend, None
 
 

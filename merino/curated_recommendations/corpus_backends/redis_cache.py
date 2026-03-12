@@ -170,7 +170,14 @@ class _RedisCorpusCache:
         if cached is not None:
             _, items_data = cached
             if items_data is not None:
-                return deserialize_fn(items_data)
+                try:
+                    return deserialize_fn(items_data)
+                except Exception:
+                    logger.warning(
+                        "Deserialization failed on retry for corpus cache key %s",
+                        data_key,
+                        exc_info=True,
+                    )
         raise BackendError(f"Cache miss and lock held for {data_key}")
 
     async def _revalidate(
@@ -187,11 +194,15 @@ class _RedisCorpusCache:
         """
         try:
             items = await fetch_fn()
-            # Cache write is best-effort: don't lose fetched items on write failure.
+            # Cache write is best-effort: don't lose fetched items on serialize or write failure.
             try:
-                await self._redis_set(data_key, serialize_fn(items))
+                serialized = serialize_fn(items)
             except Exception:
-                logger.warning("Failed to write to corpus cache key %s", data_key, exc_info=True)
+                logger.warning(
+                    "Serialization failed for corpus cache key %s", data_key, exc_info=True
+                )
+            else:
+                await self._redis_set(data_key, serialized)
             return items
         finally:
             await self._release_lock(lock_key)
