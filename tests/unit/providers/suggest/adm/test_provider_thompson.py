@@ -98,4 +98,4 @@ async def test_query_with_thompson_uses_fallback_country_and_form_factor(
     res = await adm_with_thompson.query(srequest("firefox", None, None))
 
     assert len(res) == 1
-    assert res[0].score == adm_parameters["score"]  # type: ignore[union-attr]
+    assert res[0].score == adm_parameters["score"]

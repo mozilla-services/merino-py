@@ -29,7 +29,7 @@ class EngagementMetrics(BaseModel):
             raise ValueError("`attempted` should be greater than or equal to `engaged`")
         return self
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def not_engaged(self) -> int:
         """Derive a property for not engaged activities adjusted to be no less than 1."""
