@@ -2,14 +2,12 @@
 
 import asyncio
 import time
-from typing import Any
 from unittest.mock import AsyncMock
 
 import orjson
 import pytest
 
 from merino.curated_recommendations.corpus_backends.protocol import (
-    CorpusItem,
     CorpusSection,
     CreateSource,
     SurfaceId,
@@ -25,6 +23,7 @@ from merino.curated_recommendations.corpus_backends.redis_cache import (
     _serialize_envelope,
 )
 from merino.exceptions import CacheAdapterError
+from tests.unit.curated_recommendations.test_sections import generate_corpus_item
 
 SURFACE_ID = SurfaceId.NEW_TAB_EN_US
 
@@ -76,32 +75,14 @@ class TestCorpusCacheConfig:
             )
 
 
-def _make_corpus_item(**overrides: Any) -> CorpusItem:
-    """Create a CorpusItem with sensible defaults."""
-    defaults = {
-        "corpusItemId": "abc-123",
-        "url": "https://example.com/article",
-        "title": "Test Article",
-        "excerpt": "A test excerpt",
-        "topic": None,
-        "publisher": "Example Publisher",
-        "isTimeSensitive": False,
-        "imageUrl": "https://example.com/image.jpg",
-    }
-    defaults.update(overrides)
-    return CorpusItem.model_validate(defaults)
-
-
-def _make_corpus_section(**overrides: Any) -> CorpusSection:
-    """Create a CorpusSection with sensible defaults."""
-    defaults = {
-        "sectionItems": [_make_corpus_item()],
-        "title": "Test Section",
-        "externalId": "test-section",
-        "createSource": CreateSource.ML,
-    }
-    defaults.update(overrides)
-    return CorpusSection.model_validate(defaults)
+def _make_corpus_section() -> CorpusSection:
+    """Create a CorpusSection with sensible defaults for testing."""
+    return CorpusSection(
+        sectionItems=[generate_corpus_item()],
+        title="Test Section",
+        externalId="test-section",
+        createSource=CreateSource.ML,
+    )
 
 
 def _make_fresh_envelope(items_data: list[dict], soft_ttl_sec: int = 120) -> bytes:
@@ -515,20 +496,20 @@ class TestRedisCachedScheduledSurface:
     @pytest.mark.asyncio
     async def test_fresh_hit_returns_deserialized_items(self) -> None:
         """Return CorpusItem list from a fresh Redis cache hit."""
-        item = _make_corpus_item()
+        item = generate_corpus_item()
         items_data = [item.model_dump(mode="json")]
         self.mock_cache.get.return_value = _make_fresh_envelope(items_data)
 
         result = await self.wrapper.fetch(SURFACE_ID, days_offset=0)
 
         assert len(result) == 1
-        assert result[0].corpusItemId == "abc-123"
+        assert result[0].corpusItemId == "id"
         self.mock_backend.fetch.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_cache_miss_delegates_to_backend(self) -> None:
         """Delegate to the wrapped backend on cache miss."""
-        item = _make_corpus_item()
+        item = generate_corpus_item()
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.return_value = True
         self.mock_backend.fetch.return_value = [item]
@@ -536,7 +517,7 @@ class TestRedisCachedScheduledSurface:
         result = await self.wrapper.fetch(SURFACE_ID)
 
         assert len(result) == 1
-        assert result[0].corpusItemId == "abc-123"
+        assert result[0].corpusItemId == "id"
         self.mock_backend.fetch.assert_called_once_with(SURFACE_ID, 0)
 
     @pytest.mark.asyncio
@@ -544,7 +525,7 @@ class TestRedisCachedScheduledSurface:
         """Include days_offset in the Redis key to differentiate cache entries."""
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.return_value = True
-        self.mock_backend.fetch.return_value = [_make_corpus_item()]
+        self.mock_backend.fetch.return_value = [generate_corpus_item()]
 
         await self.wrapper.fetch(SURFACE_ID, days_offset=-1)
 
