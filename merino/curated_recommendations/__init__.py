@@ -58,7 +58,6 @@ logger = logging.getLogger(__name__)
 
 _provider: CuratedRecommendationsProvider
 _legacy_provider: LegacyCuratedRecommendationsProvider
-_corpus_cache_adapter: RedisAdapter | None = None
 
 
 def init_local_model_backend() -> LocalModelBackend:
@@ -180,22 +179,21 @@ def init_ml_cohort_model_backend() -> CohortModelBackend:
         return EmptyCohortModel()
 
 
-def _wrap_with_redis_cache(
+def _init_corpus_cache(
     scheduled_surface_backend: ScheduledSurfaceProtocol,
     sections_backend: SectionsProtocol,
-) -> tuple[ScheduledSurfaceProtocol, SectionsProtocol]:
+) -> tuple[ScheduledSurfaceProtocol, SectionsProtocol, RedisAdapter | None]:
     """Optionally wrap corpus backends with a Redis L2 cache layer.
 
-    Returns the backends unchanged if corpus_cache.backend is not "redis".
+    Returns the backends (possibly wrapped) and the Redis adapter (if created).
+    The caller owns the adapter and is responsible for closing it on shutdown.
     """
-    global _corpus_cache_adapter
-
     cache_settings = settings.curated_recommendations.corpus_cache
     if cache_settings.cache != "redis":
-        return scheduled_surface_backend, sections_backend
+        return scheduled_surface_backend, sections_backend, None
 
     logger.info("Initializing Redis L2 cache for corpus backends")
-    _corpus_cache_adapter = RedisAdapter(
+    adapter = RedisAdapter(
         *create_redis_clients(
             primary=settings.redis.server,
             replica=settings.redis.replica,
@@ -211,8 +209,9 @@ def _wrap_with_redis_cache(
         key_prefix=cache_settings.key_prefix,
     )
     return (
-        RedisCachedScheduledSurface(scheduled_surface_backend, _corpus_cache_adapter, config),
-        RedisCachedSections(sections_backend, _corpus_cache_adapter, config),
+        RedisCachedScheduledSurface(scheduled_surface_backend, adapter, config),
+        RedisCachedSections(sections_backend, adapter, config),
+        adapter,
     )
 
 
@@ -240,7 +239,7 @@ def init_provider() -> None:
         manifest_provider=get_manifest_provider(),
     )
 
-    scheduled_surface_backend, sections_backend = _wrap_with_redis_cache(
+    scheduled_surface_backend, sections_backend, cache_adapter = _init_corpus_cache(
         scheduled_surface_backend, sections_backend
     )
 
@@ -252,6 +251,7 @@ def init_provider() -> None:
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
+        cache_adapter=cache_adapter,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 
@@ -270,7 +270,4 @@ def get_legacy_provider() -> LegacyCuratedRecommendationsProvider:
 
 async def shutdown() -> None:
     """Clean up resources used by curated recommendations."""
-    global _corpus_cache_adapter
-    if _corpus_cache_adapter is not None:
-        await _corpus_cache_adapter.close()
-        _corpus_cache_adapter = None
+    await _provider.shutdown()
