@@ -27,11 +27,10 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    CACrawledContentRescaler,
     CrawledContentPinnedFreshRescaler,
+    CrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
@@ -387,17 +386,15 @@ def get_ranking_rescaler_for_branch(
         return SchedulerHoldbackRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_GB:
-        return UKCrawledContentRescaler()
+        return CrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_IE and is_enrolled_in_experiment(
         request, "sections-in-ie", "sections"
     ):
         return IECrawledContentRescaler()
 
-    if surface_id == SurfaceId.NEW_TAB_EN_CA and is_enrolled_in_experiment(
-        request, "sections-in-canada", "sections-ca-content"
-    ):
-        return CACrawledContentRescaler()
+    if surface_id == SurfaceId.NEW_TAB_EN_CA:
+        return CrawledContentRescaler()
 
     # While we preivously returned None for non-US, we know there are some section users
     # who may not be in the US. This rescaler is required for all markets where data is getting
