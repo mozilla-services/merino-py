@@ -577,6 +577,26 @@ resync_interval_sec = 3600
 # a reporting issue. See DISCO-3167.
 score = 0.31
 
+[default.providers.adm.thompson]
+# MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
+# Toggle Thompson sampling
+enabled = false
+
+# MERINO_PROVIDERS__ADM__THOMPSON__MIN_ATTEMPTED_COUNT
+# Minimal attempted count eligible for Thompson sampling
+min_attempted_count = 500
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENABLED
+# Toggle to enable the dummy candidate for Thompson sampling
+dummy_enabled = true
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENGAGED_COUNT
+# The dummy candidate for Thompson sampling - engaged count
+dummy_engaged_count = 1
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
+# The dummy candidate for Thompson sampling - attempted count
+dummy_attempted_count = 1000
 
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL

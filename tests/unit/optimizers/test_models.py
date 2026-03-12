@@ -69,6 +69,12 @@ class TestThompsonConfig:
         config = ThompsonConfig(dummy_candidate=metrics)
         assert config.dummy_candidate == metrics
 
+    def test_with_minimal_attempted_count(self) -> None:
+        """minimal_attempted_count is stored correctly."""
+        minimal_attempted_count = 1000
+        config = ThompsonConfig(minimal_attempted_count=minimal_attempted_count)
+        assert config.minimal_attempted_count == minimal_attempted_count
+
     def test_with_random_seed(self) -> None:
         """random_seed is stored correctly."""
         config = ThompsonConfig(random_seed=42)
