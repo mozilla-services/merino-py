@@ -128,7 +128,7 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
 
 
-CA_EXPERIMENT_TREATMENT_PERCENT = 0.10
+CA_EXPERIMENT_TREATMENT_PERCENT = 1.0
 
 
 class CACrawledContentRescaler(CrawledContentRescaler):
