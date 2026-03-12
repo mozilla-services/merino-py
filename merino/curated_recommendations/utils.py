@@ -39,11 +39,7 @@ def get_recommendation_surface_id(
     else:
         # Default to English language for all other values of language (including 'en' or None)
         if derived_region == "CA":
-            # Canada routing: Map to NEW_TAB_EN_CA when sections feed is requested.
-            if request is not None and request.feeds is not None and "sections" in request.feeds:
-                return SurfaceId.NEW_TAB_EN_CA
-            else:
-                return SurfaceId.NEW_TAB_EN_US
+            return SurfaceId.NEW_TAB_EN_CA
         elif derived_region == "IE":
             # Ireland routing: Map to NEW_TAB_EN_IE only if:
             # 1. Request includes 'sections' in feeds

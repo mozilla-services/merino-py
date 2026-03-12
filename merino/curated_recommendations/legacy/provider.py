@@ -97,8 +97,12 @@ class LegacyCuratedRecommendationsProvider:
         """Fetch base recommendations from sections backend (US/GB) or scheduler (other)."""
         surface_id = get_recommendation_surface_id(locale, region)
 
-        if surface_id in (SurfaceId.NEW_TAB_EN_US, SurfaceId.NEW_TAB_EN_GB):
-            # US/GB: fetch from sections backend instead of scheduler
+        if surface_id in (
+            SurfaceId.NEW_TAB_EN_US,
+            SurfaceId.NEW_TAB_EN_GB,
+            SurfaceId.NEW_TAB_EN_CA,
+        ):
+            # US/GB/CA: fetch from sections backend instead of scheduler
             rescaler = CrawledContentRescaler()
             return await get_legacy_recommendations_from_sections(
                 sections_backend=curated_corpus_provider.sections_backend,

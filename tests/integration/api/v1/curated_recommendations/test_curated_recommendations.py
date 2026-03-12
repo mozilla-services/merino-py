@@ -739,7 +739,7 @@ class TestCuratedRecommendationsRequestParameters:
         "locale,surface_id",
         [
             (Locale.EN, SurfaceId.NEW_TAB_EN_US),
-            (Locale.EN_CA, SurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_CA, SurfaceId.NEW_TAB_EN_CA),
             (Locale.EN_US, SurfaceId.NEW_TAB_EN_US),
             (Locale.EN_GB, SurfaceId.NEW_TAB_EN_GB),
             (Locale.DE, SurfaceId.NEW_TAB_DE_DE),
