@@ -33,6 +33,7 @@ class FaviconExtractor:
 
             # Priority 1: Process standard link icons (usually higher quality)
             favicons = self._process_link_favicons(favicon_data.links, scraped_url, max_icons)
+            has_link_icons = len(favicons) > 0
             if len(favicons) >= max_icons:
                 return favicons
 
@@ -45,13 +46,22 @@ class FaviconExtractor:
             if len(favicons) >= max_icons:
                 return favicons
 
-            # Priority 3: Try default favicon.ico if still below max
+            # Priority 3: Try conventional /apple-touch-icon.png path
+            # Many sites serve a 180x180 icon here even without an HTML link
             if len(favicons) < max_icons:
+                apple_touch = await self._process_apple_touch_icon_fallback(scraped_url)
+                if apple_touch:
+                    favicons.append(apple_touch)
+
+            # Priority 4: Try default favicon.ico only if no link icons exist
+            # This matches Firefox behavior: /favicon.ico is a fallback, not an
+            # additional source when the page already declares icons via <link>.
+            if len(favicons) < max_icons and not has_link_icons:
                 default_favicon = await self._process_default_favicon(scraped_url)
                 if default_favicon:
                     favicons.append(default_favicon)
 
-            # Priority 4: Only process manifests if we still need more icons
+            # Priority 5: Only process manifests if we still need more icons
             if len(favicons) < max_icons and favicon_data.manifests:
                 remaining_slots = max_icons - len(favicons)
                 manifest_favicons = await self._process_manifest_favicons(
@@ -67,10 +77,23 @@ class FaviconExtractor:
     def _process_link_favicons(
         self, links: list[dict[str, Any]], base_url: str, max_icons: int
     ) -> list[dict[str, Any]]:
-        """Process favicons from link tags."""
+        """Process favicons from link tags, sorted by Firefox's favicon priority.
+
+        Firefox selects favicons by: SVG > apple-touch-icon > largest size > rest.
+        We apply this sort before the max_icons limit so that the highest-quality
+        icons aren't cut off by smaller ones appearing earlier in the document.
+
+        Icons with a ``color`` attribute are skipped because they are Safari-specific
+        mask icons and not used by Firefox.
+        """
         favicons = []
 
-        for link in links[:max_icons]:
+        # Filter out Safari-specific icons with color attribute (Firefox skips these)
+        filtered_links = [link for link in links if "color" not in link]
+
+        sorted_links = sorted(filtered_links, key=self._link_priority_key)
+
+        for link in sorted_links[:max_icons]:
             favicon_url = link.get("href", "")
 
             # Process URL using common pattern
@@ -111,6 +134,48 @@ class FaviconExtractor:
                 break
 
         return favicons
+
+    @staticmethod
+    def _link_priority_key(link: dict[str, Any]) -> tuple[int, int]:
+        """Sort key matching Firefox's favicon selection: SVG > apple-touch-icon > largest size."""
+        href = str(link.get("href", "")).lower()
+        rel_values = link.get("rel", [])
+
+        # Priority 0: SVG icons (scalable, always sharp)
+        if href.endswith(".svg"):
+            return (0, 0)
+
+        # Priority 1: apple-touch-icon variants (typically 180x180)
+        if any("apple-touch" in str(r) for r in rel_values):
+            return (1, 0)
+
+        # Priority 2: Icons with known sizes (larger first via negative width)
+        sizes = str(link.get("sizes", ""))
+        if sizes and "x" in sizes.lower():
+            try:
+                width = int(sizes.lower().split("x")[0])
+                return (2, -width)
+            except (ValueError, IndexError):
+                pass
+
+        # Priority 3: Everything else
+        return (3, 0)
+
+    async def _process_apple_touch_icon_fallback(self, base_url: str) -> dict[str, Any] | None:
+        """Try conventional /apple-touch-icon.png path (usually 180x180).
+
+        Many sites serve an apple-touch-icon at this well-known path even if
+        it is not linked in the HTML. This catches cases where the HTML only
+        contains small favicon.ico references.
+        """
+        try:
+            apple_touch_url = join_url(base_url, "/apple-touch-icon.png")
+            response = await self.favicon_scraper.async_downloader.requests_get(apple_touch_url)
+            if response and "image/" in response.headers.get("Content-Type", ""):
+                return {"href": str(response.url), "_source": "link"}
+        except Exception as e:
+            logger.debug(f"Error getting apple-touch-icon fallback: {e}")
+        return None
 
     async def _process_default_favicon(self, base_url: str) -> dict[str, Any] | None:
         """Check for favicon.ico at site root."""
