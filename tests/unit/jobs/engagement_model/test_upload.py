@@ -17,20 +17,32 @@ def test_gcs_uploader() -> None:
         {
             "advertiser": "mozilla",
             "suggestion_id": "88888",
-            "match_type": "firefox-suggest",
             "impressions": 1000,
             "clicks": 22,
         },
         {
             "advertiser": "firefox",
             "suggestion_id": "123456",
-            "match_type": "best-match",
             "impressions": 5666,
             "clicks": 0,
         },
     ]
     amp_aggregated = {"impressions": 6666, "clicks": 22}
     wiki_data = {"impressions": 321, "clicks": 123}
+    transform_amp_data = {
+        "mozilla": {
+            "advertiser": "mozilla",
+            "suggestion_id": "88888",
+            "impressions": 1000,
+            "clicks": 22,
+        },
+        "firefox": {
+            "advertiser": "firefox",
+            "suggestion_id": "123456",
+            "impressions": 5666,
+            "clicks": 0,
+        },
+    }
     with (
         patch("merino.jobs.engagement_model.GcsUploader", return_value=mock_uploader),
         patch(
@@ -53,7 +65,11 @@ def test_gcs_uploader() -> None:
         upload_engagement_data()
 
         expected_data = json.dumps(
-            {"amp": amp_data, "wiki_aggregated": wiki_data, "amp_aggregated": amp_aggregated},
+            {
+                "amp": transform_amp_data,
+                "wiki_aggregated": wiki_data,
+                "amp_aggregated": amp_aggregated,
+            },
             indent=2,
         )
         expected_destination_name = "suggest-merino-exports/engagement/20260310123456.json"
