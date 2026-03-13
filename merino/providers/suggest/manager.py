@@ -11,6 +11,8 @@ from merino.exceptions import InvalidProviderError
 from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.metrics import get_metrics_client
+from merino.optimizers.models import ThompsonConfig, EngagementMetrics
+from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.suggest.adm.backends.mars import MarsBackend
 from merino.providers.suggest.adm.backends.protocol import AdmBackend
@@ -178,6 +180,19 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 )
             else:
                 backend = FakeAdmBackend()
+
+            thompson: ThompsonSampler | None = None
+            if settings.providers.adm.thompson.enabled:
+                thompson = ThompsonSampler(
+                    config=ThompsonConfig(
+                        dummy_candidate=EngagementMetrics(
+                            engaged=settings.providers.adm.thompson.dummy_engaged_count,
+                            attempted=settings.providers.adm.thompson.dummy_attempted_count,
+                        )
+                        if settings.providers.adm.thompson.dummy_enabled
+                        else None,
+                    )
+                )
             return AdmProvider(
                 backend=backend,
                 score=setting.score,
@@ -185,6 +200,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 resync_interval_sec=setting.resync_interval_sec,
                 cron_interval_sec=setting.cron_interval_sec,
                 enabled_by_default=setting.enabled_by_default,
+                min_attempted_count=settings.providers.adm.thompson.min_attempted_count,
+                thompson=thompson,
             )
         case ProviderType.GEOLOCATION:
             return GeolocationProvider(
