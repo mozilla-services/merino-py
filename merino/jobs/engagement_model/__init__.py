@@ -47,7 +47,7 @@ def upload_engagement_data() -> None:
     }
 
     payload = {
-        "amp": transform_amp_data,
+        "amp": transformed_amp_data,
         "wiki_aggregated": {
             "impressions": int(wiki_data["impressions"]),
             "clicks": int(wiki_data["clicks"]),
