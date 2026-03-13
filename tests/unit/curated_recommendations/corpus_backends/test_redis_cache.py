@@ -448,6 +448,29 @@ class TestRedisCorpusCache:
         self.fetch_fn.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_stale_hit_deserialize_error_both_locks_fail_raises(self) -> None:
+        """Raise BackendError when stale deserialization fails and both lock attempts fail."""
+        items_data = [{"v": "stale"}]
+        # First get returns stale, second get (retry) also returns stale
+        self.mock_cache.get.return_value = _make_stale_envelope(items_data)
+        # Both lock attempts fail
+        self.mock_cache.set_nx.return_value = False
+
+        def bad_deserialize(data: list[dict]) -> list:
+            raise ValueError("schema changed")
+
+        with pytest.raises(BackendError, match="Cache miss and lock held"):
+            await self.redis_cache.get_or_fetch(
+                "test",
+                "surface",
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=bad_deserialize,
+            )
+
+        self.fetch_fn.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_non_numeric_expires_at_treated_as_miss(self) -> None:
         """Treat an envelope with non-numeric expires_at as a cache miss."""
         self.mock_cache.get.return_value = orjson.dumps(
@@ -608,3 +631,4 @@ class TestRedisCachedSections:
         assert len(result) == 1
         assert result[0].title == "Test Section"
         self.mock_backend.fetch.assert_called_once_with(SURFACE_ID)
+

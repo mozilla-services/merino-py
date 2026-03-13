@@ -278,3 +278,5 @@ async def shutdown() -> None:
         await _provider.shutdown()
     except NameError:
         pass
+    except Exception:
+        logger.warning("Error shutting down curated recommendations", exc_info=True)
