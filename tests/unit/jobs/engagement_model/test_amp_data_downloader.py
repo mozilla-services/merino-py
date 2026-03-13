@@ -10,13 +10,11 @@ def test_download_amp_data():
     rows = [
         {
             "advertiser": "mozilla",
-            "suggestion_id": "88888",
             "impressions": 1000,
             "clicks": 22,
         },
         {
             "advertiser": "firefox",
-            "suggestion_id": "123456",
             "impressions": 5666,
             "clicks": 0,
         },

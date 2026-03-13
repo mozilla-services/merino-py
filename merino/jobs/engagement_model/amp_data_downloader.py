@@ -11,7 +11,6 @@ class EngagementDataDownloader:
     QUERY = """
 SELECT
   metrics.string.quick_suggest_advertiser AS advertiser,
-  metrics.string.quick_suggest_block_id AS suggestion_id,
   COUNT(*) AS impressions,
   COUNTIF(metrics.boolean.quick_suggest_is_clicked) AS clicks
 FROM `moz-fx-data-shared-prod.firefox_desktop_live.quick_suggest_v1`
@@ -21,7 +20,7 @@ AND metrics.boolean.quick_suggest_improve_suggest_experience
 AND metrics.string.quick_suggest_request_id IS NOT NULL
 AND metrics.string.quick_suggest_ping_type = "quicksuggest-impression"
 GROUP BY 1
-ORDER BY 1, 4 DESC, 3 DESC
+ORDER BY 1, 3 DESC, 2 DESC
 """
     client: Client
 
@@ -35,7 +34,6 @@ ORDER BY 1, 4 DESC, 3 DESC
 
         return [
             {
-                "suggestion_id": row["suggestion_id"],
                 "impressions": row["impressions"],
                 "clicks": row["clicks"],
                 "advertiser": row["advertiser"],
