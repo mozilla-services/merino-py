@@ -22,7 +22,9 @@ PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 13000
-EST_TOP_STORY_TILE_IMP_PER_CYCLE = 220_000_000 // 24 // 4  # Assuming 4 ETL data cycles per hour
+
+EST_DAILY_IMPRESSIONS_TOP_STORY_TILE = 21_000_000 # Generated via https://sql.telemetry.mozilla.org/queries/116006
+EST_TOP_STORY_TILE_IMP_PER_CYCLE = EST_DAILY_IMPRESSIONS_TOP_STORY_TILE // 24 // 4  # Assuming 4 ETL data cycles per hour
 
 # Normalized relative impresions per hour. Generated via https://sql.telemetry.mozilla.org/queries/115220
 US_UTC_RELATIVE_IMPRESSIONS_NORM = [
