@@ -80,6 +80,7 @@ class Provider(BaseProvider):
     cron_task: asyncio.Task
     backend: AdmBackend
     resync_interval_sec: float
+    min_attempted_count: int
     thompson: ThompsonSampler | None = None
 
     def __init__(
@@ -90,6 +91,7 @@ class Provider(BaseProvider):
         resync_interval_sec: float,
         cron_interval_sec: float,
         enabled_by_default: bool = True,
+        min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
         **kwargs: Any,
     ) -> None:
@@ -101,6 +103,7 @@ class Provider(BaseProvider):
         self.suggestion_content = SuggestionContent(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
         self._name = name
         self._enabled_by_default = enabled_by_default
+        self.min_attempted_count = min_attempted_count
         self.thompson = thompson
         super().__init__(**kwargs)
 
@@ -165,6 +168,11 @@ class Provider(BaseProvider):
                 ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
                 for i, suggestion in enumerate(suggestions)
             ]
+
+            # If it's the only candidate with an attempted count less than the threshold, skip sampling.
+            if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
+                return suggestions[0]
+
             winner = self.thompson.sample(candidates)
             return suggestions[winner.id] if winner else None
 

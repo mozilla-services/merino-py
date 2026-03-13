@@ -39,9 +39,6 @@ class EngagementMetrics(BaseModel):
 class ThompsonConfig(BaseModel):
     """Model for Thompson sampling configuration."""
 
-    # Minimal attempted count
-    minimal_attempted_count: int = 0
-
     # Dummy candidate
     dummy_candidate: EngagementMetrics | None = None
 

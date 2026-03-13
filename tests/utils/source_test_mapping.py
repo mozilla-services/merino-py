@@ -767,7 +767,7 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
     },
     "merino/optimizers/thompson.py": {
         "direct": ["tests/unit/optimizers/test_thompson.py"],
-        "indirect": [],
+        "indirect": ["tests/unit/providers/suggest/adm/test_provider_thompson.py"],
     },
     "merino/providers/manifest/__init__.py": {
         "direct": [],
@@ -839,7 +839,10 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         ],
     },
     "merino/providers/suggest/adm/provider.py": {
-        "direct": ["tests/unit/providers/suggest/adm/test_provider.py"],
+        "direct": [
+            "tests/unit/providers/suggest/adm/test_provider.py",
+            "tests/unit/providers/suggest/adm/test_provider_thompson.py",
+        ],
         "indirect": [],
     },
     "merino/providers/suggest/amo/__init__.py": {

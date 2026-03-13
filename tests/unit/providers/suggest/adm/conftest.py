@@ -150,3 +150,20 @@ def fixture_adm_with_thompson_dummy(
 ) -> Provider:
     """Create an AdM Provider with a dominant dummy Thompson sampler for testing."""
     return Provider(backend=backend_mock, thompson=thompson_sampler_with_dummy, **adm_parameters)
+
+
+@pytest.fixture(name="adm_with_thompson_dummy_min_attempted_count")
+def fixture_adm_with_thompson_dummy_min_attempted_count(
+    backend_mock: Any,
+    adm_parameters: dict[str, Any],
+    thompson_sampler_with_dummy: ThompsonSampler,
+) -> Provider:
+    """Create an AdM Provider with a dominant dummy Thompson sampler and minimal
+    attempted count for testing.
+    """
+    return Provider(
+        backend=backend_mock,
+        min_attempted_count=1000,
+        thompson=thompson_sampler_with_dummy,
+        **adm_parameters,
+    )

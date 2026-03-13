@@ -185,7 +185,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             if settings.providers.adm.thompson.enabled:
                 thompson = ThompsonSampler(
                     config=ThompsonConfig(
-                        minimal_attempted_count=settings.providers.adm.thompson.min_attempted_count,
                         dummy_candidate=EngagementMetrics(
                             engaged=settings.providers.adm.thompson.dummy_engaged_count,
                             attempted=settings.providers.adm.thompson.dummy_attempted_count,
@@ -201,6 +200,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 resync_interval_sec=setting.resync_interval_sec,
                 cron_interval_sec=setting.cron_interval_sec,
                 enabled_by_default=setting.enabled_by_default,
+                min_attempted_count=settings.providers.adm.thompson.min_attempted_count,
                 thompson=thompson,
             )
         case ProviderType.GEOLOCATION:

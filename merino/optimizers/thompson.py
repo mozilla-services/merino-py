@@ -18,6 +18,8 @@ class ThompsonSampler:
     def sample(self, candidates: list[ThompsonCandidate]) -> ThompsonCandidate | None:
         """Apply Thompson sampling to a set of candidates.
 
+        A dummy candidate can be set in `self.config` serving as a "guard"
+        to ensure the winner meets the minimal requirement.
 
         Params:
             - `candidates`: a list of candidates of type `ThompsonCandidate`.

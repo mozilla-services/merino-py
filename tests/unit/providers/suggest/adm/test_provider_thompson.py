@@ -99,3 +99,38 @@ async def test_query_with_thompson_uses_fallback_country_and_form_factor(
 
     assert len(res) == 1
     assert res[0].score == adm_parameters["score"]
+
+
+@pytest.mark.asyncio
+async def test_query_with_thompson_min_attempted_count_returns_suggestion(
+    srequest: SuggestionRequestFixture,
+    adm_with_thompson_dummy_min_attempted_count: Provider,
+    adm_parameters: dict[str, Any],
+) -> None:
+    """Thompson-enabled provider should return a suggestion when the only candidate's
+    attempted count is below the minimal attempted count.
+    """
+    await adm_with_thompson_dummy_min_attempted_count.initialize()
+    geolocation = Location(country="US")
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+
+    res = await adm_with_thompson_dummy_min_attempted_count.query(
+        srequest("firefox", geolocation, user_agent)
+    )
+
+    assert res == [
+        NonsponsoredSuggestion(
+            block_id=2,
+            full_keyword="firefox accounts",
+            title="Mozilla Firefox Accounts",
+            url=HttpUrl("https://example.org/target/mozfirefoxaccounts"),
+            categories=[],
+            impression_url=HttpUrl("https://example.org/impression/mozilla"),
+            click_url=HttpUrl("https://example.org/click/mozilla"),
+            provider="adm",
+            advertiser="Example.org",
+            is_sponsored=False,
+            icon="attachment-host/main-workspace/quicksuggest/icon-01",
+            score=adm_parameters["score"],
+        )
+    ]
