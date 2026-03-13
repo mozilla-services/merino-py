@@ -26,6 +26,7 @@ from merino.curated_recommendations.prior_backends.constant_prior import Constan
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
+    DECrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
@@ -235,6 +236,7 @@ class TestMlSectionsExperiment:
             (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
             (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", False),
             ("other", "treatment", "US", True),
+            ("other", "treatment", "DE", True),
             ("other", "treatment", "ZZ", False),
         ],
     )
@@ -352,6 +354,24 @@ class TestFilterSectionsByExperiment:
                 SurfaceId.NEW_TAB_EN_CA,
                 CrawledContentRescaler,
             ),
+            # DE with sections branch gets DECrawledContentRescaler
+            (
+                "sections-in-germany",
+                "sections",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                DECrawledContentRescaler,
+            ),
+            # DE with wrong branch falls through to CrawledContentPinnedFreshRescaler
+            (
+                "sections-in-germany",
+                "control",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                CrawledContentPinnedFreshRescaler,
+            ),
+            # DE surface without experiment falls through to CrawledContentPinnedFreshRescaler
+            (None, None, "DE", SurfaceId.NEW_TAB_DE_DE, CrawledContentPinnedFreshRescaler),
         ],
     )
     def test_get_ranking_rescaler_for_branch(

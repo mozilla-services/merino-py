@@ -153,6 +153,25 @@ class IECrawledContentRescaler(CrawledContentRescaler):
         return opens / IE_EXPERIMENT_TREATMENT_PERCENT, no_opens / IE_EXPERIMENT_TREATMENT_PERCENT
 
 
+DE_EXPERIMENT_TREATMENT_PERCENT = 0.10
+
+
+class DECrawledContentRescaler(CrawledContentRescaler):
+    """Rescaler for DE experiment — scales engagement up by 1/0.10 = 10x
+    to compensate for only 10% of DE traffic generating engagement data.
+    """
+
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+
+    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
+        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
+        treatment percentage to compensate for small experiment size.
+        """
+        opens, no_opens = super().rescale(rec, opens, no_opens)
+        return opens / DE_EXPERIMENT_TREATMENT_PERCENT, no_opens / DE_EXPERIMENT_TREATMENT_PERCENT
+
+
 class SchedulerHoldbackRescaler(EngagementRescaler):
     """Scales experiment based content on relative size of experiment, as a fractional percentage"""
 

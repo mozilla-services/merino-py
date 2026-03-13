@@ -22,6 +22,12 @@ def test_get_translation_en_ie():
     assert result == "Popular Today"
 
 
+def test_get_translation_de_de():
+    """Test that de-DE surface has correct localized section title."""
+    result = get_translation(SurfaceId.NEW_TAB_DE_DE, "top-stories", "Default")
+    assert result == "Meistgelesen"
+
+
 def test_get_translation_non_existing_locale(caplog):
     """Test logs error and falls back to default when locale translations do not exist."""
     result = get_translation(SurfaceId.NEW_TAB_IT_IT, "business", "Default")

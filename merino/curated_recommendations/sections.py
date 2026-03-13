@@ -29,6 +29,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
+    DECrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
@@ -347,7 +348,7 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     - ML sections experiment is enabled (treatment branch), OR
     """
     in_holdback = is_scheduler_holdback_experiment(request)
-    return not in_holdback and request.region in ("US", "GB", "IE")
+    return not in_holdback and request.region in ("US", "GB", "IE", "DE")
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -392,6 +393,11 @@ def get_ranking_rescaler_for_branch(
         request, "sections-in-ie", "sections"
     ):
         return IECrawledContentRescaler()
+
+    if surface_id == SurfaceId.NEW_TAB_DE_DE and is_enrolled_in_experiment(
+        request, "sections-in-germany", "sections"
+    ):
+        return DECrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_CA:
         return CrawledContentRescaler()
