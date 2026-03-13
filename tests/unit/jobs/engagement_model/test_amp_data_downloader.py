@@ -11,14 +11,12 @@ def test_download_amp_data():
         {
             "advertiser": "mozilla",
             "suggestion_id": "88888",
-            "match_type": "firefox-suggest",
             "impressions": 1000,
             "clicks": 22,
         },
         {
             "advertiser": "firefox",
             "suggestion_id": "123456",
-            "match_type": "best-match",
             "impressions": 5666,
             "clicks": 0,
         },
