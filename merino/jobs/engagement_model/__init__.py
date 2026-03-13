@@ -40,7 +40,7 @@ def upload_engagement_data() -> None:
 
     amp_data: list[dict[str, Any]] = amp_data_downloader.download_data()
     wiki_data: dict[str, int] = wiki_data_downloader.download_data()
-    transform_amp_data = {row["advertiser"]: row for row in amp_data}
+    transformed_amp_data = {row["advertiser"]: row for row in amp_data}
     amp_aggregated = {
         "impressions": sum(int(row["impressions"]) for row in amp_data),
         "clicks": sum(int(row["clicks"]) for row in amp_data),
