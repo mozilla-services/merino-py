@@ -16,13 +16,11 @@ def test_gcs_uploader() -> None:
     amp_data = [
         {
             "advertiser": "mozilla",
-            "suggestion_id": "88888",
             "impressions": 1000,
             "clicks": 22,
         },
         {
             "advertiser": "firefox",
-            "suggestion_id": "123456",
             "impressions": 5666,
             "clicks": 0,
         },
@@ -32,13 +30,11 @@ def test_gcs_uploader() -> None:
     transform_amp_data = {
         "mozilla": {
             "advertiser": "mozilla",
-            "suggestion_id": "88888",
             "impressions": 1000,
             "clicks": 22,
         },
         "firefox": {
             "advertiser": "firefox",
-            "suggestion_id": "123456",
             "impressions": 5666,
             "clicks": 0,
         },
