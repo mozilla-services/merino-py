@@ -275,8 +275,10 @@ def get_legacy_provider() -> LegacyCuratedRecommendationsProvider:
 async def shutdown() -> None:
     """Clean up resources used by curated recommendations."""
     try:
-        await _provider.shutdown()
+        provider = _provider
     except NameError:
-        pass
+        return
+    try:
+        await provider.shutdown()
     except Exception:
         logger.warning("Error shutting down curated recommendations", exc_info=True)

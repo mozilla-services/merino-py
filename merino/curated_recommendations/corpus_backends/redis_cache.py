@@ -17,7 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     SurfaceId,
 )
-from merino.exceptions import BackendError, CacheAdapterError
+from merino.exceptions import CacheAdapterError
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,10 @@ class _RedisCorpusCache:
                         data_key,
                         exc_info=True,
                     )
-        raise BackendError(f"Cache miss and lock held for {data_key}")
+        # Last resort: Redis may be down or lock holder slow. Fetch directly
+        # so the L2 cache never degrades availability below what L1+API provide.
+        logger.warning("Falling back to direct fetch for %s", data_key)
+        return await fetch_fn()
 
     async def _revalidate(
         self,
