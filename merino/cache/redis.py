@@ -127,6 +127,31 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to SCARD {key} with error: {exc}") from exc
 
+    async def set_nx(self, key: str, ttl_sec: int) -> bool:
+        """Set the key only if it does not exist, with a TTL in seconds.
+
+        Returns:
+            True if the key was set, False if it already existed.
+
+        Raises:
+            - `CacheAdapterError` if Redis returns an error.
+        """
+        try:
+            return bool(await self.primary.set(key, b"1", nx=True, ex=ttl_sec))
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to SETNX `{repr(key)}` with error: `{exc}`") from exc
+
+    async def delete(self, key: str) -> None:
+        """Delete a key from Redis.
+
+        Raises:
+            - `CacheAdapterError` if Redis returns an error.
+        """
+        try:
+            await self.primary.delete(key)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to DELETE `{repr(key)}` with error: `{exc}`") from exc
+
     async def close(self) -> None:
         """Close the Redis connection."""
         if self.primary is self.replica:
