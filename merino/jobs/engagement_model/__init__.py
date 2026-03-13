@@ -27,7 +27,7 @@ cli = typer.Typer(
 
 
 @cli.command()
-def upload_engagement_data() -> None:
+def run() -> None:
     """Fetch AMP + Wikipedia engagement data and upload a JSON payload to GCS."""
     logger.info("Starting engagement data pipeline...")
 
