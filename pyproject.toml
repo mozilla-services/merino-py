@@ -70,7 +70,7 @@ jobs = [
 ]
 load = [
     "faker>=20.0.0,<21",
-    "numpy>=1.26.2,<2",
+    "numpy>=2.0.0,<3",
     "locust>=2.20.0,<3",
 ]
 dev = [
@@ -111,7 +111,7 @@ exclude = ["build", "dist", "__pycache__", ".git"]
 lint.select = ["D", "E4", "E7", "E9", "F"]
 # Error Code Ref: https://www.pydocstyle.org/en/stable/error_codes.html
 # D212 Multi-line docstring summary should start at the first line
-lint.extend-select = ["D212"]
+lint.extend-select = ["D212", "NPY201"]
 lint.ignore = [
   # D105 Docstrings for magic methods
   "D105",
