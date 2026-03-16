@@ -2,8 +2,12 @@
 
 from typing import Any
 
-# Mapping domain names without any suffix to their direct favicon URLs
+# Mapping domain names without any suffix to their direct favicon URLs.
+# Used for domains that block scrapers, have unreliable favicon detection,
+# or only serve small favicon.ico files despite having larger icons available.
+# All URLs below have been manually verified to return images >= 48px.
 CUSTOM_FAVICONS: dict[str, str] = {
+    # --- Original entries ---
     "axios": "https://static.axios.com/icons/favicon.svg",
     "espn": "https://a.espncdn.com/favicon.ico",
     "ign": "https://kraken.ignimgs.com/favicon.ico",
@@ -15,6 +19,24 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "telegraph": "https://www.telegraph.co.uk/etc.clientlibs/settings/wcm/designs/telegraph/core/clientlibs/core/resources/icons/favicon-196x196.png",
     "theverge": "https://www.theverge.com/static-assets/icons/android-chrome-512x512.png",
     "yahoo": "https://s.yimg.com/rz/l/favicon.ico",
+    # --- Bot-protected domains (verified apple-touch-icon.png paths) ---
+    "bloomberg": "https://www.bloomberg.com/apple-touch-icon.png",  # 180x180
+    "britannica": "https://cdn.britannica.com/mendel-resources/3-124/images/shared/default3.png",  # 100x100
+    "carvana": "https://www.carvana.com/apple-touch-icon.png",  # 57x57
+    "dell": "https://www.dell.com/apple-touch-icon.png",  # 180x180
+    "lego": "https://www.lego.com/apple-touch-icon.png",  # 180x180
+    "patreon": "https://www.patreon.com/apple-touch-icon.png",  # 192x192
+    "pixabay": "https://www.pixabay.com/apple-touch-icon.png",  # 180x180
+    "rumble": "https://www.rumble.com/apple-touch-icon.png",  # 180x180
+    # --- Domains where only small favicon.ico is found (verified larger icons) ---
+    "bing": "https://www.bing.com/apple-touch-icon.png",  # 57x57
+    "booking": "https://www.booking.com/apple-touch-icon.png",  # 180x180
+    "ebay": "https://www.ebay.com/apple-touch-icon.png",  # 60x60
+    "etsy": "https://www.etsy.com/apple-touch-icon.png",  # 57x57
+    "google": "https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png",  # 128x128
+    "imdb": "https://www.imdb.com/apple-touch-icon.png",  # 60x60
+    "reddit": "https://www.reddit.com/apple-touch-icon.png",  # 57x57
+    "twitch": "https://www.twitch.tv/apple-touch-icon.png",  # 180x180
 }
 
 
