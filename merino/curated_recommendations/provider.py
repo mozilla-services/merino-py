@@ -42,6 +42,7 @@ from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
     derive_region,
+    is_enrolled_in_experiment,
 )
 
 logger = logging.getLogger(__name__)
@@ -82,11 +83,15 @@ class CuratedRecommendationsProvider:
 
         Sections are enabled when the request includes 'sections' in the feeds list
         and the surface_id is supported (has localized section titles).
+        For surfaces still behind an experiment (e.g. DE), also check enrollment.
         """
         if request.feeds is None or "sections" not in request.feeds:
             return False
         if surface_id not in LOCALIZED_SECTION_TITLES:
             return False
+        # DE sections are gated behind the sections-in-germany experiment
+        if surface_id == SurfaceId.NEW_TAB_DE_DE:
+            return is_enrolled_in_experiment(request, "sections-in-germany", "sections")
         return True
 
     def rank_recommendations(
