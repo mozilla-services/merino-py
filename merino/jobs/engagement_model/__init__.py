@@ -14,11 +14,9 @@ from merino.configs import settings
 from merino.jobs.engagement_model.wikipedia_data_downloader import (
     EngagementDataDownloader as WikiDownloader,
 )
-
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
-
 
 cli = typer.Typer(
     name="upload_engagement_data",
@@ -27,58 +25,69 @@ cli = typer.Typer(
 
 
 @cli.command()
-def upload_engagement_data() -> None:
+def upload_engagement_data() -> None:  # pragma: no cover
     """Fetch AMP + Wikipedia engagement data and upload a JSON payload to GCS."""
     logger.info("Starting engagement data pipeline...")
 
-    gcs_bq_project = settings.engagement.gcs_bq_project
-    gcs_storage_bucket = settings.engagement.gcs_storage_bucket
-    gcs_storage_project = settings.engagement.gcs_storage_project
+    try:
+        gcs_bq_project = settings.engagement.gcs_bq_project
+        gcs_storage_bucket = settings.engagement.gcs_storage_bucket
+        gcs_storage_project = settings.engagement.gcs_storage_project
 
-    amp_data_downloader = AMPDownloader(gcs_bq_project)
-    wiki_data_downloader = WikiDownloader(gcs_bq_project)
+        amp_data_downloader = AMPDownloader(gcs_bq_project)
+        wiki_data_downloader = WikiDownloader(gcs_bq_project)
 
-    amp_data: list[dict[str, Any]] = amp_data_downloader.download_data()
-    wiki_data: dict[str, int] = wiki_data_downloader.download_data()
-    transformed_amp_data = {row["advertiser"]: row for row in amp_data}
-    amp_aggregated = {
-        "impressions": sum(int(row["impressions"]) for row in amp_data),
-        "clicks": sum(int(row["clicks"]) for row in amp_data),
-    }
+        amp_data: list[dict[str, Any]] = amp_data_downloader.download_data()
+        wiki_data: dict[str, int] = wiki_data_downloader.download_data()
 
-    payload = {
-        "amp": transformed_amp_data,
-        "wiki_aggregated": {
-            "impressions": int(wiki_data["impressions"]),
-            "clicks": int(wiki_data["clicks"]),
-        },
-        "amp_aggregated": amp_aggregated,
-    }
+        transformed_amp_data = {row["advertiser"]: row for row in amp_data}
 
-    content = json.dumps(payload, indent=2)
+        amp_aggregated = {
+            "impressions": sum(int(row["impressions"]) for row in amp_data),
+            "clicks": sum(int(row["clicks"]) for row in amp_data),
+        }
 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    destination_name = f"suggest-merino-exports/engagement/{timestamp}.json"
-    latest_name = "suggest-merino-exports/engagement/latest.json"
+        payload = {
+            "amp": transformed_amp_data,
+            "wiki_aggregated": {
+                "impressions": int(wiki_data["impressions"]),
+                "clicks": int(wiki_data["clicks"]),
+            },
+            "amp_aggregated": amp_aggregated,
+        }
 
-    uploader = GcsUploader(
-        destination_gcp_project=gcs_storage_project,
-        destination_bucket_name=gcs_storage_bucket,
-        destination_cdn_hostname="",
-    )
+        content = json.dumps(payload, indent=2)
 
-    uploader.upload_content(
-        content=content,
-        destination_name=destination_name,
-        content_type="application/json",
-        forced_upload=True,
-    )
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        destination_name = f"suggest-merino-exports/engagement/{timestamp}.json"
+        latest_name = "suggest-merino-exports/engagement/latest.json"
 
-    uploader.upload_content(
-        content=content,
-        destination_name=latest_name,
-        content_type="application/json",
-        forced_upload=True,
-    )
+        uploader = GcsUploader(
+            destination_gcp_project=gcs_storage_project,
+            destination_bucket_name=gcs_storage_bucket,
+            destination_cdn_hostname="",
+        )
 
-    logger.info("Uploaded engagement data")
+        uploader.upload_content(
+            content=content,
+            destination_name=destination_name,
+            content_type="application/json",
+            forced_upload=True,
+        )
+
+        uploader.upload_content(
+            content=content,
+            destination_name=latest_name,
+            content_type="application/json",
+            forced_upload=True,
+        )
+
+        logger.info("Uploaded engagement data")
+
+    except Exception as ex:
+        logger.error(
+            "Engagement data pipeline failed: %s: %s",
+            ex.__class__.__name__,
+            str(ex),
+            exc_info=True,
+        )
