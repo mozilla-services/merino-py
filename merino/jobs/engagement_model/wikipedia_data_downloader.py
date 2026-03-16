@@ -1,6 +1,11 @@
-"""Download engagement metrics for Wikipedia from Biq Query table"""
+"""Download engagement metrics for Wikipedia from BigQuery table"""
 
+import logging
+
+from google.api_core.exceptions import GoogleAPIError
 from google.cloud.bigquery import Client
+
+logger = logging.getLogger(__name__)
 
 
 class EngagementDataDownloader:
@@ -26,12 +31,33 @@ AND normalized_channel = "release"
         self.client = Client(source_gcp_project)
 
     def download_data(self) -> dict[str, int]:
-        """Download engagement data from BigQuery and return formatted JSON objects"""
-        query_job = self.client.query(self.QUERY)
-        row = next(query_job.result(), None)
+        """Execute the Wikipedia engagement query and return aggregated metrics.
+
+        Returns:
+            dict[str, int]: A dictionary containing total impressions and clicks.
+
+        Raises:
+            RuntimeError: If the BigQuery query fails.
+        """
+        try:
+            query_job = self.client.query(self.QUERY)
+            row = next(query_job.result(), None)
+        except GoogleAPIError as e:
+            logger.error(
+                "BigQuery query failed while downloading Wikipedia engagement data",
+                exc_info=True,
+            )
+            raise RuntimeError("Failed to fetch Wikipedia engagement data from BigQuery") from e
+
         if row is None:
+            logger.warning("Wikipedia engagement query returned no rows")
             return {"impressions": 0, "clicks": 0}
-        return {
-            "impressions": int(row["impressions"]),
-            "clicks": int(row["clicks"]),
-        }
+
+        try:
+            return {
+                "impressions": int(row["impressions"]),
+                "clicks": int(row["clicks"]),
+            }
+        except KeyError as e:
+            logger.error("Unexpected row format in Wikipedia engagement results: %s", row)
+            raise RuntimeError("Wikipedia engagement data was missing expected fields") from e
