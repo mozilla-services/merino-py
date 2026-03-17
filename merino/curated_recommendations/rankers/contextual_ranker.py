@@ -34,7 +34,7 @@ from merino.curated_recommendations.rankers.utils import (
 # we're looking at are total impressions and we care about impressions with the inferred interests. When
 # contexual is rolled out we can use a dynamic computed value based on daily impressions.
 
-CONTEXUAL_AVG_BETA_VALUE = 10000
+CONTEXUAL_AVG_BETA_VALUE = 12000
 CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
     0.5  # Underscored items tend to scale higher, leading to too much fresh content
 )
