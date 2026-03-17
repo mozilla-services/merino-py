@@ -191,7 +191,7 @@ class SuperInferredModel(LocalModelBackend):
         Topic.ARTS.value,
         Topic.POLITICS.value,
         Topic.PARENTING.value,
-        Topic.BUSINESS.value,
+        Topic.FOOD.value,
         Topic.TECHNOLOGY.value,
         Topic.SCIENCE.value,
         Topic.PERSONAL_FINANCE.value,

@@ -29,10 +29,11 @@ from merino.curated_recommendations.rankers.utils import (
     renumber_sections,
 )
 
-# We are still learning how to compute how many impressions before we can trust the ranker score completely
-# So far, 12000 impressions seems to be a reasonable average beta value to use as a threshold
-# This means that items with less than 12000 impressions will be marked as fresh.
-CONTEXUAL_AVG_BETA_VALUE = 12000
+# We are still learning how to compute how many impressions before we can trust the ranker score completely.
+# Hard coding to the current global-us blended beta use for thompson sampling (20,000) matching, scaled up 40%
+# because the contexual job runs more frequently than the thompson sampling aggregation batch job.
+
+CONTEXUAL_AVG_BETA_VALUE = 28000
 CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
     0.5  # Underscored items tend to scale higher, leading to too much fresh content
 )
@@ -48,7 +49,7 @@ CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING = {
     Topic.ARTS: 0.3,
 }
 
-CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0007
+CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0004
 CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_OFFSET = 0.2
 
 
@@ -120,7 +121,6 @@ class ContextualRanker(Ranker):
                 mean, stdev = contextual_scores.get_score_pair(rec.corpusItemId)
 
             beta_value_for_fresh_check = non_rescaled_b_prior
-
             if mean is None or stdev is None:
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)
