@@ -30,10 +30,11 @@ from merino.curated_recommendations.rankers.utils import (
 )
 
 # We are still learning how to compute how many impressions before we can trust the ranker score completely.
-# Hard coding to the current global-us blended beta use for thompson sampling (20,000) matching, scaled up 40%
-# because the contexual job runs more frequently than the thompson sampling aggregation batch job.
+# Because Contexual ranking is an experiment, the value is somewhat arbitrary because the impression counts
+# we're looking at are total impressions and we care about impressions with the inferred interests. When
+# contexual is rolled out we can use a dynamic computed value based on daily impressions.
 
-CONTEXUAL_AVG_BETA_VALUE = 28000
+CONTEXUAL_AVG_BETA_VALUE = 10000
 CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
     0.5  # Underscored items tend to scale higher, leading to too much fresh content
 )
@@ -80,7 +81,7 @@ class ContextualRanker(Ranker):
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region and utcOffset.
         """
-
+        print("contextual ranker: starting to rank items with ml backend")
         def boost_interest(rec: CuratedRecommendation) -> float:
             if personal_interests is None or rec.topic is None:
                 return 0.0
@@ -143,6 +144,7 @@ class ContextualRanker(Ranker):
                 if no_opens < target_no_opens:
                     is_fresh = True
                     remaining_fresh_impressions = int(target_no_opens - no_opens)
+                    print("Fresh item detected: ", rec.corpusItemId, " with no_opens: ", no_opens, " and target_no_opens: ", target_no_opens)
 
             rec.ranking_data = RankingData(
                 score=score,
