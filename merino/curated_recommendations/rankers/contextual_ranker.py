@@ -81,7 +81,7 @@ class ContextualRanker(Ranker):
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region and utcOffset.
         """
-        print("contextual ranker: starting to rank items with ml backend")
+
         def boost_interest(rec: CuratedRecommendation) -> float:
             if personal_interests is None or rec.topic is None:
                 return 0.0
@@ -144,7 +144,6 @@ class ContextualRanker(Ranker):
                 if no_opens < target_no_opens:
                     is_fresh = True
                     remaining_fresh_impressions = int(target_no_opens - no_opens)
-                    print("Fresh item detected: ", rec.corpusItemId, " with no_opens: ", no_opens, " and target_no_opens: ", target_no_opens)
 
             rec.ranking_data = RankingData(
                 score=score,
