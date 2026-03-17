@@ -30,10 +30,11 @@ from merino.curated_recommendations.rankers.utils import (
 )
 
 # We are still learning how to compute how many impressions before we can trust the ranker score completely.
-# Hard coding to the current global-us blended beta use for thompson sampling (20,000) matching, scaled up 40%
-# because the contexual job runs more frequently than the thompson sampling aggregation batch job.
+# Because Contexual ranking is an experiment, the value is somewhat arbitrary because the impression counts
+# we're looking at are total impressions and we care about impressions with the inferred interests. When
+# contexual is rolled out we can use a dynamic computed value based on daily impressions.
 
-CONTEXUAL_AVG_BETA_VALUE = 28000
+CONTEXUAL_AVG_BETA_VALUE = 12000
 CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
     0.5  # Underscored items tend to scale higher, leading to too much fresh content
 )
