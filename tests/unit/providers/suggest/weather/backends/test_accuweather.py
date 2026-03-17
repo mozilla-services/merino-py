@@ -2904,6 +2904,40 @@ async def test_get_hourly_forecasts_cache_hit(
 
 
 @pytest.mark.asyncio
+async def test_get_hourly_forecasts_stale_invalid_shape_cache_returns_none(
+    mocker: MockerFixture,
+    accuweather: AccuweatherBackend,
+    weather_context_with_location_key: WeatherContext,
+) -> None:
+    """Test that get_hourly_forecasts returns None when cached data has an invalid shape."""
+    accuweather_location = AccuweatherLocation(
+        key="39376",
+        localized_name="San Francisco",
+        administrative_area_id="CA",
+        country_name="United States",
+    )
+    mocker.patch(
+        "merino.providers.suggest.weather.backends.accuweather.pathfinder.explore"
+    ).return_value = (accuweather_location, None)
+
+    # cached data missing required fields.
+    stale_cached_data = orjson.dumps(
+        {"hourly_forecasts": [{"date_time": "2026-02-18T14:00:00-05:00"}]}
+    )
+    mocker.patch.object(
+        accuweather.cache,
+        "run_script",
+        return_value=[stale_cached_data, TEST_HOURLY_FORECASTS_CACHE_TTL_SEC],
+    )
+
+    result: Optional[HourlyForecastsWithTTL] = await accuweather.get_hourly_forecasts(
+        weather_context_with_location_key
+    )
+
+    assert result is None
+
+
+@pytest.mark.asyncio
 async def test_get_hourly_forecasts_api_returns_none(
     mocker: MockerFixture,
     accuweather: AccuweatherBackend,
