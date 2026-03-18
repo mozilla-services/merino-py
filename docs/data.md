@@ -156,6 +156,17 @@ The weather provider records additional metrics.
 - `merino.providers.accuweather.skip_cities_mapping.total.size` - A counter to measure the total number of occurrences cities were skipped due to no location
 - `merino.providers.accuweather.skip_cities_mapping.unique.size` - A counter to measure the number of unique cities that are skipped due to no location
 
+### MARS (ADM Backend)
+
+The MARS backend for sponsored suggestions records the following metrics during its periodic data sync.
+All fetch metrics are tagged with `country` and `form_factor`.
+
+- `mars.fetch.success` - A counter for successful MARS API fetches that returned suggestion data.
+- `mars.fetch.not_modified` - A counter for 304 Not Modified responses (data unchanged, cached data kept).
+- `mars.fetch.empty_response` - A counter for responses with an empty suggestions array. Cached data is preserved when this occurs.
+- `mars.fetch.error` - A counter for failed MARS API requests (HTTP errors, timeouts, connection failures).
+- `mars.data.staleness_seconds` - A gauge tracking the time in seconds since the last successful data fetch from MARS. Can be used to alert if data becomes stale (e.g., threshold at 2x the resync interval).
+
 ### Curated Recommendations
 
 The following additional metrics are recorded when curated recommendations are requested.

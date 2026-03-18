@@ -218,6 +218,78 @@ suggest/yelp:
     scope: |
       Provider initialization
     alert_policy: []
+suggest/mars:
+  mars_fetch_success:
+    description: |
+      A counter for successful MARS API fetches that returned suggestion data
+    type: counter
+    labels:
+      - name: country
+        description: |
+          The country code for the fetched segment
+      - name: form_factor
+        description: |
+          The form factor for the fetched segment
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  mars_fetch_not_modified:
+    description: |
+      A counter for MARS API responses with 304 Not Modified (data unchanged)
+    type: counter
+    labels:
+      - name: country
+        description: |
+          The country code for the fetched segment
+      - name: form_factor
+        description: |
+          The form factor for the fetched segment
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  mars_fetch_empty_response:
+    description: |
+      A counter for MARS API responses that returned an empty suggestions array.
+      Cached data is preserved when this occurs.
+    type: counter
+    labels:
+      - name: country
+        description: |
+          The country code for the fetched segment
+      - name: form_factor
+        description: |
+          The form factor for the fetched segment
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  mars_fetch_error:
+    description: |
+      A counter for failed MARS API requests (HTTP errors, timeouts, connection failures)
+    type: counter
+    labels:
+      - name: country
+        description: |
+          The country code for the fetched segment
+      - name: form_factor
+        description: |
+          The form factor for the fetched segment
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  mars_data_staleness_seconds:
+    description: |
+      A gauge tracking the time in seconds since the last successful data fetch
+      from MARS. Can be used to alert if data becomes stale.
+    type: gauge
+    labels: []
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
 suggest/flightaware:
   flightaware_request_summary_get:
     description: |
