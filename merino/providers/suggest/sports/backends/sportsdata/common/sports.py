@@ -431,9 +431,6 @@ class UCL(Sport):
         return self
 
 
-# THE FOLLOWING CLASSES ARE WIP:::
-
-
 class MLB(Sport):
     """Major League Baseball"""
 
@@ -485,6 +482,9 @@ class MLB(Sport):
         """Fetch active team information"""
         await self.get_season(client=client)
         logger = logging.getLogger(__name__)
+        if self.season is None:
+            logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
+            return self
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
         url = f"{self.base_url}/teams?key={self.api_key}"
         response = await get_data(
@@ -506,9 +506,8 @@ class MLB(Sport):
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Fetch the list of events for the sport. (5 min interval)"""
         local_timezone = ZoneInfo("America/New_York")
-        date = datetime.now(tz=local_timezone).strftime("%Y-%b-%d")
-        season = str(date)
-        url = f"{self.base_url}/ScoresBasic/{season}?key={self.api_key}"
+        date = datetime.now(tz=local_timezone).strftime("%Y-%b-%d").upper()
+        url = f"{self.base_url}/ScoresBasic/{date}?key={self.api_key}"
         """
         [
             {
@@ -558,6 +557,9 @@ class MLB(Sport):
             response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
         )
         return self
+
+
+# THE FOLLOWING CLASSES ARE WIP:::
 
 
 # class EPL(Sport):
