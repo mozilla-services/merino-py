@@ -9,7 +9,7 @@ import hashlib
 
 from unittest.mock import patch
 
-from merino.jobs.navigational_suggestions import _get_serp_categories
+from merino.jobs.navigational_suggestions.processing.manifest_builder import get_serp_categories
 from merino.utils.domain_categories.models import Category
 
 
@@ -27,11 +27,13 @@ def test_get_serp_categories_with_valid_url():
             return [Category.News, Category.Tech]
         return default
 
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         mock_domain_mapping.get.side_effect = mock_get
 
         # Call the function
-        result = _get_serp_categories("https://example.com")
+        result = get_serp_categories("https://example.com")
 
         # Verify the results
         assert result == [Category.News.value, Category.Tech.value]
@@ -40,9 +42,11 @@ def test_get_serp_categories_with_valid_url():
 
 def test_get_serp_categories_with_none_url():
     """Test _get_serp_categories with None URL."""
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         # Call the function with None
-        result = _get_serp_categories(None)
+        result = get_serp_categories(None)
 
         # Verify the result is None
         assert result is None
@@ -63,11 +67,13 @@ def test_get_serp_categories_with_subdomain():
             return [Category.Education]
         return default
 
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         mock_domain_mapping.get.side_effect = mock_get
 
         # Call the function
-        result = _get_serp_categories("https://sub.example.com/path")
+        result = get_serp_categories("https://sub.example.com/path")
 
         # Verify the results
         assert result == [Category.Education.value]
@@ -76,9 +82,11 @@ def test_get_serp_categories_with_subdomain():
 
 def test_get_serp_categories_with_empty_url():
     """Test _get_serp_categories with an empty URL."""
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         # Call the function with empty string
-        result = _get_serp_categories("")
+        result = get_serp_categories("")
 
         # Verify the result
         assert result is None
@@ -87,12 +95,14 @@ def test_get_serp_categories_with_empty_url():
 
 def test_get_serp_categories_with_unknown_domain():
     """Test _get_serp_categories with an unknown domain."""
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         # When domain is not found, the default is used
         mock_domain_mapping.get.return_value = [Category.Inconclusive]
 
         # Call the function
-        result = _get_serp_categories("https://unknown-domain.example")
+        result = get_serp_categories("https://unknown-domain.example")
 
         # Verify the results
         assert result == [Category.Inconclusive.value]
@@ -113,11 +123,13 @@ def test_get_serp_categories_with_multiple_categories():
             return [Category.Home, Category.Business, Category.Tech]
         return default
 
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         mock_domain_mapping.get.side_effect = mock_get
 
         # Call the function
-        result = _get_serp_categories("https://multi-category.com")
+        result = get_serp_categories("https://multi-category.com")
 
         # Verify all categories are included in the result
         assert result == [Category.Home.value, Category.Business.value, Category.Tech.value]
@@ -127,12 +139,14 @@ def test_get_serp_categories_with_multiple_categories():
 def test_get_serp_categories_with_invalid_url_format():
     """Test _get_serp_categories with an invalid URL format."""
     # Test with a URL that doesn't contain a host
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         # Setup the mock to return a default value
         mock_domain_mapping.get.return_value = [Category.Inconclusive]
 
         # Call the function with a malformed URL
-        result = _get_serp_categories("https://")
+        result = get_serp_categories("https://")
 
         # The implementation actually returns the Category.Inconclusive values
         # which is [0] since Inconclusive has value 0
@@ -144,7 +158,9 @@ def test_get_serp_categories_with_invalid_url_format():
 
 def test_get_serp_categories_with_port_in_url():
     """Test _get_serp_categories with a URL containing a port number."""
-    with patch("merino.jobs.navigational_suggestions.DOMAIN_MAPPING") as mock_domain_mapping:
+    with patch(
+        "merino.jobs.navigational_suggestions.processing.manifest_builder.DOMAIN_MAPPING"
+    ) as mock_domain_mapping:
         # Setup mock to verify the correct host is extracted
         def mock_get(key, default):
             # The MD5 hash should be for "example.com", not "example.com:8080"
@@ -160,7 +176,7 @@ def test_get_serp_categories_with_port_in_url():
         mock_domain_mapping.get.side_effect = mock_get
 
         # Call the function with a URL containing a port
-        result = _get_serp_categories("https://example.com:8080/path")
+        result = get_serp_categories("https://example.com:8080/path")
 
         # Verify the correct category is returned
         assert result == [Category.Tech.value]

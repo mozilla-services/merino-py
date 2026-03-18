@@ -62,7 +62,7 @@ class SectionsBackend(SectionsProtocol):
         self._background_tasks = set()
 
     @stale_while_revalidate(
-        wait_expiration=WaitRandomExpiration(timedelta(seconds=50), timedelta(seconds=70)),
+        wait_expiration=WaitRandomExpiration(timedelta(seconds=110), timedelta(seconds=130)),
         cache=lambda self: self._cache,
         jobs=lambda self: self._background_tasks,
     )
@@ -88,6 +88,8 @@ class SectionsBackend(SectionsProtocol):
                 description
                 heroTitle
                 heroDescription
+                followable
+                allowAds
                 iab {
                     taxonomy
                     categories
@@ -130,14 +132,20 @@ class SectionsBackend(SectionsProtocol):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
+            # Strip any suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present
+            # This handles locale suffixes and any future suffix patterns
+            external_id = section["externalId"].split("__")[0]
+
             section_obj = CorpusSection(
-                externalId=section["externalId"],
+                externalId=external_id,
                 title=section["title"],
                 description=section.get("description"),  # use .get (can be None)
                 heroTitle=section.get("heroTitle"),
                 heroSubtitle=section.get("heroDescription"),
                 iab=section["iab"],
                 createSource=section["createSource"],
+                followable=section["followable"],
+                allowAds=section["allowAds"],
                 sectionItems=[
                     build_corpus_item(
                         section_item["corpusItem"], self.manifest_provider, utm_source

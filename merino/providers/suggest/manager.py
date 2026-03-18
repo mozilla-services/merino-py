@@ -11,7 +11,11 @@ from merino.exceptions import InvalidProviderError
 from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.metrics import get_metrics_client
+from merino.optimizers.models import ThompsonConfig, EngagementMetrics
+from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.fake_backends import FakeAdmBackend
+from merino.providers.suggest.adm.backends.mars import MarsBackend
+from merino.providers.suggest.adm.backends.protocol import AdmBackend
 from merino.providers.suggest.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.suggest.adm.provider import Provider as AdmProvider
 from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
@@ -39,7 +43,7 @@ from merino.providers.suggest.flightaware.provider import (
 )
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
 from merino.providers.suggest.sports import (
-    DEFAULT_TRIGGER_WORDS as SPORT_DEFAULT_TRIGGER_WORDS,
+    DEFAULT_INTENT_WORDS as SPORT_DEFAULT_INTENT_WORDS,
     BASE_SUGGEST_SCORE as SPORT_BASE_SUGGEST_SCORE,
 )
 from merino.providers.suggest.sports.provider import SportsDataProvider
@@ -103,6 +107,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                             setting.cache_ttls.current_condition_ttl_sec
                         ),
                         cached_forecast_ttl_sec=setting.cache_ttls.forecast_ttl_sec,
+                        cached_hourly_forecast_ttl_sec=setting.cache_ttls.hourly_forecast_ttl_sec,
                         metrics_client=get_metrics_client(),
                         metrics_sample_rate=settings.accuweather.metrics_sampling_rate,
                         http_client=create_http_client(
@@ -123,6 +128,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         url_location_key_placeholder=(
                             settings.accuweather.url_location_key_placeholder
                         ),
+                        url_hourly_forecasts_path=settings.accuweather.url_hourly_forecasts_path,
                     )
                     if setting.backend == "accuweather"
                     else FakeWeatherBackend()
@@ -148,29 +154,54 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 enabled_by_default=setting.enabled_by_default,
             )
         case ProviderType.ADM:
-            return AdmProvider(
-                backend=(
-                    RemoteSettingsBackend(
-                        server=settings.remote_settings.server,
-                        collection=settings.remote_settings.collection_amp,
-                        bucket=settings.remote_settings.bucket,
-                        icon_processor=IconProcessor(
-                            gcs_project=settings.image_gcs.gcs_project,
-                            gcs_bucket=settings.image_gcs.gcs_bucket,
-                            cdn_hostname=settings.image_gcs.cdn_hostname,
-                            http_client=create_http_client(
-                                request_timeout=settings.icon.http_timeout,
-                            ),
-                        ),
-                    )
-                    if setting.backend == "remote-settings"
-                    else FakeAdmBackend()
+            icon_processor = IconProcessor(
+                gcs_project=settings.image_gcs.gcs_project,
+                gcs_bucket=settings.image_gcs.gcs_bucket,
+                cdn_hostname=settings.image_gcs.cdn_hostname,
+                http_client=create_http_client(
+                    request_timeout=settings.icon.http_timeout,
                 ),
+            )
+            backend: AdmBackend
+            if setting.backend == "remote-settings":
+                backend = RemoteSettingsBackend(
+                    server=settings.remote_settings.server,
+                    collection=settings.remote_settings.collection_amp,
+                    bucket=settings.remote_settings.bucket,
+                    icon_processor=icon_processor,
+                )
+            elif setting.backend == "mars":
+                backend = MarsBackend(
+                    base_url=settings.mars.base_url,
+                    icon_processor=icon_processor,
+                    connect_timeout=settings.mars.connect_timeout_sec,
+                    request_timeout=settings.mars.request_timeout_sec,
+                    suggestion_url_path=settings.mars.suggestion_url_path,
+                )
+            else:
+                backend = FakeAdmBackend()
+
+            thompson: ThompsonSampler | None = None
+            if settings.providers.adm.thompson.enabled:
+                thompson = ThompsonSampler(
+                    config=ThompsonConfig(
+                        dummy_candidate=EngagementMetrics(
+                            engaged=settings.providers.adm.thompson.dummy_engaged_count,
+                            attempted=settings.providers.adm.thompson.dummy_attempted_count,
+                        )
+                        if settings.providers.adm.thompson.dummy_enabled
+                        else None,
+                    )
+                )
+            return AdmProvider(
+                backend=backend,
                 score=setting.score,
                 name=provider_id,
                 resync_interval_sec=setting.resync_interval_sec,
                 cron_interval_sec=setting.cron_interval_sec,
                 enabled_by_default=setting.enabled_by_default,
+                min_attempted_count=settings.providers.adm.thompson.min_attempted_count,
+                thompson=thompson,
             )
         case ProviderType.GEOLOCATION:
             return GeolocationProvider(
@@ -319,9 +350,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.SPORTS:
-            trigger_words = [
+            intent_words = [
                 word.lower().strip()
-                for word in setting.get("trigger_words", SPORT_DEFAULT_TRIGGER_WORDS)
+                for word in setting.get("intent_words", SPORT_DEFAULT_INTENT_WORDS)
             ]
             # Use wikipedia as a backup for the Elasticsearch credentials.
             # TODO, use a central Elasticsearch credential set.
@@ -348,7 +379,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 score=setting.get("score", SPORT_BASE_SUGGEST_SCORE),
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
-                trigger_words=trigger_words,
+                intent_words=intent_words,
                 enabled_by_default=setting.enabled_by_default,
             )
         case _:

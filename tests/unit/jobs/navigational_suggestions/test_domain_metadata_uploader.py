@@ -15,10 +15,10 @@ from pytest_mock import MockerFixture
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
-from merino.jobs.navigational_suggestions.domain_metadata_uploader import (
+from merino.jobs.navigational_suggestions.io.domain_metadata_uploader import (
     DomainMetadataUploader,
 )
-from merino.jobs.navigational_suggestions.utils import AsyncFaviconDownloader
+from merino.jobs.navigational_suggestions.io import AsyncFaviconDownloader
 from tests.types import FilterCaplogFixture
 
 

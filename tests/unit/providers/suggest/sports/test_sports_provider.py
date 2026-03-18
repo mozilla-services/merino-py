@@ -43,9 +43,9 @@ def mock_client(mocker: MockerFixture) -> AsyncClient:
 async def test_sports_ttl_from_now():
     """Test that we get a valid UTC time for tomorrow"""
     result = utc_time_from_now(timedelta(days=1))
-    tomorrow = int((datetime.now(tz=timezone.utc) + timedelta(days=1)).timestamp())
+    tomorrow = datetime.now(tz=timezone.utc) + timedelta(days=1)
     # Use a window because of clock skew.
-    assert tomorrow - 1 <= result <= tomorrow + 1
+    assert (tomorrow - timedelta(seconds=1)) <= result <= (tomorrow + timedelta(seconds=1))
 
 
 @pytest.mark.asyncio
@@ -62,6 +62,7 @@ async def test_sports_provider(mock_client: AsyncClient):
         away_team=away_team,
         status="Final",
         status_type="final",
+        touched="2025-10-01T10:10:00+00:00",
     )
     summary = [SportSummary(sport="test", values=[event])]
     backend = AsyncMock(spec=SportsDataBackend)
@@ -71,7 +72,7 @@ async def test_sports_provider(mock_client: AsyncClient):
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["test"],
+        intent_words=["test"],
     )
     await provider.initialize()
     sreq = SuggestionRequest(query="test game jets", geolocation=Location())
@@ -95,14 +96,14 @@ async def test_sports_provider(mock_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_provider_query_non_trigger_word():
+async def test_provider_query_non_intent_word():
     """Test non-trigger word returns no suggestions."""
     backend = AsyncMock(spec=SportsDataBackend)
     provider = SportsDataProvider(
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["trigger word"],
+        intent_words=["trigger word"],
     )
     await provider.initialize()
     backend.query.return_value = []
@@ -119,12 +120,12 @@ async def test_provider_normalize_query():
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["trigger", "word"],
+        intent_words=["trigger", "word"],
     )
     success = "Trigger is my horse"
     fail = "Hi-ho Silver!"
     await provider.initialize()
-    assert provider.normalize_query(success) == success
+    assert provider.normalize_query(success) == "is my horse"
     assert provider.normalize_query(fail) == ""
 
 
@@ -137,7 +138,7 @@ async def test_provider_backend_failure():
         metrics_client=get_metrics_client(),
         backend=backend,
         enabled_by_default=True,
-        trigger_words=["trigger", "word"],
+        intent_words=["trigger", "word"],
     )
     await provider.initialize()
     assert provider.backend is None

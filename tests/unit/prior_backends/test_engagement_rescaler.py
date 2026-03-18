@@ -1,0 +1,286 @@
+"""Module with basic tests covering the backend data rescaling used to normalize the
+thompson sampling experiments
+"""
+
+from unittest.mock import Mock
+
+from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    BLOCKED_FROM_MOST_POPULAR_SCALER,
+    EST_TOP_STORY_TILE_IMP_PER_CYCLE,
+    US_UTC_RELATIVE_IMPRESSIONS_NORM,
+    CrawledContentPinnedFreshRescaler,
+    CrawledContentRescaler,
+    DE_EXPERIMENT_TREATMENT_PERCENT,
+    DECrawledContentRescaler,
+    IE_EXPERIMENT_TREATMENT_PERCENT,
+    IECrawledContentRescaler,
+    SchedulerHoldbackRescaler,
+    PESSIMISTIC_PRIOR_ALPHA_SCALE,
+    PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC,
+)
+from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG
+
+SECTIONS_HOLDBACK_TOTAL_PERCENT = 0.1
+
+
+class TestCrawledContentRescaler:
+    """Test Rig for the rescaler"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = CrawledContentRescaler()
+
+    def test_detect_blocked_from_most_popular(self):
+        """Test detection of blocked from most popular"""
+        rec = Mock()
+        rec.experiment_flags = {ITEM_SUBTOPIC_FLAG}
+        rec.topic = Topic.SPORTS
+        rec.is_story_blocked_for_top_stories.return_value = True
+        assert self.rescaler.is_blocked_from_most_popular(rec)
+
+        rec = Mock()
+        rec.experiment_flags = {ITEM_SUBTOPIC_FLAG}
+        rec.topic = Topic.ARTS
+        rec.is_story_blocked_for_top_stories.return_value = True
+        assert self.rescaler.is_blocked_from_most_popular(rec)
+
+        rec.experiment_flags = set()
+        rec.topic = Topic.GAMING
+        rec.is_story_blocked_for_top_stories.return_value = True
+        assert self.rescaler.is_blocked_from_most_popular(rec)
+
+        rec.topic = Topic.TECHNOLOGY
+        rec.is_story_blocked_for_top_stories.return_value = False
+        assert not self.rescaler.is_blocked_from_most_popular(rec)
+
+        assert self.rescaler.compute_estimated_fresh_per_cycle() >= 0
+        assert self.rescaler.fresh_items_top_stories_fixed_position is None
+
+    def test_rescale_with_subtopic_item(self):
+        """Test rescaling of priors for relative experiment size."""
+        rec = Mock()
+        rec.topic = Topic.BUSINESS
+        rec.experiment_flags = {ITEM_SUBTOPIC_FLAG}
+        rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = True
+        rec.in_experiment.return_value = True
+
+        expected_opens = 100
+        expected_no_opens = 50
+        opens, no_opens = self.rescaler.rescale(rec, expected_opens, expected_no_opens)
+        assert opens == expected_opens * BLOCKED_FROM_MOST_POPULAR_SCALER
+        assert no_opens == expected_no_opens * BLOCKED_FROM_MOST_POPULAR_SCALER
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
+        assert beta == 20
+
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
+    def test_rescale_with_blocked_item(self):
+        """Test rescaling of priors for relative experiment size."""
+        rec = Mock()
+        rec.topic = Topic.GAMING
+        rec.experiment_flags = set()
+        rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = True
+        rec.in_experiment.return_value = False
+
+        expected_opens = 100
+        expected_no_opens = 50
+        opens, no_opens = self.rescaler.rescale(rec, expected_opens, expected_no_opens)
+        assert opens == expected_opens * BLOCKED_FROM_MOST_POPULAR_SCALER
+        assert no_opens == expected_no_opens * BLOCKED_FROM_MOST_POPULAR_SCALER
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
+        assert beta == 20
+
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
+    def test_rescale_when_not_subtopic_item(self):
+        """Test normal case for normal item"""
+        rec = Mock()
+        rec.topic = Topic.BUSINESS
+        rec.experiment_flags = set()
+        rec.isTimeSensitive = False
+        rec.in_experiment.return_value = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100
+        assert no_opens == 50
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
+        assert beta == 20
+
+
+class TestCrawledContentPinnedFreshRescaler:
+    """Test pinned rescalar"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = CrawledContentPinnedFreshRescaler()
+
+    def test_basic_stuff(self):
+        """Test detection of blocked from most popular"""
+        assert self.rescaler.fresh_items_top_stories_fixed_position == 4
+        assert (
+            self.rescaler.fresh_items_top_stories_fixed_est_imp_per_cycle
+            == EST_TOP_STORY_TILE_IMP_PER_CYCLE
+        )
+        assert len(US_UTC_RELATIVE_IMPRESSIONS_NORM) == 24
+        # Sanity check computed target value for tile is in range
+        assert (
+            0.1 * EST_TOP_STORY_TILE_IMP_PER_CYCLE
+            < self.rescaler.compute_estimated_fresh_per_cycle()
+            < 2.5 * EST_TOP_STORY_TILE_IMP_PER_CYCLE
+        )
+
+
+class TestIECrawledContentRescaler:
+    """Test Rig for the IE experiment rescaler"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = IECrawledContentRescaler()
+
+    def test_rescale_regular_item(self):
+        """Test that regular items are scaled up by 1/0.10 = 10x for experiment size"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 / IE_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 / IE_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_blocked_item(self):
+        """Test that blocked items get parent 5x scaling then 10x experiment scaling"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.topic = Topic.GAMING
+        rec.is_story_blocked_for_top_stories.return_value = True
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / IE_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / IE_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_prior_inherits_parent(self):
+        """Test that prior rescaling is inherited from CrawledContentRescaler"""
+        rec = Mock()
+        rec.in_experiment.return_value = True
+        rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
+        assert beta == 20
+
+    def test_fresh_items_settings_inherited(self):
+        """Test that fresh item settings are inherited from parent"""
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
+
+class TestDECrawledContentRescaler:
+    """Test Rig for the DE experiment rescaler"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = DECrawledContentRescaler()
+
+    def test_rescale_regular_item(self):
+        """Test that regular items are scaled up by 1/0.10 = 10x for experiment size"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 / DE_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 / DE_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_blocked_item(self):
+        """Test that blocked items get parent 5x scaling then 10x experiment scaling"""
+        rec = Mock()
+        rec.in_experiment.return_value = False
+        rec.topic = Topic.GAMING
+        rec.is_story_blocked_for_top_stories.return_value = True
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        assert opens == 100 * BLOCKED_FROM_MOST_POPULAR_SCALER / DE_EXPERIMENT_TREATMENT_PERCENT
+        assert no_opens == 50 * BLOCKED_FROM_MOST_POPULAR_SCALER / DE_EXPERIMENT_TREATMENT_PERCENT
+
+    def test_rescale_prior_inherits_parent(self):
+        """Test that prior rescaling is inherited from CrawledContentRescaler"""
+        rec = Mock()
+        rec.in_experiment.return_value = True
+        rec.isTimeSensitive = False
+        rec.is_story_blocked_for_top_stories.return_value = False
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
+        assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC
+        assert beta == 20
+
+    def test_fresh_items_settings_inherited(self):
+        """Test that fresh item settings are inherited from parent"""
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
+
+class TestSchedulerHoldbackRescaler:
+    """Test Rig for the rescaler"""
+
+    def setup_method(self):
+        """Set up test"""
+        self.rescaler = SchedulerHoldbackRescaler()
+
+    def test_rescale_subtopic_item(self):
+        """Not an expected use case for legacy sections"""
+        rec = Mock()
+        rec.experiment_flags = {ITEM_SUBTOPIC_FLAG}
+        rec.is_story_blocked_for_top_stories.return_value = False
+        rec.in_experiment.return_value = True
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+        expected_opens = 100 / SECTIONS_HOLDBACK_TOTAL_PERCENT
+        expected_no_opens = 50 / SECTIONS_HOLDBACK_TOTAL_PERCENT
+        assert opens == expected_opens
+        assert no_opens == expected_no_opens
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
+        assert alpha == 40
+        assert beta == 20
+
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage == 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier == 0
+
+    def test_rescale_regular_item(self):
+        """Test when no experiment in request"""
+        rec = Mock()
+        rec.experiment_flags = set()
+        rec.isTimeSensitive = False
+        rec.in_experiment.return_value = False
+        rec.is_story_blocked_for_top_stories.return_value = True
+
+        opens, no_opens = self.rescaler.rescale(rec, 100, 50)
+
+        assert opens == 100 / SECTIONS_HOLDBACK_TOTAL_PERCENT
+        assert no_opens == 50 / SECTIONS_HOLDBACK_TOTAL_PERCENT
+
+        alpha, beta = self.rescaler.rescale_prior(rec, 40, 20)
+        assert alpha == 40
+        assert beta == 20
+
+        assert self.rescaler.fresh_items_max == 0
+        assert self.rescaler.fresh_items_section_ranking_max_percentage == 0
+        assert self.rescaler.fresh_items_limit_prior_threshold_multiplier == 0

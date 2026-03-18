@@ -28,7 +28,7 @@ class NFL(Sport):
     """National Football League"""
 
     season: str | None = None
-    week: int = 0
+    week: int | None = 0
     _lock: asyncio.Lock
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
@@ -48,10 +48,10 @@ class NFL(Sport):
         )
         self._lock = asyncio.Lock()
 
-    async def get_team(self, name: str) -> Team | None:
+    async def get_team(self, id: int) -> Team | None:
         """Attempt to find the team information in a thread-locking manner."""
         async with self._lock:
-            team = self.teams.get(self.gen_key(name))
+            team = self.teams.get(id)
         return team
 
     async def get_season(self, client: AsyncClient):
@@ -92,11 +92,20 @@ class NFL(Sport):
             'ApiWeek': '3'
         }]
         """
-        self.season = response[0].get("ApiSeason")
-        self.week = response[0].get("ApiWeek")
+        # Special case the Superbowl
+        if not response[0].get("ApiSeason").endswith("STAR"):
+            self.season = response[0].get("ApiSeason")
+            self.week = response[0].get("ApiWeek")
+        else:
+            # The ProBowl interferes with displaying the Superbowl.
+            self.season = response[0].get("ApiSeason").replace("STAR", "POST")
+            self.week = 4
+        if self.week is None:
+            logger.debug(f"{LOGGING_TAG} No week, no events")
+            return
         start = response[0].get("StartDate")
         end = response[0].get("EndDate")
-        logger.debug(f"{LOGGING_TAG} {self.name} week {self.week} {start} to {end}")
+        logger.debug(f"{LOGGING_TAG} {self.name} {self.season} week {self.week} {start} to {end}")
 
     async def update_teams(self, client: AsyncClient):
         """NFL requires a nightly "Timeframe" lookup."""
@@ -113,13 +122,16 @@ class NFL(Sport):
             self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient):
+    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update the events for this sport in the elastic search database"""
         logger = logging.getLogger(__name__)
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
         local_timezone = ZoneInfo("America/New_York")
         # get this week and next week
+        if self.week is None:
+            logger.debug(f"{LOGGING_TAG} No events (No week)")
+            return
         for week in [int(self.week), int(self.week) + 1]:
             url = f"{self.base_url}/ScoresBasic/{self.season}/{week}?key={self.api_key}"
             response = await get_data(
@@ -129,7 +141,9 @@ class NFL(Sport):
                 cache_dir=self.cache_dir,
             )
 
-            self.load_scores_from_source(response, event_timezone=local_timezone)
+            self.load_scores_from_source(
+                response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
+            )
         return self
 
 
@@ -137,7 +151,7 @@ class NHL(Sport):
     """National Hockey League"""
 
     season: str | None = None
-    teams: dict[str, Any] = {}
+    teams: dict[int, Any] = {}
     _lock: asyncio.Lock
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
@@ -156,10 +170,10 @@ class NHL(Sport):
         )
         self._lock = asyncio.Lock()
 
-    async def get_team(self, name: str) -> Team | None:
+    async def get_team(self, id: int) -> Team | None:
         """Fetch team information using local locking"""
         async with self._lock:
-            return self.teams.get(self.gen_key(name))
+            return self.teams.get(id)
 
     async def get_season(self, client: AsyncClient):
         """Get the current season"""
@@ -204,10 +218,12 @@ class NHL(Sport):
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
         )
+        # NOTE:
+        # Sportsdata lists the Superbowl teams as "AFC" vs "NFC".
         self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient):
+    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
         logger = logging.getLogger(__name__)
@@ -220,7 +236,9 @@ class NHL(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_scores_from_source(response, event_timezone=local_timezone)
+        self.load_scores_from_source(
+            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
+        )
         return self
 
 
@@ -244,10 +262,10 @@ class NBA(Sport):
         )
         self._lock = asyncio.Lock()
 
-    async def get_team(self, name: str) -> Team | None:
+    async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
         async with self._lock:
-            return self.teams.get(self.gen_key(name))
+            return self.teams.get(id)
 
     async def get_season(self, client: AsyncClient):
         """Get the current season"""
@@ -293,7 +311,7 @@ class NBA(Sport):
             self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient):
+    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
         logger = logging.getLogger(__name__)
@@ -308,7 +326,9 @@ class NBA(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_scores_from_source(response, event_timezone=local_timezone)
+        self.load_scores_from_source(
+            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
+        )
         return self
 
 
@@ -337,10 +357,10 @@ class UCL(Sport):
         self.season = str(datetime.now(tz=timezone.utc).year)
         return self
 
-    async def get_team(self, name: str) -> Team | None:
+    async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
         async with self._lock:
-            return self.teams.get(self.gen_key(name))
+            return self.teams.get(id)
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
@@ -392,7 +412,7 @@ class UCL(Sport):
             self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient):
+    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
         logger = logging.getLogger(__name__)
@@ -405,7 +425,9 @@ class UCL(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_scores_from_source(response, event_timezone=local_timezone)
+        self.load_scores_from_source(
+            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
+        )
         return self
 
 

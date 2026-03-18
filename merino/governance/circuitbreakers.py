@@ -30,13 +30,23 @@ from circuitbreaker import CircuitBreaker
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
+from merino.providers.suggest.flightaware.backends.errors import FlightawareError
+from merino.providers.suggest.weather.backends.accuweather.errors import (
+    AccuweatherError,
+)
 from merino.providers.suggest.base import BaseSuggestion
 
 
 async def _suggest_provider_fallback_fn(*args, **kwargs) -> list[BaseSuggestion]:
     """Define a fallback function that returns an empty list when the circuit breaker is open."""
     return []
+
+
+# This method is exported and used as the override for WeatherCircuitBreaker decorater for get_hourly_foreacasts.
+# This is because we are sharing the WeatherCircuitBreaker but only one fall back function can be registered per circuit breaker definition.
+async def hourly_forecasts_fallback(*args, **kwargs) -> None:
+    """Define a fallback function that returns None when the circuit breaker is open for get_hourly_forecasts."""
+    return None
 
 
 class WeatherCircuitBreaker(CircuitBreaker):
@@ -47,5 +57,17 @@ class WeatherCircuitBreaker(CircuitBreaker):
     # This breaker only cares about these two errors, which would cover both Redis errors
     # and AccuWeather API errors.
     EXPECTED_EXCEPTION = (AccuweatherError, BackendError)
+    # When the breaker is open, use this to simply return an empty suggestion list to the caller.
+    FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+
+
+class FlightawareCircuitBreaker(CircuitBreaker):
+    """Circuit Breaker for the flightaware provider."""
+
+    FAILURE_THRESHOLD = settings.providers.flightaware.circuit_breaker_failure_threshold
+    RECOVERY_TIMEOUT = settings.providers.flightaware.circuit_breaker_recover_timeout_sec
+    # This breaker only cares about these two errors, which would cover both Redis errors
+    # and AeroAPI errors.
+    EXPECTED_EXCEPTION = (FlightawareError, BackendError)
     # When the breaker is open, use this to simply return an empty suggestion list to the caller.
     FALLBACK_FUNCTION = _suggest_provider_fallback_fn

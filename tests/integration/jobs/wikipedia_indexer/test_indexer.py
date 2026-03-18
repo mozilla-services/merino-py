@@ -2,12 +2,14 @@
 
 import datetime
 import json
+import logging
 
 import freezegun
 import pytest
 from google.cloud.storage import Blob
 
 from merino.jobs.wikipedia_indexer.indexer import Indexer
+from merino.search.elastic import ElasticSearchAdapter
 
 FROZEN_TIME = "2020-01-01"
 EPOCH_FROZEN_TIME = int(
@@ -37,10 +39,16 @@ def file_manager(mocker):
 
 
 @pytest.fixture
-def es_client(mocker):
-    """Return a mock Elasticsearch client."""
-    es_mock = mocker.patch("elasticsearch.Elasticsearch")
-    return es_mock.return_value
+def es_adapter(mocker):
+    """Return a mock ElasticSearchAdapter."""
+    adapter_mock = mocker.Mock(spec=ElasticSearchAdapter)
+    return adapter_mock
+
+
+@pytest.fixture
+def indexer(file_manager, es_adapter, category_blocklist, title_blocklist):
+    """Return a mock indexer instance"""
+    return Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
 
 @pytest.mark.parametrize(
@@ -55,7 +63,7 @@ def es_client(mocker):
 @freezegun.freeze_time(FROZEN_TIME)
 def test_get_index_name(
     file_manager,
-    es_client,
+    es_adapter,
     category_blocklist,
     title_blocklist,
     file_name,
@@ -63,7 +71,7 @@ def test_get_index_name(
     expected,
 ):
     """Test filename to index name parsing."""
-    indexer = Indexer(version, category_blocklist, title_blocklist, file_manager, es_client)
+    indexer = Indexer(version, category_blocklist, title_blocklist, file_manager, es_adapter)
 
     index_name = indexer._get_index_name(file_name)
     assert index_name == expected
@@ -80,7 +88,7 @@ def test_get_index_name(
 )
 def test_create_index(
     file_manager,
-    es_client,
+    es_adapter,
     category_blocklist,
     title_blocklist,
     index_exists,
@@ -89,24 +97,24 @@ def test_create_index(
     expected_create_called,
 ):
     """Test create index logic."""
-    es_client.indices.exists.return_value = index_exists
-    es_client.indices.create.return_value = create_return
+    es_adapter.index_exists.return_value = index_exists
+    es_adapter.create_index.return_value = create_return.get("acknowledged", False)
 
     index_name = "enwiki-123-v1"
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     assert expected_return == indexer._create_index(index_name)
-    assert expected_create_called == es_client.indices.create.called
+    assert expected_create_called == es_adapter.create_index.called
 
 
 def test_index_from_export_no_exports_available(
-    file_manager, es_client, category_blocklist, title_blocklist
+    file_manager, es_adapter, category_blocklist, title_blocklist
 ):
     """Test that RuntimeError is emitted."""
     file_manager.get_latest_gcs.return_value = Blob("", "bucket")
     file_manager.language = "en"
-    es_client.indices.exists.return_value = False
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
+    es_adapter.index_exists.return_value = False
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
     with pytest.raises(RuntimeError) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
@@ -115,7 +123,7 @@ def test_index_from_export_no_exports_available(
 
 def test_index_from_export_fail_on_existing_index(
     file_manager,
-    es_client,
+    es_adapter,
     category_blocklist,
     title_blocklist,
 ):
@@ -123,9 +131,9 @@ def test_index_from_export_fail_on_existing_index(
     file_manager.get_latest_gcs.return_value = Blob(
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
     )
-    es_client.indices.exists.return_value = False
-    es_client.indices.create.return_value = {}
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = False
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
     with pytest.raises(Exception) as exc_info:
         indexer.index_from_export(100, "fake_alias")
 
@@ -138,7 +146,6 @@ def test_index_from_export_fail_on_existing_index(
         "alias_name",
         "existing_indices",
         "expected_actions",
-        "expected_close_indices",
     ],
     [
         (
@@ -149,7 +156,6 @@ def test_index_from_export_fail_on_existing_index(
                 {"add": {"index": "enwiki-123", "alias": "enwiki"}},
                 {"remove": {"index": "enwiki-345", "alias": "enwiki"}},
             ],
-            ["enwiki-345"],
         ),
         (
             "enwiki-123",
@@ -160,7 +166,6 @@ def test_index_from_export_fail_on_existing_index(
                 {"remove": {"index": "enwiki-345", "alias": "enwiki-v1"}},
                 {"remove": {"index": "enwiki-678", "alias": "enwiki-v1"}},
             ],
-            ["enwiki-345", "enwiki-678"],
         ),
         (
             "enwiki-123",
@@ -169,40 +174,34 @@ def test_index_from_export_fail_on_existing_index(
             [
                 {"add": {"index": "enwiki-123", "alias": "enwiki-v1"}},
             ],
-            [],
         ),
     ],
 )
 def test_flip_alias(
     file_manager,
-    es_client,
+    es_adapter,
     category_blocklist,
     title_blocklist,
     new_index_name,
     alias_name,
     existing_indices,
     expected_actions,
-    expected_close_indices,
 ):
     """Test alias flipping logic."""
-    es_client.indices.exists_alias.return_value = len(existing_indices) > 0
-    es_client.indices.get_alias.return_value = existing_indices
+    es_adapter.alias_exists.return_value = len(existing_indices) > 0
+    es_adapter.get_indices_for_alias.return_value = existing_indices
 
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
     indexer._flip_alias_to_latest(new_index_name, alias_name)
 
-    assert es_client.indices.update_aliases.called
+    assert es_adapter.update_aliases.called
 
-    es_client.indices.update_aliases.assert_called_with(actions=expected_actions)
-    if expected_close_indices:
-        es_client.indices.close.assert_called_once_with(index=expected_close_indices)
-    else:
-        assert not es_client.indices.close.called
+    es_adapter.update_aliases.assert_called_with(actions=expected_actions)
 
 
 def test_index_from_export(
     file_manager,
-    es_client,
+    es_adapter,
     category_blocklist,
     title_blocklist,
 ):
@@ -211,13 +210,14 @@ def test_index_from_export(
         "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
     )
 
-    es_client.bulk.return_value = {
+    es_adapter.bulk.return_value = {
         "acknowledged": True,
         "errors": False,
         "items": [{"id": 1000}],
     }
-    es_client.indices.exists.return_value = False
-    es_client.indices.create.return_value = {"acknowledged": True}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
 
     operation = {"index": {"_type": "doc", "_id": "1000"}}
     document = {
@@ -235,18 +235,18 @@ def test_index_from_export(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
-    es_client.bulk.assert_called_once()
-    es_client.indices.refresh.assert_called_once()
-    es_client.indices.update_aliases.assert_called_once()
+    es_adapter.bulk.assert_called_once()
+    es_adapter.refresh_index.assert_called_once()
+    es_adapter.update_aliases.assert_called_once()
 
 
 def test_index_from_export_with_category_blocklist_content_filter(
     file_manager,
-    es_client,
+    es_adapter,
     category_blocklist,
     title_blocklist,
 ):
@@ -268,9 +268,10 @@ def test_index_from_export_with_category_blocklist_content_filter(
             "items": [{"id": 1000}],
         }
 
-    es_client.bulk.side_effect = check_bulk_side_effect
-    es_client.indices.exists.return_value = False
-    es_client.indices.create.return_value = {"acknowledged": True}
+    es_adapter.bulk.side_effect = check_bulk_side_effect
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
 
     operation0 = {"index": {"_type": "doc", "_id": "1000"}}
     document0 = {
@@ -301,16 +302,16 @@ def test_index_from_export_with_category_blocklist_content_filter(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
-    es_client.bulk.assert_called_once()
+    es_adapter.bulk.assert_called_once()
 
 
 def test_index_from_export_with_title_blocklist_content_filter(
     file_manager,
-    es_client,
+    es_adapter,
     category_blocklist,
     title_blocklist,
 ):
@@ -334,9 +335,10 @@ def test_index_from_export_with_title_blocklist_content_filter(
             "items": [{"id": 1000}],
         }
 
-    es_client.bulk.side_effect = check_bulk_side_effect
-    es_client.indices.exists.return_value = False
-    es_client.indices.create.return_value = {"acknowledged": True}
+    es_adapter.bulk.side_effect = check_bulk_side_effect
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
 
     operation0 = {"index": {"_type": "doc", "_id": "1000"}}
     document0 = {
@@ -367,8 +369,68 @@ def test_index_from_export_with_title_blocklist_content_filter(
     ]
 
     file_manager.stream_from_gcs.return_value = (input for input in inputs)
-    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_client)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
 
     indexer.index_from_export(1, "enwiki")
 
-    es_client.bulk.assert_called_once()
+    es_adapter.bulk.assert_called_once()
+
+
+def _set_queue(indexer, n=1):
+    # queue is [op, doc, op, doc, ...]
+    indexer.queue.clear()
+    for i in range(n):
+        indexer.queue.append({"index": {"_index": "test-idx", "_id": str(i)}})
+        indexer.queue.append({"title": f"Doc {i}"})
+
+
+def test_index_docs_raises_with_first_failing_item(indexer, es_adapter, caplog):
+    """Test that when errors=True, raise with the first item that actually failed, not just items[0]."""
+    _set_queue(indexer, n=2)
+
+    # first item is a success, second item is a failure
+    # The ElasticSearchAdapter.bulk raises RuntimeError when errors=True
+    es_adapter.bulk.side_effect = RuntimeError(
+        "Bulk failed. First error: {'action': 'index', 'status': 400, 'index': 'test-idx', "
+        "'id': '1', 'error': {'type': 'mapper_parsing_exception', 'reason': 'failed to parse field [suggest]'}}"
+    )
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError) as exc:
+            indexer._index_docs(force=True)
+
+    msg = str(exc.value)
+    assert "Bulk failed" in msg
+    assert "mapper_parsing_exception" in msg
+    assert indexer.queue == []
+
+
+def test_index_docs_handles_non_index_actions(indexer, es_adapter):
+    """Test that index_docs works when ES returns actions like 'update'"""
+    _set_queue(indexer, n=1)
+    # The ElasticSearchAdapter.bulk raises RuntimeError when errors=True
+    es_adapter.bulk.side_effect = RuntimeError(
+        "Bulk failed. First error: {'action': 'update', 'status': 404, 'index': 'test-idx', "
+        "'id': '42', 'error': {'type': 'document_missing_exception', 'reason': '[42]: document missing'}}"
+    )
+    with pytest.raises(RuntimeError) as exc:
+        indexer._index_docs(force=True)
+    assert "document_missing_exception" in str(exc.value)
+    assert indexer.queue == []
+
+
+def test_index_docs_success_returns_item_count(indexer, es_adapter):
+    """Test that when errors=False, return count and do not raise."""
+    _set_queue(indexer, n=3)
+    es_adapter.bulk.return_value = {
+        "took": 5,
+        "errors": False,
+        "items": [
+            {"index": {"_index": "test-idx", "_id": "0", "status": 201}},
+            {"index": {"_index": "test-idx", "_id": "1", "status": 201}},
+            {"index": {"_index": "test-idx", "_id": "2", "status": 201}},
+        ],
+    }
+    count = indexer._index_docs(force=True)
+    assert count == 3
+    assert indexer.queue == []

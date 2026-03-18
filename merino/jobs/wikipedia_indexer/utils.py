@@ -5,7 +5,6 @@ from io import StringIO
 from logging import Logger
 
 import requests
-from elasticsearch import Elasticsearch
 
 
 class ProgressReporter:
@@ -50,15 +49,3 @@ def create_blocklist(blocklist_file_url: str) -> set[str]:
     file_like_io = StringIO(block_list)
     csv_reader = csv.DictReader(file_like_io, delimiter=",")
     return set(row["name"] for row in csv_reader)
-
-
-def create_elasticsearch_client(
-    elasticsearch_url: str,
-    elasticsearch_api_key: str,
-) -> Elasticsearch:
-    """Create the Elasticsearch client."""
-    return Elasticsearch(
-        elasticsearch_url,
-        api_key=elasticsearch_api_key,
-        request_timeout=60,
-    )

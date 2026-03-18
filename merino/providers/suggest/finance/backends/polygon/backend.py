@@ -142,23 +142,39 @@ class PolygonBackend:
         cached = await self.get_snapshots_from_cache(tickers)
         # each tuple has the shape of `(snapshot, ttl)` and ignore the none tuples for now.
         cached_snapshots = [tupl[0] for tupl in cached if tupl is not None]
-        if cached_snapshots:
-            return cached_snapshots
 
-        # request from the vendor on cache misses.
-        snapshots: list[TickerSnapshot] = []
+        # Determine which tickers were cached and which were not.
+        cached_ticker_set = {s.ticker for s in cached_snapshots}
+        missed_tickers = [t for t in tickers if t not in cached_ticker_set]
 
-        for ticker in tickers:
+        # Emit metrics based on cache coverage.
+        if not missed_tickers:
+            self.metrics_client.increment("polygon.snapshot.cache.hit")
+        elif cached_snapshots:
+            self.metrics_client.increment("polygon.snapshot.cache.partial_hit")
+        else:
+            self.metrics_client.increment("polygon.snapshot.cache.miss")
+
+        # Fetch any missing tickers from the API.
+        fetched_snapshots: list[TickerSnapshot] = []
+        for ticker in missed_tickers:
             if (
                 snapshot := extract_snapshot_if_valid(await self.fetch_ticker_snapshot(ticker))
             ) is not None:
-                snapshots.append(snapshot)
+                fetched_snapshots.append(snapshot)
             else:
                 self.metrics_client.increment("polygon.snapshot.invalid")
 
-        await self.store_snapshots_in_cache(snapshots)
+        # Cache only the newly fetched snapshots.
+        await self.store_snapshots_in_cache(fetched_snapshots)
 
-        return snapshots
+        # Merge cached and freshly fetched snapshots into a lookup by ticker symbol.
+        all_snapshots = cached_snapshots + fetched_snapshots
+        snapshot_by_ticker: dict[str, TickerSnapshot] = {s.ticker: s for s in all_snapshots}
+
+        # Return results in the original requested order, skipping any tickers
+        # that failed to load from both cache and API.
+        return [snapshot_by_ticker[t] for t in tickers if t in snapshot_by_ticker]
 
     def get_ticker_summary(
         self, snapshot: TickerSnapshot, image_url: HttpUrl | None
@@ -198,7 +214,9 @@ class PolygonBackend:
         params = {"ticker": ticker, self.url_param_api_key: self.api_key}
 
         try:
-            with self.metrics_client.timeit("polygon.request.snapshot.get"):
+            self.metrics_client.increment("polygon.request.snapshot.get")
+
+            with self.metrics_client.timeit("polygon.request.snapshot.get.latency"):
                 response: Response = await self.http_client.get(
                     self.url_single_ticker_snapshot, params=params
                 )
@@ -218,17 +236,16 @@ class PolygonBackend:
         params = {self.url_param_api_key: self.api_key}
 
         try:
-            with self.metrics_client.timeit("polygon.request.ticker_overview.get"):
-                response: Response = await self.http_client.get(
-                    self.url_single_ticker_overview.format(ticker=ticker), params=params
-                )
+            response: Response = await self.http_client.get(
+                self.url_single_ticker_overview.format(ticker=ticker), params=params
+            )
             response.raise_for_status()
             result = response.json()
         except HTTPStatusError as ex:
             logger.error(
                 f"Failed to get ticker image for {ticker}: {ex.response.status_code} {ex.response.reason_phrase}"
             )
-            self.metrics_client.increment("polygon.request.ticker_overview.get.failed")
+
             return None
 
         branding = result.get("results", {}).get("branding", {})
@@ -252,8 +269,7 @@ class PolygonBackend:
         params = {self.url_param_api_key: self.api_key}
 
         try:
-            with self.metrics_client.timeit("polygon.request.company_logo.get"):
-                response: Response = await self.http_client.get(image_url, params=params)
+            response: Response = await self.http_client.get(image_url, params=params)
             response.raise_for_status()
 
             content = response.content
@@ -266,7 +282,6 @@ class PolygonBackend:
             logger.error(
                 f"Failed to download ticker image for {ticker}: {ex.response.status_code} {ex.response.reason_phrase}"
             )
-            self.metrics_client.increment("polygon.request.company_logo.get.failed")
             return None
 
     async def bulk_download_and_upload_ticker_images(
@@ -284,7 +299,6 @@ class PolygonBackend:
 
                 if logo is None:
                     logger.warning(f"No logo found for ticker {ticker}, skipping.")
-                    self.metrics_client.increment("polygon.company_logo.not_found")
                     continue
 
                 content_hash = hashlib.sha256(logo.content).hexdigest()
@@ -391,15 +405,17 @@ class PolygonBackend:
             orjson.dumps(snapshot.model_dump_json()) for snapshot in snapshots
         ]
 
-        # TODO @Herraj -- add try catch and metrics
-        await self.cache.run_script(
-            sid=SCRIPT_ID_BULK_WRITE_TICKERS,
-            keys=cache_keys,
-            args=[
-                *cache_values,
-                self.ticker_ttl_sec,  # the last value is the TTL used for all keys
-            ],
-        )
+        try:
+            await self.cache.run_script(
+                sid=SCRIPT_ID_BULK_WRITE_TICKERS,
+                keys=cache_keys,
+                args=[
+                    *cache_values,
+                    self.ticker_ttl_sec,  # the last value is the TTL used for all keys
+                ],
+            )
+        except CacheAdapterError as exc:
+            logger.error(f"Failed to write snapshots to Redis: {exc}")
 
     # TODO @herraj add unit tests for this
     def _parse_cached_data(

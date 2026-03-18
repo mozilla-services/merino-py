@@ -21,6 +21,9 @@ from merino.providers.suggest.finance.backends.protocol import (
     GetManifestResultCode,
     TickerSummary,
 )
+from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
+    STOCKS_WIDGET_DEFAULT_ETFS,
+)
 from merino.providers.suggest.finance.backends.polygon.utils import (
     get_tickers_for_query,
 )
@@ -128,7 +131,9 @@ class Provider(BaseProvider):
 
     def validate(self, srequest: SuggestionRequest) -> None:
         """Validate the suggestion request."""
-        if not srequest.query:
+        # newtab requests don't require a query string; an empty query returns the default ETF set.
+        # A non-empty query is used to look up individual stocks regardless of source.
+        if srequest.source != "newtab" and not srequest.query:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid query parameters: `q` is missing",
@@ -140,23 +145,32 @@ class Provider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
-        # Get the list of tickers (0 to 3) for the query string.
-        tickers = get_tickers_for_query(srequest.query)
+        tickers: list[str] | None
+        if srequest.source == "newtab" and not srequest.query:
+            tickers = STOCKS_WIDGET_DEFAULT_ETFS
+        else:
+            # Get the list of tickers (0 to 3) for the query string.
+            tickers = get_tickers_for_query(srequest.query)
 
         try:
             if not tickers:
                 return []
             else:
-                ticker_summaries: list[TickerSummary] = []
-                # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
-                ticker_snapshots = await self.backend.get_snapshots(tickers)
+                # Tag requests from the New Tab stocks widget with "newtab".
+                tags = {"source": "newtab"} if srequest.source == "newtab" else {}
+                with self.metrics_client.timeit("polygon.provider.query.latency", tags=tags):
+                    ticker_summaries: list[TickerSummary] = []
+                    # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
+                    ticker_snapshots = await self.backend.get_snapshots(tickers)
 
-                # Build ticker summary for each snapshot and its ticker's image
-                for snapshot in ticker_snapshots:
-                    image_url = self.get_image_url_for_ticker(snapshot.ticker)
-                    ticker_summaries.append(self.backend.get_ticker_summary(snapshot, image_url))
+                    # Build ticker summary for each snapshot and its ticker's image
+                    for snapshot in ticker_snapshots:
+                        image_url = self.get_image_url_for_ticker(snapshot.ticker)
+                        ticker_summaries.append(
+                            self.backend.get_ticker_summary(snapshot, image_url)
+                        )
 
-                return [self.build_suggestion(ticker_summaries)]
+                    return [self.build_suggestion(ticker_summaries)]
 
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")

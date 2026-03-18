@@ -4,9 +4,13 @@ import json
 import logging
 import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from merino.cache.protocol import CacheAdapter
+from merino.providers.suggest.flightaware.backends.errors import (
+    FlightawareError,
+    FlightawareErrorMessages,
+)
 from merino.providers.suggest.flightaware.backends.protocol import FlightSummary
 from merino.exceptions import CacheAdapterError
 
@@ -40,11 +44,21 @@ class FlightCache:
 
             data_json = json.loads(data.decode("utf-8"))
             return CachedFlightData.model_validate(data_json)
-        except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
-            return None
+        except (
+            json.JSONDecodeError,
+            UnicodeDecodeError,
+            ValueError,
+            ValidationError,
+        ) as e:
+            raise FlightawareError(
+                FlightawareErrorMessages.CACHE_DATA_PARSING_ERROR,
+                flight_num=flight_num,
+            ) from e
         except CacheAdapterError as e:
-            logger.warning(f"Error while getting flight summaries for {flight_num} : {e}")
-            return None
+            raise FlightawareError(
+                FlightawareErrorMessages.CACHE_READ_ERROR,
+                flight_num=flight_num,
+            ) from e
 
     async def set_flight(
         self, flight_num: str, summaries: list[FlightSummary], ttl_seconds: int
@@ -52,15 +66,23 @@ class FlightCache:
         """Store flight summaries and metadata in redis."""
         key = CACHE_KEY.format(ident=flight_num)
 
-        payload = {
-            "summaries": [s.model_dump(mode="json") for s in summaries],
-        }
-
         try:
+            payload = {
+                "summaries": [s.model_dump(mode="json") for s in summaries],
+            }
             await self.redis.set(
                 key,
                 json.dumps(payload).encode("utf-8"),
                 ttl=datetime.timedelta(seconds=ttl_seconds),
             )
+        except (TypeError, ValueError, UnicodeEncodeError) as e:
+            raise FlightawareError(
+                FlightawareErrorMessages.CACHE_DATA_PARSING_ERROR,
+                flight_num=flight_num,
+            ) from e
+
         except CacheAdapterError as e:
-            logger.warning(f"Error while setting flight summaries for {flight_num}: {e}")
+            raise FlightawareError(
+                FlightawareErrorMessages.CACHE_WRITE_ERROR,
+                flight_num=flight_num,
+            ) from e

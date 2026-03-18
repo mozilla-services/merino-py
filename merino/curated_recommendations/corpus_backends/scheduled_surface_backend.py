@@ -47,11 +47,11 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
     metrics_client: aiodogstatsd.Client
     manifest_provider: ManifestProvider
 
-    # Time-to-live was chosen because 1 minute (+/- 10 s) is short enough that updates by curators
+    # Time-to-live was chosen because 2 minutes (+/- 10 s) is short enough that updates by curators
     # such as breaking news or editorial corrections propagate fast enough, and that the request
     # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
-    cache_time_to_live_min = timedelta(seconds=50)
-    cache_time_to_live_max = timedelta(seconds=70)
+    cache_time_to_live_min = timedelta(seconds=110)
+    cache_time_to_live_max = timedelta(seconds=130)
     _cache: dict
     _background_tasks: set[asyncio.Task]
 
@@ -79,6 +79,7 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
         zones = {
             SurfaceId.NEW_TAB_EN_US: "America/New_York",
             SurfaceId.NEW_TAB_EN_GB: "Europe/London",
+            SurfaceId.NEW_TAB_EN_CA: "America/Toronto",
             # Note: en-Intl is poorly named. Only India is currently eligible.
             SurfaceId.NEW_TAB_EN_INTL: "Asia/Kolkata",
             SurfaceId.NEW_TAB_DE_DE: "Europe/Berlin",

@@ -28,8 +28,11 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecast,
+    HourlyForecastsWithTTL,
     Temperature,
     WeatherBackend,
+    WeatherContext,
     WeatherReport,
 )
 from merino.providers.suggest.weather.provider import (
@@ -209,6 +212,83 @@ def test_query_with_no_request_type_param_returns_http_400(
 
     assert len(records) == 1
     assert records[0].message == "HTTP 400: invalid query parameters: `request_type` is missing"
+
+
+@pytest.mark.asyncio
+async def test_location_pii_query_returns_empty(
+    statsd_mock: Any,
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    weather_report: WeatherReport,
+) -> None:
+    """Test that the query method returns empty for pii location requests."""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(
+            query="123 Seasame Street",
+            geolocation=geolocation,
+            source="urlbar",
+            request_type="location",
+            is_soft_pii=True,
+        )
+    )
+
+    assert suggestions == []
+
+
+@pytest.fixture(name="weather_context")
+def fixture_weather_context(geolocation: Location) -> WeatherContext:
+    """Return a test WeatherContext."""
+    return WeatherContext(geolocation=geolocation, languages=["en-US"])
+
+
+@pytest.fixture(name="hourly_forecasts_with_ttl")
+def fixture_hourly_forecasts_with_ttl() -> HourlyForecastsWithTTL:
+    """Return a test HourlyForecastsWithTTL."""
+    return HourlyForecastsWithTTL(
+        hourly_forecasts=[
+            HourlyForecast(
+                date_time="2026-02-18T14:00:00-05:00",
+                epoch_date_time=1708281600,
+                temperature=Temperature(f=60, c=16),
+                icon_id=6,
+                url=HttpUrl(
+                    "http://www.accuweather.com/en/us/san-francisco/94105/"
+                    "hourly-weather-forecast/39376"
+                ),
+            )
+        ],
+        ttl=300,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_returns_data(
+    backend_mock: Any,
+    provider: Provider,
+    weather_context: WeatherContext,
+    hourly_forecasts_with_ttl: HourlyForecastsWithTTL,
+) -> None:
+    """Test that get_hourly_forecasts returns HourlyForecastsWithTTL from the backend."""
+    backend_mock.get_hourly_forecasts.return_value = hourly_forecasts_with_ttl
+
+    result = await provider.get_hourly_forecasts(weather_context)
+
+    assert result == hourly_forecasts_with_ttl
+
+
+@pytest.mark.asyncio
+async def test_get_hourly_forecasts_missing_location_key_returns_none(
+    backend_mock: Any,
+    provider: Provider,
+    weather_context: WeatherContext,
+) -> None:
+    """Test that get_hourly_forecasts returns None when the backend raises MissingLocationKeyError."""
+    backend_mock.get_hourly_forecasts.side_effect = MissingLocationKeyError()
+
+    result = await provider.get_hourly_forecasts(weather_context)
+
+    assert result is None
 
 
 @pytest.mark.asyncio

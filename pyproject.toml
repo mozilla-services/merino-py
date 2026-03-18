@@ -1,3 +1,4 @@
+
 [project]
 name = "merino-py"
 version = "0.1.0"
@@ -31,7 +32,20 @@ dependencies = [
     "redis[hiredis]>=5.2.1,<6",
     "circuitbreaker>=2.1.3",
     "mozilla-merino-ext>=0.2.0",
+    "torch>=2.9.1",
+    "safetensors>=0.7.0,<1"
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu" },
+]
+
 
 [project.scripts]
 merino-jobs = "merino.jobs.cli:cli"
@@ -56,7 +70,7 @@ jobs = [
 ]
 load = [
     "faker>=20.0.0,<21",
-    "numpy>=1.26.2,<2",
+    "numpy>=2.0.0,<3",
     "locust>=2.20.0,<3",
 ]
 dev = [
@@ -97,7 +111,7 @@ exclude = ["build", "dist", "__pycache__", ".git"]
 lint.select = ["D", "E4", "E7", "E9", "F"]
 # Error Code Ref: https://www.pydocstyle.org/en/stable/error_codes.html
 # D212 Multi-line docstring summary should start at the first line
-lint.extend-select = ["D212"]
+lint.extend-select = ["D212", "NPY201"]
 lint.ignore = [
   # D105 Docstrings for magic methods
   "D105",
@@ -123,6 +137,8 @@ skips = ["B101", "B104", "B311"]
 exclude_dirs = [
   # Data file only
   "merino/utils/domain_categories/domain_category_mapping.py",
+  # Test utilities
+  "tests/utils/test_probe.py",
 ]
 
 [tool.mypy]
@@ -142,7 +158,17 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v -r s --cov=merino"
+norecursedirs = [
+  "tests/data/",
+  "tests/utils/",
+  "tests/load/",
+]
+addopts = [
+  "-v",
+  "-r s",
+  "--cov=merino",
+  "--import-mode=importlib",
+]
 filterwarnings = [
   # Transform warnings into errors.
   # Reference https://docs.pytest.org/en/stable/how-to/capture-warnings.html

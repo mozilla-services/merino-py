@@ -1,6 +1,18 @@
 version: 1.0
 
 service: Merino
+suggest:
+  query_pii_detected:
+    description: |
+      Measurement for queries that contain pii
+    type: counter
+    labels:
+      type:
+        - email
+        - numeric
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
 suggest/accuweather:
   providers_accuweather_query_weather_report:
     description: |
@@ -14,14 +26,35 @@ suggest/accuweather:
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 suggest/polygon:
-  polygon_request_snapshot_get:
+  polygon_provider_query_latency:
+    description: |
+      A gauge to track the latency for the polygon provider to return a finance suggestion
+    type: gauge
+    labels:
+      - name: source
+        description: |
+          Origin of the finance suggestion request
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
+  polygon_request_snapshot_get_latency:
     description: |
       A gauge to track the latency for snapshot v3 get request
     type: gauge
     labels: [] # no labels
     scope: |
       The "api/v1/suggest" API endpoint.
-    alert_policy:
+    alert_policy: []
+
+  polygon_request_snapshot_get:
+    description: |
+      A counter for snapshot v3 get requests
+    type: gauge
+    labels: [] # no labels
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
 
   polygon_request_snapshot_get_failed:
     description: |
@@ -32,50 +65,42 @@ suggest/polygon:
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 
-  polygon_request_ticker_overview_get:
+  polygon_snapshot_invalid:
     description: |
-      A gauge to track the latency for ticker overview get request
-    type: gauge
-    labels: []
-    scope: |
-      The "api/v1/suggest" API endpoint.
-    alert_policy: []
-
-  polygon_request_ticker_overview_get_failed:
-    description: |
-      A counter for failed ticker overview get requests
+      A counter for invalid snapshots
     type: counter
-    labels: []
+    labels: [] # no labels
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 
-  polygon_request_company_logo_get:
+  polygon_snapshot_cache_hit:
     description: |
-      A gauge to track the latency for company logo get request
-    type: gauge
-    labels: []
-    scope: |
-      The "api/v1/suggest" API endpoint.
-    alert_policy: []
-
-  polygon_request_company_logo_get_failed:
-    description: |
-      A counter for failed company logo get requests
+      A counter for snapshot cache hits
     type: counter
-    labels: []
+    labels: [] # no labels
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 
-  polygon_company_logo_not_found:
+  polygon_snapshot_cache_partial_hit:
     description: |
-      A counter for when a requested company logo is not found
+      A counter for partial snapshot cache hits where some tickers are cached and others are not
     type: counter
-    labels: []
+    labels: [] # no labels
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
+
+  polygon_snapshot_cache_miss:
+    description: |
+      A counter for snapshot cache misses
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
 suggest/yelp:
   yelp_request_business_search_get:
     description: |
@@ -237,4 +262,41 @@ suggest/flightaware:
     labels: []
     scope: |
       The "api/v1/suggest" API endpoint
+    alert_policy: []
+
+weather/hourly_forecasts:
+  weather_hourly_forecasts_request_timing:
+    description: |
+      A timer covering the count and latency of requests to the hourly forecasts endpoint
+    type: timing
+    labels: []
+    scope: |
+      The "api/v1/weather/hourly-forecasts" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_hit_hourly_forecasts:
+    description: |
+      A counter for AccuWeather hourly forecast cache hits
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_fetch_miss_hourly_forecasts:
+    description: |
+      A counter for AccuWeather hourly forecast cache misses
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_hourly_forecast_read_error:
+    description: |
+      A counter for errors reading hourly forecast data from cache
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather" API endpoint.
     alert_policy: []

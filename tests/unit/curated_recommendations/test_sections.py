@@ -22,35 +22,45 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
 )
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
+from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CrawledContentPinnedFreshRescaler,
+    CrawledContentRescaler,
+    DECrawledContentRescaler,
+    IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    DefaultRescaler,
 )
 from merino.curated_recommendations.protocol import (
+    ITEM_SUBTOPIC_FLAG,
     Section,
     SectionConfiguration,
     ExperimentName,
+    DailyBriefingBranch,
     CuratedRecommendation,
     RankingData,
 )
-from merino.curated_recommendations.rankers import section_thompson_sampling
+from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
+    IS_COHORT_FEATURE_DISABLED,
     adjust_ads_in_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
-    is_custom_sections_experiment,
+    is_daily_briefing_experiment,
+    should_show_popular_today_with_headlines,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
     map_corpus_section_to_section,
     map_section_item_to_recommendation,
-    remove_story_recs,
     get_corpus_sections_for_legacy_topic,
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
+    HEADLINES_SECTION_KEY,
     get_top_story_list,
     get_legacy_topic_ids,
+    pick_random_fresh_story,
     put_headlines_first_then_top_stories,
+    dedupe_recommendations_across_sections,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -175,15 +185,15 @@ class TestAdjustAdsInSections:
             tile.hasAd for layout in section.layout.responsiveLayouts for tile in layout.tiles
         )
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "section_count, expected_section_ranks_with_ads",
         [
             (11, {0, 1, 2, 4, 6, 8}),  # All 6 expected sections (1,2,3,5,7,9) to have ads
             (4, {0, 1, 2}),  # Partially expected sections to have ads
         ],
+        ids=["all-allowed-ranks", "partial-allowed-ranks"],
     )
-    async def test_ads_adjusted_in_sections_by_section_count(
+    def test_ads_adjusted_in_sections_by_section_count(
         self, section_count, expected_section_ranks_with_ads
     ):
         """Test that ads show up only in expected sections."""
@@ -204,6 +214,17 @@ class TestAdjustAdsInSections:
             else:
                 assert not self.ads_in_section(section)
 
+    def test_allow_ads_false_disables_ads_at_allowed_rank(self):
+        """Test that allowAds=False disables ads even at normally allowed ranks."""
+        sample_feed = generate_sections_feed(section_count=4)
+        sample_feed["top_stories_section"].allowAds = False
+        assert self.ads_in_section(sample_feed["top_stories_section"])
+
+        adjust_ads_in_sections(sample_feed)
+
+        # Rank 0 normally allows ads, but allowAds=False should override
+        assert not self.ads_in_section(sample_feed["top_stories_section"])
+
 
 class TestMlSectionsExperiment:
     """Tests covering is_subtopics_experiment"""
@@ -215,6 +236,7 @@ class TestMlSectionsExperiment:
             (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
             (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", False),
             ("other", "treatment", "US", True),
+            ("other", "treatment", "DE", True),
             ("other", "treatment", "ZZ", False),
         ],
     )
@@ -224,50 +246,150 @@ class TestMlSectionsExperiment:
         assert is_subtopics_experiment(req) is expected
 
 
-class TestCustomSectionsExperiment:
-    """Tests covering is_custom_sections_experiment"""
+class TestDailyBriefingExperiment:
+    """Tests covering is_daily_briefing_experiment and should_show_popular_today_with_headlines"""
 
     @pytest.mark.parametrize(
         "name,branch,expected",
         [
-            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment", True),
-            (ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "control", False),
-            ("other", "treatment", False),
+            # briefing-with-popular branch enables daily briefing
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
+                True,
+            ),
+            # briefing-without-popular branch also enables daily briefing
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                True,
+            ),
+            # control branch does not enable daily briefing
+            (ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "control", False),
+            # other experiment does not enable daily briefing
+            ("other-experiment", "treatment", False),
+            # no experiment does not enable daily briefing
             (None, None, False),
         ],
     )
-    def test_custom_sections_experiment_flag(self, name, branch, expected):
-        """Test that custom sections experiment flag logic matches expected behavior."""
+    def test_is_daily_briefing_experiment(self, name, branch, expected):
+        """Test that is_daily_briefing_experiment returns True for either treatment branch."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch)
-        assert is_custom_sections_experiment(req) is expected
+        assert is_daily_briefing_experiment(req) is expected
 
     @pytest.mark.parametrize(
-        "name,branch,region,expected_class",
+        "name,branch,expected",
+        [
+            # briefing-with-popular shows Popular Today
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
+                True,
+            ),
+            # briefing-without-popular does NOT show Popular Today
+            (
+                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
+                False,
+            ),
+            # control branch does not show Popular Today with headlines
+            (ExperimentName.DAILY_BRIEFING_EXPERIMENT.value, "control", False),
+            # other experiment does not affect this
+            ("other-experiment", "treatment", False),
+        ],
+    )
+    def test_should_show_popular_today_with_headlines(self, name, branch, expected):
+        """Test that should_show_popular_today_with_headlines returns True only for briefing-with-popular."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        assert should_show_popular_today_with_headlines(req) is expected
+
+
+class TestFilterSectionsByExperiment:
+    """Tests covering filter_sections_by_experiment"""
+
+    @pytest.mark.parametrize(
+        "name,branch,region,surface_id,expected_class",
         [
             (
                 ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
                 "control",
                 "US",
+                None,
                 SchedulerHoldbackRescaler,
             ),
-            ("other", "treatment", "US", None),
-            ("other", "treatment", "CA", None),
-            (None, None, "US", None),
-            (None, None, "CA", None),
+            # Whenever we launch sections somewhere else we'll have crawled content, so best
+            # to set it as default.
+            ("other", "treatment", "US", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            ("other", "treatment", "US", None, CrawledContentRescaler),
+            ("other", "treatment", "CA", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
+            (None, None, "US", None, CrawledContentRescaler),
+            (None, None, "CA", None, CrawledContentRescaler),
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
+            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
+            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
+            # IE with sections branch gets IECrawledContentRescaler
+            (
+                "sections-in-ie",
+                "sections",
+                "IE",
+                SurfaceId.NEW_TAB_EN_IE,
+                IECrawledContentRescaler,
+            ),
+            # IE with wrong branch falls through to CrawledContentRescaler
+            (
+                "sections-in-ie",
+                "control",
+                "IE",
+                SurfaceId.NEW_TAB_EN_IE,
+                CrawledContentRescaler,
+            ),
+            # IE surface without experiment falls through to CrawledContentRescaler
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_IE, CrawledContentRescaler),
+            # CA surface gets CrawledContentRescaler (no experiment gating)
+            (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CrawledContentRescaler),
+            (
+                "sections-in-canada",
+                "sections-ca-content",
+                "CA",
+                SurfaceId.NEW_TAB_EN_CA,
+                CrawledContentRescaler,
+            ),
+            # DE with sections branch gets DECrawledContentRescaler
+            (
+                "sections-in-germany",
+                "sections",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                DECrawledContentRescaler,
+            ),
+            # DE with wrong branch falls through to CrawledContentPinnedFreshRescaler
+            (
+                "sections-in-germany",
+                "control",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                CrawledContentPinnedFreshRescaler,
+            ),
+            # DE surface without experiment falls through to CrawledContentPinnedFreshRescaler
+            (None, None, "DE", SurfaceId.NEW_TAB_DE_DE, CrawledContentPinnedFreshRescaler),
         ],
     )
-    def test_get_ranking_rescaler_for_branch(self, name, branch, region, expected_class):
+    def test_get_ranking_rescaler_for_branch(
+        self, name, branch, region, surface_id, expected_class
+    ):
         """Test that we get the appropriate rescaler"""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:
-            assert isinstance(get_ranking_rescaler_for_branch(req), expected_class)
+            assert isinstance(
+                get_ranking_rescaler_for_branch(req, surface_id=surface_id), expected_class
+            )
         else:
             assert get_ranking_rescaler_for_branch(req) is None
 
-    def test_filter_sections_custom_sections_treatment(self):
-        """Test that custom sections experiment treatment only includes MANUAL sections"""
+    def test_filter_sections_includes_both_manual_and_ml(self):
+        """Test that filter_sections_by_experiment includes both MANUAL and ML sections"""
         from merino.curated_recommendations.sections import filter_sections_by_experiment
         from merino.curated_recommendations.corpus_backends.protocol import CreateSource
 
@@ -279,40 +401,69 @@ class TestCustomSectionsExperiment:
             MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
         ]
 
-        # Custom sections experiment treatment: should only get MANUAL sections
-        result = filter_sections_by_experiment(sections, is_custom_sections_experiment=True)
+        # Should include both MANUAL and ML sections (legacy topics)
+        result = filter_sections_by_experiment(sections, include_subtopics=False)
 
-        assert len(result) == 2
+        assert len(result) == 4
         assert "custom-section-1" in result
         assert "custom-section-2" in result
+        assert "health" in result
+        assert "tech" in result
         assert result["custom-section-1"].createSource == CreateSource.MANUAL
         assert result["custom-section-2"].createSource == CreateSource.MANUAL
-        assert "health" not in result
-        assert "tech" not in result
+        assert result["health"].createSource == CreateSource.ML
+        assert result["tech"].createSource == CreateSource.ML
 
-    def test_filter_sections_custom_sections_control(self):
-        """Test that custom sections experiment control excludes MANUAL sections"""
+    def test_filter_sections_respects_subtopics_flag(self):
+        """Test that filter_sections_by_experiment respects the include_subtopics flag"""
         from merino.curated_recommendations.sections import filter_sections_by_experiment
         from merino.curated_recommendations.corpus_backends.protocol import CreateSource
 
-        # Create test sections with different createSource values
+        # Create test sections including a non-legacy topic ML section
         sections = [
-            MagicMock(externalId="health", createSource=CreateSource.ML),
+            MagicMock(externalId="health", createSource=CreateSource.ML),  # legacy
             MagicMock(externalId="custom-section-1", createSource=CreateSource.MANUAL),
-            MagicMock(externalId="tech", createSource=CreateSource.ML),
-            MagicMock(externalId="custom-section-2", createSource=CreateSource.MANUAL),
+            MagicMock(externalId="nfl", createSource=CreateSource.ML),  # non-legacy subtopic
         ]
 
-        # Custom sections experiment control: should exclude MANUAL sections
-        result = filter_sections_by_experiment(sections, is_custom_sections_experiment=False)
-
-        assert len(result) == 2
+        # With subtopics=False: should include MANUAL + legacy ML only
+        result = filter_sections_by_experiment(sections, include_subtopics=False)
+        assert "custom-section-1" in result
         assert "health" in result
-        assert "tech" in result
-        assert result["health"].createSource == CreateSource.ML
-        assert result["tech"].createSource == CreateSource.ML
-        assert "custom-section-1" not in result
-        assert "custom-section-2" not in result
+        assert "nfl" not in result
+
+        # With subtopics=True: should include MANUAL + all ML sections
+        result = filter_sections_by_experiment(sections, include_subtopics=True)
+        assert "custom-section-1" in result
+        assert "health" in result
+        assert "nfl" in result
+
+
+class TestIsInferredContextualRankingExperiment:
+    """Tests covering is_inferred_contextual_ranking function"""
+
+    def test_inferred_contextual_ranking(self):
+        """Test that inferred contextual ranking is correctly identified."""
+        from merino.curated_recommendations.sections import is_inferred_contextual_ranking
+        from merino.curated_recommendations.protocol import ProcessedInterests
+
+        # Test case where personal_interests is None
+        assert not is_inferred_contextual_ranking(None)
+
+        # Test case where cohort is None
+        pi_no_cohort = ProcessedInterests(cohort=None, numerical_value=5)
+        assert not is_inferred_contextual_ranking(pi_no_cohort)
+
+        # Test case where numerical_value mod selector is not zero
+        pi_not_selected = ProcessedInterests(cohort="test", numerical_value=3)  # 3 % 4 != 0
+        not is_inferred_contextual_ranking(pi_not_selected)
+
+        # Test case where all conditions are met
+        pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0
+        if IS_COHORT_FEATURE_DISABLED:
+            assert not is_inferred_contextual_ranking(pi_selected)
+        else:
+            assert is_inferred_contextual_ranking(pi_selected)
 
 
 class TestUpdateReceivedFeedRank:
@@ -355,11 +506,17 @@ class TestMapSectionItemToRecommendation:
         rec = map_section_item_to_recommendation(item, 3, section_id)
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
-        for k in rec.features.keys():
-            if k.startswith("t_"):
-                assert "." not in k  # Make sure we're not sending a type but actual value.
         assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
         assert not rec.in_experiment("unknown_experiment")
+
+    def test_basic_mapping_manual_section(self):
+        """Map a valid CorpusItem into a CuratedRecommendation."""
+        item = generate_corpus_item()
+        section_id = "secX"
+        rec = map_section_item_to_recommendation(item, 3, section_id, is_manual_section=True)
+        assert isinstance(rec, CuratedRecommendation)
+        assert rec.receivedRank == 3
+        assert rec.features == {f"t_{item.topic.value}": 1.0}
 
     def test_basic_mapping_experiment(self):
         """Map a valid CorpusItem into a CuratedRecommendation."""
@@ -417,6 +574,41 @@ class TestMapCorpusSectionToSection:
         sec = map_corpus_section_to_section(empty_cs, 7)
         assert sec.recommendations == []
         assert sec.receivedFeedRank == 7
+
+    def test_dedupes_duplicate_items(self):
+        """Duplicate corpus items are removed within a section while preserving order."""
+        dup_item = generate_corpus_item("dup", "sched_dup")
+        unique_item = generate_corpus_item("unique", "sched_unique")
+        cs = CorpusSection(
+            sectionItems=[dup_item, dup_item, unique_item],
+            title="With Duplicates",
+            externalId="dup-section",
+            createSource=CreateSource.ML,
+        )
+
+        sec = map_corpus_section_to_section(cs, 2)
+
+        assert [rec.corpusItemId for rec in sec.recommendations] == ["dup", "unique"]
+        assert [rec.receivedRank for rec in sec.recommendations] == [0, 1]
+
+    @pytest.mark.parametrize(
+        "followable,allow_ads",
+        [(True, True), (False, True), (True, False), (False, False)],
+        ids=["both-true", "not-followable", "no-ads", "neither"],
+    )
+    def test_followable_and_allow_ads_passthrough(self, followable, allow_ads):
+        """Test that followable and allowAds are passed from CorpusSection to Section."""
+        cs = CorpusSection(
+            sectionItems=[generate_corpus_item("item1", "sched1")],
+            title="Test",
+            externalId="test-section",
+            createSource=CreateSource.MANUAL,
+            followable=followable,
+            allowAds=allow_ads,
+        )
+        sec = map_corpus_section_to_section(cs, 0)
+        assert sec.followable == followable
+        assert sec.allowAds == allow_ads
 
 
 class TestGetCorpusSectionsForLegacyTopics:
@@ -505,42 +697,49 @@ class TestGetLegacyTopicIds:
         assert get_legacy_topic_ids() == expected
 
 
-class TestRemoveStoryRecs:
-    """Tests for remove_story_recs."""
+class TestDedupeRecommendationsAcrossSections:
+    """Tests for dedupe_recommendations_across_sections."""
 
-    def test_remove_story_recs(self):
-        """Removes certain recommendations."""
-        # generate 5 recs
-        recommendations = generate_recommendations(5, ["a", "b", "c", "d", "e"])
-        # 3 recs in top_stories_section
-        story_ids_to_remove = {"a", "d", "e"}
+    @staticmethod
+    def build_section(item_ids: list[str], rank: int, title: str) -> Section:
+        """Lightweight helper to create a section with the given ids and rank."""
+        return Section(
+            receivedFeedRank=rank,
+            recommendations=generate_recommendations(item_ids=item_ids),
+            title=title,
+            layout=copy.deepcopy(layout_4_medium),
+        )
 
-        result = remove_story_recs(recommendations, story_ids_to_remove)
+    def test_dedupes_and_drops_underfilled_sections(self):
+        """Keeps items from higher-priority sections and drops sections that shrink too much."""
+        top_ids = ["a", "b", "c", "d", "e"]  # meets layout_4_medium.max_tile_count + 1
+        mid_ids = ["b", "c", "f", "g", "h", "i", "j"]  # drops two dupes, still >= threshold
+        low_ids = ["b", "k"]  # will be too small after dedupe
 
-        # the 3 story ids to remove should not be present, result should have 2 recs
-        assert len(result) == 2
-        assert result[0].corpusItemId == "b"
-        assert result[1].corpusItemId == "c"
+        sections = dedupe_recommendations_across_sections(
+            {
+                "top": self.build_section(top_ids, 0, "Top Stories"),
+                "mid": self.build_section(mid_ids, 1, "Mid"),
+                "low": self.build_section(low_ids, 2, "Low"),
+            }
+        )
 
-    def test_recs_unchanged_no_match_found(self):
-        """Return original list of recommendations if no corpus Ids match story_ids_to_remove."""
-        # generate 3 recs
-        recommendations = generate_recommendations(3, ["a", "b", "c"])
-        # rec ids to remove, not found in recs list
-        story_ids_to_remove = {"z", "xy"}
-        result = remove_story_recs(recommendations, story_ids_to_remove)
+        assert set(sections.keys()) == {"top", "mid"}
+        assert sections["top"].receivedFeedRank == 0
+        assert sections["mid"].receivedFeedRank == 1
 
-        assert result == recommendations
-
-    def test_return_empty_list_all_match(self):
-        """Return empty list if  all recommendations are top stories"""
-        # generate 3 recs
-        recommendations = generate_recommendations(3, ["a", "b", "c"])
-        # rec ids to remove, all 3 ids match original recommendations list
-        story_ids_to_remove = {"a", "b", "c"}
-        result = remove_story_recs(recommendations, story_ids_to_remove)
-
-        assert result == []
+        assert [rec.corpusItemId for rec in sections["top"].recommendations] == top_ids
+        # Duplicates of b/c removed; remaining must re-number ranks
+        assert [rec.corpusItemId for rec in sections["mid"].recommendations] == [
+            "f",
+            "g",
+            "h",
+            "i",
+            "j",
+        ]
+        assert [rec.receivedRank for rec in sections["mid"].recommendations] == list(
+            range(len(sections["mid"].recommendations))
+        )
 
 
 class TestGetTopStoryList:
@@ -658,7 +857,7 @@ class TestGetTopStoryList:
         """Should return exactly `top_count` items from start of list, not using
         rescaler because no items have fresh label
         """
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
         items = generate_recommendations(
             item_ids=["a", "b", "c", "d", "e"], topics=self.non_dupe_topics[:5]
         )
@@ -688,9 +887,9 @@ class TestGetTopStoryList:
         )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.1)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", lambda: 0.1)
 
         result = get_top_story_list(
             items, top_count=3, extra_count=0, extra_source_depth=0, rescaler=rescaler
@@ -707,9 +906,9 @@ class TestGetTopStoryList:
         )
         for rec in items:
             rec.ranking_data = RankingData(alpha=1, beta=1, score=1, is_fresh=True)
-        rescaler = DefaultRescaler(fresh_items_top_stories_max_percentage=0.5)
+        rescaler = CrawledContentRescaler(fresh_items_top_stories_max_percentage=0.5)
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.9)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", lambda: 0.9)
 
         result = get_top_story_list(
             items, top_count=2, extra_count=0, extra_source_depth=0, rescaler=rescaler
@@ -733,6 +932,246 @@ class TestGetTopStoryList:
             assert len(result) == min(len(items), 10 + 3)
             picked_ids = set([rec.corpusItemId for rec in result])
             assert len(picked_ids) == len(result)  # Check no duplicates
+
+
+class TestGetTopStoryListWithPinnedFreshRescaler:
+    """End-to-end tests for get_top_story_list with CrawledContentPinnedFreshRescaler.
+
+    CrawledContentPinnedFreshRescaler places one fresh story at a fixed position (default: 4)
+    and removes the story that was previously there, keeping the list length constant.
+
+    pick_random_fresh_story skips the random.random() gate when
+    total_remaining >= est_imp_per_cycle (leftover <= 0), so using a very large
+    remaining_impressions value guarantees the fresh item is always selected without
+    any monkeypatching.  Conversely, remaining_impressions=0 sets p_non_fresh=1.0,
+    which ensures the fresh item is never selected.
+    """
+
+    # Six diverse topics for the non-fresh items so topic-limiting doesn't filter them.
+    _non_fresh_topics = [
+        Topic.CAREER.value,
+        Topic.POLITICS.value,
+        Topic.PERSONAL_FINANCE.value,
+        Topic.ARTS.value,
+        Topic.BUSINESS.value,
+        Topic.EDUCATION.value,
+    ]
+
+    def _make_items(
+        self, fresh_remaining_impressions: int = 4_000_000
+    ) -> list[CuratedRecommendation]:
+        """Create 6 non_fresh + 1 fresh recommendation.
+
+        Args:
+            fresh_remaining_impressions: remaining_impressions for the fresh item.
+                Use a value > EST_TOP_STORY_TILE_IMP_PER_CYCLE * max_scale (~3.9M) to guarantee
+                the fresh item is always picked; use 0 to guarantee it is never picked.
+        """
+        non_fresh = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e", "f"],
+            topics=self._non_fresh_topics,
+            time_sensitive_count=0,
+        )
+        for rec in non_fresh:
+            rec.ranking_data = RankingData(alpha=1.0, beta=1.0, score=0.5, is_fresh=False)
+
+        fresh = generate_recommendations(
+            item_ids=["fresh"], topics=[Topic.SPORTS.value], time_sensitive_count=0
+        )[0]
+        fresh.ranking_data = RankingData(
+            alpha=1.0,
+            beta=1.0,
+            score=0.5,
+            is_fresh=True,
+            remaining_impressions=fresh_remaining_impressions,
+        )
+        return non_fresh + [fresh]
+
+    def test_fresh_story_placed_at_fixed_position(self):
+        """Fresh story should appear at the rescaler's fixed position (index 4)."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert result[4].corpusItemId == "fresh"
+
+    def test_list_length_unchanged_after_insertion(self):
+        """Inserting at the fixed position should not change the total list length."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert len(result) == 5
+
+    def test_received_ranks_sequential_after_insertion(self):
+        """ReceivedRank should be 0..N-1 regardless of fresh-item insertion."""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert [rec.receivedRank for rec in result] == list(range(len(result)))
+
+    def test_no_fresh_story_inserted_when_remaining_is_zero(self):
+        """When remaining_impressions=0, p_non_fresh is 1.0 so the fresh item is never picked
+        and the output list should not contain it.
+        """
+        # remaining_impressions=0 → total_remaining=0 → leftover=est_imp_per_cycle > 0
+        # → p_non_fresh = min(1.0, 1.0) = 1.0 → random.random() < 1.0 always → skip
+        result = get_top_story_list(
+            self._make_items(fresh_remaining_impressions=0),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+        )
+
+        assert len(result) == 5
+        assert all(rec.corpusItemId != "fresh" for rec in result)
+
+
+REMAINING_DEFAULT = 10
+
+
+class TestPickRandomFreshStory:
+    """Tests for pick_random_fresh_story."""
+
+    def _fresh_rec(self, corpus_id: str) -> CuratedRecommendation:
+        """Create a fresh, unblocked recommendation."""
+        rec = generate_recommendations(item_ids=[corpus_id])[0]
+        rec.ranking_data = RankingData(
+            alpha=1.0,
+            beta=1.0,
+            score=0.5,
+            is_fresh=True,
+            remaining_impressions=REMAINING_DEFAULT,
+        )
+        rec.topic = Topic.SPORTS
+        return rec
+
+    def test_returns_none_when_no_items(self):
+        """Empty list returns (None, []) without error."""
+        result_item, remaining = pick_random_fresh_story([], 100)
+        assert result_item is None
+        assert remaining == []
+
+    def test_returns_none_when_no_ranking_data(self):
+        """Items with ranking_data=None are never treated as fresh."""
+        items = generate_recommendations(item_ids=["a", "b"])
+        for item in items:
+            item.ranking_data = None
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_returns_none_when_not_fresh(self):
+        """Items with is_fresh=False are not picked."""
+        items = generate_recommendations(item_ids=["a", "b"])
+        for item in items:
+            item.ranking_data = RankingData(alpha=1, beta=1, score=0.5, is_fresh=False)
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_returns_none_when_fresh_items_have_subtopic_flag(self):
+        """Fresh items with ITEM_SUBTOPIC_FLAG are blocked from top stories and not picked."""
+        items = [self._fresh_rec(f"item-{i}") for i in range(3)]
+        for item in items:
+            item.experiment_flags = {ITEM_SUBTOPIC_FLAG}
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_returns_none_when_fresh_items_are_gaming(self):
+        """Fresh gaming-topic items are blocked from top stories and not picked."""
+        items = [self._fresh_rec(f"item-{i}") for i in range(3)]
+        for item in items:
+            item.topic = Topic.GAMING
+        result_item, remaining = pick_random_fresh_story(items, 100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_always_picks_fresh_when_no_leftover_impressions(self, monkeypatch):
+        """When est_imp_per_cycle <= total impressions, a fresh item is always picked."""
+        items = [self._fresh_rec("a")]
+        # leftover = 10 - 10*1 = 0, not > 0, so random() is never consulted
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is items[0]
+        assert remaining == []
+
+    def test_returns_none_when_random_below_probability_of_non_fresh(self, monkeypatch):
+        """When leftover impressions exist and random() falls below the non-fresh probability, returns (None, items)."""
+        items = [self._fresh_rec("a")]
+        # leftover = 100 - 10*1 = 90; probability_of_non_fresh = 90/100 = 0.9
+        # random() = 0.5 < 0.9 → returns (None, items)
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.5)
+        result_item, remaining = pick_random_fresh_story(items, est_imp_per_cycle=100)
+        assert result_item is None
+        assert remaining is items
+
+    def test_picks_fresh_when_random_above_probability_of_non_fresh(self, monkeypatch):
+        """When random() exceeds the non-fresh probability, the fresh item is picked."""
+        items = [self._fresh_rec("a")]
+        # probability_of_non_fresh = 90/100 = 0.9; random() = 0.95 ≥ 0.9 → pick fresh
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.95)
+        result_item, remaining = pick_random_fresh_story(items, est_imp_per_cycle=100)
+        assert result_item is items[0]
+        assert remaining == []
+
+    def test_probability_of_non_fresh_capped_at_one(self, monkeypatch):
+        """Probability of skipping a fresh item is capped at 1.0."""
+        items = [self._fresh_rec("a")]
+        items[0].ranking_data.remaining_impressions = 8
+        # random() = 8 out of 10  impressions would suggest 0.8 probability of non-fresh
+
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.99)
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is not None
+        assert remaining == []
+
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.5)
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is not None
+        assert remaining == []
+
+        monkeypatch.setattr("merino.curated_recommendations.sections.random.random", lambda: 0.15)
+        result_item, remaining = pick_random_fresh_story(
+            items, est_imp_per_cycle=REMAINING_DEFAULT
+        )
+        assert result_item is None
+        assert remaining == items
+
+    def test_fresh_item_removed_from_remaining(self, monkeypatch):
+        """The picked fresh item is absent from the remaining items list."""
+        items = [self._fresh_rec(f"item-{i}") for i in range(3)]
+        monkeypatch.setattr(
+            "merino.curated_recommendations.sections.random.choices",
+            lambda items, weights, k: [items[1]],
+        )
+        result_item, remaining = pick_random_fresh_story(items, est_imp_per_cycle=30)
+        assert result_item is items[1]
+        assert result_item not in remaining
+        assert len(remaining) == 2
+        # Check that item was spliced out
+        assert items[0] == remaining[0]
+        assert items[2] == remaining[1]
 
 
 class DummyTrackingEngagementBackend:
@@ -767,7 +1206,7 @@ class TestSectionThompsonSampling:
 
     def test_limits_fresh_items_when_rescaler_cap_active(self, monkeypatch):
         """Only allow fresh items up to cap when enough non-fresh content exists."""
-        rescaler = DefaultRescaler(fresh_items_section_ranking_max_percentage=0.1)
+        rescaler = CrawledContentRescaler(fresh_items_section_ranking_max_percentage=0.1)
         recs = generate_recommendations(
             item_ids=["fresh1", "fresh2", "fresh3", "stale1", "stale2"],
             time_sensitive_count=0,
@@ -788,18 +1227,18 @@ class TestSectionThompsonSampling:
             )
         }
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.5)
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", lambda: 0.8)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.5
+        )
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", lambda: 0.8)
 
-        section_thompson_sampling(sections, backend, top_n=4, rescaler=rescaler)
+        top_n = 4
 
-        expected_ids = [
-            recs[3].corpusItemId,
-            recs[4].corpusItemId,
-            recs[0].corpusItemId,
-            recs[1].corpusItemId,
-        ]
-        assert backend.requests == expected_ids
+        thomspon_sampling = ThompsonSamplingRanker(backend, ConstantPrior())
+        thomspon_sampling.rank_sections(sections, top_n=top_n, rescaler=rescaler)
+
+        # Engagement tracker checks for global and regional engagement
+        assert len(backend.requests) == top_n * 2
 
 
 class TestCycleLayoutsForRankedSections:
@@ -867,13 +1306,13 @@ class TestPutHeadlinesFirstThenTopStories:
         top_stories_section.receivedFeedRank = 0
 
         # Insert headlines section at rank 3
-        feed["headlines_section"] = Section(
+        feed[HEADLINES_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
             title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed["headlines_section"]
+        headlines_section = feed[HEADLINES_SECTION_KEY]
 
         put_headlines_first_then_top_stories(feed)
 
@@ -883,12 +1322,12 @@ class TestPutHeadlinesFirstThenTopStories:
 
         # Get the other sections besides headlines & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
         # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
-        expected_order = ["headlines_section", "top_stories_section"] + remaining_sections
+        expected_order = [HEADLINES_SECTION_KEY, "top_stories_section"] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
@@ -898,17 +1337,17 @@ class TestPutHeadlinesFirstThenTopStories:
         feed = generate_sections_feed(section_count=6, has_top_stories=False)
 
         # Insert headlines section at rank 3
-        feed["headlines_section"] = Section(
+        feed[HEADLINES_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
             title="Your Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed["headlines_section"]
+        headlines_section = feed[HEADLINES_SECTION_KEY]
 
         # Get the other sections besides headlines & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in ("headlines_section", "top_stories_section")),
+            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
@@ -918,7 +1357,7 @@ class TestPutHeadlinesFirstThenTopStories:
         assert headlines_section.receivedFeedRank == 0
 
         # Expected: headlines first -> then rest in keys order without headlines & top
-        expected_order = ["headlines_section"] + remaining_sections
+        expected_order = [HEADLINES_SECTION_KEY] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
@@ -955,7 +1394,7 @@ class TestGetCorpusSections:
         sports.createSource = CreateSource.ML
 
         headlines = MagicMock()
-        headlines.externalId = "headlines_section"
+        headlines.externalId = HEADLINES_SECTION_KEY
         headlines.title = "Headlines"
         headlines.description = "Top Headlines today"
         headlines.heroTitle = None
@@ -1058,34 +1497,20 @@ class TestGetCorpusSections:
         assert headlines is not None
         assert headlines.title == "Headlines"
         assert headlines.subtitle == "Top Headlines today"
-        assert "headlines_section" not in sections
+        assert HEADLINES_SECTION_KEY not in sections
         # Remaining sections should still be mapped.
         assert set(sections.keys()) == {"sports"}
 
     @pytest.mark.asyncio
-    async def test_custom_sections_control_excludes_manual_sections(
+    async def test_includes_both_manual_and_ml_sections(
         self, sections_backend_with_manual_sections
     ):
-        """Manual sections are excluded when custom sections experiment is off."""
+        """Both manual and ML sections are included."""
         _, sections = await get_corpus_sections(
             sections_backend=sections_backend_with_manual_sections,
             surface_id=SurfaceId.NEW_TAB_EN_US,
             min_feed_rank=0,
-            is_custom_sections_experiment=False,
         )
 
-        assert set(sections.keys()) == {"sports"}
-
-    @pytest.mark.asyncio
-    async def test_custom_sections_treatment_only_returns_manual_sections(
-        self, sections_backend_with_manual_sections
-    ):
-        """Only manual sections remain when the custom sections experiment is on."""
-        _, sections = await get_corpus_sections(
-            sections_backend=sections_backend_with_manual_sections,
-            surface_id=SurfaceId.NEW_TAB_EN_US,
-            min_feed_rank=0,
-            is_custom_sections_experiment=True,
-        )
-
-        assert set(sections.keys()) == {"custom-section-1", "custom-section-2"}
+        # Should include both ML and MANUAL sections
+        assert set(sections.keys()) == {"sports", "custom-section-1", "custom-section-2"}

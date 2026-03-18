@@ -8,10 +8,8 @@ import typer
 from merino.configs import settings as config
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.indexer import Indexer
-from merino.jobs.wikipedia_indexer.utils import (
-    create_blocklist,
-    create_elasticsearch_client,
-)
+from merino.jobs.wikipedia_indexer.utils import create_blocklist
+from merino.search.elastic import ElasticSearchAdapter
 from merino.utils.blocklists import WIKIPEDIA_TITLE_BLOCKLIST
 
 logger = logging.getLogger(__name__)
@@ -56,7 +54,7 @@ def index(
     gcp_project: str = gcp_project_option,
 ):
     """Index file from GCS to Elasticsearch"""
-    es_client = create_elasticsearch_client(elasticsearch_url, elasticsearch_api_key)
+    elasticsearch = ElasticSearchAdapter(url=elasticsearch_url, api_key=elasticsearch_api_key)
 
     blocklist = create_blocklist(
         blocklist_file_url
@@ -67,14 +65,14 @@ def index(
     file_manager = FileManager(gcs_path, gcp_project, "", language)
 
     alias_key = f"{language}_es_alias"
-    elasticsearch_alias = elasticsearch_alias = job_settings[alias_key]
+    elasticsearch_alias = job_settings[alias_key]
 
     indexer = Indexer(
         index_version,
         blocklist,
         WIKIPEDIA_TITLE_BLOCKLIST,
         file_manager,
-        es_client,
+        elasticsearch,
     )
     indexer.index_from_export(total_docs, elasticsearch_alias)
 
@@ -82,7 +80,8 @@ def index(
 @indexer_cmd.command()
 def copy_export(
     language: Annotated[
-        str, typer.Option(help="Language to copy export for (e.g., en, fr, de), default to en.")
+        str,
+        typer.Option(help="Language to copy export for (e.g., en, fr, de), default to en."),
     ] = "en",
     export_base_url: str = job_settings.export_base_url,
     gcs_path: str = gcs_path_option,

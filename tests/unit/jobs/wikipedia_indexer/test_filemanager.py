@@ -9,7 +9,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from requests import HTTPError
-from merino.jobs.wikipedia_indexer.filemanager import FileManager, WikipediaFilemanagerError
+from merino.jobs.wikipedia_indexer.filemanager import (
+    FileManager,
+    WikipediaFilemanagerError,
+)
 
 
 def test_get_latest_gcs_returns_latest_blob():
@@ -231,7 +234,10 @@ def test_stream_latest_dump_when_gcs_empty(mock_get_latest_gcs, mock_get_latest_
     mock_blob.name = "BlobMock"
 
     # First call raises RuntimeError (no file)
-    mock_get_latest_gcs.side_effect = [RuntimeError("No matching dump files found"), mock_blob]
+    mock_get_latest_gcs.side_effect = [
+        RuntimeError("No matching dump files found"),
+        mock_blob,
+    ]
     mock_get_latest_dump.return_value = (
         "http://mock-url/dewiki-20250512-cirrussearch-content.json.gz"
     )
@@ -319,7 +325,7 @@ def test_get_latest_dump_uses_fallback_when_current_has_no_match(mock_get):
     resp_fallback = MagicMock()
     resp_fallback.content = """
     <html><body>
-      <a href="frwiki-20251027-cirrussearch-content.json.gz">frwiki-20251027-cirrussearch-content.json.gz</a>
+      <a href="frwiki-20251229-cirrussearch-content.json.gz">frwiki-20251229-cirrussearch-content.json.gz</a>
     </body></html>
     """
 
@@ -339,7 +345,7 @@ def test_get_latest_dump_uses_fallback_when_current_has_no_match(mock_get):
 
     assert (
         result
-        == "https://dumps.wikimedia.org/other/cirrussearch/20251027/frwiki-20251027-cirrussearch-content.json.gz"
+        == "https://dumps.wikimedia.org/other/cirrussearch/20251229/frwiki-20251229-cirrussearch-content.json.gz"
     )
 
 

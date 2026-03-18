@@ -23,6 +23,7 @@ class SuggestionRequest(BaseModel):
     country: str | None = None
     user_agent: UserAgent | None = None
     source: str | None = None
+    is_soft_pii: bool = False
 
 
 class BaseSuggestion(BaseModel):

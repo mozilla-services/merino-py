@@ -11,7 +11,7 @@ from pydantic import HttpUrl
 from merino.providers.suggest.weather.backends.accuweather.errors import (
     MissingLocationKeyError,
 )
-from merino.governance.circuitbreakers import WeatherCircuitBreaker
+from merino.governance.circuitbreakers import WeatherCircuitBreaker, hourly_forecasts_fallback
 from merino.utils import cron
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import (
@@ -28,6 +28,7 @@ from merino.providers.suggest.weather.backends.accuweather.pathfinder import (
 from merino.providers.suggest.weather.backends.protocol import (
     CurrentConditions,
     Forecast,
+    HourlyForecastsWithTTL,
     LocationCompletion,
     WeatherBackend,
     WeatherReport,
@@ -166,8 +167,12 @@ class Provider(BaseProvider):
         weather_report: WeatherReport | None = None
         location_completions: list[LocationCompletion] | None = None
         weather_context = WeatherContext(geolocation, languages, request_source=source)
+        is_soft_pii: bool = srequest.is_soft_pii
         try:
             with self.metrics_client.timeit(f"providers.{self.name}.query.backend.get"):
+                if is_location_completion_request and is_soft_pii:
+                    # location requests aren't location keys so they shouldn't contain pii
+                    return []
                 if is_location_completion_request:
                     location_completions = await self.backend.get_location_completion(
                         weather_context, search_term=srequest.query
@@ -217,6 +222,22 @@ class Provider(BaseProvider):
                 icon=None,
                 locations=data,
             )
+
+    @WeatherCircuitBreaker(
+        name="weather_hourly_forecasts", fallback_function=hourly_forecasts_fallback
+    )  # Expect `AccuweatherError`
+    async def get_hourly_forecasts(
+        self, weather_context: WeatherContext
+    ) -> HourlyForecastsWithTTL | None:
+        """Provide hourly forecasts."""
+        try:
+            hourly_forecasts_with_ttl: (
+                HourlyForecastsWithTTL | None
+            ) = await self.backend.get_hourly_forecasts(weather_context)
+
+            return hourly_forecasts_with_ttl
+        except MissingLocationKeyError:
+            return None
 
     async def shutdown(self) -> None:
         """Shut down the provider."""

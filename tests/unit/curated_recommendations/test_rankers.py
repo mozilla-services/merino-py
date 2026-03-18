@@ -14,8 +14,10 @@ from pydantic import HttpUrl
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
+from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
+    ITEM_SUBTOPIC_FLAG,
     CuratedRecommendation,
     MIN_TILE_ID,
     Section,
@@ -23,13 +25,17 @@ from merino.curated_recommendations.protocol import (
     ProcessedInterests,
     RankingData,
 )
-from merino.curated_recommendations.prior_backends.experiment_rescaler import (
-    SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG,
-    DefaultRescaler,
+from merino.curated_recommendations.prior_backends.engagment_rescaler import (
+    CrawledContentRescaler,
 )
+from merino.curated_recommendations.ml_backends.protocol import ContextualArticleRankings
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
-    ArticleBalancer,
+    filter_fresh_items_with_probability,
+    ThompsonSamplingRanker,
+)
+from merino.curated_recommendations.rankers.contextual_ranker import ContextualRanker
+from merino.curated_recommendations.rankers.utils import (
     spread_publishers,
     boost_preferred_topic,
     boost_followed_sections,
@@ -38,8 +44,6 @@ from merino.curated_recommendations.rankers import (
     put_top_stories_first,
     greedy_personalized_section_rank,
     takedown_reported_recommendations,
-    thompson_sampling,
-    filter_fresh_items_with_probability,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -219,7 +223,7 @@ class TestRenumberRecommendations:
 
     def test_empty_list(self):
         """Test that renumber_recommendations works with an empty list."""
-        recs: list[CuratedRecommendation] = []
+        recs = []
         renumber_recommendations(recs)
         assert recs == []
 
@@ -264,7 +268,7 @@ class TestFilterFreshItemsWithProbability:
             except StopIteration:
                 return 0.0
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", fake_random)
 
         filtered, backlog = filter_fresh_items_with_probability(
             recs, fresh_story_prob=0.5, max_items=3
@@ -291,7 +295,7 @@ class TestFilterFreshItemsWithProbability:
             except StopIteration:
                 return 0.9
 
-        monkeypatch.setattr("merino.curated_recommendations.rankers.random", fake_random)
+        monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", fake_random)
 
         filtered, backlog = filter_fresh_items_with_probability(
             recs, fresh_story_prob=0.1, max_items=1
@@ -349,17 +353,14 @@ class TestThompsonSampling:
                 "stale": (0, 12),  # impressions -> no_opens = 12 - greater than beta
             }
         )
-        rescaler = DefaultRescaler()
+        rescaler = CrawledContentRescaler()
 
         # Make beta sampling deterministic to avoid flakiness.
-        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
-
-        ranked = thompson_sampling(
-            recs,
-            engagement_backend=engagement_backend,
-            prior_backend=prior_backend,
-            rescaler=rescaler,
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
         )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
 
         assert len(ranked) == 2
         by_id = {rec.corpusItemId: rec for rec in ranked}
@@ -387,19 +388,19 @@ class TestThompsonSampling:
                 "fresh2": (2, 4),
             }
         )
-        rescaler = DefaultRescaler()
+        rescaler = CrawledContentRescaler()
         rescaler.fresh_items_max = 1
         rescaler.fresh_items_limit_prior_threshold_multiplier = 1
         rescaler.fresh_items_section_ranking_max_percentage = 0
         rescaler.fresh_items_top_stories_max_percentage = 0
 
         # Make beta sampling deterministic to avoid flakiness.
-        monkeypatch.setattr("merino.curated_recommendations.rankers.beta.rvs", lambda a, b: 0.42)
-
-        ranked = thompson_sampling(
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(
             recs,
-            engagement_backend=engagement_backend,
-            prior_backend=prior_backend,
             rescaler=rescaler,
         )
 
@@ -412,6 +413,60 @@ class TestThompsonSampling:
         assert by_id["fresh2"].ranking_data.is_fresh is True
         assert by_id["fresh1"].ranking_data is not None
         assert by_id["fresh2"].ranking_data.is_fresh is True
+
+    def test_remaining_impressions_set_on_fresh_item(self, monkeypatch):
+        """remaining_impressions should equal int(target_no_opens - no_opens) for a fresh item.
+
+        With prior beta=10 and fresh_items_limit_prior_threshold_multiplier=1,
+        target_no_opens = 10.  An item with 4 impressions (no_opens=4) needs 6 more.
+        """
+        recs = generate_recommendations(
+            item_ids=["fresh"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        recs[0].isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({"fresh": (0, 4)})  # no_opens = 4
+        rescaler = CrawledContentRescaler()  # fresh_items_limit_prior_threshold_multiplier = 1
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
+
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.is_fresh is True
+        assert ranked[0].ranking_data.remaining_impressions == 6  # int(10 - 4)
+
+    def test_remaining_impressions_zero_on_stale_item(self, monkeypatch):
+        """remaining_impressions should stay 0 when an item is not fresh.
+
+        With prior beta=10, an item with 12 impressions (no_opens=12) exceeds target_no_opens=10,
+        so it is not marked fresh and remaining_impressions is left at its default of 0.
+        """
+        recs = generate_recommendations(
+            item_ids=["stale"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        recs[0].isTimeSensitive = False
+
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({"stale": (0, 12)})  # no_opens = 12
+        rescaler = CrawledContentRescaler()
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(recs, rescaler)
+
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.is_fresh is False
+        assert ranked[0].ranking_data.remaining_impressions == 0
 
     def test_preserve_order_for_equal_ranks(self):
         """Test renumber_recommendations preserves original order for equal initial ranks."""
@@ -952,6 +1007,33 @@ class TestCuratedRecommendationsProviderBoostFollowedSections:
         assert not new_feed["travel"].isFollowed
         assert new_feed["travel"].isBlocked
 
+    @freeze_time("2025-03-20 12:00:00", tz_offset=0)
+    def test_non_followable_section_not_boosted(self):
+        """Test that a section with followable=False is not boosted even if client sends isFollowed=True."""
+        req_sections = [
+            SectionConfiguration(
+                sectionId="business",
+                isFollowed=True,
+                isBlocked=False,
+                followedAt=datetime(2025, 3, 19, tzinfo=timezone.utc),
+            ),
+        ]
+        feed = self.generate_sections(
+            [0, 1, 2, 3],
+            ["top_stories_section", "business", "arts", "food"],
+        )
+        feed["business"].followable = False
+
+        new_feed = boost_followed_sections(req_sections, feed)
+
+        # business should NOT be marked as followed
+        assert not new_feed["business"].isFollowed
+        # Original rank order should be preserved since no section was boosted
+        assert new_feed["top_stories_section"].receivedFeedRank == 0
+        assert new_feed["business"].receivedFeedRank == 1
+        assert new_feed["arts"].receivedFeedRank == 2
+        assert new_feed["food"].receivedFeedRank == 3
+
 
 class TestPutTopStoriesFirst:
     """Tests covering put_top_stories_first"""
@@ -961,7 +1043,7 @@ class TestPutTopStoriesFirst:
         # Create 4 sections; default top_stories_section at rank 0
         sections = generate_sections_feed(section_count=4)
         # Get swap 'Top Stories' with the section on index 2.
-        keys: list[str] = list(sections.keys())
+        keys = list(sections.keys())
         keys[0], keys[2] = keys[2], keys[0]
         for idx, sid in enumerate(keys):
             sections[sid].receivedFeedRank = idx
@@ -1055,6 +1137,26 @@ class TestGreedyPersonalizedSectionRanker:
         for sec in reranked_sections:
             assert reranked_sections[sec].receivedFeedRank == original_ranking[sec]
 
+    def test_low_interests(self):
+        """Empty inferredinterests should not affect the section ranking"""
+        # get example section feed
+        sections = generate_sections_feed(section_count=16)
+        # store the original ranking
+        original_ranking = {sec: sections[sec].receivedFeedRank for sec in sections}
+        # inferredinterests is empty
+        sec_titles = [sec for sec in sections]
+        personal_sections = [sec_titles[i] for i in [4, 10, 13, 15]]
+        personal_interests = ProcessedInterests(
+            scores={k: float(i) * 0.0001 for i, k in enumerate(personal_sections)}
+        )
+        # rerank the sections
+        reranked_sections = greedy_personalized_section_rank(
+            sections=sections, personal_interests=personal_interests, epsilon=0.0
+        )
+        # the ranking should not have changed
+        for sec in reranked_sections:
+            assert reranked_sections[sec].receivedFeedRank == original_ranking[sec]
+
     def test_fictional_interests(self):
         """Interest vector keys that are not sections should not appear in section ranking"""
         # get example section feed
@@ -1070,8 +1172,8 @@ class TestGreedyPersonalizedSectionRanker:
         assert bogus not in reranked_sections
 
 
-class TestArticleBalancer:
-    """Tests covering ArticleBalancer balancing behavior."""
+class TestTopStoriesArticleBalancer:
+    """Tests covering TopStoriesArticleBalancer balancing behavior."""
 
     @staticmethod
     def _build_recommendation(
@@ -1086,12 +1188,36 @@ class TestArticleBalancer:
         )[0]
         rec.experiment_flags = rec.experiment_flags or set()
         if subtopic:
-            rec.experiment_flags.add(SUBTOPIC_EXPERIMENT_CURATED_ITEM_FLAG)
+            rec.experiment_flags.add(ITEM_SUBTOPIC_FLAG)
         return rec
+
+    def test_is_story_blocked_for_top_stories(self):
+        """Test that blocked stories are identified correctly."""
+        blocked_story1 = self._build_recommendation("1", Topic.GAMING)
+        blocked_story2 = self._build_recommendation("1", Topic.ARTS, subtopic=True)
+        allowed_story1 = self._build_recommendation("2", Topic.BUSINESS)
+        allowed_story2 = self._build_recommendation("2", Topic.SPORTS)
+
+        assert blocked_story1.is_story_blocked_for_top_stories() is True
+        assert blocked_story2.is_story_blocked_for_top_stories() is True
+        assert allowed_story1.is_story_blocked_for_top_stories() is False
+        assert allowed_story2.is_story_blocked_for_top_stories() is False
+
+    def test_all_subtopics_and_gaming_blocked(self):
+        """Test that blocked stories are rejected."""
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9)
+        stories = [
+            self._build_recommendation("0", Topic.SPORTS, subtopic=True),
+            self._build_recommendation("1", Topic.SPORTS, subtopic=False),
+            self._build_recommendation("2", Topic.GAMING, subtopic=False),
+        ]
+        assert balancer.add_story(stories[0]) is False  # No subtopic
+        assert balancer.add_story(stories[1]) is True
+        assert balancer.add_story(stories[2]) is False  # No gaming
 
     def test_rejects_story_when_per_topic_limit_exceeded(self):
         """Ensure adding beyond the per-topic maximum fails."""
-        balancer = ArticleBalancer(expected_num_articles=10)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=10)
         stories = [self._build_recommendation(str(idx), Topic.BUSINESS) for idx in range(3)]
 
         assert balancer.add_story(stories[0])
@@ -1099,23 +1225,9 @@ class TestArticleBalancer:
         assert balancer.add_story(stories[2]) is False
         assert len(balancer.get_stories()) == 2
 
-    def test_rejects_story_when_subtopic_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=6)
-        stories = [
-            self._build_recommendation("0", Topic.BUSINESS, subtopic=True),
-            self._build_recommendation("1", Topic.TECHNOLOGY, subtopic=True),
-            self._build_recommendation("2", Topic.SPORTS, subtopic=True),
-        ]
-
-        assert balancer.add_story(stories[0])
-        assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2]) is False
-        assert len(balancer.get_stories()) == 2
-
     def test_rejects_story_when_evergreen_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=4)
+        """Ensure evergreen quota caps additions when already full."""
+        balancer = TopStoriesArticleBalancer(expected_num_articles=5)
         stories = [
             self._build_recommendation("0", Topic.FOOD, subtopic=False),
             self._build_recommendation("1", Topic.SELF_IMPROVEMENT, subtopic=False),
@@ -1125,18 +1237,18 @@ class TestArticleBalancer:
 
         assert balancer.add_story(stories[0])
         assert balancer.add_story(stories[1])
-        assert balancer.add_story(stories[2])
+        assert balancer.add_story(stories[2]) is False
         assert balancer.add_story(stories[3]) is False
-        assert len(balancer.get_stories()) == 3
+        assert len(balancer.get_stories()) == 2
 
     def test_rejects_story_when_topical_limit_exceeded(self):
-        """Ensure subtopic quota caps additions when already full."""
-        balancer = ArticleBalancer(expected_num_articles=4)
+        """Ensure topical quota caps additions when already full."""
+        balancer = TopStoriesArticleBalancer(expected_num_articles=3)
         stories = [
-            self._build_recommendation("0", Topic.SPORTS, subtopic=False),
+            self._build_recommendation("0", Topic.BUSINESS, subtopic=False),
             self._build_recommendation("1", Topic.ARTS, subtopic=False),
-            self._build_recommendation("2", Topic.POLITICS, subtopic=False),
-            self._build_recommendation("3", Topic.GAMING, subtopic=False),
+            self._build_recommendation("2", Topic.TECHNOLOGY, subtopic=False),
+            self._build_recommendation("3", Topic.POLITICS, subtopic=False),
         ]
 
         assert balancer.add_story(stories[0])
@@ -1145,9 +1257,22 @@ class TestArticleBalancer:
         assert balancer.add_story(stories[3]) is False
         assert len(balancer.get_stories()) == 3
 
+    def test_rejects_blocked_topics_after_limits_raise(self):
+        """Blocked topics should be excluded, even after limits are raised."""
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9)
+        allowed_story = self._build_recommendation("0", Topic.BUSINESS)
+        blocked_story = self._build_recommendation("1", Topic.GAMING)
+
+        assert balancer.add_story(allowed_story)
+        assert balancer.add_story(blocked_story) is False
+
+        balancer.set_limits_for_expected_articles(15)
+        assert balancer.add_story(blocked_story) is False
+        assert len(balancer.get_stories()) == 1  # Story wasn't allowed
+
     def test_add_stories_supports_raising_limits_and_capacity(self):
         """Add a second batch after increasing both limit and balancing constraints."""
-        balancer = ArticleBalancer(expected_num_articles=3)
+        balancer = TopStoriesArticleBalancer(expected_num_articles=3)
         batch_one = [
             self._build_recommendation("0", Topic.BUSINESS),
             self._build_recommendation("1", Topic.BUSINESS),
@@ -1165,3 +1290,131 @@ class TestArticleBalancer:
         assert discarded_second == []
         assert remaining_second == batch_one[4:]
         assert len(balancer.get_stories()) == 4
+
+
+class StubMLRecsBackend:
+    """Stub MLRecsBackend returning configurable contextual rankings."""
+
+    def __init__(self, rankings: ContextualArticleRankings | None = None):
+        """Initialize with optional pre-set rankings."""
+        self._rankings = rankings
+
+    def is_valid(self) -> bool:
+        """Return True."""
+        return True
+
+    def get(
+        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
+    ) -> ContextualArticleRankings | None:
+        """Return pre-configured rankings."""
+        return self._rankings
+
+    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+        """Return 0 impressions."""
+        return 0
+
+    def get_cohort_training_run_id(self) -> str | None:
+        """Return None."""
+        return None
+
+
+class TestContextualRanker:
+    """Tests for the ContextualRanker."""
+
+    def test_rank_items_falls_back_to_thompson_when_no_contextual_scores(self):
+        """When ml_backend.get() returns None, rank_items must not raise
+        any errors and must fall back to Thompson sampling for every recommendation.
+        """
+        recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(rankings=None)
+
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs)
+
+        assert len(ranked) == 2
+        assert all(rec.ranking_data is not None for rec in ranked)
+        assert all(isinstance(rec.ranking_data.score, float) for rec in ranked)
+
+    def test_rank_items_falls_back_to_thompson_when_item_not_in_rankings(self):
+        """When rankings exist but the item's corpusItemId is absent, fall back to Thompson sampling."""
+        recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        # Rankings present but no data for the particular items.
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(granularity="region", shards={})
+        )
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs)
+        assert len(ranked) == 2
+        assert all(rec.ranking_data is not None for rec in ranked)
+        assert all(isinstance(rec.ranking_data.score, float) for rec in ranked)
+
+    def test_rank_items_uses_ml_score_when_item_in_rankings(self, monkeypatch):
+        """When rankings contain the item, the ML (normal-sampled) score is used."""
+        recs = generate_recommendations(item_ids=["a"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(
+                granularity="region",
+                shards={"a": {"mean": 0.8, "std": 0.0}},
+            )
+        )
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs)
+
+        assert len(ranked) == 1
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.score == pytest.approx(0.8)
+
+    def test_boosts_inferred_item_score(self, monkeypatch):
+        """When rankings contain the item, the ML (normal-sampled) score is used."""
+        recs = generate_recommendations(
+            item_ids=["a", "b", "c"],
+            topics=[Topic.ARTS, Topic.TECHNOLOGY, Topic.SCIENCE],
+            time_sensitive_count=0,
+        )
+        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(
+                granularity="region",
+                shards={
+                    "a": {"mean": 0.0021, "std": 0.0},
+                    "b": {"mean": 0.002, "std": 0.0},
+                    "c": {"mean": 0.001, "std": 0.0},
+                },
+            )
+        )
+
+        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranked = ranker.rank_items(recs, personal_interests=None)
+        assert len(ranked) == 3
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].corpusItemId == "a"
+        assert ranked[0].ranking_data.score == pytest.approx(0.0021)
+
+        tech_interests = ProcessedInterests(
+            scores={
+                Topic.TECHNOLOGY.value: 0.9,
+                Topic.ARTS.value: 0.3,
+                Topic.POLITICS.value: 0.0,
+                Topic.SCIENCE.value: 0.3,
+            }
+        )
+        ranked = ranker.rank_items(recs, personal_interests=tech_interests)
+        assert len(ranked) == 3
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].corpusItemId == "b"
+        assert ranked[0].ranking_data.score > 0.0021
+
+        tech_interests = ProcessedInterests(scores={Topic.TECHNOLOGY.value: 0.0})
+        ranked = ranker.rank_items(recs, personal_interests=tech_interests)
+        assert len(ranked) == 3
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].corpusItemId == "a"
+        assert ranked[1].corpusItemId == "b"
+        assert ranked[1].ranking_data.score == 0.002

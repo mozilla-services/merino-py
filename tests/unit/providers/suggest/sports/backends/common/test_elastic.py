@@ -141,14 +141,15 @@ async def test_store_event_fail_and_metrics_captured(
         sport="football",
         id=0,
         terms="test",
-        date=int(datetime.datetime.now().timestamp()),
+        date=datetime.datetime.now(),
         original_date="2025-09-22",
         home_team={"key": "home"},
         home_score=0,
         away_team={"key": "away"},
         away_score=0,
         status=GameStatus.Scheduled,
-        expiry=0,
+        expiry=datetime.datetime.now(),
+        updated=datetime.datetime.now(),
     )
     nfl = NFL(settings=settings.providers.sports)
     nfl.events = {0: event}
@@ -165,38 +166,94 @@ async def test_store_event_fail_and_metrics_captured(
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")
 @pytest.mark.asyncio
-async def test_search_event_hits(
+async def test_sports_search_event_hits(
     sport_data_store: SportsDataStore,
     es_client: AsyncMock,
 ):
     """Test Sport Data Store search event with a hit."""
-    now = int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
     hits = [
         {
-            "_score": 1.0,
-            "_source": {
-                "event": json.dumps({"sport": "NFL", "status": "Final", "date": now - 3600})
-            },
-        },
-        {
-            "_score": 0.9,
-            "_source": {
-                "event": json.dumps({"sport": "NFL", "status": "InProgress", "date": now - 100})
-            },
-        },
-        {
-            "_score": 0.8,
+            "_score": 0.1,
             "_source": {
                 "event": json.dumps(
-                    {"sport": "NFL", "status": "Scheduled", "date": now + 3 * 86400}
+                    {
+                        "sport": "NFL",
+                        "status": "Final",
+                        "label": "alpha",
+                        "date": (now - datetime.timedelta(seconds=3700)).isoformat(),
+                        "updated": (now - datetime.timedelta(seconds=3700)).isoformat(),
+                    }
                 )
             },
         },
         {
-            "_score": 0.7,
+            "_score": 0.2,  # Most recently updated game
             "_source": {
                 "event": json.dumps(
-                    {"sport": "NFL", "status": "Scheduled", "date": now + 2 * 86400}
+                    {
+                        "sport": "NFL",
+                        "status": "Final",
+                        "label": "beta",
+                        "date": (now - datetime.timedelta(seconds=3700)).isoformat(),
+                        "updated": (now - datetime.timedelta(seconds=3600)).isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,  # Current game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "InProgress",
+                        "label": "epsilon",
+                        "date": (now - datetime.timedelta(seconds=100)).isoformat(),
+                        "updated": (now - datetime.timedelta(seconds=1)).isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,  # Current game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "InProgress",
+                        "label": "gamma",
+                        "date": (now - datetime.timedelta(seconds=100)).isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 2.0,  # Next scheduled game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "Scheduled",
+                        "label": "delta",
+                        "date": (now + datetime.timedelta(seconds=3 * 86400)).isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 2.1,  # Future scheduled game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "Scheduled",
+                        "label": "epsilon",
+                        "date": (now + datetime.timedelta(seconds=2 * 86400)).isoformat(),
+                        "updated": now.isoformat(),
+                    }
                 )
             },
         },
@@ -207,18 +264,119 @@ async def test_search_event_hits(
     expected_result = {
         "NFL": {
             "current": {
-                "date": 1758542300,
-                "es_score": 0.9,
+                "date": "2025-09-22T11:58:20+00:00",
+                "es_score": 1.0,
                 "event_status": GameStatus.InProgress,
+                "label": "gamma",
                 "sport": "NFL",
                 "status": "InProgress",
+                "touched": "None",
+                "updated": "2025-09-22T12:00:00+00:00",
             },
             "next": {
-                "date": 1758715200,
-                "es_score": 0.7,
+                "date": "2025-09-25T12:00:00+00:00",
+                "es_score": 2.0,
                 "event_status": GameStatus.Scheduled,
+                "label": "delta",
                 "sport": "NFL",
                 "status": "Scheduled",
+                "touched": "None",
+                "updated": "2025-09-22T12:00:00+00:00",
+            },
+        }
+    }
+
+    assert result == expected_result
+
+
+@freezegun.freeze_time("2025-09-22T12:00:00Z")
+@pytest.mark.asyncio
+async def test_sports_search_event_hits_no_current(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+):
+    """Test Sport Data Store search event with a hit."""
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    hits = [
+        {
+            "_score": 0.1,  # A prior game.
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "Final",
+                        "label": "alpha",
+                        "date": (now - datetime.timedelta(seconds=3800)).isoformat(),
+                        "updated": (now - datetime.timedelta(seconds=3809)).isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 0.2,  # Most recently played & updated game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "Final",
+                        "label": "beta",
+                        "date": (now - datetime.timedelta(seconds=3700)).isoformat(),
+                        "updated": (now - datetime.timedelta(seconds=3600)).isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 2.0,  # Next scheduled game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "Scheduled",
+                        "label": "delta",
+                        "date": (now + datetime.timedelta(seconds=3 * 86400)).isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 2.1,  # Future scheduled game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "Scheduled",
+                        "epsilon" "date": (
+                            now + datetime.timedelta(seconds=2 * 86400)
+                        ).isoformat(),
+                    }
+                )
+            },
+        },
+    ]
+    es_client.search.return_value = {"hits": {"total": {"value": 1}, "hits": hits}}
+
+    result = await sport_data_store.search_events(q="game", language_code="en", mix_sports=False)
+    expected_result = {
+        "NFL": {
+            "previous": {
+                "date": "2025-09-22T10:58:20+00:00",
+                "es_score": 0.2,
+                "event_status": GameStatus.Final,
+                "label": "beta",
+                "sport": "NFL",
+                "status": "Final",
+                "touched": "None",
+                "updated": "2025-09-22T11:00:00+00:00",
+            },
+            "next": {
+                "date": "2025-09-25T12:00:00+00:00",
+                "es_score": 2.0,
+                "event_status": GameStatus.Scheduled,
+                "label": "delta",
+                "sport": "NFL",
+                "status": "Scheduled",
+                "touched": "None",
             },
         }
     }
@@ -263,34 +421,32 @@ async def test_get_index_settings():
     assert settings["analysis"]["analyzer"]["plain_search_en"]["type"] == "standard"
 
 
-# @pytest.mark.asyncio
-# async def test_meta_store(sport_data_store: SportsDataStore, es_client: AsyncMock):
-#     """Test storing data to meta"""
-#     es_client.create.side_effect = ConflictError("oops", cast(Any, object()), {})
-#     await sport_data_store.store_meta("foo", "bar")
-#     assert es_client.create.called
-#     assert es_client.update.called
+@pytest.mark.asyncio
+async def test_meta_store(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test storing data to meta"""
+    es_client.create.side_effect = ConflictError("oops", cast(Any, object()), {})
+    await sport_data_store.store_meta("foo", "bar")
+    assert es_client.create.called
+    assert es_client.update.called
 
 
-# @pytest.mark.asyncio
-# async def test_meta_query(sport_data_store: SportsDataStore, es_client: AsyncMock):
-#     """Test query data to meta"""
-#     es_client.search.return_value = {"hits": {}}
-#     res = await sport_data_store.query_meta("foo")
-#     assert res is None
-#
-#     es_client.search.return_value = {"hits": {"hits": [{"_source": {"meta_value": "bar"}}]}}
-#     res = await sport_data_store.query_meta("foo")
-#     assert res == "bar"
+@pytest.mark.asyncio
+async def test_meta_query(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test query data to meta"""
+    es_client.search.return_value = {"hits": {}}
+    res = await sport_data_store.query_meta("foo")
+    assert res is None
+    es_client.search.return_value = {"hits": {"hits": [{"_source": {"meta_value": "bar"}}]}}
+    res = await sport_data_store.query_meta("foo")
+    assert res == "bar"
 
 
-# @pytest.mark.asyncio
-# async def test_meta_del(sport_data_store: SportsDataStore, es_client: AsyncMock):
-#     """Test deleting data to meta"""
-#     await sport_data_store.del_meta("foo")
-#
-#     assert es_client.delete.called
-#     assert es_client.indices.refresh.called
+@pytest.mark.asyncio
+async def test_meta_del(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test deleting data to meta"""
+    await sport_data_store.del_meta("foo")
+    assert es_client.delete.called
+    assert es_client.indices.refresh.called
 
 
 @pytest.mark.asyncio
@@ -366,3 +522,11 @@ async def test_build_index_exception(sport_data_store: SportsDataStore, es_clien
     await sport_data_store.build_indexes(clear=True)
     assert es_client.indices.delete.called
     assert es_client.indices.create.called
+
+
+@pytest.mark.asyncio
+async def test_shutdown(sport_data_store: SportsDataStore, es_client: AsyncMock):
+    """Test shutdown"""
+    # note: test cov does not believe that sport_data_store.client is set.
+    await sport_data_store.shutdown()
+    assert es_client.close.called

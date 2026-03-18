@@ -185,6 +185,18 @@ The following additional metrics are recorded when curated recommendations are r
 - `recommendation.prior.last_updated` -
  A gauge for the staleness (in seconds) of the prior data, measured between when the data was
  updated in GCS and the current time.
+- `recommendation.ml.contextual.update.timing` - A timer to measure the duration (in ms) of updating the engagement data from GCS.
+- `recommendation.ml.contextual.size` - A gauge to track the size of the engagement blob on GCS.
+- `recommendation.ml.contextual.last_updated` -
+ A gauge for the staleness (in seconds) of the contextual engagement data, measured between when the data was
+ updated in GCS and the current time.
+- `recommendation.ml.cohort_model.update.timing` - A timer to measure the duration (in ms) of updating the cohort model data from GCS.
+- `recommendation.ml.cohort_model.size` - A gauge to track the size of the cohort model blob on GCS.
+- `recommendation.ml.cohort_model.last_updated` -
+ A gauge for the staleness (in seconds) of the cohort model data, measured between when the data was
+ updated in GCS and the current time. This value could get large as the model may be updated weekly.
+
+
 
 ### Manifest
 

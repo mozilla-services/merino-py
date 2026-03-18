@@ -4,7 +4,6 @@ import string
 from unittest.mock import AsyncMock
 
 import pytest
-from elasticsearch import AsyncElasticsearch
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
@@ -14,6 +13,7 @@ from merino.providers.suggest.wikipedia.backends.elastic import (
     ElasticBackend,
     get_best_keyword,
 )
+from merino.search.async_elastic import AsyncElasticSearchAdapter
 
 
 @pytest.fixture(name="es_backend")
@@ -55,7 +55,7 @@ async def test_es_backend_search_success_en(
             }
         }
     )
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
 
     suggestions = await es_backend.search("foO", "en")
 
@@ -101,7 +101,7 @@ async def test_es_backend_search_success_fr(mocker, es_backend: ElasticBackend) 
             }
         }
     )
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
 
     suggestions = await es_backend.search("nou", "fr")
 
@@ -144,7 +144,7 @@ async def test_es_backend_search_multiword_query_en(
             }
         }
     )
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
 
     suggestions = await es_backend.search("food f", "en")
 
@@ -187,7 +187,7 @@ async def test_es_backend_search_multiword_query_de(
             }
         }
     )
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
 
     suggestions = await es_backend.search("berliner f", "de")
 
@@ -216,7 +216,7 @@ async def test_es_backend_search_without_suggest(
 ) -> None:
     """Test it can handle malformed responses (i.e. without the `suggest` field) from ES."""
     async_mock = AsyncMock(return_value={})
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
 
     suggestions = await es_backend.search("foo", "en")
 
@@ -229,7 +229,7 @@ async def test_es_backend_search_exception_en(
     es_backend: ElasticBackend,
 ) -> None:
     """Test the exception handling in the search method of the ES backend for english."""
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=Exception("404 error"))
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=Exception("404 error"))
 
     with pytest.raises(BackendError) as excinfo:
         await es_backend.search("foo", "en")
@@ -243,7 +243,7 @@ async def test_es_backend_search_exception_it(
     es_backend: ElasticBackend,
 ) -> None:
     """Test the exception handling in the search method of the ES backend for italian."""
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=Exception("404 error"))
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=Exception("404 error"))
 
     with pytest.raises(BackendError) as excinfo:
         await es_backend.search("bis", "it")
@@ -254,10 +254,26 @@ async def test_es_backend_search_exception_it(
 @pytest.mark.asyncio
 async def test_es_backend_shutdown(mocker: MockerFixture, es_backend: ElasticBackend) -> None:
     """Test the shutdown method of the ES backend."""
-    spy = mocker.spy(AsyncElasticsearch, "close")
+    spy = mocker.spy(AsyncElasticSearchAdapter, "shutdown")
 
     await es_backend.shutdown()
     spy.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_es_backend_multiple_searches_reuse_adapter(
+    mocker: MockerFixture, es_backend: ElasticBackend
+) -> None:
+    """Verify multiple searches work correctly and reuse the adapter's cached client."""
+    async_mock = AsyncMock(
+        return_value={"suggest": {SUGGEST_ID: [{"options": [{"_source": {"title": "Test"}}]}]}}
+    )
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
+
+    await es_backend.search("foo", "en")
+    await es_backend.search("bar", "fr")
+
+    assert async_mock.await_count == 2
 
 
 def test_get_best_keyword_removes_trailing_punctuation() -> None:
@@ -288,7 +304,7 @@ async def test_es_backend_search_keyword_strip(
             }
         }
     )
-    mocker.patch.object(AsyncElasticsearch, "search", side_effect=async_mock)
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
 
     suggestions = await es_backend.search("mozi", "en")
 

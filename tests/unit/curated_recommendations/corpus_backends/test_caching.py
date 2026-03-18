@@ -115,26 +115,28 @@ class TestStaleWhileRevalidate:
 
     # Use a fixed wait expiration that returns a future time.
     wait_exp = WaitRandomExpiration(timedelta(seconds=60), timedelta(seconds=120))
+    # Simulated duration of a backend call in the test helpers below.
+    backend_call_duration = 0.005
 
     @stale_while_revalidate(wait_exp, lambda self: self._cache, lambda self: self._jobs)
     async def compute_value(self, x):
         """Compute and return x multiplied by 2."""
         self.call_count += 1
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(self.backend_call_duration)
         return x * 2
 
     @stale_while_revalidate(wait_exp, lambda self: self._cache, lambda self: self._jobs)
     async def failing_compute(self, x):
         """Compute and always raise an error."""
         self.call_count += 1
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(self.backend_call_duration)
         raise ValueError("Computation failed")
 
     @stale_while_revalidate(wait_exp, lambda self: self._cache, lambda self: self._jobs)
     async def failing_compute_after_first_call(self, x):
         """Compute and return x multiplied by 3 on first call, then raise an error on subsequent calls."""
         self.call_count += 1
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(self.backend_call_duration)
         if self.call_count > 1:
             raise ValueError("Computation failed after first call")
         return x * 3
@@ -192,22 +194,17 @@ class TestStaleWhileRevalidate:
 
     @pytest.mark.asyncio
     async def test_error_during_update_with_stale(self, caplog):
-        """Return stale value when a background update fails after a successful first call."""
-        # Freeze time for the initial call.
+        """Return stale value and log error when a background update fails."""
         with freeze_time("2022-01-01 00:00:00", tick=True) as frozen_datetime:
             result1 = await self.failing_compute_after_first_call(5)
             assert result1 == 15
-            assert self.call_count == 1
 
             frozen_datetime.tick(121.0)  # Force staleness. Max ttl is 120 seconds.
-            # The second call will attempt a background update that fails, returning stale value.
             result2 = await self.failing_compute_after_first_call(5)
             assert result2 == 15
-            await asyncio.sleep(0.01)  # Allow background update to complete.
-            # Now 2 backend calls should have been made.
-            assert self.call_count == 2
+            # 2x margin for event loop overhead
+            await asyncio.sleep(2 * self.backend_call_duration)
 
-        # Assert that an error was logged indicating that stale data is being returned.
         assert any(
             record.message
             == "Error updating cache for key failing_compute_after_first_call(5,)[]:"
@@ -222,3 +219,38 @@ class TestStaleWhileRevalidate:
         """Propagate error when no cached value exists during an update failure."""
         with pytest.raises(ValueError):
             await self.failing_compute(3)
+
+    @pytest.mark.asyncio
+    async def test_failed_update_does_not_cause_retry_storm(self):
+        """Verify that failed cache updates extend expiration to prevent retry storms.
+
+        When _update_cache fails and stale data exists, entry.expiration is
+        extended to rate-limit retries to once per TTL window. Without this,
+        every subsequent request would trigger a new update attempt.
+
+        Regression test for the Feb 21 2026 curated-corpus-api outage.
+        See: https://docs.google.com/document/d/1O0KXJlklGcQzr2CYb3MTGyS_ZO2B3R0x532bPaxXyL4
+        """
+        with freeze_time("2022-01-01 00:00:00", tick=True) as frozen_datetime:
+            # 1. Populate cache with valid data
+            result = await self.failing_compute_after_first_call(5)
+            assert result == 15
+            assert self.call_count == 1
+
+            # 2. Expire the cache. Max TTL is 120 seconds.
+            frozen_datetime.tick(121.0)
+
+            # 3. Simulate multiple sequential requests, each separated by enough
+            #    time for the background update task to complete and release the lock
+            num_requests = 5
+            for _ in range(num_requests):
+                result = await self.failing_compute_after_first_call(5)
+                assert result == 15  # Stale data is always returned (correct)
+                # 2x margin for event loop overhead
+                await asyncio.sleep(2 * self.backend_call_duration)
+
+            # Only the first request after expiration triggers an update; subsequent ones
+            # see the extended expiration and return stale data without retrying.
+            assert (
+                self.call_count == 2
+            ), f"Expected 2 backend calls (1 initial + 1 failed retry), but got {self.call_count}."

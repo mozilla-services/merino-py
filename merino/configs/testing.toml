@@ -55,6 +55,9 @@ partner_code_newtab_value = "test_newtab"
 form_factors = ["desktop", "phone"]
 countries = ["US", "DE"]
 
+[testing.mars]
+base_url = "http://test-mars-api"
+
 [testing.providers.accuweather]
 enabled_by_default = false
 backend = "test_weather"
@@ -71,7 +74,7 @@ kickstart = false
 
 [testing.providers.sports.es]
 dsn = "http://localhost:9200"
-request_timeout_ms = 100
+request_timeout_ms = 10000
 api_key = "test"
 
 [testing.polygon]
@@ -79,6 +82,10 @@ api_key = "test"
 # The URL in `url_base` isn't actually pinged during testing but we set it
 # anyway to make sure the production server isn't accidentally pinged.
 url_base = "http://test-polygon"
+
+[testing.providers.flightaware]
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
 
 [testing.flightaware]
 api_key = "test"
@@ -97,6 +104,11 @@ backend = "test"
 # Whether or not this provider is enabled by default.
 enabled_by_default = true
 backend = "test"
+
+[testing.providers.adm.thompson]
+# MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
+# Toggle Thompson sampling
+enabled = true
 
 [testing.providers.top_picks]
 # Whether or not this provider is enabled by default.
@@ -134,6 +146,15 @@ gcp_project = "test-project"
 #    test_repeat_count = 100
 #    ```
 test_repeat_count = 1
+
+
+[testing.ml_recommendations.gcs]
+bucket_name = "test-bucket"
+gcp_project = "test-project"
+
+[testing.interest_cohort_model.gcs]
+bucket_name = "test-bucket"
+gcp_project = "test-project"
 
 [testing.curated_recommendations.corpus_api]
 

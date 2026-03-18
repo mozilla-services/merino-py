@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-from merino.jobs.navigational_suggestions.domain_metadata_diff import DomainDiff
+from merino.jobs.navigational_suggestions.io.domain_metadata_diff import DomainDiff
 
 
 @pytest.fixture(name="json_domain_data_old")

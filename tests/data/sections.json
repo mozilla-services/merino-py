@@ -3,6 +3,8 @@
     "getSections": [
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "books",
         "active": true,
         "title": "Books",
@@ -137,6 +139,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "nfl",
         "active": true,
         "title": "NFL",
@@ -331,6 +335,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "celebrity",
         "active": true,
         "title": "Celebrity News",
@@ -441,6 +447,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "tv",
         "active": true,
         "title": "Television",
@@ -635,6 +643,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "music",
         "active": true,
         "title": "Music",
@@ -829,6 +839,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "movies",
         "active": true,
         "title": "Movies",
@@ -1023,6 +1035,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "nba",
         "active": true,
         "title": "NBA",
@@ -1217,6 +1231,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "soccer",
         "active": true,
         "title": "Professional Soccer",
@@ -1411,6 +1427,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "mlb",
         "active": true,
         "title": "MLB",
@@ -1605,6 +1623,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "nhl",
         "active": true,
         "title": "NHL",
@@ -1799,6 +1819,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "business",
         "active": true,
         "title": "Business",
@@ -1981,6 +2003,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "sports",
         "active": true,
         "title": "Sports",
@@ -2175,6 +2199,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "career",
         "active": true,
         "title": "Career",
@@ -2273,6 +2299,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "travel",
         "active": true,
         "title": "Travel",
@@ -2395,6 +2423,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "food",
         "active": true,
         "title": "Food",
@@ -2565,6 +2595,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "home",
         "active": true,
         "title": "Home & Garden",
@@ -2699,6 +2731,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "health",
         "active": true,
         "title": "Health",
@@ -2941,6 +2975,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "education",
         "active": true,
         "title": "Education",
@@ -3111,6 +3147,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "society",
         "active": true,
         "title": "Life Hacks",
@@ -3233,6 +3271,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "government",
         "active": true,
         "title": "Politics",
@@ -3511,6 +3551,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "finance",
         "active": true,
         "title": "Money",
@@ -3621,6 +3663,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "tech",
         "active": true,
         "title": "Tech",
@@ -3779,6 +3823,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "society-parenting",
         "active": true,
         "title": "Parenting",
@@ -3925,6 +3971,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "hobbies",
         "active": true,
         "title": "Gaming",
@@ -4035,6 +4083,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "education-science",
         "active": true,
         "title": "Science",
@@ -4325,6 +4375,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "arts",
         "active": true,
         "title": "Entertainment",
@@ -4687,6 +4739,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "hobbies",
         "active": true,
         "title": "Gaming",
@@ -4881,6 +4935,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "business",
         "active": true,
         "title": "Business",
@@ -5075,6 +5131,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "food",
         "active": true,
         "title": "Food",
@@ -5257,6 +5315,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "society-parenting",
         "active": true,
         "title": "Parenting",
@@ -5451,6 +5511,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "tech",
         "active": true,
         "title": "Tech",
@@ -5645,6 +5707,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "career",
         "active": true,
         "title": "Career",
@@ -5839,6 +5903,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "home",
         "active": true,
         "title": "Home & Garden",
@@ -6033,6 +6099,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "government",
         "active": true,
         "title": "Politics",
@@ -6215,6 +6283,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "education",
         "active": true,
         "title": "Education",
@@ -6409,6 +6479,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "education-science",
         "active": true,
         "title": "Science",
@@ -6603,6 +6675,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "finance",
         "active": true,
         "title": "Money",
@@ -6797,6 +6871,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "health",
         "active": true,
         "title": "Health",
@@ -6991,6 +7067,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "arts",
         "active": true,
         "title": "Entertainment",
@@ -7185,6 +7263,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "sports",
         "active": true,
         "title": "Sports",
@@ -7379,6 +7459,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "travel",
         "active": true,
         "title": "Travel",
@@ -7573,7 +7655,9 @@
       },
       {
         "createSource": "ML",
-        "externalId": "headlines_section",
+        "followable": true,
+        "allowAds": true,
+        "externalId": "headlines",
         "active": true,
         "title": "Headlines",
         "description": "Top Headlines today",
@@ -7709,6 +7793,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "society",
         "active": true,
         "title": "Life Hacks",
@@ -7819,6 +7905,8 @@
       },
       {
         "createSource": "ML",
+        "followable": true,
+        "allowAds": true,
         "externalId": "042b10d6-4fab-4df6-8006-e73ae5fd021d",
         "active": true,
         "title": "Amsterdam Tips",
@@ -7980,6 +8068,8 @@
       },
       {
         "createSource": "MANUAL",
+        "followable": true,
+        "allowAds": true,
         "externalId": "d532b687-108a-4edb-a076-58a6945de714",
         "active": true,
         "title": "Tech stuff",
