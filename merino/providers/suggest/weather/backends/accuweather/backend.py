@@ -318,9 +318,9 @@ class AccuweatherBackend:
                     hasher.update(key.encode("utf-8") + value.encode("utf-8"))
             extra_identifiers = hasher.hexdigest()
 
-            return f"{self.__class__.__name__}:v7:{url}:{extra_identifiers}"
+            return f"{self.__class__.__name__}:v8:{url}:{extra_identifiers}"
 
-        return f"{self.__class__.__name__}:v7:{url}"
+        return f"{self.__class__.__name__}:v8:{url}"
 
     @functools.cache
     def cache_key_template(self, dt: WeatherDataType, language: str) -> str:
@@ -977,27 +977,19 @@ class AccuweatherBackend:
 
         hourly_forecasts_cached, ttl_cached = cached_data
 
-        # cache miss, early exit.
-        # The cache miss metric is emitted in _fetch_hourly_forecasts_from_upstream method.
         if not hourly_forecasts_cached or ttl_cached == REDIS_EXPIRED_KEY_TTL:
             return None
 
         # cache hit.
         self.metrics_client.increment("accuweather.cache.hit.hourly_forecasts")
 
-        try:
-            # convert binary json from cache to regular json.
-            hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)["hourly_forecasts"]
+        # convert binary json from cache to regular json.
+        hourly_forecasts_as_json = orjson.loads(hourly_forecasts_cached)["hourly_forecasts"]
 
-            # build HourlyForecast objects from the converted json above.
-            hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
-                hourly_forecasts_as_json[:DEFAULT_FORECAST_HOURS]
-            )
-        except (KeyError, ValidationError) as exc:
-            logger.warning(
-                f"Invalid hourly forecast shape read from cache: {exc.__class__.__name__}"
-            )
-            return None
+        # build HourlyForecast objects from the converted json above.
+        hourly_forecasts: list[HourlyForecast] = create_hourly_forecasts_from_json(
+            hourly_forecasts_as_json[:DEFAULT_FORECAST_HOURS]
+        )
 
         # casting the ttl to an int even though it is an int because linter does not trust binary int.
         return HourlyForecastsWithTTL(hourly_forecasts=hourly_forecasts, ttl=cast(int, ttl_cached))
