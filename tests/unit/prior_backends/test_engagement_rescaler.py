@@ -294,11 +294,13 @@ class TestSchedulerHoldbackRescaler:
             self.rescaler = CrawledContentPinnedFreshRescaler(
                 fresh_items_top_stories_fixed_position=2
             )
-            self.rescaler_inferred = CrawledContentPinnedFreshRescalerInferred()
+            self.rescaler_inferred = CrawledContentPinnedFreshRescalerInferred(
+            )
 
         def test_fixed_position_setting(self):
             """Test that fixed position setting is set correctly"""
-            assert self.rescaler.fresh_items_top_stories_fixed_position == 4
+            assert self.rescaler.fresh_items_top_stories_fixed_position == 2
+            # 4 is the default
             assert self.rescaler_inferred.fresh_items_top_stories_fixed_position == 4
             assert (
                 self.rescaler.compute_estimated_fresh_per_cycle()

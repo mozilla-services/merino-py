@@ -242,7 +242,7 @@ class TestMlSectionsExperiment:
     )
     def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
         """Test that experiment flag logic matches expected behavior for ML sections"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region, inferredInterests=None)
         assert is_subtopics_experiment(req) is expected
 
 
@@ -274,7 +274,7 @@ class TestDailyBriefingExperiment:
     )
     def test_is_daily_briefing_experiment(self, name, branch, expected):
         """Test that is_daily_briefing_experiment returns True for either treatment branch."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert is_daily_briefing_experiment(req) is expected
 
     @pytest.mark.parametrize(
@@ -300,7 +300,7 @@ class TestDailyBriefingExperiment:
     )
     def test_should_show_popular_today_with_headlines(self, name, branch, expected):
         """Test that should_show_popular_today_with_headlines returns True only for briefing-with-popular."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert should_show_popular_today_with_headlines(req) is expected
 
 
@@ -378,7 +378,7 @@ class TestFilterSectionsByExperiment:
         self, name, branch, region, surface_id, expected_class
     ):
         """Test that we get the appropriate rescaler"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region, inferredInterests=None)
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:

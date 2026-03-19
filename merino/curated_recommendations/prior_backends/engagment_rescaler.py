@@ -146,7 +146,7 @@ class CrawledContentPinnedFreshRescalerInferred(CrawledContentPinnedFreshRescale
     def __init__(self, **data: Any):
         data.setdefault(
             "fresh_items_top_stories_fixed_est_imp_per_cycle",
-            EST_TOP_STORY_TILE_IMP_PER_CYCLE * INFERRED_EXPERIMENT_PERCENTAGE,
+            round(EST_TOP_STORY_TILE_IMP_PER_CYCLE * INFERRED_EXPERIMENT_PERCENTAGE),
         )
         super().__init__(**data)
 
