@@ -21,7 +21,10 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
-FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 13000
+# This was a 50% experiment but overal users has declined over time
+INFERRED_EXPERIMENT_PERCENTAGE = 0.25
+
+FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 12000
 
 EST_DAILY_IMPRESSIONS_TOP_STORY_TILE = (
     21_000_000  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
@@ -132,6 +135,20 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         else:
             scale = 1.0
         return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
+
+
+class CrawledContentPinnedFreshRescalerInferred(CrawledContentPinnedFreshRescaler):
+    """Rescaler for inferred contextual interest experiment.
+    Similar to CrawledContentPinnedFreshRescaler but with more aggressive settings to account
+    for smaller experiment size.
+    """
+
+    def __init__(self, **data: Any):
+        data.setdefault(
+            "fresh_items_top_stories_fixed_est_imp_per_cycle",
+            round(EST_TOP_STORY_TILE_IMP_PER_CYCLE * INFERRED_EXPERIMENT_PERCENTAGE),
+        )
+        super().__init__(**data)
 
 
 IE_EXPERIMENT_TREATMENT_PERCENT = 0.10
