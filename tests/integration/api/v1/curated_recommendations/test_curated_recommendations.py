@@ -1565,9 +1565,9 @@ class TestSections:
 
         assert "music" in sections
 
-        # headlines section should not be in the final response even if present in the corpus-api response
-        # it should only be available when headlines experiment is enabled
-        assert "headlines" not in sections
+        # headlines is now a regular subtopic section that flows through TS
+        # daily-briefing is only available when the daily briefing experiment is enabled
+        assert "daily-briefing" not in sections
 
         # assert IAB metadata is present in ML sections (there are 8 of them)
         expected_iab_metadata = {
@@ -2186,11 +2186,11 @@ class TestSections:
 
         # Manually created sections may appear regardless of experiment settings
 
-    def test_daily_briefing_experiment_headlines_section_returned(self, client: TestClient):
-        """Test that the Headlines section is returned when the daily briefing experiment is enabled.
+    def test_daily_briefing_experiment_section_returned(self, client: TestClient):
+        """Test that Daily Briefing section is returned when the experiment is enabled.
 
-        - Headlines section should be ranked on the very top (rank ==0)
-        - Popular Today section should be ranked right after headlines (rank ==1)
+        - Daily Briefing section should be ranked on the very top (rank == 0)
+        - Popular Today section should be ranked right after (rank == 1)
         - The remaining sections should be ranked right after (rank == 2...N)
         """
         response = client.post(
@@ -2212,14 +2212,13 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # Assert headlines section is returned as "headlines"
-        assert "headlines" in sections
-        headlines_section = sections.get("headlines")
-        if headlines_section is not None:
-            assert headlines_section["receivedFeedRank"] == 0
-            assert headlines_section["title"] == "Headlines"
-            assert headlines_section["subtitle"] == "Top Headlines today"
-            assert headlines_section["layout"]["name"] == "4-large-small-medium-1-ad"
+        # Assert daily-briefing section is returned
+        assert "daily-briefing" in sections
+        db_section = sections["daily-briefing"]
+        assert db_section["receivedFeedRank"] == 0
+        assert db_section["title"] == "Daily Briefing"
+        assert db_section["subtitle"] == "Your daily briefing"
+        assert db_section["layout"]["name"] == "4-medium-small-1-ad"
 
         # Assert that top_stories section has rank == 1
         top_stories_section = sections.get("top_stories_section")
@@ -2229,31 +2228,30 @@ class TestSections:
             assert top_stories_section["layout"]["name"] == "4-medium-small-1-ad"
 
         remaining_sections = sorted(
-            (sid for sid in sections if sid not in ("headlines", "top_stories_section")),
+            (sid for sid in sections if sid not in ("daily-briefing", "top_stories_section")),
             key=lambda sid: sections[sid]["receivedFeedRank"],
         )
 
-        # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
-        expected_order = ["headlines", "top_stories_section"] + remaining_sections
+        expected_order = ["daily-briefing", "top_stories_section"] + remaining_sections
         for idx, sid in enumerate(expected_order):
             assert sections[sid]["receivedFeedRank"] == idx
 
-        # Check the recs used in headlines section are removed from their original sections.
-        headlines_story_ids = {
-            rec["corpusItemId"] for rec in sections["headlines"]["recommendations"]
+        # Check the recs used in daily-briefing are removed from other sections (dedup).
+        db_story_ids = {
+            rec["corpusItemId"] for rec in sections["daily-briefing"]["recommendations"]
         }
 
         for sid, sec in sections.items():
-            if sid != "headlines":
+            if sid != "daily-briefing":
                 for rec in sec["recommendations"]:
-                    assert rec["corpusItemId"] not in headlines_story_ids
+                    assert rec["corpusItemId"] not in db_story_ids
 
     def test_daily_briefing_without_popular_excludes_top_stories(self, client: TestClient):
         """Test that Popular Today is NOT returned when in briefing-without-popular branch.
 
-        - Headlines section should be ranked on the very top (rank == 0)
+        - Daily Briefing section should be ranked on the very top (rank == 0)
         - Popular Today (top_stories_section) should NOT be present
-        - The remaining sections should be ranked right after headlines (rank == 1...N)
+        - The remaining sections should be ranked right after (rank == 1...N)
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2274,19 +2272,18 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # Assert headlines section is returned
-        assert "headlines" in sections
-        headlines_section = sections.get("headlines")
-        if headlines_section is not None:
-            assert headlines_section["receivedFeedRank"] == 0
-            assert headlines_section["title"] == "Headlines"
+        # Assert daily-briefing section is returned
+        assert "daily-briefing" in sections
+        db_section = sections["daily-briefing"]
+        assert db_section["receivedFeedRank"] == 0
+        assert db_section["title"] == "Daily Briefing"
 
         # Assert that top_stories_section is NOT present
         assert "top_stories_section" not in sections
 
         # Verify remaining sections start at rank 1
         remaining_sections = sorted(
-            (sid for sid in sections if sid != "headlines"),
+            (sid for sid in sections if sid != "daily-briefing"),
             key=lambda sid: sections[sid]["receivedFeedRank"],
         )
         for idx, sid in enumerate(remaining_sections, start=1):
