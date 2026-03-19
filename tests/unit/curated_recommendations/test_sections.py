@@ -242,7 +242,9 @@ class TestMlSectionsExperiment:
     )
     def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
         """Test that experiment flag logic matches expected behavior for ML sections"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region, inferredInterests=None)
+        req = SimpleNamespace(
+            experimentName=name, experimentBranch=branch, region=region, inferredInterests=None
+        )
         assert is_subtopics_experiment(req) is expected
 
 
@@ -378,7 +380,9 @@ class TestFilterSectionsByExperiment:
         self, name, branch, region, surface_id, expected_class
     ):
         """Test that we get the appropriate rescaler"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region, inferredInterests=None)
+        req = SimpleNamespace(
+            experimentName=name, experimentBranch=branch, region=region, inferredInterests=None
+        )
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:

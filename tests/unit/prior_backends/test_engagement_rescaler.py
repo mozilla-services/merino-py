@@ -294,8 +294,7 @@ class TestSchedulerHoldbackRescaler:
             self.rescaler = CrawledContentPinnedFreshRescaler(
                 fresh_items_top_stories_fixed_position=2
             )
-            self.rescaler_inferred = CrawledContentPinnedFreshRescalerInferred(
-            )
+            self.rescaler_inferred = CrawledContentPinnedFreshRescalerInferred()
 
         def test_fixed_position_setting(self):
             """Test that fixed position setting is set correctly"""
