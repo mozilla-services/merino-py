@@ -28,6 +28,7 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
+    CrawledContentPinnedFreshRescalerInferred,
     CrawledContentRescaler,
     DECrawledContentRescaler,
     IECrawledContentRescaler,
@@ -408,6 +409,9 @@ def get_ranking_rescaler_for_branch(
 
     # The pinned fresh content rescaler is only available for the US market right now.
     # Some additional work would be needed to make it work for other markets.
+
+    if request.inferredInterests is not None:
+        return CrawledContentPinnedFreshRescalerInferred()
     return CrawledContentPinnedFreshRescaler()
 
 
