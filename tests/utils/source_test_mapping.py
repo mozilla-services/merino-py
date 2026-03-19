@@ -352,7 +352,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": [],
         "indirect": [
             "tests/unit/jobs/csv_rs_uploader/test_csv_rs_uploader.py",
-            "tests/unit/jobs/csv_rs_uploader/test_fakespot.py",
             "tests/unit/jobs/csv_rs_uploader/test_mdn.py",
             "tests/unit/jobs/csv_rs_uploader/test_pocket.py",
             "tests/unit/jobs/relevancy_uploader/test_relevancy_csv_uploader.py",
@@ -365,10 +364,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
     },
     "merino/jobs/csv_rs_uploader/chunked_rs_uploader.py": {
         "direct": [],
-        "indirect": [],
-    },
-    "merino/jobs/csv_rs_uploader/fakespot.py": {
-        "direct": ["tests/unit/jobs/csv_rs_uploader/test_fakespot.py"],
         "indirect": [],
     },
     "merino/jobs/csv_rs_uploader/mdn.py": {

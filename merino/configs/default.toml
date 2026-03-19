@@ -170,9 +170,6 @@ collection = "quicksuggest-other"
 # The remote settings collection that contains AMP data.
 collection_amp = "quicksuggest-amp"
 
-# The collection to use for uploading fakespot suggestions if not specified on the command line
-collection_fakespot = "fakespot-suggest-products"
-
 # MERINO_REMOTE_SETTINGS__AUTH
 # Authorization token when uploading suggestions.
 auth = ""
