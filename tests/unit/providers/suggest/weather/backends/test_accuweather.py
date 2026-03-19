@@ -769,6 +769,7 @@ def fixture_accuweather_hourly_forecast_response() -> bytes:
                 "EpochDateTime": base_time + (i * 3600),
                 "Temperature": {"Unit": "F", "Value": 60 + i},
                 "WeatherIcon": 6,
+                "IconPhrase": "Sunny",
                 "Link": f"http://www.accuweather.com/en/us/san-francisco/94105/hourly-weather-forecast/39376?day=1&hbhhour={hour}&lang=en-us",
             }
         )
@@ -2057,16 +2058,16 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend, language: str
     [
         (
             {"q": "asdfg", "apikey": "filter_me_out"},
-            f"AccuweatherBackend:v7:localhost:"
+            f"AccuweatherBackend:v8:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
         (
             {},
-            "AccuweatherBackend:v7:localhost",
+            "AccuweatherBackend:v8:localhost",
         ),
         (
             {"q": "asdfg"},
-            f"AccuweatherBackend:v7:localhost:"
+            f"AccuweatherBackend:v8:localhost:"
             f"{hashlib.blake2s('q'.encode('utf-8') + 'asdfg'.encode('utf-8')).hexdigest()}",
         ),
     ],
@@ -2817,6 +2818,7 @@ async def test_get_hourly_forecasts(
     assert first_forecast.temperature.f == 60
     assert first_forecast.temperature.c == 16
     assert first_forecast.icon_id == 6
+    assert first_forecast.summary == "Sunny"
     assert "hourly-weather-forecast/39376?day=1&hbhhour=14" in str(first_forecast.url)
 
     metrics_called = [call_arg[0][0] for call_arg in statsd_mock.increment.call_args_list]

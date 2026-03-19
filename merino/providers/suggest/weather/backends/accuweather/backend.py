@@ -318,9 +318,9 @@ class AccuweatherBackend:
                     hasher.update(key.encode("utf-8") + value.encode("utf-8"))
             extra_identifiers = hasher.hexdigest()
 
-            return f"{self.__class__.__name__}:v7:{url}:{extra_identifiers}"
+            return f"{self.__class__.__name__}:v8:{url}:{extra_identifiers}"
 
-        return f"{self.__class__.__name__}:v7:{url}"
+        return f"{self.__class__.__name__}:v8:{url}"
 
     @functools.cache
     def cache_key_template(self, dt: WeatherDataType, language: str) -> str:
@@ -980,6 +980,7 @@ class AccuweatherBackend:
         if not hourly_forecasts_cached or ttl_cached == REDIS_EXPIRED_KEY_TTL:
             return None
 
+        # cache hit.
         self.metrics_client.increment("accuweather.cache.hit.hourly_forecasts")
 
         # convert binary json from cache to regular json.

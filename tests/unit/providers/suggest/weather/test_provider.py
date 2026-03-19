@@ -252,6 +252,7 @@ def fixture_hourly_forecasts_with_ttl() -> HourlyForecastsWithTTL:
                 epoch_date_time=1708281600,
                 temperature=Temperature(f=60, c=16),
                 icon_id=6,
+                summary="Sunny",
                 url=HttpUrl(
                     "http://www.accuweather.com/en/us/san-francisco/94105/"
                     "hourly-weather-forecast/39376"

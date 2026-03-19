@@ -347,6 +347,7 @@ def fixture_accuweather_hourly_forecast_response() -> bytes:
                 "EpochDateTime": base_time + (i * 3600),
                 "Temperature": {"Unit": "F", "Value": 60 + i},
                 "WeatherIcon": 6,
+                "IconPhrase": "Sunny",
                 "Link": f"http://www.accuweather.com/en/us/san-francisco/94105/hourly-weather-forecast/39376?day=1&hbhhour={hour}&lang=en-us",
             }
         )
