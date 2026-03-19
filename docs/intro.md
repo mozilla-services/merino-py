@@ -8,6 +8,7 @@ then send an interaction ping if defined in the request and not to a provider di
 See [API documentation](https://merino.services.mozilla.com/docs) for more details.
 
 ## Table of Contents
+
 [api.md - API Documentation][1] describes endpoints, query parameters, request and response headers, response objects and details on the suggestion objects.
 
 [firefox.md - Firefox and Merino Environments][2] describes how to enable
@@ -102,7 +103,6 @@ subgraph curatedRecommendationsBackends["fa:fa-microchip Curated Recommendations
         corpusBackend("corpus")
         extendedExpirationCorpusBackend("corpus extended expiration")
         gcsEngagementBackend("gcs engagement")
-        fakespotBackend("fakespot")
         gcsPriorBackend("gcs prior")
 end
 subgraph Merino["fa:fa-server Merino"]
@@ -151,7 +151,6 @@ end
     accuweatherAPI -. tries to query cache first ..-> redis[("fa:fa-memory Redis Cache")]
     gcsEngagementBackend --> gcsMerinoAirflowData[("fa:fa-database GCS Merino Airflow Data")]
     gcsPriorBackend --> gcsMerinoAirflowData
-    fakespotBackend --> gcsFakespotNewTabProducts[("fa:fa-database GCS Fakespot NewTab Products")]
     corpusBackend -..-> curatedCorpusAPI("fa:fa-globe Curated Corpus API")
     offline -..- kinto[("Remote Settings")]
     remoteSettingsBackend --- merinoRustExtension("fa:fa-puzzle-piece Merino Rust Extension")

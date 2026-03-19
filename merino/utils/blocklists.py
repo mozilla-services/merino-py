@@ -15,5 +15,3 @@ TOP_PICKS_BLOCKLIST: set[str] = {
     "winloot",
     "worldstarhiphop",
 }
-
-FAKESPOT_CSV_UPLOADER_BLOCKLIST: set[str] = set()
