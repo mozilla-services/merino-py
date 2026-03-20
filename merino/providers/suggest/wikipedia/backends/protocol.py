@@ -2,6 +2,14 @@
 
 from typing import Any, Protocol
 
+from pydantic import BaseModel
+
+
+class EngagementData(BaseModel):
+    """Model for Wikipedia engagement data from GCS."""
+
+    wiki_aggregated: dict[str, int]
+
 
 class WikipediaBackend(Protocol):
     """Protocol for a Wikipedia backend that this provider depends on.

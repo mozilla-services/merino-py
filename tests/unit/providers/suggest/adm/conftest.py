@@ -29,6 +29,8 @@ def fixture_adm_parameters() -> dict[str, Any]:
         "name": "adm",
         "resync_interval_sec": 10800,
         "cron_interval_sec": 60,
+        "engagement_gcs_bucket": "test-engagement-bucket",
+        "engagement_resync_interval_sec": 3600,
     }
 
 

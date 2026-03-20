@@ -2,11 +2,13 @@
 
 import pytest
 from pydantic import HttpUrl
+from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
+from merino.providers.suggest.wikipedia.backends.protocol import EngagementData
 from merino.providers.suggest.wikipedia.provider import (
     ADVERTISER,
     ICON,
@@ -14,7 +16,12 @@ from merino.providers.suggest.wikipedia.provider import (
     WikipediaSuggestion,
 )
 from merino.utils.domain_categories.models import Category
+from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
+
+SAMPLE_ENGAGEMENT_DATA = EngagementData(
+    wiki_aggregated={"impressions": 2935973, "clicks": 2325},
+)
 
 
 @pytest.fixture(name="expected_block_list")
@@ -30,6 +37,9 @@ def fixture_wikipedia(expected_block_list: set[str]) -> Provider:
         backend=FakeEchoWikipediaBackend(),
         title_block_list=expected_block_list,
         query_timeout_sec=0.2,
+        engagement_gcs_bucket="test-engagement-bucket",
+        engagement_resync_interval_sec=3600,
+        cron_interval_sec=60,
     )
 
 
@@ -117,3 +127,69 @@ async def test_query(
             categories=[Category.Education],
         )
     ]
+
+
+@pytest.mark.asyncio
+async def test_initialize_starts_engagement_cron(wikipedia: Provider) -> None:
+    """Test that initialize() creates the engagement cron task."""
+    try:
+        await wikipedia.initialize()
+        assert wikipedia.engagement_cron_task is not None
+        assert not wikipedia.engagement_cron_task.done()
+    finally:
+        wikipedia.engagement_cron_task.cancel()
+
+
+@pytest.mark.asyncio
+async def test_fetch_engagement_data_success(
+    mocker: MockerFixture,
+    wikipedia: Provider,
+) -> None:
+    """Test that _fetch_engagement_data stores data and updates the timestamp on success."""
+    mocker.patch.object(wikipedia.filemanager, "get_file", return_value=SAMPLE_ENGAGEMENT_DATA)
+
+    assert wikipedia.last_engagement_fetch_at == 0
+    await wikipedia._fetch_engagement_data()
+
+    assert wikipedia.engagement_data == SAMPLE_ENGAGEMENT_DATA
+    assert wikipedia.last_engagement_fetch_at > 0
+
+
+@pytest.mark.asyncio
+async def test_fetch_engagement_data_returns_none(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    wikipedia: Provider,
+) -> None:
+    """Test that a None return logs a warning and does not update the timestamp."""
+    mocker.patch.object(wikipedia.filemanager, "get_file", return_value=None)
+
+    await wikipedia._fetch_engagement_data()
+
+    records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
+    assert len(records) == 1
+    assert "None" in records[0].message
+    assert wikipedia.engagement_data is None
+    assert wikipedia.last_engagement_fetch_at == 0
+
+
+@pytest.mark.asyncio
+async def test_fetch_engagement_data_exception(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    wikipedia: Provider,
+) -> None:
+    """Test that an exception logs a warning and does not update the timestamp."""
+    mocker.patch.object(
+        wikipedia.filemanager, "get_file", side_effect=Exception("GCS unavailable")
+    )
+
+    await wikipedia._fetch_engagement_data()
+
+    records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
+    assert len(records) == 1
+    assert records[0].__dict__["error"] == "GCS unavailable"
+    assert wikipedia.engagement_data is None
+    assert wikipedia.last_engagement_fetch_at == 0

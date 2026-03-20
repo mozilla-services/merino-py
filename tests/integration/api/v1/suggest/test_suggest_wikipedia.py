@@ -31,7 +31,13 @@ Scenario = namedtuple(
 SCENARIOS: dict[str, Scenario] = {
     "Case-I: Backend returns": Scenario(
         providers={
-            "wikipedia": Provider(backend=FakeEchoWikipediaBackend(), title_block_list=BLOCK_LIST)
+            "wikipedia": Provider(
+                backend=FakeEchoWikipediaBackend(),
+                title_block_list=BLOCK_LIST,
+                engagement_gcs_bucket="",
+                engagement_resync_interval_sec=3600,
+                cron_interval_sec=60,
+            )
         },
         query="foo bar",
         expected_suggestion_count=1,
@@ -41,7 +47,11 @@ SCENARIOS: dict[str, Scenario] = {
     "Case-II: Backend raises": Scenario(
         providers={
             "wikipedia": Provider(
-                backend=FakeExceptionWikipediaBackend(), title_block_list=BLOCK_LIST
+                backend=FakeExceptionWikipediaBackend(),
+                title_block_list=BLOCK_LIST,
+                engagement_gcs_bucket="",
+                engagement_resync_interval_sec=3600,
+                cron_interval_sec=60,
             )
         },
         query="foo bar",
@@ -51,7 +61,13 @@ SCENARIOS: dict[str, Scenario] = {
     ),
     "Case-III: Block list filter": Scenario(
         providers={
-            "wikipedia": Provider(backend=FakeEchoWikipediaBackend(), title_block_list=BLOCK_LIST)
+            "wikipedia": Provider(
+                backend=FakeEchoWikipediaBackend(),
+                title_block_list=BLOCK_LIST,
+                engagement_gcs_bucket="",
+                engagement_resync_interval_sec=3600,
+                cron_interval_sec=60,
+            )
         },
         query="unsafe content",
         expected_suggestion_count=0,
