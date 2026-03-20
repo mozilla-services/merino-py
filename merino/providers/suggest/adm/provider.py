@@ -12,10 +12,15 @@ from pydantic import HttpUrl
 
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
-from merino.providers.suggest.adm.backends.protocol import FormFactor
+from merino.providers.suggest.adm.backends.filemanager import ADMFilemanager
+from merino.providers.suggest.adm.backends.protocol import EngagementData, FormFactor
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +87,11 @@ class Provider(BaseProvider):
     resync_interval_sec: float
     min_attempted_count: int
     thompson: ThompsonSampler | None = None
+    engagement_data: EngagementData | None
+    filemanager: ADMFilemanager
+    engagement_resync_interval_sec: float
+    last_engagement_fetch_at: float
+    engagement_cron_task: asyncio.Task
 
     def __init__(
         self,
@@ -90,6 +100,8 @@ class Provider(BaseProvider):
         name: str,
         resync_interval_sec: float,
         cron_interval_sec: float,
+        engagement_gcs_bucket: str,
+        engagement_resync_interval_sec: float,
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
@@ -105,6 +117,13 @@ class Provider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.min_attempted_count = min_attempted_count
         self.thompson = thompson
+        self.engagement_data = EngagementData(amp={}, amp_aggregated={})
+        self.engagement_resync_interval_sec = engagement_resync_interval_sec
+        self.last_engagement_fetch_at = 0
+        self.filemanager = ADMFilemanager(
+            gcs_bucket_path=engagement_gcs_bucket,
+            blob_name="suggest-merino-exports/engagement/latest.json",
+        )
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -132,14 +151,45 @@ class Provider(BaseProvider):
         # reference to it.
         self.cron_task = asyncio.create_task(cron_job())
 
+        engagement_cron_job = cron.Job(
+            name="resync_engagement_data",
+            interval=self.cron_interval_sec,
+            condition=self._should_fetch_engagement,
+            task=self._fetch_engagement_data,
+        )
+        self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
+
     def _should_fetch(self) -> bool:
         """Check if it should fetch data from Remote Settings."""
         return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
+
+    def _should_fetch_engagement(self) -> bool:
+        """Check if it should fetch engagement data from GCS."""
+        return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         self.suggestion_content = await self.backend.fetch()
         self.last_fetch_at = time.time()
+
+    async def _fetch_engagement_data(self) -> None:
+        """Fetch engagement data from GCS and store it in memory.
+
+        If the fetch returns no data, `last_engagement_fetch_at` is not updated
+        so the cron job retries on the next tick.
+        """
+        try:
+            data = await self.filemanager.get_file()
+            if data is None:
+                logger.warning("Engagement data fetch returned None, will retry on next tick")
+                return
+            self.engagement_data = data
+            self.last_engagement_fetch_at = time.time()
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch engagement data from GCS",
+                extra={"error": str(e)},
+            )
 
     def hidden(self) -> bool:  # noqa: D102
         return False
@@ -148,10 +198,15 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
-    def _fetch_engagement_metrics(self, _suggestion: PyAmpResult) -> EngagementMetrics:
+    def _fetch_engagement_metrics(self, suggestion: PyAmpResult) -> EngagementMetrics:
         """Fetch engagement metrics for an AMP suggestion."""
-        # TODO(nanj): look up the real engagement metrics.
+        advertiser = suggestion.advertiser
         engaged, attempted = 1, 1
+        if self.engagement_data:
+            attempted = int(
+                self.engagement_data.amp.get(advertiser, {}).get("impressions", attempted)
+            )
+            engaged = int(self.engagement_data.amp.get(advertiser, {}).get("clicks", engaged))
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
     def _select(self, suggestions: list[PyAmpResult]) -> PyAmpResult | None:
