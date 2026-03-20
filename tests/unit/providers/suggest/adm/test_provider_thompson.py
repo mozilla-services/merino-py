@@ -68,7 +68,7 @@ async def test_query_with_thompson_dummy_suppresses_suggestion(
     geolocation = Location(country="US")
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
 
-    res = await adm_with_thompson_dummy.query(srequest("firefox", geolocation, user_agent))
+    res = await adm_with_thompson_dummy.query(srequest("low engagement", geolocation, user_agent))
 
     assert res == []
 
