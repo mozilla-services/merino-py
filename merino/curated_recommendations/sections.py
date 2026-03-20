@@ -138,6 +138,8 @@ def map_corpus_section_to_section(
     """
     item_flags = set()
     is_manual_section = corpus_section.createSource == CreateSource.MANUAL
+    # Headlines items should not carry the subtopic flag so they remain eligible
+    # for the pinned fresh story slot in Popular Today (see HNT-2057).
     is_headlines = corpus_section.externalId == HEADLINES_SECTION_KEY
     if not is_legacy_section and not is_manual_section and not is_headlines:
         item_flags.add(ITEM_SUBTOPIC_FLAG)
@@ -588,7 +590,7 @@ def rank_sections(
 
     # If daily briefing enabled, put daily-briefing on top, followed by top_stories
     if include_daily_briefing_section:
-        put_daily_briefing_first_then_top_stories(sections)
+        sections = put_daily_briefing_first_then_top_stories(sections)
 
     # Sort sections by receivedFeedRank and limit to MAX_SECTIONS_PER_RESPONSE
     sorted_sections = sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)[
@@ -865,21 +867,33 @@ async def get_sections(
         )
     }
 
-    # 12. If daily briefing experiment enabled, insert daily-briefing on top
-    if include_daily_briefing_section and raw_daily_briefing is not None:
+    # 12. If daily briefing experiment enabled, insert daily-briefing on top.
+    #     Daily-briefing is split out before TS (ML controls item order), but
+    #     must still go through reported-takedown and blocked-topic filtering.
+    if include_daily_briefing_section:
+        assert raw_daily_briefing is not None  # guaranteed by line 761-763
         daily_briefing_section = map_corpus_section_to_section(
             corpus_section=raw_daily_briefing,
             rank=0,
             layout=deepcopy(layout_4_medium),
             is_legacy_section=False,
         )
+        daily_briefing_section.recommendations = takedown_reported_recommendations(
+            daily_briefing_section.recommendations,
+            engagement_backend=engagement_backend,
+            region=region,
+        )
+        if request.sections:
+            daily_briefing_section.recommendations = exclude_recommendations_from_blocked_sections(
+                daily_briefing_section.recommendations, request.sections
+            )
         sections[DAILY_BRIEFING_SECTION_KEY] = daily_briefing_section
         if should_show_popular_today_with_daily_briefing(request):
             # briefing-with-popular: show both DB and Popular Today (shrink)
-            sections["top_stories_section"].layout = layout_4_medium
+            sections["top_stories_section"].layout = deepcopy(layout_4_medium)
         else:
             # briefing-without-popular: remove Popular Today entirely
-            del sections["top_stories_section"]
+            sections.pop("top_stories_section", None)
 
     # 13. Add remaining corpus sections
     sections.update(corpus_sections)

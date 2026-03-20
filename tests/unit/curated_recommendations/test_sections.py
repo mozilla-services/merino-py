@@ -597,6 +597,28 @@ class TestMapCorpusSectionToSection:
         assert [rec.corpusItemId for rec in sec.recommendations] == ["dup", "unique"]
         assert [rec.receivedRank for rec in sec.recommendations] == [0, 1]
 
+    def test_headlines_items_not_flagged_as_subtopics(self):
+        """Headlines items should not carry ITEM_SUBTOPIC_FLAG (HNT-2057)."""
+        cs = CorpusSection(
+            sectionItems=[generate_corpus_item("h1", "sched_h1")],
+            title="Headlines",
+            externalId=HEADLINES_SECTION_KEY,
+            createSource=CreateSource.ML,
+        )
+        sec = map_corpus_section_to_section(cs, 0, is_legacy_section=False)
+        assert not sec.recommendations[0].in_experiment(ITEM_SUBTOPIC_FLAG)
+
+    def test_non_legacy_ml_items_flagged_as_subtopics(self):
+        """Non-legacy ML section items should carry ITEM_SUBTOPIC_FLAG."""
+        cs = CorpusSection(
+            sectionItems=[generate_corpus_item("s1", "sched_s1")],
+            title="NFL",
+            externalId="nfl",
+            createSource=CreateSource.ML,
+        )
+        sec = map_corpus_section_to_section(cs, 0, is_legacy_section=False)
+        assert sec.recommendations[0].in_experiment(ITEM_SUBTOPIC_FLAG)
+
     @pytest.mark.parametrize(
         "followable,allow_ads",
         [(True, True), (False, True), (True, False), (False, False)],
@@ -1286,6 +1308,23 @@ class TestCycleLayoutsForRankedSections:
         for idx, section in enumerate(other_sections):
             expected_layout = LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]
             assert section.layout == expected_layout
+
+    def test_daily_briefing_excluded_from_layout_cycling(self):
+        """Daily-briefing section should not have its layout modified by cycling."""
+        sections = generate_sections_feed(5, has_top_stories=True)
+        sections[DAILY_BRIEFING_SECTION_KEY] = Section(
+            receivedFeedRank=0,
+            recommendations=[],
+            title="Daily Briefing",
+            layout=copy.deepcopy(layout_4_medium),
+        )
+
+        original_db_layout = sections[DAILY_BRIEFING_SECTION_KEY].layout
+
+        cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
+
+        # daily-briefing layout should remain unchanged
+        assert sections[DAILY_BRIEFING_SECTION_KEY].layout == original_db_layout
 
 
 class TestPutDailyBriefingFirstThenTopStories:
