@@ -11,5 +11,5 @@ from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.base import SuggestionRequest
 
 SuggestionRequestFixture = Callable[
-    [str, Optional[Location], Optional[UserAgent]], SuggestionRequest
+    [str, Optional[Location], Optional[UserAgent], Optional[list[str]]], SuggestionRequest
 ]
