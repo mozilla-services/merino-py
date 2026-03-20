@@ -27,12 +27,12 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    CACrawledContentRescaler,
     CrawledContentPinnedFreshRescaler,
+    CrawledContentPinnedFreshRescalerInferred,
     CrawledContentRescaler,
+    DECrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
@@ -70,6 +70,7 @@ TOP_STORIES_COUNT = 6
 DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines"
+DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
 IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
@@ -137,7 +138,10 @@ def map_corpus_section_to_section(
     """
     item_flags = set()
     is_manual_section = corpus_section.createSource == CreateSource.MANUAL
-    if not is_legacy_section and not is_manual_section:
+    # Headlines items should not carry the subtopic flag so they remain eligible
+    # for the pinned fresh story slot in Popular Today (see HNT-2057).
+    is_headlines = corpus_section.externalId == HEADLINES_SECTION_KEY
+    if not is_legacy_section and not is_manual_section and not is_headlines:
         item_flags.add(ITEM_SUBTOPIC_FLAG)
     seen_ids: set[str] = set()
     section_items: list[CorpusItem] = []
@@ -200,7 +204,7 @@ async def get_corpus_sections(
     surface_id: SurfaceId,
     min_feed_rank: int,
     include_subtopics: bool = False,
-) -> tuple[Section | None, dict[str, Section]]:
+) -> tuple[CorpusSection | None, dict[str, Section]]:
     """Fetch curated sections.
 
     Args:
@@ -210,29 +214,20 @@ async def get_corpus_sections(
         include_subtopics: Whether to include subtopic sections.
 
     Returns:
-        A tuple of headlines section (if present) & a mapping from section IDs to Section objects, each with a unique receivedFeedRank.
+        A tuple of the raw daily-briefing CorpusSection (if present,
+        before filtering) and a mapping from section IDs to Section
+        objects. Headlines flows through filtering and TS like any
+        other section.
     """
     # Get raw corpus sections
     raw_corpus_sections = await sections_backend.fetch(surface_id)
 
-    # Split headlines_section & remaining sections
-    raw_headlines_section, remaining_raw_corpus_sections = split_headlines_section(
-        raw_corpus_sections
-    )
-    headlines_corpus_section: Section | None = None
+    # Split daily-briefing section before filtering (experiment-only gate)
+    raw_daily_briefing, remaining_raw = split_daily_briefing_section(raw_corpus_sections)
 
-    # If Headlines section is present, isolate from other sections & map to a corpus section
-    if raw_headlines_section:
-        headlines_corpus_section = map_corpus_section_to_section(
-            corpus_section=raw_headlines_section,
-            rank=0,
-            layout=deepcopy(layout_4_large),
-            is_legacy_section=False,
-        )
-
-    # Apply filtering based on subtopics experiment
+    # Headlines stays in remaining_raw and goes through normal filtering.
     filtered_corpus_sections = filter_sections_by_experiment(
-        remaining_raw_corpus_sections,
+        remaining_raw,
         include_subtopics,
     )
 
@@ -242,21 +237,21 @@ async def get_corpus_sections(
         min_feed_rank,
     )
 
-    return headlines_corpus_section, corpus_sections
+    return raw_daily_briefing, corpus_sections
 
 
-def split_headlines_section(
+def split_daily_briefing_section(
     corpus_sections: list[CorpusSection],
 ) -> tuple[CorpusSection | None, list[CorpusSection]]:
-    """Return the headlines section separately from everything else."""
-    headlines_section: CorpusSection | None = None
+    """Return the daily-briefing section separately from everything else."""
+    daily_briefing_section: CorpusSection | None = None
     remaining_sections: list[CorpusSection] = []
     for cs in corpus_sections:
-        if cs.externalId == HEADLINES_SECTION_KEY:
-            headlines_section = cs
+        if cs.externalId == DAILY_BRIEFING_SECTION_KEY:
+            daily_briefing_section = cs
         else:
             remaining_sections.append(cs)
-    return headlines_section, remaining_sections
+    return daily_briefing_section, remaining_sections
 
 
 def exclude_recommendations_from_blocked_sections(
@@ -329,10 +324,12 @@ def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool
     )
 
 
-def should_show_popular_today_with_headlines(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if Popular Today should be shown alongside the headlines section.
+def should_show_popular_today_with_daily_briefing(
+    request: CuratedRecommendationsRequest,
+) -> bool:
+    """Return True if Popular Today should be shown alongside the Daily Briefing section.
 
-    Returns True when user is in the 'briefing-with-popular' branch of the Daily Briefing experiment.
+    Returns True when user is in the 'briefing-with-popular' branch.
     Returns False when user is in the 'briefing-without-popular' branch.
     """
     return is_enrolled_in_experiment(
@@ -349,7 +346,7 @@ def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     - ML sections experiment is enabled (treatment branch), OR
     """
     in_holdback = is_scheduler_holdback_experiment(request)
-    return not in_holdback and request.region in ("US", "GB", "IE")
+    return not in_holdback and request.region in ("US", "GB", "IE", "DE")
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -388,28 +385,31 @@ def get_ranking_rescaler_for_branch(
         return SchedulerHoldbackRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_GB:
-        return UKCrawledContentRescaler()
+        return CrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_IE and is_enrolled_in_experiment(
         request, "sections-in-ie", "sections"
     ):
         return IECrawledContentRescaler()
 
-    if surface_id == SurfaceId.NEW_TAB_EN_CA and is_enrolled_in_experiment(
-        request, "sections-in-canada", "sections-ca-content"
+    if surface_id == SurfaceId.NEW_TAB_DE_DE and is_enrolled_in_experiment(
+        request, "sections-in-germany", "sections"
     ):
-        return CACrawledContentRescaler()
+        return DECrawledContentRescaler()
+
+    if surface_id == SurfaceId.NEW_TAB_EN_CA:
+        return CrawledContentRescaler()
 
     # While we preivously returned None for non-US, we know there are some section users
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
 
-    if is_enrolled_in_experiment(
-        request, ExperimentName.FIXED_POSITION_FRESH_ITEMS_EXPERIMENT.value, "treatment"
-    ):
-        return CrawledContentPinnedFreshRescaler()
+    # The pinned fresh content rescaler is only available for the US market right now.
+    # Some additional work would be needed to make it work for other markets.
 
-    return CrawledContentRescaler()
+    if request.inferredInterests is not None:
+        return CrawledContentPinnedFreshRescalerInferred()
+    return CrawledContentPinnedFreshRescaler()
 
 
 def update_received_feed_rank(sections: dict[str, Section]):
@@ -495,36 +495,38 @@ def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict
 
 
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
-    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'headlines'."""
-    # Exclude top_stories_section & headlines (if present) from layout cycling
+    """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'daily-briefing'."""
+    # Exclude top_stories_section & daily-briefing (if present) from layout cycling
     ranked_sections = [
         section
         for sid, section in sections.items()
-        if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")
+        if sid not in (DAILY_BRIEFING_SECTION_KEY, "top_stories_section")
     ]
     for idx, section in enumerate(ranked_sections):
         section.layout = deepcopy(layout_cycle[idx % len(layout_cycle)])
 
 
-def put_headlines_first_then_top_stories(sections: dict[str, Section]) -> dict[str, Section]:
-    """Ensure headlines section is on top followed by top_stories section, other sections should have rank 2...N & preserve relative order."""
-    headlines_key = HEADLINES_SECTION_KEY
+def put_daily_briefing_first_then_top_stories(
+    sections: dict[str, Section],
+) -> dict[str, Section]:
+    """Ensure daily-briefing section is on top followed by top_stories section, other sections should have rank 2...N & preserve relative order."""
+    briefing_key = DAILY_BRIEFING_SECTION_KEY
     top_stories_key = TOP_STORIES_SECTION_KEY
 
-    headlines_section = sections.get(headlines_key)
+    briefing_section = sections.get(briefing_key)
     top_stories_section = sections.get(top_stories_key)
 
-    if not headlines_section:
+    if not briefing_section:
         return sections
 
     # Save & keep relative order for the other sections based on their current ranks
     remaining_sections = sorted(
-        (sec for sid, sec in sections.items() if sid not in (headlines_key, top_stories_key)),
+        (sec for sid, sec in sections.items() if sid not in (briefing_key, top_stories_key)),
         key=lambda s: s.receivedFeedRank,
     )
 
-    # Assign ranks, start with headlines rank == 0
-    headlines_section.receivedFeedRank = 0
+    # Assign ranks, start with daily-briefing rank == 0
+    briefing_section.receivedFeedRank = 0
     # If top_stories is present, assign rank == 1
     if top_stories_section:
         top_stories_section.receivedFeedRank = 1
@@ -545,11 +547,11 @@ def rank_sections(
     personal_interests: ProcessedInterests | None,
     engagement_rescaler: EngagementRescaler | None,
     do_section_personalization_reranking: bool = True,
-    include_headlines_section: bool = False,
+    include_daily_briefing_section: bool = False,
 ) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
 
-    1. Pin the `top_stories_section` to receivedFeedRank 0 so it's always at the top.
+    1. Pin the `top_stories_section` to receivedFeedRank 0 so it’s always at the top.
     2. Promote any user-followed sections from `section_configurations` to appear immediately
        after Top Stories, ordered by recency (followedAt) and preserving their relative order.
     3. Apply Thompson sampling on engagement data (via `engagement_backend`) to the remaining
@@ -559,12 +561,13 @@ def rank_sections(
         sections: a dict mapping section IDs to Section objects (with `receivedFeedRank` set).
         section_configurations: optional list of SectionConfiguration objects indicating which
             sections are followed/blocked and when they were followed.
-        engagement_backend: provides engagement signals for Thompson sampling.
         personal_interests: provides personal interests.
-        engagement_rescaler: Rescaler that can rescale ranking data based on experiment size and content distribution
-        do_section_personalization_reranking: Whether to implement section based reranking for personalization
-        if interest vector is avialable.
-        include_headlines_section: If headlines experiment is enabled, don't put top_stories_section on top
+        engagement_rescaler: Rescaler that can rescale ranking data based on experiment size
+            and content distribution.
+        do_section_personalization_reranking: Whether to implement section based reranking for
+            personalization if interest vector is available.
+        include_daily_briefing_section: If daily briefing experiment is enabled, pin
+            daily-briefing at rank 0 followed by top_stories.
 
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
@@ -585,9 +588,9 @@ def rank_sections(
     # 1st priority: always keep top stories at the very top
     sections = put_top_stories_first(sections)
 
-    # If headlines experiment enabled, put headlines section on top, followed by top_stories
-    if include_headlines_section:
-        put_headlines_first_then_top_stories(sections)
+    # If daily briefing enabled, put daily-briefing on top, followed by top_stories
+    if include_daily_briefing_section:
+        sections = put_daily_briefing_first_then_top_stories(sections)
 
     # Sort sections by receivedFeedRank and limit to MAX_SECTIONS_PER_RESPONSE
     sorted_sections = sorted(sections.items(), key=lambda kv: kv[1].receivedFeedRank)[
@@ -605,7 +608,6 @@ def pick_random_fresh_story(
     """Pick a random fresh story (not blocked from most popular). The chance of picking a fresh story is based on the number of leftover
     impressions after accounting for max impressions per item, and the number of items. The number of
     impressions in a period is max_imp_per_item_per_cycle.
-
     Returns an picked story, and the remaining items, with the story removed if one was picked.
     Args:
         items: List of CuratedRecommendation objects
@@ -621,7 +623,6 @@ def pick_random_fresh_story(
     )
     if len(fresh_items) == 0:
         return None, items
-
     total_remaining = sum(
         it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
     )
@@ -639,7 +640,6 @@ def pick_random_fresh_story(
         it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
     ]
     picked = random.choices(fresh_items, weights=weights, k=1)[0]
-
     # Remove the picked object from the original items list
     remaining_items = [it for it in items if it is not picked]
     return picked, remaining_items
@@ -772,16 +772,16 @@ async def get_sections(
 
     rescaler = get_ranking_rescaler_for_branch(request, surface_id)
 
-    headlines_corpus_section, corpus_sections_all = await get_corpus_sections(
+    raw_daily_briefing, corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=include_subtopics,
     )
 
-    # Determine if we should include headlines section based on daily briefing experiment
-    include_headlines_section = (
-        is_daily_briefing_experiment(request) and headlines_corpus_section is not None
+    # Determine if we should include daily briefing based on experiment
+    include_daily_briefing_section = (
+        is_daily_briefing_experiment(request) and raw_daily_briefing is not None
     )
 
     # 2. Sections are already properly filtered by get_corpus_sections
@@ -883,15 +883,33 @@ async def get_sections(
         )
     }
 
-    # 12. If headlines experiment enabled, insert headlines on top
-    if is_daily_briefing_experiment(request) and headlines_corpus_section is not None:
-        sections[HEADLINES_SECTION_KEY] = headlines_corpus_section
-        if should_show_popular_today_with_headlines(request):
-            # briefing-with-popular: show both headlines and top_stories (shrink top_stories)
-            sections["top_stories_section"].layout = layout_4_medium
+    # 12. If daily briefing experiment enabled, insert daily-briefing on top.
+    #     Daily-briefing is split out before TS (ML controls item order), but
+    #     must still go through reported-takedown and blocked-topic filtering.
+    if include_daily_briefing_section:
+        assert raw_daily_briefing is not None  # guaranteed by line 761-763
+        daily_briefing_section = map_corpus_section_to_section(
+            corpus_section=raw_daily_briefing,
+            rank=0,
+            layout=deepcopy(layout_4_medium),
+            is_legacy_section=False,
+        )
+        daily_briefing_section.recommendations = takedown_reported_recommendations(
+            daily_briefing_section.recommendations,
+            engagement_backend=engagement_backend,
+            region=region,
+        )
+        if request.sections:
+            daily_briefing_section.recommendations = exclude_recommendations_from_blocked_sections(
+                daily_briefing_section.recommendations, request.sections
+            )
+        sections[DAILY_BRIEFING_SECTION_KEY] = daily_briefing_section
+        if should_show_popular_today_with_daily_briefing(request):
+            # briefing-with-popular: show both Daily Briefing and Popular Today (shrink)
+            sections["top_stories_section"].layout = deepcopy(layout_4_medium)
         else:
-            # briefing-without-popular: remove top_stories entirely
-            del sections["top_stories_section"]
+            # briefing-without-popular: remove Popular Today entirely
+            sections.pop("top_stories_section", None)
 
     # 13. Add remaining corpus sections
     sections.update(corpus_sections)
@@ -907,7 +925,7 @@ async def get_sections(
         personal_interests,
         engagement_rescaler=rescaler,
         do_section_personalization_reranking=not use_contexual_ranker,  # Contextual ranker already re-ranks all sections
-        include_headlines_section=include_headlines_section,
+        include_daily_briefing_section=include_daily_briefing_section,
     )
 
     # 16. Apply cross-section deduplication, preserving higher-priority sections

@@ -116,9 +116,9 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("en-CA", "US", SurfaceId.NEW_TAB_EN_US),
             ("en-GB", "US", SurfaceId.NEW_TAB_EN_US),
             ("en-US", "US", SurfaceId.NEW_TAB_EN_US),
-            ("en-CA", "CA", SurfaceId.NEW_TAB_EN_US),
-            ("en-GB", "CA", SurfaceId.NEW_TAB_EN_US),
-            ("en-US", "CA", SurfaceId.NEW_TAB_EN_US),
+            ("en-CA", "CA", SurfaceId.NEW_TAB_EN_CA),
+            ("en-GB", "CA", SurfaceId.NEW_TAB_EN_CA),
+            ("en-US", "CA", SurfaceId.NEW_TAB_EN_CA),
             ("de", "DE", SurfaceId.NEW_TAB_DE_DE),
             ("de-AT", "DE", SurfaceId.NEW_TAB_DE_DE),
             ("de-CH", "DE", SurfaceId.NEW_TAB_DE_DE),
@@ -138,7 +138,7 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("de", "AT", SurfaceId.NEW_TAB_DE_DE),
             ("de", "BE", SurfaceId.NEW_TAB_DE_DE),
             # Locale can be a main language only.
-            ("en", "CA", SurfaceId.NEW_TAB_EN_US),
+            ("en", "CA", SurfaceId.NEW_TAB_EN_CA),
             ("en", "US", SurfaceId.NEW_TAB_EN_US),
             ("en", "GB", SurfaceId.NEW_TAB_EN_GB),
             ("en", "IE", SurfaceId.NEW_TAB_EN_GB),
@@ -157,7 +157,7 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("eN-US", None, SurfaceId.NEW_TAB_EN_US),
             ("En-GB", None, SurfaceId.NEW_TAB_EN_GB),
             ("EN-ie", None, SurfaceId.NEW_TAB_EN_GB),
-            ("en-cA", None, SurfaceId.NEW_TAB_EN_US),
+            ("en-cA", None, SurfaceId.NEW_TAB_EN_CA),
             # region can vary in case.
             ("en", "gB", SurfaceId.NEW_TAB_EN_GB),
             ("en", "Ie", SurfaceId.NEW_TAB_EN_GB),
@@ -166,7 +166,7 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("en", "XX", SurfaceId.NEW_TAB_EN_US),
             # Default to English when language is unknown.
             ("xx", "US", SurfaceId.NEW_TAB_EN_US),
-            ("xx", "CA", SurfaceId.NEW_TAB_EN_US),
+            ("xx", "CA", SurfaceId.NEW_TAB_EN_CA),
             ("xx", "GB", SurfaceId.NEW_TAB_EN_GB),
             ("xx", "IE", SurfaceId.NEW_TAB_EN_GB),
             ("xx", "YY", SurfaceId.NEW_TAB_EN_US),
@@ -182,102 +182,11 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
 
 
 class TestGetRecommendationSurfaceIdWithExperiment:
-    """Unit tests for experiment-gated surface ID routing (CA and IE)."""
+    """Unit tests for experiment-gated surface ID routing (IE)."""
 
     @pytest.mark.parametrize(
         "locale,region,exp_name,exp_branch,feeds,expected",
         [
-            # --- CA experiment: sections-in-canada ---
-            # Treatment branch
-            (
-                Locale.EN_CA,
-                "CA",
-                "sections-in-canada",
-                "sections-ca-content",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_CA,
-            ),
-            # Optin prefix
-            (
-                Locale.EN_CA,
-                "CA",
-                "optin-sections-in-canada",
-                "sections-ca-content",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_CA,
-            ),
-            # Layout-only branch falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "sections-in-canada",
-                "sections-layout-only",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # Control branch falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "sections-in-canada",
-                "control",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # No sections feed falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "sections-in-canada",
-                "sections-ca-content",
-                ["general"],
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # None feeds falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "sections-in-canada",
-                "sections-ca-content",
-                None,
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # Different experiment falls back
-            (
-                Locale.EN_CA,
-                "CA",
-                "other-experiment",
-                "sections-ca-content",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_US,
-            ),
-            # Region derived from locale
-            (
-                Locale.EN_CA,
-                None,
-                "sections-in-canada",
-                "sections-ca-content",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_CA,
-            ),
-            # Base en locale with CA region
-            (
-                Locale.EN,
-                "CA",
-                "sections-in-canada",
-                "sections-ca-content",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_CA,
-            ),
-            # US region unaffected
-            (
-                Locale.EN_US,
-                "US",
-                "sections-in-canada",
-                "sections-ca-content",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_US,
-            ),
             # --- IE experiment: sections-in-ie ---
             # Treatment branch
             (
@@ -330,16 +239,6 @@ class TestGetRecommendationSurfaceIdWithExperiment:
             ),
         ],
         ids=[
-            "ca-treatment",
-            "ca-optin",
-            "ca-layout-only-fallback",
-            "ca-control-fallback",
-            "ca-no-sections-feed",
-            "ca-none-feeds",
-            "ca-different-experiment",
-            "ca-region-from-locale",
-            "ca-en-locale",
-            "ca-us-unaffected",
             "ie-treatment",
             "ie-optin",
             "ie-control-fallback",
@@ -363,13 +262,13 @@ class TestGetRecommendationSurfaceIdWithExperiment:
     @pytest.mark.parametrize(
         "locale,region,expected",
         [
-            (Locale.EN_CA, "CA", SurfaceId.NEW_TAB_EN_US),
+            (Locale.EN_CA, "CA", SurfaceId.NEW_TAB_EN_CA),
             (Locale.EN_GB, "IE", SurfaceId.NEW_TAB_EN_GB),
         ],
         ids=["ca-no-request", "ie-no-request"],
     )
     def test_no_request_returns_fallback(self, locale, region, expected):
-        """Test that None request returns the fallback surface (backwards compatibility)."""
+        """Test that None request returns the expected surface."""
         assert get_recommendation_surface_id(locale, region, request=None) == expected
 
 

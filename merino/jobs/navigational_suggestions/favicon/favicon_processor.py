@@ -202,6 +202,18 @@ class FaviconProcessor:
                                 width, height = image.get_dimensions()
                                 width_val = min(width, height)
                             except Exception as e:
+                                # Check if this is an SVG served without .svg extension
+                                if image and "image/svg+xml" in image.content_type:
+                                    try:
+                                        dst_favicon_name = uploader.destination_favicon_name(image)
+                                        result = uploader.upload_image(
+                                            image, dst_favicon_name, forced_upload=True
+                                        )
+                                        return str(result), min_width, failed_image_validations
+                                    except Exception as svg_err:
+                                        logger.warning(
+                                            f"Failed to upload misidentified SVG: {svg_err}"
+                                        )
                                 logger.warning(
                                     f"Exception getting dimensions at position {local_idx}: {e}"
                                 )

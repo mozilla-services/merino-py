@@ -352,7 +352,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": [],
         "indirect": [
             "tests/unit/jobs/csv_rs_uploader/test_csv_rs_uploader.py",
-            "tests/unit/jobs/csv_rs_uploader/test_fakespot.py",
             "tests/unit/jobs/csv_rs_uploader/test_mdn.py",
             "tests/unit/jobs/csv_rs_uploader/test_pocket.py",
             "tests/unit/jobs/relevancy_uploader/test_relevancy_csv_uploader.py",
@@ -365,10 +364,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
     },
     "merino/jobs/csv_rs_uploader/chunked_rs_uploader.py": {
         "direct": [],
-        "indirect": [],
-    },
-    "merino/jobs/csv_rs_uploader/fakespot.py": {
-        "direct": ["tests/unit/jobs/csv_rs_uploader/test_fakespot.py"],
         "indirect": [],
     },
     "merino/jobs/csv_rs_uploader/mdn.py": {
@@ -759,6 +754,16 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/unit/utils/test_log_data_creator.py",
         ],
     },
+    "merino/optimizers/models.py": {
+        "direct": ["tests/unit/optimizers/test_models.py"],
+        "indirect": [
+            "tests/unit/optimizers/test_thompson.py",
+        ],
+    },
+    "merino/optimizers/thompson.py": {
+        "direct": ["tests/unit/optimizers/test_thompson.py"],
+        "indirect": ["tests/unit/providers/suggest/adm/test_provider_thompson.py"],
+    },
     "merino/providers/manifest/__init__.py": {
         "direct": [],
         "indirect": [
@@ -829,7 +834,10 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         ],
     },
     "merino/providers/suggest/adm/provider.py": {
-        "direct": ["tests/unit/providers/suggest/adm/test_provider.py"],
+        "direct": [
+            "tests/unit/providers/suggest/adm/test_provider.py",
+            "tests/unit/providers/suggest/adm/test_provider_thompson.py",
+        ],
         "indirect": [],
     },
     "merino/providers/suggest/amo/__init__.py": {

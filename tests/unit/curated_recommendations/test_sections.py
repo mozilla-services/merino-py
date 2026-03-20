@@ -24,12 +24,11 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
-    CACrawledContentRescaler,
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
+    DECrawledContentRescaler,
     IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
-    UKCrawledContentRescaler,
 )
 from merino.curated_recommendations.protocol import (
     ITEM_SUBTOPIC_FLAG,
@@ -47,7 +46,7 @@ from merino.curated_recommendations.sections import (
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
     is_daily_briefing_experiment,
-    should_show_popular_today_with_headlines,
+    should_show_popular_today_with_daily_briefing,
     update_received_feed_rank,
     get_sections_with_enough_items,
     get_corpus_sections,
@@ -57,10 +56,12 @@ from merino.curated_recommendations.sections import (
     cycle_layouts_for_ranked_sections,
     LAYOUT_CYCLE,
     HEADLINES_SECTION_KEY,
+    DAILY_BRIEFING_SECTION_KEY,
     get_top_story_list,
     get_legacy_topic_ids,
     pick_random_fresh_story,
-    put_headlines_first_then_top_stories,
+    put_daily_briefing_first_then_top_stories,
+    split_daily_briefing_section,
     dedupe_recommendations_across_sections,
 )
 from tests.unit.curated_recommendations.fixtures import (
@@ -237,17 +238,20 @@ class TestMlSectionsExperiment:
             (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
             (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", False),
             ("other", "treatment", "US", True),
+            ("other", "treatment", "DE", True),
             ("other", "treatment", "ZZ", False),
         ],
     )
     def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
         """Test that experiment flag logic matches expected behavior for ML sections"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
+        req = SimpleNamespace(
+            experimentName=name, experimentBranch=branch, region=region, inferredInterests=None
+        )
         assert is_subtopics_experiment(req) is expected
 
 
 class TestDailyBriefingExperiment:
-    """Tests covering is_daily_briefing_experiment and should_show_popular_today_with_headlines"""
+    """Tests covering is_daily_briefing_experiment and should_show_popular_today_with_daily_briefing"""
 
     @pytest.mark.parametrize(
         "name,branch,expected",
@@ -274,7 +278,7 @@ class TestDailyBriefingExperiment:
     )
     def test_is_daily_briefing_experiment(self, name, branch, expected):
         """Test that is_daily_briefing_experiment returns True for either treatment branch."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert is_daily_briefing_experiment(req) is expected
 
     @pytest.mark.parametrize(
@@ -298,10 +302,10 @@ class TestDailyBriefingExperiment:
             ("other-experiment", "treatment", False),
         ],
     )
-    def test_should_show_popular_today_with_headlines(self, name, branch, expected):
-        """Test that should_show_popular_today_with_headlines returns True only for briefing-with-popular."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch)
-        assert should_show_popular_today_with_headlines(req) is expected
+    def test_should_show_popular_today_with_daily_briefing(self, name, branch, expected):
+        """Test that should_show_popular_today_with_daily_briefing returns True only for briefing-with-popular."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
+        assert should_show_popular_today_with_daily_briefing(req) is expected
 
 
 class TestFilterSectionsByExperiment:
@@ -324,9 +328,9 @@ class TestFilterSectionsByExperiment:
             ("other", "treatment", "CA", SurfaceId.NEW_TAB_EN_US, CrawledContentRescaler),
             (None, None, "US", None, CrawledContentRescaler),
             (None, None, "CA", None, CrawledContentRescaler),
-            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
-            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
-            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, UKCrawledContentRescaler),
+            (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
+            (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
+            (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
             # IE with sections branch gets IECrawledContentRescaler
             (
                 "sections-in-ie",
@@ -345,31 +349,42 @@ class TestFilterSectionsByExperiment:
             ),
             # IE surface without experiment falls through to CrawledContentRescaler
             (None, None, "IE", SurfaceId.NEW_TAB_EN_IE, CrawledContentRescaler),
-            # CA with sections-ca-content branch gets CACrawledContentRescaler
+            # CA surface gets CrawledContentRescaler (no experiment gating)
+            (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CrawledContentRescaler),
             (
                 "sections-in-canada",
                 "sections-ca-content",
                 "CA",
                 SurfaceId.NEW_TAB_EN_CA,
-                CACrawledContentRescaler,
-            ),
-            # CA with wrong branch falls through to CrawledContentRescaler
-            (
-                "sections-in-canada",
-                "sections-layout-only",
-                "CA",
-                SurfaceId.NEW_TAB_EN_CA,
                 CrawledContentRescaler,
             ),
-            # CA surface without experiment falls through to CrawledContentRescaler
-            (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CrawledContentRescaler),
+            # DE with sections branch gets DECrawledContentRescaler
+            (
+                "sections-in-germany",
+                "sections",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                DECrawledContentRescaler,
+            ),
+            # DE with wrong branch falls through to CrawledContentPinnedFreshRescaler
+            (
+                "sections-in-germany",
+                "control",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                CrawledContentPinnedFreshRescaler,
+            ),
+            # DE surface without experiment falls through to CrawledContentPinnedFreshRescaler
+            (None, None, "DE", SurfaceId.NEW_TAB_DE_DE, CrawledContentPinnedFreshRescaler),
         ],
     )
     def test_get_ranking_rescaler_for_branch(
         self, name, branch, region, surface_id, expected_class
     ):
         """Test that we get the appropriate rescaler"""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, region=region)
+        req = SimpleNamespace(
+            experimentName=name, experimentBranch=branch, region=region, inferredInterests=None
+        )
         from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
 
         if expected_class is not None:
@@ -581,6 +596,28 @@ class TestMapCorpusSectionToSection:
 
         assert [rec.corpusItemId for rec in sec.recommendations] == ["dup", "unique"]
         assert [rec.receivedRank for rec in sec.recommendations] == [0, 1]
+
+    def test_headlines_items_not_flagged_as_subtopics(self):
+        """Headlines items should not carry ITEM_SUBTOPIC_FLAG (HNT-2057)."""
+        cs = CorpusSection(
+            sectionItems=[generate_corpus_item("h1", "sched_h1")],
+            title="Headlines",
+            externalId=HEADLINES_SECTION_KEY,
+            createSource=CreateSource.ML,
+        )
+        sec = map_corpus_section_to_section(cs, 0, is_legacy_section=False)
+        assert not sec.recommendations[0].in_experiment(ITEM_SUBTOPIC_FLAG)
+
+    def test_non_legacy_ml_items_flagged_as_subtopics(self):
+        """Non-legacy ML section items should carry ITEM_SUBTOPIC_FLAG."""
+        cs = CorpusSection(
+            sectionItems=[generate_corpus_item("s1", "sched_s1")],
+            title="NFL",
+            externalId="nfl",
+            createSource=CreateSource.ML,
+        )
+        sec = map_corpus_section_to_section(cs, 0, is_legacy_section=False)
+        assert sec.recommendations[0].in_experiment(ITEM_SUBTOPIC_FLAG)
 
     @pytest.mark.parametrize(
         "followable,allow_ads",
@@ -1283,90 +1320,113 @@ class TestCycleLayoutsForRankedSections:
             expected_layout = LAYOUT_CYCLE[idx % len(LAYOUT_CYCLE)]
             assert section.layout == expected_layout
 
+    def test_daily_briefing_excluded_from_layout_cycling(self):
+        """Daily-briefing section should not have its layout modified by cycling."""
+        sections = generate_sections_feed(5, has_top_stories=True)
+        sections[DAILY_BRIEFING_SECTION_KEY] = Section(
+            receivedFeedRank=0,
+            recommendations=[],
+            title="Daily Briefing",
+            layout=copy.deepcopy(layout_4_medium),
+        )
 
-class TestPutHeadlinesFirstThenTopStories:
-    """Tests for put_headlines_first_then_top_stories."""
+        original_db_layout = sections[DAILY_BRIEFING_SECTION_KEY].layout
 
-    def test_headlines_not_present(self):
-        """Test if headlines section is not present, ranks and order are unchanged for other sections."""
+        cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
+
+        # daily-briefing layout should remain unchanged
+        assert sections[DAILY_BRIEFING_SECTION_KEY].layout == original_db_layout
+
+
+class TestPutDailyBriefingFirstThenTopStories:
+    """Tests for put_daily_briefing_first_then_top_stories."""
+
+    def test_daily_briefing_not_present(self):
+        """Test if daily-briefing section is not present, ranks and order are unchanged."""
         sections = generate_sections_feed(section_count=4, has_top_stories=True)
 
         # Save original sectionId -> rank for comparison
         original_sections = {sid: sec.receivedFeedRank for sid, sec in sections.items()}
 
-        result = put_headlines_first_then_top_stories(sections)
+        result = put_daily_briefing_first_then_top_stories(sections)
 
         # Nothing should be changed
         assert result is sections
         new_sections = {sid: sec.receivedFeedRank for sid, sec in result.items()}
         assert new_sections == original_sections
 
-    def test_with_headlines_and_top_stories(self):
-        """Test when headlines is put on top (0), top_stories right after (1) & other sections are rank=2...N and preserve relative order."""
+    def test_with_daily_briefing_and_top_stories(self):
+        """Test when daily-briefing is put on top (0), top_stories right after (1) & other sections are rank=2...N and preserve relative order."""
         feed = generate_sections_feed(section_count=6, has_top_stories=True)
         top_stories_section = feed["top_stories_section"]
         top_stories_section.receivedFeedRank = 0
 
-        # Insert headlines section at rank 3
-        feed[HEADLINES_SECTION_KEY] = Section(
+        # Insert daily-briefing section at rank 3
+        feed[DAILY_BRIEFING_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
-            title="Your Briefing",
+            title="Daily Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed[HEADLINES_SECTION_KEY]
+        briefing_section = feed[DAILY_BRIEFING_SECTION_KEY]
 
-        put_headlines_first_then_top_stories(feed)
+        put_daily_briefing_first_then_top_stories(feed)
 
-        # Check ranks for headlines & top_stories are updated
-        assert headlines_section.receivedFeedRank == 0
+        # Check ranks for daily-briefing & top_stories are updated
+        assert briefing_section.receivedFeedRank == 0
         assert top_stories_section.receivedFeedRank == 1
 
-        # Get the other sections besides headlines & top_stories
+        # Get the other sections besides daily-briefing & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
+            (
+                sid
+                for sid in feed
+                if sid not in (DAILY_BRIEFING_SECTION_KEY, "top_stories_section")
+            ),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
-        # Expected: headlines first -> top_stories_section second, then rest in keys order without headlines & top
-        expected_order = [HEADLINES_SECTION_KEY, "top_stories_section"] + remaining_sections
+        expected_order = [DAILY_BRIEFING_SECTION_KEY, "top_stories_section"] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
 
-    def test_with_headlines_and_no_top_stories(self):
-        """Test when no top_stories present, headlines is put on top & other sections are rank=1...N and preserve relative order."""
+    def test_with_daily_briefing_and_no_top_stories(self):
+        """Test when no top_stories present, daily-briefing is put on top & other sections are rank=1...N."""
         feed = generate_sections_feed(section_count=6, has_top_stories=False)
 
-        # Insert headlines section at rank 3
-        feed[HEADLINES_SECTION_KEY] = Section(
+        # Insert daily-briefing section at rank 3
+        feed[DAILY_BRIEFING_SECTION_KEY] = Section(
             receivedFeedRank=3,
             recommendations=[],
-            title="Your Briefing",
+            title="Daily Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        headlines_section = feed[HEADLINES_SECTION_KEY]
+        briefing_section = feed[DAILY_BRIEFING_SECTION_KEY]
 
-        # Get the other sections besides headlines & top_stories
+        # Get the other sections besides daily-briefing & top_stories
         remaining_sections = sorted(
-            (sid for sid in feed if sid not in (HEADLINES_SECTION_KEY, "top_stories_section")),
+            (
+                sid
+                for sid in feed
+                if sid not in (DAILY_BRIEFING_SECTION_KEY, "top_stories_section")
+            ),
             key=lambda sid: feed[sid].receivedFeedRank,
         )
 
-        put_headlines_first_then_top_stories(feed)
+        put_daily_briefing_first_then_top_stories(feed)
 
-        # Headlines should be on top rank==0
-        assert headlines_section.receivedFeedRank == 0
+        # Daily-briefing should be on top rank==0
+        assert briefing_section.receivedFeedRank == 0
 
-        # Expected: headlines first -> then rest in keys order without headlines & top
-        expected_order = [HEADLINES_SECTION_KEY] + remaining_sections
+        expected_order = [DAILY_BRIEFING_SECTION_KEY] + remaining_sections
 
         for idx, sid in enumerate(expected_order):
             assert feed[sid].receivedFeedRank == idx
 
 
-class TestSplitHeadlinesSection:
-    """Tests for split_headlines_section."""
+class TestSplitDailyBriefingSection:
+    """Tests for split_daily_briefing_section."""
 
     def generate_corpus_section(self, external_id: str, title: str = "") -> CorpusSection:
         """Generate a minimal corpus section."""
@@ -1376,13 +1436,38 @@ class TestSplitHeadlinesSection:
 
         return corpus_section
 
+    def test_extracts_daily_briefing(self):
+        """Test that daily-briefing section is extracted and others remain."""
+        daily_briefing = self.generate_corpus_section("daily-briefing", "Daily Briefing")
+        sports = self.generate_corpus_section("sports", "Sports")
+        headlines = self.generate_corpus_section("headlines", "Headlines")
+
+        result_briefing, remaining = split_daily_briefing_section(
+            [daily_briefing, sports, headlines]
+        )
+
+        assert result_briefing is daily_briefing
+        assert len(remaining) == 2
+        assert remaining[0] is sports
+        assert remaining[1] is headlines
+
+    def test_no_daily_briefing(self):
+        """Test that None is returned when no daily-briefing section exists."""
+        sports = self.generate_corpus_section("sports", "Sports")
+        headlines = self.generate_corpus_section("headlines", "Headlines")
+
+        result_briefing, remaining = split_daily_briefing_section([sports, headlines])
+
+        assert result_briefing is None
+        assert len(remaining) == 2
+
 
 class TestGetCorpusSections:
     """Tests for get_corpus_sections function."""
 
     @pytest.fixture
-    def sections_backend_with_headlines_section(self):
-        """Fake SectionsProtocol returning data with a headlines section."""
+    def sections_backend_with_daily_briefing(self):
+        """Fake SectionsProtocol returning data with a daily-briefing section."""
         mock_backend = MagicMock(spec=SectionsProtocol)
 
         sports = MagicMock()
@@ -1395,6 +1480,16 @@ class TestGetCorpusSections:
         sports.iab = None
         sports.createSource = CreateSource.ML
 
+        daily_briefing = MagicMock()
+        daily_briefing.externalId = DAILY_BRIEFING_SECTION_KEY
+        daily_briefing.title = "Daily Briefing"
+        daily_briefing.description = "Your daily briefing"
+        daily_briefing.heroTitle = None
+        daily_briefing.heroSubtitle = None
+        daily_briefing.sectionItems = []
+        daily_briefing.iab = {"taxonomy": "IAB-3.0", "categories": ["386"]}
+        daily_briefing.createSource = CreateSource.ML
+
         headlines = MagicMock()
         headlines.externalId = HEADLINES_SECTION_KEY
         headlines.title = "Headlines"
@@ -1402,10 +1497,10 @@ class TestGetCorpusSections:
         headlines.heroTitle = None
         headlines.heroSubtitle = None
         headlines.sectionItems = []
-        headlines.iab = {"taxonomy": "IAB-3.0", "categories": ["386", "JLBCU7"]}
+        headlines.iab = {"taxonomy": "IAB-3.0", "categories": ["386"]}
         headlines.createSource = CreateSource.ML
 
-        mock_backend.fetch = AsyncMock(return_value=[sports, headlines])
+        mock_backend.fetch = AsyncMock(return_value=[sports, daily_briefing, headlines])
         return mock_backend
 
     @pytest.fixture
@@ -1464,12 +1559,12 @@ class TestGetCorpusSections:
     @pytest.mark.asyncio
     async def test_section_transformation(self, sections_backend, sample_backend_data):
         """Verify mapping logic for get_corpus_sections."""
-        headlines, result = await get_corpus_sections(
+        raw_briefing, result = await get_corpus_sections(
             sections_backend=sections_backend, surface_id=SurfaceId.NEW_TAB_EN_US, min_feed_rank=5
         )
 
-        # No headlines section present here
-        assert headlines is None
+        # No daily-briefing section present here
+        assert raw_briefing is None
 
         assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
         section_a = result["business"]
@@ -1488,20 +1583,42 @@ class TestGetCorpusSections:
         assert section_c.layout == layout_6_tiles
 
     @pytest.mark.asyncio
-    async def test_headlines_section_split_out(self, sections_backend_with_headlines_section):
-        """Headlines section should be returned separately from the other sections."""
-        headlines, sections = await get_corpus_sections(
-            sections_backend=sections_backend_with_headlines_section,
+    async def test_daily_briefing_split_out(self, sections_backend_with_daily_briefing):
+        """Daily-briefing section should be returned separately from the other sections."""
+        raw_briefing, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_daily_briefing,
             surface_id=SurfaceId.NEW_TAB_EN_US,
             min_feed_rank=1,
+            include_subtopics=True,
         )
 
-        assert headlines is not None
-        assert headlines.title == "Headlines"
-        assert headlines.subtitle == "Top Headlines today"
+        assert raw_briefing is not None
+        assert raw_briefing.externalId == DAILY_BRIEFING_SECTION_KEY
+        assert raw_briefing.title == "Daily Briefing"
+        assert DAILY_BRIEFING_SECTION_KEY not in sections
+        # Headlines stays in the regular sections as a subtopic
+        assert HEADLINES_SECTION_KEY in sections
+        # Sports is a legacy topic, always included
+        assert "sports" in sections
+
+    @pytest.mark.asyncio
+    async def test_headlines_filtered_without_subtopics(
+        self, sections_backend_with_daily_briefing
+    ):
+        """Headlines is an ML non-legacy section, filtered out when subtopics disabled."""
+        raw_briefing, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_daily_briefing,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+            include_subtopics=False,
+        )
+
+        # Daily-briefing still extracted (bypasses filter)
+        assert raw_briefing is not None
+        # Headlines is filtered out (not legacy, not manual, subtopics disabled)
         assert HEADLINES_SECTION_KEY not in sections
-        # Remaining sections should still be mapped.
-        assert set(sections.keys()) == {"sports"}
+        # Sports is a legacy topic, always included
+        assert "sports" in sections
 
     @pytest.mark.asyncio
     async def test_includes_both_manual_and_ml_sections(

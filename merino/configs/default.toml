@@ -170,9 +170,6 @@ collection = "quicksuggest-other"
 # The remote settings collection that contains AMP data.
 collection_amp = "quicksuggest-amp"
 
-# The collection to use for uploading fakespot suggestions if not specified on the command line
-collection_fakespot = "fakespot-suggest-products"
-
 # MERINO_REMOTE_SETTINGS__AUTH
 # Authorization token when uploading suggestions.
 auth = ""
@@ -199,15 +196,11 @@ form_factors = ["desktop"]
 [default.mars]
 # MERINO_MARS__BASE_URL
 # The base URL for the MARS API.
-base_url = "https://ads.mozilla.org/"
+base_url = "https://ads.mozilla.org/v1/suggest/"
 
 # MERINO_MARS__SUGGESTION_URL_PATH
 # The URL path for fetching suggestions from the MARS API.
-suggestion_url_path = "suggestions"
-
-# MERINO_MARS__ICON_URL_PATH
-# The URL path prefix for fetching icons from the MARS API.
-icon_url_path = "icons"
+suggestion_url_path = "data"
 
 # MERINO_MARS__CONNECT_TIMEOUT_SEC
 # Timeout in seconds for establishing a connection to the MARS API.
@@ -303,6 +296,12 @@ cdn_hostname = ""
 # Set to `true` in production and `false` in staging or development.
 gcs_enabled = true
 
+[default.engagement]
+gcs_storage_bucket = ""
+
+gcs_bq_project = ""
+
+gcs_storage_project = ""
 
 [default.icon]
 # Subdirectory within bucket for favicons
@@ -368,8 +367,8 @@ current_condition_ttl_sec = 1800 # 1/2 hr
 forecast_ttl_sec = 3600 # 1 hr
 
 # MERINO_PROVIDERS__ACCUWEATHER__CACHE_TTLS__HOURLY_FORECAST_TTL_SEC
-# Cache TTL for hourly forecasts (1 hour).
-hourly_forecast_ttl_sec = 3600
+# Cache TTL for hourly forecasts (30 minutes).
+hourly_forecast_ttl_sec = 1800
 
 [default.providers.sports]
 type="sports"
@@ -581,6 +580,26 @@ resync_interval_sec = 3600
 # a reporting issue. See DISCO-3167.
 score = 0.31
 
+[default.providers.adm.thompson]
+# MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
+# Toggle Thompson sampling
+enabled = false
+
+# MERINO_PROVIDERS__ADM__THOMPSON__MIN_ATTEMPTED_COUNT
+# Minimal attempted count eligible for Thompson sampling
+min_attempted_count = 500
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENABLED
+# Toggle to enable the dummy candidate for Thompson sampling
+dummy_enabled = true
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENGAGED_COUNT
+# The dummy candidate for Thompson sampling - engaged count
+dummy_engaged_count = 1
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
+# The dummy candidate for Thompson sampling - attempted count
+dummy_attempted_count = 1000
 
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL

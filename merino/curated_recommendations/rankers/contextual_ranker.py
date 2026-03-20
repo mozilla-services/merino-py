@@ -29,9 +29,11 @@ from merino.curated_recommendations.rankers.utils import (
     renumber_sections,
 )
 
-# We are still learning how to compute how many impressions before we can trust the ranker score completely
-# So far, 4000 impressions seems to be a reasonable average beta value to use as a threshold
-# This means that items with less than 4000 impressions will be marked as fresh.
+# We are still learning how to compute how many impressions before we can trust the ranker score completely.
+# Because Contexual ranking is an experiment, the value is somewhat arbitrary because the impression counts
+# we're looking at are total impressions and we care about impressions with the inferred interests. When
+# contexual is rolled out we can use a dynamic computed value based on daily impressions.
+
 CONTEXUAL_AVG_BETA_VALUE = 4000
 CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
     0.5  # Underscored items tend to scale higher, leading to too much fresh content
@@ -42,12 +44,13 @@ logger = logging.getLogger(__name__)
 # These topics are in the current interest vector but not being used to determine the
 # cohort selection.
 CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING = {
-    Topic.PERSONAL_FINANCE: 1.0,
+    Topic.PERSONAL_FINANCE: 1.2,
     Topic.TECHNOLOGY: 1.0,
-    Topic.BUSINESS: 1.0,
+    Topic.POLITICS: 0.3,
+    Topic.ARTS: 0.3,
 }
 
-CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0007
+CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0003
 CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_OFFSET = 0.2
 
 
@@ -119,7 +122,6 @@ class ContextualRanker(Ranker):
                 mean, stdev = contextual_scores.get_score_pair(rec.corpusItemId)
 
             beta_value_for_fresh_check = non_rescaled_b_prior
-
             if mean is None or stdev is None:
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)

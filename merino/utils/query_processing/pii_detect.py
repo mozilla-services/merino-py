@@ -3,7 +3,7 @@
 import re
 from enum import StrEnum
 
-EMAIL_PATTERN = re.compile(r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}", re.IGNORECASE)
+AT_SIGN_PATTERN = re.compile(r"@")
 NUMERIC_PATTERN = re.compile(r"\d")
 
 
@@ -16,8 +16,8 @@ class PIIType(StrEnum):
 
 
 def query_contains_email(query: str) -> bool:
-    """Determine if query contains an email address."""
-    return bool(EMAIL_PATTERN.search(query))
+    """Determine if query contains an @ sign, indicating an email address or social media handle."""
+    return bool(AT_SIGN_PATTERN.search(query))
 
 
 def query_contains_numeric(query: str) -> bool:

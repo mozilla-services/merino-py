@@ -196,7 +196,7 @@ class SuperInferredModel(LocalModelBackend):
         Topic.ARTS.value,
         Topic.POLITICS.value,
         Topic.PARENTING.value,
-        Topic.BUSINESS.value,
+        Topic.FOOD.value,
         Topic.TECHNOLOGY.value,
         Topic.SCIENCE.value,
         # Time zone is added for 8th private feature

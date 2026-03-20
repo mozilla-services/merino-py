@@ -62,6 +62,7 @@ class HourlyForecast(BaseModel):
     temperature: Temperature
     icon_id: int
     url: HttpUrl
+    summary: str
 
 
 class HourlyForecastsWithTTL(NamedTuple):

@@ -21,13 +21,21 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
+# This was a 50% experiment but overal users has declined over time
+INFERRED_EXPERIMENT_PERCENTAGE = 0.25
+
 LOCAL_RERANK_WEGHT = (
     30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
 )
-# the normalized interest vector is added if there is an interest match.
 
-FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 13000
-EST_TOP_STORY_TILE_IMP_PER_CYCLE = 220_000_000 // 24 // 4  # Assuming 4 ETL data cycles per hour
+FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 12000
+
+EST_DAILY_IMPRESSIONS_TOP_STORY_TILE = (
+    21_000_000  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
+)
+EST_TOP_STORY_TILE_IMP_PER_CYCLE = (
+    EST_DAILY_IMPRESSIONS_TOP_STORY_TILE // 24 // 4
+)  # Assuming 4 ETL data cycles per hour
 
 # Normalized relative impresions per hour. Generated via https://sql.telemetry.mozilla.org/queries/115220
 US_UTC_RELATIVE_IMPRESSIONS_NORM = [
@@ -134,23 +142,18 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
 
 
-CA_EXPERIMENT_TREATMENT_PERCENT = 0.10
-
-
-class CACrawledContentRescaler(CrawledContentRescaler):
-    """Rescaler for CA experiment — scales engagement up by 1/0.10 = 10x
-    to compensate for only 10% of CA traffic generating engagement data.
+class CrawledContentPinnedFreshRescalerInferred(CrawledContentPinnedFreshRescaler):
+    """Rescaler for inferred contextual interest experiment.
+    Similar to CrawledContentPinnedFreshRescaler but with more aggressive settings to account
+    for smaller experiment size.
     """
 
     def __init__(self, **data: Any):
+        data.setdefault(
+            "fresh_items_top_stories_fixed_est_imp_per_cycle",
+            round(EST_TOP_STORY_TILE_IMP_PER_CYCLE * INFERRED_EXPERIMENT_PERCENTAGE),
+        )
         super().__init__(**data)
-
-    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
-        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
-        treatment percentage to compensate for small experiment size.
-        """
-        opens, no_opens = super().rescale(rec, opens, no_opens)
-        return opens / CA_EXPERIMENT_TREATMENT_PERCENT, no_opens / CA_EXPERIMENT_TREATMENT_PERCENT
 
 
 IE_EXPERIMENT_TREATMENT_PERCENT = 0.10
@@ -172,21 +175,23 @@ class IECrawledContentRescaler(CrawledContentRescaler):
         return opens / IE_EXPERIMENT_TREATMENT_PERCENT, no_opens / IE_EXPERIMENT_TREATMENT_PERCENT
 
 
-class UKCrawledContentRescaler(CrawledContentRescaler):
-    """Rescaler that has settings for any Crawl type deployment that has many content item updates throughout the day
-    Special handling is added for certain content types that are blocked from most popular section
+DE_EXPERIMENT_TREATMENT_PERCENT = 0.10
+
+
+class DECrawledContentRescaler(CrawledContentRescaler):
+    """Rescaler for DE experiment — scales engagement up by 1/0.10 = 10x
+    to compensate for only 10% of DE traffic generating engagement data.
     """
 
     def __init__(self, **data: Any):
         super().__init__(**data)
 
     def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
-        """Story is not allowed in most popular in some cases. We therefore will have to get by with many less impressions
-        If we don't do this, these stories will rely more on priors for ranking, causing poor exploration/exploitation balance
-        both in terms of section ranking and ranking within the section
+        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
+        treatment percentage to compensate for small experiment size.
         """
         opens, no_opens = super().rescale(rec, opens, no_opens)
-        return opens, no_opens
+        return opens / DE_EXPERIMENT_TREATMENT_PERCENT, no_opens / DE_EXPERIMENT_TREATMENT_PERCENT
 
 
 class SchedulerHoldbackRescaler(EngagementRescaler):

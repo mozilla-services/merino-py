@@ -6,10 +6,12 @@ import time
 from enum import Enum, unique
 from typing import Any, Final
 
-from moz_merino_ext.amp import AmpIndexManager
+from moz_merino_ext.amp import AmpIndexManager, PyAmpResult
 
 from pydantic import HttpUrl
 
+from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
+from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
@@ -38,6 +40,9 @@ FORM_FACTORS_FALLBACK_MAPPING = {
     "desktop": FormFactor.DESKTOP.value,
     "phone": FormFactor.PHONE.value,
 }
+
+FALLBACK_FORM_FACTOR: str = "other"
+FALLBACK_COUNTRY_CODE: str = "US"
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -75,6 +80,8 @@ class Provider(BaseProvider):
     cron_task: asyncio.Task
     backend: AdmBackend
     resync_interval_sec: float
+    min_attempted_count: int
+    thompson: ThompsonSampler | None = None
 
     def __init__(
         self,
@@ -84,6 +91,8 @@ class Provider(BaseProvider):
         resync_interval_sec: float,
         cron_interval_sec: float,
         enabled_by_default: bool = True,
+        min_attempted_count: int = 0,
+        thompson: ThompsonSampler | None = None,
         **kwargs: Any,
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
@@ -94,6 +103,8 @@ class Provider(BaseProvider):
         self.suggestion_content = SuggestionContent(index_manager=AmpIndexManager(), icons={})  # type: ignore[no-untyped-call]
         self._name = name
         self._enabled_by_default = enabled_by_default
+        self.min_attempted_count = min_attempted_count
+        self.thompson = thompson
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -137,42 +148,76 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
+    def _fetch_engagement_metrics(self, _suggestion: PyAmpResult) -> EngagementMetrics:
+        """Fetch engagement metrics for an AMP suggestion."""
+        # TODO(nanj): look up the real engagement metrics.
+        engaged, attempted = 1, 1
+        return EngagementMetrics(engaged=engaged, attempted=attempted)
+
+    def _select(self, suggestions: list[PyAmpResult]) -> PyAmpResult | None:
+        """Select a suggestion from the candidate collection.
+
+        Params:
+          - `suggestions`: A list of candidates `PyAmpResult`
+        Returns:
+            Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
+            determines so. Return the first candidate when the optimizer is disabled.
+        """
+        if self.thompson:
+            candidates = [
+                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
+                for i, suggestion in enumerate(suggestions)
+            ]
+
+            # If it's the only candidate with an attempted count less than the threshold, skip sampling.
+            if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
+                return suggestions[0]
+
+            winner = self.thompson.sample(candidates)
+            return suggestions[winner.id] if winner else None
+
+        return suggestions[0] if suggestions else None
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q: str = srequest.query
         form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
         country = srequest.geolocation.country
-        if country and form_factor:
-            segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
-            idx_id = f"{country}/{segment}"
-            if self.suggestion_content.index_manager.has(idx_id) and (
-                suggest_look_ups := self.suggestion_content.index_manager.query(idx_id, q)
-            ):
-                res = suggest_look_ups[0]
 
-                is_sponsored = res.iab_category == IABCategory.SHOPPING
+        # Set the fallback country code and form factor if absent. See "DISCO-3971" for details.
+        form_factor = form_factor or FALLBACK_FORM_FACTOR
+        country = country or FALLBACK_COUNTRY_CODE
 
-                url: str = res.url
+        segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
+        idx_id = f"{country}/{segment}"
+        if (
+            self.suggestion_content.index_manager.has(idx_id)
+            and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
+            and (res := self._select(suggestions))
+        ):
+            is_sponsored = res.iab_category == IABCategory.SHOPPING
 
-                suggestion_dict: dict[str, Any] = {
-                    "block_id": res.block_id,
-                    "full_keyword": res.full_keyword,
-                    "title": res.title,
-                    "url": url,
-                    "categories": res.serp_categories,
-                    "impression_url": res.impression_url,
-                    "click_url": res.click_url,
-                    "provider": self.name,
-                    "advertiser": res.advertiser,
-                    "is_sponsored": is_sponsored,
-                    "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
-                    "score": self.score,
-                }
-                return [
-                    (
-                        SponsoredSuggestion(**suggestion_dict)
-                        if is_sponsored
-                        else NonsponsoredSuggestion(**suggestion_dict)
-                    )
-                ]
+            url: str = res.url
+
+            suggestion_dict: dict[str, Any] = {
+                "block_id": res.block_id,
+                "full_keyword": res.full_keyword,
+                "title": res.title,
+                "url": url,
+                "categories": res.serp_categories,
+                "impression_url": res.impression_url,
+                "click_url": res.click_url,
+                "provider": self.name,
+                "advertiser": res.advertiser,
+                "is_sponsored": is_sponsored,
+                "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
+                "score": self.score,
+            }
+            return [
+                (
+                    SponsoredSuggestion(**suggestion_dict)
+                    if is_sponsored
+                    else NonsponsoredSuggestion(**suggestion_dict)
+                )
+            ]
         return []

@@ -15,7 +15,8 @@ from merino.utils.query_processing.pii_detect import (
     [
         ("no email here", False),
         ("send me an email: test.address+validation1@xn--ls8h.example.com", True),
-        ("not @ email .com ", False),
+        ("not @ email .com ", True),
+        ("follow me @username", True),
     ],
 )
 def test_query_contains_email(query, expected):

@@ -263,3 +263,40 @@ suggest/flightaware:
     scope: |
       The "api/v1/suggest" API endpoint
     alert_policy: []
+
+weather/hourly_forecasts:
+  weather_hourly_forecasts_request_timing:
+    description: |
+      A timer covering the count and latency of requests to the hourly forecasts endpoint
+    type: timing
+    labels: []
+    scope: |
+      The "api/v1/weather/hourly-forecasts" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_hit_hourly_forecasts:
+    description: |
+      A counter for AccuWeather hourly forecast cache hits
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_fetch_miss_hourly_forecasts:
+    description: |
+      A counter for AccuWeather hourly forecast cache misses
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather" API endpoint.
+    alert_policy: []
+
+  accuweather_cache_hourly_forecast_read_error:
+    description: |
+      A counter for errors reading hourly forecast data from cache
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/weather" API endpoint.
+    alert_policy: []

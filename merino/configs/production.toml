@@ -35,6 +35,13 @@ gcs_bucket = "merino-images-prodpy"
 cdn_hostname = "merino-images.services.mozilla.com"
 
 
+[production.engagement]
+gcs_storage_bucket = "merino-airflow-data-prod"
+
+gcs_bq_project = "moz-fx-data-shared-prod"
+
+gcs_storage_project = "moz-fx-merino-prod-5de4"
+
 [production.image_gcs_v2]
 # MERINO_IMAGE_GCS_V2__GCS_PROJECT
 # GCS project name that contains domain data
