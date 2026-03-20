@@ -170,6 +170,7 @@ MODEL_Q_VALUE_V3 = 0.030
 
 THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
 THRESHOLDS_V3_NON_NORMALIZED = [0.002, 0.008, 0.017]
+THRESHOLDS_V3_NON_NORMALIZED_ALL_TOPICS = [0.0001, 0.002, 0.004]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 
@@ -206,7 +207,7 @@ class SuperInferredModel(LocalModelBackend):
         if topic == SPECIAL_ALL_TOPIC_KEYWOWRD:
             return InterestVectorConfig(
                 features={f"t_{t}": 1 for t in BASE_TOPICS},
-                thresholds=thresholds,
+                thresholds=THRESHOLDS_V3_NON_NORMALIZED_ALL_TOPICS,
                 diff_p=MODEL_P_VALUE_V3,
                 diff_q=MODEL_Q_VALUE_V3,
             )
