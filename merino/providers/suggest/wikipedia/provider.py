@@ -1,6 +1,8 @@
 """The provider for the dynamic Wikipedia integration."""
 
+import asyncio
 import logging
+import time
 from typing import Any, Final
 
 from pydantic import HttpUrl
@@ -13,8 +15,10 @@ from merino.providers.suggest.base import (
     SuggestionRequest,
     Category,
 )
-from merino.providers.suggest.wikipedia.backends.protocol import WikipediaBackend
+from merino.providers.suggest.wikipedia.backends.filemanager import WikipediaFilemanager
+from merino.providers.suggest.wikipedia.backends.protocol import EngagementData, WikipediaBackend
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
+from merino.utils import cron
 
 # The Wikipedia icon backed by Merino's image CDN.
 # TODO: Use a better way to fetch this icon URL instead of hardcoding it here.
@@ -48,11 +52,20 @@ class Provider(BaseProvider):
     backend: WikipediaBackend
     score: float
     title_block_list: set[str]
+    engagement_data: EngagementData | None
+    filemanager: WikipediaFilemanager
+    engagement_resync_interval_sec: float
+    cron_interval_sec: float
+    last_engagement_fetch_at: float
+    engagement_cron_task: asyncio.Task
 
     def __init__(
         self,
         backend: WikipediaBackend,
         title_block_list: set[str],
+        engagement_gcs_bucket: str,
+        engagement_resync_interval_sec: float,
+        cron_interval_sec: float,
         name: str = "wikipedia",
         enabled_by_default: bool = True,
         query_timeout_sec: float = settings.providers.wikipedia.query_timeout_sec,
@@ -67,11 +80,50 @@ class Provider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self._query_timeout_sec = query_timeout_sec
         self.score = score
+        self.engagement_data = None
+        self.engagement_resync_interval_sec = engagement_resync_interval_sec
+        self.cron_interval_sec = cron_interval_sec
+        self.last_engagement_fetch_at = 0
+        self.filemanager = WikipediaFilemanager(
+            gcs_bucket_path=engagement_gcs_bucket,
+            blob_name="suggest-merino-exports/engagement/latest.json",
+        )
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
-        """Initialize Wikipedia provider."""
-        return
+        """Initialize Wikipedia provider and start engagement data cron job."""
+        engagement_cron_job = cron.Job(
+            name="resync_wikipedia_engagement_data",
+            interval=self.cron_interval_sec,
+            condition=self._should_fetch_engagement,
+            task=self._fetch_engagement_data,
+        )
+        self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
+
+    def _should_fetch_engagement(self) -> bool:
+        """Check if it should fetch Wikipedia engagement data from GCS."""
+        return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
+
+    async def _fetch_engagement_data(self) -> None:
+        """Fetch Wikipedia engagement data from GCS and store it in memory.
+
+        If the fetch returns no data, `last_engagement_fetch_at` is not updated
+        so the cron job retries on the next tick.
+        """
+        try:
+            data = await self.filemanager.get_file()
+            if data is None:
+                logger.warning(
+                    "Wikipedia engagement data fetch returned None, will retry on next tick"
+                )
+                return
+            self.engagement_data = data
+            self.last_engagement_fetch_at = time.time()
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch Wikipedia engagement data from GCS",
+                extra={"error": str(e)},
+            )
 
     def hidden(self) -> bool:  # noqa: D102
         """Whether this provider is hidden or not."""

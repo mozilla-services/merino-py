@@ -185,12 +185,14 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             if settings.providers.adm.thompson.enabled:
                 thompson = ThompsonSampler(
                     config=ThompsonConfig(
-                        dummy_candidate=EngagementMetrics(
-                            engaged=settings.providers.adm.thompson.dummy_engaged_count,
-                            attempted=settings.providers.adm.thompson.dummy_attempted_count,
-                        )
-                        if settings.providers.adm.thompson.dummy_enabled
-                        else None,
+                        dummy_candidate=(
+                            EngagementMetrics(
+                                engaged=settings.providers.adm.thompson.dummy_engaged_count,
+                                attempted=settings.providers.adm.thompson.dummy_attempted_count,
+                            )
+                            if settings.providers.adm.thompson.dummy_enabled
+                            else None
+                        ),
                     )
                 )
             return AdmProvider(
@@ -202,6 +204,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 enabled_by_default=setting.enabled_by_default,
                 min_attempted_count=settings.providers.adm.thompson.min_attempted_count,
                 thompson=thompson,
+                engagement_gcs_bucket=settings.engagement.gcs_storage_bucket,
+                engagement_resync_interval_sec=setting.engagement_resync_interval_sec,
             )
         case ProviderType.GEOLOCATION:
             return GeolocationProvider(
@@ -236,6 +240,9 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
+                engagement_gcs_bucket=settings.engagement.gcs_storage_bucket,
+                engagement_resync_interval_sec=setting.engagement_resync_interval_sec,
+                cron_interval_sec=setting.cron_interval_sec,
             )
         case ProviderType.POLYGON:
             cache = (
