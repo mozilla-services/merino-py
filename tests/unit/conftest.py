@@ -30,14 +30,14 @@ def fixture_srequest() -> SuggestionRequestFixture:
         query: str,
         geolocation: Optional[Location] = None,
         user_agent: Optional[UserAgent] = None,
-        client_variants: Optional[list[str]] = [],
+        client_variants: Optional[list[str]] = None,
     ) -> SuggestionRequest:
         """Create a SuggestionRequest object with a given `query`"""
         return SuggestionRequest(
             query=query,
             geolocation=geolocation if geolocation else Location(),
             user_agent=user_agent if user_agent else None,
-            client_variants=client_variants,
+            client_variants=client_variants if client_variants else [],
         )
 
     return srequest
