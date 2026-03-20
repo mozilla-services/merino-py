@@ -68,15 +68,12 @@ class GcsMLRecs(MLRecsBackend):
         # Probe in order of specificity
         ro = keys["region_cohort"]
         if ro and ro in self._cache:
-            print("cohort model hit " + ro)
             return self._cache[ro]
         ro = keys["region_offset"]
         if ro and ro in self._cache:
-            print("region offset model hit " + ro)
             return self._cache[ro]
         r = keys["region"]
         if r and r in self._cache:
-            print("region model hit " + r)
             return self._cache[r]
         return self._cache.get(GLOBAL_KEY, None)
 
