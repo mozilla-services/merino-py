@@ -623,7 +623,6 @@ def pick_random_fresh_story(
     )
     if len(fresh_items) == 0:
         return None, items
-    print("Number of fresh items eligible for top stories:", len(fresh_items))
     total_remaining = sum(
         it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
     )
@@ -632,9 +631,6 @@ def pick_random_fresh_story(
     # after accounting for remaining impressions among fresh items.
     if est_imp_per_cycle > 0:
         leftover = est_imp_per_cycle - total_remaining
-        print("Leftover impressions after accounting for fresh items:", leftover)
-        print("estimated impressions per cycle:", est_imp_per_cycle)
-        print("total remaining impressions for fresh items:", total_remaining)
         if leftover > 0:
             p_non_fresh = min(leftover / est_imp_per_cycle, 1.0)
             if random.random() < p_non_fresh:
