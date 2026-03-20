@@ -24,6 +24,7 @@ class SuggestionRequest(BaseModel):
     user_agent: UserAgent | None = None
     source: str | None = None
     is_soft_pii: bool = False
+    client_variants: list[str] = []
 
 
 class BaseSuggestion(BaseModel):

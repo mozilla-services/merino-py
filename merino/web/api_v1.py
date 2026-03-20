@@ -237,6 +237,7 @@ async def suggest(
 
     validate_suggest_custom_location_params(city, region, country, source)
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
+    client_variants_list = client_variants.split(",") if client_variants else []
 
     for p in search_from:
         srequest = SuggestionRequest(
@@ -247,6 +248,7 @@ async def suggest(
             user_agent=user_agent,
             source=source,
             is_soft_pii=is_soft_pii,
+            client_variants=client_variants_list,
         )
         p.validate(srequest)
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")

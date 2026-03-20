@@ -10,6 +10,7 @@ from moz_merino_ext.amp import AmpIndexManager, PyAmpResult
 
 from pydantic import HttpUrl
 
+from merino.configs import settings
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.protocol import FormFactor
@@ -43,6 +44,7 @@ FORM_FACTORS_FALLBACK_MAPPING = {
 
 FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
+CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -154,7 +156,9 @@ class Provider(BaseProvider):
         engaged, attempted = 1, 1
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
-    def _select(self, suggestions: list[PyAmpResult]) -> PyAmpResult | None:
+    def _select(
+        self, suggestions: list[PyAmpResult], client_variants: list[str]
+    ) -> PyAmpResult | None:
         """Select a suggestion from the candidate collection.
 
         Params:
@@ -163,7 +167,7 @@ class Provider(BaseProvider):
             Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
             determines so. Return the first candidate when the optimizer is disabled.
         """
-        if self.thompson:
+        if self.thompson and any([cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants]):
             candidates = [
                 ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
                 for i, suggestion in enumerate(suggestions)
@@ -183,6 +187,7 @@ class Provider(BaseProvider):
         q: str = srequest.query
         form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
         country = srequest.geolocation.country
+        client_variants = srequest.client_variants
 
         # Set the fallback country code and form factor if absent. See "DISCO-3971" for details.
         form_factor = form_factor or FALLBACK_FORM_FACTOR
@@ -193,7 +198,7 @@ class Provider(BaseProvider):
         if (
             self.suggestion_content.index_manager.has(idx_id)
             and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
-            and (res := self._select(suggestions))
+            and (res := self._select(suggestions, client_variants))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 
