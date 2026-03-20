@@ -608,7 +608,6 @@ def pick_random_fresh_story(
     """Pick a random fresh story (not blocked from most popular). The chance of picking a fresh story is based on the number of leftover
     impressions after accounting for max impressions per item, and the number of items. The number of
     impressions in a period is max_imp_per_item_per_cycle.
-
     Returns an picked story, and the remaining items, with the story removed if one was picked.
     Args:
         items: List of CuratedRecommendation objects
@@ -624,7 +623,7 @@ def pick_random_fresh_story(
     )
     if len(fresh_items) == 0:
         return None, items
-
+    print("Number of fresh items eligible for top stories:", len(fresh_items))
     total_remaining = sum(
         it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
     )
@@ -633,6 +632,9 @@ def pick_random_fresh_story(
     # after accounting for remaining impressions among fresh items.
     if est_imp_per_cycle > 0:
         leftover = est_imp_per_cycle - total_remaining
+        print("Leftover impressions after accounting for fresh items:", leftover)
+        print("estimated impressions per cycle:", est_imp_per_cycle)
+        print("total remaining impressions for fresh items:", total_remaining)
         if leftover > 0:
             p_non_fresh = min(leftover / est_imp_per_cycle, 1.0)
             if random.random() < p_non_fresh:
@@ -642,7 +644,6 @@ def pick_random_fresh_story(
         it.ranking_data.remaining_impressions if it.ranking_data else 0 for it in fresh_items
     ]
     picked = random.choices(fresh_items, weights=weights, k=1)[0]
-
     # Remove the picked object from the original items list
     remaining_items = [it for it in items if it is not picked]
     return picked, remaining_items
