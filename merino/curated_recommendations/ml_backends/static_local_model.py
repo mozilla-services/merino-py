@@ -169,8 +169,11 @@ MODEL_Q_VALUE_V3 = 0.030
 
 
 THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
+THRESHOLDS_V3_NON_NORMALIZED = [0.004, 0.008, 0.015]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
+
+SPECIAL_ALL_TOPIC_KEYWOWRD = "all"
 
 
 # Creates a limited model based on topics. Topics features are stored with a t_
@@ -194,12 +197,19 @@ class SuperInferredModel(LocalModelBackend):
         Topic.FOOD.value,
         Topic.TECHNOLOGY.value,
         Topic.SCIENCE.value,
-        Topic.PERSONAL_FINANCE.value,
+        SPECIAL_ALL_TOPIC_KEYWOWRD,
     ]
     limited_topics_set = set(v3_limited_topics)
 
     @staticmethod
     def _get_topic(topic: str, thresholds: list[float]) -> InterestVectorConfig:
+        if topic == SPECIAL_ALL_TOPIC_KEYWOWRD:
+            return InterestVectorConfig(
+                features={f"t_{t}": 1 for t in BASE_TOPICS},
+                thresholds=thresholds,
+                diff_p=MODEL_P_VALUE_V3,
+                diff_q=MODEL_Q_VALUE_V3,
+            )
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
             thresholds=thresholds,
@@ -218,7 +228,7 @@ class SuperInferredModel(LocalModelBackend):
         )
 
     def _build_local(self, model_id, surface_id) -> InferredLocalModel | None:
-        model_thresholds = THRESHOLDS_V3_NORMALIZED
+        model_thresholds = THRESHOLDS_V3_NON_NORMALIZED
         private_features: list[str] | None = None
 
         if model_id == SERVER_V3_MODEL_ID:
@@ -236,7 +246,7 @@ class SuperInferredModel(LocalModelBackend):
         topic_features = {a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics}
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
-            rescale=True,
+            rescale=False,
             noise_scale=0.0,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],
