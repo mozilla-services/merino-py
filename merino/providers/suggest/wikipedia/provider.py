@@ -106,9 +106,7 @@ class Provider(BaseProvider):
 
     def _should_fetch_engagement(self) -> bool:
         """Check if it should fetch Wikipedia engagement data from GCS."""
-        return (
-            time.time() - self.last_engagement_fetch_at
-        ) >= self.engagement_resync_interval_sec
+        return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
 
     async def _fetch_engagement_data(self) -> None:
         """Fetch Wikipedia engagement data from GCS and store it in memory.

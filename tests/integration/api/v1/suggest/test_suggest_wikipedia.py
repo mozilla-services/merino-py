@@ -127,8 +127,6 @@ def test_suggest_wikipedia(
         }
 
     # Check logs for the timed out query(-ies)
-    records = filter_caplog(
-        caplog.records, "merino.providers.suggest.wikipedia.provider"
-    )
+    records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
 
     assert {record.__dict__["msg"] for record in records} == expected_logs

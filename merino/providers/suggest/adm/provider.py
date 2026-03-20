@@ -171,9 +171,7 @@ class Provider(BaseProvider):
 
     def _should_fetch_engagement(self) -> bool:
         """Check if it should fetch engagement data from GCS."""
-        return (
-            time.time() - self.last_engagement_fetch_at
-        ) >= self.engagement_resync_interval_sec
+        return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
@@ -189,9 +187,7 @@ class Provider(BaseProvider):
         try:
             data = await self.filemanager.get_file()
             if data is None:
-                logger.warning(
-                    "Engagement data fetch returned None, will retry on next tick"
-                )
+                logger.warning("Engagement data fetch returned None, will retry on next tick")
                 return
             self.engagement_data = EngagementData.model_validate(data.model_dump())
             self.last_engagement_fetch_at = time.time()
@@ -208,10 +204,15 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
-    def _fetch_engagement_metrics(self, _suggestion: PyAmpResult) -> EngagementMetrics:
+    def _fetch_engagement_metrics(self, suggestion: PyAmpResult) -> EngagementMetrics:
         """Fetch engagement metrics for an AMP suggestion."""
-        # TODO(nanj): look up the real engagement metrics.
+        advertiser = suggestion.advertiser
         engaged, attempted = 1, 1
+        if self.engagement_data:
+            attempted = int(
+                self.engagement_data.amp.get(advertiser, {}).get("impressions", attempted)
+            )
+            engaged = int(self.engagement_data.amp.get(advertiser, {}).get("clicks", engaged))
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
     def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
@@ -235,17 +236,12 @@ class Provider(BaseProvider):
         """
         if self._is_thompson_eligible(client_variants):
             candidates = [
-                ThompsonCandidate(
-                    id=i, metrics=self._fetch_engagement_metrics(suggestion)
-                )
+                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
                 for i, suggestion in enumerate(suggestions)
             ]
 
             # If it's the only candidate with an attempted count less than the threshold, skip sampling.
-            if (
-                len(candidates) == 1
-                and candidates[0].metrics.attempted < self.min_attempted_count
-            ):
+            if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
                 return suggestions[0]
 
             winner = cast(ThompsonSampler, self.thompson).sample(candidates)
@@ -264,9 +260,7 @@ class Provider(BaseProvider):
         form_factor = form_factor or FALLBACK_FORM_FACTOR
         country = country or FALLBACK_COUNTRY_CODE
 
-        segment = (
-            FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),
-        )
+        segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
         idx_id = f"{country}/{segment}"
         if (
             self.suggestion_content.index_manager.has(idx_id)
