@@ -8256,6 +8256,121 @@
             }
           }
         ]
+      },
+      {
+        "createSource": "ML",
+        "followable": false,
+        "allowAds": true,
+        "externalId": "daily-briefing",
+        "active": true,
+        "title": "Daily Briefing",
+        "description": "Your daily briefing",
+        "heroTitle": null,
+        "heroDescription": null,
+        "iab": {
+          "taxonomy": "IAB-3.0",
+          "categories": [
+            "386"
+          ]
+        },
+        "sectionItems": [
+          {
+            "corpusItem": {
+              "id": "651f3028-6dad-2a0c-5e78-93739267bd82",
+              "url": "https://www.cnn.com/2026/03/19/world/video/trump-pearl-harbor-joke-japan-prime-minister-takaichi-vrtc",
+              "title": "Trump makes Pearl Harbor joke in front of Japan's Prime Minister",
+              "excerpt": "President Trump made a joke about Pearl Harbor sitting next to the prime minister of Japan in the Oval Office.",
+              "topic": "POLITICS",
+              "publisher": "CNN",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media.cnn.com/api/v1/images/stellar/prod/118134-trumppearlharborjoke-clean-thumbnail-vrtc0.jpg?c=16x9&q=w_800,c_fill"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "950004a2-29d0-e42f-4708-bf53756025f6",
+              "url": "https://www.theguardian.com/business/2026/mar/19/oil-prices-gas-prices-rise-iran-israel-donald-trump",
+              "title": "Oil and gas prices jump after Iran and Israel attack gasfields",
+              "excerpt": "State-run QatarEnergy says Iranian attack on its facilities has wiped out 17% of its LNG capacity for up to five years",
+              "topic": "BUSINESS",
+              "publisher": "The Guardian",
+              "isTimeSensitive": false,
+              "imageUrl": "https://i.guim.co.uk/img/media/c6d4da6b3a933e06d1e459548a9692ef02b55e77/0_391_1200_959/master/1200.jpg?width=1200&height=630"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "e6df8a52-ab14-d738-6f76-e70b0eb50f0c",
+              "url": "https://www.cnn.com/2026/03/20/politics/trump-faces-presidency-defining-dilemmas-in-iran",
+              "title": "Trump faces legacy-defining dilemmas in Iran",
+              "excerpt": "The question is no longer whether President Donald Trump has lost control of the narrative of his new war in Iran.",
+              "topic": "POLITICS",
+              "publisher": "CNN",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media.cnn.com/api/v1/images/stellar/prod/c-gettyimages-2264580345.jpg?c=16x9&q=w_800,c_fill"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "83a0f3b1-0bd6-84e2-d941-ccabd10d72cb",
+              "url": "https://www.espn.com/soccer/story/_/id/48141988/is-there-extra-away-goals-uefa-womens-champions-league",
+              "title": "Is there extra time, away goals in the Women's Champions League?",
+              "excerpt": "ESPN answers if there is extra time and away goals in the knockout rounds of the women's Champions League.",
+              "topic": "SPORTS",
+              "publisher": "ESPN",
+              "isTimeSensitive": false,
+              "imageUrl": "https://a3.espncdn.com/combiner/i?img=%2Fphoto%2F2025%2F1007%2Fr1556716_1296x729_16%2D9.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "26a275c6-ee42-f926-a1c6-aae6d7d1eea2",
+              "url": "https://www.vanityfair.com/hollywood/story/mormon-wives-taylor-frankie-paul-bachelorette-season-cancelled-by-abc",
+              "title": "Mormon Wives Star Taylor Frankie Paul's Bachelorette Season Canceled By ABC",
+              "excerpt": "We have made the decision to not move forward.",
+              "topic": "ENTERTAINMENT",
+              "publisher": "Vanity Fair",
+              "isTimeSensitive": false,
+              "imageUrl": "https://media.vanityfair.com/photos/69bc6fca91292e30de651955/16:9/w_1280,c_limit/2266288946"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "4a3771c7-44ee-5a37-f265-ea1541d24331",
+              "url": "https://www.cbsnews.com/news/markwayne-mullin-nomination-homeland-security-secretary-rand-paul/",
+              "title": "Senate committee advances Markwayne Mullin's nomination for DHS secretary",
+              "excerpt": "The Senate Homeland Security committee advanced Sen. Markwayne Mullin's nomination to lead DHS.",
+              "topic": "POLITICS",
+              "publisher": "CBS News",
+              "isTimeSensitive": false,
+              "imageUrl": "https://assets1.cbsnewsstatic.com/hub/i/r/2026/03/19/230f46c0-8e48-4a7e-a686-d6aa5b7430d7/thumbnail/1200x630g2/72603cc4d1bc0d00d735d2ec3a1b59e4/gettyimages-2267206214.jpg"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "53653574-d363-6af5-9bd7-a05ff6b325b2",
+              "url": "https://www.cnbc.com/2026/03/20/nvidia-ai-agents-tokens-human-workers-engineer-jobs-unemployment-jensen-huang.html",
+              "title": "Nvidia's Huang pitches AI tokens on top of salary as agents reshape how humans work",
+              "excerpt": "Most enterprise AI projects have failed since 2018, a sobering track record for an industry awash in enthusiasm.",
+              "topic": "TECHNOLOGY",
+              "publisher": "CNBC",
+              "isTimeSensitive": false,
+              "imageUrl": "https://image.cnbcfm.com/api/v1/image/108270431-1772117506402-gettyimages-2205220150-AFP_372Y44B.jpeg?v=1772117523&w=1920&h=1080"
+            }
+          },
+          {
+            "corpusItem": {
+              "id": "0284a83a-d466-a432-52c2-862e17c4bf15",
+              "url": "https://www.popsci.com/environment/nikon-comedy-wildlife-photography-awards-outtakes-2025/",
+              "title": "14 silly, never-before-seen images from the Comedy Wildlife Photography Awards",
+              "excerpt": "Nature, you're hilarious.",
+              "topic": "SCIENCE",
+              "publisher": "Popular Science",
+              "isTimeSensitive": false,
+              "imageUrl": "https://www.popsci.com/wp-content/uploads/2026/03/Bernard-Beaune_Head-to-tail.jpg?quality=85&w=1200"
+            }
+          }
+        ]
       }
     ]
   }
