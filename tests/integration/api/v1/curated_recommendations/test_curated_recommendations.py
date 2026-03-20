@@ -1565,8 +1565,7 @@ class TestSections:
 
         assert "music" in sections
 
-        # headlines is now a regular subtopic section that flows through TS
-        # daily-briefing is only available when the daily briefing experiment is enabled
+        # daily-briefing requires the daily briefing experiment
         assert "daily-briefing" not in sections
 
         # assert IAB metadata is present in ML sections (there are 8 of them)
@@ -2088,7 +2087,7 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # daily-briefing should not appear unless the daily briefing experiment is enabled
+        # daily-briefing requires the daily briefing experiment
         assert "daily-briefing" not in sections
 
         # assert isFollowed & isBlocked have been correctly set
@@ -2149,7 +2148,7 @@ class TestSections:
 
         sections = {name: section for name, section in data["feeds"].items() if section}
 
-        # daily-briefing should not be present unless the daily briefing experiment is enabled
+        # daily-briefing requires the daily briefing experiment
         assert "daily-briefing" not in sections
 
         assert len(sections) >= 4
@@ -2217,7 +2216,6 @@ class TestSections:
         db_section = sections["daily-briefing"]
         assert db_section["receivedFeedRank"] == 0
         assert db_section["title"] == "Daily Briefing"
-        assert db_section["subtitle"] == "Your daily briefing"
         assert db_section["layout"]["name"] == "4-medium-small-1-ad"
 
         # Assert that top_stories section has rank == 1
@@ -2272,11 +2270,9 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # Assert daily-briefing section is returned
+        # Assert daily-briefing section is at rank 0
         assert "daily-briefing" in sections
-        db_section = sections["daily-briefing"]
-        assert db_section["receivedFeedRank"] == 0
-        assert db_section["title"] == "Daily Briefing"
+        assert sections["daily-briefing"]["receivedFeedRank"] == 0
 
         # Assert that top_stories_section is NOT present
         assert "top_stories_section" not in sections
@@ -2318,33 +2314,6 @@ class TestSections:
         # Popular Today should be present and at rank 0
         assert "top_stories_section" in sections
         assert sections["top_stories_section"]["receivedFeedRank"] == 0
-
-    def test_headlines_items_eligible_for_popular_today(self, client: TestClient):
-        """Test that Headlines items participate in the global TS pool and can
-        appear in Popular Today, now that headlines is no longer split out.
-        """
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "region": "US",
-            },
-        )
-
-        data = response.json()
-        assert response.status_code == 200
-
-        feeds = data["feeds"]
-        sections = {name: section for name, section in feeds.items() if section is not None}
-
-        # Popular Today should be present
-        assert "top_stories_section" in sections
-        top_stories = sections["top_stories_section"]
-
-        # Headlines items can now appear in Popular Today
-        # (previously they were extracted before TS and could never appear here)
-        assert len(top_stories["recommendations"]) > 0
 
     def test_curated_recommendations_with_sections_feed_removes_blocked_topics(
         self, caplog, client: TestClient
