@@ -2088,8 +2088,8 @@ class TestSections:
         feeds = data["feeds"]
         sections = {name: section for name, section in feeds.items() if section is not None}
 
-        # headlines_section should not be in the final response unless that experiment is enabled
-        assert "headlines_section" not in sections
+        # daily-briefing should not appear unless the daily briefing experiment is enabled
+        assert "daily-briefing" not in sections
 
         # assert isFollowed & isBlocked have been correctly set
         if data["feeds"].get("arts") is not None:
@@ -2149,8 +2149,8 @@ class TestSections:
 
         sections = {name: section for name, section in data["feeds"].items() if section}
 
-        # headlines_section should not be present unless the daily briefing experiment is enabled separately.
-        assert "headlines_section" not in sections
+        # daily-briefing should not be present unless the daily briefing experiment is enabled
+        assert "daily-briefing" not in sections
 
         assert len(sections) >= 4
 
@@ -2288,6 +2288,63 @@ class TestSections:
         )
         for idx, sid in enumerate(remaining_sections, start=1):
             assert sections[sid]["receivedFeedRank"] == idx
+
+    def test_daily_briefing_control_branch_no_daily_briefing(self, client: TestClient):
+        """Test that the control branch does NOT return a daily-briefing section.
+
+        Headlines should appear as a regular section through Thompson Sampling.
+        Popular Today should be at rank 0.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "experimentName": ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
+                "experimentBranch": "control",
+                "region": "US",
+            },
+        )
+
+        data = response.json()
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # daily-briefing should NOT appear for control branch
+        assert "daily-briefing" not in sections
+
+        # Popular Today should be present and at rank 0
+        assert "top_stories_section" in sections
+        assert sections["top_stories_section"]["receivedFeedRank"] == 0
+
+    def test_headlines_items_eligible_for_popular_today(self, client: TestClient):
+        """Test that Headlines items participate in the global TS pool and can
+        appear in Popular Today, now that headlines is no longer split out.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "region": "US",
+            },
+        )
+
+        data = response.json()
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # Popular Today should be present
+        assert "top_stories_section" in sections
+        top_stories = sections["top_stories_section"]
+
+        # Headlines items can now appear in Popular Today
+        # (previously they were extracted before TS and could never appear here)
+        assert len(top_stories["recommendations"]) > 0
 
     def test_curated_recommendations_with_sections_feed_removes_blocked_topics(
         self, caplog, client: TestClient
