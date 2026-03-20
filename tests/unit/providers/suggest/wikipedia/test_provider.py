@@ -7,7 +7,9 @@ from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
+from merino.providers.suggest.wikipedia.backends.fake_backends import (
+    FakeEchoWikipediaBackend,
+)
 from merino.providers.suggest.wikipedia.backends.protocol import EngagementData
 from merino.providers.suggest.wikipedia.provider import (
     ADVERTISER,
@@ -147,7 +149,9 @@ async def test_fetch_engagement_data_success(
     wikipedia: Provider,
 ) -> None:
     """Test that _fetch_engagement_data stores data and updates the timestamp on success."""
-    mocker.patch.object(wikipedia.filemanager, "get_file", return_value=SAMPLE_ENGAGEMENT_DATA)
+    mocker.patch.object(
+        wikipedia.filemanager, "get_file", return_value=SAMPLE_ENGAGEMENT_DATA
+    )
 
     assert wikipedia.last_engagement_fetch_at == 0
     await wikipedia._fetch_engagement_data()
@@ -168,7 +172,9 @@ async def test_fetch_engagement_data_returns_none(
 
     await wikipedia._fetch_engagement_data()
 
-    records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
+    records = filter_caplog(
+        caplog.records, "merino.providers.suggest.wikipedia.provider"
+    )
     assert len(records) == 1
     assert "None" in records[0].message
     assert wikipedia.engagement_data.wiki_aggregated == {}
@@ -189,7 +195,9 @@ async def test_fetch_engagement_data_exception(
 
     await wikipedia._fetch_engagement_data()
 
-    records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
+    records = filter_caplog(
+        caplog.records, "merino.providers.suggest.wikipedia.provider"
+    )
     assert len(records) == 1
     assert records[0].__dict__["error"] == "GCS unavailable"
     assert wikipedia.engagement_data.wiki_aggregated == {}

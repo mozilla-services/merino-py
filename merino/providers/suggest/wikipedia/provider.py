@@ -15,7 +15,10 @@ from merino.providers.suggest.base import (
     SuggestionRequest,
     Category,
 )
-from merino.providers.suggest.wikipedia.backends.protocol import EngagementData, WikipediaBackend
+from merino.providers.suggest.wikipedia.backends.protocol import (
+    EngagementData,
+    WikipediaBackend,
+)
 from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
 from merino.utils import cron
@@ -103,7 +106,9 @@ class Provider(BaseProvider):
 
     def _should_fetch_engagement(self) -> bool:
         """Check if it should fetch Wikipedia engagement data from GCS."""
-        return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
+        return (
+            time.time() - self.last_engagement_fetch_at
+        ) >= self.engagement_resync_interval_sec
 
     async def _fetch_engagement_data(self) -> None:
         """Fetch Wikipedia engagement data from GCS and store it in memory.

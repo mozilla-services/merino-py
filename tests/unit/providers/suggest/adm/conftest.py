@@ -44,7 +44,10 @@ def fixture_rs_attachment_raw_us() -> str:
                 "id": 2,
                 "advertiser": "Example.org",
                 "click_url": "https://example.org/click/mozilla",
-                "full_keywords": [["firefox accounts", 3], ["mozilla firefox accounts", 4]],
+                "full_keywords": [
+                    ["firefox accounts", 3],
+                    ["mozilla firefox accounts", 4],
+                ],
                 "iab_category": "5 - Education",
                 "icon": "01",
                 "serp_categories": [],
@@ -74,7 +77,10 @@ def fixture_rs_attachment_raw_de() -> str:
                 "id": 2,
                 "advertiser": "de.Example.org",
                 "click_url": "https://de.example.org/click/mozilla",
-                "full_keywords": [["firefox accounts de", 4], ["mozilla firefox accounts de", 5]],
+                "full_keywords": [
+                    ["firefox accounts de", 4],
+                    ["mozilla firefox accounts de", 5],
+                ],
                 "iab_category": "5 - Education",
                 "icon": "01",
                 "serp_categories": [],
@@ -152,7 +158,9 @@ def fixture_adm_with_thompson_dummy(
     thompson_sampler_with_dummy: ThompsonSampler,
 ) -> Provider:
     """Create an AdM Provider with a dominant dummy Thompson sampler for testing."""
-    return Provider(backend=backend_mock, thompson=thompson_sampler_with_dummy, **adm_parameters)
+    return Provider(
+        backend=backend_mock, thompson=thompson_sampler_with_dummy, **adm_parameters
+    )
 
 
 @pytest.fixture(name="adm_with_thompson_dummy_min_attempted_count")
