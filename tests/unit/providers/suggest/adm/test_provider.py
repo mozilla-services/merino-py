@@ -112,7 +112,7 @@ async def test_initialize_remote_settings_failure(
     # SuggestionContent should be empty as initialize was unsuccessful.
     assert adm.suggestion_content.index_manager.list() == []
     assert adm.suggestion_content.icons == {}
-    assert await adm.query(srequest(query, None, None)) == []
+    assert await adm.query(srequest(query, None, None, None)) == []
 
 
 @pytest.mark.parametrize("query", ["firefox"])
@@ -129,7 +129,7 @@ async def test_query_success(
     await adm.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
-    res = await adm.query(srequest(query, geolocation, user_agent))
+    res = await adm.query(srequest(query, geolocation, user_agent, None))
     assert res == [
         NonsponsoredSuggestion(
             block_id=2,
@@ -159,7 +159,7 @@ async def test_query_with_missing_key(
     """Test for the query() method of the adM provider with missing keys, the fallback should be used"""
     await adm.initialize()
 
-    res = await adm.query(srequest(query, None, None))
+    res = await adm.query(srequest(query, None, None, None))
     assert res == [
         NonsponsoredSuggestion(
             block_id=2,
