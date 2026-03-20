@@ -1357,12 +1357,12 @@ class TestPutDailyBriefingFirstThenTopStories:
             title="Daily Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        db_section = feed[DAILY_BRIEFING_SECTION_KEY]
+        briefing_section = feed[DAILY_BRIEFING_SECTION_KEY]
 
         put_daily_briefing_first_then_top_stories(feed)
 
         # Check ranks for daily-briefing & top_stories are updated
-        assert db_section.receivedFeedRank == 0
+        assert briefing_section.receivedFeedRank == 0
         assert top_stories_section.receivedFeedRank == 1
 
         # Get the other sections besides daily-briefing & top_stories
@@ -1391,7 +1391,7 @@ class TestPutDailyBriefingFirstThenTopStories:
             title="Daily Briefing",
             layout=copy.deepcopy(layout_4_medium),
         )
-        db_section = feed[DAILY_BRIEFING_SECTION_KEY]
+        briefing_section = feed[DAILY_BRIEFING_SECTION_KEY]
 
         # Get the other sections besides daily-briefing & top_stories
         remaining_sections = sorted(
@@ -1406,7 +1406,7 @@ class TestPutDailyBriefingFirstThenTopStories:
         put_daily_briefing_first_then_top_stories(feed)
 
         # Daily-briefing should be on top rank==0
-        assert db_section.receivedFeedRank == 0
+        assert briefing_section.receivedFeedRank == 0
 
         expected_order = [DAILY_BRIEFING_SECTION_KEY] + remaining_sections
 
@@ -1427,13 +1427,15 @@ class TestSplitDailyBriefingSection:
 
     def test_extracts_daily_briefing(self):
         """Test that daily-briefing section is extracted and others remain."""
-        db = self.generate_corpus_section("daily-briefing", "Daily Briefing")
+        daily_briefing = self.generate_corpus_section("daily-briefing", "Daily Briefing")
         sports = self.generate_corpus_section("sports", "Sports")
         headlines = self.generate_corpus_section("headlines", "Headlines")
 
-        result_db, remaining = split_daily_briefing_section([db, sports, headlines])
+        result_briefing, remaining = split_daily_briefing_section(
+            [daily_briefing, sports, headlines]
+        )
 
-        assert result_db is db
+        assert result_briefing is daily_briefing
         assert len(remaining) == 2
         assert remaining[0] is sports
         assert remaining[1] is headlines
@@ -1443,9 +1445,9 @@ class TestSplitDailyBriefingSection:
         sports = self.generate_corpus_section("sports", "Sports")
         headlines = self.generate_corpus_section("headlines", "Headlines")
 
-        result_db, remaining = split_daily_briefing_section([sports, headlines])
+        result_briefing, remaining = split_daily_briefing_section([sports, headlines])
 
-        assert result_db is None
+        assert result_briefing is None
         assert len(remaining) == 2
 
 
@@ -1546,12 +1548,12 @@ class TestGetCorpusSections:
     @pytest.mark.asyncio
     async def test_section_transformation(self, sections_backend, sample_backend_data):
         """Verify mapping logic for get_corpus_sections."""
-        raw_db, result = await get_corpus_sections(
+        raw_briefing, result = await get_corpus_sections(
             sections_backend=sections_backend, surface_id=SurfaceId.NEW_TAB_EN_US, min_feed_rank=5
         )
 
         # No daily-briefing section present here
-        assert raw_db is None
+        assert raw_briefing is None
 
         assert set(result.keys()) == {cs.externalId for cs in sample_backend_data}
         section_a = result["business"]
@@ -1572,16 +1574,16 @@ class TestGetCorpusSections:
     @pytest.mark.asyncio
     async def test_daily_briefing_split_out(self, sections_backend_with_daily_briefing):
         """Daily-briefing section should be returned separately from the other sections."""
-        raw_db, sections = await get_corpus_sections(
+        raw_briefing, sections = await get_corpus_sections(
             sections_backend=sections_backend_with_daily_briefing,
             surface_id=SurfaceId.NEW_TAB_EN_US,
             min_feed_rank=1,
             include_subtopics=True,
         )
 
-        assert raw_db is not None
-        assert raw_db.externalId == DAILY_BRIEFING_SECTION_KEY
-        assert raw_db.title == "Daily Briefing"
+        assert raw_briefing is not None
+        assert raw_briefing.externalId == DAILY_BRIEFING_SECTION_KEY
+        assert raw_briefing.title == "Daily Briefing"
         assert DAILY_BRIEFING_SECTION_KEY not in sections
         # Headlines stays in the regular sections as a subtopic
         assert HEADLINES_SECTION_KEY in sections
@@ -1593,7 +1595,7 @@ class TestGetCorpusSections:
         self, sections_backend_with_daily_briefing
     ):
         """Headlines is an ML non-legacy section, filtered out when subtopics disabled."""
-        raw_db, sections = await get_corpus_sections(
+        raw_briefing, sections = await get_corpus_sections(
             sections_backend=sections_backend_with_daily_briefing,
             surface_id=SurfaceId.NEW_TAB_EN_US,
             min_feed_rank=1,
@@ -1601,7 +1603,7 @@ class TestGetCorpusSections:
         )
 
         # Daily-briefing still extracted (bypasses filter)
-        assert raw_db is not None
+        assert raw_briefing is not None
         # Headlines is filtered out (not legacy, not manual, subtopics disabled)
         assert HEADLINES_SECTION_KEY not in sections
         # Sports is a legacy topic, always included

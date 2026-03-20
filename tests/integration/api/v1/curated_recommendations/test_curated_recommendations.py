@@ -2213,10 +2213,10 @@ class TestSections:
 
         # Assert daily-briefing section is returned
         assert "daily-briefing" in sections
-        db_section = sections["daily-briefing"]
-        assert db_section["receivedFeedRank"] == 0
-        assert db_section["title"] == "Daily Briefing"
-        assert db_section["layout"]["name"] == "4-medium-small-1-ad"
+        briefing_section = sections["daily-briefing"]
+        assert briefing_section["receivedFeedRank"] == 0
+        assert briefing_section["title"] == "Daily Briefing"
+        assert briefing_section["layout"]["name"] == "4-medium-small-1-ad"
 
         # Assert that top_stories section has rank == 1
         top_stories_section = sections.get("top_stories_section")
@@ -2235,14 +2235,14 @@ class TestSections:
             assert sections[sid]["receivedFeedRank"] == idx
 
         # Check the recs used in daily-briefing are removed from other sections (dedup).
-        db_story_ids = {
+        briefing_story_ids = {
             rec["corpusItemId"] for rec in sections["daily-briefing"]["recommendations"]
         }
 
         for sid, sec in sections.items():
             if sid != "daily-briefing":
                 for rec in sec["recommendations"]:
-                    assert rec["corpusItemId"] not in db_story_ids
+                    assert rec["corpusItemId"] not in briefing_story_ids
 
     def test_daily_briefing_without_popular_excludes_top_stories(self, client: TestClient):
         """Test that Popular Today is NOT returned when in briefing-without-popular branch.

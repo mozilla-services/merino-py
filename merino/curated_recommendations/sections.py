@@ -510,23 +510,23 @@ def put_daily_briefing_first_then_top_stories(
     sections: dict[str, Section],
 ) -> dict[str, Section]:
     """Ensure daily-briefing section is on top followed by top_stories section, other sections should have rank 2...N & preserve relative order."""
-    db_key = DAILY_BRIEFING_SECTION_KEY
+    briefing_key = DAILY_BRIEFING_SECTION_KEY
     top_stories_key = TOP_STORIES_SECTION_KEY
 
-    db_section = sections.get(db_key)
+    briefing_section = sections.get(briefing_key)
     top_stories_section = sections.get(top_stories_key)
 
-    if not db_section:
+    if not briefing_section:
         return sections
 
     # Save & keep relative order for the other sections based on their current ranks
     remaining_sections = sorted(
-        (sec for sid, sec in sections.items() if sid not in (db_key, top_stories_key)),
+        (sec for sid, sec in sections.items() if sid not in (briefing_key, top_stories_key)),
         key=lambda s: s.receivedFeedRank,
     )
 
     # Assign ranks, start with daily-briefing rank == 0
-    db_section.receivedFeedRank = 0
+    briefing_section.receivedFeedRank = 0
     # If top_stories is present, assign rank == 1
     if top_stories_section:
         top_stories_section.receivedFeedRank = 1
@@ -889,7 +889,7 @@ async def get_sections(
             )
         sections[DAILY_BRIEFING_SECTION_KEY] = daily_briefing_section
         if should_show_popular_today_with_daily_briefing(request):
-            # briefing-with-popular: show both DB and Popular Today (shrink)
+            # briefing-with-popular: show both Daily Briefing and Popular Today (shrink)
             sections["top_stories_section"].layout = deepcopy(layout_4_medium)
         else:
             # briefing-without-popular: remove Popular Today entirely
