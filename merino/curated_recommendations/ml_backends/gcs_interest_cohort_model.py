@@ -84,11 +84,18 @@ class GcsInterestCohortModel(CohortModelBackend):
             normalized_chunks.append(replacement_map.get(chunk, "0000"))
         return "".join(normalized_chunks)
 
-    def _is_empty_cohort_for_no_clicks(self, normalized_interests: str) -> bool:
-        """Determine if the normalized interests correspond to the empty cohort for no clicks."""
+    def _is_empty_cohort_for_no_clicks(
+        self, normalized_interests: str, skip_last_interest: bool = True
+    ) -> bool:
+        """Determine if the normalized interests correspond to the empty cohort for no clicks.
+        The last interest is reserved in the US for time zone offset, so it doesn't count as a click
+        """
         if not DO_EMPTY_COHORT_FOR_NO_CLICKS:
             return False
-        for k in range(self._num_bits // 4):
+        num_interests = self._num_bits // 4
+        if skip_last_interest:
+            num_interests -= 1
+        for k in range(num_interests):
             chunk = normalized_interests[k * 4 : (k + 1) * 4]
             if (
                 chunk != "0000" and chunk != "1000"
