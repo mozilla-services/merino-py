@@ -8,6 +8,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     InterestVectorConfig,
     ModelType,
     DayTimeWeightingConfig,
+    PrivacyOverrides,
 )
 from merino.curated_recommendations.protocol import ExperimentName
 
@@ -15,6 +16,8 @@ INFERRED_LOCAL_EXPERIMENT_NAME = ExperimentName.INFERRED_LOCAL_EXPERIMENT.value
 INFERRED_LOCAL_EXPERIMENT_NAME_V2 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V2.value
 INFERRED_LOCAL_EXPERIMENT_NAME_V3 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V3.value
 INFERRED_LOCAL_EXPERIMENT_NAME_V4 = ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value
+
+TEST_INFERRED_EXPERIMENT = "test-inferred-experiment"
 
 LOCAL_AND_SERVER_V1_MODEL_ID = "local-and-server"
 LOCAL_ONLY_V1_MODEL_ID = "local-only"
@@ -177,6 +180,23 @@ SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 
 TIME_ZONE_OFFSET_INFERRED_KEY = "timeZoneOffset"
 
+CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXEPRIMENT = 14700000
+
+
+class PrivacyOverridesForFivePercentExperimentUS(PrivacyOverrides):
+    """Defines privacy overrides, so they can be applied automatically for Merino based experiments to reduce risk of privacy issues"""
+
+    def __init__(self, **data) -> None:
+        data.setdefault("iv_in_telemetry", False)
+        data.setdefault(
+            "random_content_click_probability_epsilon_micro",
+            CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXEPRIMENT,
+        )
+        data.setdefault(
+            "daily_click_event_cap", 2
+        )  # Cap of 10 click events per day to reduce risk of outliers
+        super().__init__(**data)
+
 
 # Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
@@ -300,8 +320,10 @@ class SuperInferredModel(LocalModelBackend):
             private_features=private_features,
         )
         # No privacy overrides until this is implemented in Merino
-        privacy_overrides = None
-
+        privacy_overrides: PrivacyOverrides | None = (
+            PrivacyOverridesForFivePercentExperimentUS() if small_experiment else None
+        )
+        print("privacy overrides set " + str(privacy_overrides))
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
@@ -339,13 +361,12 @@ class SuperInferredModel(LocalModelBackend):
                 experiment_name is None  # Default
                 or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V4
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V4}"
-                or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V3
-                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V3}"
             ):
+                print("Using inferred local model v4")
                 # We don't have to check for branch here as control won't call inferred code
                 return self._build_local(SERVER_V3_MODEL_ID, surface_id)
             else:
-                # We are part of an unknown experiment, so we need to tweak privacy.
+                print("Using inferred local model v4 (unknown experiment)")
                 return self._build_local(
                     EXPERIMENT_PRODUCTION_MODEL_ID, surface_id, small_experiment=True
                 )

@@ -203,7 +203,8 @@ class CuratedRecommendationsProvider:
             experiment_name=request.experimentName,
             experiment_branch=request.experimentBranch,
         )
-
+        print("Local model fetched: " + local_model.model_dump_json() if local_model else "None")
+        print(local_model)
         response = CuratedRecommendationsResponse(
             recommendedAt=get_millisecond_epoch_time(),
             surfaceId=surface_id,

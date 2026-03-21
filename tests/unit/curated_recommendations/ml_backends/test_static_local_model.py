@@ -656,3 +656,9 @@ def test_get_dummy_experiment_name(model_limited):
     other_interest = result.model_data.interest_vector[Topic.SCIENCE.value]
     assert len(other_interest.thresholds) == len(THRESHOLDS_V3_NORMALIZED)
     assert other_interest.thresholds[0] < 0.9
+
+    assert result.privacy_overrides is not None
+    assert result.privacy_overrides.daily_click_event_cap == 2
+    assert result.privacy_overrides.random_content_click_probability_epsilon_micro > 1000
+    assert result.privacy_overrides.iv_in_telemetry is False
+    assert result.privacy_overrides.local_popular_today_rerank is None
