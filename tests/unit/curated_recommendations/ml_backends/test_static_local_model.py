@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
     SERVER_V3_MODEL_ID,
-    THRESHOLDS_V3_NORMALIZED,
+    THRESHOLDS_V3_NON_NORMALIZED,
     FakeLocalModelSections,
     SuperInferredModel,
     CTR_SECTION_MODEL_ID,
@@ -111,7 +111,7 @@ def test_model_returns_default_limited_model(model_limited):
     # test a specific threshold value
     assert (
         result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0]
-        == THRESHOLDS_V3_NORMALIZED[0]
+        == THRESHOLDS_V3_NON_NORMALIZED[0]
     )
 
 
