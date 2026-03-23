@@ -29,7 +29,7 @@ class ADMFilemanager:
         self.gcs_bucket_path = gcs_bucket_path
         self.blob_name = blob_name
 
-    async def get_bucket(self) -> Bucket:
+    def get_bucket(self) -> Bucket:
         """Lazily instantiate the GCS client and return the configured bucket"""
         if self.bucket is not None:
             return self.bucket
@@ -43,7 +43,7 @@ class ADMFilemanager:
     async def get_file(self) -> EngagementData | None:
         """Fetch the engagement data file from GCS"""
         try:
-            bucket = await self.get_bucket()
+            bucket = self.get_bucket()
             blob: Blob = await bucket.get_blob(self.blob_name)
             blob_data = await blob.download()
 

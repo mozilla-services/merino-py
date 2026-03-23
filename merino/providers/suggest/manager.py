@@ -205,6 +205,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 min_attempted_count=settings.providers.adm.thompson.min_attempted_count,
                 thompson=thompson,
                 engagement_gcs_bucket=settings.engagement.gcs_storage_bucket,
+                engagement_blob_name=settings.engagement.blob_name,
                 engagement_resync_interval_sec=setting.engagement_resync_interval_sec,
             )
         case ProviderType.GEOLOCATION:
@@ -241,6 +242,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 query_timeout_sec=setting.query_timeout_sec,
                 enabled_by_default=setting.enabled_by_default,
                 engagement_gcs_bucket=settings.engagement.gcs_storage_bucket,
+                engagement_blob_name=settings.engagement.blob_name,
                 engagement_resync_interval_sec=setting.engagement_resync_interval_sec,
                 cron_interval_sec=setting.cron_interval_sec,
             )

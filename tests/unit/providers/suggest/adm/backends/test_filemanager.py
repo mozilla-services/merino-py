@@ -36,7 +36,7 @@ def fixture_filemanager() -> ADMFilemanager:
 def fixture_mock_blob(mocker: MockerFixture):
     """Return a mock gcloud.aio.storage Blob."""
     blob = mocker.AsyncMock()
-    blob.download.return_value = SAMPLE_ENGAGEMENT_JSON.encode()
+    blob.download = mocker.AsyncMock(return_value=SAMPLE_ENGAGEMENT_JSON.encode())
     return blob
 
 
@@ -44,12 +44,11 @@ def fixture_mock_blob(mocker: MockerFixture):
 def fixture_mock_bucket(mocker: MockerFixture, mock_blob):
     """Return a mock gcloud.aio.storage Bucket."""
     bucket = mocker.AsyncMock()
-    bucket.get_blob.return_value = mock_blob
+    bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
     return bucket
 
 
-@pytest.mark.asyncio
-async def test_get_bucket_lazily_creates_client_and_bucket(
+def test_get_bucket_lazily_creates_client_and_bucket(
     mocker: MockerFixture,
     filemanager: ADMFilemanager,
     mock_bucket,
@@ -63,15 +62,14 @@ async def test_get_bucket_lazily_creates_client_and_bucket(
     assert filemanager.gcs_client is None
     assert filemanager.bucket is None
 
-    bucket = await filemanager.get_bucket()
+    bucket = filemanager.get_bucket()
 
     mock_storage_cls.assert_called_once()
     assert bucket is mock_bucket
     assert filemanager.bucket is mock_bucket
 
 
-@pytest.mark.asyncio
-async def test_get_bucket_returns_cached_bucket(
+def test_get_bucket_returns_cached_bucket(
     mocker: MockerFixture,
     filemanager: ADMFilemanager,
     mock_bucket,
@@ -80,7 +78,7 @@ async def test_get_bucket_returns_cached_bucket(
     filemanager.bucket = mock_bucket
     mock_storage_cls = mocker.patch("merino.providers.suggest.adm.backends.filemanager.Storage")
 
-    bucket = await filemanager.get_bucket()
+    bucket = filemanager.get_bucket()
 
     mock_storage_cls.assert_not_called()
     assert bucket is mock_bucket

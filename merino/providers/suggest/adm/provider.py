@@ -101,6 +101,7 @@ class Provider(BaseProvider):
         resync_interval_sec: float,
         cron_interval_sec: float,
         engagement_gcs_bucket: str,
+        engagement_blob_name: str,
         engagement_resync_interval_sec: float,
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
@@ -122,7 +123,7 @@ class Provider(BaseProvider):
         self.last_engagement_fetch_at = 0
         self.filemanager = ADMFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
-            blob_name="suggest-merino-exports/engagement/latest.json",
+            blob_name=engagement_blob_name,
         )
         super().__init__(**kwargs)
 

@@ -306,6 +306,10 @@ gcs_bq_project = ""
 
 gcs_storage_project = ""
 
+# MERINO_ENGAGEMENT__BLOB_NAME
+# Path within the GCS bucket to the engagement data blob.
+blob_name = "suggest-merino-exports/engagement/latest.json"
+
 [default.icon]
 # Subdirectory within bucket for favicons
 favicons_root = "favicons"

@@ -35,7 +35,7 @@ def fixture_filemanager() -> WikipediaFilemanager:
 def fixture_mock_blob(mocker: MockerFixture):
     """Return a mock gcloud.aio.storage Blob."""
     blob = mocker.AsyncMock()
-    blob.download.return_value = SAMPLE_ENGAGEMENT_JSON.encode()
+    blob.download = mocker.AsyncMock(return_value=SAMPLE_ENGAGEMENT_JSON.encode())
     return blob
 
 
@@ -43,7 +43,7 @@ def fixture_mock_blob(mocker: MockerFixture):
 def fixture_mock_bucket(mocker: MockerFixture, mock_blob):
     """Return a mock gcloud.aio.storage Bucket."""
     bucket = mocker.AsyncMock()
-    bucket.get_blob.return_value = mock_blob
+    bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
     return bucket
 
 

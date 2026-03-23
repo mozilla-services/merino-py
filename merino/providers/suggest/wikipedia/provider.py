@@ -64,6 +64,7 @@ class Provider(BaseProvider):
         backend: WikipediaBackend,
         title_block_list: set[str],
         engagement_gcs_bucket: str,
+        engagement_blob_name: str,
         engagement_resync_interval_sec: float,
         cron_interval_sec: float,
         name: str = "wikipedia",
@@ -86,7 +87,7 @@ class Provider(BaseProvider):
         self.last_engagement_fetch_at = 0
         self.filemanager = WikipediaFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
-            blob_name="suggest-merino-exports/engagement/latest.json",
+            blob_name=engagement_blob_name,
         )
         super().__init__(**kwargs)
 

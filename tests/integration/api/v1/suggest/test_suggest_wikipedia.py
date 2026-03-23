@@ -35,6 +35,7 @@ SCENARIOS: dict[str, Scenario] = {
                 backend=FakeEchoWikipediaBackend(),
                 title_block_list=BLOCK_LIST,
                 engagement_gcs_bucket="",
+                engagement_blob_name="suggest-merino-exports/engagement/latest.json",
                 engagement_resync_interval_sec=3600,
                 cron_interval_sec=60,
             )
@@ -50,6 +51,7 @@ SCENARIOS: dict[str, Scenario] = {
                 backend=FakeExceptionWikipediaBackend(),
                 title_block_list=BLOCK_LIST,
                 engagement_gcs_bucket="",
+                engagement_blob_name="suggest-merino-exports/engagement/latest.json",
                 engagement_resync_interval_sec=3600,
                 cron_interval_sec=60,
             )
@@ -65,6 +67,7 @@ SCENARIOS: dict[str, Scenario] = {
                 backend=FakeEchoWikipediaBackend(),
                 title_block_list=BLOCK_LIST,
                 engagement_gcs_bucket="",
+                engagement_blob_name="suggest-merino-exports/engagement/latest.json",
                 engagement_resync_interval_sec=3600,
                 cron_interval_sec=60,
             )
