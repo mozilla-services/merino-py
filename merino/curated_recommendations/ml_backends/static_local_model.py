@@ -362,11 +362,9 @@ class SuperInferredModel(LocalModelBackend):
                 or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V4
                 or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V4}"
             ):
-                print("Using inferred local model v4")
                 # We don't have to check for branch here as control won't call inferred code
                 return self._build_local(SERVER_V3_MODEL_ID, surface_id)
             else:
-                print("Using inferred local model v4 (unknown experiment)")
                 return self._build_local(
                     EXPERIMENT_PRODUCTION_MODEL_ID, surface_id, small_experiment=True
                 )
