@@ -5,8 +5,10 @@ from asyncio import Task
 from collections import defaultdict
 import json
 import logging
+import time
 from urllib.parse import urljoin
 
+import aiodogstatsd
 import httpx
 from moz_merino_ext.amp import AmpIndexManager
 
@@ -34,15 +36,19 @@ class MarsBackend:
     base_url: str
     suggestion_url_path: str
     http_client: httpx.AsyncClient
+    metrics_client: aiodogstatsd.Client
     # Cache the latest suggestion content.
     suggestion_content: SuggestionContent
     # ETag tracking per segment for conditional fetching.
     etags: dict[str, str]
+    # Timestamp of the last successful 200-with-data response.
+    last_new_data_at: float
 
     def __init__(
         self,
         base_url: str,
         icon_processor: IconProcessor,
+        metrics_client: aiodogstatsd.Client,
         connect_timeout: float,
         request_timeout: float,
         suggestion_url_path: str = "data",
@@ -52,6 +58,7 @@ class MarsBackend:
         Args:
             base_url: The base URL for the MARS API.
             icon_processor: The icon processor for handling favicons.
+            metrics_client: The StatsD metrics client.
             connect_timeout: Timeout in seconds for establishing a connection.
             request_timeout: Timeout in seconds for a request.
             suggestion_url_path: The URL path for fetching suggestions.
@@ -65,6 +72,7 @@ class MarsBackend:
         self.base_url = base_url
         self.suggestion_url_path = suggestion_url_path
         self.icon_processor = icon_processor
+        self.metrics_client = metrics_client
         self.http_client = create_http_client(
             connect_timeout=connect_timeout,
             request_timeout=request_timeout,
@@ -74,6 +82,7 @@ class MarsBackend:
             icons={},
         )
         self.etags = {}
+        self.last_new_data_at = 0.0
 
     def get_segment(self, form_factor_str: str) -> SegmentType:
         """Compose segment from a form factor string.
@@ -154,6 +163,14 @@ class MarsBackend:
                 icons[icon_id] = original_url
 
         self.suggestion_content.icons.update(icons)
+
+        if self.last_new_data_at > 0:
+            staleness = time.time() - self.last_new_data_at
+            self.metrics_client.gauge(
+                "mars.data.staleness_seconds",
+                value=staleness,
+            )
+
         return self.suggestion_content
 
     async def get_suggestions(
@@ -218,6 +235,7 @@ class MarsBackend:
         Raises:
             MarsError: Failed request to the MARS API.
         """
+        tags = {"country": country, "form_factor": form_factor}
         headers: dict[str, str] = {}
         if idx_id in self.etags:
             headers["If-None-Match"] = self.etags[idx_id]
@@ -231,6 +249,7 @@ class MarsBackend:
             )
 
             if response.status_code == 304:
+                self.metrics_client.increment("mars.fetch.not_modified", tags=tags)
                 return None
 
             response.raise_for_status()
@@ -251,6 +270,20 @@ class MarsBackend:
                     f"MARS response missing 'suggestions' key for {country}/{form_factor}"
                 )
 
-            return json.dumps(data["suggestions"])
+            suggestions_list = data["suggestions"]
+            if not suggestions_list:
+                logger.warning(
+                    "MARS returned empty suggestions for " f"{country}/{form_factor}",
+                )
+                self.metrics_client.increment(
+                    "mars.fetch.empty_response",
+                    tags=tags,
+                )
+                return None
+
+            self.metrics_client.increment("mars.fetch.success", tags=tags)
+            self.last_new_data_at = time.time()
+            return json.dumps(suggestions_list)
         except httpx.HTTPError as error:
+            self.metrics_client.increment("mars.fetch.error", tags=tags)
             raise MarsError(f"Failed to fetch suggestions for {country}/{form_factor}") from error
