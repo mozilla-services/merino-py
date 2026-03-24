@@ -723,8 +723,8 @@ def get_top_story_list(
     for idx, rec in enumerate(top_stories):
         rec.receivedRank = idx
     if rescaler:
-        last_score = 1000.0
-        tiny_delta = 0.0001
+        last_score = 1000.0  # Most recent score encountered as we go through items. Start with arbitrary high number
+        tiny_delta = 0.00001  # Arbitrary small number to ensure descending order
         for rec in top_stories:
             """
             It is possible that the served article order is different than the score order.

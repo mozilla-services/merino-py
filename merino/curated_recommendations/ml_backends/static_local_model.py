@@ -1,5 +1,8 @@
 """Backup local model for testing and in case of GCS failure"""
 
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
@@ -41,6 +44,13 @@ SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID}
 DEFAULT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID
 EXPERIMENT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID + "_exp"
 
+# These cause interest vector to have no randomization and should only be used
+# when thresholds force a constant ouput
+FIXED_VALUE_P = 1.0
+FIXED_VALUE_Q = 0.0
+
+# Very high threshold to ensure that the 0 index is always returned
+VERY_HIGH_THRESHOLD = 1000.0
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -166,11 +176,11 @@ class FakeLocalModelSections(LocalModelBackend):
         )
 
 
-MODEL_P_VALUE_V1 = 0.806
-MODEL_Q_VALUE_V1 = 0.030
+# See calculation https://colab.research.google.com/drive/1GlEr2TScikP8YLKpAL1sGTawnimD1IyV#scrollTo=KawDDJnjBwIM
+# Section March 2026 rollout
+MODEL_P_VALUE = 0.92
+MODEL_Q_VALUE = 0.0288
 
-MODEL_P_VALUE_V3 = 0.91
-MODEL_Q_VALUE_V3 = 0.030
 
 OFF_THRESH_VALUE = 100
 
@@ -182,7 +192,7 @@ SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 
 TIME_ZONE_OFFSET_INFERRED_KEY = "timeZoneOffset"
 
-CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXEPRIMENT = 14700000
+CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXPERIMENT = 14700000
 
 SPECIAL_ALL_TOPIC_KEYWOWRD = "all"
 
@@ -194,7 +204,7 @@ class PrivacyOverridesForFivePercentExperimentUS(PrivacyOverrides):
         data.setdefault("iv_in_telemetry", False)
         data.setdefault(
             "random_content_click_probability_epsilon_micro",
-            CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXEPRIMENT,
+            CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXPERIMENT,
         )
         data.setdefault(
             "daily_click_event_cap", 2
@@ -249,34 +259,37 @@ class SuperInferredModel(LocalModelBackend):
         if disable_feature:
             return InterestVectorConfig(
                 features={f"t_{topic}": 1},
-                thresholds=[1000 for _ in range(len(thresholds))],
-                diff_p=1.0,
-                diff_q=0.0,
+                thresholds=[VERY_HIGH_THRESHOLD for _ in range(len(thresholds))],
+                diff_p=FIXED_VALUE_P,
+                diff_q=FIXED_VALUE_Q,
             )
         if topic == SPECIAL_ALL_TOPIC_KEYWOWRD:
             return InterestVectorConfig(
                 features={f"t_{t}": 1 for t in BASE_TOPICS},
                 thresholds=THRESHOLDS_V3_NON_NORMALIZED_ALL_TOPICS,
-                diff_p=MODEL_P_VALUE_V3,
-                diff_q=MODEL_Q_VALUE_V3,
+                diff_p=MODEL_P_VALUE,
+                diff_q=MODEL_Q_VALUE,
             )
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
             thresholds=thresholds,
-            diff_p=MODEL_P_VALUE_V3,
-            diff_q=MODEL_Q_VALUE_V3,
+            diff_p=MODEL_P_VALUE,
+            diff_q=MODEL_Q_VALUE,
         )
 
     @staticmethod
     def _get_time_zone() -> InterestVectorConfig:
-        """Time zone key has special functionality in Firefox, but we must specifiy privacy and offset here"""
+        """Time zone key has special functionality in Firefox, but we must specifiy threshols here
+        based on UTC offset +24 (positive values). These thresholds support the 4 continental US zones
+        """
+        now: datetime = datetime.now(ZoneInfo("America/Los_Angeles"))
+        offset: timedelta = now.utcoffset() or timedelta(0)
+        pacific_bucket: float = (offset.total_seconds() / 3600) % 24
         return InterestVectorConfig(
             features={},
-            # TODO - add daylight savings time check so model can switch based on daylight savings time
-            # Below are thresholds in 24 offset format so that results are one of current bucketed PST -> EDT
-            thresholds=[16.1, 17.1, 18.1],
-            diff_p=MODEL_P_VALUE_V3,
-            diff_q=MODEL_Q_VALUE_V3,
+            thresholds=[pacific_bucket + 0.1, pacific_bucket + 1.1, pacific_bucket + 2.1],
+            diff_p=MODEL_P_VALUE,
+            diff_q=MODEL_Q_VALUE,
         )
 
     @staticmethod
@@ -285,8 +298,8 @@ class SuperInferredModel(LocalModelBackend):
         return InterestVectorConfig(
             features=features,
             thresholds=thresholds,
-            diff_p=MODEL_P_VALUE_V3,
-            diff_q=MODEL_Q_VALUE_V3,  # Note since these section features are non-private features, p/q are ignored
+            diff_p=MODEL_P_VALUE,
+            diff_q=MODEL_Q_VALUE,  # Note since these section features are non-private features, p/q are ignored
         )
 
     def _build_local(
@@ -334,7 +347,6 @@ class SuperInferredModel(LocalModelBackend):
         privacy_overrides: PrivacyOverrides | None = (
             PrivacyOverridesForFivePercentExperimentUS() if small_experiment else None
         )
-        print("privacy overrides set " + str(privacy_overrides))
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
