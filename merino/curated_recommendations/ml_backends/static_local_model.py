@@ -175,12 +175,16 @@ MODEL_Q_VALUE_V3 = 0.030
 OFF_THRESH_VALUE = 100
 
 THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
+THRESHOLDS_V3_NON_NORMALIZED = [0.002, 0.008, 0.017]
+THRESHOLDS_V3_NON_NORMALIZED_ALL_TOPICS = [0.0001, 0.002, 0.004]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 
 TIME_ZONE_OFFSET_INFERRED_KEY = "timeZoneOffset"
 
 CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXEPRIMENT = 14700000
+
+SPECIAL_ALL_TOPIC_KEYWOWRD = "all"
 
 
 class PrivacyOverridesForFivePercentExperimentUS(PrivacyOverrides):
@@ -247,7 +251,13 @@ class SuperInferredModel(LocalModelBackend):
                 features={f"t_{topic}": 1},
                 thresholds=[1000 for _ in range(len(thresholds))],
                 diff_p=1.0,
-                diff_q=0.0,
+                diff_q=0.0)
+        if topic == SPECIAL_ALL_TOPIC_KEYWOWRD:
+            return InterestVectorConfig(
+                features={f"t_{t}": 1 for t in BASE_TOPICS},
+                thresholds=THRESHOLDS_V3_NON_NORMALIZED_ALL_TOPICS,
+                diff_p=MODEL_P_VALUE_V3,
+                diff_q=MODEL_Q_VALUE_V3,
             )
         return InterestVectorConfig(
             features={f"t_{topic}": 1},
@@ -281,7 +291,7 @@ class SuperInferredModel(LocalModelBackend):
     def _build_local(
         self, model_id, surface_id, small_experiment=False
     ) -> InferredLocalModel | None:
-        model_thresholds = THRESHOLDS_V3_NORMALIZED
+        model_thresholds = THRESHOLDS_V3_NON_NORMALIZED
         private_features: list[str] | None = None
 
         section_features = {
@@ -306,7 +316,7 @@ class SuperInferredModel(LocalModelBackend):
 
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
-            rescale=True,
+            rescale=False,
             noise_scale=0.0,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],

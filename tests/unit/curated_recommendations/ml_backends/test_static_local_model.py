@@ -113,7 +113,7 @@ def test_model_returns_default_limited_model(model_limited):
     # test a specific threshold value
     assert (
         result.model_data.interest_vector[Topic.SPORTS.value].thresholds[0]
-        == THRESHOLDS_V3_NORMALIZED[0]
+        == THRESHOLDS_V3_NON_NORMALIZED[0]
     )
 
 
