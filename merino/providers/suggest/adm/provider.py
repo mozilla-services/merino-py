@@ -12,8 +12,8 @@ from pydantic import HttpUrl
 
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
-from merino.providers.suggest.adm.backends.filemanager import ADMFilemanager
 from merino.providers.suggest.adm.backends.protocol import EngagementData, FormFactor
+from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.suggest.base import (
@@ -87,8 +87,8 @@ class Provider(BaseProvider):
     resync_interval_sec: float
     min_attempted_count: int
     thompson: ThompsonSampler | None = None
-    engagement_data: EngagementData | None
-    filemanager: ADMFilemanager
+    engagement_data: EngagementData
+    filemanager: EngagementFilemanager
     engagement_resync_interval_sec: float
     last_engagement_fetch_at: float
     engagement_cron_task: asyncio.Task
@@ -121,7 +121,7 @@ class Provider(BaseProvider):
         self.engagement_data = EngagementData(amp={}, amp_aggregated={})
         self.engagement_resync_interval_sec = engagement_resync_interval_sec
         self.last_engagement_fetch_at = 0
-        self.filemanager = ADMFilemanager(
+        self.filemanager = EngagementFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
         )
@@ -184,7 +184,7 @@ class Provider(BaseProvider):
             if data is None:
                 logger.warning("Engagement data fetch returned None, will retry on next tick")
                 return
-            self.engagement_data = data
+            self.engagement_data = EngagementData.model_validate(data.model_dump())
             self.last_engagement_fetch_at = time.time()
         except Exception as e:
             logger.warning(

@@ -1,26 +1,33 @@
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
-"""A Filemanager to retrieve engagement data for the Wikipedia Provider."""
+"""Filemanager for retrieving engagement data from GCS."""
 
 import logging
 from json import JSONDecodeError
 
 import orjson
 from gcloud.aio.storage import Blob, Bucket, Storage
-
-from merino.providers.suggest.wikipedia.backends.protocol import EngagementData
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class WikipediaFilemanager:
-    """Filemanager for fetching Wikipedia engagement data from GCS asynchronously and storing in memory."""
+class EngagementData(BaseModel):
+    """Model for the full engagement data file stored in GCS."""
+
+    amp: dict[str, dict[str, str | int]] = {}
+    amp_aggregated: dict[str, int] = {}
+    wiki_aggregated: dict[str, int] = {}
+
+
+class EngagementFilemanager:
+    """Filemanager for fetching engagement data from GCS asynchronously."""
 
     gcs_bucket_path: str
     blob_name: str
-    gcs_client: Storage | None = None
-    bucket: Bucket | None = None
+    gcs_client: Storage | None
+    bucket: Bucket | None
 
     def __init__(self, gcs_bucket_path: str, blob_name: str) -> None:
         """:param gcs_bucket_path: GCS bucket name to fetch from.
@@ -28,8 +35,10 @@ class WikipediaFilemanager:
         """
         self.gcs_bucket_path = gcs_bucket_path
         self.blob_name = blob_name
+        self.gcs_client = None
+        self.bucket = None
 
-    async def get_bucket(self) -> Bucket:
+    def get_bucket(self) -> Bucket:
         """Lazily instantiate the GCS client and return the configured bucket."""
         if self.bucket is not None:
             return self.bucket
@@ -41,22 +50,14 @@ class WikipediaFilemanager:
         return self.bucket
 
     async def get_file(self) -> EngagementData | None:
-        """Fetch the Wikipedia engagement data file from GCS."""
+        """Fetch the engagement data file from GCS and return a validated model instance."""
         try:
-            bucket = await self.get_bucket()
+            bucket = self.get_bucket()
             blob: Blob = await bucket.get_blob(self.blob_name)
             blob_data = await blob.download()
-
-            engagement_data = EngagementData.model_validate(orjson.loads(blob_data))
-
-            logger.info(f"Successfully loaded Wikipedia engagement data from {self.blob_name}")
-
-            return engagement_data
-
-        except (JSONDecodeError, ValueError) as json_error:
-            logger.error(f"Failed to decode Wikipedia engagement data JSON: {json_error}")
-
+            return EngagementData.model_validate(orjson.loads(blob_data))
+        except (JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to decode engagement data JSON: {e}")
         except Exception as e:
-            logger.error(f"Error fetching Wikipedia engagement data file {self.blob_name}: {e}")
-
+            logger.error(f"Error fetching engagement data file {self.blob_name}: {e}")
         return None

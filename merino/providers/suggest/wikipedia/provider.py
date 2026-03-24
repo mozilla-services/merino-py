@@ -15,8 +15,8 @@ from merino.providers.suggest.base import (
     SuggestionRequest,
     Category,
 )
-from merino.providers.suggest.wikipedia.backends.filemanager import WikipediaFilemanager
 from merino.providers.suggest.wikipedia.backends.protocol import EngagementData, WikipediaBackend
+from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
 from merino.utils import cron
 
@@ -52,8 +52,8 @@ class Provider(BaseProvider):
     backend: WikipediaBackend
     score: float
     title_block_list: set[str]
-    engagement_data: EngagementData | None
-    filemanager: WikipediaFilemanager
+    engagement_data: EngagementData
+    filemanager: EngagementFilemanager
     engagement_resync_interval_sec: float
     cron_interval_sec: float
     last_engagement_fetch_at: float
@@ -81,11 +81,11 @@ class Provider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self._query_timeout_sec = query_timeout_sec
         self.score = score
-        self.engagement_data = None
+        self.engagement_data = EngagementData(wiki_aggregated={})
         self.engagement_resync_interval_sec = engagement_resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_engagement_fetch_at = 0
-        self.filemanager = WikipediaFilemanager(
+        self.filemanager = EngagementFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
         )
@@ -118,7 +118,7 @@ class Provider(BaseProvider):
                     "Wikipedia engagement data fetch returned None, will retry on next tick"
                 )
                 return
-            self.engagement_data = data
+            self.engagement_data = EngagementData.model_validate(data.model_dump())
             self.last_engagement_fetch_at = time.time()
         except Exception as e:
             logger.warning(

@@ -171,7 +171,7 @@ async def test_fetch_engagement_data_returns_none(
     records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
     assert len(records) == 1
     assert "None" in records[0].message
-    assert wikipedia.engagement_data is None
+    assert wikipedia.engagement_data.wiki_aggregated == {}
     assert wikipedia.last_engagement_fetch_at == 0
 
 
@@ -192,5 +192,5 @@ async def test_fetch_engagement_data_exception(
     records = filter_caplog(caplog.records, "merino.providers.suggest.wikipedia.provider")
     assert len(records) == 1
     assert records[0].__dict__["error"] == "GCS unavailable"
-    assert wikipedia.engagement_data is None
+    assert wikipedia.engagement_data.wiki_aggregated == {}
     assert wikipedia.last_engagement_fetch_at == 0
