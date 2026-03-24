@@ -164,6 +164,49 @@ async def test_store_event_fail_and_metrics_captured(
         assert len(list(filter(lambda x: "sports.time.load.refresh_indexes" in x, calls))) == 1
 
 
+@pytest.mark.asyncio
+async def test_store_events_bulk_called_once_for_multiple_events(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    mocker: MockerFixture,
+) -> None:
+    """Test that store_events calls async_bulk once with all events, not once per event.
+
+    Regression test for a bug where async_bulk was called inside the action collection
+    loop, resulting in n*(n+1)/2 writes per job rather than n.
+    """
+    action_count = 3
+    mock_async_bulk = mocker.patch(
+        f"{SportsDataStore.__module__}.helpers.async_bulk",
+        new_callable=AsyncMock,
+        return_value=(action_count, []),
+    )
+    nfl = NFL(settings=settings.providers.sports)
+    nfl.events = {
+        i: Event(
+            sport="football",
+            id=i,
+            terms="test",
+            date=datetime.datetime.now(),
+            original_date="2025-09-22",
+            home_team={"key": f"home{i}"},
+            home_score=0,
+            away_team={"key": f"away{i}"},
+            away_score=0,
+            status=GameStatus.Scheduled,
+            expiry=datetime.datetime.now(),
+            updated=datetime.datetime.now(),
+        )
+        for i in range(action_count)
+    }
+
+    await sport_data_store.store_events(sport=nfl, language_code="en")
+
+    assert mock_async_bulk.call_count == 1
+    actions = mock_async_bulk.call_args.kwargs["actions"]
+    assert len(actions) == action_count
+
+
 @freezegun.freeze_time("2025-09-22T12:00:00Z")
 @pytest.mark.asyncio
 async def test_sports_search_event_hits(

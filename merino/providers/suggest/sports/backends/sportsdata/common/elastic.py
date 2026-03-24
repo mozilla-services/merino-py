@@ -787,17 +787,17 @@ class SportsDataStore(ElasticDataStore):
             actions.append(action)
             if event.status.is_in_progress():
                 logger.info(f"{LOGGING_TAG} ## Live Game: {event.terms}")
-
-            try:
-                start = datetime.now()
-                await helpers.async_bulk(client=self.client, actions=actions, stats_only=False)
-                logger.info(
-                    f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
-                )
-            except Exception as ex:
-                raise SportsDataError(
-                    f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
-                ) from ex
+        # Bulk-write collected actions
+        try:
+            start = datetime.now()
+            await helpers.async_bulk(client=self.client, actions=actions, stats_only=False)
+            logger.info(
+                f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
+            )
+        except Exception as ex:
+            raise SportsDataError(
+                f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
+            ) from ex
         start = datetime.now()
         try:
             await self.store_meta("last_update", datetime.now(tz=timezone.utc).isoformat())
