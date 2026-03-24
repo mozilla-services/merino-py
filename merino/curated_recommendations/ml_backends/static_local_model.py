@@ -251,7 +251,8 @@ class SuperInferredModel(LocalModelBackend):
                 features={f"t_{topic}": 1},
                 thresholds=[1000 for _ in range(len(thresholds))],
                 diff_p=1.0,
-                diff_q=0.0)
+                diff_q=0.0,
+            )
         if topic == SPECIAL_ALL_TOPIC_KEYWOWRD:
             return InterestVectorConfig(
                 features={f"t_{t}": 1 for t in BASE_TOPICS},

@@ -7,7 +7,7 @@ from merino.curated_recommendations.corpus_backends.protocol import Topic, Surfa
 from merino.curated_recommendations.ml_backends.static_local_model import (
     EXPERIMENT_PRODUCTION_MODEL_ID,
     SERVER_V3_MODEL_ID,
-    THRESHOLDS_V3_NORMALIZED,
+    THRESHOLDS_V3_NON_NORMALIZED,
     TIME_ZONE_OFFSET_INFERRED_KEY,
     FakeLocalModelSections,
     SuperInferredModel,
@@ -649,12 +649,12 @@ def test_get_dummy_experiment_name(model_limited):
 
     # Some interests have been removed
     zeroed_interest = result.model_data.interest_vector[Topic.POLITICS.value]
-    assert len(zeroed_interest.thresholds) == len(THRESHOLDS_V3_NORMALIZED)
+    assert len(zeroed_interest.thresholds) == len(THRESHOLDS_V3_NON_NORMALIZED)
     assert zeroed_interest.thresholds[0] > 10
 
     # others have not
     other_interest = result.model_data.interest_vector[Topic.SCIENCE.value]
-    assert len(other_interest.thresholds) == len(THRESHOLDS_V3_NORMALIZED)
+    assert len(other_interest.thresholds) == len(THRESHOLDS_V3_NON_NORMALIZED)
     assert other_interest.thresholds[0] < 0.9
 
     assert result.privacy_overrides is not None
