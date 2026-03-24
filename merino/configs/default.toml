@@ -303,6 +303,10 @@ gcs_bq_project = ""
 
 gcs_storage_project = ""
 
+# MERINO_ENGAGEMENT__BLOB_NAME
+# Path within the GCS bucket to the engagement data blob.
+blob_name = "suggest-merino-exports/engagement/latest.json"
+
 [default.icon]
 # Subdirectory within bucket for favicons
 favicons_root = "favicons"
@@ -574,6 +578,10 @@ cron_interval_sec = 60
 # Time between re-syncs of Remote Settings data, in seconds. Defaults to 1 hour.
 resync_interval_sec = 3600
 
+# MERINO_PROVIDERS__ADM__ENGAGEMENT_RESYNC_INTERVAL_SEC
+# Time between re-syncs of engagement data from GCS, in seconds. Defaults to 1 hour.
+engagement_resync_interval_sec = 3600
+
 # MERINO_PROVIDERS__ADM__SCORE
 # Ranking score for this provider as a floating point number. Defaults to 0.31.
 # This is intentionally set to be greater than the score in Remote Settings to fix
@@ -759,6 +767,15 @@ query_timeout_sec = 5.0
 # MERINO_PROVIDERS__WIKIPEDIA__SCORE
 # The ranking score for this provider as a floating point number. Defaults to 0.23.
 score = 0.23
+
+# MERINO_PROVIDERS__WIKIPEDIA__CRON_INTERVAL_SEC
+# The interval of the engagement data cron job tick (in seconds).
+# Should be more frequent than `engagement_resync_interval_sec` to allow retries.
+cron_interval_sec = 60
+
+# MERINO_PROVIDERS__WIKIPEDIA__ENGAGEMENT_RESYNC_INTERVAL_SEC
+# Time between re-syncs of Wikipedia engagement data from GCS, in seconds. Defaults to 1 hour.
+engagement_resync_interval_sec = 3600
 
 
 [default.providers.polygon]

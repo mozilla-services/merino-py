@@ -12,10 +12,15 @@ from pydantic import HttpUrl
 
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
-from merino.providers.suggest.adm.backends.protocol import FormFactor
+from merino.providers.suggest.adm.backends.protocol import EngagementData, FormFactor
+from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +87,11 @@ class Provider(BaseProvider):
     resync_interval_sec: float
     min_attempted_count: int
     thompson: ThompsonSampler | None = None
+    engagement_data: EngagementData
+    filemanager: EngagementFilemanager
+    engagement_resync_interval_sec: float
+    last_engagement_fetch_at: float
+    engagement_cron_task: asyncio.Task
 
     def __init__(
         self,
@@ -90,6 +100,9 @@ class Provider(BaseProvider):
         name: str,
         resync_interval_sec: float,
         cron_interval_sec: float,
+        engagement_gcs_bucket: str,
+        engagement_blob_name: str,
+        engagement_resync_interval_sec: float,
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
@@ -105,6 +118,13 @@ class Provider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.min_attempted_count = min_attempted_count
         self.thompson = thompson
+        self.engagement_data = EngagementData(amp={}, amp_aggregated={})
+        self.engagement_resync_interval_sec = engagement_resync_interval_sec
+        self.last_engagement_fetch_at = 0
+        self.filemanager = EngagementFilemanager(
+            gcs_bucket_path=engagement_gcs_bucket,
+            blob_name=engagement_blob_name,
+        )
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -132,14 +152,45 @@ class Provider(BaseProvider):
         # reference to it.
         self.cron_task = asyncio.create_task(cron_job())
 
+        engagement_cron_job = cron.Job(
+            name="resync_engagement_data",
+            interval=self.cron_interval_sec,
+            condition=self._should_fetch_engagement,
+            task=self._fetch_engagement_data,
+        )
+        self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
+
     def _should_fetch(self) -> bool:
         """Check if it should fetch data from Remote Settings."""
         return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
+
+    def _should_fetch_engagement(self) -> bool:
+        """Check if it should fetch engagement data from GCS."""
+        return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         self.suggestion_content = await self.backend.fetch()
         self.last_fetch_at = time.time()
+
+    async def _fetch_engagement_data(self) -> None:
+        """Fetch engagement data from GCS and store it in memory.
+
+        If the fetch returns no data, `last_engagement_fetch_at` is not updated
+        so the cron job retries on the next tick.
+        """
+        try:
+            data = await self.filemanager.get_file()
+            if data is None:
+                logger.warning("Engagement data fetch returned None, will retry on next tick")
+                return
+            self.engagement_data = EngagementData.model_validate(data.model_dump())
+            self.last_engagement_fetch_at = time.time()
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch engagement data from GCS",
+                extra={"error": str(e)},
+            )
 
     def hidden(self) -> bool:  # noqa: D102
         return False
