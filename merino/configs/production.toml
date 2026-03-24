@@ -17,6 +17,11 @@ dynaconf_merge = true
 # from the ADC file in the GCP Project. For dev & testing envs, we use anonymous credentials.
 skip_gcp_client_auth = true
 
+# MERINO_RUNTIME__DISABLED_PROVIDERS
+# List containing providers to disable at startup.
+# Prevents a provider from being instantiated.
+disabled_providers = ["amo", "wikipedia", "sports"]
+
 [production.accuweather]
 url_base = "https://api.accuweather.com"
 
