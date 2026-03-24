@@ -45,6 +45,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
     NBA,
     NHL,
+    MLB,
     # UCL,
     # MLB,
     # EPL,
@@ -109,8 +110,8 @@ class SportDataUpdater:
                     sport = NHL(settings)
                 # case "UCL":
                 #    sport = UCL(settings)
-                # case "MLB":
-                #    sport = MLB(settings)
+                case "MLB":
+                    sport = MLB(settings)
                 # case "EPL":
                 #    sport = EPL(settings)
                 case _:
