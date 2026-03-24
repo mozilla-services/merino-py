@@ -34,7 +34,7 @@ sequenceDiagram
 
 ## Flight Numbers Manifest Sync
 
-Flight numbers are loaded into memory from GCS on app startup and refreshed periodically (determined by `settings.manifest.cron_interval_sec` which resolves to `MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC` env var). This is an append-only manifest which contains all flight numbers that have been synced via the scheduled flight numbers ingestion job.
+Flight numbers are loaded into memory from GCS on app startup and refreshed periodically (see [config](../operations/configs.md#general)). This is an append-only manifest which contains all flight numbers that have been synced via the scheduled flight numbers ingestion job.
 
 ```mermaid
 sequenceDiagram
@@ -78,4 +78,4 @@ sequenceDiagram
     Job->>GCS: Upload flight_numbers_latest.json (×2 buckets)
 ```
 
-Note that the job can be configured tostore the manifest in Redis by setting `settings.flightaware.storage` (resolves to `MERINO_FLIGHTAWARE__STORAGE` env var) to `redis`. However, the provider is only configured to fetch the manifest from GCS.
+Note that the job can be configured to store the manifest in Redis by setting `settings.flightaware.storage` (resolves to `MERINO_FLIGHTAWARE__STORAGE` env var) to `redis`. However, the provider is only configured to fetch the manifest from GCS.
