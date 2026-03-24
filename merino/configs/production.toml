@@ -20,7 +20,7 @@ skip_gcp_client_auth = true
 # MERINO_RUNTIME__DISABLED_PROVIDERS
 # List containing providers to disable at startup.
 # Prevents a provider from being instantiated.
-disabled_providers = ["amo", "wikipedia", "sports"]
+disabled_providers = ["amo", "sports"]
 
 [production.accuweather]
 url_base = "https://api.accuweather.com"
