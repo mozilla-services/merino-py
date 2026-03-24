@@ -35,6 +35,76 @@ services:
       - ./local_data/gcs_emulator:/data
     command: -port=4443 -public-host=localhost:4443 -scheme=http
 
+  # Adapted from https://github.com/elastic/elasticsearch/blob/main/docs/reference/setup/install/docker/docker-compose.yml
+  # Removed auth and certs, disabled ml, running in single-node rather than cluster mode
+  # And using custom image to install plugins
+  es01:
+    build:
+      context: .
+      dockerfile: Dockerfile.elasticsearch
+      args:
+        STACK_VERSION: ${STACK_VERSION}
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data
+    ports:
+      - ${ES_PORT}:9200
+    environment:
+      - node.name=es01
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.type=single-node
+      - bootstrap.memory_lock=false
+      - xpack.security.enabled=false
+      - xpack.ml.enabled=false
+      - xpack.license.self_generated.type=${LICENSE}
+    mem_limit: ${MEM_LIMIT}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'curl -sf http://localhost:9200/_cluster/health | grep -qv ''"status":"red"''',
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  kibana:
+    depends_on:
+      es01:
+        condition: service_healthy
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    volumes:
+      - kibanadata:/usr/share/kibana/data
+    ports:
+      - ${KIBANA_PORT}:5601
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+    mem_limit: ${MEM_LIMIT}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  es-setup:
+    image: curlimages/curl:latest
+    depends_on:
+      es01:
+        condition: service_healthy
+    volumes:
+      - ./es-setup.sh:/es-setup.sh:ro
+      - ./es-indexes:/es-indexes:ro
+    entrypoint: ["sh", "/es-setup.sh"]
+    restart: "no"
+
 volumes:
   redis_primary:
   redis_replica:
+  kibanadata:
+    driver: local
+  esdata01:
+    driver: local

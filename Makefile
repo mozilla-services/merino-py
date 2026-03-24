@@ -173,15 +173,20 @@ profile:  ## Profile Merino with Scalene
 
 .PHONY: docker-compose-up
 docker-compose-up:  ## Run `docker-compose up` in `./dev`
-	docker compose -f dev/docker-compose.yaml up
+	docker compose --env-file dev/.env -f dev/docker-compose.yaml up
 
 .PHONY: docker-compose-up-daemon
 docker-compose-up-daemon:  ## Run `docker-compose up -d` in `./dev`
-	docker compose -f dev/docker-compose.yaml up -d
+	docker compose --env-file dev/.env -f dev/docker-compose.yaml up -d
 
 .PHONY: docker-compose-down
 docker-compose-down:  ## Run `docker-compose down` in `./dev`
-	docker compose -f dev/docker-compose.yaml down
+	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down
+
+# Use if you want to e.g. wipe elasticsearch indices and data
+.PHONY: docker-compose-down-v
+docker-compose-down:  ## Run `docker-compose down` in `./dev` and remove volumes
+	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down -v
 
 .PHONY: help
 help:

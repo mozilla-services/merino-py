@@ -137,6 +137,7 @@ merino/configs/.secrets.*
 
 # Dynaconf local config files
 merino/configs/*.local.*
+!merino/configs/*.local.*.example
 
 # mdBook generated files
 book/
