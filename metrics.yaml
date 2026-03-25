@@ -219,9 +219,10 @@ suggest/yelp:
       Provider initialization
     alert_policy: []
 suggest/mars:
-  mars_fetch_success:
+  mars_fetch:
     description: |
-      A counter for successful MARS API fetches that returned suggestion data
+      A counter for MARS API fetch attempts during periodic data sync.
+      The status tag indicates the outcome: success, not_modified, empty_response, or error.
     type: counter
     labels:
       - name: country
@@ -230,52 +231,9 @@ suggest/mars:
       - name: form_factor
         description: |
           The form factor for the fetched segment
-    scope: |
-      The ADM provider MARS backend data sync.
-    alert_policy: []
-
-  mars_fetch_not_modified:
-    description: |
-      A counter for MARS API responses with 304 Not Modified (data unchanged)
-    type: counter
-    labels:
-      - name: country
+      - name: status
         description: |
-          The country code for the fetched segment
-      - name: form_factor
-        description: |
-          The form factor for the fetched segment
-    scope: |
-      The ADM provider MARS backend data sync.
-    alert_policy: []
-
-  mars_fetch_empty_response:
-    description: |
-      A counter for MARS API responses that returned an empty suggestions array.
-      Cached data is preserved when this occurs.
-    type: counter
-    labels:
-      - name: country
-        description: |
-          The country code for the fetched segment
-      - name: form_factor
-        description: |
-          The form factor for the fetched segment
-    scope: |
-      The ADM provider MARS backend data sync.
-    alert_policy: []
-
-  mars_fetch_error:
-    description: |
-      A counter for failed MARS API requests (HTTP errors, timeouts, connection failures)
-    type: counter
-    labels:
-      - name: country
-        description: |
-          The country code for the fetched segment
-      - name: form_factor
-        description: |
-          The form factor for the fetched segment
+          The fetch outcome (success, not_modified, empty_response, error)
     scope: |
       The ADM provider MARS backend data sync.
     alert_policy: []

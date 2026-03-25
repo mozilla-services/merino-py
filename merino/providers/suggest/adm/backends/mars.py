@@ -249,7 +249,9 @@ class MarsBackend:
             )
 
             if response.status_code == 304:
-                self.metrics_client.increment("mars.fetch.not_modified", tags=tags)
+                self.metrics_client.increment(
+                    "mars.fetch", tags={**tags, "status": "not_modified"}
+                )
                 return None
 
             response.raise_for_status()
@@ -276,14 +278,13 @@ class MarsBackend:
                     "MARS returned empty suggestions for " f"{country}/{form_factor}",
                 )
                 self.metrics_client.increment(
-                    "mars.fetch.empty_response",
-                    tags=tags,
+                    "mars.fetch", tags={**tags, "status": "empty_response"}
                 )
                 return None
 
-            self.metrics_client.increment("mars.fetch.success", tags=tags)
+            self.metrics_client.increment("mars.fetch", tags={**tags, "status": "success"})
             self.last_new_data_at = time.time()
             return json.dumps(suggestions_list)
         except httpx.HTTPError as error:
-            self.metrics_client.increment("mars.fetch.error", tags=tags)
+            self.metrics_client.increment("mars.fetch", tags={**tags, "status": "error"})
             raise MarsError(f"Failed to fetch suggestions for {country}/{form_factor}") from error

@@ -531,8 +531,8 @@ async def test_fetch_empty_suggestions(
 
     # Empty response metric should be incremented.
     mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
-        "mars.fetch.empty_response",
-        tags={"country": "US", "form_factor": "desktop"},
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "empty_response"},
     )
 
 
@@ -542,7 +542,7 @@ async def test_fetch_metrics_on_success(
     mars_backend: MarsBackend,
     suggestion_response: httpx.Response,
 ) -> None:
-    """Test that mars.fetch.success is incremented on 200 with data."""
+    """Test that mars.fetch with status=success is incremented on 200 with data."""
     mocker.patch.object(
         httpx.AsyncClient,
         "get",
@@ -552,8 +552,8 @@ async def test_fetch_metrics_on_success(
     await mars_backend.fetch()
 
     mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
-        "mars.fetch.success",
-        tags={"country": "US", "form_factor": "desktop"},
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "success"},
     )
 
 
@@ -562,7 +562,7 @@ async def test_fetch_metrics_on_304(
     mocker: MockerFixture,
     mars_backend: MarsBackend,
 ) -> None:
-    """Test that mars.fetch.not_modified is incremented on 304."""
+    """Test that mars.fetch with status=not_modified is incremented on 304."""
     not_modified_response = httpx.Response(
         status_code=304,
         request=httpx.Request(method="GET", url="http://test-mars-api/data"),
@@ -576,8 +576,8 @@ async def test_fetch_metrics_on_304(
     await mars_backend.fetch()
 
     mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
-        "mars.fetch.not_modified",
-        tags={"country": "US", "form_factor": "desktop"},
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "not_modified"},
     )
 
 
@@ -586,7 +586,7 @@ async def test_fetch_metrics_on_error(
     mocker: MockerFixture,
     mars_backend: MarsBackend,
 ) -> None:
-    """Test that mars.fetch.error is incremented on HTTP errors."""
+    """Test that mars.fetch with status=error is incremented on HTTP errors."""
     error_response = httpx.Response(
         status_code=500,
         text="Internal Server Error",
@@ -602,8 +602,8 @@ async def test_fetch_metrics_on_error(
         await mars_backend.fetch()
 
     mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
-        "mars.fetch.error",
-        tags={"country": "US", "form_factor": "desktop"},
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "error"},
     )
 
 
