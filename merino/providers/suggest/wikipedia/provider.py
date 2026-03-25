@@ -15,7 +15,10 @@ from merino.providers.suggest.base import (
     SuggestionRequest,
     Category,
 )
-from merino.providers.suggest.wikipedia.backends.protocol import EngagementData, WikipediaBackend
+from merino.providers.suggest.wikipedia.backends.protocol import (
+    EngagementData,
+    WikipediaBackend,
+)
 from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
 from merino.utils import cron

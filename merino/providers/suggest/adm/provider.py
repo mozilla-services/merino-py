@@ -204,10 +204,13 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
-    def _fetch_engagement_metrics(self, _suggestion: PyAmpResult) -> EngagementMetrics:
+    def _fetch_engagement_metrics(self, suggestion: PyAmpResult) -> EngagementMetrics:
         """Fetch engagement metrics for an AMP suggestion."""
-        # TODO(nanj): look up the real engagement metrics.
+        advertiser = suggestion.advertiser
         engaged, attempted = 1, 1
+        if self.engagement_data and (metrics := self.engagement_data.amp.get(advertiser)):
+            attempted = int(metrics.get("impressions", attempted))
+            engaged = int(metrics.get("clicks", attempted))
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
     def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
