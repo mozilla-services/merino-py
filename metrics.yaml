@@ -13,6 +13,21 @@ suggest:
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
+  intent_word_count:
+    description: |
+      Count of intent words contained in a query
+    type: counter
+    labels:
+      - name: provider
+        description: |
+          The provider which accepted the request
+      - name: word
+        description: |
+          The matched intent word (can have more than one per query)
+    scope: |
+      Provider served by the "/api/v1/suggest" API endpoint
+    alert_policy: []
+
 suggest/accuweather:
   providers_accuweather_query_weather_report:
     description: |
