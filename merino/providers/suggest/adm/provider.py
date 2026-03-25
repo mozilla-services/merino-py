@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from enum import Enum, unique
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from moz_merino_ext.amp import AmpIndexManager, PyAmpResult
 
@@ -210,6 +210,14 @@ class Provider(BaseProvider):
         engaged, attempted = 1, 1
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
+    def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
+        """Return True if Thompson sampling should be applied to this request."""
+        if not self.thompson:
+            return False
+        if self.should_check_client_variants:
+            return any(cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants)
+        return True
+
     def _select(
         self, suggestions: list[PyAmpResult], client_variants: list[str]
     ) -> PyAmpResult | None:
@@ -221,10 +229,7 @@ class Provider(BaseProvider):
             Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
             determines so. Return the first candidate when the optimizer is disabled.
         """
-        if self.thompson and (
-            not self.should_check_client_variants
-            or any([cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants])
-        ):
+        if self._is_thompson_eligible(client_variants):
             candidates = [
                 ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
                 for i, suggestion in enumerate(suggestions)
@@ -234,7 +239,7 @@ class Provider(BaseProvider):
             if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
                 return suggestions[0]
 
-            winner = self.thompson.sample(candidates)
+            winner = cast(ThompsonSampler, self.thompson).sample(candidates)
             return suggestions[winner.id] if winner else None
 
         return suggestions[0] if suggestions else None
