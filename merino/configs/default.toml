@@ -612,6 +612,10 @@ dummy_engaged_count = 1
 # The dummy candidate for Thompson sampling - attempted count
 dummy_attempted_count = 1000
 
+# MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
+# Whether to check `client_variants` for Thompson sampling
+check_client_variants = true
+
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL
 # This is the URL for the Addons API to get more information for particular addons.

@@ -88,6 +88,7 @@ class Provider(BaseProvider):
     backend: AdmBackend
     resync_interval_sec: float
     min_attempted_count: int
+    should_check_client_variants: bool
     thompson: ThompsonSampler | None = None
     engagement_data: EngagementData
     filemanager: EngagementFilemanager
@@ -108,6 +109,7 @@ class Provider(BaseProvider):
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
+        should_check_client_variants=True,
         **kwargs: Any,
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
@@ -127,6 +129,7 @@ class Provider(BaseProvider):
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
         )
+        self.should_check_client_variants = should_check_client_variants
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -218,7 +221,10 @@ class Provider(BaseProvider):
             Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
             determines so. Return the first candidate when the optimizer is disabled.
         """
-        if self.thompson and any([cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants]):
+        if self.thompson and (
+            not self.should_check_client_variants
+            or any([cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants])
+        ):
             candidates = [
                 ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
                 for i, suggestion in enumerate(suggestions)
