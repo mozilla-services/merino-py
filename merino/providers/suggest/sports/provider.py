@@ -125,10 +125,7 @@ class SportsDataProvider(BaseProvider):
         for word in found_intent_words:
             self.metrics_client.increment(
                 INTENT_WORD_COUNT_METRIC_NAME,
-                tags={
-                    "provider": PROVIDER_ID,
-                    "word": word
-                },
+                tags={"provider": PROVIDER_ID, "word": word},
             )
         if found_intent_words:
             # if we found an intent word, strip it out of the query, else we won't return any results.
