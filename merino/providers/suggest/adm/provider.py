@@ -4,12 +4,13 @@ import asyncio
 import logging
 import time
 from enum import Enum, unique
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from moz_merino_ext.amp import AmpIndexManager, PyAmpResult
 
 from pydantic import HttpUrl
 
+from merino.configs import settings
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.protocol import EngagementData, FormFactor
@@ -48,6 +49,7 @@ FORM_FACTORS_FALLBACK_MAPPING = {
 
 FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
+CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -86,6 +88,7 @@ class Provider(BaseProvider):
     backend: AdmBackend
     resync_interval_sec: float
     min_attempted_count: int
+    should_check_client_variants: bool
     thompson: ThompsonSampler | None = None
     engagement_data: EngagementData
     filemanager: EngagementFilemanager
@@ -106,6 +109,7 @@ class Provider(BaseProvider):
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
+        should_check_client_variants=True,
         **kwargs: Any,
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
@@ -125,6 +129,7 @@ class Provider(BaseProvider):
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
         )
+        self.should_check_client_variants = should_check_client_variants
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -205,7 +210,17 @@ class Provider(BaseProvider):
         engaged, attempted = 1, 1
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
-    def _select(self, suggestions: list[PyAmpResult]) -> PyAmpResult | None:
+    def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
+        """Return True if Thompson sampling should be applied to this request."""
+        if not self.thompson:
+            return False
+        if self.should_check_client_variants:
+            return any(cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants)
+        return True
+
+    def _select(
+        self, suggestions: list[PyAmpResult], client_variants: list[str]
+    ) -> PyAmpResult | None:
         """Select a suggestion from the candidate collection.
 
         Params:
@@ -214,7 +229,7 @@ class Provider(BaseProvider):
             Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
             determines so. Return the first candidate when the optimizer is disabled.
         """
-        if self.thompson:
+        if self._is_thompson_eligible(client_variants):
             candidates = [
                 ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
                 for i, suggestion in enumerate(suggestions)
@@ -224,7 +239,7 @@ class Provider(BaseProvider):
             if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
                 return suggestions[0]
 
-            winner = self.thompson.sample(candidates)
+            winner = cast(ThompsonSampler, self.thompson).sample(candidates)
             return suggestions[winner.id] if winner else None
 
         return suggestions[0] if suggestions else None
@@ -234,6 +249,7 @@ class Provider(BaseProvider):
         q: str = srequest.query
         form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
         country = srequest.geolocation.country
+        client_variants = srequest.client_variants
 
         # Set the fallback country code and form factor if absent. See "DISCO-3971" for details.
         form_factor = form_factor or FALLBACK_FORM_FACTOR
@@ -244,7 +260,7 @@ class Provider(BaseProvider):
         if (
             self.suggestion_content.index_manager.has(idx_id)
             and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
-            and (res := self._select(suggestions))
+            and (res := self._select(suggestions, client_variants))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 

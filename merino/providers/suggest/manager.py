@@ -207,6 +207,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 engagement_gcs_bucket=settings.engagement.gcs_storage_bucket,
                 engagement_blob_name=settings.engagement.blob_name,
                 engagement_resync_interval_sec=setting.engagement_resync_interval_sec,
+                should_check_client_variants=settings.providers.adm.thompson.check_client_variants,
             )
         case ProviderType.GEOLOCATION:
             return GeolocationProvider(

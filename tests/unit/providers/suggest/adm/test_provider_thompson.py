@@ -17,6 +17,9 @@ from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provid
 from tests.unit.types import SuggestionRequestFixture
 
 
+CLIENT_VARIANTS: list[str] = ["engagement_guided_suggestions"]
+
+
 def test_thompson_attribute_is_none_by_default(adm: Provider) -> None:
     """Provider created without a thompson argument should have thompson=None."""
     assert adm.thompson is None
@@ -37,8 +40,10 @@ async def test_query_with_thompson_returns_suggestion(
     await adm_with_thompson.initialize()
     geolocation = Location(country="US")
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
-
-    res = await adm_with_thompson.query(srequest("firefox", geolocation, user_agent))
+    client_variants = ["engagement_guided_suggestions"]
+    res = await adm_with_thompson.query(
+        srequest("firefox", geolocation, user_agent, client_variants)
+    )
 
     assert res == [
         NonsponsoredSuggestion(
@@ -67,8 +72,11 @@ async def test_query_with_thompson_dummy_suppresses_suggestion(
     await adm_with_thompson_dummy.initialize()
     geolocation = Location(country="US")
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    client_variants = CLIENT_VARIANTS
 
-    res = await adm_with_thompson_dummy.query(srequest("firefox", geolocation, user_agent))
+    res = await adm_with_thompson_dummy.query(
+        srequest("firefox", geolocation, user_agent, client_variants)
+    )
 
     assert res == []
 
@@ -80,8 +88,9 @@ async def test_query_with_thompson_no_match_returns_empty(
 ) -> None:
     """Thompson-enabled provider should return empty list when the query matches nothing."""
     await adm_with_thompson.initialize()
+    client_variants = CLIENT_VARIANTS
 
-    res = await adm_with_thompson.query(srequest("zzznomatch", None, None))
+    res = await adm_with_thompson.query(srequest("zzznomatch", None, None, client_variants))
 
     assert res == []
 
@@ -94,8 +103,8 @@ async def test_query_with_thompson_uses_fallback_country_and_form_factor(
 ) -> None:
     """Thompson-enabled provider should apply country/form-factor fallbacks when absent."""
     await adm_with_thompson.initialize()
-
-    res = await adm_with_thompson.query(srequest("firefox", None, None))
+    client_variants = CLIENT_VARIANTS
+    res = await adm_with_thompson.query(srequest("firefox", None, None, client_variants))
 
     assert len(res) == 1
     assert res[0].score == adm_parameters["score"]
@@ -113,9 +122,46 @@ async def test_query_with_thompson_min_attempted_count_returns_suggestion(
     await adm_with_thompson_dummy_min_attempted_count.initialize()
     geolocation = Location(country="US")
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    client_variants = CLIENT_VARIANTS
 
     res = await adm_with_thompson_dummy_min_attempted_count.query(
-        srequest("firefox", geolocation, user_agent)
+        srequest("firefox", geolocation, user_agent, client_variants)
+    )
+
+    assert res == [
+        NonsponsoredSuggestion(
+            block_id=2,
+            full_keyword="firefox accounts",
+            title="Mozilla Firefox Accounts",
+            url=HttpUrl("https://example.org/target/mozfirefoxaccounts"),
+            categories=[],
+            impression_url=HttpUrl("https://example.org/impression/mozilla"),
+            click_url=HttpUrl("https://example.org/click/mozilla"),
+            provider="adm",
+            advertiser="Example.org",
+            is_sponsored=False,
+            icon="attachment-host/main-workspace/quicksuggest/icon-01",
+            score=adm_parameters["score"],
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_query_with_thompson_without_client_variants_check(
+    srequest: SuggestionRequestFixture,
+    adm_with_thompson_skip_client_variants_check: Provider,
+    adm_parameters: dict[str, Any],
+) -> None:
+    """Thompson-enabled provider without the client_variants check should return
+    a suggestion when the sampler picks a winner even if client_variants does
+    not match.
+    """
+    await adm_with_thompson_skip_client_variants_check.initialize()
+    geolocation = Location(country="US")
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    client_variants: list[str] = []
+    res = await adm_with_thompson_skip_client_variants_check.query(
+        srequest("firefox", geolocation, user_agent, client_variants)
     )
 
     assert res == [

@@ -103,6 +103,9 @@ client_variant_max = 10
 # in this case the total string length count for client variants.
 client_variant_character_max = 100
 
+# MERINO_WEB__API__V1__CLIENT_VARIANT_ALLOW_LIST
+# list of client variants the merino will be aware about
+client_variant_allow_list = ["engagement_guided_suggestions"]
 
 # MERINO_WEB__API__V1__HEADER_CHARACTER_MAX
 # A non-negative integer that limits the string character length of a given header string,
@@ -608,6 +611,10 @@ dummy_engaged_count = 1
 # MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
 # The dummy candidate for Thompson sampling - attempted count
 dummy_attempted_count = 1000
+
+# MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
+# Whether to check `client_variants` for Thompson sampling
+check_client_variants = true
 
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL

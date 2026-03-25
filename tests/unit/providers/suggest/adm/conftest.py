@@ -170,3 +170,18 @@ def fixture_adm_with_thompson_dummy_min_attempted_count(
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
     )
+
+
+@pytest.fixture(name="adm_with_thompson_skip_client_variants_check")
+def fixture_adm_with_thompson_skip_client_variants_check(
+    backend_mock: Any,
+    adm_parameters: dict[str, Any],
+    thompson_sampler: ThompsonSampler,
+) -> Provider:
+    """Create an AdM Provider with Thompson sampling enabled for testing."""
+    return Provider(
+        backend=backend_mock,
+        thompson=thompson_sampler,
+        should_check_client_variants=False,
+        **adm_parameters,
+    )
