@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 # Type definition for tags in aiodogstatsd metrics
 MetricTags = Mapping[str, float | int | str]
 
+INTENT_WORD_COUNT_METRIC_NAME = "intent_word_count"
+
 
 @cache
 def get_metrics_client() -> aiodogstatsd.Client:
