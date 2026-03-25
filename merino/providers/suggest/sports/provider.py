@@ -31,6 +31,7 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
+from merino.utils.metrics import INTENT_WORD_COUNT_METRIC_NAME
 
 
 class SportsDataProvider(BaseProvider):
@@ -120,7 +121,15 @@ class SportsDataProvider(BaseProvider):
         # here, we test for the presence of at least one "intent word".
         # See merino.providers.suggest.sports.DEFAULT_INTENT_WORDS
         #
-        if any(map(lambda w: w.lower() in self.intent_words, query.split())):
+        intent_words = [w.lower() for w in query.split() if w.lower() in self.intent_words]
+        for word in intent_words:
+            self.metrics_client.increment(
+                INTENT_WORD_COUNT_METRIC_NAME,
+                tags={
+                    "provider": PROVIDER_ID,
+                    "word": word
+                },
+            )
             # if we found an intent word, strip it out of the query, else we won't return any results.
             return " ".join(filter(lambda w: w.lower() not in self.intent_words, query.split()))
         return ""
