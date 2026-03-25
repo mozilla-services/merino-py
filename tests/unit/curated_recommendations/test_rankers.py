@@ -1379,11 +1379,12 @@ class TestContextualRanker:
         )
         prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
         engagement_backend = StubEngagementBackend({})
+        A_RANK = 0.0020001
         ml_backend = StubMLRecsBackend(
             rankings=ContextualArticleRankings(
                 granularity="region",
                 shards={
-                    "a": {"mean": 0.0021, "std": 0.0},
+                    "a": {"mean": A_RANK, "std": 0.0},
                     "b": {"mean": 0.002, "std": 0.0},
                     "c": {"mean": 0.001, "std": 0.0},
                 },
@@ -1395,7 +1396,7 @@ class TestContextualRanker:
         assert len(ranked) == 3
         assert ranked[0].ranking_data is not None
         assert ranked[0].corpusItemId == "a"
-        assert ranked[0].ranking_data.score == pytest.approx(0.0021)
+        assert ranked[0].ranking_data.score == pytest.approx(A_RANK)
 
         tech_interests = ProcessedInterests(
             scores={
@@ -1409,7 +1410,7 @@ class TestContextualRanker:
         assert len(ranked) == 3
         assert ranked[0].ranking_data is not None
         assert ranked[0].corpusItemId == "b"
-        assert ranked[0].ranking_data.score > 0.0021
+        assert ranked[0].ranking_data.score > A_RANK
 
         tech_interests = ProcessedInterests(scores={Topic.TECHNOLOGY.value: 0.0})
         ranked = ranker.rank_items(recs, personal_interests=tech_interests)
