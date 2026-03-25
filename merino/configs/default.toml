@@ -386,7 +386,7 @@ max_suggestions = 5
 # Disable this provider by default
 enabled_by_default = true
 # General timeout
-query_timeout_sec = 3.0
+query_timeout_sec = 0.3
 # Temporary value to enable data pre-load "kickstart"
 kickstart = true
 
@@ -762,7 +762,7 @@ es_request_timeout_ms = 5000
 
 # MERINO_PROVIDERS__WIKIPEDIA__QUERY_TIMEOUT_SEC
 # The timeout in seconds for each query request to the provider.
-query_timeout_sec = 5.0
+query_timeout_sec = 0.3
 
 # MERINO_PROVIDERS__WIKIPEDIA__SCORE
 # The ranking score for this provider as a floating point number. Defaults to 0.23.
@@ -808,7 +808,7 @@ score = 0.29
 # MERINO_PROVIDERS__POLYGON__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for finance data. This will override the default global query timeout.
-query_timeout_sec = 5.0
+query_timeout_sec = 1.0
 
 # MERINO_PROVIDERS__POLYGON__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
@@ -888,7 +888,7 @@ score = 0 # TODO
 # MERINO_PROVIDERS__YELP__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for yelp data. This will override the default global query timeout.
-query_timeout_sec = 5.0
+query_timeout_sec = 0.3
 
 # MERINO_PROVIDERS__YELP__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
@@ -948,7 +948,7 @@ score = 0.29
 # MERINO_PROVIDERS__FLIGHTAWARE__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for flightaware data. This will override the default global query timeout.
-query_timeout_sec = 5.0
+query_timeout_sec = 1.0
 
 # MERINO_PROVIDERS__FLIGHTAWARE__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
