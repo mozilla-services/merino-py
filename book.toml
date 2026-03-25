@@ -1,7 +1,6 @@
 [book]
 authors = ["Mozilla Content Discovery Services"]
 language = "en"
-multilingual = false
 src = "docs"
 title = "Merino Book"
 

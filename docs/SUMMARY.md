@@ -21,6 +21,8 @@
     - [Unit Tests](./testing/unit-tests.md)
     - [Integration Tests](./testing/integration-tests.md)
     - [Load Tests](./testing/load-tests.md)
+- [Providers](./providers/index.md)
+  - [Flights](./providers/flights.md)
 - [Operations](./operations/index.md)
   - [Rollback](./operations/rollback.md)
   - [Modify Navigational Suggestions Blocklist](./operations/blocklist-nav-suggestions.md)
@@ -34,8 +36,8 @@
     - [Remote Settings CSV Uploader](./operations/jobs/csv-remote-settings.md)
     - [Geonames Uploader](./operations/jobs/geonames-uploader.md)
 
-
 # ADR
+
 - [Archive](./adr/index.md)
   - [Load Test Framework: Locust VS K6](./adr/0001-locust-vs-k6-merino-py-performance-test-framework.md)
   - [General API Response](./adr/0002-merino-general-response.md)
