@@ -184,7 +184,7 @@ MODEL_Q_VALUE = 0.0288
 
 OFF_THRESH_VALUE = 100
 
-THRESHOLDS_V3_NORMALIZED = [0.3, 0.5, 0.8]
+THRESHOLDS_V3_NORMALIZED = [0.25, 0.46, 0.8]
 THRESHOLDS_V3_NON_NORMALIZED = [0.002, 0.008, 0.017]
 THRESHOLDS_V3_NON_NORMALIZED_ALL_TOPICS = [0.0001, 0.002, 0.004]
 
@@ -305,7 +305,7 @@ class SuperInferredModel(LocalModelBackend):
     def _build_local(
         self, model_id, surface_id, small_experiment=False
     ) -> InferredLocalModel | None:
-        model_thresholds = THRESHOLDS_V3_NON_NORMALIZED
+        model_thresholds = THRESHOLDS_V3_NORMALIZED
         private_features: list[str] | None = None
 
         section_features = {
@@ -330,7 +330,7 @@ class SuperInferredModel(LocalModelBackend):
 
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
-            rescale=False,
+            rescale=True,
             noise_scale=0.0,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],
