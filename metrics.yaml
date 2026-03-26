@@ -218,6 +218,36 @@ suggest/yelp:
     scope: |
       Provider initialization
     alert_policy: []
+suggest/mars:
+  mars_fetch:
+    description: |
+      A counter for MARS API fetch attempts during periodic data sync.
+      The status tag indicates the outcome: success, not_modified, empty_response, or error.
+    type: counter
+    labels:
+      - name: country
+        description: |
+          The country code for the fetched segment
+      - name: form_factor
+        description: |
+          The form factor for the fetched segment
+      - name: status
+        description: |
+          The fetch outcome (success, not_modified, empty_response, error)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  mars_data_staleness_seconds:
+    description: |
+      A gauge tracking the time in seconds since the last successful data fetch
+      from MARS. Can be used to alert if data becomes stale.
+    type: gauge
+    labels: []
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
 suggest/flightaware:
   flightaware_request_summary_get:
     description: |

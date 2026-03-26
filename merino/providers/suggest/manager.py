@@ -174,6 +174,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 backend = MarsBackend(
                     base_url=settings.mars.base_url,
                     icon_processor=icon_processor,
+                    metrics_client=get_metrics_client(),
                     connect_timeout=settings.mars.connect_timeout_sec,
                     request_timeout=settings.mars.request_timeout_sec,
                     suggestion_url_path=settings.mars.suggestion_url_path,
