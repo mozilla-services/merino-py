@@ -198,6 +198,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 )
             return AdmProvider(
                 backend=backend,
+                metrics_client=get_metrics_client(),
                 score=setting.score,
                 name=provider_id,
                 resync_interval_sec=setting.resync_interval_sec,

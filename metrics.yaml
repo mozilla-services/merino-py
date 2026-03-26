@@ -218,6 +218,22 @@ suggest/yelp:
     scope: |
       Provider initialization
     alert_policy: []
+suggest/adm:
+  providers_adm_thompson_select:
+    description: |
+      A counter for ADM provider Thompson sampling selection outcomes.
+      The outcome tag indicates the result: selected (sampler picked a winner),
+      suppressed (dummy candidate won, suggestion withheld), or skipped (single
+      candidate below the min_attempted_count threshold, sampler bypassed).
+    type: counter
+    labels:
+      - name: outcome
+        description: |
+          The sampling outcome (selected, suppressed, skipped)
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
 suggest/mars:
   mars_fetch:
     description: |

@@ -7,6 +7,7 @@
 import json
 from typing import Any
 
+import aiodogstatsd
 import pytest
 from moz_merino_ext.amp import AmpIndexManager
 from pytest_mock import MockerFixture
@@ -182,10 +183,18 @@ def fixture_thompson_backend_mock(mocker: MockerFixture, rs_attachment_raw_thomp
     return backend_mock
 
 
+@pytest.fixture(name="metrics_client_mock")
+def fixture_metrics_client_mock(mocker: MockerFixture) -> Any:
+    """Create a metrics client mock for AdM provider tests."""
+    return mocker.MagicMock(spec=aiodogstatsd.Client)
+
+
 @pytest.fixture(name="adm")
-def fixture_adm(backend_mock: Any, adm_parameters: dict[str, Any]) -> Provider:
+def fixture_adm(
+    backend_mock: Any, adm_parameters: dict[str, Any], metrics_client_mock: Any
+) -> Provider:
     """Create an AdM Provider for test."""
-    return Provider(backend=backend_mock, **adm_parameters)
+    return Provider(backend=backend_mock, metrics_client=metrics_client_mock, **adm_parameters)
 
 
 @pytest.fixture(name="thompson_sampler")
@@ -239,10 +248,12 @@ def fixture_adm_with_thompson(
     adm_parameters: dict[str, Any],
     thompson_sampler: ThompsonSampler,
     engagement_data: EngagementData,
+    metrics_client_mock: Any,
 ) -> Provider:
     """Create an AdM Provider with Thompson sampling enabled for testing."""
     provider = Provider(
         backend=thompson_backend_mock,
+        metrics_client=metrics_client_mock,
         thompson=thompson_sampler,
         **adm_parameters,
     )
@@ -255,6 +266,7 @@ def fixture_adm_with_thompson_dummy(
     thompson_backend_mock: Any,
     adm_parameters: dict[str, Any],
     thompson_sampler_with_dummy: ThompsonSampler,
+    metrics_client_mock: Any,
 ) -> Provider:
     """Create an AdM Provider with a dominant dummy Thompson sampler for testing.
 
@@ -263,6 +275,7 @@ def fixture_adm_with_thompson_dummy(
     """
     return Provider(
         backend=thompson_backend_mock,
+        metrics_client=metrics_client_mock,
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
     )
@@ -274,12 +287,14 @@ def fixture_adm_with_thompson_dummy_min_attempted_count(
     adm_parameters: dict[str, Any],
     engagement_data: EngagementData,
     thompson_sampler_with_dummy: ThompsonSampler,
+    metrics_client_mock: Any,
 ) -> Provider:
     """Create an AdM Provider with a dominant dummy Thompson sampler and minimal
     attempted count for testing.
     """
     provider = Provider(
         backend=thompson_backend_mock,
+        metrics_client=metrics_client_mock,
         min_attempted_count=1000,
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
@@ -293,11 +308,30 @@ def fixture_adm_with_thompson_skip_client_variants_check(
     backend_mock: Any,
     adm_parameters: dict[str, Any],
     thompson_sampler: ThompsonSampler,
+    metrics_client_mock: Any,
 ) -> Provider:
     """Create an AdM Provider with Thompson sampling enabled for testing."""
     return Provider(
         backend=backend_mock,
+        metrics_client=metrics_client_mock,
         thompson=thompson_sampler,
         should_check_client_variants=False,
+        **adm_parameters,
+    )
+
+
+@pytest.fixture(name="adm_with_thompson_single_candidate_below_threshold")
+def fixture_adm_with_thompson_single_candidate_below_threshold(
+    backend_mock: Any,
+    adm_parameters: dict[str, Any],
+    thompson_sampler_with_dummy: ThompsonSampler,
+    metrics_client_mock: Any,
+) -> Provider:
+    """Create an AdM Provider with Thompson sampling and a min_attempted_count threshold."""
+    return Provider(
+        backend=backend_mock,
+        metrics_client=metrics_client_mock,
+        min_attempted_count=1000,
+        thompson=thompson_sampler_with_dummy,
         **adm_parameters,
     )

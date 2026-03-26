@@ -16,6 +16,9 @@ from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provid
 
 from tests.unit.types import SuggestionRequestFixture
 
+GEOLOCATION = Location(country="US")
+USER_AGENT = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+
 
 CLIENT_VARIANTS: list[str] = ["engagement_guided_suggestions"]
 
@@ -38,11 +41,8 @@ async def test_query_with_thompson_returns_suggestion(
 ) -> None:
     """Thompson-enabled provider should return a suggestion when the sampler picks a winner."""
     await adm_with_thompson.initialize()
-    geolocation = Location(country="US")
-    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
-    client_variants = ["engagement_guided_suggestions"]
     res = await adm_with_thompson.query(
-        srequest("firefox", geolocation, user_agent, client_variants)
+        srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
     )
 
     assert res == [
@@ -70,12 +70,9 @@ async def test_query_with_thompson_dummy_suppresses_suggestion(
 ) -> None:
     """Provider with a dominant dummy should suppress the suggestion (return empty list)."""
     await adm_with_thompson_dummy.initialize()
-    geolocation = Location(country="US")
-    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
-    client_variants = CLIENT_VARIANTS
 
     res = await adm_with_thompson_dummy.query(
-        srequest("firefox", geolocation, user_agent, client_variants)
+        srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
     )
 
     assert res == []
@@ -120,12 +117,9 @@ async def test_query_with_thompson_min_attempted_count_returns_suggestion(
     attempted count is below the minimal attempted count.
     """
     await adm_with_thompson_dummy_min_attempted_count.initialize()
-    geolocation = Location(country="US")
-    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
-    client_variants = CLIENT_VARIANTS
 
     res = await adm_with_thompson_dummy_min_attempted_count.query(
-        srequest("firefox", geolocation, user_agent, client_variants)
+        srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
     )
 
     assert res == [
@@ -157,11 +151,9 @@ async def test_query_with_thompson_without_client_variants_check(
     not match.
     """
     await adm_with_thompson_skip_client_variants_check.initialize()
-    geolocation = Location(country="US")
-    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     client_variants: list[str] = []
     res = await adm_with_thompson_skip_client_variants_check.query(
-        srequest("firefox", geolocation, user_agent, client_variants)
+        srequest("firefox", GEOLOCATION, USER_AGENT, client_variants)
     )
 
     assert res == [
@@ -180,3 +172,52 @@ async def test_query_with_thompson_without_client_variants_check(
             score=adm_parameters["score"],
         )
     ]
+
+
+@pytest.mark.asyncio
+async def test_thompson_selected_metric(
+    srequest: SuggestionRequestFixture,
+    adm_with_thompson: Provider,
+    metrics_client_mock: Any,
+) -> None:
+    """Thompson sampler picking a winner should emit the 'selected' outcome metric."""
+    await adm_with_thompson.initialize()
+    await adm_with_thompson.query(srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS))
+
+    metrics_client_mock.increment.assert_called_once_with(
+        "providers.adm.thompson.select", tags={"outcome": "selected"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_thompson_suppressed_metric(
+    srequest: SuggestionRequestFixture,
+    adm_with_thompson_dummy: Provider,
+    metrics_client_mock: Any,
+) -> None:
+    """Dominant dummy candidate suppressing a suggestion should emit the 'suppressed' outcome metric."""
+    await adm_with_thompson_dummy.initialize()
+    await adm_with_thompson_dummy.query(
+        srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
+    )
+
+    metrics_client_mock.increment.assert_called_once_with(
+        "providers.adm.thompson.select", tags={"outcome": "suppressed"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_thompson_skipped_metric(
+    srequest: SuggestionRequestFixture,
+    adm_with_thompson_single_candidate_below_threshold: Provider,
+    metrics_client_mock: Any,
+) -> None:
+    """Single candidate below min_attempted_count bypassing the sampler should emit the 'skipped' outcome metric."""
+    await adm_with_thompson_single_candidate_below_threshold.initialize()
+    await adm_with_thompson_single_candidate_below_threshold.query(
+        srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
+    )
+
+    metrics_client_mock.increment.assert_called_once_with(
+        "providers.adm.thompson.select", tags={"outcome": "skipped"}
+    )
