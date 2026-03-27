@@ -38,6 +38,7 @@ async def test_query_with_thompson_returns_suggestion(
     srequest: SuggestionRequestFixture,
     adm_with_thompson: Provider,
     adm_parameters: dict[str, Any],
+    statsd_mock: Any,
 ) -> None:
     """Thompson-enabled provider should return a suggestion when the sampler picks a winner."""
     await adm_with_thompson.initialize()
@@ -61,12 +62,16 @@ async def test_query_with_thompson_returns_suggestion(
             score=adm_parameters["score"],
         )
     ]
+    statsd_mock.increment.assert_called_once_with(
+        "providers.adm.thompson.select", tags={"outcome": "selected"}
+    )
 
 
 @pytest.mark.asyncio
 async def test_query_with_thompson_dummy_suppresses_suggestion(
     srequest: SuggestionRequestFixture,
     adm_with_thompson_dummy: Provider,
+    statsd_mock: Any,
 ) -> None:
     """Provider with a dominant dummy should suppress the suggestion (return empty list)."""
     await adm_with_thompson_dummy.initialize()
@@ -76,6 +81,9 @@ async def test_query_with_thompson_dummy_suppresses_suggestion(
     )
 
     assert res == []
+    statsd_mock.increment.assert_called_once_with(
+        "providers.adm.thompson.select", tags={"outcome": "suppressed"}
+    )
 
 
 @pytest.mark.asyncio
@@ -175,49 +183,36 @@ async def test_query_with_thompson_without_client_variants_check(
 
 
 @pytest.mark.asyncio
-async def test_thompson_selected_metric(
-    srequest: SuggestionRequestFixture,
-    adm_with_thompson: Provider,
-    metrics_client_mock: Any,
-) -> None:
-    """Thompson sampler picking a winner should emit the 'selected' outcome metric."""
-    await adm_with_thompson.initialize()
-    await adm_with_thompson.query(srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS))
-
-    metrics_client_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select", tags={"outcome": "selected"}
-    )
-
-
-@pytest.mark.asyncio
-async def test_thompson_suppressed_metric(
-    srequest: SuggestionRequestFixture,
-    adm_with_thompson_dummy: Provider,
-    metrics_client_mock: Any,
-) -> None:
-    """Dominant dummy candidate suppressing a suggestion should emit the 'suppressed' outcome metric."""
-    await adm_with_thompson_dummy.initialize()
-    await adm_with_thompson_dummy.query(
-        srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
-    )
-
-    metrics_client_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select", tags={"outcome": "suppressed"}
-    )
-
-
-@pytest.mark.asyncio
-async def test_thompson_skipped_metric(
+async def test_query_with_thompson_single_candidate_below_threshold_returns_suggestion(
     srequest: SuggestionRequestFixture,
     adm_with_thompson_single_candidate_below_threshold: Provider,
-    metrics_client_mock: Any,
+    adm_parameters: dict[str, Any],
+    statsd_mock: Any,
 ) -> None:
-    """Single candidate below min_attempted_count bypassing the sampler should emit the 'skipped' outcome metric."""
+    """Single candidate below min_attempted_count should bypass sampling, return the suggestion,
+    and emit the 'skipped' outcome metric.
+    """
     await adm_with_thompson_single_candidate_below_threshold.initialize()
-    await adm_with_thompson_single_candidate_below_threshold.query(
+    res = await adm_with_thompson_single_candidate_below_threshold.query(
         srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
     )
 
-    metrics_client_mock.increment.assert_called_once_with(
+    assert res == [
+        NonsponsoredSuggestion(
+            block_id=2,
+            full_keyword="firefox accounts",
+            title="Mozilla Firefox Accounts",
+            url=HttpUrl("https://example.org/target/mozfirefoxaccounts"),
+            categories=[],
+            impression_url=HttpUrl("https://example.org/impression/mozilla"),
+            click_url=HttpUrl("https://example.org/click/mozilla"),
+            provider="adm",
+            advertiser="Example.org",
+            is_sponsored=False,
+            icon="attachment-host/main-workspace/quicksuggest/icon-01",
+            score=adm_parameters["score"],
+        )
+    ]
+    statsd_mock.increment.assert_called_once_with(
         "providers.adm.thompson.select", tags={"outcome": "skipped"}
     )
