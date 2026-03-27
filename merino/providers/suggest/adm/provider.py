@@ -6,6 +6,7 @@ import time
 from enum import Enum, unique
 from typing import Any, Final, cast
 
+import aiodogstatsd
 from moz_merino_ext.amp import AmpIndexManager, PyAmpResult
 
 from pydantic import HttpUrl
@@ -99,6 +100,7 @@ class Provider(BaseProvider):
     def __init__(
         self,
         backend: AdmBackend,
+        metrics_client: aiodogstatsd.Client,
         score: float,
         name: str,
         resync_interval_sec: float,
@@ -114,6 +116,7 @@ class Provider(BaseProvider):
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
         self.backend = backend
+        self.metrics_client = metrics_client
         self.score = score
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
@@ -240,10 +243,23 @@ class Provider(BaseProvider):
 
             # If it's the only candidate with an attempted count less than the threshold, skip sampling.
             if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
+                self.metrics_client.increment(
+                    "providers.adm.thompson.select", tags={"outcome": "skipped"}
+                )
                 return suggestions[0]
 
             winner = cast(ThompsonSampler, self.thompson).sample(candidates)
-            return suggestions[winner.id] if winner else None
+            if winner:
+                self.metrics_client.increment(
+                    "providers.adm.thompson.select", tags={"outcome": "selected"}
+                )
+                winner_idx: int = winner.id
+                return suggestions[winner_idx]
+            else:
+                self.metrics_client.increment(
+                    "providers.adm.thompson.select", tags={"outcome": "suppressed"}
+                )
+                return None
 
         return suggestions[0] if suggestions else None
 
