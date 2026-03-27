@@ -303,16 +303,20 @@ class SuperInferredModel(LocalModelBackend):
         )
 
     def _build_local(
-        self, model_id, surface_id, small_experiment=False
+        self, model_id, surface_id, small_experiment=False, include_local_reranking=False
     ) -> InferredLocalModel | None:
         model_thresholds = THRESHOLDS_V3_NORMALIZED
         private_features: list[str] | None = None
 
-        section_features = {
-            a: self._get_section(a, model_thresholds)
-            for a in BASE_SECTIONS_FOR_LOCAL_MODEL
-            if a not in self.limited_topics_set
-        }
+        section_features = (
+            {
+                a: self._get_section(a, model_thresholds)
+                for a in BASE_SECTIONS_FOR_LOCAL_MODEL
+                if a not in self.limited_topics_set
+            }
+            if include_local_reranking
+            else {}
+        )
 
         private_features = self.v3_limited_topics + [TIME_ZONE_OFFSET_INFERRED_KEY]
 
