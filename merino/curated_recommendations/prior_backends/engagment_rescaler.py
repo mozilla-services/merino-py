@@ -21,8 +21,8 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
-# This was a 50% experiment but overal users has declined over time
-INFERRED_EXPERIMENT_PERCENTAGE = 0.25
+# This was a 50% experiment but is now in process of rolling out
+INFERRED_EXPERIMENT_PERCENTAGE = 0.8
 
 LOCAL_RERANK_WEGHT = (
     30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
