@@ -78,3 +78,16 @@ gcs_bq_project = "moz-fx-data-shared-prod"
 
 # MERINO_ENGAGEMENT__GCS_STORAGE_PROJECT
 gcs_storage_project = "moz-fx-merino-nonprod-db57"
+
+[stage.providers.adm.thompson]
+# MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
+enabled = true
+
+# MERINO_PROVIDERS__ADM__THOMPSON__MIN_ATTEMPTED_COUNT
+min_attempted_count = 200
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENGAGED_COUNT
+dummy_engaged_count = 5
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
+dummy_attempted_count = 1000
