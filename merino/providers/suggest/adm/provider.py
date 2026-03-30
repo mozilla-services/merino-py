@@ -221,6 +221,8 @@ class Provider(BaseProvider):
         """Return True if Thompson sampling should be applied to this request."""
         if not self.thompson:
             return False
+        if not self.engagement_data.amp:
+            return False
         if self.should_check_client_variants:
             return any(cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants)
         return True

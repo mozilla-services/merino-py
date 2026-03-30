@@ -317,12 +317,20 @@ def fixture_adm_with_thompson_single_candidate_below_threshold(
     adm_parameters: dict[str, Any],
     thompson_sampler_with_dummy: ThompsonSampler,
     statsd_mock: Any,
+    engagement_data: EngagementData,
 ) -> Provider:
     """Create an AdM Provider with Thompson sampling and a min_attempted_count threshold."""
-    return Provider(
+    provider = Provider(
         backend=backend_mock,
         metrics_client=statsd_mock,
         min_attempted_count=1000,
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
     )
+    provider.engagement_data = EngagementData(
+        amp={
+            "Example.org": {"click": 10, "impression": 100},
+        },
+        amp_aggregated={},
+    )
+    return provider
