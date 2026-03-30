@@ -216,12 +216,12 @@ def fixture_engagement_data() -> EngagementData:
                 "clicks": 5,
             },
             "Example.org": {
-                "advertiser": "Example.org",
+                "advertiser": "example.org",
                 "impressions": 10001,
                 "clicks": 10000,
             },
             "LowEngagement": {
-                "advertiser": "LowEngagement",
+                "advertiser": "lowengagement",
                 "impressions": 9999,
                 "clicks": 5,
             },
@@ -329,7 +329,7 @@ def fixture_adm_with_thompson_single_candidate_below_threshold(
     )
     provider.engagement_data = EngagementData(
         amp={
-            "Example.org": {"click": 10, "impression": 100},
+            "example.org": {"click": 10, "impression": 100},
         },
         amp_aggregated={},
     )
