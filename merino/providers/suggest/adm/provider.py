@@ -210,7 +210,7 @@ class Provider(BaseProvider):
         engaged, attempted = 1, 1
         if self.engagement_data and (metrics := self.engagement_data.amp.get(advertiser)):
             attempted = int(metrics.get("impressions", attempted))
-            engaged = int(metrics.get("clicks", attempted))
+            engaged = int(metrics.get("clicks", engaged))
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
     def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
