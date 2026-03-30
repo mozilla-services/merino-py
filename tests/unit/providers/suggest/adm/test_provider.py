@@ -96,6 +96,7 @@ async def test_initialize_remote_settings_failure(
     of provider to return an empty suggestion.
     """
     error_message: str = "The remote server was unreachable"
+    error_message_engagement: str = "Engagement data fetch returned None, will retry on next tick"
     # override default mocked behavior for fetch
     backend_mock.fetch.side_effect = Exception(error_message)
 
@@ -108,9 +109,10 @@ async def test_initialize_remote_settings_failure(
         adm.engagement_cron_task.cancel()
 
     records = filter_caplog(caplog.records, "merino.providers.suggest.adm.provider")
-    assert len(records) == 1
+    assert len(records) == 2
     assert records[0].__dict__["error message"] == error_message
     assert adm.last_fetch_at == 0
+    assert records[1].message == error_message_engagement
     # SuggestionContent should be empty as initialize was unsuccessful.
     assert adm.suggestion_content.index_manager.list() == []
     assert adm.suggestion_content.icons == {}

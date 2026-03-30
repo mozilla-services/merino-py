@@ -160,6 +160,7 @@ class Provider(BaseProvider):
         # reference to it.
         self.cron_task = asyncio.create_task(cron_job())
 
+        await self._fetch_engagement_data()
         engagement_cron_job = cron.Job(
             name="resync_engagement_data",
             interval=self.cron_interval_sec,
