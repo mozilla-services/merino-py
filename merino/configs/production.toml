@@ -41,10 +41,13 @@ cdn_hostname = "merino-images.services.mozilla.com"
 
 
 [production.engagement]
+# MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = "merino-airflow-data-prod"
 
+# MERINO_ENGAGEMENT__GCS_BQ_BUCKET
 gcs_bq_project = "moz-fx-data-shared-prod"
 
+# MERINO_ENGAGEMENT__GCS_STORAGE_PROJECT
 gcs_storage_project = "moz-fx-merino-prod-5de4"
 
 [production.image_gcs_v2]

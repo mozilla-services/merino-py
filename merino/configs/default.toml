@@ -300,10 +300,13 @@ cdn_hostname = ""
 gcs_enabled = true
 
 [default.engagement]
+# MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = ""
 
+# MERINO_ENGAGEMENT__GCS_BQ_BUCKET
 gcs_bq_project = ""
 
+# MERINO_ENGAGEMENT__GCS_STORAGE_PROJECT
 gcs_storage_project = ""
 
 # MERINO_ENGAGEMENT__BLOB_NAME

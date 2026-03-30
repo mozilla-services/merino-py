@@ -69,3 +69,12 @@ gcp_project = "moz-fx-merino-nonprod-db57"
 # GCS bucket that contains cohort model data
 bucket_name = "merino-ml-data-stage"
 
+[stage.engagement]
+# MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
+gcs_storage_bucket = "merino-airflow-data-stage"
+
+# MERINO_ENGAGEMENT__GCS_BQ_BUCKET
+gcs_bq_project = "moz-fx-data-shared-prod"
+
+# MERINO_ENGAGEMENT__GCS_STORAGE_PROJECT
+gcs_storage_project = "moz-fx-merino-nonprod-db57"
