@@ -210,7 +210,7 @@ class Provider(BaseProvider):
 
     def _fetch_engagement_metrics(self, suggestion: PyAmpResult) -> EngagementMetrics:
         """Fetch engagement metrics for an AMP suggestion."""
-        advertiser = suggestion.advertiser
+        advertiser = suggestion.advertiser.lower()
         engaged, attempted = 1, 1
         if self.engagement_data and (metrics := self.engagement_data.amp.get(advertiser)):
             attempted = int(metrics.get("impressions", attempted))
