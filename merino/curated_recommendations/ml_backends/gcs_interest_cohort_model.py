@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_TARGET_COHORTS = 10
 DO_EMPTY_COHORT_FOR_NO_CLICKS = True
 NO_CLICKS_COHORT_ID = "-1"
+NUM_NON_CLICK_BASED_INTERESTS = 1
+# number of interests that are not based on clicks, e.g. timezone offset
+# All of these interests must be at the end
 
 
 class GcsInterestCohortModel(CohortModelBackend):
@@ -95,7 +98,7 @@ class GcsInterestCohortModel(CohortModelBackend):
         num_interests = self._num_bits // 4
         if skip_last_interest:
             num_interests -= 1
-        for k in range(num_interests):
+        for k in range(num_interests - NUM_NON_CLICK_BASED_INTERESTS):
             chunk = normalized_interests[k * 4 : (k + 1) * 4]
             if (
                 chunk != "0000" and chunk != "1000"

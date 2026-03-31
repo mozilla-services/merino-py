@@ -11,7 +11,6 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     EST_TOP_STORY_TILE_IMP_PER_CYCLE,
     US_UTC_RELATIVE_IMPRESSIONS_NORM,
     CrawledContentPinnedFreshRescaler,
-    CrawledContentPinnedFreshRescalerInferred,
     CrawledContentRescaler,
     DE_EXPERIMENT_TREATMENT_PERCENT,
     DECrawledContentRescaler,
@@ -297,7 +296,7 @@ class TestSchedulerHoldbackRescaler:
             self.rescaler = CrawledContentPinnedFreshRescaler(
                 fresh_items_top_stories_fixed_position=2
             )
-            self.rescaler_inferred = CrawledContentPinnedFreshRescalerInferred()
+            self.rescaler_inferred = CrawledContentPinnedFreshRescaler()
 
         def test_fixed_position_setting(self):
             """Test that fixed position setting is set correctly"""
