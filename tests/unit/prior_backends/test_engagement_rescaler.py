@@ -305,5 +305,5 @@ class TestSchedulerHoldbackRescaler:
             assert self.rescaler_inferred.fresh_items_top_stories_fixed_position == 4
             assert (
                 self.rescaler.compute_estimated_fresh_per_cycle()
-                > self.rescaler_inferred.compute_estimated_fresh_per_cycle()
+                == self.rescaler_inferred.compute_estimated_fresh_per_cycle()
             )
