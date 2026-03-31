@@ -21,8 +21,6 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
-# This was a 50% experiment but overal users has declined over time
-INFERRED_EXPERIMENT_PERCENTAGE = 0.25
 
 LOCAL_RERANK_WEGHT = (
     30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
@@ -140,20 +138,6 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         else:
             scale = 1.0
         return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
-
-
-class CrawledContentPinnedFreshRescalerInferred(CrawledContentPinnedFreshRescaler):
-    """Rescaler for inferred contextual interest experiment.
-    Similar to CrawledContentPinnedFreshRescaler but with more aggressive settings to account
-    for smaller experiment size.
-    """
-
-    def __init__(self, **data: Any):
-        data.setdefault(
-            "fresh_items_top_stories_fixed_est_imp_per_cycle",
-            round(EST_TOP_STORY_TILE_IMP_PER_CYCLE * INFERRED_EXPERIMENT_PERCENTAGE),
-        )
-        super().__init__(**data)
 
 
 IE_EXPERIMENT_TREATMENT_PERCENT = 0.10
