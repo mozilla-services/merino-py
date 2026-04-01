@@ -32,8 +32,8 @@ EST_DAILY_IMPRESSIONS_TOP_STORY_TILE = (
     21_000_000  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
 )
 EST_TOP_STORY_TILE_IMP_PER_CYCLE = (
-    EST_DAILY_IMPRESSIONS_TOP_STORY_TILE // 24 // 4
-)  # Assuming 4 ETL data cycles per hour
+    EST_DAILY_IMPRESSIONS_TOP_STORY_TILE // 24 // 7
+)  # Assuming 7 ETL data cycles per hour. We actually have a1round 6 but estimating as higher boosts the rate of fresh items
 
 # Normalized relative impresions per hour. Generated via https://sql.telemetry.mozilla.org/queries/115220
 US_UTC_RELATIVE_IMPRESSIONS_NORM = [
@@ -125,7 +125,7 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         data.setdefault(
             "fresh_items_top_stories_fixed_est_imp_per_cycle", EST_TOP_STORY_TILE_IMP_PER_CYCLE
         )
-        data.setdefault("fresh_items_top_stories_max_percentage", 0.02)
+        data.setdefault("fresh_items_top_stories_max_percentage", 0.03)
         super().__init__(**data)
 
     def compute_estimated_fresh_per_cycle(self) -> int:

@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 LOCAL_MODEL_MODEL_ID_KEY = "model_id"
+TIME_ZONE_OFFSET_INFERRED_KEY = "timeZoneOffset"
 
 
 # Define the model type enum

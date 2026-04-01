@@ -25,7 +25,10 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SurfaceId,
     IABMetadata,
 )
-from merino.curated_recommendations.ml_backends.protocol import InferredLocalModel
+from merino.curated_recommendations.ml_backends.protocol import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+    InferredLocalModel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -169,16 +172,20 @@ class ProcessedInterests(BaseModel):
         If any key is missing from the expected_keys, we set its value to the mean
         of the normalized values.
         """
-        if self.skip_normalization and len(self.scores) > 0:
+        # Create a copy of self.scores and remove the TIME_ZONE_OFFSET_INFERRED_KEY if it exists, since this key is not meant to be used in the ranking and can cause issues with normalization if present.
+        pre_normalized_dict = self.scores.copy()
+        if TIME_ZONE_OFFSET_INFERRED_KEY in pre_normalized_dict:
+            pre_normalized_dict.pop(TIME_ZONE_OFFSET_INFERRED_KEY, None)
+        if self.skip_normalization and len(pre_normalized_dict) > 0:
             """ Note this scenarios is not being used but may be soon. If not used Jan 2026 it can be removed."""
             pre_normalized_dict = self.scores.copy()
             values = np.array(list(self.scores.values()), dtype=float)
             for missing_key in self.expected_keys - pre_normalized_dict.keys():
                 pre_normalized_dict[missing_key] = values.mean()
             object.__setattr__(self, "normalized_scores", pre_normalized_dict)
-        elif len(self.scores) >= self.minimum_value_count_for_normalization:
-            keys = list(self.scores.keys())
-            values = np.array(list(self.scores.values()), dtype=float)
+        elif len(pre_normalized_dict) >= self.minimum_value_count_for_normalization:
+            keys = list(pre_normalized_dict.keys())
+            values = np.array(list(pre_normalized_dict.values()), dtype=float)
 
             # Compute L2 norm (Euclidean length)
             norm = np.linalg.norm(values) + 1e-6
@@ -189,7 +196,8 @@ class ProcessedInterests(BaseModel):
             # Fill in missing expected keys with mean
             mean_val = normalized.mean()
             for missing_key in self.expected_keys - normalized_dict.keys():
-                normalized_dict[missing_key] = mean_val
+                if missing_key != TIME_ZONE_OFFSET_INFERRED_KEY:
+                    normalized_dict[missing_key] = mean_val
             object.__setattr__(self, "normalized_scores", normalized_dict)
         return self
 
