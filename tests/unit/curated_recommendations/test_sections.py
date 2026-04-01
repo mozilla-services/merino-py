@@ -31,6 +31,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SchedulerHoldbackRescaler,
 )
 from merino.curated_recommendations.protocol import (
+    ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
     Section,
     SectionConfiguration,
@@ -597,8 +598,8 @@ class TestMapCorpusSectionToSection:
         assert [rec.corpusItemId for rec in sec.recommendations] == ["dup", "unique"]
         assert [rec.receivedRank for rec in sec.recommendations] == [0, 1]
 
-    def test_headlines_items_not_flagged_as_subtopics(self):
-        """Headlines items should not carry ITEM_SUBTOPIC_FLAG (HNT-2057)."""
+    def test_headlines_items_flagged_as_headlines(self):
+        """Headlines items should carry ITEM_HEADLINES_FLAG (HNT-2167)."""
         cs = CorpusSection(
             sectionItems=[generate_corpus_item("h1", "sched_h1")],
             title="Headlines",
@@ -606,6 +607,7 @@ class TestMapCorpusSectionToSection:
             createSource=CreateSource.ML,
         )
         sec = map_corpus_section_to_section(cs, 0, is_legacy_section=False)
+        assert sec.recommendations[0].in_experiment(ITEM_HEADLINES_FLAG)
         assert not sec.recommendations[0].in_experiment(ITEM_SUBTOPIC_FLAG)
 
     def test_non_legacy_ml_items_flagged_as_subtopics(self):

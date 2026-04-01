@@ -38,6 +38,7 @@ from merino.curated_recommendations.prior_backends.protocol import (
     EngagementRescaler,
 )
 from merino.curated_recommendations.protocol import (
+    ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
     CuratedRecommendationsRequest,
     CuratedRecommendation,
@@ -137,10 +138,12 @@ def map_corpus_section_to_section(
     """
     item_flags = set()
     is_manual_section = corpus_section.createSource == CreateSource.MANUAL
-    # Headlines items should not carry the subtopic flag so they remain eligible
-    # for the pinned fresh story slot in Popular Today (see HNT-2057).
     is_headlines = corpus_section.externalId == HEADLINES_SECTION_KEY
-    if not is_legacy_section and not is_manual_section and not is_headlines:
+    if is_headlines:
+        # Block headlines from Popular Today to avoid duplicate content with
+        # The Latest / Daily Briefing sections (HNT-2167).
+        item_flags.add(ITEM_HEADLINES_FLAG)
+    elif not is_legacy_section and not is_manual_section:
         item_flags.add(ITEM_SUBTOPIC_FLAG)
     seen_ids: set[str] = set()
     section_items: list[CorpusItem] = []

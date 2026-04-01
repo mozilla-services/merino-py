@@ -247,6 +247,7 @@ class RankingData(BaseModel):
 
 # Flags for in_experiment flags. Note that the name in_experiment is historical and should be migrated to a new name
 ITEM_SUBTOPIC_FLAG = "SUBTOPICS"
+ITEM_HEADLINES_FLAG = "HEADLINES"
 
 
 class CuratedRecommendation(CorpusItem):
@@ -279,7 +280,11 @@ class CuratedRecommendation(CorpusItem):
 
     def is_story_blocked_for_top_stories(self) -> bool:
         """Return true if the story should be blocked from most popular section."""
-        return self.in_experiment(ITEM_SUBTOPIC_FLAG) or self.topic == Topic.GAMING
+        return (
+            self.in_experiment(ITEM_SUBTOPIC_FLAG)
+            or self.in_experiment(ITEM_HEADLINES_FLAG)
+            or self.topic == Topic.GAMING
+        )
 
     @model_validator(mode="before")
     def set_tileId(cls, values):
