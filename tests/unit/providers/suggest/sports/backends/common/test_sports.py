@@ -18,12 +18,14 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataWarning,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
+import merino.providers.suggest.sports.backends.sportsdata.common.sports as sports_module
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
     NHL,
     NBA,
     UCL,
     MLB,
+    SPORT_CATEGORY_MAP,
 )
 
 
@@ -704,6 +706,19 @@ async def test_weird_afc_update_events(
     )
     await sport.update_events(client=mock_client)
     assert not sport.events
+
+
+def test_sport_subclasses_have_category_mapping() -> None:
+    """Assert every Sport subclass in sports.py has an entry in SPORT_CATEGORY_MAP.
+
+    Catches the case where a new Sport class is added but the static map is not updated.
+    """
+    missing = [
+        cls.__name__
+        for cls in Sport.__subclasses__()
+        if cls.__module__ == sports_module.__name__ and cls.__name__ not in SPORT_CATEGORY_MAP
+    ]
+    assert missing == [], f"Sport subclasses missing from SPORT_CATEGORY_MAP: {missing}"
 
 
 @pytest.mark.asyncio

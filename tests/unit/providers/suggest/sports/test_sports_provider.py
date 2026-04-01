@@ -31,6 +31,7 @@ from merino.providers.suggest.sports.backends.sportsdata.protocol import (
     SportSummary,
     SportEventDetails,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
 
 
 @pytest.fixture
@@ -63,6 +64,7 @@ async def test_sports_provider(mock_client: AsyncClient):
         status="Final",
         status_type="final",
         touched="2025-10-01T10:10:00+00:00",
+        sport_category=SportCategory.Misc,
     )
     summary = [SportSummary(sport="test", values=[event])]
     backend = AsyncMock(spec=SportsDataBackend)

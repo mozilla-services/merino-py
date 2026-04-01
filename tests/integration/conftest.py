@@ -41,6 +41,8 @@ def _start_container_in_thread(timeout=120):
         container = ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4")
         container.with_env("discovery.type", "single-node")
         container.with_env("ES_JAVA_OPTS", "-Xms256m -Xmx256m")
+        # Prevent local shards from entering into a read-only state due to high disk usage
+        container.with_env("cluster.routing.allocation.disk.threshold_enabled", "false")
         container.start()
 
         host = container.get_container_host_ip()
