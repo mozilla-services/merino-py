@@ -494,6 +494,9 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
     # spot-check a couple of features decode to the last threshold
     for idx, (key, cfg) in enumerate(iv.items()):
         if key in inferred_model.model_data.private_features:
+            if key == TIME_ZONE_OFFSET_INFERRED_KEY:
+                assert key not in out.normalized_scores  # timeZoneOffset is skipped in decoding
+                continue
             if idx == 0:
                 assert out.scores[key] == cfg.thresholds[-1]
                 assert (

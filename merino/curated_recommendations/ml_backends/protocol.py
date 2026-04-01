@@ -156,8 +156,6 @@ class InferredLocalModel(BaseModel):
         for idx, (key, ivconfig) in enumerate(iv_items):
             ## guard against model/experiment becoming misaligned due to experiments and
             ## local inferred model possibly changing at different times
-            if key == TIME_ZONE_OFFSET_INFERRED_KEY:
-                continue
             if idx >= len(dp_values):
                 logger.error("Model DP incorrect length")
                 continue
