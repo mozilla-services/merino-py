@@ -7,7 +7,7 @@ import os
 
 from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, ClassVar
 from zoneinfo import ZoneInfo
 
 from dynaconf.base import LazySettings
@@ -21,9 +21,7 @@ from merino.providers.suggest.sports import (
     utc_time_from_now,
 )
 
-from merino.providers.suggest.sports.backends.sportsdata.common import (
-    GameStatus,
-)
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
@@ -201,6 +199,7 @@ class Sport:
     # and ownership reasons.
     term_filter: list[str] = []
     cache_dir: str | None
+    sport_category: ClassVar[SportCategory]
 
     def __init__(
         self,

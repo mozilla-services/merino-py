@@ -20,8 +20,19 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
     Team,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
 
 FORCE_IMPORT = ""
+
+# When creating a new sport, ensure that you are inheriting
+# from the Sport class and setting sport_category as a class variable;
+# this keeps the dictionary mapping of sport name to category in sync.
+# Unfortunately there's no good python support for abstract class variables
+# as of 2026-04-01, so it's your responsibility to remember to set it.
+#
+# Note: This also makes the assumption is that a class will be defined in
+# this file for any data possibly returned by the sports provider. If this
+# changes then the logic must be updated.
 
 
 class NFL(Sport):
@@ -30,6 +41,7 @@ class NFL(Sport):
     season: str | None = None
     week: int | None = 0
     _lock: asyncio.Lock
+    sport_category = SportCategory.Football
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         name = self.__class__.__name__
@@ -153,6 +165,7 @@ class NHL(Sport):
     season: str | None = None
     teams: dict[int, Any] = {}
     _lock: asyncio.Lock
+    sport_category = SportCategory.Hockey
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         name = self.__class__.__name__
@@ -247,6 +260,7 @@ class NBA(Sport):
 
     season: str | None = None
     _lock: asyncio.Lock
+    sport_category = SportCategory.Basketball
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         name = self.__class__.__name__
@@ -337,6 +351,7 @@ class UCL(Sport):
 
     season: str | None = None
     _lock: asyncio.Lock
+    sport_category = SportCategory.Soccer
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         name = self.__class__.__name__
@@ -436,6 +451,7 @@ class MLB(Sport):
 
     season: str | None = None
     _lock: asyncio.Lock
+    sport_category = SportCategory.Baseball
 
     def __init__(self, settings: LazySettings, *args, **kwargs):
         name = self.__class__.__name__
@@ -566,6 +582,7 @@ class MLB(Sport):
 #    """English Premier League"""
 #
 #    term_filter: list[str] = ["a", "club", "the", "football", "fc"]
+#    sport_category = SportCategory.Soccer
 #
 #    def __init__(self, settings: LazySettings, *args, **kwargs):
 #        name = self.__class__.__name__
@@ -600,3 +617,16 @@ class MLB(Sport):
 #            pass
 #        return
 #
+
+
+# This must stay at the bottom of the file (after all Sport subclasses
+# are defined), since __subclasses__() only returns classes already
+# defined at call time
+SPORT_CATEGORY_MAP: dict[str, SportCategory] = {
+    # Iterate over all sports defined in this module to build
+    # an importable mapping of sport name (stored in elasticsearch
+    # as "sport") to sport category.
+    cls.__name__: cls.sport_category
+    for cls in Sport.__subclasses__()
+    if cls.__module__ == __name__ and hasattr(cls, "sport_category")
+}
