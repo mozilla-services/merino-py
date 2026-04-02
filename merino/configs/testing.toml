@@ -71,6 +71,8 @@ score = 0.5
 query_timeout_sec = 100
 api_key = "test"
 kickstart = false
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
 
 [testing.providers.sports.es]
 dsn = "http://localhost:9200"
@@ -125,6 +127,8 @@ domain_data_source = "local"
 
 [testing.providers.wikipedia]
 # The backend of the provider. Either "elasticsearch" or "test".
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
 backend = "test"
 
 cron_interval_sec = 60

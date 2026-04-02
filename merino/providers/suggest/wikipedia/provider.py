@@ -9,6 +9,7 @@ from pydantic import HttpUrl
 
 from merino.configs import settings
 from merino.exceptions import BackendError
+from merino.governance.circuitbreakers import WikipediaCircuitBreaker
 from merino.providers.suggest.base import (
     BaseProvider,
     BaseSuggestion,
@@ -133,6 +134,7 @@ class Provider(BaseProvider):
         """Whether this provider is hidden or not."""
         return False
 
+    @WikipediaCircuitBreaker(name="wikipedia")
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         try:
@@ -141,7 +143,7 @@ class Provider(BaseProvider):
             suggestions = await self.backend.search(srequest.query, language_code)
         except BackendError as e:
             logger.warning(f"{e}")
-            return []
+            raise e
 
         return [
             WikipediaSuggestion(

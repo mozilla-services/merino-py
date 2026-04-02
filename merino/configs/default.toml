@@ -395,6 +395,12 @@ enabled_by_default = true
 query_timeout_sec = 0.3
 # Temporary value to enable data pre-load "kickstart"
 kickstart = true
+# MERINO_PROVIDERS__SPORTS__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+# MERINO_PROVIDERS__SPORTS__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
 
 [default.providers.sports.es]
 # MERINO_PROVIDERS__SPORTS__ES__DSN
@@ -731,6 +737,14 @@ enabled_by_default = true
 # MERINO_PROVIDERS__WIKIPEDIA__BACKEND
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
+
+# MERINO_PROVIDERS__WIKIPEDIA__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__WIKIPEDIA__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
 
 # MERINO_PROVIDERS__WIKIPEDIA__ES_URL
 # The URL of the Elasticsearch cluster that we want to connect to.

@@ -71,3 +71,25 @@ class FlightawareCircuitBreaker(CircuitBreaker):
     EXPECTED_EXCEPTION = (FlightawareError, BackendError)
     # When the breaker is open, use this to simply return an empty suggestion list to the caller.
     FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+
+
+class WikipediaCircuitBreaker(CircuitBreaker):
+    """Circuit breaker for the wikipedia provider."""
+
+    FAILURE_THRESHOLD = settings.providers.wikipedia.circuit_breaker_failure_threshold
+    RECOVERY_TIMEOUT = settings.providers.wikipedia.circuit_breaker_recover_timeout_sec
+    # BackendError is raised by elasticsearch query errors
+    EXPECTED_EXCEPTION = BackendError
+    # When the breaker is open, use this to simply return an empty suggestion list to the caller.
+    FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+
+
+class SportsCircuitBreaker(CircuitBreaker):
+    """Circuit breaker for the sports provider."""
+
+    FAILURE_THRESHOLD = settings.providers.sports.circuit_breaker_failure_threshold
+    RECOVERY_TIMEOUT = settings.providers.sports.circuit_breaker_recover_timeout_sec
+    # BackendError is raised by elasticsearch query errors
+    EXPECTED_EXCEPTION = BackendError
+    # When the breaker is open, use this to simply return an empty suggestion list to the caller.
+    FALLBACK_FUNCTION = _suggest_provider_fallback_fn
