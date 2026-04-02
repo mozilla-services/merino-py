@@ -1025,6 +1025,20 @@ ident_url_path = "flights/{ident}?ident_type=designator&start={start}&end={end}&
 # The url to the live FlightAware landing page.
 landing_page_url = "https://www.flightaware.com/live/flight/{ident}"
 
+[default.rss_providers.wikimedia_potd]
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__TYPE
+# The type of this provider, should be `wikimedia_potd`.
+type = "wikimedia_potd"
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__ENABLED_BY_DEFAULT
+# Whether or not this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__QUERY_TIMEOUT_SEC
+# A float (in seconds) indicating the maximum waiting period when querying for POTD data.
+query_timeout_sec = 1.0
+
+
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains Airflow data for Merino
