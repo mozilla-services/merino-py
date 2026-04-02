@@ -6,6 +6,9 @@ from dynaconf.base import Settings
 
 from merino.configs import settings
 from merino.providers.rss.base import BaseRssProvider
+from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
+    WikimediaPotdBackend,
+)
 from merino.providers.rss.wikimedia_potd.provider import WikimediaPotdProvider
 from merino.utils.metrics import get_metrics_client
 
@@ -26,7 +29,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
     match setting.type:
         case RssProviderType.WIKIMEDIA_POTD:
             return WikimediaPotdProvider(
-                backend=None,
+                backend=WikimediaPotdBackend(feed_url=setting.feed_url),
                 metrics_client=get_metrics_client(),
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,

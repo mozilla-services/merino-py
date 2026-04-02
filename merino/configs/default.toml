@@ -1046,6 +1046,10 @@ enabled_by_default = false
 # A float (in seconds) indicating the maximum waiting period when querying for POTD data.
 query_timeout_sec = 1.0
 
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
+# URL for the Wikimedia Picture of the Day RSS feed.
+feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
+
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
