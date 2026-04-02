@@ -25,8 +25,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
 FORCE_IMPORT = ""
 
 # When creating a new sport class, add its entry to SPORT_CATEGORY_MAP below.
-# The key must match the class name, as that is what is stored in Elasticsearch "sport" field.
-# There's ways to be cleverer with this but due to the low number and velocity
+# The key must match the class name, as that is what is stored in the `Event.sport` field.
+# There's ways to be more clever with this but due to the low number and velocity
 # keeping it simple is best for now.
 #
 # The test test_sport_subclasses_have_category_mapping will catch any missing entries,
