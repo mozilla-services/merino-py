@@ -16,12 +16,32 @@ from httpx import AsyncClient
 
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends import get_data
+from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
     Team,
 )
 
 FORCE_IMPORT = ""
+
+# When creating a new sport class, add its entry to SPORT_CATEGORY_MAP below.
+# The key must match the class name, as that is what is stored in the `Event.sport` field.
+# There's ways to be more clever with this but due to the low number and velocity
+# keeping it simple is best for now.
+#
+# The test test_sport_subclasses_have_category_mapping will catch any missing entries,
+# as long as Sport subclasses remain defined in this file (will need to update
+# the test logic if that changes)
+
+
+SPORT_CATEGORY_MAP: dict[str, SportCategory] = {
+    "NFL": SportCategory.Football,
+    "NHL": SportCategory.Hockey,
+    "NBA": SportCategory.Basketball,
+    "UCL": SportCategory.Soccer,
+    "MLB": SportCategory.Baseball,
+    "EPL": SportCategory.Soccer,
+}
 
 
 class NFL(Sport):

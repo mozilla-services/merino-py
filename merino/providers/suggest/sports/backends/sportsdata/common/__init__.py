@@ -102,3 +102,18 @@ class GameStatus(StrEnum):
                 return ""
             case _:
                 return self.name.capitalize()
+
+
+class SportCategory(StrEnum):
+    """Enum for sports category values."""
+
+    Baseball = "baseball"
+    Basketball = "basketball"
+    Hockey = "hockey"
+    Soccer = "soccer"
+    # American football
+    Football = "football"
+    Golf = "golf"
+    Racing = "racing"
+    # Anything that doesn't map to more specific category
+    Misc = "misc"

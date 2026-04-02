@@ -13,7 +13,7 @@ from merino.configs import settings
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team, Event
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
@@ -106,7 +106,7 @@ def fixture_nfl() -> NFL:
     ).minimal()
 
     ev = Event(
-        sport="football",
+        sport="NFL",
         id=1,
         terms="fakehome fakeaway",
         date=FROZEN_TIME + timedelta(seconds=600),
@@ -146,8 +146,9 @@ async def test_sportsdata_na_query(sportsdata: SportsDataBackend, sports_league:
         sport="all",
         values=[
             SportEventDetail(
-                sport="football",
-                query="football Fake Away at Fake Home 27 Oct 2025",
+                sport="NFL",
+                sport_category=SportCategory.Football,
+                query="NFL Fake Away at Fake Home 27 Oct 2025",
                 date="2025-10-27T00:10:00+00:00",
                 home_team=SportTeamDetail(
                     key="HOM", name="Fake Home", colors=["000000", "FFFFFF"], score=None

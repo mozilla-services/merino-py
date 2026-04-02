@@ -1,6 +1,5 @@
 """Sport info provider"""
 
-from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
 from typing import Final
 
