@@ -282,11 +282,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         settings.image_gcs.gcs_bucket,
                         settings.image_gcs.cdn_hostname,
                     ),
-                    gcs_uploader_v2=GcsUploader(
-                        settings.image_gcs_v2.gcs_project,
-                        settings.image_gcs_v2.gcs_bucket,
-                        settings.image_gcs_v2.cdn_hostname,
-                    ),
                     ticker_ttl_sec=settings.providers.polygon.cache_ttls.ticker_ttl_sec,
                     cache=cache,
                 ),
