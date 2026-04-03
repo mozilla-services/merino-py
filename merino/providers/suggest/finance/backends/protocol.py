@@ -95,7 +95,7 @@ class FinanceBackend(Protocol):
 
     async def bulk_download_and_upload_ticker_images(
         self, tickers: list[str], prefix: str = "polygon"
-    ) -> dict[str, dict[str, str]]:
+    ) -> dict[str, str]:
         """Download and upload images for a list of ticker symbols.
         Uses content hash to deduplicate and skips upload if destination blob already exists.
         """
