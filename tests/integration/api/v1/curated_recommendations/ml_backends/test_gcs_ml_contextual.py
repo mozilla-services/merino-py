@@ -80,7 +80,15 @@ def blob(gcs_bucket):
                 "global": {
                     "granularity": "global",
                     "shards": {"": {"mean": 1, "std": 1}, "aa": {"mean": 3, "std": 1}},
-                }
+                },
+                "US_COHORT_0_TZ_1": {
+                    "granularity": "TZ_COHORT_TIME_ZONE",
+                    "shards": {"": {"mean": 2, "std": 1}, "aa": {"mean": 4, "std": 1}},
+                },
+                "US_COHORT_0": {
+                    "granularity": "TZ_COHORT",
+                    "shards": {"": {"mean": 5, "std": 1}, "aa": {"mean": 6, "std": 1}},
+                },
             },
             "impressions_by_id": {"aa": 1},
         },
@@ -155,6 +163,14 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
 
     assert gcs_engagement.get_adjusted_impressions("aa") == 1
     assert gcs_engagement.get_adjusted_impressions("unknown") == 0
+
+    rankings = gcs_engagement.get(region="US", cohort="0", time_zone="1")
+    assert rankings is not None
+    assert rankings.granularity == "TZ_COHORT_TIME_ZONE"
+
+    rankings = gcs_engagement.get(region="US", cohort="0")
+    assert rankings is not None
+    assert rankings.granularity == "TZ_COHORT"
 
 
 @pytest.mark.asyncio

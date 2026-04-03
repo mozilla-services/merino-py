@@ -112,7 +112,7 @@ def setting_environment(request):
 
 
 @pytest.mark.asyncio
-async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client, blob):
+async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client, blob) -> None:
     """Test that the backend parses model."""
     model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_model_is_updated(model_provider)

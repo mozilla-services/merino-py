@@ -16,15 +16,15 @@ class EmptyMLRecs(MLRecsBackend):
     def get(
         self,
         region: str | None = None,
-        utcOffset: str | None = None,
         cohort: str | None = None,
+        time_zone: str | None = None,
     ) -> ContextualArticleRankings | None:
         """Get empty recommendations that should be handled downstream if this happens
 
         Args:
             region: The region for which to return prior data (e.g. 'US').
-            utcOffset: The UTC offset for which to return the ranked articles
             cohort: The users cohort for which to return the ranked articles
+            time_zone: The user's time zone Id ("0" for Pacific, "3" for Eastern, etc.)
 
         Returns:
             ContextualArticleRankings: Ranked articles for a given region and utc offset with seeds

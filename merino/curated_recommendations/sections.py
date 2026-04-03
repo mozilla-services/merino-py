@@ -21,7 +21,10 @@ from merino.curated_recommendations.layouts import (
     layout_7_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
-from merino.curated_recommendations.ml_backends.protocol import MLRecsBackend
+from merino.curated_recommendations.ml_backends.protocol import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+    MLRecsBackend,
+)
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
@@ -341,6 +344,15 @@ def should_show_popular_today_with_daily_briefing(
     )
 
 
+def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the contextual ranking time zone experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_TZ,
+    )
+
+
 def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if subtopics should be included based on experiments.
 
@@ -362,19 +374,6 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     """Return True if custom sections should be included based on experiments."""
     return is_enrolled_in_experiment(
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
-    )
-
-
-def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the contextual ranking experiment is enabled."""
-    return is_enrolled_in_experiment(
-        request,
-        ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_TZ,
-    ) or is_enrolled_in_experiment(
-        request,
-        ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     )
 
 
@@ -815,11 +814,16 @@ async def get_sections(
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
     use_contexual_ranker = (
-        (do_inferred_contextual or is_contextual_ranking_experiment(request))
-        and ml_backend is not None
-        and ml_backend.is_valid()
+        do_inferred_contextual and ml_backend is not None and ml_backend.is_valid()
     )
     if use_contexual_ranker:
+        is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
+        if (
+            not is_inferred_time_zone_experiment_enabled
+            and personal_interests
+            and TIME_ZONE_OFFSET_INFERRED_KEY in personal_interests.scores
+        ):
+            personal_interests.scores.pop(TIME_ZONE_OFFSET_INFERRED_KEY, None)
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -838,7 +842,6 @@ async def get_sections(
         region=region,
         rescaler=rescaler,
         personal_interests=personal_interests,
-        utcOffset=request.utcOffset,
     )
     # 8. Split top stories from the globally ranked recommendations
     # Use 2-row layout as default for Popular Today
