@@ -143,7 +143,7 @@ class Provider(BaseProvider):
             suggestions = await self.backend.search(srequest.query, language_code)
         except BackendError as e:
             logger.warning(f"{e}")
-            raise e
+            raise
 
         return [
             WikipediaSuggestion(

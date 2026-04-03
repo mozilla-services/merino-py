@@ -1,4 +1,4 @@
-"""Integration tests for the Wikipedia provider."""
+"""Integration tests for the Sports provider."""
 
 from typing import Any
 
