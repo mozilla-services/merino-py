@@ -813,9 +813,8 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
     use_contexual_ranker = (
-        (do_inferred_contextual or is_contextual_ranking_experiment(request))
+        (surface_id == SurfaceId.NEW_TAB_EN_US or is_contextual_ranking_experiment(request))
         and ml_backend is not None
         and ml_backend.is_valid()
     )
@@ -823,9 +822,7 @@ async def get_sections(
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
-            ml_backend=ml_backend,
-            disable_time_zone_context=request.experimentBranch
-            == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+            ml_backend=ml_backend
         )
     else:
         ranker = ThompsonSamplingRanker(
