@@ -822,7 +822,7 @@ async def get_sections(
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
-            ml_backend=ml_backend
+            ml_backend=ml_backend,
         )
     else:
         ranker = ThompsonSamplingRanker(
