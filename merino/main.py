@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from merino import curated_recommendations, governance
+from merino.exceptions import CorpusCacheUnavailable
 from merino.providers import rss
 from merino.configs.app_configs.config_logging import configure_logging
 from merino.configs.app_configs.config_sentry import configure_sentry
@@ -73,6 +74,19 @@ async def validation_exception_handler(
     return ORJSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content=jsonable_encoder({"detail": exc.errors()}),
+    )
+
+
+@app.exception_handler(CorpusCacheUnavailable)
+async def corpus_cache_unavailable_handler(
+    request: Request, exc: CorpusCacheUnavailable
+) -> ORJSONResponse:
+    """Return 503 when corpus cache has no data and the revalidation lock is held."""
+    logger.info("Corpus cache unavailable, returning 503: %s", exc)
+    return ORJSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": "Service temporarily unavailable"},
+        headers={"Retry-After": "60"},
     )
 
 

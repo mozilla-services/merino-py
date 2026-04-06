@@ -33,3 +33,12 @@ class CacheMissError(Exception):
     """Exception raised if an entry doesn't exist in the cache."""
 
     pass
+
+
+class CorpusCacheUnavailable(Exception):
+    """Raised when corpus cache has no data and another pod holds the revalidation lock.
+
+    Signals the API layer to return 503 with Retry-After instead of blocking.
+    """
+
+    pass

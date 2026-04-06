@@ -45,7 +45,10 @@ flowchart TB
 
     acquire_lock -- "LOCK ACQUIRED" --> api
     acquire_lock -. "LOCK HELD + stale exists" .-> serve_stale["Return stale data"]
-    acquire_lock -. "LOCK HELD + no data" .-> retry["Wait, retry Redis, or raise"]
+    acquire_lock -. "LOCK HELD + no data" .-> retry_redis["Wait 100ms, retry Redis"]
+
+    retry_redis -- "HIT" --> done_retry["Return data"]
+    retry_redis -. "MISS" .-> return_503["503 + Retry-After: 60"]
 
     api --> write --> done_api["Update L1 cache"]
 
@@ -58,7 +61,9 @@ flowchart TB
     style respond_fresh fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
     style respond_stale fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
     style serve_stale fill:#f4d03f,stroke:#d4ac0f,color:#333
-    style retry fill:#e74c3c,stroke:#c0392b,color:#fff
+    style retry_redis fill:#e67e22,stroke:#bf6516,color:#fff,stroke-width:2px
+    style done_retry fill:#27ae60,stroke:#1e8449,color:#fff
+    style return_503 fill:#e74c3c,stroke:#c0392b,color:#fff
     style done_l2 fill:#27ae60,stroke:#1e8449,color:#fff
     style done_api fill:#27ae60,stroke:#1e8449,color:#fff
     style L1 fill:#eaf2f8,stroke:#2980b9,stroke-width:2px,color:#2c3e50
@@ -73,18 +78,27 @@ Two layers of caching sit in front of the Corpus GraphQL API:
 
 When L2 is stale, one pod acquires a distributed lock, fetches from the API, and writes to Redis. Other pods serve stale data until the winner finishes.
 
-On cold start (no L1 or L2 data), the request blocks until data is fetched. All pods may hit the API simultaneously in this case — same as today without the cache.
+### Cold-miss behavior
+
+On cold start (no L1 or L2 data), the first pod acquires the lock and fetches from the API. Pods that lose the lock race wait 100ms and retry Redis once. If still no data, they raise `CorpusCacheUnavailable`, which the API layer translates to **HTTP 503** with `Retry-After: 60`. This prevents connections from piling up while the lock holder populates the cache.
+
+### Circuit breaker
+
+A simple circuit breaker protects against hammering a degraded Redis. After `circuit_breaker_failure_threshold` consecutive Redis errors, the circuit opens and all Redis calls are skipped for `circuit_breaker_recovery_timeout_sec`. During this period, every request falls through directly to the Corpus API (same behavior as cache disabled). After the recovery period, one request is allowed through (half-open) to test if Redis has recovered.
 
 ## Configuration
 
 Config section: `[default.curated_recommendations.corpus_cache]` in `merino/configs/default.toml`.
 
-Key settings:
-- `cache` — `"redis"` to enable, `"none"` to disable (default: disabled)
-- `soft_ttl_sec` — when a cached entry is considered stale and triggers revalidation
-- `hard_ttl_sec` — when Redis evicts the key entirely (safety net)
-- `lock_ttl_sec` — auto-release timeout if the lock holder crashes
-- `key_prefix` — bump the version on schema changes to avoid deserialization errors
+| Setting | Default | Description |
+|---|---|---|
+| `cache` | `"none"` | `"redis"` to enable, `"none"` to disable |
+| `soft_ttl_sec` | `120` | Seconds before an entry is stale and triggers revalidation |
+| `hard_ttl_sec` | `86400` | Seconds before Redis evicts the key (1 day safety net) |
+| `lock_ttl_sec` | `30` | Auto-release timeout if the lock holder crashes |
+| `key_prefix` | `"curated:v1"` | Bump the version on schema changes to avoid deserialization errors |
+| `circuit_breaker_failure_threshold` | `10` | Consecutive Redis failures before the circuit opens |
+| `circuit_breaker_recovery_timeout_sec` | `30` | Seconds to skip Redis after the circuit opens |
 
 Env var override pattern: `MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CACHE=redis`
 
@@ -98,7 +112,9 @@ Uses the shared Redis cluster (`[default.redis]`). No separate instance needed.
 | Write pattern | Distributed stale-while-revalidate | One pod revalidates, others serve stale. Avoids thundering herd |
 | Lock mechanism | `SET NX EX` with TTL | Simple, self-expiring. Worst case on timeout: one extra API call |
 | Cache format | Pydantic model dicts via orjson | Saves CPU across pods vs re-parsing raw GraphQL |
-| Failure mode | All Redis errors fall through to API | Redis is an optimization, never a requirement |
+| Cold miss (lock held) | 503 with Retry-After | Prevents connection pile-up; Firefox retries after backoff |
+| Redis failure | Circuit breaker, fall through to API | Redis is an optimization. Circuit breaker prevents hammering a degraded instance |
+| Hard TTL | 1 day (86400s) | Long safety net so data survives extended API outages |
 
 ## Rollout
 
@@ -106,9 +122,3 @@ Uses the shared Redis cluster (`[default.redis]`). No separate instance needed.
 2. Enable in staging
 3. Monitor metrics, validate API call reduction
 4. Enable in production
-
-## Key files
-
-- `merino/curated_recommendations/corpus_backends/redis_cache.py` — cache logic
-- `merino/curated_recommendations/__init__.py` — wiring (`_init_corpus_cache`)
-- `merino/configs/default.toml` — config section with defaults and documentation

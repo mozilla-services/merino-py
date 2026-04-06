@@ -5,7 +5,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Awaitable, Callable, TypeVar
+from typing import Awaitable, Callable, Literal, TypeVar
 
 import orjson
 
@@ -17,11 +17,13 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     SurfaceId,
 )
-from merino.exceptions import CacheAdapterError
+from merino.exceptions import CacheAdapterError, CorpusCacheUnavailable
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+BackendType = Literal["scheduled", "sections"]
 
 
 @dataclass(frozen=True)
@@ -33,48 +35,31 @@ class CorpusCacheConfig:
             while others continue to serve the stale value.
         hard_ttl_sec: Seconds before Redis evicts the key entirely. Safety net.
         lock_ttl_sec: Seconds before a distributed revalidation lock auto-expires.
-        key_prefix: Prefix for all Redis keys. Bump the version on schema changes.
+        key_prefix: Prefix for all Redis keys. Bump the version (e.g. v1 → v2) on
+            breaking schema changes so stale data from the old format is not deserialized.
     """
 
     soft_ttl_sec: int
     hard_ttl_sec: int
     lock_ttl_sec: int
     key_prefix: str
+    circuit_breaker_failure_threshold: int = 10
+    circuit_breaker_recovery_timeout_sec: int = 30
 
-    def __post_init__(self) -> None:
-        """Validate that TTL values are consistent and positive."""
-        if self.soft_ttl_sec <= 0:
-            raise ValueError(f"soft_ttl_sec ({self.soft_ttl_sec}) must be positive")
-        if self.hard_ttl_sec <= 0:
-            raise ValueError(f"hard_ttl_sec ({self.hard_ttl_sec}) must be positive")
-        if self.lock_ttl_sec <= 0:
-            raise ValueError(f"lock_ttl_sec ({self.lock_ttl_sec}) must be positive")
-        if self.hard_ttl_sec <= self.soft_ttl_sec:
-            raise ValueError(
-                f"hard_ttl_sec ({self.hard_ttl_sec}) must be greater than "
-                f"soft_ttl_sec ({self.soft_ttl_sec})"
-            )
-        if self.hard_ttl_sec <= self.lock_ttl_sec:
-            raise ValueError(
-                f"hard_ttl_sec ({self.hard_ttl_sec}) must be greater than "
-                f"lock_ttl_sec ({self.lock_ttl_sec})"
-            )
 
 
 def _build_data_key(
-    config: CorpusCacheConfig, backend_type: str, surface_id: str, *extra: str
+    config: CorpusCacheConfig, backend_type: BackendType, surface_id: SurfaceId
 ) -> str:
     """Build the Redis key for cached corpus data."""
-    parts = [config.key_prefix, backend_type, surface_id, *extra]
-    return ":".join(parts)
+    return ":".join([config.key_prefix, backend_type, surface_id.value])
 
 
 def _build_lock_key(
-    config: CorpusCacheConfig, backend_type: str, surface_id: str, *extra: str
+    config: CorpusCacheConfig, backend_type: BackendType, surface_id: SurfaceId
 ) -> str:
     """Build the Redis key for the distributed revalidation lock."""
-    parts = [config.key_prefix, "lock", backend_type, surface_id, *extra]
-    return ":".join(parts)
+    return ":".join([config.key_prefix, "lock", backend_type, surface_id.value])
 
 
 def _serialize_envelope(data: list[dict], soft_ttl_sec: int) -> bytes:
@@ -97,17 +82,54 @@ class _RedisCorpusCache:
 
     Implements distributed stale-while-revalidate: when the cached value is stale,
     one pod acquires a lock and revalidates while others serve stale data.
+
+    Includes a simple circuit breaker: after consecutive Redis failures exceed the
+    threshold, Redis calls are skipped for a recovery period to avoid hammering a
+    degraded Redis instance.
     """
 
     def __init__(self, cache: CacheAdapter, config: CorpusCacheConfig) -> None:
         self._cache = cache
         self._config = config
+        self._failure_count: int = 0
+        self._circuit_open_until: float = 0.0
+
+    def _is_circuit_open(self) -> bool:
+        """Check if the circuit breaker is open (Redis should be skipped)."""
+        if self._circuit_open_until == 0.0:
+            return False
+        if time.time() >= self._circuit_open_until:
+            # Recovery period elapsed — half-open: allow one attempt
+            self._circuit_open_until = 0.0
+            self._failure_count = 0
+            logger.info("Redis corpus cache circuit breaker: half-open, retrying")
+            return False
+        return True
+
+    def _record_failure(self) -> None:
+        """Record a Redis failure and open the circuit if threshold is reached."""
+        self._failure_count += 1
+        if self._failure_count >= self._config.circuit_breaker_failure_threshold:
+            self._circuit_open_until = (
+                time.time() + self._config.circuit_breaker_recovery_timeout_sec
+            )
+            logger.warning(
+                "Redis corpus cache circuit breaker opened after %d failures, "
+                "recovering in %ds",
+                self._failure_count,
+                self._config.circuit_breaker_recovery_timeout_sec,
+            )
+
+    def _record_success(self) -> None:
+        """Reset failure count on a successful Redis operation."""
+        if self._failure_count > 0:
+            self._failure_count = 0
 
     async def get_or_fetch(
         self,
-        backend_type: str,
-        surface_id: str,
-        *extra: str,
+        backend_type: BackendType,
+        surface_id: SurfaceId,
+        *,
         fetch_fn: Callable[[], Awaitable[list[T]]],
         serialize_fn: Callable[[list[T]], list[dict]],
         deserialize_fn: Callable[[list[dict]], list[T]],
@@ -115,15 +137,18 @@ class _RedisCorpusCache:
         """Check Redis, returning cached data or fetching from the backend.
 
         Args:
-            backend_type: Type identifier for key namespacing (e.g. "scheduled", "sections").
-            surface_id: Surface ID value for the cache key.
-            *extra: Additional key segments (e.g. days_offset).
+            backend_type: Type identifier for key namespacing.
+            surface_id: Surface ID enum for the cache key.
             fetch_fn: Async callable that fetches fresh data from the backend.
             serialize_fn: Converts typed models to dicts for Redis storage.
             deserialize_fn: Converts dicts from Redis back to typed models.
         """
-        data_key = _build_data_key(self._config, backend_type, surface_id, *extra)
-        lock_key = _build_lock_key(self._config, backend_type, surface_id, *extra)
+        # Circuit breaker: skip Redis entirely when it's known-degraded
+        if self._is_circuit_open():
+            return await fetch_fn()
+
+        data_key = _build_data_key(self._config, backend_type, surface_id)
+        lock_key = _build_lock_key(self._config, backend_type, surface_id)
         # Try reading from Redis
         cached = await self._redis_get(data_key)
         if cached is not None:
@@ -178,10 +203,9 @@ class _RedisCorpusCache:
                         data_key,
                         exc_info=True,
                     )
-        # Last resort: Redis may be down or lock holder slow. Fetch directly
-        # so the L2 cache never degrades availability below what L1+API provide.
-        logger.warning("Falling back to direct fetch for %s", data_key)
-        return await fetch_fn()
+        # No data available and another pod holds the lock. Signal the API layer
+        # to return 503 so connections don't pile up waiting for the lock holder.
+        raise CorpusCacheUnavailable(f"No data available for {data_key}")
 
     async def _revalidate(
         self,
@@ -216,8 +240,10 @@ class _RedisCorpusCache:
             raw = await self._cache.get(key)
             if raw is None:
                 return None
+            self._record_success()
             return _deserialize_envelope(raw)
         except CacheAdapterError:
+            self._record_failure()
             logger.warning("Redis read error for corpus cache key %s", key, exc_info=True)
             return None
         except (orjson.JSONDecodeError, KeyError, TypeError):
@@ -233,14 +259,19 @@ class _RedisCorpusCache:
         try:
             value = _serialize_envelope(data, self._config.soft_ttl_sec)
             await self._cache.set(key, value, ttl=timedelta(seconds=self._config.hard_ttl_sec))
+            self._record_success()
         except Exception:
+            self._record_failure()
             logger.warning("Redis write error for corpus cache key %s", key, exc_info=True)
 
     async def _try_acquire_lock(self, lock_key: str) -> bool:
         """Attempt to acquire a distributed lock via SET NX EX."""
         try:
-            return await self._cache.set_nx(lock_key, self._config.lock_ttl_sec)
+            result = await self._cache.set_nx(lock_key, self._config.lock_ttl_sec)
+            self._record_success()
+            return result
         except CacheAdapterError:
+            self._record_failure()
             logger.warning("Redis lock acquire error for %s", lock_key, exc_info=True)
             return False
 
@@ -256,6 +287,7 @@ class _RedisCorpusCache:
         try:
             await self._cache.delete(lock_key)
         except CacheAdapterError:
+            self._record_failure()
             logger.warning("Redis lock release error for %s", lock_key, exc_info=True)
 
 
@@ -280,8 +312,7 @@ class RedisCachedScheduledSurface(ScheduledSurfaceProtocol):
         """Fetch corpus items, checking Redis L2 cache first."""
         return await self._redis_cache.get_or_fetch(
             "scheduled",
-            surface_id.value,
-            str(days_offset),
+            surface_id,
             fetch_fn=lambda: self._backend.fetch(surface_id, days_offset),
             serialize_fn=lambda items: [item.model_dump(mode="json") for item in items],
             deserialize_fn=lambda data: [CorpusItem.model_validate(d) for d in data],
@@ -307,7 +338,7 @@ class RedisCachedSections(SectionsProtocol):
         """Fetch corpus sections, checking Redis L2 cache first."""
         return await self._redis_cache.get_or_fetch(
             "sections",
-            surface_id.value,
+            surface_id,
             fetch_fn=lambda: self._backend.fetch(surface_id),
             serialize_fn=lambda sections: [s.model_dump(mode="json") for s in sections],
             deserialize_fn=lambda data: [CorpusSection.model_validate(d) for d in data],

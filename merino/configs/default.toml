@@ -1265,8 +1265,8 @@ cache = "none"
 soft_ttl_sec = 120
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__HARD_TTL_SEC
-# Hard TTL in seconds. Redis evicts the key after this. Should be much longer than soft TTL.
-hard_ttl_sec = 600
+# Hard TTL in seconds. Redis evicts the key after this. Safety net for API outages.
+hard_ttl_sec = 86400
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__LOCK_TTL_SEC
 # Distributed lock TTL in seconds. Auto-releases if the lock holder crashes.
@@ -1275,6 +1275,14 @@ lock_ttl_sec = 30
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__KEY_PREFIX
 # Prefix for all Redis keys. Bump the version on schema changes.
 key_prefix = "curated:v1"
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# Number of consecutive Redis failures before the circuit breaker opens.
+circuit_breaker_failure_threshold = 10
+
+# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SEC
+# Seconds to wait before retrying Redis after the circuit breaker opens.
+circuit_breaker_recovery_timeout_sec = 30
 
 
 [default.curated_recommendations.corpus_api]

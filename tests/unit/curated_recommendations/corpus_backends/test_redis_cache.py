@@ -22,7 +22,7 @@ from merino.curated_recommendations.corpus_backends.redis_cache import (
     _deserialize_envelope,
     _serialize_envelope,
 )
-from merino.exceptions import CacheAdapterError
+from merino.exceptions import CacheAdapterError, CorpusCacheUnavailable
 from tests.unit.curated_recommendations.test_sections import generate_corpus_item
 
 SURFACE_ID = SurfaceId.NEW_TAB_EN_US
@@ -34,45 +34,6 @@ CONFIG = CorpusCacheConfig(
     key_prefix="curated:v1",
 )
 
-
-class TestCorpusCacheConfig:
-    """Tests for CorpusCacheConfig validation."""
-
-    def test_valid_config(self) -> None:
-        """Accept valid TTL ordering."""
-        config = CorpusCacheConfig(
-            soft_ttl_sec=120, hard_ttl_sec=600, lock_ttl_sec=30, key_prefix="test"
-        )
-        assert config.soft_ttl_sec == 120
-
-    def test_hard_ttl_must_exceed_soft_ttl(self) -> None:
-        """Reject hard_ttl_sec <= soft_ttl_sec."""
-        with pytest.raises(ValueError, match="hard_ttl_sec.*must be greater than.*soft_ttl_sec"):
-            CorpusCacheConfig(
-                soft_ttl_sec=600, hard_ttl_sec=120, lock_ttl_sec=30, key_prefix="test"
-            )
-
-    def test_hard_ttl_must_exceed_lock_ttl(self) -> None:
-        """Reject hard_ttl_sec <= lock_ttl_sec."""
-        with pytest.raises(ValueError, match="hard_ttl_sec.*must be greater than.*lock_ttl_sec"):
-            CorpusCacheConfig(soft_ttl_sec=10, hard_ttl_sec=20, lock_ttl_sec=30, key_prefix="test")
-
-    @pytest.mark.parametrize(
-        "soft,hard,lock",
-        [
-            (0, 600, 30),
-            (120, 0, 30),
-            (120, 600, 0),
-            (-1, 600, 30),
-        ],
-        ids=["zero_soft", "zero_hard", "zero_lock", "negative_soft"],
-    )
-    def test_ttl_values_must_be_positive(self, soft: int, hard: int, lock: int) -> None:
-        """Reject zero or negative TTL values."""
-        with pytest.raises(ValueError, match="must be positive"):
-            CorpusCacheConfig(
-                soft_ttl_sec=soft, hard_ttl_sec=hard, lock_ttl_sec=lock, key_prefix="test"
-            )
 
 
 def _make_corpus_section() -> CorpusSection:
@@ -103,19 +64,19 @@ class TestKeyBuilders:
     """Tests for Redis key construction functions."""
 
     def test_build_data_key_scheduled(self) -> None:
-        """Build a data key for a scheduled surface with days_offset."""
-        key = _build_data_key(CONFIG, "scheduled", "NEW_TAB_EN_US", "0")
-        assert key == "curated:v1:scheduled:NEW_TAB_EN_US:0"
+        """Build a data key for a scheduled surface."""
+        key = _build_data_key(CONFIG, "scheduled", SurfaceId.NEW_TAB_EN_US)
+        assert key == "curated:v1:scheduled:NEW_TAB_EN_US"
 
     def test_build_data_key_sections(self) -> None:
         """Build a data key for sections."""
-        key = _build_data_key(CONFIG, "sections", "NEW_TAB_EN_US")
+        key = _build_data_key(CONFIG, "sections", SurfaceId.NEW_TAB_EN_US)
         assert key == "curated:v1:sections:NEW_TAB_EN_US"
 
     def test_build_lock_key(self) -> None:
         """Build a lock key with 'lock' segment inserted."""
-        key = _build_lock_key(CONFIG, "scheduled", "NEW_TAB_EN_US", "0")
-        assert key == "curated:v1:lock:scheduled:NEW_TAB_EN_US:0"
+        key = _build_lock_key(CONFIG, "scheduled", SurfaceId.NEW_TAB_EN_US)
+        assert key == "curated:v1:lock:scheduled:NEW_TAB_EN_US"
 
 
 class TestEnvelope:
@@ -153,8 +114,8 @@ class TestRedisCorpusCache:
         self.mock_cache.get.return_value = _make_fresh_envelope(items_data)
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -172,8 +133,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = True
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -182,7 +143,7 @@ class TestRedisCorpusCache:
         assert result == ["item1", "item2"]
         self.fetch_fn.assert_called_once()
         self.mock_cache.set.assert_called_once()
-        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:test:surface")
+        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
 
     @pytest.mark.asyncio
     async def test_stale_hit_lock_loser_returns_stale(self) -> None:
@@ -192,8 +153,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = False
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -209,8 +170,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = True
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -228,8 +189,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = False
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -240,27 +201,27 @@ class TestRedisCorpusCache:
         assert self.mock_cache.get.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_cache_miss_lock_loser_retries_then_fetches_direct(self) -> None:
-        """Fall back to direct fetch when retry still finds no data after waiting."""
+    async def test_cache_miss_lock_loser_retries_then_raises_unavailable(self) -> None:
+        """Raise CorpusCacheUnavailable when retry still finds no data after waiting."""
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.return_value = False
 
-        result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
-            fetch_fn=self.fetch_fn,
-            serialize_fn=self.serialize_fn,
-            deserialize_fn=self.deserialize_fn,
-        )
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
 
-        assert result == ["item1", "item2"]
-        self.fetch_fn.assert_called_once()
+        self.fetch_fn.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_cache_miss_lock_loser_retry_deserialize_error_fetches_direct(
+    async def test_cache_miss_lock_loser_retry_deserialize_error_raises_unavailable(
         self,
     ) -> None:
-        """Fall back to direct fetch when retry data can't be deserialized."""
+        """Raise CorpusCacheUnavailable when retry data can't be deserialized."""
         items_data = [{"v": "item1"}]
         self.mock_cache.get.side_effect = [None, _make_fresh_envelope(items_data)]
         self.mock_cache.set_nx.return_value = False
@@ -268,16 +229,16 @@ class TestRedisCorpusCache:
         def bad_deserialize(data: list[dict]) -> list:
             raise ValueError("schema changed")
 
-        result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
-            fetch_fn=self.fetch_fn,
-            serialize_fn=self.serialize_fn,
-            deserialize_fn=bad_deserialize,
-        )
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=bad_deserialize,
+            )
 
-        assert result == ["item1", "item2"]
-        self.fetch_fn.assert_called_once()
+        self.fetch_fn.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_redis_read_error_falls_through(self) -> None:
@@ -286,8 +247,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = True
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -304,8 +265,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set.side_effect = CacheAdapterError("write failed")
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -314,7 +275,7 @@ class TestRedisCorpusCache:
         assert result == ["item1", "item2"]
         # Cache write was attempted (and failed), but lock should still be released
         self.mock_cache.set.assert_called_once()
-        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:test:surface")
+        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
 
     @pytest.mark.asyncio
     async def test_deserialization_error_falls_through(self) -> None:
@@ -323,8 +284,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = True
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -334,21 +295,21 @@ class TestRedisCorpusCache:
         self.fetch_fn.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_lock_acquire_error_on_miss_falls_back_to_fetch(self) -> None:
-        """Fall back to direct fetch when lock acquisition fails on miss."""
+    async def test_lock_acquire_error_on_miss_raises_unavailable(self) -> None:
+        """Raise CorpusCacheUnavailable when lock acquisition fails on miss."""
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.side_effect = CacheAdapterError("lock error")
 
-        result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
-            fetch_fn=self.fetch_fn,
-            serialize_fn=self.serialize_fn,
-            deserialize_fn=self.deserialize_fn,
-        )
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
 
-        assert result == ["item1", "item2"]
-        self.fetch_fn.assert_called_once()
+        self.fetch_fn.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_lock_acquire_error_returns_stale_on_stale_hit(self) -> None:
@@ -358,8 +319,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.side_effect = CacheAdapterError("lock error")
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -377,14 +338,14 @@ class TestRedisCorpusCache:
 
         with pytest.raises(Exception, match="API down"):
             await self.redis_cache.get_or_fetch(
-                "test",
-                "surface",
+                "scheduled",
+                SURFACE_ID,
                 fetch_fn=self.fetch_fn,
                 serialize_fn=self.serialize_fn,
                 deserialize_fn=self.deserialize_fn,
             )
 
-        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:test:surface")
+        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
 
     @pytest.mark.asyncio
     async def test_serialize_error_returns_items_and_releases_lock(self) -> None:
@@ -396,15 +357,15 @@ class TestRedisCorpusCache:
             raise TypeError("cannot serialize")
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=bad_serialize,
             deserialize_fn=self.deserialize_fn,
         )
 
         assert result == ["item1", "item2"]
-        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:test:surface")
+        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
 
     @pytest.mark.asyncio
     async def test_deserialize_fn_error_on_fresh_hit_falls_through(self) -> None:
@@ -417,8 +378,8 @@ class TestRedisCorpusCache:
             raise ValueError("validation error")
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=bad_deserialize,
@@ -439,8 +400,8 @@ class TestRedisCorpusCache:
             raise ValueError("schema changed")
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=bad_deserialize,
@@ -450,46 +411,44 @@ class TestRedisCorpusCache:
         self.fetch_fn.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_stale_hit_deserialize_error_both_locks_fail_fetches_direct(
+    async def test_stale_hit_deserialize_error_both_locks_fail_raises_unavailable(
         self,
     ) -> None:
-        """Fall back to direct fetch when stale deserialization fails and both locks fail."""
+        """Raise CorpusCacheUnavailable when stale deser fails and both locks fail."""
         items_data = [{"v": "stale"}]
-        # First get returns stale, second get (retry) also returns stale
         self.mock_cache.get.return_value = _make_stale_envelope(items_data)
-        # Both lock attempts fail
         self.mock_cache.set_nx.return_value = False
 
         def bad_deserialize(data: list[dict]) -> list:
             raise ValueError("schema changed")
 
-        result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
-            fetch_fn=self.fetch_fn,
-            serialize_fn=self.serialize_fn,
-            deserialize_fn=bad_deserialize,
-        )
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=bad_deserialize,
+            )
 
-        assert result == ["item1", "item2"]
-        self.fetch_fn.assert_called_once()
+        self.fetch_fn.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_redis_down_falls_back_to_fetch(self) -> None:
-        """Fall back to fetch_fn when Redis is completely unavailable."""
+    async def test_redis_down_raises_unavailable(self) -> None:
+        """Raise CorpusCacheUnavailable when Redis is completely unavailable."""
         self.mock_cache.get.side_effect = CacheAdapterError("connection refused")
         self.mock_cache.set_nx.side_effect = CacheAdapterError("connection refused")
 
-        result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
-            fetch_fn=self.fetch_fn,
-            serialize_fn=self.serialize_fn,
-            deserialize_fn=self.deserialize_fn,
-        )
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
 
-        assert result == ["item1", "item2"]
-        self.fetch_fn.assert_called_once()
+        self.fetch_fn.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_non_numeric_expires_at_treated_as_miss(self) -> None:
@@ -500,8 +459,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = True
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -521,14 +480,14 @@ class TestRedisCorpusCache:
 
         with pytest.raises(asyncio.CancelledError):
             await self.redis_cache.get_or_fetch(
-                "test",
-                "surface",
+                "scheduled",
+                SURFACE_ID,
                 fetch_fn=cancelled_fetch,
                 serialize_fn=self.serialize_fn,
                 deserialize_fn=self.deserialize_fn,
             )
 
-        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:test:surface")
+        self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
 
     @pytest.mark.asyncio
     async def test_malformed_envelope_missing_key_falls_through(self) -> None:
@@ -537,8 +496,8 @@ class TestRedisCorpusCache:
         self.mock_cache.set_nx.return_value = True
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -555,8 +514,8 @@ class TestRedisCorpusCache:
         self.fetch_fn.return_value = []
 
         result = await self.redis_cache.get_or_fetch(
-            "test",
-            "surface",
+            "scheduled",
+            SURFACE_ID,
             fetch_fn=self.fetch_fn,
             serialize_fn=self.serialize_fn,
             deserialize_fn=self.deserialize_fn,
@@ -564,6 +523,117 @@ class TestRedisCorpusCache:
 
         assert result == []
         self.mock_cache.set.assert_called_once()
+
+
+class TestCircuitBreaker:
+    """Tests for the Redis corpus cache circuit breaker."""
+
+    def setup_method(self) -> None:
+        """Set up mock cache with low failure threshold for testing."""
+        self.mock_cache = AsyncMock()
+        self.config = CorpusCacheConfig(
+            soft_ttl_sec=120,
+            hard_ttl_sec=600,
+            lock_ttl_sec=30,
+            key_prefix="curated:v1",
+            circuit_breaker_failure_threshold=3,
+            circuit_breaker_recovery_timeout_sec=10,
+        )
+        self.redis_cache = _RedisCorpusCache(self.mock_cache, self.config)
+        self.fetch_fn = AsyncMock(return_value=["item1", "item2"])
+        self.serialize_fn = lambda items: [{"v": i} for i in items]
+        self.deserialize_fn = lambda data: [d["v"] for d in data]
+
+    @pytest.mark.asyncio
+    async def test_circuit_opens_after_threshold_failures(self) -> None:
+        """Skip Redis and call fetch_fn directly after enough failures."""
+        self.mock_cache.get.side_effect = CacheAdapterError("down")
+        self.mock_cache.set_nx.side_effect = CacheAdapterError("down")
+
+        # One call generates 3 Redis failures (get + set_nx + retry-get),
+        # reaching the threshold and opening the circuit.
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
+
+        # Reset mocks to track next call
+        self.mock_cache.get.reset_mock()
+        self.fetch_fn.reset_mock()
+
+        # Circuit is now open: Redis should NOT be called, fetch_fn called directly
+        result = await self.redis_cache.get_or_fetch(
+            "scheduled",
+            SURFACE_ID,
+            fetch_fn=self.fetch_fn,
+            serialize_fn=self.serialize_fn,
+            deserialize_fn=self.deserialize_fn,
+        )
+
+        assert result == ["item1", "item2"]
+        self.mock_cache.get.assert_not_called()
+        self.fetch_fn.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_circuit_resets_after_recovery_timeout(self) -> None:
+        """Retry Redis after recovery timeout elapses."""
+        self.mock_cache.get.side_effect = CacheAdapterError("down")
+        self.mock_cache.set_nx.side_effect = CacheAdapterError("down")
+
+        # Open the circuit
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
+
+        # Simulate recovery timeout elapsed
+        self.redis_cache._circuit_open_until = time.time() - 1
+
+        # Redis should be retried (half-open state)
+        self.mock_cache.get.reset_mock()
+        self.mock_cache.get.side_effect = CacheAdapterError("still down")
+        self.mock_cache.set_nx.side_effect = CacheAdapterError("still down")
+
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
+
+        # Redis was retried (half-open state attempted Redis)
+        self.mock_cache.get.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_success_resets_failure_count(self) -> None:
+        """A successful Redis call resets the failure counter."""
+        # Manually set failure count below threshold
+        self.redis_cache._failure_count = 2
+
+        # A successful Redis read resets it
+        items_data = [{"v": "item1"}]
+        self.mock_cache.get.return_value = _make_fresh_envelope(items_data)
+
+        await self.redis_cache.get_or_fetch(
+            "scheduled",
+            SURFACE_ID,
+            fetch_fn=self.fetch_fn,
+            serialize_fn=self.serialize_fn,
+            deserialize_fn=self.deserialize_fn,
+        )
+
+        assert self.redis_cache._failure_count == 0
+        assert self.redis_cache._circuit_open_until == 0.0
 
 
 class TestRedisCachedScheduledSurface:
@@ -602,19 +672,6 @@ class TestRedisCachedScheduledSurface:
         assert result[0].corpusItemId == "id"
         self.mock_backend.fetch.assert_called_once_with(SURFACE_ID, 0)
 
-    @pytest.mark.asyncio
-    async def test_days_offset_included_in_key(self) -> None:
-        """Include days_offset in the Redis key to differentiate cache entries."""
-        self.mock_cache.get.return_value = None
-        self.mock_cache.set_nx.return_value = True
-        self.mock_backend.fetch.return_value = [generate_corpus_item()]
-
-        await self.wrapper.fetch(SURFACE_ID, days_offset=-1)
-
-        # Verify the key includes the days_offset
-        set_call = self.mock_cache.set.call_args
-        key = set_call[0][0]
-        assert ":-1" in key
 
 
 class TestRedisCachedSections:

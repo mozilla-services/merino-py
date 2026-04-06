@@ -208,6 +208,8 @@ def _init_corpus_cache(
             hard_ttl_sec=cache_settings.hard_ttl_sec,
             lock_ttl_sec=cache_settings.lock_ttl_sec,
             key_prefix=cache_settings.key_prefix,
+            circuit_breaker_failure_threshold=cache_settings.circuit_breaker_failure_threshold,
+            circuit_breaker_recovery_timeout_sec=cache_settings.circuit_breaker_recovery_timeout_sec,
         )
         return (
             RedisCachedScheduledSurface(scheduled_surface_backend, adapter, config),
