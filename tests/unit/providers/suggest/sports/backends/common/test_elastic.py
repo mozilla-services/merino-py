@@ -36,6 +36,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import NF
 def fixture_es_client(mocker: MockerFixture) -> MagicMock:
     """Test ElasticSearch client instance."""
     client = mocker.MagicMock()
+    client.options = MagicMock(name="options", return_value=client)
     client.close = mocker.AsyncMock()
 
     indices = mocker.MagicMock()

@@ -405,8 +405,8 @@ dsn=""
 # Using the "basic" key, which allows using locally served
 # versions of elasticsearch
 api_key=""
-# Timeout for an Elastic Search response in milliseconds.
-request_timeout_ms = 300
+# Timeout for an Elastic Search response in seconds (floating point).
+request_timeout_sec = 0.25
 
 [default.providers.sports.sportsdata]
 # MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
@@ -766,9 +766,9 @@ pl_es_index = "plwiki-v1"
 # The maximum suggestions for each search request to Elasticsearch.
 es_max_suggestions = 1
 
-# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS
-# The timeout in milliseconds for each search request to Elasticsearch.
-es_request_timeout_ms = 5000
+# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_SEC
+# The timeout in seconds (floating point) for each search request to Elasticsearch.
+es_request_timeout_SEC = 0.25
 
 # MERINO_PROVIDERS__WIKIPEDIA__QUERY_TIMEOUT_SEC
 # The timeout in seconds for each query request to the provider.
