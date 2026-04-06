@@ -81,6 +81,10 @@ can_propagate = false
 # Boolean to toggle the `web.suggest.request` logging.
 log_suggest_request = true
 
+# MERINO_LOGGING__EXCLUDED_PROVIDERS
+# Excluded providers for query logging
+excluded_providers = ["accuweather", "geolocation"]
+
 [default.governance]
 # MERINO_GOVERNANCE__CRON_INTERVAL_SEC
 # The interval of the background cron job for Merino governance.
