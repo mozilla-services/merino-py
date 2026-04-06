@@ -578,7 +578,7 @@ enabled_by_default = true
 
 # MERINO_PROVIDERS__ADM__BACKEND
 # The backend of the provider. Either "remote-settings", "mars", or "test".
-backend = "remote-settings"
+backend = "mars"
 
 # MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC
 # The interval of the RemoteSettings cron job (in seconds)
