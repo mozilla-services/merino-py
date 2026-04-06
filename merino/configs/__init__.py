@@ -1,5 +1,7 @@
 """Configuration for merino-py"""
 
+from functools import partial, update_wrapper
+
 from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
@@ -230,3 +232,44 @@ settings = Dynaconf(
     env_switcher="MERINO_ENV",
     validators=_validators,
 )
+
+
+def validate_request_timeouts(value, provider_timeout_key):
+    """Validate that the provider-level query timeout is greater than or equal to
+    the backend-level timeout.
+    """
+    provider_timeout = settings.get(provider_timeout_key)
+    return provider_timeout >= value
+
+
+# Inter-configuration validations.
+settings.validators.register(
+    Validator(
+        "providers.wikipedia.es_request_timeout_sec",
+        condition=update_wrapper(
+            partial(
+                validate_request_timeouts,
+                provider_timeout_key="providers.wikipedia.query_timeout_sec",
+            ),
+            validate_request_timeouts,
+        ),
+        messages={
+            "condition": "Elasticsearch request timeout: {name}, must be less than or equal to the provider-level requeset timeout."
+        },
+    ),
+    Validator(
+        "providers.sports.es.request_timeout_sec",
+        condition=update_wrapper(
+            partial(
+                validate_request_timeouts,
+                provider_timeout_key="providers.sports.query_timeout_sec",
+            ),
+            validate_request_timeouts,
+        ),
+        messages={
+            "condition": "Elasticsearch request timeout: {name}, must be less than or equal to the provider-level requeset timeout."
+        },
+    ),
+)
+
+settings.validators.validate()
