@@ -17,12 +17,10 @@ flowchart TB
         l1_lock{{"asyncio.Lock (per entry)"}}
     end
 
-    respond_fresh["Respond with fresh data"]
-    respond_stale["Respond with stale data"]
+    respond["Respond with data"]
     return_error["BackendError"]
 
     subgraph bg ["Background Revalidation Task"]
-        direction TB
 
         subgraph L2 ["L2 — Shared Redis"]
             check_l2{{"Check Redis cache"}}
@@ -32,36 +30,32 @@ flowchart TB
         api["Fetch from Corpus GraphQL API"]
         write["Write to Redis + release lock"]
         retry_redis["Wait 500ms, retry Redis"]
-        done_l2["Return data + update L1"]
-        done_api["Return data + update L1"]
-        done_retry["Return data + update L1"]
-        serve_stale["Return stale data + update L1"]
+        serve_stale["Serve stale + update L1"]
+        return_data["Return data + update L1"]
         return_503["503 Service Unavailable"]
     end
 
     req --> check_l1
 
-    check_l1 -- "FRESH HIT" --> respond_fresh
-    check_l1 -- "STALE" --> respond_stale
+    check_l1 -- "FRESH or STALE" --> respond
     check_l1 -. "MISS (cold start)" .-> l1_lock
 
-    respond_stale -. "spawns task" .-> l1_lock
+    respond -. "if STALE, spawns task" .-> l1_lock
     l1_lock -- "acquired" --> check_l2
-    l1_lock -. "waited, value populated" .-> respond_fresh
+    l1_lock -. "waited, value populated" .-> respond
     l1_lock -. "waited, fetch failed" .-> return_error
 
-    check_l2 -- "FRESH HIT" --> done_l2
-    check_l2 -. "STALE" .-> acquire_lock
-    check_l2 -. "MISS" .-> acquire_lock
+    check_l2 -- "FRESH HIT" --> return_data
+    check_l2 -. "STALE or MISS" .-> acquire_lock
 
     acquire_lock -- "LOCK ACQUIRED" --> api
     acquire_lock -. "LOCK HELD + stale exists" .-> serve_stale
     acquire_lock -. "LOCK HELD + no data" .-> retry_redis
 
-    retry_redis -- "HIT" --> done_retry
+    retry_redis -- "HIT" --> return_data
     retry_redis -. "MISS" .-> return_503
 
-    api --> write --> done_api
+    api --> write --> return_data
 
     style req fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:2px
     style check_l1 fill:#2980b9,stroke:#1f6da0,color:#fff,stroke-width:2px
@@ -70,13 +64,10 @@ flowchart TB
     style acquire_lock fill:#e67e22,stroke:#bf6516,color:#fff,stroke-width:2px
     style api fill:#1e8449,stroke:#145a32,color:#fff,stroke-width:2px
     style write fill:#1e8449,stroke:#145a32,color:#fff,stroke-width:2px
-    style respond_fresh fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
-    style respond_stale fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
+    style respond fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
     style serve_stale fill:#f4d03f,stroke:#d4ac0f,color:#333
     style retry_redis fill:#e67e22,stroke:#bf6516,color:#fff,stroke-width:2px
-    style done_l2 fill:#27ae60,stroke:#1e8449,color:#fff
-    style done_api fill:#27ae60,stroke:#1e8449,color:#fff
-    style done_retry fill:#27ae60,stroke:#1e8449,color:#fff
+    style return_data fill:#27ae60,stroke:#1e8449,color:#fff
     style return_503 fill:#e74c3c,stroke:#c0392b,color:#fff
     style return_error fill:#e74c3c,stroke:#c0392b,color:#fff
     style L1 fill:#eaf2f8,stroke:#2980b9,stroke-width:2px,color:#2c3e50
