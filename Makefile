@@ -1,4 +1,5 @@
 APP_DIR := merino
+ES_IMAGE := merino-elasticsearch:local
 TEST_DIR := tests
 TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
@@ -118,8 +119,24 @@ quicker-test: $(INSTALL_STAMP)  ## Same as "quick-test" but quicker
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
 	MERINO_ENV=testing $(UV) run pytest $(UNIT_TEST_DIR) --fixtures-per-test
 
+.PHONY: build-es-image
+build-es-image:  ##  Build local Elasticsearch image with analysis-icu plugin
+	docker build \
+	    --build-arg STACK_VERSION=$(shell grep STACK_VERSION dev/.env | cut -d= -f2) \
+	    -t $(ES_IMAGE) \
+	    dev/elasticsearch/
+
 .PHONY: integration-tests ## ryuk is a container that helps with clean up, need it disabled to run two test containers at once.
-integration-tests: $(INSTALL_STAMP)  ##  Run integration tests
+integration-tests: $(INSTALL_STAMP)  ##  Run integration tests (CI: expects ES image pre-built)
+	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
+	    MERINO_ENV=testing \
+	    TESTCONTAINERS_RYUK_DISABLED=true \
+	    $(UV) run pytest $(INTEGRATION_TEST_DIR) $(XTRA) \
+	    --junit-xml=$(INTEGRATION_JUNIT_XML)
+
+# When running locally need to invoke the elasticsearch build step
+.PHONY: integration-tests-local
+integration-tests-local: $(INSTALL_STAMP) build-es-image  ##  Run integration tests (local: builds ES image first)
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
 	    MERINO_ENV=testing \
 	    TESTCONTAINERS_RYUK_DISABLED=true \
@@ -173,15 +190,20 @@ profile:  ## Profile Merino with Scalene
 
 .PHONY: docker-compose-up
 docker-compose-up:  ## Run `docker-compose up` in `./dev`
-	docker compose -f dev/docker-compose.yaml up
+	docker compose --env-file dev/.env -f dev/docker-compose.yaml up
 
 .PHONY: docker-compose-up-daemon
 docker-compose-up-daemon:  ## Run `docker-compose up -d` in `./dev`
-	docker compose -f dev/docker-compose.yaml up -d
+	docker compose --env-file dev/.env -f dev/docker-compose.yaml up -d
 
 .PHONY: docker-compose-down
 docker-compose-down:  ## Run `docker-compose down` in `./dev`
-	docker compose -f dev/docker-compose.yaml down
+	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down
+
+# Use if you want to e.g. wipe elasticsearch indices and data
+.PHONY: docker-compose-down-v
+docker-compose-down-v:  ## Run `docker-compose down` in `./dev` and remove volumes
+	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down -v
 
 .PHONY: help
 help:

@@ -1,0 +1,12 @@
+{"index": {"_index": "enwiki-v1", "_id": "39"}}
+{"batch_id": 1773119331589880, "version": "v1", "doc_id": "39", "title": "Albedo", "suggest": {"input": ["Albedo"], "weight": 5922150}, "suggest-stop": {"input": ["Albedo"], "weight": 5922150}}
+{"index": {"_index": "enwiki-v1", "_id": "290"}}
+{"batch_id": 1773119331589880, "version": "v1", "doc_id": "290", "title": "A", "suggest": {"input": ["A"], "weight": 6646162}, "suggest-stop": {"input": ["A"], "weight": 6646162}}
+{"index": {"_index": "enwiki-v1", "_id": "305"}}
+{"batch_id": 1773119331589880, "version": "v1", "doc_id": "305", "title": "Achilles", "suggest": {"input": ["Achilles"], "weight": 6847317}, "suggest-stop": {"input": ["Achilles"], "weight": 6847317}}
+{"index": {"_index": "enwiki-v1", "_id": "309"}}
+{"batch_id": 1773119331589880, "version": "v1", "doc_id": "309", "title": "An American in Paris", "suggest": {"input": ["An American in Paris"], "weight": 5085402}, "suggest-stop": {"input": ["An American in Paris"], "weight": 5085402}}
+{"index": {"_index": "enwiki-v1", "_id": "316"}}
+{"batch_id": 1773119331589880, "version": "v1", "doc_id": "316", "title": "Academy Award for Best Production Design", "suggest": {"input": ["Academy Award for Best Production Design"], "weight": 5730412}, "suggest-stop": {"input": ["Academy Award for Best Production Design"], "weight": 5730412}}
+{"index": {"_index": "enwiki-v1", "_id": "330"}}
+{"batch_id": 1773119331589880, "version": "v1", "doc_id": "330", "title": "Actrius", "suggest": {"input": ["Actrius"], "weight": 4598231}, "suggest-stop": {"input": ["Actrius"], "weight": 4598231}}

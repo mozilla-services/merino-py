@@ -36,3 +36,18 @@ source_gcp_project = "mozdata"
 # See `jobs.sportsdata_jobs.common` for list of supported sports
 sports = "NBA,NHL,EPL,UCL"
 api_key = "abc123"
+
+[development.providers.wikipedia]
+backend = "elasticsearch"
+es_url = "http://localhost:9200"
+# Unused, just needs to be non-empty
+es_api_key = "local"
+
+[development.providers.sports]
+enabled_by_default = true
+
+[development.providers.sports.es]
+dsn = "http://localhost:9200"
+# Unused, just needs to be non-empty
+api_key = "local"
+request_timeout_ms = 10000

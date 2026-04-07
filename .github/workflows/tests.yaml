@@ -27,7 +27,7 @@ jobs:
           GITHUB_REPONAME: ${{ github.event.repository.name }}
           TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}
       - uses: actions/upload-artifact@v4
-        if: always()  # Ensure the artifacts upload even if tests fail
+        if: always() # Ensure the artifacts upload even if tests fail
         with:
           name: unit-test-results
           include-hidden-files: true
@@ -38,6 +38,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up to run
         uses: ./.github/actions/weave
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build custom ES image
+        uses: docker/build-push-action@v7
+        with:
+          context: dev/elasticsearch/
+          file: dev/elasticsearch/Dockerfile
+          build-args: STACK_VERSION=8.18.1
+          tags: merino-elasticsearch:local
+          load: true # makes image available to testcontainers
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Run Integration Tests
         run: make integration-tests
         env:
@@ -49,7 +61,7 @@ jobs:
           GITHUB_REPONAME: ${{ github.event.repository.name }}
           TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}
       - uses: actions/upload-artifact@v4
-        if: always()  # Ensure the artifacts upload even if tests fail
+        if: always() # Ensure the artifacts upload even if tests fail
         with:
           name: integration-test-results
           include-hidden-files: true
@@ -61,10 +73,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up to run
         uses: ./.github/actions/weave
-      - name: Download All Artifacts
+      - name: Download Test Results Artifacts
         uses: actions/download-artifact@v4
         with:
           path: ${{ inputs.test_result_dir }}
+          pattern: "*-test-results"
           merge-multiple: true
       - name: Evaluate Minimum Test Coverage
         run: make test-coverage-check
