@@ -28,9 +28,12 @@ flowchart TB
         end
 
         api["Fetch from Corpus GraphQL API"]
-        write["Write to Redis + release lock + update L1"]
-        retry_redis["Wait 100ms, retry Redis"]
-        done_retry["Return data"]
+        write["Write to Redis + release lock"]
+        retry_redis["Wait 500ms, retry Redis"]
+        done_l2["Update L1 cache"]
+        done_api["Update L1 cache"]
+        done_retry["Return data + update L1"]
+        serve_stale["Return stale data + update L1"]
         return_503["503 + Retry-After: 60"]
     end
 
@@ -38,25 +41,28 @@ flowchart TB
 
     check_l1 -- "FRESH HIT" --> respond_fresh
     check_l1 -- "STALE" --> respond_stale
-    check_l1 -. "MISS (cold start, blocks)" .-> check_l2
+    check_l1 -. "MISS (cold start)" .-> l1_lock{{"asyncio.Lock (per entry)"}}
 
-    respond_stale -. "spawns task" .-> check_l2
+    respond_stale -. "spawns task" .-> l1_lock
+    l1_lock -- "acquired" --> check_l2
+    l1_lock -. "waited, value populated" .-> respond_fresh
 
-    check_l2 -- "FRESH HIT" --> done_l2["Update L1 cache"]
+    check_l2 -- "FRESH HIT" --> done_l2
     check_l2 -. "STALE" .-> acquire_lock
     check_l2 -. "MISS" .-> acquire_lock
 
     acquire_lock -- "LOCK ACQUIRED" --> api
-    acquire_lock -. "LOCK HELD + stale exists" .-> serve_stale["Return stale data"]
+    acquire_lock -. "LOCK HELD + stale exists" .-> serve_stale
     acquire_lock -. "LOCK HELD + no data" .-> retry_redis
 
     retry_redis -- "HIT" --> done_retry
     retry_redis -. "MISS" .-> return_503
 
-    api --> write --> done_api["Update L1 cache"]
+    api --> write --> done_api
 
     style req fill:#2c3e50,stroke:#1a252f,color:#ecf0f1,stroke-width:2px
     style check_l1 fill:#2980b9,stroke:#1f6da0,color:#fff,stroke-width:2px
+    style l1_lock fill:#2980b9,stroke:#1f6da0,color:#fff,stroke-width:2px
     style check_l2 fill:#d35400,stroke:#a04000,color:#fff,stroke-width:2px
     style acquire_lock fill:#e67e22,stroke:#bf6516,color:#fff,stroke-width:2px
     style api fill:#1e8449,stroke:#145a32,color:#fff,stroke-width:2px
@@ -65,10 +71,10 @@ flowchart TB
     style respond_stale fill:#27ae60,stroke:#1e8449,color:#fff,stroke-width:2px
     style serve_stale fill:#f4d03f,stroke:#d4ac0f,color:#333
     style retry_redis fill:#e67e22,stroke:#bf6516,color:#fff,stroke-width:2px
-    style done_retry fill:#27ae60,stroke:#1e8449,color:#fff
-    style return_503 fill:#e74c3c,stroke:#c0392b,color:#fff
     style done_l2 fill:#27ae60,stroke:#1e8449,color:#fff
     style done_api fill:#27ae60,stroke:#1e8449,color:#fff
+    style done_retry fill:#27ae60,stroke:#1e8449,color:#fff
+    style return_503 fill:#e74c3c,stroke:#c0392b,color:#fff
     style L1 fill:#eaf2f8,stroke:#2980b9,stroke-width:2px,color:#2c3e50
     style L2 fill:#fef5e7,stroke:#d35400,stroke-width:2px,color:#2c3e50
     style bg fill:#f4f6f7,stroke:#95a5a6,stroke-width:2px,stroke-dasharray: 8 4,color:#2c3e50
@@ -83,7 +89,11 @@ Both layers use the stale-while-revalidate pattern: serve the cached value immed
 
 ### Cold-miss behavior
 
-On cold start (no L1 or L2 data), the first pod acquires the lock and fetches from the API. Pods that lose the lock race wait 100ms and retry Redis once. If still no data, they raise `CorpusCacheUnavailable`, which the API layer translates to **HTTP 503** with `Retry-After: 60`. This prevents connections from piling up while the lock holder populates the cache.
+On cold start (no L1 or L2 data), the L1 `asyncio.Lock` ensures only one coroutine per pod enters L2. Other coroutines in the same pod wait on the lock and receive the result when it completes (or a `BackendError` if it fails).
+
+At the L2 level, one pod acquires the distributed lock and fetches from the API. Pods that lose the lock race wait 500ms and retry Redis once. If still no data, they raise `CorpusCacheUnavailable`, which the API layer translates to **HTTP 503** with `Retry-After: 60`.
+
+Note: if Redis is timing out (not just down), the lock holder blocks for the duration of each Redis timeout. During this time, all other coroutines in the pod are waiting on the `asyncio.Lock`. The circuit breaker only sees failures from the single lock holder, so it accumulates failures slowly.
 
 ### Circuit breaker
 

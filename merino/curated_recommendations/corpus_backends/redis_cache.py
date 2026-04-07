@@ -200,8 +200,8 @@ class _RedisCorpusCache:
         self._metrics.increment("corpus_cache.miss")
         if await self._try_acquire_lock(lock_key):
             return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
-        # Another pod is populating; wait briefly then retry Redis
-        await asyncio.sleep(0.1)
+        # Another pod is populating; wait for it to finish (P95 API latency is ~217ms)
+        await asyncio.sleep(0.5)
         cached = await self._redis_get(data_key)
         if cached is not None:
             _, items_data = cached
