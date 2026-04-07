@@ -14,10 +14,12 @@ flowchart TB
 
     subgraph L1 ["L1 — Per-Pod In-Memory Cache"]
         check_l1{{"Check in-memory cache"}}
+        l1_lock{{"asyncio.Lock (per entry)"}}
     end
 
     respond_fresh["Respond with fresh data"]
     respond_stale["Respond with stale data"]
+    return_error["BackendError"]
 
     subgraph bg ["Background Revalidation Task"]
         direction TB
@@ -30,23 +32,23 @@ flowchart TB
         api["Fetch from Corpus GraphQL API"]
         write["Write to Redis + release lock"]
         retry_redis["Wait 500ms, retry Redis"]
-        done_l2["Update L1 cache"]
-        done_api["Update L1 cache"]
+        done_l2["Return data + update L1"]
+        done_api["Return data + update L1"]
         done_retry["Return data + update L1"]
         serve_stale["Return stale data + update L1"]
-        return_503["503 + Retry-After: 60"]
+        return_503["503 Service Unavailable"]
     end
 
     req --> check_l1
 
     check_l1 -- "FRESH HIT" --> respond_fresh
     check_l1 -- "STALE" --> respond_stale
-    check_l1 -. "MISS (cold start)" .-> l1_lock{{"asyncio.Lock (per entry)"}}
+    check_l1 -. "MISS (cold start)" .-> l1_lock
 
     respond_stale -. "spawns task" .-> l1_lock
     l1_lock -- "acquired" --> check_l2
     l1_lock -. "waited, value populated" .-> respond_fresh
-    l1_lock -. "waited, fetch failed" .-> return_error["BackendError"]
+    l1_lock -. "waited, fetch failed" .-> return_error
 
     check_l2 -- "FRESH HIT" --> done_l2
     check_l2 -. "STALE" .-> acquire_lock
