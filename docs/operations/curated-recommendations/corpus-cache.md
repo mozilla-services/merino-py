@@ -86,13 +86,13 @@ Both layers use the stale-while-revalidate pattern: serve the cached value immed
 
 On cold start (no L1 or L2 data), the L1 `asyncio.Lock` ensures only one coroutine per pod enters L2. Other coroutines in the same pod wait on the lock and receive the result when it completes (or a `BackendError` if it fails).
 
-At the L2 level, one pod acquires the distributed lock and fetches from the API. Pods that lose the lock race wait 500ms and retry Redis once. If still no data, they raise `CorpusCacheUnavailable`, which the API layer translates to **HTTP 503** with `Retry-After: 60`.
+At the L2 level, one pod acquires the distributed lock and fetches from the API. Pods that lose the lock race wait 500ms and retry Redis once. If still no data, they raise `CorpusCacheUnavailable`, which the API layer translates to **HTTP 503**.
 
 Note: if Redis is timing out (not just down), the lock holder blocks for the duration of each Redis timeout. During this time, all other coroutines in the pod are waiting on the `asyncio.Lock`. The circuit breaker only sees failures from the single lock holder, so it accumulates failures slowly.
 
 ### Circuit breaker
 
-A simple circuit breaker protects against hammering a degraded Redis. After `circuit_breaker_failure_threshold` consecutive Redis errors, the circuit opens and all Redis calls are skipped for `circuit_breaker_recovery_timeout_sec`. During this period, every request falls through directly to the Corpus API (same behavior as cache disabled). After the recovery period, the circuit closes and requests resume hitting Redis. If Redis is still degraded, failures re-accumulate and the circuit re-opens.
+A simple circuit breaker protects against hammering a degraded Redis. After `circuit_breaker_failure_threshold` consecutive Redis errors, the circuit opens and requests fail fast with `CorpusCacheUnavailable` (HTTP 503) for `circuit_breaker_recovery_timeout_sec`. In steady state this only affects the background revalidation task — L1 continues serving stale data. After the recovery period, the circuit closes and requests resume hitting Redis. If Redis is still degraded, failures re-accumulate and the circuit re-opens.
 
 ## Configuration
 
@@ -122,5 +122,5 @@ Uses the shared Redis cluster (`[default.redis]`). No separate instance needed.
 | L2 lock | `SET NX EX` with TTL | Distributed, self-expiring. Worst case on timeout: one extra API call |
 | Cache format | Pydantic model dicts via orjson | Saves CPU across pods vs re-parsing raw GraphQL |
 | Cold miss (lock held) | 503 with Retry-After | Prevents connection pile-up; Firefox retries after backoff |
-| Redis failure | Circuit breaker, fall through to API | Redis is an optimization. Circuit breaker prevents hammering a degraded instance |
+| Redis failure | Circuit breaker, fail fast with 503 | Prevents hammering a degraded Redis. L1 serves stale data in steady state |
 | Hard TTL | 1 day (86400s) | Long safety net so data survives extended API outages |

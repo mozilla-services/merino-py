@@ -149,10 +149,11 @@ class _RedisCorpusCache:
             serialize_fn: Converts typed models to dicts for Redis storage.
             deserialize_fn: Converts dicts from Redis back to typed models.
         """
-        # Circuit breaker: skip Redis entirely when it's known-degraded
+        # Circuit breaker: fail fast when Redis is known-degraded.
+        # L1 in-memory cache serves stale data; this only affects cold starts.
         if self._is_circuit_open():
             self._metrics.increment("corpus_cache.circuit_breaker_skip")
-            return await fetch_fn()
+            raise CorpusCacheUnavailable("Redis circuit breaker is open")
 
         data_key = _build_data_key(self._config, backend_type, surface_id)
         lock_key = _build_lock_key(self._config, backend_type, surface_id)

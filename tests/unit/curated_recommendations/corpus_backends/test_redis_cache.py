@@ -548,7 +548,7 @@ class TestCircuitBreaker:
 
     @pytest.mark.asyncio
     async def test_circuit_opens_after_threshold_failures(self) -> None:
-        """Skip Redis and call fetch_fn directly after enough failures."""
+        """Raise CorpusCacheUnavailable immediately when circuit is open."""
         self.mock_cache.get.side_effect = CacheAdapterError("down")
         self.mock_cache.set_nx.side_effect = CacheAdapterError("down")
 
@@ -567,18 +567,18 @@ class TestCircuitBreaker:
         self.mock_cache.get.reset_mock()
         self.fetch_fn.reset_mock()
 
-        # Circuit is now open: Redis should NOT be called, fetch_fn called directly
-        result = await self.redis_cache.get_or_fetch(
-            "scheduled",
-            SURFACE_ID,
-            fetch_fn=self.fetch_fn,
-            serialize_fn=self.serialize_fn,
-            deserialize_fn=self.deserialize_fn,
-        )
+        # Circuit is now open: should fail fast without calling Redis or fetch_fn
+        with pytest.raises(CorpusCacheUnavailable):
+            await self.redis_cache.get_or_fetch(
+                "scheduled",
+                SURFACE_ID,
+                fetch_fn=self.fetch_fn,
+                serialize_fn=self.serialize_fn,
+                deserialize_fn=self.deserialize_fn,
+            )
 
-        assert result == ["item1", "item2"]
         self.mock_cache.get.assert_not_called()
-        self.fetch_fn.assert_called_once()
+        self.fetch_fn.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_circuit_resets_after_recovery_timeout(self) -> None:

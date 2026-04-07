@@ -86,7 +86,6 @@ async def corpus_cache_unavailable_handler(
     return ORJSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content={"detail": "Service temporarily unavailable"},
-        headers={"Retry-After": "60"},
     )
 
 
