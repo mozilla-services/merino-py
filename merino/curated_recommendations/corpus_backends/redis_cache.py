@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Awaitable, Callable, Literal, TypeVar
 
+import aiodogstatsd
 import orjson
 
 from merino.cache.protocol import CacheAdapter
@@ -87,9 +88,15 @@ class _RedisCorpusCache:
     degraded Redis instance.
     """
 
-    def __init__(self, cache: CacheAdapter, config: CorpusCacheConfig) -> None:
+    def __init__(
+        self,
+        cache: CacheAdapter,
+        config: CorpusCacheConfig,
+        metrics_client: aiodogstatsd.Client,
+    ) -> None:
         self._cache = cache
         self._config = config
+        self._metrics = metrics_client
         self._failure_count: int = 0
         self._circuit_open_until: float = 0.0
 
@@ -144,6 +151,7 @@ class _RedisCorpusCache:
         """
         # Circuit breaker: skip Redis entirely when it's known-degraded
         if self._is_circuit_open():
+            self._metrics.increment("corpus_cache.circuit_breaker_skip")
             return await fetch_fn()
 
         data_key = _build_data_key(self._config, backend_type, surface_id)
@@ -164,7 +172,9 @@ class _RedisCorpusCache:
 
             if is_fresh and items_data is not None:
                 try:
-                    return deserialize_fn(items_data)
+                    result = deserialize_fn(items_data)
+                    self._metrics.increment("corpus_cache.hit")
+                    return result
                 except Exception:
                     logger.warning(
                         "Deserialization failed for corpus cache key %s",
@@ -174,6 +184,7 @@ class _RedisCorpusCache:
                     # Fall through to revalidation/fetch below
             elif items_data is not None:
                 # Stale — try to revalidate
+                self._metrics.increment("corpus_cache.stale")
                 if await self._try_acquire_lock(lock_key):
                     return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
                 try:
@@ -186,6 +197,7 @@ class _RedisCorpusCache:
                     )
 
         # Cache miss — try to acquire lock and fetch
+        self._metrics.increment("corpus_cache.miss")
         if await self._try_acquire_lock(lock_key):
             return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
         # Another pod is populating; wait briefly then retry Redis
@@ -303,9 +315,10 @@ class RedisCachedScheduledSurface(ScheduledSurfaceProtocol):
         backend: ScheduledSurfaceProtocol,
         cache: CacheAdapter,
         config: CorpusCacheConfig,
+        metrics_client: aiodogstatsd.Client,
     ) -> None:
         self._backend = backend
-        self._redis_cache = _RedisCorpusCache(cache, config)
+        self._redis_cache = _RedisCorpusCache(cache, config, metrics_client)
 
     async def fetch(self, surface_id: SurfaceId, days_offset: int = 0) -> list[CorpusItem]:
         """Fetch corpus items, checking Redis L2 cache first."""
@@ -329,9 +342,10 @@ class RedisCachedSections(SectionsProtocol):
         backend: SectionsProtocol,
         cache: CacheAdapter,
         config: CorpusCacheConfig,
+        metrics_client: aiodogstatsd.Client,
     ) -> None:
         self._backend = backend
-        self._redis_cache = _RedisCorpusCache(cache, config)
+        self._redis_cache = _RedisCorpusCache(cache, config, metrics_client)
 
     async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
         """Fetch corpus sections, checking Redis L2 cache first."""

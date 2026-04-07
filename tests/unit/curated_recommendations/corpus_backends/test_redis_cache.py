@@ -2,8 +2,9 @@
 
 import asyncio
 import time
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
+import aiodogstatsd
 import orjson
 import pytest
 
@@ -101,7 +102,8 @@ class TestRedisCorpusCache:
     def setup_method(self) -> None:
         """Set up mock cache adapter and helper functions."""
         self.mock_cache = AsyncMock()
-        self.redis_cache = _RedisCorpusCache(self.mock_cache, CONFIG)
+        self.metrics_client = MagicMock(spec=aiodogstatsd.Client)
+        self.redis_cache = _RedisCorpusCache(self.mock_cache, CONFIG, self.metrics_client)
         self.fetch_fn = AsyncMock(return_value=["item1", "item2"])
         self.serialize_fn = lambda items: [{"v": i} for i in items]
         self.deserialize_fn = lambda data: [d["v"] for d in data]
@@ -538,7 +540,8 @@ class TestCircuitBreaker:
             circuit_breaker_failure_threshold=3,
             circuit_breaker_recovery_timeout_sec=10,
         )
-        self.redis_cache = _RedisCorpusCache(self.mock_cache, self.config)
+        self.metrics_client = MagicMock(spec=aiodogstatsd.Client)
+        self.redis_cache = _RedisCorpusCache(self.mock_cache, self.config, self.metrics_client)
         self.fetch_fn = AsyncMock(return_value=["item1", "item2"])
         self.serialize_fn = lambda items: [{"v": i} for i in items]
         self.deserialize_fn = lambda data: [d["v"] for d in data]
@@ -642,7 +645,10 @@ class TestRedisCachedScheduledSurface:
         """Set up mock backend and cache."""
         self.mock_backend = AsyncMock()
         self.mock_cache = AsyncMock()
-        self.wrapper = RedisCachedScheduledSurface(self.mock_backend, self.mock_cache, CONFIG)
+        self.metrics_client = MagicMock(spec=aiodogstatsd.Client)
+        self.wrapper = RedisCachedScheduledSurface(
+            self.mock_backend, self.mock_cache, CONFIG, self.metrics_client
+        )
 
     @pytest.mark.asyncio
     async def test_fresh_hit_returns_deserialized_items(self) -> None:
@@ -679,7 +685,10 @@ class TestRedisCachedSections:
         """Set up mock backend and cache."""
         self.mock_backend = AsyncMock()
         self.mock_cache = AsyncMock()
-        self.wrapper = RedisCachedSections(self.mock_backend, self.mock_cache, CONFIG)
+        self.metrics_client = MagicMock(spec=aiodogstatsd.Client)
+        self.wrapper = RedisCachedSections(
+            self.mock_backend, self.mock_cache, CONFIG, self.metrics_client
+        )
 
     @pytest.mark.asyncio
     async def test_fresh_hit_returns_deserialized_sections(self) -> None:

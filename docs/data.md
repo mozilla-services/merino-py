@@ -200,6 +200,14 @@ The following additional metrics are recorded when curated recommendations are r
 - `recommendation.ml.cohort_model.last_updated` -
  A gauge for the staleness (in seconds) of the cohort model data, measured between when the data was
  updated in GCS and the current time. This value could get large as the model may be updated weekly.
+- `corpus_cache.hit` -
+ A counter for Redis cache hits (fresh data returned without calling the Corpus API).
+- `corpus_cache.stale` -
+ A counter for stale Redis cache entries that trigger revalidation.
+- `corpus_cache.miss` -
+ A counter for Redis cache misses (no data in Redis).
+- `corpus_cache.circuit_breaker_skip` -
+ A counter for requests that skipped Redis because the circuit breaker was open.
 
 
 

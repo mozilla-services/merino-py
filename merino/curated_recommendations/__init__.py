@@ -211,9 +211,12 @@ def _init_corpus_cache(
             circuit_breaker_failure_threshold=cache_settings.circuit_breaker_failure_threshold,
             circuit_breaker_recovery_timeout_sec=cache_settings.circuit_breaker_recovery_timeout_sec,
         )
+        metrics_client = get_metrics_client()
         return (
-            RedisCachedScheduledSurface(scheduled_surface_backend, adapter, config),
-            RedisCachedSections(sections_backend, adapter, config),
+            RedisCachedScheduledSurface(
+                scheduled_surface_backend, adapter, config, metrics_client
+            ),
+            RedisCachedSections(sections_backend, adapter, config, metrics_client),
             adapter,
         )
     except Exception as e:
