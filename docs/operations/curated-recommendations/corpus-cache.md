@@ -46,6 +46,7 @@ flowchart TB
     respond_stale -. "spawns task" .-> l1_lock
     l1_lock -- "acquired" --> check_l2
     l1_lock -. "waited, value populated" .-> respond_fresh
+    l1_lock -. "waited, fetch failed" .-> return_error["BackendError"]
 
     check_l2 -- "FRESH HIT" --> done_l2
     check_l2 -. "STALE" .-> acquire_lock
@@ -75,6 +76,7 @@ flowchart TB
     style done_api fill:#27ae60,stroke:#1e8449,color:#fff
     style done_retry fill:#27ae60,stroke:#1e8449,color:#fff
     style return_503 fill:#e74c3c,stroke:#c0392b,color:#fff
+    style return_error fill:#e74c3c,stroke:#c0392b,color:#fff
     style L1 fill:#eaf2f8,stroke:#2980b9,stroke-width:2px,color:#2c3e50
     style L2 fill:#fef5e7,stroke:#d35400,stroke-width:2px,color:#2c3e50
     style bg fill:#f4f6f7,stroke:#95a5a6,stroke-width:2px,stroke-dasharray: 8 4,color:#2c3e50
