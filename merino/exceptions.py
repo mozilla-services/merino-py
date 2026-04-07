@@ -36,9 +36,10 @@ class CacheMissError(Exception):
 
 
 class CorpusCacheUnavailable(Exception):
-    """Raised when corpus cache has no data and another pod holds the revalidation lock.
+    """Raised when the corpus cache cannot serve data.
 
-    Signals the API layer to return 503 with Retry-After instead of blocking.
+    Triggers include: cold miss with lock held, circuit breaker open, or retry
+    exhausted. The API layer translates this to HTTP 503.
     """
 
     pass

@@ -121,6 +121,6 @@ Uses the shared Redis cluster (`[default.redis]`). No separate instance needed.
 | L1 lock | `asyncio.Lock` per cache entry | Coordinates concurrent revalidation within a single pod |
 | L2 lock | `SET NX EX` with TTL | Distributed, self-expiring. Worst case on timeout: one extra API call |
 | Cache format | Pydantic model dicts via orjson | Saves CPU across pods vs re-parsing raw GraphQL |
-| Cold miss (lock held) | 503 with Retry-After | Prevents connection pile-up; Firefox retries after backoff |
+| Cold miss (lock held) | 503 Service Unavailable | Prevents connection pile-up; Firefox shows cached NewTab content |
 | Redis failure | Circuit breaker, fail fast with 503 | Prevents hammering a degraded Redis. L1 serves stale data in steady state |
 | Hard TTL | 1 day (86400s) | Long safety net so data survives extended API outages |
