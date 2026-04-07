@@ -73,10 +73,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up to run
         uses: ./.github/actions/weave
-      - name: Download All Artifacts
+      - name: Download Test Results Artifacts
         uses: actions/download-artifact@v4
         with:
           path: ${{ inputs.test_result_dir }}
+          pattern: "*-test-results"
           merge-multiple: true
       - name: Evaluate Minimum Test Coverage
         run: make test-coverage-check
