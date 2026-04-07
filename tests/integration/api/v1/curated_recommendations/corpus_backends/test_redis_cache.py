@@ -114,7 +114,7 @@ class TestHappyPath:
     async def test_distributed_lock_prevents_concurrent_fetches(
         self, redis_cache: _RedisCorpusCache
     ) -> None:
-        """Only one caller fetches when multiple hit a cache miss concurrently."""
+        """Only one caller fetches when 10 coroutines hit a cache miss concurrently."""
         import asyncio
 
         fetch_count = 0
@@ -128,30 +128,23 @@ class TestHappyPath:
         serialize_fn = lambda items: [{"v": i} for i in items]
         deserialize_fn = lambda data: [d["v"] for d in data]
 
-        # Launch two concurrent get_or_fetch calls on the same key
-        results = await asyncio.gather(
+        # Launch 10 concurrent get_or_fetch calls to ensure overlap
+        calls = [
             redis_cache.get_or_fetch(
                 "scheduled",
                 SURFACE_ID,
                 fetch_fn=slow_fetch_fn,
                 serialize_fn=serialize_fn,
                 deserialize_fn=deserialize_fn,
-            ),
-            redis_cache.get_or_fetch(
-                "scheduled",
-                SURFACE_ID,
-                fetch_fn=slow_fetch_fn,
-                serialize_fn=serialize_fn,
-                deserialize_fn=deserialize_fn,
-            ),
-            return_exceptions=True,
-        )
+            )
+            for _ in range(10)
+        ]
+        results = await asyncio.gather(*calls, return_exceptions=True)
 
-        # One should succeed with data, the other either succeeds (retry hit)
-        # or raises CorpusCacheUnavailable (retry miss)
+        # Each result is either data (list) or CorpusCacheUnavailable (503)
         successes = [r for r in results if isinstance(r, list)]
         errors = [r for r in results if isinstance(r, CorpusCacheUnavailable)]
-        assert len(successes) + len(errors) == 2
+        assert len(successes) + len(errors) == 10
         assert len(successes) >= 1
         for s in successes:
             assert s == ["item1"]
