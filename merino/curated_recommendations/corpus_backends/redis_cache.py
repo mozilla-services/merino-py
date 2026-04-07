@@ -47,7 +47,6 @@ class CorpusCacheConfig:
     circuit_breaker_recovery_timeout_sec: int = 30
 
 
-
 def _build_data_key(
     config: CorpusCacheConfig, backend_type: BackendType, surface_id: SurfaceId
 ) -> str:

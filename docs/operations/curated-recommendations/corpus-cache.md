@@ -4,7 +4,7 @@ Shared Redis cache between the per-pod in-memory cache and the Corpus GraphQL AP
 
 ## Why
 
-Merino pods each independently fetch from the Corpus API on a short interval. This puts unnecessary load on Apollo/Client-API and creates risk as we expand internationally or scale pod count.
+Merino pods each independently fetch from the Corpus API on a short interval. This puts unnecessary load on Apollo/Client-API and creates risk as we expand internationally or scale pod count. Unlike most suggest providers, the number of unique backend requests is small (one per surface per refresh interval), making them highly cacheable — and the curated-corpus-api backend doesn't handle traffic spikes well.
 
 ## How it works
 
@@ -12,7 +12,7 @@ Merino pods each independently fetch from the Corpus API on a short interval. Th
 flowchart TB
     req["Firefox NewTab Request"]
 
-    subgraph L1 ["L1 — Per-Pod In-Memory SWR"]
+    subgraph L1 ["L1 — Per-Pod In-Memory Cache"]
         check_l1{{"Check in-memory cache"}}
     end
 
@@ -29,6 +29,9 @@ flowchart TB
 
         api["Fetch from Corpus GraphQL API"]
         write["Write to Redis + release lock + update L1"]
+        retry_redis["Wait 100ms, retry Redis"]
+        done_retry["Return data"]
+        return_503["503 + Retry-After: 60"]
     end
 
     req --> check_l1
@@ -45,10 +48,10 @@ flowchart TB
 
     acquire_lock -- "LOCK ACQUIRED" --> api
     acquire_lock -. "LOCK HELD + stale exists" .-> serve_stale["Return stale data"]
-    acquire_lock -. "LOCK HELD + no data" .-> retry_redis["Wait 100ms, retry Redis"]
+    acquire_lock -. "LOCK HELD + no data" .-> retry_redis
 
-    retry_redis -- "HIT" --> done_retry["Return data"]
-    retry_redis -. "MISS" .-> return_503["503 + Retry-After: 60"]
+    retry_redis -- "HIT" --> done_retry
+    retry_redis -. "MISS" .-> return_503
 
     api --> write --> done_api["Update L1 cache"]
 
@@ -73,10 +76,10 @@ flowchart TB
 
 Two layers of caching sit in front of the Corpus GraphQL API:
 
-- **L1 (in-memory SWR)** — per-pod. Serves requests immediately. On stale, spawns a background task to revalidate.
-- **L2 (Redis)** — shared across all pods. The background task checks Redis before hitting the API.
+- **L1 (in-memory)** — per-pod. Serves requests immediately. On stale, spawns a background task to revalidate. Uses an `asyncio.Lock` per cache entry to coordinate concurrent updates within a single pod.
+- **L2 (Redis)** — shared across all pods. On stale, one pod acquires a distributed lock and revalidates while others continue serving stale data. Uses `SET NX EX` to coordinate across pods.
 
-When L2 is stale, one pod acquires a distributed lock, fetches from the API, and writes to Redis. Other pods serve stale data until the winner finishes.
+Both layers use the stale-while-revalidate pattern: serve the cached value immediately and refresh in the background.
 
 ### Cold-miss behavior
 
@@ -84,7 +87,7 @@ On cold start (no L1 or L2 data), the first pod acquires the lock and fetches fr
 
 ### Circuit breaker
 
-A simple circuit breaker protects against hammering a degraded Redis. After `circuit_breaker_failure_threshold` consecutive Redis errors, the circuit opens and all Redis calls are skipped for `circuit_breaker_recovery_timeout_sec`. During this period, every request falls through directly to the Corpus API (same behavior as cache disabled). After the recovery period, one request is allowed through (half-open) to test if Redis has recovered.
+A simple circuit breaker protects against hammering a degraded Redis. After `circuit_breaker_failure_threshold` consecutive Redis errors, the circuit opens and all Redis calls are skipped for `circuit_breaker_recovery_timeout_sec`. During this period, every request falls through directly to the Corpus API (same behavior as cache disabled). After the recovery period, the circuit closes and requests resume hitting Redis. If Redis is still degraded, failures re-accumulate and the circuit re-opens.
 
 ## Configuration
 
@@ -108,17 +111,11 @@ Uses the shared Redis cluster (`[default.redis]`). No separate instance needed.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Cache layer | Redis L2 behind existing in-memory L1 | Keeps per-pod latency low, Redis only consulted on L1 miss |
+| Cache layer | Redis L2 behind existing in-memory L1 | Keeps per-pod latency low, Redis only consulted on L1 miss or stale |
 | Write pattern | Distributed stale-while-revalidate | One pod revalidates, others serve stale. Avoids thundering herd |
-| Lock mechanism | `SET NX EX` with TTL | Simple, self-expiring. Worst case on timeout: one extra API call |
+| L1 lock | `asyncio.Lock` per cache entry | Coordinates concurrent revalidation within a single pod |
+| L2 lock | `SET NX EX` with TTL | Distributed, self-expiring. Worst case on timeout: one extra API call |
 | Cache format | Pydantic model dicts via orjson | Saves CPU across pods vs re-parsing raw GraphQL |
 | Cold miss (lock held) | 503 with Retry-After | Prevents connection pile-up; Firefox retries after backoff |
 | Redis failure | Circuit breaker, fall through to API | Redis is an optimization. Circuit breaker prevents hammering a degraded instance |
 | Hard TTL | 1 day (86400s) | Long safety net so data survives extended API outages |
-
-## Rollout
-
-1. Deploy with cache disabled (no behavior change)
-2. Enable in staging
-3. Monitor metrics, validate API call reduction
-4. Enable in production

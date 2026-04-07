@@ -35,7 +35,6 @@ CONFIG = CorpusCacheConfig(
 )
 
 
-
 def _make_corpus_section() -> CorpusSection:
     """Create a CorpusSection with sensible defaults for testing."""
     return CorpusSection(
@@ -671,7 +670,6 @@ class TestRedisCachedScheduledSurface:
         assert len(result) == 1
         assert result[0].corpusItemId == "id"
         self.mock_backend.fetch.assert_called_once_with(SURFACE_ID, 0)
-
 
 
 class TestRedisCachedSections:
