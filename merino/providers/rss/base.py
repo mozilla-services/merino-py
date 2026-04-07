@@ -10,6 +10,11 @@ class BaseRssProvider(ABC):
     _enabled_by_default: bool
     _query_timeout_sec: float
 
+    def __init__(self, name: str, enabled_by_default: bool, query_timeout_sec: float) -> None:
+        self._name = name
+        self._enabled_by_default = enabled_by_default
+        self._query_timeout_sec = query_timeout_sec
+
     @abstractmethod
     async def initialize(self) -> None:  # pragma: no cover
         """Initialize the provider."""

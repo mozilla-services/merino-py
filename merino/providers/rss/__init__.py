@@ -3,6 +3,7 @@
 import logging
 
 from merino.providers.rss.base import BaseRssProvider
+from merino.providers.rss.wikimedia_potd.provider import WikimediaPotdProvider
 from merino.providers.rss.manager import load_providers
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ async def init_providers() -> None:
 
     This should only be called once at the startup of the application.
     """
+    # load_providers() pulls all the rss providers from the config file.
     providers.update(load_providers())
     for name, provider in providers.items():
         await provider.initialize()
@@ -28,9 +30,13 @@ async def shutdown_providers() -> None:
     """
     for name, provider in providers.items():
         await provider.shutdown()
+        # remove provider from
+        providers.pop(name)
         logger.info("RSS provider shut down", extra={"provider": name})
 
 
-def get_wikimedia_potd_provider() -> BaseRssProvider:
+def get_wikimedia_potd_provider() -> WikimediaPotdProvider:
     """Return the Wikimedia Picture of the Day provider."""
-    return providers["wikimedia_potd"]
+    provider = providers["wikimedia_potd"]
+    assert isinstance(provider, WikimediaPotdProvider)
+    return provider

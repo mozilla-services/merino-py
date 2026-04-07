@@ -33,15 +33,13 @@ class WikimediaPotdProvider(BaseRssProvider):
         query_timeout_sec: float,
         enabled_by_default: bool = False,
     ) -> None:
+        super().__init__(
+            name=name, enabled_by_default=enabled_by_default, query_timeout_sec=query_timeout_sec
+        )
         self.backend = None
         self.metrics_client = metrics_client
-        self._name = name
-        self._query_timeout_sec = query_timeout_sec
-        self._enabled_by_default = enabled_by_default
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.manifest_data = None
-
-        super().__init__()
 
     async def initialize(self) -> None:
         """Initialize the provider."""
