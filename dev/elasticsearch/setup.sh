@@ -16,3 +16,20 @@ for file in /es-indexes/*.json; do
 done
 
 echo "--- Index creation complete ---"
+
+for file in /es-seed/*.ndjson; do
+  echo ""
+  echo "--- Seeding: $file ---"
+  curl -v -X POST "$ES_URL/_bulk" \
+    -H "Content-Type: application/x-ndjson" \
+    --data-binary "@$file" 2>&1
+  echo ""
+done
+
+echo "--- Seeding complete ---"
+
+# Due to negative refresh interval in index
+echo "--- Refreshing indices ---"
+curl -s -X POST "$ES_URL/_refresh" | cat
+echo ""
+echo "--- Done ---"

@@ -40,8 +40,8 @@ services:
   # And using custom image to install plugins
   es01:
     build:
-      context: .
-      dockerfile: Dockerfile.elasticsearch
+      context: ./elasticsearch
+      dockerfile: Dockerfile
       args:
         STACK_VERSION: ${STACK_VERSION}
     volumes:
@@ -79,6 +79,7 @@ services:
     environment:
       - SERVERNAME=kibana
       - ELASTICSEARCH_HOSTS=http://es01:9200
+      - XPACK_ENTERPRISESEARCH_ENABLED=false
     mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
@@ -96,9 +97,10 @@ services:
       es01:
         condition: service_healthy
     volumes:
-      - ./es-setup.sh:/es-setup.sh:ro
-      - ./es-indexes:/es-indexes:ro
-    entrypoint: ["sh", "/es-setup.sh"]
+      - ./elasticsearch/setup.sh:/setup.sh:ro
+      - ./elasticsearch/indexes:/es-indexes:ro
+      - ./elasticsearch/seed:/es-seed:ro
+    entrypoint: ["sh", "/setup.sh"]
     restart: "no"
 
 volumes:

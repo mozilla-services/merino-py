@@ -1,10 +1,9 @@
 {
   "settings": {
     "index": {
-      "number_of_replicas": "1",
+      "number_of_replicas": "0",
       "refresh_interval": "-1",
-      "number_of_shards": "2",
-      "lifecycle": { "name": "sports-en-policy" }
+      "number_of_shards": "1"
     },
     "analysis": {
       "filter": {
@@ -93,6 +92,31 @@
             "\\ufeff=>\\u0020"
           ]
         }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": false,
+    "properties": {
+      "batch_id": { "type": "long" },
+      "version": { "type": "keyword" },
+      "doc_id": { "type": "keyword" },
+      "title": { "type": "keyword" },
+      "suggest": {
+        "type": "completion",
+        "analyzer": "plain_en",
+        "search_analyzer": "plain_search_en",
+        "preserve_separators": true,
+        "preserve_position_increments": true,
+        "max_input_length": 255
+      },
+      "suggest-stop": {
+        "type": "completion",
+        "analyzer": "stop_analyzer_en",
+        "search_analyzer": "stop_analyzer_search_en",
+        "preserve_separators": false,
+        "preserve_position_increments": false,
+        "max_input_length": 255
       }
     }
   }

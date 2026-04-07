@@ -104,6 +104,8 @@ celerybeat.pid
 
 # Environments
 .env
+# Safe local dev env vars
+!dev/.env
 .venv
 env/
 venv/
@@ -137,7 +139,6 @@ merino/configs/.secrets.*
 
 # Dynaconf local config files
 merino/configs/*.local.*
-!merino/configs/*.local.*.example
 
 # mdBook generated files
 book/
