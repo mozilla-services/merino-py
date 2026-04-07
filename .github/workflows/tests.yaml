@@ -39,9 +39,9 @@ jobs:
       - name: Set up to run
         uses: ./.github/actions/weave
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Build custom ES image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: dev/elasticsearch/
           file: dev/elasticsearch/Dockerfile
