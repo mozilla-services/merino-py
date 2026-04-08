@@ -4,7 +4,9 @@ from typing import Any
 from datetime import datetime
 
 from merino.providers.suggest.base import BaseModel
-from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
+from merino.providers.suggest.sports.backends.sportsdata.common import (
+    GameStatus,
+)
 
 
 class SportTeamDetail(BaseModel):
