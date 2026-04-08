@@ -256,7 +256,7 @@ async def test_query_with_thompson_without_engagement_data_skips_sampling(
     statsd_mock.increment.assert_not_called()
 
 
-@patch("merino.providers.suggest.adm.provider.FALLBACK_TO_BASE_SUGGESTION", True)
+@patch("merino.providers.suggest.adm.provider.TS_DRY_RUN", True)
 @pytest.mark.asyncio
 async def test_query_with_thompson_returns_fallback_when_fallback_enabled(
     srequest: SuggestionRequestFixture,
@@ -264,7 +264,7 @@ async def test_query_with_thompson_returns_fallback_when_fallback_enabled(
     adm_parameters: dict[str, Any],
     statsd_mock: Any,
 ) -> None:
-    """Thompson-enabled provider should return a suggestion when the sampler picks a winner."""
+    """Thompson-enabled provider should return fallback when TS_DRY_RUN is enabled."""
     await adm_with_thompson.initialize()
     res = await adm_with_thompson.query(
         srequest("firefox", GEOLOCATION, USER_AGENT, CLIENT_VARIANTS)
@@ -291,7 +291,7 @@ async def test_query_with_thompson_returns_fallback_when_fallback_enabled(
     )
 
 
-@patch("merino.providers.suggest.adm.provider.FALLBACK_TO_BASE_SUGGESTION", True)
+@patch("merino.providers.suggest.adm.provider.TS_DRY_RUN", True)
 @pytest.mark.asyncio
 async def test_query_with_thompson_dummy_return_suggestion_when_fallback_enabled(
     srequest: SuggestionRequestFixture,
@@ -299,7 +299,7 @@ async def test_query_with_thompson_dummy_return_suggestion_when_fallback_enabled
     adm_parameters: dict[str, Any],
     statsd_mock: Any,
 ) -> None:
-    """Provider with a dominant dummy should suppress the suggestion (return empty list)."""
+    """Provider with a dominant dummy should return fallback suggestion when TS_DRY_RUN is enabled."""
     await adm_with_thompson_dummy.initialize()
     adm_with_thompson_dummy.engagement_data = EngagementData(
         amp={"something": {}}, amp_aggregated={}

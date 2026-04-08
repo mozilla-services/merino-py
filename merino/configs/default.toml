@@ -632,9 +632,9 @@ dummy_attempted_count = 1000
 # Whether to check `client_variants` for Thompson sampling
 check_client_variants = true
 
-# MERINO_PROVIDERS__ADM__THOMPSON__FALLBACK_TO_BASE_SUGGESTION
+# MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
 # Toggle to determine whether to return fallback suggestion or thompson selected suggestion
-fallback_to_base_suggestion = true
+dry_run = true
 
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL
