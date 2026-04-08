@@ -199,15 +199,13 @@ def _process_corpus_sections(
     return sections
 
 def clean_exp_id(idstr):
-    ## TODO some regex that removes __exp*__ and returns the * part
-    filtstr = 'foo'
-    filttype = 'bar'
-    return filtstr, filttype
+    base_id, exp_type = idstr.split('_exp')
+    return base_id, exp_type
 
 def resolve_5050(original_id, exp_id):
     return random.sample([original_id,exp_id],1)[0]
 
-def resolve_exp(original_id, exp_id, exp_type):
+def resolve_section_experiment(original_id, exp_id, exp_type):
     ## case switch on 
     if exp_type == '5050':
         return resolve_5050(original_id,exp_id)
@@ -215,23 +213,24 @@ def resolve_exp(original_id, exp_id, exp_type):
         return original_id
 
 def dedupe_experiment_sections(sections):
-    ## get all section ids
-    sec_ids = [section.id for section in sections]
     ## pull out experimental sections
-    exp_ids = [sid for sid in sec_ids if '__exp' in sid]
+    exp_ids = set([sec.id for sec in sections if '_exp' in sec.id])
+    ## map id to section
+    id_to_section = {section.id:section for section in sections}
+    ## result id_to_section, , notice we are dropping _exp sections
+    id_to_result = {section.id:section for section in sections
+                    if section.id not in exp_ids}
     ## find experimental pairs
     kept_ids = []
     for eid in exp_ids:
         can_eid, exp_type = clean_exp_id(eid)
         ## check if there is a matching non-experimental section
-        if can_eid in sec_ids:
+        if can_eid in id_to_section:
             ## pick
-            kept_id, filt_id = resolve_exp(can_eid,eid,exp_type)
-            sec_ids.remove(filt_id)
-    ## do filtering
-    sections = [section for section in sections
-                if section.id in sec_ids]
-    return sections
+            kept_id, _ = resolve_section_experiment(can_eid,eid,exp_type)
+            ## replace value, keep canonical id
+            id_to_result[can_eid] = id_to_section[kept_id]        
+    return list(id_to_result.values())
 
 
 async def get_corpus_sections(
