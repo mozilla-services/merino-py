@@ -164,13 +164,6 @@ class MarsBackend:
 
         self.suggestion_content.icons.update(icons)
 
-        if self.last_new_data_at > 0:
-            staleness = time.time() - self.last_new_data_at
-            self.metrics_client.gauge(
-                "mars.data.staleness_seconds",
-                value=staleness,
-            )
-
         return self.suggestion_content
 
     async def get_suggestions(
