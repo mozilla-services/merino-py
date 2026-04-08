@@ -51,6 +51,7 @@ FORM_FACTORS_FALLBACK_MAPPING = {
 FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
 CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
+TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -230,15 +231,8 @@ class Provider(BaseProvider):
     def _select(
         self, suggestions: list[PyAmpResult], client_variants: list[str]
     ) -> PyAmpResult | None:
-        """Select a suggestion from the candidate collection.
-
-        Params:
-          - `suggestions`: A list of candidates `PyAmpResult`
-        Returns:
-            Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
-            determines so. Return the first candidate when the optimizer is disabled.
-        """
-        if self._is_thompson_eligible(client_variants):
+        def _sampling() -> PyAmpResult | None:
+            """Thompson sampling helper function."""
             candidates = [
                 ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
                 for i, suggestion in enumerate(suggestions)
@@ -263,6 +257,11 @@ class Provider(BaseProvider):
                     "providers.adm.thompson.select", tags={"outcome": "suppressed"}
                 )
                 return None
+
+        if self._is_thompson_eligible(client_variants):
+            winner = _sampling()
+            if not TS_DRY_RUN:
+                return winner
 
         return suggestions[0] if suggestions else None
 
