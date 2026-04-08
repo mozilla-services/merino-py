@@ -199,7 +199,7 @@ def _process_corpus_sections(
     return sections
 
 def clean_exp_id(section_id: str) -> tuple[str, str] | None:
-    marker = "_exp"
+    marker = "__exp"
     idx = section_id.rfind(marker)
     if idx <= 0:
         return None
@@ -228,7 +228,7 @@ def dedupe_experiment_sections(sections):
     exp_ids = [sec.externalId for sec in sections if clean_exp_id(sec.externalId) is not None]
     ## map id to section
     id_to_section = {section.externalId:section for section in sections}
-    ## result id_to_section, , notice we are dropping _exp sections
+    ## result id_to_section, , notice we are dropping __exp sections
     id_to_result = {section.externalId:section for section in sections
                     if section.externalId not in exp_ids}
     ## find experimental pairs

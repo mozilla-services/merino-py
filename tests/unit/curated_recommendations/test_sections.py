@@ -253,15 +253,15 @@ class TestRawSectionExperimentResolution:
 
     def test_clean_exp_id_parses_supported_suffix(self):
         """A supported experimental section ID should parse into base ID and experiment type."""
-        assert clean_exp_id("government_exp5050") == ("government", "5050")
+        assert clean_exp_id("government__exp5050") == ("government", "5050")
 
     @pytest.mark.parametrize(
         "section_id",
         [
             "government",
-            "government_exp",
-            "_exp5050",
-            "government_exp5050_variant",
+            "government__exp",
+            "__exp5050",
+            "government__exp5050_variant",
             "education__lDE_DE",
         ],
     )
@@ -274,14 +274,14 @@ class TestRawSectionExperimentResolution:
         monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
 
         assert (
-            resolve_section_experiment("government", "government_exp5050", "5050")
-            == "government_exp5050"
+            resolve_section_experiment("government", "government__exp5050", "5050")
+            == "government__exp5050"
         )
 
     def test_resolve_section_experiment_unsupported_type_returns_base(self):
         """Unsupported experiment types should keep the base section."""
         assert (
-            resolve_section_experiment("government", "government_exp9999", "9999")
+            resolve_section_experiment("government", "government__exp9999", "9999")
             == "government"
         )
 
@@ -289,7 +289,7 @@ class TestRawSectionExperimentResolution:
         """If the base wins, the canonical output should contain only the base content."""
         monkeypatch.setattr(random, "sample", lambda seq, _: [seq[0]])
         base = generate_corpus_section("government", count=1)
-        exp = generate_corpus_section("government_exp5050", count=2)
+        exp = generate_corpus_section("government__exp5050", count=2)
 
         result = dedupe_experiment_sections([base, exp])
 
@@ -303,14 +303,14 @@ class TestRawSectionExperimentResolution:
         """If the experiment wins, the content should survive under the base section ID."""
         monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
         base = generate_corpus_section("government", count=1)
-        exp = generate_corpus_section("government_exp5050", count=2)
+        exp = generate_corpus_section("government__exp5050", count=2)
 
         result = dedupe_experiment_sections([base, exp])
 
         assert [section.externalId for section in result] == ["government"]
         assert len(result[0].sectionItems) == 2
         assert result[0] is not exp
-        assert exp.externalId == "government_exp5050"
+        assert exp.externalId == "government__exp5050"
 
     def test_dedupe_experiment_sections_preserves_base_position(self, monkeypatch):
         """The chosen section should occupy the original base section position."""
@@ -318,7 +318,7 @@ class TestRawSectionExperimentResolution:
         sports = generate_corpus_section("sports")
         base = generate_corpus_section("government")
         tech = generate_corpus_section("tech")
-        exp = generate_corpus_section("government_exp5050")
+        exp = generate_corpus_section("government__exp5050")
 
         result = dedupe_experiment_sections([sports, base, tech, exp])
 
@@ -326,7 +326,7 @@ class TestRawSectionExperimentResolution:
 
     def test_dedupe_experiment_sections_drops_orphan_experimental_section(self):
         """An experimental section without a matching base should be dropped."""
-        exp = generate_corpus_section("government_exp5050")
+        exp = generate_corpus_section("government__exp5050")
 
         result = dedupe_experiment_sections([exp])
 
@@ -335,7 +335,7 @@ class TestRawSectionExperimentResolution:
     def test_dedupe_experiment_sections_unsupported_variant_keeps_base(self):
         """Unsupported experimental variants should be dropped while the base remains."""
         base = generate_corpus_section("government", count=1)
-        exp = generate_corpus_section("government_exp9999", count=2)
+        exp = generate_corpus_section("government__exp9999", count=2)
 
         result = dedupe_experiment_sections([base, exp])
 
@@ -1679,7 +1679,7 @@ class TestGetCorpusSections:
         mock_backend.fetch = AsyncMock(
             return_value=[
                 generate_corpus_section("government", count=1),
-                generate_corpus_section("government_exp5050", count=2),
+                generate_corpus_section("government__exp5050", count=2),
                 generate_corpus_section("sports", count=1),
             ]
         )
@@ -1692,7 +1692,7 @@ class TestGetCorpusSections:
         mock_backend.fetch = AsyncMock(
             return_value=[
                 generate_corpus_section("government", count=1),
-                generate_corpus_section("government_exp5050", count=2),
+                generate_corpus_section("government__exp5050", count=2),
                 generate_corpus_section(DAILY_BRIEFING_SECTION_KEY, count=1),
             ]
         )
