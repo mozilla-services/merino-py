@@ -96,6 +96,7 @@ class Provider(BaseProvider):
     engagement_resync_interval_sec: float
     last_engagement_fetch_at: float
     engagement_cron_task: asyncio.Task
+    staleness_cron_task: asyncio.Task
 
     def __init__(
         self,
@@ -168,6 +169,28 @@ class Provider(BaseProvider):
             task=self._fetch_engagement_data,
         )
         self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
+
+        staleness_cron_job = cron.Job(
+            name="mars_staleness_metric",
+            interval=self.cron_interval_sec,
+            condition=self._should_emit_staleness,
+            task=self._emit_staleness,
+        )
+        self.staleness_cron_task = asyncio.create_task(staleness_cron_job())
+
+    def _should_emit_staleness(self) -> bool:
+        """Check if the backend tracks data staleness."""
+        return getattr(self.backend, "last_new_data_at", 0) > 0
+
+    async def _emit_staleness(self) -> None:
+        """Emit the data staleness gauge for the MARS backend."""
+        last_new_data_at: float = getattr(self.backend, "last_new_data_at", 0)
+        if last_new_data_at > 0:
+            staleness = time.time() - last_new_data_at
+            self.metrics_client.gauge(
+                "mars.data.staleness_seconds",
+                value=staleness,
+            )
 
     def _should_fetch(self) -> bool:
         """Check if it should fetch data from Remote Settings."""
