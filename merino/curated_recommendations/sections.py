@@ -198,6 +198,7 @@ def _process_corpus_sections(
 
     return sections
 
+
 def clean_exp_id(section_id: str) -> tuple[str, str] | None:
     """Parse a raw experimental section ID into its base ID and experiment type.
 
@@ -210,7 +211,7 @@ def clean_exp_id(section_id: str) -> tuple[str, str] | None:
         return None
 
     base_id = section_id[:idx]
-    exp_type = section_id[idx + len(marker):]
+    exp_type = section_id[idx + len(marker) :]
 
     if not exp_type or not exp_type.isalnum():
         return None
@@ -222,6 +223,7 @@ def resolve_5050(original_id: str, exp_id: str) -> str:
     """Choose between the base and experimental section IDs with 50/50 odds."""
     return random.sample([original_id, exp_id], 1)[0]
 
+
 def resolve_section_experiment(original_id: str, exp_id: str, exp_type: str) -> str:
     """Resolve a base/experimental section pair to the winning section ID.
 
@@ -232,6 +234,7 @@ def resolve_section_experiment(original_id: str, exp_id: str, exp_type: str) -> 
     else:
         return original_id
 
+
 def dedupe_experiment_sections(sections: list[CorpusSection]) -> list[CorpusSection]:
     """Resolve raw experimental section pairs and keep a single canonical section.
 
@@ -239,15 +242,25 @@ def dedupe_experiment_sections(sections: list[CorpusSection]) -> list[CorpusSect
     matching base section exists, the winning section content is copied into the
     base section slot and emitted under the canonical base ID.
     """
+    # Pull out experimental sections.
     exp_ids = [sec.externalId for sec in sections if clean_exp_id(sec.externalId) is not None]
+    # Map IDs to sections.
     id_to_section = {section.externalId: section for section in sections}
+    # Build the result map, dropping __exp sections until a winner is chosen.
     id_to_result = {
         section.externalId: section for section in sections if section.externalId not in exp_ids
     }
+    # Find experimental pairs.
     for eid in exp_ids:
-        can_eid, exp_type = clean_exp_id(eid)
+        parsed_eid = clean_exp_id(eid)
+        if parsed_eid is None:
+            continue
+        can_eid, exp_type = parsed_eid
+        # Check if there is a matching non-experimental section.
         if can_eid in id_to_section:
+            # Pick the winning section ID.
             kept_id = resolve_section_experiment(can_eid, eid, exp_type)
+            # Replace the value while keeping the canonical ID.
             id_to_result[can_eid] = deepcopy(id_to_section[kept_id])
             id_to_result[can_eid].externalId = can_eid
     return list(id_to_result.values())

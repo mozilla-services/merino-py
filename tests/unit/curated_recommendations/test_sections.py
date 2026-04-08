@@ -281,8 +281,7 @@ class TestRawSectionExperimentResolution:
     def test_resolve_section_experiment_unsupported_type_returns_base(self):
         """Unsupported experiment types should keep the base section."""
         assert (
-            resolve_section_experiment("government", "government__exp9999", "9999")
-            == "government"
+            resolve_section_experiment("government", "government__exp9999", "9999") == "government"
         )
 
     def test_dedupe_experiment_sections_keeps_base_when_base_selected(self, monkeypatch):
@@ -297,9 +296,7 @@ class TestRawSectionExperimentResolution:
         assert len(result[0].sectionItems) == 1
         assert result[0].externalId == "government"
 
-    def test_dedupe_experiment_sections_keeps_exp_content_under_canonical_id(
-        self, monkeypatch
-    ):
+    def test_dedupe_experiment_sections_keeps_exp_content_under_canonical_id(self, monkeypatch):
         """If the experiment wins, the content should survive under the base section ID."""
         monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
         base = generate_corpus_section("government", count=1)
