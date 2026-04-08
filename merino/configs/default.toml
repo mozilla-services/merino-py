@@ -632,6 +632,10 @@ dummy_attempted_count = 1000
 # Whether to check `client_variants` for Thompson sampling
 check_client_variants = true
 
+# MERINO_PROVIDERS__ADM__THOMPSON__FALLBACK_TO_BASE_SUGGESTION
+# Toggle to determine whether to return fallback suggestion or thompson selected suggestion
+fallback_to_base_suggestion = true
+
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL
 # This is the URL for the Addons API to get more information for particular addons.

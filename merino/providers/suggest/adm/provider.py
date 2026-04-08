@@ -51,6 +51,7 @@ FORM_FACTORS_FALLBACK_MAPPING = {
 FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
 CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
+FALLBACK_TO_BASE_SUGGESTION: bool = settings.providers.adm.thompson.fallback_to_base_suggestion
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -238,6 +239,7 @@ class Provider(BaseProvider):
             Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
             determines so. Return the first candidate when the optimizer is disabled.
         """
+        base_suggestion = suggestions[0] if suggestions else None
         if self._is_thompson_eligible(client_variants):
             candidates = [
                 ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
@@ -257,11 +259,15 @@ class Provider(BaseProvider):
                     "providers.adm.thompson.select", tags={"outcome": "selected"}
                 )
                 winner_idx: int = winner.id
+                if FALLBACK_TO_BASE_SUGGESTION:
+                    return base_suggestion
                 return suggestions[winner_idx]
             else:
                 self.metrics_client.increment(
                     "providers.adm.thompson.select", tags={"outcome": "suppressed"}
                 )
+                if FALLBACK_TO_BASE_SUGGESTION:
+                    return base_suggestion
                 return None
 
         return suggestions[0] if suggestions else None
