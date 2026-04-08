@@ -198,6 +198,41 @@ def _process_corpus_sections(
 
     return sections
 
+def clean_exp_id(idstr):
+    ## TODO some regex that removes __exp*__ and returns the * part
+    filtstr = 'foo'
+    filttype = 'bar'
+    return filtstr, filttype
+
+def resolve_5050(original_id, exp_id):
+    return random.sample([original_id,exp_id],1)[0]
+
+def resolve_exp(original_id, exp_id, exp_type):
+    ## case switch on 
+    if exp_type == '5050':
+        return resolve_5050(original_id,exp_id)
+    else:
+        return original_id
+
+def dedupe_experiment_sections(sections):
+    ## get all section ids
+    sec_ids = [section.id for section in sections]
+    ## pull out experimental sections
+    exp_ids = [sid for sid in sec_ids if '__exp' in sid]
+    ## find experimental pairs
+    kept_ids = []
+    for eid in exp_ids:
+        can_eid, exp_type = clean_exp_id(eid)
+        ## check if there is a matching non-experimental section
+        if can_eid in sec_ids:
+            ## pick
+            kept_id, filt_id = resolve_exp(can_eid,eid,exp_type)
+            sec_ids.remove(filt_id)
+    ## do filtering
+    sections = [section for section in sections
+                if section.id in sec_ids]
+    return sections
+
 
 async def get_corpus_sections(
     sections_backend: SectionsProtocol,
