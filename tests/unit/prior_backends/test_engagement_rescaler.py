@@ -7,10 +7,10 @@ from unittest.mock import Mock
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     BLOCKED_FROM_MOST_POPULAR_SCALER,
+    LOCAL_RERANK_WEGHT,
     EST_TOP_STORY_TILE_IMP_PER_CYCLE,
     US_UTC_RELATIVE_IMPRESSIONS_NORM,
     CrawledContentPinnedFreshRescaler,
-    CrawledContentPinnedFreshRescalerInferred,
     CrawledContentRescaler,
     DE_EXPERIMENT_TREATMENT_PERCENT,
     DECrawledContentRescaler,
@@ -103,6 +103,8 @@ class TestCrawledContentRescaler:
         assert self.rescaler.fresh_items_max == 0
         assert self.rescaler.fresh_items_section_ranking_max_percentage > 0
         assert self.rescaler.fresh_items_limit_prior_threshold_multiplier > 0
+
+        assert self.rescaler.local_rerank_scalar == LOCAL_RERANK_WEGHT
 
     def test_rescale_when_not_subtopic_item(self):
         """Test normal case for normal item"""
@@ -294,7 +296,7 @@ class TestSchedulerHoldbackRescaler:
             self.rescaler = CrawledContentPinnedFreshRescaler(
                 fresh_items_top_stories_fixed_position=2
             )
-            self.rescaler_inferred = CrawledContentPinnedFreshRescalerInferred()
+            self.rescaler_inferred = CrawledContentPinnedFreshRescaler()
 
         def test_fixed_position_setting(self):
             """Test that fixed position setting is set correctly"""
@@ -303,5 +305,5 @@ class TestSchedulerHoldbackRescaler:
             assert self.rescaler_inferred.fresh_items_top_stories_fixed_position == 4
             assert (
                 self.rescaler.compute_estimated_fresh_per_cycle()
-                > self.rescaler_inferred.compute_estimated_fresh_per_cycle()
+                == self.rescaler_inferred.compute_estimated_fresh_per_cycle()
             )

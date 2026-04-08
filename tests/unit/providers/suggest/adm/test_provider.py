@@ -96,6 +96,7 @@ async def test_initialize_remote_settings_failure(
     of provider to return an empty suggestion.
     """
     error_message: str = "The remote server was unreachable"
+    error_message_engagement: str = "Engagement data fetch returned None, will retry on next tick"
     # override default mocked behavior for fetch
     backend_mock.fetch.side_effect = Exception(error_message)
 
@@ -106,11 +107,13 @@ async def test_initialize_remote_settings_failure(
         # since the cron jobs have kicked in as the initial fetch fails.
         adm.cron_task.cancel()
         adm.engagement_cron_task.cancel()
+        adm.staleness_cron_task.cancel()
 
     records = filter_caplog(caplog.records, "merino.providers.suggest.adm.provider")
-    assert len(records) == 1
+    assert len(records) == 2
     assert records[0].__dict__["error message"] == error_message
     assert adm.last_fetch_at == 0
+    assert records[1].message == error_message_engagement
     # SuggestionContent should be empty as initialize was unsuccessful.
     assert adm.suggestion_content.index_manager.list() == []
     assert adm.suggestion_content.icons == {}
@@ -244,3 +247,43 @@ async def test_fetch_engagement_data_exception(
     assert records[0].__dict__["error"] == "GCS unavailable"
     assert adm.engagement_data == original_data
     assert adm.last_engagement_fetch_at == 0
+
+
+@pytest.mark.asyncio
+async def test_emit_staleness_with_mars_backend(
+    adm: Provider,
+    backend_mock: Any,
+    statsd_mock: Any,
+) -> None:
+    """Test that _emit_staleness emits the gauge when backend has last_new_data_at."""
+    backend_mock.last_new_data_at = 1000.0
+
+    await adm._emit_staleness()
+
+    statsd_mock.gauge.assert_called_once()
+    call_args = statsd_mock.gauge.call_args
+    assert call_args[0][0] == "mars.data.staleness_seconds"
+    assert call_args[1]["value"] > 0
+
+
+@pytest.mark.asyncio
+async def test_emit_staleness_without_mars_backend(
+    adm: Provider,
+    statsd_mock: Any,
+) -> None:
+    """Test that _emit_staleness is a no-op when backend lacks last_new_data_at."""
+    await adm._emit_staleness()
+
+    statsd_mock.gauge.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_should_emit_staleness(
+    adm: Provider,
+    backend_mock: Any,
+) -> None:
+    """Test that _should_emit_staleness returns True only when backend has data."""
+    assert adm._should_emit_staleness() is False
+
+    backend_mock.last_new_data_at = 1000.0
+    assert adm._should_emit_staleness() is True

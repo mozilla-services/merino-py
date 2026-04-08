@@ -20,12 +20,13 @@ from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
     SportsDataStore,
 )
+from merino.providers.suggest.sports.backends.sportsdata.protocol import SportEventDetail
 
 
 VALID_TEST_RESPONSE: dict = {}
@@ -323,3 +324,32 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
     await backend.startup()
 
     assert mock_store.startup.called
+
+
+@pytest.mark.parametrize(
+    "sport,expected_category",
+    [
+        ("NFL", SportCategory.Football),
+        ("NHL", SportCategory.Hockey),
+        ("NBA", SportCategory.Basketball),
+        ("UCL", SportCategory.Soccer),
+        ("MLB", SportCategory.Baseball),
+        ("Warhammer40k", SportCategory.Misc),
+    ],
+    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "miscellaneous"],
+)
+def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
+    """Test sport name mapping and fallback behavior"""
+    base_event: dict = {
+        "date": "2025-10-01T00:00:00+00:00",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
+        "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2025-10-01T00:00:00+00:00",
+    }
+
+    event = {**base_event, "sport": sport}
+    result = SportEventDetail.from_event_dict(event)
+    assert result.sport_category == expected_category

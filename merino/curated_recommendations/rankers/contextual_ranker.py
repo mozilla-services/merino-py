@@ -34,10 +34,7 @@ from merino.curated_recommendations.rankers.utils import (
 # we're looking at are total impressions and we care about impressions with the inferred interests. When
 # contexual is rolled out we can use a dynamic computed value based on daily impressions.
 
-CONTEXUAL_AVG_BETA_VALUE = 4000
-CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT = (
-    0.5  # Underscored items tend to scale higher, leading to too much fresh content
-)
+CONTEXUAL_AVG_BETA_VALUE = 12000
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +42,9 @@ logger = logging.getLogger(__name__)
 # cohort selection.
 CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING = {
     Topic.TECHNOLOGY: 1.0,
-    Topic.POLITICS: 0.3,
-    Topic.ARTS: 0.3,
 }
 
-CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0003
+CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0001
 CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_OFFSET = 0.2
 
 
@@ -171,7 +166,6 @@ class ContextualRanker(Ranker):
             """Create score based on top items in section"""
             fresh_retain_likelyhood = (
                 rescaler.fresh_items_section_ranking_max_percentage
-                * CONTEXTAL_LIMIT_PERCENTAGE_ADJUSTMENT
                 if rescaler is not None
                 else 0.0
             )

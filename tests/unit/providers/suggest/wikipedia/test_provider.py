@@ -7,7 +7,9 @@ from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.exceptions import BackendError
-from merino.providers.suggest.wikipedia.backends.fake_backends import FakeEchoWikipediaBackend
+from merino.providers.suggest.wikipedia.backends.fake_backends import (
+    FakeEchoWikipediaBackend,
+)
 from merino.providers.suggest.wikipedia.backends.protocol import EngagementData
 from merino.providers.suggest.wikipedia.provider import (
     ADVERTISER,

@@ -21,8 +21,10 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
-# This was a 50% experiment but overal users has declined over time
-INFERRED_EXPERIMENT_PERCENTAGE = 0.25
+
+LOCAL_RERANK_WEGHT = (
+    30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
+)
 
 FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 12000
 
@@ -30,8 +32,8 @@ EST_DAILY_IMPRESSIONS_TOP_STORY_TILE = (
     21_000_000  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
 )
 EST_TOP_STORY_TILE_IMP_PER_CYCLE = (
-    EST_DAILY_IMPRESSIONS_TOP_STORY_TILE // 24 // 4
-)  # Assuming 4 ETL data cycles per hour
+    EST_DAILY_IMPRESSIONS_TOP_STORY_TILE // 24 // 7
+)  # Assuming 7 ETL data cycles per hour. We actually have a1round 6 but estimating as higher boosts the rate of fresh items
 
 # Normalized relative impresions per hour. Generated via https://sql.telemetry.mozilla.org/queries/115220
 US_UTC_RELATIVE_IMPRESSIONS_NORM = [
@@ -72,6 +74,7 @@ class CrawledContentRescaler(EngagementRescaler):
         data.setdefault("fresh_items_top_stories_max_percentage", 0.15)
         data.setdefault("fresh_items_section_ranking_max_percentage", 0.15)
         data.setdefault("fresh_items_limit_prior_threshold_multiplier", 1)
+        data.setdefault("local_rerank_scalar", LOCAL_RERANK_WEGHT)
         super().__init__(**data)
 
     @classmethod
@@ -122,7 +125,7 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         data.setdefault(
             "fresh_items_top_stories_fixed_est_imp_per_cycle", EST_TOP_STORY_TILE_IMP_PER_CYCLE
         )
-        data.setdefault("fresh_items_top_stories_max_percentage", 0.02)
+        data.setdefault("fresh_items_top_stories_max_percentage", 0.03)
         super().__init__(**data)
 
     def compute_estimated_fresh_per_cycle(self) -> int:
@@ -135,20 +138,6 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         else:
             scale = 1.0
         return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
-
-
-class CrawledContentPinnedFreshRescalerInferred(CrawledContentPinnedFreshRescaler):
-    """Rescaler for inferred contextual interest experiment.
-    Similar to CrawledContentPinnedFreshRescaler but with more aggressive settings to account
-    for smaller experiment size.
-    """
-
-    def __init__(self, **data: Any):
-        data.setdefault(
-            "fresh_items_top_stories_fixed_est_imp_per_cycle",
-            round(EST_TOP_STORY_TILE_IMP_PER_CYCLE * INFERRED_EXPERIMENT_PERCENTAGE),
-        )
-        super().__init__(**data)
 
 
 IE_EXPERIMENT_TREATMENT_PERCENT = 0.10

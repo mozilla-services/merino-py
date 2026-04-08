@@ -55,6 +55,8 @@ class EngagementRescaler(BaseModel):
         float  # Max number of fresh items to use when considering section rank
     ) = 0
 
+    local_rerank_scalar: float = 0
+
     fresh_items_top_stories_fixed_position: (
         int | None  # Fixed position to host bulk of fresh stories
     ) = None

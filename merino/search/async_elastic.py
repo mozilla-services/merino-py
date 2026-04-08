@@ -45,7 +45,7 @@ class AsyncElasticSearchAdapter:
         index: str,
         body: Optional[dict[str, Any]] = None,
         suggest: Optional[dict[str, Any]] = None,
-        timeout: Optional[str] = None,
+        timeout: Optional[float] = None,
         **kwargs: Any,
     ) -> dict[str, Any]:
         """Run an async search request."""
@@ -53,8 +53,8 @@ class AsyncElasticSearchAdapter:
 
         return cast(
             dict[str, Any],
-            await client.search(
-                index=index, body=body, suggest=suggest, timeout=timeout, **kwargs
+            await client.options(request_timeout=timeout).search(
+                index=index, body=body, suggest=suggest, **kwargs
             ),
         )
 

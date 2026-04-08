@@ -1,6 +1,7 @@
 """Module for test configurations for the integration test directory."""
 
 import asyncio
+import os
 import time
 import threading
 import requests
@@ -9,6 +10,8 @@ import pytest_asyncio
 
 from testcontainers.elasticsearch import ElasticSearchContainer
 from elasticsearch import AsyncElasticsearch
+
+ES_IMAGE = os.environ.get("ES_IMAGE", "merino-elasticsearch:local")
 
 ES_PROP = {
     "container": None,
@@ -38,9 +41,11 @@ def pytest_collection_modifyitems(session, config, items):
 def _start_container_in_thread(timeout=120):
     """Start container in thread and update container status with ES_PROP."""
     try:
-        container = ElasticSearchContainer("docker.elastic.co/elasticsearch/elasticsearch:8.13.4")
+        container = ElasticSearchContainer(ES_IMAGE)
         container.with_env("discovery.type", "single-node")
         container.with_env("ES_JAVA_OPTS", "-Xms256m -Xmx256m")
+        # Prevent local shards from entering into a read-only state due to high disk usage
+        container.with_env("cluster.routing.allocation.disk.threshold_enabled", "false")
         container.start()
 
         host = container.get_container_host_ip()

@@ -17,6 +17,7 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
+    ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
     CuratedRecommendation,
     MIN_TILE_ID,
@@ -1177,7 +1178,11 @@ class TestTopStoriesArticleBalancer:
 
     @staticmethod
     def _build_recommendation(
-        suffix: str, topic: Topic, *, subtopic: bool = False
+        suffix: str,
+        topic: Topic,
+        *,
+        subtopic: bool = False,
+        headlines: bool = False,
     ) -> CuratedRecommendation:
         """Construct a deterministic CuratedRecommendation for balancing tests."""
         rec = generate_recommendations(
@@ -1189,17 +1194,21 @@ class TestTopStoriesArticleBalancer:
         rec.experiment_flags = rec.experiment_flags or set()
         if subtopic:
             rec.experiment_flags.add(ITEM_SUBTOPIC_FLAG)
+        if headlines:
+            rec.experiment_flags.add(ITEM_HEADLINES_FLAG)
         return rec
 
     def test_is_story_blocked_for_top_stories(self):
         """Test that blocked stories are identified correctly."""
         blocked_story1 = self._build_recommendation("1", Topic.GAMING)
         blocked_story2 = self._build_recommendation("1", Topic.ARTS, subtopic=True)
+        blocked_story3 = self._build_recommendation("1", Topic.BUSINESS, headlines=True)
         allowed_story1 = self._build_recommendation("2", Topic.BUSINESS)
         allowed_story2 = self._build_recommendation("2", Topic.SPORTS)
 
         assert blocked_story1.is_story_blocked_for_top_stories() is True
         assert blocked_story2.is_story_blocked_for_top_stories() is True
+        assert blocked_story3.is_story_blocked_for_top_stories() is True
         assert allowed_story1.is_story_blocked_for_top_stories() is False
         assert allowed_story2.is_story_blocked_for_top_stories() is False
 
@@ -1379,11 +1388,12 @@ class TestContextualRanker:
         )
         prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
         engagement_backend = StubEngagementBackend({})
+        A_RANK = 0.0020001
         ml_backend = StubMLRecsBackend(
             rankings=ContextualArticleRankings(
                 granularity="region",
                 shards={
-                    "a": {"mean": 0.0021, "std": 0.0},
+                    "a": {"mean": A_RANK, "std": 0.0},
                     "b": {"mean": 0.002, "std": 0.0},
                     "c": {"mean": 0.001, "std": 0.0},
                 },
@@ -1395,7 +1405,7 @@ class TestContextualRanker:
         assert len(ranked) == 3
         assert ranked[0].ranking_data is not None
         assert ranked[0].corpusItemId == "a"
-        assert ranked[0].ranking_data.score == pytest.approx(0.0021)
+        assert ranked[0].ranking_data.score == pytest.approx(A_RANK)
 
         tech_interests = ProcessedInterests(
             scores={
@@ -1409,7 +1419,7 @@ class TestContextualRanker:
         assert len(ranked) == 3
         assert ranked[0].ranking_data is not None
         assert ranked[0].corpusItemId == "b"
-        assert ranked[0].ranking_data.score > 0.0021
+        assert ranked[0].ranking_data.score > A_RANK
 
         tech_interests = ProcessedInterests(scores={Topic.TECHNOLOGY.value: 0.0})
         ranked = ranker.rank_items(recs, personal_interests=tech_interests)

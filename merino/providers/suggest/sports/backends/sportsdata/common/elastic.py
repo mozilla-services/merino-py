@@ -135,30 +135,9 @@ EN_INDEX_SETTINGS: dict = {
 }
 
 
-def get_index_settings(dsn: str | None = None) -> dict[str, Any]:
-    """Local installs of ElasticSearch don't support some filters. Strip those only if needed"""
-    provided_dsn = dsn or ""
-    effective_dsn = (dsn or settings.providers.sports.es.dsn or "").lower()
-    if not provided_dsn or "localhost" in effective_dsn or "127.0.0.1" in effective_dsn:
-        return {
-            "number_of_replicas": "0",
-            "refresh_interval": "-1",
-            "number_of_shards": "1",
-            "analysis": {
-                "analyzer": {
-                    "plain_en": {"type": "standard"},
-                    "plain_search_en": {"type": "standard"},
-                    "stop_analyzer_en": {"type": "standard"},
-                    "stop_analyzer_search_en": {"type": "standard"},
-                }
-            },
-        }
-    return EN_INDEX_SETTINGS
-
-
 SUGGEST_ID: Final[str] = "suggest-on-title"
 MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
-TIMEOUT_MS: Final[str] = f"{settings.providers.sports.es.request_timeout_ms}ms"
+REQUEST_TIMEOUT_SEC: Final[float] = settings.providers.sports.es.request_timeout_sec
 
 
 class ElasticCredentials:
@@ -387,8 +366,7 @@ class SportsDataStore(ElasticDataStore):
         # build the index based on the platform.
         self.index_map = index_map
         self.meta_map = meta_map
-        dsn = credentials.dsn or settings.providers.sports.es.dsn
-        self.index_settings = {lang: get_index_settings(dsn=dsn) for lang in languages}
+        self.index_settings = {lang: EN_INDEX_SETTINGS for lang in languages}
         logging.getLogger(__name__).info(
             f"{LOGGING_TAG} Initialized Elastic search at {credentials.dsn}"
         )
@@ -588,9 +566,7 @@ class SportsDataStore(ElasticDataStore):
             query = {"range": {"expiry": {"lte": utc_now}}}
             try:
                 start = datetime.now()
-                res = await self.client.delete_by_query(
-                    index=index, query=query, timeout=TIMEOUT_MS
-                )
+                res = await self.client.delete_by_query(index=index, query=query)
                 logger.info(
                     f"{LOGGING_TAG}⏱ sports.time.prune [{res.get("deleted")} records] in [{(datetime.now()-start).microseconds}μs]"
                 )
@@ -623,11 +599,10 @@ class SportsDataStore(ElasticDataStore):
 
             logger.debug(f"{LOGGING_TAG} Searching {index_id} for `{q}`")
 
-            res = await self.client.search(
+            res = await self.client.options(request_timeout=REQUEST_TIMEOUT_SEC).search(
                 index=index_id,
                 query=query,
                 sort=[{"date": "desc"}, {"updated": "desc"}],
-                timeout=TIMEOUT_MS,
                 # The list of fields to return from Elasticsearch
                 source_includes=["event", "touched"],
             )

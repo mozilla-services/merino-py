@@ -21,9 +21,7 @@ from merino.providers.suggest.sports import (
     utc_time_from_now,
 )
 
-from merino.providers.suggest.sports.backends.sportsdata.common import (
-    GameStatus,
-)
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )

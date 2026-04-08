@@ -6,6 +6,10 @@ from datetime import datetime
 from merino.providers.suggest.base import BaseModel
 from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
+    SportCategory,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
+    SPORT_CATEGORY_MAP,
 )
 
 
@@ -28,6 +32,7 @@ class SportEventDetail(BaseModel):
     """Data about the specific Sport event."""
 
     sport: str  # Sport Name ("NFL", "NHL", "NBA", etc.)
+    sport_category: SportCategory  # Sport category, defaults to "misc"
     query: str  # Click search query for this event.
     date: str  # UTC timestamp for the game
     home_team: SportTeamDetail  # Home Team details
@@ -64,6 +69,7 @@ class SportEventDetail(BaseModel):
             status=status.as_str(),
             status_type=str(status.as_ui_status()),
             touched=event.get("touched", "None"),
+            sport_category=SPORT_CATEGORY_MAP.get(event["sport"], SportCategory.Misc),
         )
 
 

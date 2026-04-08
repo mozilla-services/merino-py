@@ -6,6 +6,7 @@
 
 import json
 from collections import defaultdict
+from typing import Any
 
 import httpx
 import moz_merino_ext.amp
@@ -37,11 +38,12 @@ def fixture_mock_icon_processor(mocker: MockerFixture) -> IconProcessor:
 
 
 @pytest.fixture(name="mars_backend")
-def fixture_mars_backend(mock_icon_processor: IconProcessor) -> MarsBackend:
+def fixture_mars_backend(mock_icon_processor: IconProcessor, statsd_mock: Any) -> MarsBackend:
     """Create a MarsBackend object for test."""
     return MarsBackend(
         base_url="http://test-mars-api",
         icon_processor=mock_icon_processor,
+        metrics_client=statsd_mock,
         connect_timeout=5.0,
         request_timeout=10.0,
     )
@@ -112,12 +114,13 @@ DEFAULT_SEGMENT = (FormFactor.DESKTOP.value,)
 DEFAULT_IDX_ID = f"US/{DEFAULT_SEGMENT}"
 
 
-def test_init_invalid_base_url(mock_icon_processor: IconProcessor) -> None:
+def test_init_invalid_base_url(mock_icon_processor: IconProcessor, statsd_mock: Any) -> None:
     """Test that a ValueError is raised if initializing with an empty base_url."""
     with pytest.raises(ValueError, match="The MARS 'base_url' parameter is not specified"):
         MarsBackend(
             base_url="",
             icon_processor=mock_icon_processor,
+            metrics_client=statsd_mock,
             connect_timeout=5.0,
             request_timeout=10.0,
         )
@@ -480,3 +483,145 @@ def test_get_segment_invalid_form_factor(mars_backend: MarsBackend) -> None:
     """Test that get_segment raises KeyError for unknown form factors."""
     with pytest.raises(KeyError):
         mars_backend.get_segment("tablet")
+
+
+@pytest.mark.asyncio
+async def test_fetch_empty_suggestions(
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that empty suggestions preserve cached data and emit metric."""
+    # First fetch populates the cache.
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+    await mars_backend.fetch()
+    assert mars_backend.suggestion_content.index_manager.has(DEFAULT_IDX_ID)
+
+    # Second fetch: MARS returns 200 with empty suggestions.
+    empty_response = httpx.Response(
+        status_code=200,
+        text=json.dumps({"suggestions": []}),
+        headers={"ETag": '"etag-v2"', "Content-Type": "application/json"},
+        request=httpx.Request(
+            method="GET",
+            url="http://test-mars-api/data?country=US&form_factor=desktop",
+        ),
+    )
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=empty_response,
+    )
+
+    suggestion_content = await mars_backend.fetch()
+
+    # Cached index should be preserved (not wiped).
+    assert suggestion_content.index_manager.has(DEFAULT_IDX_ID)
+
+    # Warning should be logged.
+    records = filter_caplog(caplog.records, "merino.providers.suggest.adm.backends.mars")
+    warning_records = [r for r in records if r.levelname == "WARNING"]
+    assert any("empty suggestions" in r.message for r in warning_records)
+
+    # Empty response metric should be incremented.
+    mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "empty_response"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_fetch_metrics_on_success(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that mars.fetch with status=success is incremented on 200 with data."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    await mars_backend.fetch()
+
+    mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "success"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_fetch_metrics_on_304(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+) -> None:
+    """Test that mars.fetch with status=not_modified is incremented on 304."""
+    not_modified_response = httpx.Response(
+        status_code=304,
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
+    )
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=not_modified_response,
+    )
+
+    await mars_backend.fetch()
+
+    mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "not_modified"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_fetch_metrics_on_error(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+) -> None:
+    """Test that mars.fetch with status=error is incremented on HTTP errors."""
+    error_response = httpx.Response(
+        status_code=500,
+        text="Internal Server Error",
+        request=httpx.Request(method="GET", url="http://test-mars-api/data"),
+    )
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=error_response,
+    )
+
+    with pytest.raises(BackendError):
+        await mars_backend.fetch()
+
+    mars_backend.metrics_client.increment.assert_any_call(  # type: ignore[attr-defined]
+        "mars.fetch",
+        tags={"country": "US", "form_factor": "desktop", "status": "error"},
+    )
+
+
+@pytest.mark.asyncio
+async def test_last_new_data_at_set_on_success(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that last_new_data_at is set after a successful 200 with data."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    assert mars_backend.last_new_data_at == 0.0
+
+    await mars_backend.fetch()
+
+    assert mars_backend.last_new_data_at > 0

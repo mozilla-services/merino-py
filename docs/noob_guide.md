@@ -2,6 +2,38 @@
 
 This guide presumes that you know what [Merino](intro.md), are familiar with programming in Python 3.12+, and are looking to incorporate a new service.
 
+<a name="local-run">
+
+## Running locally
+
+```sh
+make docker-compose-up-daemon
+```
+
+Then start the service (in debug mode):
+
+```sh
+make dev
+```
+
+By default, this sets up the server
+
+You can check if your setup works by querying the providers endpoint, which should return a list:
+
+```sh
+curl http://127.0.0.1:8000/api/v1/providers
+```
+
+Tear down the services with:
+
+```sh
+# You can alternatively use
+# `make docker-compose-down-v`
+# to also destroy mounted volumes, which will
+# remove any persisted data (e.g. in elasticsearch)
+make docker-compose-down
+```
+
 <a name="setup">
 
 ## Setting up a development environment
@@ -10,10 +42,19 @@ This guide presumes that you know what [Merino](intro.md), are familiar with pro
 
 ### ElasticSearch
 
-Merino uses several data stores, including ElasticSearch. You can read how to install and run a local only instance by following [this guide](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/install-elasticsearch-docker-basic).
+Merino uses several data stores, including ElasticSearch. When running locally, it is created and bootstrapped automatically via docker-compose, using a custom Dockerfile which installs additional plugins used in production. When running integration tests, the same custom Dockerfile is built and passed to testcontainers.
 
-It's important to remember that elastic search is a mapping based data storage system. This means that you need to specify the index declaration, as well as the index specification. The Declaration can be done in the code (see examples in [wikipedia](https://github.com/mozilla-services/merino-py/blob/2472bd7f1a892f06763546144b6b84f21bdb5586/merino/jobs/wikipedia_indexer/settings/v1.py#L33) and [sports](https://github.com/mozilla-services/merino-py/blob/0835b214d93a134f596b85948eadedc2a157a311/merino/providers/suggest/sports/backends/sportsdata/common/elastic.py#L27)
-). The actual index creation may need to happen externally, and should be either done manually using the GCP console, or by using the internal teraform definition tooling.
+When running locally, the bootstrap step creates indices and seeds a few documents for testing queries. See the `/dev/elasticsearch` directory at the root of the repository for more information on setup and seeding.
+
+Example queries (return results from seeded data):
+
+- `http://localhost:8000/api/v1/suggest?q=achill&providers=wikipedia`
+- `http://localhost:8000/api/v1/suggest?q=bruins+game&providers=sports`
+
+It's important to remember that elastic search is a mapping based data storage system. This means that you need to specify the index declaration, as well as the index specification.
+
+The local declaration in `/dev/elasticsearch/indices` should be kept in sync with the terraform definition and/or code-declared indices (see examples in [wikipedia](https://github.com/mozilla-services/merino-py/blob/2472bd7f1a892f06763546144b6b84f21bdb5586/merino/jobs/wikipedia_indexer/settings/v1.py#L33) and [sports](https://github.com/mozilla-services/merino-py/blob/0835b214d93a134f596b85948eadedc2a157a311/merino/providers/suggest/sports/backends/sportsdata/common/elastic.py#L27)
+), in order to best emulate the production environment.
 
 Remember, when running locally, you will have admin rights to your Elasticsearch instance. This will NOT be the case in production.
 
@@ -81,7 +122,7 @@ A significant portion of work involves fetching and normalizing data, referred t
 
 The ingestion applications are stored under `./merino/jobs/` each provider has it's own application, since each provider is slightly different. For consistency, we use [Typer](https://typer.tiangolo.com/tutorial/) to describe the command.
 
-Airflow uses [DAG](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html) definitions to specify job run specifications. Each DAG will invoke a specific merino job. The DAG definitions are stored under `./telemetry-airflow` which links to https://github.com/mozilla/telemetry-airflow with merino jobs defined in `merino-jobs.py`. DAGs are python command lines and look like:
+Airflow uses [DAG](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html) definitions to specify job run specifications. Each DAG will invoke a specific merino job. The DAG definitions are stored under `./telemetry-airflow` which links to <https://github.com/mozilla/telemetry-airflow> with merino jobs defined in `merino-jobs.py`. DAGs are python command lines and look like:
 
 ```python
 # Run nightly SportsData team/sport update job

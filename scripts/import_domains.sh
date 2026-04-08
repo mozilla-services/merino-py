@@ -9,7 +9,7 @@ fi
 
 # Get the CSV file from command line argument
 CSV_FILE="$1"
-EXISTING_PY_FILE="merino/jobs/navigational_suggestions/custom_domains.py"
+EXISTING_PY_FILE="merino/jobs/navigational_suggestions/enrichments/custom_domains.py"
 TEMP_OUTPUT_FILE=$(mktemp)
 SORTED_DOMAINS_FILE=$(mktemp)
 CSV_DOMAINS_FILE=$(mktemp)

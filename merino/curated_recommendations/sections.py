@@ -28,7 +28,6 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
-    CrawledContentPinnedFreshRescalerInferred,
     CrawledContentRescaler,
     DECrawledContentRescaler,
     IECrawledContentRescaler,
@@ -39,6 +38,7 @@ from merino.curated_recommendations.prior_backends.protocol import (
     EngagementRescaler,
 )
 from merino.curated_recommendations.protocol import (
+    ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
     CuratedRecommendationsRequest,
     CuratedRecommendation,
@@ -138,10 +138,12 @@ def map_corpus_section_to_section(
     """
     item_flags = set()
     is_manual_section = corpus_section.createSource == CreateSource.MANUAL
-    # Headlines items should not carry the subtopic flag so they remain eligible
-    # for the pinned fresh story slot in Popular Today (see HNT-2057).
     is_headlines = corpus_section.externalId == HEADLINES_SECTION_KEY
-    if not is_legacy_section and not is_manual_section and not is_headlines:
+    if is_headlines:
+        # Block headlines from Popular Today to avoid duplicate content with
+        # The Latest / Daily Briefing sections (HNT-2167).
+        item_flags.add(ITEM_HEADLINES_FLAG)
+    elif not is_legacy_section and not is_manual_section:
         item_flags.add(ITEM_SUBTOPIC_FLAG)
     seen_ids: set[str] = set()
     section_items: list[CorpusItem] = []
@@ -406,9 +408,6 @@ def get_ranking_rescaler_for_branch(
 
     # The pinned fresh content rescaler is only available for the US market right now.
     # Some additional work would be needed to make it work for other markets.
-
-    if request.inferredInterests is not None:
-        return CrawledContentPinnedFreshRescalerInferred()
     return CrawledContentPinnedFreshRescaler()
 
 
@@ -722,6 +721,25 @@ def get_top_story_list(
 
     for idx, rec in enumerate(top_stories):
         rec.receivedRank = idx
+    if rescaler:
+        last_score = 1000.0  # Most recent score encountered as we go through items. Start with arbitrary high number
+        tiny_delta = 0.00001  # Arbitrary small number to ensure descending order
+        for rec in top_stories:
+            """
+            It is possible that the served article order is different than the score order.
+            due to article balancer having different constraints after certain article counts.
+            For local re-ranking we would like the order preserved, absent user preferences, so
+            we need to make sure the serverScore is always descending
+            """
+            cur_score = (
+                round(rec.ranking_data.score * rescaler.local_rerank_scalar, 3)
+                if rec.ranking_data and rec.ranking_data.score
+                else 0
+            )
+            if cur_score >= last_score:  # Unexpected non-descending scores
+                cur_score = last_score - tiny_delta
+            last_score = cur_score
+            rec.serverScore = cur_score
     return top_stories
 
 

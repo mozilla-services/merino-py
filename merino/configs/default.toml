@@ -81,6 +81,10 @@ can_propagate = false
 # Boolean to toggle the `web.suggest.request` logging.
 log_suggest_request = true
 
+# MERINO_LOGGING__EXCLUDED_PROVIDERS
+# Excluded providers for query logging
+excluded_providers = ["accuweather", "geolocation"]
+
 [default.governance]
 # MERINO_GOVERNANCE__CRON_INTERVAL_SEC
 # The interval of the background cron job for Merino governance.
@@ -300,10 +304,13 @@ cdn_hostname = ""
 gcs_enabled = true
 
 [default.engagement]
+# MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = ""
 
+# MERINO_ENGAGEMENT__GCS_BQ_BUCKET
 gcs_bq_project = ""
 
+# MERINO_ENGAGEMENT__GCS_STORAGE_PROJECT
 gcs_storage_project = ""
 
 # MERINO_ENGAGEMENT__BLOB_NAME
@@ -389,9 +396,15 @@ max_suggestions = 5
 # Disable this provider by default
 enabled_by_default = true
 # General timeout
-query_timeout_sec = 3.0
+query_timeout_sec = 0.3
 # Temporary value to enable data pre-load "kickstart"
 kickstart = true
+# MERINO_PROVIDERS__SPORTS__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+# MERINO_PROVIDERS__SPORTS__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
 
 [default.providers.sports.es]
 # MERINO_PROVIDERS__SPORTS__ES__DSN
@@ -402,8 +415,11 @@ dsn=""
 # Using the "basic" key, which allows using locally served
 # versions of elasticsearch
 api_key=""
-# Timeout for an Elastic Search response in milliseconds.
-request_timeout_ms = 300
+
+# MERINO_PROVDERS__SPORTS__ES__REQUEST_TIMEOUT_SEC
+# Timeout for an Elastic Search response in seconds (floating point).
+# Note that this timeout should not be greater than `providers.sports.query_timeout_sec`.
+request_timeout_sec = 0.25
 
 [default.providers.sports.sportsdata]
 # MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
@@ -569,7 +585,7 @@ enabled_by_default = true
 
 # MERINO_PROVIDERS__ADM__BACKEND
 # The backend of the provider. Either "remote-settings", "mars", or "test".
-backend = "remote-settings"
+backend = "mars"
 
 # MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC
 # The interval of the RemoteSettings cron job (in seconds)
@@ -615,6 +631,10 @@ dummy_attempted_count = 1000
 # MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
 # Whether to check `client_variants` for Thompson sampling
 check_client_variants = true
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
+# Toggle to determine whether to return fallback suggestion or thompson selected suggestion
+dry_run = true
 
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL
@@ -729,6 +749,14 @@ enabled_by_default = true
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
 
+# MERINO_PROVIDERS__WIKIPEDIA__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__WIKIPEDIA__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
 # MERINO_PROVIDERS__WIKIPEDIA__ES_URL
 # The URL of the Elasticsearch cluster that we want to connect to.
 es_url = "http://localhost:9200"
@@ -763,13 +791,14 @@ pl_es_index = "plwiki-v1"
 # The maximum suggestions for each search request to Elasticsearch.
 es_max_suggestions = 1
 
-# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS
-# The timeout in milliseconds for each search request to Elasticsearch.
-es_request_timeout_ms = 5000
+# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_SEC
+# The timeout in seconds (floating point) for each search request to Elasticsearch.
+# Note that this timeout should not be greater than `providers.wikipedia.query_timeout_sec`.
+es_request_timeout_sec = 0.25
 
 # MERINO_PROVIDERS__WIKIPEDIA__QUERY_TIMEOUT_SEC
 # The timeout in seconds for each query request to the provider.
-query_timeout_sec = 5.0
+query_timeout_sec = 0.3
 
 # MERINO_PROVIDERS__WIKIPEDIA__SCORE
 # The ranking score for this provider as a floating point number. Defaults to 0.23.
@@ -815,7 +844,7 @@ score = 0.29
 # MERINO_PROVIDERS__POLYGON__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for finance data. This will override the default global query timeout.
-query_timeout_sec = 5.0
+query_timeout_sec = 1.0
 
 # MERINO_PROVIDERS__POLYGON__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
@@ -895,7 +924,7 @@ score = 0 # TODO
 # MERINO_PROVIDERS__YELP__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for yelp data. This will override the default global query timeout.
-query_timeout_sec = 5.0
+query_timeout_sec = 0.3
 
 # MERINO_PROVIDERS__YELP__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
@@ -955,7 +984,7 @@ score = 0.29
 # MERINO_PROVIDERS__FLIGHTAWARE__QUERY_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period when Merino queries
 # for flightaware data. This will override the default global query timeout.
-query_timeout_sec = 5.0
+query_timeout_sec = 1.0
 
 # MERINO_PROVIDERS__FLIGHTAWARE__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
@@ -1007,6 +1036,20 @@ ident_url_path = "flights/{ident}?ident_type=designator&start={start}&end={end}&
 # MERINO_FLIGHTAWARE__LANDING_PAGE_URL
 # The url to the live FlightAware landing page.
 landing_page_url = "https://www.flightaware.com/live/flight/{ident}"
+
+[default.rss_providers.wikimedia_potd]
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__TYPE
+# The type of this provider, should be `wikimedia_potd`.
+type = "wikimedia_potd"
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__ENABLED_BY_DEFAULT
+# Whether or not this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__QUERY_TIMEOUT_SEC
+# A float (in seconds) indicating the maximum waiting period when querying for POTD data.
+query_timeout_sec = 1.0
+
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
