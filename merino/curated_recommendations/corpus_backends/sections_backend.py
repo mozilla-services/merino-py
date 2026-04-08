@@ -132,9 +132,9 @@ class SectionsBackend(SectionsProtocol):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
-            # Strip any suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present
-            # This handles locale suffixes and any future suffix patterns
-            external_id = section["externalId"].split("__")[0]
+            # Strip any locale suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present.
+            # Keep non-locale suffixes such as "__exp5050" intact for downstream processing.
+            external_id = section["externalId"].split("__l", 1)[0]
 
             section_obj = CorpusSection(
                 externalId=external_id,

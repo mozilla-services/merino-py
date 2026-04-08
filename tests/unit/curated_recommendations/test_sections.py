@@ -340,13 +340,13 @@ class TestRawSectionExperimentResolution:
         assert len(result[0].sectionItems) == 1
 
     def test_dedupe_experiment_sections_keeps_locale_suffixed_section_untouched(self):
-        """Locale suffixes should not be mistaken for experiment IDs."""
+        """Locale-suffixed survivors should be normalized to the canonical base ID."""
         localized = generate_corpus_section("education__lDE_DE", count=1)
         sports = generate_corpus_section("sports", count=1)
 
         result = dedupe_experiment_sections([localized, sports])
 
-        assert [section.externalId for section in result] == ["education__lDE_DE", "sports"]
+        assert [section.externalId for section in result] == ["education", "sports"]
 
 
 class TestMlSectionsExperiment:

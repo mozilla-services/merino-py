@@ -263,6 +263,9 @@ def dedupe_experiment_sections(sections: list[CorpusSection]) -> list[CorpusSect
             # Replace the value while keeping the canonical ID.
             id_to_result[can_eid] = deepcopy(id_to_section[kept_id])
             id_to_result[can_eid].externalId = can_eid
+    # Canonicalize any remaining double-underscore suffixes on surviving sections.
+    for section in id_to_result.values():
+        section.externalId = section.externalId.split("__", 1)[0]
     return list(id_to_result.values())
 
 
