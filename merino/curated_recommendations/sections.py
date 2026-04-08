@@ -198,9 +198,20 @@ def _process_corpus_sections(
 
     return sections
 
-def clean_exp_id(idstr):
-    base_id, exp_type = idstr.split('_exp')
+def clean_exp_id(section_id: str) -> tuple[str, str] | None:
+    marker = "_exp"
+    idx = section_id.rfind(marker)
+    if idx <= 0:
+        return None
+
+    base_id = section_id[:idx]
+    exp_type = section_id[idx + len(marker):]
+
+    if not exp_type or not exp_type.isalnum():
+        return None
+
     return base_id, exp_type
+
 
 def resolve_5050(original_id, exp_id):
     return random.sample([original_id,exp_id],1)[0]
@@ -214,22 +225,23 @@ def resolve_section_experiment(original_id, exp_id, exp_type):
 
 def dedupe_experiment_sections(sections):
     ## pull out experimental sections
-    exp_ids = set([sec.id for sec in sections if '_exp' in sec.id])
+    exp_ids = [sec.externalId for sec in sections if clean_exp_id(sec.externalId) is not None]
     ## map id to section
-    id_to_section = {section.id:section for section in sections}
+    id_to_section = {section.externalId:section for section in sections}
     ## result id_to_section, , notice we are dropping _exp sections
-    id_to_result = {section.id:section for section in sections
-                    if section.id not in exp_ids}
+    id_to_result = {section.externalId:section for section in sections
+                    if section.externalId not in exp_ids}
     ## find experimental pairs
-    kept_ids = []
     for eid in exp_ids:
         can_eid, exp_type = clean_exp_id(eid)
         ## check if there is a matching non-experimental section
         if can_eid in id_to_section:
             ## pick
-            kept_id, _ = resolve_section_experiment(can_eid,eid,exp_type)
+            kept_id = resolve_section_experiment(can_eid,eid,exp_type)
             ## replace value, keep canonical id
-            id_to_result[can_eid] = id_to_section[kept_id]        
+            id_to_result[can_eid] = deepcopy(id_to_section[kept_id])
+            ## replace id value with canonical
+            id_to_result[can_eid].externalId = can_eid      
     return list(id_to_result.values())
 
 
@@ -255,6 +267,9 @@ async def get_corpus_sections(
     """
     # Get raw corpus sections
     raw_corpus_sections = await sections_backend.fetch(surface_id)
+
+    # Dedupe on sections by ID
+    raw_corpus_sections = dedupe_experiment_sections(raw_corpus_sections)
 
     # Split daily-briefing section before filtering (experiment-only gate)
     raw_daily_briefing, remaining_raw = split_daily_briefing_section(raw_corpus_sections)

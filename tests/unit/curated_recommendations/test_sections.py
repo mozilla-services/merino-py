@@ -43,6 +43,8 @@ from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
     IS_COHORT_FEATURE_DISABLED,
     adjust_ads_in_sections,
+    clean_exp_id,
+    dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
     is_daily_briefing_experiment,
@@ -61,6 +63,7 @@ from merino.curated_recommendations.sections import (
     get_legacy_topic_ids,
     pick_random_fresh_story,
     put_daily_briefing_first_then_top_stories,
+    resolve_section_experiment,
     split_daily_briefing_section,
     dedupe_recommendations_across_sections,
 )
@@ -83,6 +86,23 @@ def generate_corpus_item(corpus_id: str = "id", sched_id: str = "sched") -> Corp
         isTimeSensitive=False,
         imageUrl=HttpUrl(f"https://example.com/img/{corpus_id}"),
         iconUrl=None,
+    )
+
+
+def generate_corpus_section(
+    section_id: str, count: int = 1, create_source: CreateSource = CreateSource.ML
+) -> CorpusSection:
+    """Create a CorpusSection instance for testing."""
+    return CorpusSection(
+        sectionItems=[
+            generate_corpus_item(f"{section_id}_item{i}", f"{section_id}_sched{i}")
+            for i in range(count)
+        ],
+        title=f"Title_{section_id}",
+        description=f"Description_{section_id}",
+        externalId=section_id,
+        iab=IABMetadata(categories=["324"]),
+        createSource=create_source,
     )
 
 
@@ -226,6 +246,110 @@ class TestAdjustAdsInSections:
 
         # Rank 0 normally allows ads, but allowAds=False should override
         assert not self.ads_in_section(sample_feed["top_stories_section"])
+
+
+class TestRawSectionExperimentResolution:
+    """Tests covering raw section experiment resolution helpers."""
+
+    def test_clean_exp_id_parses_supported_suffix(self):
+        """A supported experimental section ID should parse into base ID and experiment type."""
+        assert clean_exp_id("government_exp5050") == ("government", "5050")
+
+    @pytest.mark.parametrize(
+        "section_id",
+        [
+            "government",
+            "government_exp",
+            "_exp5050",
+            "government_exp5050_variant",
+            "education__lDE_DE",
+        ],
+    )
+    def test_clean_exp_id_rejects_invalid_ids(self, section_id):
+        """Invalid or malformed section IDs should not parse as experiments."""
+        assert clean_exp_id(section_id) is None
+
+    def test_resolve_section_experiment_uses_5050_random_choice(self, monkeypatch):
+        """5050 experiments should resolve through the random chooser."""
+        monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
+
+        assert (
+            resolve_section_experiment("government", "government_exp5050", "5050")
+            == "government_exp5050"
+        )
+
+    def test_resolve_section_experiment_unsupported_type_returns_base(self):
+        """Unsupported experiment types should keep the base section."""
+        assert (
+            resolve_section_experiment("government", "government_exp9999", "9999")
+            == "government"
+        )
+
+    def test_dedupe_experiment_sections_keeps_base_when_base_selected(self, monkeypatch):
+        """If the base wins, the canonical output should contain only the base content."""
+        monkeypatch.setattr(random, "sample", lambda seq, _: [seq[0]])
+        base = generate_corpus_section("government", count=1)
+        exp = generate_corpus_section("government_exp5050", count=2)
+
+        result = dedupe_experiment_sections([base, exp])
+
+        assert [section.externalId for section in result] == ["government"]
+        assert len(result[0].sectionItems) == 1
+        assert result[0].externalId == "government"
+
+    def test_dedupe_experiment_sections_keeps_exp_content_under_canonical_id(
+        self, monkeypatch
+    ):
+        """If the experiment wins, the content should survive under the base section ID."""
+        monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
+        base = generate_corpus_section("government", count=1)
+        exp = generate_corpus_section("government_exp5050", count=2)
+
+        result = dedupe_experiment_sections([base, exp])
+
+        assert [section.externalId for section in result] == ["government"]
+        assert len(result[0].sectionItems) == 2
+        assert result[0] is not exp
+        assert exp.externalId == "government_exp5050"
+
+    def test_dedupe_experiment_sections_preserves_base_position(self, monkeypatch):
+        """The chosen section should occupy the original base section position."""
+        monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
+        sports = generate_corpus_section("sports")
+        base = generate_corpus_section("government")
+        tech = generate_corpus_section("tech")
+        exp = generate_corpus_section("government_exp5050")
+
+        result = dedupe_experiment_sections([sports, base, tech, exp])
+
+        assert [section.externalId for section in result] == ["sports", "government", "tech"]
+
+    def test_dedupe_experiment_sections_drops_orphan_experimental_section(self):
+        """An experimental section without a matching base should be dropped."""
+        exp = generate_corpus_section("government_exp5050")
+
+        result = dedupe_experiment_sections([exp])
+
+        assert result == []
+
+    def test_dedupe_experiment_sections_unsupported_variant_keeps_base(self):
+        """Unsupported experimental variants should be dropped while the base remains."""
+        base = generate_corpus_section("government", count=1)
+        exp = generate_corpus_section("government_exp9999", count=2)
+
+        result = dedupe_experiment_sections([base, exp])
+
+        assert [section.externalId for section in result] == ["government"]
+        assert len(result[0].sectionItems) == 1
+
+    def test_dedupe_experiment_sections_keeps_locale_suffixed_section_untouched(self):
+        """Locale suffixes should not be mistaken for experiment IDs."""
+        localized = generate_corpus_section("education__lDE_DE", count=1)
+        sports = generate_corpus_section("sports", count=1)
+
+        result = dedupe_experiment_sections([localized, sports])
+
+        assert [section.externalId for section in result] == ["education__lDE_DE", "sports"]
 
 
 class TestMlSectionsExperiment:
@@ -1548,6 +1672,32 @@ class TestGetCorpusSections:
         mock_backend.fetch = AsyncMock(return_value=sample_backend_data)
         return mock_backend
 
+    @pytest.fixture
+    def sections_backend_with_5050_pair(self):
+        """Fake SectionsProtocol returning a base/experimental raw section pair."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
+        mock_backend.fetch = AsyncMock(
+            return_value=[
+                generate_corpus_section("government", count=1),
+                generate_corpus_section("government_exp5050", count=2),
+                generate_corpus_section("sports", count=1),
+            ]
+        )
+        return mock_backend
+
+    @pytest.fixture
+    def sections_backend_with_5050_pair_and_daily_briefing(self):
+        """Fake SectionsProtocol returning a 5050 pair plus a daily briefing section."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
+        mock_backend.fetch = AsyncMock(
+            return_value=[
+                generate_corpus_section("government", count=1),
+                generate_corpus_section("government_exp5050", count=2),
+                generate_corpus_section(DAILY_BRIEFING_SECTION_KEY, count=1),
+            ]
+        )
+        return mock_backend
+
     @pytest.mark.asyncio
     async def test_fetch_called_with_correct_args(self, sections_backend):
         """Ensure fetch is called once with given surface_id."""
@@ -1633,3 +1783,39 @@ class TestGetCorpusSections:
 
         # Should include both ML and MANUAL sections
         assert set(sections.keys()) == {"sports", "custom-section-1", "custom-section-2"}
+
+    @pytest.mark.asyncio
+    async def test_resolves_5050_pair_before_mapping(
+        self, sections_backend_with_5050_pair, monkeypatch
+    ):
+        """A winning experimental section should map downstream under the canonical base ID."""
+        monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
+
+        _, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_5050_pair,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=0,
+            include_subtopics=False,
+        )
+
+        assert set(sections.keys()) == {"government", "sports"}
+        assert len(sections["government"].recommendations) == 2
+
+    @pytest.mark.asyncio
+    async def test_daily_briefing_unaffected_by_5050_resolution(
+        self, sections_backend_with_5050_pair_and_daily_briefing, monkeypatch
+    ):
+        """Daily briefing extraction should still work after raw experiment resolution."""
+        monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
+
+        raw_briefing, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_5050_pair_and_daily_briefing,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=0,
+            include_subtopics=False,
+        )
+
+        assert raw_briefing is not None
+        assert raw_briefing.externalId == DAILY_BRIEFING_SECTION_KEY
+        assert set(sections.keys()) == {"government"}
+        assert len(sections["government"].recommendations) == 2
