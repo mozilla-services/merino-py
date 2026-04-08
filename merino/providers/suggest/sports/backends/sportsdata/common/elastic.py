@@ -761,7 +761,9 @@ class SportsDataStore(ElasticDataStore):
             }
             actions.append(action)
             if event.status.is_in_progress():
-                logger.info(f"{LOGGING_TAG} ## Live Game: {event.terms}")
+                logger.info(
+                    f"{LOGGING_TAG} ## Live Game: {event.terms} {event.away_score} : {event.home_score}"
+                )
         # Bulk-write collected actions
         try:
             start = datetime.now()
