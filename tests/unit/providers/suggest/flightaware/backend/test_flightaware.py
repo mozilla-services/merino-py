@@ -76,7 +76,7 @@ def cache_adapter():
 
 
 @pytest.fixture
-def backend(metrics, cache_adapter):
+def backend(metrics, cache_adapter, logo_provider_mock):
     """Return a FlightAwareBackend with mocked HTTP client and metrics."""
     mock_http_client = AsyncMock()
     backend = FlightAwareBackend(
@@ -85,6 +85,7 @@ def backend(metrics, cache_adapter):
         ident_url="flights/{ident}?start={start}&end={end}",
         metrics_client=metrics,
         cache=cache_adapter,
+        logo_provider=logo_provider_mock,
     )
     return backend
 
@@ -100,7 +101,7 @@ async def test_fetch_flight_details_success(backend, metrics, make_summary):
 
     fake_summary = make_summary("UA123", FlightStatus.SCHEDULED)
 
-    with patch.object(backend, "get_flight_summaries", return_value=[fake_summary]):
+    with patch.object(backend, "get_flight_summaries", AsyncMock(return_value=[fake_summary])):
         result = await backend.fetch_flight_details("UA123")
 
     assert isinstance(result, list)
@@ -249,19 +250,22 @@ async def test_fetch_flight_details_cache_miss_empty_response_returns_empty(back
     assert result == []
 
 
-def test_get_flight_summaries_returns_empty_list_when_response_is_none(backend):
+@pytest.mark.asyncio
+async def test_get_flight_summaries_returns_empty_list_when_response_is_none(backend):
     """Ensure get_flight_summaries returns empty list if flight_response is None."""
-    result = backend.get_flight_summaries(None, "UA123")
+    result = await backend.get_flight_summaries(None, "UA123")
     assert result == []
 
 
-def test_get_flight_summaries_returns_empty_list_when_no_flights(backend):
+@pytest.mark.asyncio
+async def test_get_flight_summaries_returns_empty_list_when_no_flights(backend):
     """Ensure get_flight_summaries returns empty list if 'flights' is empty."""
-    result = backend.get_flight_summaries({"flights": []}, "UA123")
+    result = await backend.get_flight_summaries({"flights": []}, "UA123")
     assert result == []
 
 
-def test_get_flight_summaries_filters_out_none_summaries(backend):
+@pytest.mark.asyncio
+async def test_get_flight_summaries_filters_out_none_summaries(backend):
     """Ensure get_flight_summaries excludes flights where build_flight_summary returns None."""
     good_flight = {
         "ident_iata": "UA123",
@@ -296,7 +300,7 @@ def test_get_flight_summaries_filters_out_none_summaries(backend):
         "progress_percent": 0,
     }
     flights = [good_flight, bad_flight]
-    result = backend.get_flight_summaries({"flights": flights}, "UA123")
+    result = await backend.get_flight_summaries({"flights": flights}, "UA123")
 
     assert len(result) == 1
     summary = result[0]
@@ -306,7 +310,8 @@ def test_get_flight_summaries_filters_out_none_summaries(backend):
     assert summary.destination.code == "EWR"
 
 
-def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now, backend):
+@pytest.mark.asyncio
+async def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now, backend):
     """Ensure get_flight_summaries returns multiple summaries when build_flight_summary succeeds."""
     flights = [
         {
@@ -360,7 +365,7 @@ def test_get_flight_summaries_returns_multiple_valid_summaries(fixed_now, backen
 
     with patch.object(utils.datetime, "datetime", wraps=datetime.datetime) as mock_datetime:
         mock_datetime.now.return_value = fixed_now
-        results = backend.get_flight_summaries({"flights": flights}, "UA111")
+        results = await backend.get_flight_summaries({"flights": flights}, "UA111")
 
     assert len(results) == 2
     assert all(isinstance(r, FlightSummary) for r in results)
