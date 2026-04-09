@@ -2,6 +2,7 @@
 
 from typing import Any
 from datetime import datetime
+from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseModel
 from merino.providers.suggest.sports.backends.sportsdata.common import (
@@ -20,6 +21,7 @@ class SportTeamDetail(BaseModel):
     name: str  # Full name of the team
     colors: list[str]  # list of hex colors from primary to quaternary
     score: int | None  # Current score (if available)
+    icon: HttpUrl | None = None  # Team icon (if available)
 
 
 def build_query(event: dict[str, Any]) -> str:
@@ -59,12 +61,14 @@ class SportEventDetail(BaseModel):
                 name=event.get("home_team", {}).get("name"),
                 colors=event.get("home_team", {}).get("colors"),
                 score=event.get("home_score"),
+                icon=None,  # Hydrated upstream
             ),
             away_team=SportTeamDetail(
                 key=event.get("away_team", {}).get("key"),
                 name=event.get("away_team", {}).get("name"),
                 colors=event.get("away_team", {}).get("colors"),
                 score=event.get("away_score"),
+                icon=None,  # Hydrated upstream
             ),
             status=status.as_str(),
             status_type=str(status.as_ui_status()),

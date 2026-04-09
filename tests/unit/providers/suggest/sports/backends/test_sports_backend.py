@@ -26,7 +26,13 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
     SportsDataStore,
 )
-from merino.providers.suggest.sports.backends.sportsdata.protocol import SportEventDetail
+from merino.providers.suggest.sports.backends.sportsdata.protocol import (
+    SportEventDetail,
+    SportSummary,
+    SportTeamDetail,
+)
+from merino.providers.suggest.logos.provider import LogoCategory
+from pydantic import HttpUrl
 
 
 VALID_TEST_RESPONSE: dict = {}
@@ -252,7 +258,9 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
 
 
 @pytest.mark.asyncio
-async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
+async def test_sportsdata_backend(
+    sport_data_store: SportsDataStore, mocker: MockerFixture, logo_provider_mock
+):
     """Test the backend"""
     sport_data_store.search_events = AsyncMock(  # type: ignore
         side_effect=[
@@ -305,7 +313,9 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
         ]
     )
 
-    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store, logos=logo_provider_mock
+    )
     res = await backend.query(
         query_string="Some Search String",
     )
@@ -316,11 +326,15 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
 
 
 @pytest.mark.asyncio
-async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker: MockerFixture):
+async def test_sports_backend_startup(
+    sport_data_store: SportsDataStore, mocker: MockerFixture, logo_provider_mock
+):
     """Test that the backend calls the storage startup"""
     mock_store = AsyncMock()
     # Create and test the backend
-    backend = SportsDataBackend(settings=settings.providers.sports, store=mock_store)
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=mock_store, logos=logo_provider_mock
+    )
     await backend.startup()
 
     assert mock_store.startup.called
@@ -353,3 +367,59 @@ def test_sport_event_detail_category(sport: str, expected_category: SportCategor
     event = {**base_event, "sport": sport}
     result = SportEventDetail.from_event_dict(event)
     assert result.sport_category == expected_category
+
+
+def _make_summary(sport: str) -> SportSummary:
+    """Build a minimal SportSummary for hydration tests."""
+    event = SportEventDetail(
+        sport=sport,
+        sport_category=SportCategory.Misc,
+        query="test query",
+        date="2025-10-01T00:00:00",
+        home_team=SportTeamDetail(
+            key="HOM", name="Home Team", colors=["000000"], score=None, icon=None
+        ),
+        away_team=SportTeamDetail(
+            key="AWY", name="Away Team", colors=["FFFFFF"], score=None, icon=None
+        ),
+        status="Scheduled",
+        status_type="scheduled",
+        touched="2025-10-01T00:00:00",
+    )
+    return SportSummary(sport=sport, values=[event])
+
+
+@pytest.mark.asyncio
+async def test_hydrate_events_icons_sets_team_icons(sport_data_store, logo_provider_mock):
+    """Icons are populated on home and away teams when the sport has a LogoCategory."""
+    logo_url = HttpUrl("https://storage.googleapis.com/logos/nhl/nhl_hom.png")
+    logo_provider_mock.get_logo_url.return_value = logo_url
+
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store, logos=logo_provider_mock
+    )
+    summary = _make_summary("NHL")
+
+    await backend._hydrate_events_icons(summary)
+
+    assert summary.values[0].home_team.icon == logo_url
+    assert summary.values[0].away_team.icon == logo_url
+    logo_provider_mock.get_logo_url.assert_any_call(LogoCategory.NHL, "hom")
+    logo_provider_mock.get_logo_url.assert_any_call(LogoCategory.NHL, "awy")
+
+
+@pytest.mark.asyncio
+async def test_hydrate_events_icons_unknown_sport_leaves_icons_none(
+    sport_data_store, logo_provider_mock
+):
+    """Icons remain None when the sport has no corresponding LogoCategory."""
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store, logos=logo_provider_mock
+    )
+    summary = _make_summary("UCL")
+
+    await backend._hydrate_events_icons(summary)
+
+    assert summary.values[0].home_team.icon is None
+    assert summary.values[0].away_team.icon is None
+    logo_provider_mock.get_logo_url.assert_not_called()

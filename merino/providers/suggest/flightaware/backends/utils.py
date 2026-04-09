@@ -18,6 +18,9 @@ from merino.providers.suggest.flightaware.backends.protocol import (
     FlightStatus,
     FlightSummary,
 )
+from merino.providers.suggest.logos.provider import LogoCategory
+from merino.providers.suggest.logos.provider import Provider as LogoProvider
+
 from merino.configs import settings
 
 logger = logging.getLogger(__name__)
@@ -179,7 +182,9 @@ def pick_best_flights(flights: list[dict], limit: int = 2) -> list[dict]:
     return candidates[:limit]
 
 
-def build_flight_summary(flight: dict, normalized_query: str) -> FlightSummary | None:
+async def build_flight_summary(
+    flight: dict, normalized_query: str, logo_provider: LogoProvider
+) -> FlightSummary | None:
     """Build and return a flight summary from the flight response"""
     try:
         flight_number = normalized_query
@@ -209,7 +214,7 @@ def build_flight_summary(flight: dict, normalized_query: str) -> FlightSummary |
             scheduled_time=scheduled_arrival, estimated_time=estimated_arrival
         )
 
-        airline = get_airline_details(flight_number)
+        airline = await get_airline_details(flight_number, logo_provider)
 
         status = derive_flight_status(flight)
         progress_percent = flight.get("progress_percent") or 0
@@ -347,7 +352,7 @@ def is_delayed(flight: dict) -> bool:
     return False
 
 
-def get_airline_details(flight_number: str) -> AirlineDetails:
+async def get_airline_details(flight_number: str, logo_provider: LogoProvider) -> AirlineDetails:
     """Return airline details if they exist and are valid."""
     code = None
 
@@ -363,11 +368,16 @@ def get_airline_details(flight_number: str) -> AirlineDetails:
     name = name.title() if name else None
     color = airline_data.get("color")
 
+    if code:
+        icon = await logo_provider.get_logo_url(LogoCategory.Airline, code)
+    else:
+        icon = None
+
     return AirlineDetails(
         code=code,
         name=name,
         color=color,
-        icon=None,
+        icon=icon,
     )
 
 
