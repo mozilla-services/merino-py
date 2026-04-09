@@ -23,8 +23,6 @@ class SportsDataProtocol(Protocol):
 class SportsDataBackend(SportsDataProtocol):
     """Provide the methods specific to this provider for fulfilling the request"""
 
-    data_store: SportsDataStore
-
     def __init__(
         self,
         store: SportsDataStore,
@@ -69,12 +67,8 @@ class SportsDataBackend(SportsDataProtocol):
                 # TODO: collect the es_score from the events, calculate an average, and
                 # apply that as an adjustment value to the returned score value.
                 # Waiting for guidance about what ranges to have scores.
-                suggestions.append(
-                    SportSummary.from_events(
-                        sport=sport,
-                        events=events,
-                    )
-                )
+                summary = SportSummary.from_events(sport=sport, events=events)
+                suggestions.append(summary)
             return suggestions
         return []
 

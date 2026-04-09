@@ -21,7 +21,6 @@ async def init_providers() -> None:
     This should only be called once at the startup of application.
     """
     start = timer()
-
     # register providers
     providers.update(load_providers(disabled_providers_list=settings.runtime.disabled_providers))
 

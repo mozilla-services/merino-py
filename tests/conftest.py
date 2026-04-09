@@ -4,12 +4,15 @@
 
 """Module for test configurations for the tests directory."""
 
+from datetime import datetime, timezone
 from logging import LogRecord
 from typing import Any
 
 import aiodogstatsd
 import pytest
 from pytest_mock import MockerFixture
+
+from merino.utils.logos import Logo, LogoCategory, LogoManifest
 
 from tests.types import FilterCaplogFixture
 
@@ -52,3 +55,31 @@ def reset_storage_client() -> None:
 def fixture_statsd_mock(mocker: MockerFixture) -> Any:
     """Create a StatsD client mock object for testing."""
     return mocker.MagicMock(spec=aiodogstatsd.Client)
+
+
+@pytest.fixture
+def make_manifest():
+    """Return a factory for building LogoManifest instances in tests."""
+
+    def _make(*entries: tuple[LogoCategory, str]) -> LogoManifest:
+        lookups: dict[LogoCategory, dict[str, Logo]] = {}
+        for category, key in entries:
+            lookups.setdefault(category, {})[key.upper()] = Logo(
+                name=key.upper(),
+                url=f"logos/{category}/{category}_{key.lower()}.png",
+            )
+        return LogoManifest(
+            generated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            lookups=lookups,
+        )
+
+    return _make
+
+
+@pytest.fixture(autouse=True)
+def mock_load_manifest(mocker: MockerFixture, make_manifest) -> None:
+    """Patch load_manifest for all tests to avoid reading the real file."""
+    mocker.patch(
+        "merino.utils.logos.load_manifest",
+        return_value=make_manifest((LogoCategory.Airline, "aa")),
+    )
