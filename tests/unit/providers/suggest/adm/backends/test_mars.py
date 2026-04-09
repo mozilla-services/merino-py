@@ -625,3 +625,29 @@ async def test_last_new_data_at_set_on_success(
     await mars_backend.fetch()
 
     assert mars_backend.last_new_data_at > 0
+
+
+@pytest.mark.asyncio
+async def test_index_metrics_emitted_after_build(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that amp.index.* gauges are emitted after a successful index build."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    await mars_backend.fetch()
+
+    gauge_calls = mars_backend.metrics_client.gauge.call_args_list  # type: ignore[attr-defined]
+    index_calls = {c[0][0]: c[1] for c in gauge_calls if c[0][0].startswith("amp.index.")}
+
+    assert "amp.index.suggestions_count" in index_calls
+    assert index_calls["amp.index.suggestions_count"]["value"] == 1
+    assert index_calls["amp.index.suggestions_count"]["tags"] == {"index": DEFAULT_IDX_ID}
+
+    assert "amp.index.keyword_index_size" in index_calls
+    assert index_calls["amp.index.keyword_index_size"]["value"] == 5
