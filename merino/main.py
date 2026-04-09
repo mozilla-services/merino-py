@@ -16,6 +16,7 @@ from merino.providers import rss
 from merino.configs.app_configs.config_logging import configure_logging
 from merino.configs.app_configs.config_sentry import configure_sentry
 from merino.providers import suggest, manifest
+from merino.providers.suggest import logos
 from merino.utils.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging as mw_logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
@@ -44,6 +45,8 @@ async def lifespan(app: FastAPI):
     configure_logging()
     configure_sentry()
     await configure_metrics()
+    # Logos provider is used by suggest and must be initialized first
+    await logos.init_provider()
     await suggest.init_providers()
     await manifest.init_provider()
     await rss.init_providers()

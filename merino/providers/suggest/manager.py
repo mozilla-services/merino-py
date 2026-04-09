@@ -42,6 +42,7 @@ from merino.providers.suggest.flightaware.provider import (
     Provider as FlightAwareProvider,
 )
 from merino.providers.suggest.flightaware.backends.flightaware import FlightAwareBackend
+from merino.providers.suggest import logos
 from merino.providers.suggest.sports import (
     DEFAULT_INTENT_WORDS as SPORT_DEFAULT_INTENT_WORDS,
     BASE_SUGGEST_SCORE as SPORT_BASE_SUGGEST_SCORE,
@@ -352,6 +353,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     ident_url=settings.flightaware.ident_url_path,
                     metrics_client=get_metrics_client(),
                     cache=cache,
+                    logo_provider=logos.get_provider(),
                 ),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
@@ -383,6 +385,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return SportsDataProvider(
                 backend=SportsDataBackend(
                     store=store,
+                    logos=logos.get_provider(),
                     settings=setting,
                     max_suggestions=setting.max_suggestions,
                     mix_sports=setting.get("mix_sports", True),

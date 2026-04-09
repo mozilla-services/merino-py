@@ -10,6 +10,11 @@ from merino.providers.suggest.sports.backends.sportsdata.protocol import SportSu
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
+from merino.providers.suggest.logos.provider import Provider as LogoProvider
+from merino.providers.suggest.logos.provider import LogoCategory
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SportsDataProtocol(Protocol):
@@ -23,11 +28,10 @@ class SportsDataProtocol(Protocol):
 class SportsDataBackend(SportsDataProtocol):
     """Provide the methods specific to this provider for fulfilling the request"""
 
-    data_store: SportsDataStore
-
     def __init__(
         self,
         store: SportsDataStore,
+        logos: LogoProvider,
         settings: LazySettings,
         max_suggestions: int = 10,
         mix_sports: bool = True,
@@ -39,6 +43,7 @@ class SportsDataBackend(SportsDataProtocol):
         self.max_suggestions = max_suggestions
         self.mix_sports = mix_sports
         self.settings = settings
+        self._logos = logos
 
     async def query(
         self,
@@ -69,14 +74,36 @@ class SportsDataBackend(SportsDataProtocol):
                 # TODO: collect the es_score from the events, calculate an average, and
                 # apply that as an adjustment value to the returned score value.
                 # Waiting for guidance about what ranges to have scores.
-                suggestions.append(
-                    SportSummary.from_events(
-                        sport=sport,
-                        events=events,
-                    )
-                )
+                summary = SportSummary.from_events(sport=sport, events=events)
+                await self._hydrate_events_icons(summary)
+                suggestions.append(summary)
             return suggestions
         return []
+
+    async def _hydrate_events_icons(self, events: SportSummary) -> None:
+        """Populate team icons on each event in the summary by
+        fetching from the logos provider.
+        """
+        # try:
+        #     category = LogoCategory(events.sport.lower())
+        # except ValueError:
+        #     # No logos for this sport; leave icons as None
+        #     return
+        for event in events.values:
+            try:
+                category = LogoCategory(event.sport.lower())
+            except ValueError:
+                # No logos for this sport; leave icons as None
+                continue
+            try:
+                home_icon = await self._logos.get_logo_url(category, event.home_team.key.lower())
+                logger.debug(f"Home icon: {home_icon}")
+                event.home_team.icon = home_icon
+                event.away_team.icon = await self._logos.get_logo_url(
+                    category, event.away_team.key.lower()
+                )
+            except Exception as e:
+                logger.error(f"Hydrate events got an error: {e}")
 
     async def shutdown(self) -> None:
         """Politely shut down the datastore"""
