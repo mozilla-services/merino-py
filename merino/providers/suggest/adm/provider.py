@@ -261,23 +261,29 @@ class Provider(BaseProvider):
                 for i, suggestion in enumerate(suggestions)
             ]
 
+            tags = {}
+            if suggestions:
+                # FIXME(nanj): this uses the first element as the subject as `suggestions`
+                # should always be a singleton list. Update it if that's false in the future.
+                tags["subject"] = suggestions[0].advertiser.lower()
+
             # If it's the only candidate with an attempted count less than the threshold, skip sampling.
             if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
                 self.metrics_client.increment(
-                    "providers.adm.thompson.select", tags={"outcome": "skipped"}
+                    "providers.adm.thompson.select", tags={"outcome": "skipped", **tags}
                 )
                 return suggestions[0]
 
             winner = cast(ThompsonSampler, self.thompson).sample(candidates)
             if winner:
                 self.metrics_client.increment(
-                    "providers.adm.thompson.select", tags={"outcome": "selected"}
+                    "providers.adm.thompson.select", tags={"outcome": "selected", **tags}
                 )
                 winner_idx: int = winner.id
                 return suggestions[winner_idx]
             else:
                 self.metrics_client.increment(
-                    "providers.adm.thompson.select", tags={"outcome": "suppressed"}
+                    "providers.adm.thompson.select", tags={"outcome": "suppressed", **tags}
                 )
                 return None
 
