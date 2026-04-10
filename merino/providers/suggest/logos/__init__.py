@@ -6,11 +6,16 @@ import logging
 from gcloud.aio.storage import Storage
 
 from merino.utils import metrics
-from merino.providers.suggest.logos.provider import Provider
+from merino.utils.synced_gcs_blob_v2 import typed_gcs_json_blob_factory
+from merino.providers.suggest.logos.provider import Provider, LogoManifest
+from merino.configs import settings
 
 logger = logging.getLogger(__name__)
 
 provider: Provider | None = None
+cron_interval_sec: int = settings.providers.logos.cron_interval_sec
+logos_manifest_key: str = settings.providers.logos.logos_manifest_key
+images_bucket: str = settings.image_gcs_v2.gcs_bucket
 
 
 async def init_provider() -> None:
@@ -21,10 +26,19 @@ async def init_provider() -> None:
     global provider
     start = timer()
 
-    provider = Provider(
-        metrics_client=metrics.get_metrics_client(),
+    logo_manifest = typed_gcs_json_blob_factory(
+        LogoManifest,
         storage_client=Storage(),
+        metrics_client=metrics.get_metrics_client(),
+        bucket_name=images_bucket,
+        blob_name=logos_manifest_key,
+        max_size=None,
+        cron_interval_seconds=cron_interval_sec,
+        cron_job_name="logo_manifest_sync",
     )
+
+    provider = Provider(metrics_client=metrics.get_metrics_client(), logo_manifest=logo_manifest)
+    provider.initialize()
 
     logger.info(
         "Logos provider initialization completed",

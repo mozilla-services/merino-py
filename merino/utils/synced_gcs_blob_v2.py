@@ -46,7 +46,7 @@ class SyncedGcsBlobV2(Generic[T]):
         metrics_client: StatsdClient,
         bucket_name: str,
         blob_name: str,
-        max_size: int,
+        max_size: Optional[int],
         cron_interval_seconds: float,
         cron_job_name: str,
         fetch_callback: Callable[[bytes], T],
@@ -145,7 +145,7 @@ class SyncedGcsBlobV2(Generic[T]):
         self.metrics_client.gauge(
             f"{self.metrics_namespace}.size", value=blob_size, tags=self._default_tags
         )
-        if blob_size > self.max_size:
+        if self.max_size is not None and blob_size > self.max_size:
             logger.error(f"Blob '{self.blob_name}' size {blob_size} exceeds {self.max_size}")
             self._gauge_validity(0)
         elif blob_updated <= self.last_updated:
@@ -185,7 +185,7 @@ def typed_gcs_json_blob_factory(
     metrics_client: StatsdClient,
     bucket_name: str,
     blob_name: str,
-    max_size: int,
+    max_size: Optional[int],
     cron_interval_seconds: float,
     cron_job_name: str,
 ) -> SyncedGcsBlobV2[T]:

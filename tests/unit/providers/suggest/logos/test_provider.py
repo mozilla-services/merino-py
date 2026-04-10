@@ -5,20 +5,29 @@
 """Unit tests for the logos provider module."""
 
 import logging
-from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 
 import pytest
 from pydantic import HttpUrl
 
-from merino.providers.suggest.logos.provider import LogoCategory, STORAGE_BASE_URL
-from merino.providers.suggest.logos.provider import Provider
+from merino.providers.suggest.logos.provider import LogoCategory, Provider, STORAGE_BASE_URL
 from tests.types import FilterCaplogFixture
 
 
 @pytest.mark.asyncio
-async def test_get_logo_url_exists(logos_provider: Provider) -> None:
-    """Returns a GCS URL when the blob exists."""
-    result = await logos_provider.get_logo_url(LogoCategory.Airline, "aa")
+@pytest.mark.parametrize(
+    "category,key",
+    [
+        (LogoCategory.Airline, "aa"),
+        (LogoCategory.Airline, "AA"),
+    ],
+    ids=["lowercase", "capitalized"],
+)
+async def test_get_logo_url_exists(
+    logos_provider: Provider, category: LogoCategory, key: str
+) -> None:
+    """Returns the URL from the manifest when the entry exists (regardless of capitalization)."""
+    result = await logos_provider.get_logo_url(category, key)
 
     assert result == HttpUrl(f"{STORAGE_BASE_URL}/logos/airline/airline_aa.png")
 
@@ -26,66 +35,36 @@ async def test_get_logo_url_exists(logos_provider: Provider) -> None:
 @pytest.mark.asyncio
 async def test_get_logo_url_not_found(
     logos_provider: Provider,
-    fixture_logos_bucket: AsyncMock,
     caplog: pytest.LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
+    statsd_mock
 ) -> None:
-    """Returns None and logs a warning when the blob does not exist."""
-    fixture_logos_bucket.blob_exists.return_value = False
-
+    """Returns None when the manifest has no entry for the given category and key."""
     with caplog.at_level(logging.WARNING):
-        result = await logos_provider.get_logo_url(LogoCategory.MLB, "bos")
+        result = await logos_provider.get_logo_url(LogoCategory.MLB, "zzz")
 
     assert result is None
     records = filter_caplog(caplog.records, "merino.providers.suggest.logos.provider")
     assert len(records) == 1
-    assert "bos" in records[0].message
     assert "mlb" in records[0].message
+    assert "zzz" in records[0].message
 
-
-@pytest.mark.asyncio
-async def test_get_logo_url_increments_found_metric(logos_provider: Provider, statsd_mock) -> None:
-    """Increments a found metric when the blob exists."""
-    await logos_provider.get_logo_url(LogoCategory.NBA, "lal")
-
+    # Increments miss metric
     statsd_mock.increment.assert_called_once_with(
-        "gcs.blob.fetch",
-        tags={"provider": "logos", "result": "found"},
+        "manifest.lookup.miss",
+        tags={"provider": "logos"},
     )
 
 
 @pytest.mark.asyncio
-async def test_get_logo_url_increments_not_found_metric(
-    logos_provider: Provider, fixture_logos_bucket: AsyncMock, statsd_mock
+async def test_get_logo_url_manifest_unavailable(
+    logos_provider: Provider,
+    logo_manifest_mock: MagicMock,
 ) -> None:
-    """Increments a not found metric when the blob does not exist."""
-    fixture_logos_bucket.blob_exists.return_value = False
+    """Returns None when the manifest data is not yet available."""
+    logo_manifest_mock.data = None
 
-    await logos_provider.get_logo_url(LogoCategory.NFL, "ne")
+    result = await logos_provider.get_logo_url(LogoCategory.Airline, "aa")
 
-    statsd_mock.increment.assert_called_once_with(
-        "gcs.blob.fetch",
-        tags={"provider": "logos", "result": "not_found"},
-    )
+    assert result is None
 
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "category,key",
-    [
-        (LogoCategory.Airline, "ua"),
-        (LogoCategory.MLB, "nyy"),
-        (LogoCategory.NBA, "lal"),
-        (LogoCategory.NFL, "gb"),
-        (LogoCategory.NHL, "tor"),
-        (LogoCategory.NHL, "TOR"),
-    ],
-    ids=["airline", "mlb", "nba", "nfl", "nhl", "capitalized"],
-)
-async def test_get_logo_url_blob_name_format(
-    logos_provider: Provider, category: LogoCategory, key: str
-) -> None:
-    """URL follows the /logos/{category}/{category}_{key}.png naming convention."""
-    result = await logos_provider.get_logo_url(category, key)
-
-    assert result == HttpUrl(f"{STORAGE_BASE_URL}/logos/{category}/{category}_{key.lower()}.png")
