@@ -95,7 +95,11 @@ class SectionsBackend(SectionsProtocol):
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
-        """Fetch section recommendations from the backend."""
+        """Fetch section recommendations from the backend.
+
+        Experimental sections are omitted from the top-level result and linked
+        to their canonical base sections for downstream resolution.
+        """
         query = """
             query GetSections($filters: SectionFilters!) {
               getSections(filters: $filters) {
@@ -172,26 +176,16 @@ class SectionsBackend(SectionsProtocol):
             )
             parsed_sections.append(section_obj)
 
-        sections_list = []
-        base_sections_by_id: dict[str, CorpusSection] = {}
-        pending_alternates: dict[str, CorpusSection] = {}
+        base_sections = [s for s in parsed_sections if s.experimentVariant == 0]
+        experimental_sections = [s for s in parsed_sections if s.experimentVariant != 0]
 
-        for section in parsed_sections:
-            if section.experimentVariant == 0:
-                sections_list.append(section)
-                base_sections_by_id[section.externalId] = section
+        base_sections_by_id: dict[str, CorpusSection] = {s.externalId: s for s in base_sections}
 
-                alternate_section = pending_alternates.pop(section.externalId, None)
-                if alternate_section is not None and section.alternateSection is None:
-                    section.alternateSection = alternate_section
-                continue
+        for section in experimental_sections:
+            base = base_sections_by_id.get(section.externalId)
+            if base and base.alternateSection is None:
+                base.alternateSection = section
 
-            base_section = base_sections_by_id.get(section.externalId)
-            if base_section is not None:
-                if base_section.alternateSection is None:
-                    base_section.alternateSection = section
-                continue
-
-            pending_alternates.setdefault(section.externalId, section)
+        sections_list = base_sections
 
         return sections_list
