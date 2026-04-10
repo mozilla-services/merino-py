@@ -29,7 +29,7 @@ from tests.unit.curated_recommendations.test_sections import generate_corpus_ite
 SURFACE_ID = SurfaceId.NEW_TAB_EN_US
 
 CONFIG = CorpusCacheConfig(
-    soft_ttl_sec=120,
+    soft_ttl_sec=60,
     hard_ttl_sec=600,
     lock_ttl_sec=30,
     key_prefix="curated:v1",
@@ -46,7 +46,7 @@ def _make_corpus_section() -> CorpusSection:
     )
 
 
-def _make_fresh_envelope(items_data: list[dict], soft_ttl_sec: int = 120) -> bytes:
+def _make_fresh_envelope(items_data: list[dict], soft_ttl_sec: int = 60) -> bytes:
     """Create a serialized cache envelope that is still fresh."""
     return _serialize_envelope(items_data, soft_ttl_sec)
 
@@ -85,7 +85,7 @@ class TestEnvelope:
     def test_roundtrip(self) -> None:
         """Serialize and deserialize an envelope."""
         data = [{"corpusItemId": "abc", "title": "Hello"}]
-        raw = _serialize_envelope(data, soft_ttl_sec=120)
+        raw = _serialize_envelope(data, soft_ttl_sec=60)
         expires_at, deserialized = _deserialize_envelope(raw)
         assert deserialized == data
         assert expires_at > time.time()

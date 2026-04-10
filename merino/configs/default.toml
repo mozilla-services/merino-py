@@ -1261,11 +1261,11 @@ cron_interval_seconds = 600
 cache = "none"
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__SOFT_TTL_SEC
-# Soft TTL in seconds. After this, one pod revalidates while others serve stale data.
-soft_ttl_sec = 120
+# Soft TTL in seconds. Balances propagating time-sensitive content quickly vs backend load.
+soft_ttl_sec = 60
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__HARD_TTL_SEC
-# Hard TTL in seconds. Redis evicts the key after this. Safety net for API outages.
+# Hard TTL in seconds. Safety net so data survives extended API outages (1 day).
 hard_ttl_sec = 86400
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__LOCK_TTL_SEC

@@ -125,7 +125,7 @@ class _RedisCorpusCache:
                 is_fresh = time.time() < expires_at
             except TypeError:
                 # expires_at is not numeric (corrupted envelope)
-                logger.warning(
+                logger.error(
                     "Invalid expires_at in corpus cache key %s", data_key, exc_info=True
                 )
                 is_fresh = False
@@ -137,7 +137,7 @@ class _RedisCorpusCache:
                     self._metrics.increment("corpus_cache.hit")
                     return result
                 except Exception:
-                    logger.warning(
+                    logger.error(
                         "Deserialization failed for corpus cache key %s",
                         data_key,
                         exc_info=True,
@@ -151,7 +151,7 @@ class _RedisCorpusCache:
                 try:
                     return deserialize_fn(items_data)
                 except Exception:
-                    logger.warning(
+                    logger.error(
                         "Deserialization of stale data failed for corpus cache key %s",
                         data_key,
                         exc_info=True,
@@ -170,7 +170,7 @@ class _RedisCorpusCache:
                 try:
                     return deserialize_fn(items_data)
                 except Exception:
-                    logger.warning(
+                    logger.error(
                         "Deserialization failed on retry for corpus cache key %s",
                         data_key,
                         exc_info=True,
@@ -197,7 +197,7 @@ class _RedisCorpusCache:
             try:
                 serialized = serialize_fn(items)
             except Exception:
-                logger.warning(
+                logger.error(
                     "Serialization failed for corpus cache key %s", data_key, exc_info=True
                 )
             else:
@@ -214,10 +214,10 @@ class _RedisCorpusCache:
                 return None
             return _deserialize_envelope(raw)
         except CacheAdapterError:
-            logger.warning("Redis read error for corpus cache key %s", key, exc_info=True)
+            logger.error("Redis read error for corpus cache key %s", key, exc_info=True)
             return None
         except (orjson.JSONDecodeError, KeyError, TypeError):
-            logger.warning(
+            logger.error(
                 "Redis deserialization error for corpus cache key %s",
                 key,
                 exc_info=True,
@@ -230,7 +230,7 @@ class _RedisCorpusCache:
             value = _serialize_envelope(data, self._config.soft_ttl_sec)
             await self._cache.set(key, value, ttl=timedelta(seconds=self._config.hard_ttl_sec))
         except Exception:
-            logger.warning("Redis write error for corpus cache key %s", key, exc_info=True)
+            logger.error("Redis write error for corpus cache key %s", key, exc_info=True)
 
     async def _try_acquire_lock(self, lock_key: str) -> bool:
         """Attempt to acquire a distributed lock via SET NX EX."""
@@ -238,7 +238,7 @@ class _RedisCorpusCache:
             result = await self._cache.set_nx(lock_key, self._config.lock_ttl_sec)
             return result
         except CacheAdapterError:
-            logger.warning("Redis lock acquire error for %s", lock_key, exc_info=True)
+            logger.error("Redis lock acquire error for %s", lock_key, exc_info=True)
             return False
 
     async def _release_lock(self, lock_key: str) -> None:
@@ -253,7 +253,7 @@ class _RedisCorpusCache:
         try:
             await self._cache.delete(lock_key)
         except CacheAdapterError:
-            logger.warning("Redis lock release error for %s", lock_key, exc_info=True)
+            logger.error("Redis lock release error for %s", lock_key, exc_info=True)
 
 
 class RedisCachedScheduledSurface(ScheduledSurfaceProtocol):

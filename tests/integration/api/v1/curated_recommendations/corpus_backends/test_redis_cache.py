@@ -23,7 +23,7 @@ from merino.exceptions import CorpusCacheUnavailable
 logger = logging.getLogger(__name__)
 
 CONFIG = CorpusCacheConfig(
-    soft_ttl_sec=120,
+    soft_ttl_sec=60,
     hard_ttl_sec=600,
     lock_ttl_sec=30,
     key_prefix="curated:v1",

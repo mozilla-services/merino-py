@@ -97,7 +97,7 @@ Config section: `[default.curated_recommendations.corpus_cache]` in `merino/conf
 | Setting | Default | Description |
 |---|---|---|
 | `cache` | `"none"` | `"redis"` to enable, `"none"` to disable |
-| `soft_ttl_sec` | `120` | Seconds before an entry is stale and triggers revalidation |
+| `soft_ttl_sec` | `60` | Seconds before an entry is stale and triggers revalidation |
 | `hard_ttl_sec` | `86400` | Seconds before Redis evicts the key (1 day safety net) |
 | `lock_ttl_sec` | `30` | Auto-release timeout if the lock holder crashes |
 | `key_prefix` | `"curated:v1"` | Bump the version on schema changes to avoid deserialization errors |
