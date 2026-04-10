@@ -18,11 +18,22 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     SurfaceId,
 )
-from merino.exceptions import CacheAdapterError, CorpusCacheUnavailable
+from merino.exceptions import CacheAdapterError
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+class CorpusCacheUnavailable(Exception):
+    """Raised when the corpus cache cannot serve data.
+
+    Triggers include: cold miss with lock held or retry exhausted.
+    The API layer translates this to HTTP 503.
+    """
+
+    pass
+
 
 BackendType = Literal["scheduled", "sections"]
 
@@ -125,9 +136,7 @@ class _RedisCorpusCache:
                 is_fresh = time.time() < expires_at
             except TypeError:
                 # expires_at is not numeric (corrupted envelope)
-                logger.error(
-                    "Invalid expires_at in corpus cache key %s", data_key, exc_info=True
-                )
+                logger.error("Invalid expires_at in corpus cache key %s", data_key, exc_info=True)
                 is_fresh = False
                 items_data = None
 
@@ -247,7 +256,7 @@ class _RedisCorpusCache:
         Note: This uses unconditional DELETE rather than owner-aware release
         (compare-and-delete via Lua script). If revalidation exceeds lock_ttl_sec
         (30s default), another pod's lock could be deleted. The consequence is at
-        most one extra redundant API call, not a stampede, because the SWR pattern
+        most one extra redundant API call, not a stampede, because the stale-while-revalidate pattern
         ensures other pods serve stale/cached data regardless of lock state.
         """
         try:
@@ -259,9 +268,8 @@ class _RedisCorpusCache:
 class RedisCachedScheduledSurface(ScheduledSurfaceProtocol):
     """Redis L2 cache wrapper for ScheduledSurfaceBackend.
 
-    Checks Redis before hitting the Corpus API. Uses distributed SWR:
-    when the cached value is stale, one pod acquires a lock and revalidates
-    while others continue to serve stale data.
+    Checks Redis before hitting the Corpus API. Uses distributed stale-while-revalidate:
+    one pod acquires a lock and revalidates while others serve stale data.
     """
 
     def __init__(
@@ -288,7 +296,7 @@ class RedisCachedScheduledSurface(ScheduledSurfaceProtocol):
 class RedisCachedSections(SectionsProtocol):
     """Redis L2 cache wrapper for SectionsBackend.
 
-    Same distributed SWR pattern as RedisCachedScheduledSurface.
+    Same distributed stale-while-revalidate pattern as RedisCachedScheduledSurface.
     """
 
     def __init__(

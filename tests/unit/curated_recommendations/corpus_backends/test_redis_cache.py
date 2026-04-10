@@ -14,7 +14,9 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SurfaceId,
 )
 from merino.curated_recommendations.corpus_backends.redis_cache import (
+    BackendType,
     CorpusCacheConfig,
+    CorpusCacheUnavailable,
     RedisCachedScheduledSurface,
     RedisCachedSections,
     _RedisCorpusCache,
@@ -23,7 +25,7 @@ from merino.curated_recommendations.corpus_backends.redis_cache import (
     _deserialize_envelope,
     _serialize_envelope,
 )
-from merino.exceptions import CacheAdapterError, CorpusCacheUnavailable
+from merino.exceptions import CacheAdapterError
 from tests.unit.curated_recommendations.test_sections import generate_corpus_item
 
 SURFACE_ID = SurfaceId.NEW_TAB_EN_US
@@ -63,15 +65,17 @@ def _make_stale_envelope(items_data: list[dict]) -> bytes:
 class TestKeyBuilders:
     """Tests for Redis key construction functions."""
 
-    def test_build_data_key_scheduled(self) -> None:
-        """Build a data key for a scheduled surface."""
-        key = _build_data_key(CONFIG, "scheduled", SurfaceId.NEW_TAB_EN_US)
-        assert key == "curated:v1:scheduled:NEW_TAB_EN_US"
-
-    def test_build_data_key_sections(self) -> None:
-        """Build a data key for sections."""
-        key = _build_data_key(CONFIG, "sections", SurfaceId.NEW_TAB_EN_US)
-        assert key == "curated:v1:sections:NEW_TAB_EN_US"
+    @pytest.mark.parametrize(
+        ("backend_type", "expected"),
+        [
+            ("scheduled", "curated:v1:scheduled:NEW_TAB_EN_US"),
+            ("sections", "curated:v1:sections:NEW_TAB_EN_US"),
+        ],
+        ids=["scheduled", "sections"],
+    )
+    def test_build_data_key(self, backend_type: BackendType, expected: str) -> None:
+        """Build a data key for the given backend type."""
+        assert _build_data_key(CONFIG, backend_type, SurfaceId.NEW_TAB_EN_US) == expected
 
     def test_build_lock_key(self) -> None:
         """Build a lock key with 'lock' segment inserted."""
@@ -259,7 +263,9 @@ class TestRedisCorpusCache:
         self.fetch_fn.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_redis_write_error_does_not_raise(self) -> None:
+    async def test_redis_write_error_does_not_raise(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Continue normally when Redis write fails after fetching."""
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.return_value = True
@@ -277,6 +283,7 @@ class TestRedisCorpusCache:
         # Cache write was attempted (and failed), but lock should still be released
         self.mock_cache.set.assert_called_once()
         self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
+        assert any("write error" in r.message for r in caplog.records)
 
     @pytest.mark.asyncio
     async def test_deserialization_error_falls_through(self) -> None:
@@ -349,7 +356,9 @@ class TestRedisCorpusCache:
         self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
 
     @pytest.mark.asyncio
-    async def test_serialize_error_returns_items_and_releases_lock(self) -> None:
+    async def test_serialize_error_returns_items_and_releases_lock(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Return fetched items even when serialize_fn fails (best-effort cache write)."""
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.return_value = True
@@ -367,6 +376,7 @@ class TestRedisCorpusCache:
 
         assert result == ["item1", "item2"]
         self.mock_cache.delete.assert_called_once_with("curated:v1:lock:scheduled:NEW_TAB_EN_US")
+        assert any("Serialization failed" in r.message for r in caplog.records)
 
     @pytest.mark.asyncio
     async def test_deserialize_fn_error_on_fresh_hit_falls_through(self) -> None:
@@ -415,7 +425,7 @@ class TestRedisCorpusCache:
     async def test_stale_hit_deserialize_error_both_locks_fail_raises_unavailable(
         self,
     ) -> None:
-        """Raise CorpusCacheUnavailable when stale deser fails and both locks fail."""
+        """Raise CorpusCacheUnavailable when stale deserialization fails and both locks fail."""
         items_data = [{"v": "stale"}]
         self.mock_cache.get.return_value = _make_stale_envelope(items_data)
         self.mock_cache.set_nx.return_value = False
@@ -472,7 +482,7 @@ class TestRedisCorpusCache:
 
     @pytest.mark.asyncio
     async def test_cancelled_error_releases_lock(self) -> None:
-        """Release the lock even when the task is cancelled (BaseException)."""
+        """Release the lock even when the fetch task is cancelled."""
         self.mock_cache.get.return_value = None
         self.mock_cache.set_nx.return_value = True
 

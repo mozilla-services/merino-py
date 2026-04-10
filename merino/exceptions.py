@@ -33,13 +33,3 @@ class CacheMissError(Exception):
     """Exception raised if an entry doesn't exist in the cache."""
 
     pass
-
-
-class CorpusCacheUnavailable(Exception):
-    """Raised when the corpus cache cannot serve data.
-
-    Triggers include: cold miss with lock held or retry exhausted.
-    The API layer translates this to HTTP 503.
-    """
-
-    pass

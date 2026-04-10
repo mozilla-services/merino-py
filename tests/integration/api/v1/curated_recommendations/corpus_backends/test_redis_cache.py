@@ -18,7 +18,6 @@ from merino.curated_recommendations.corpus_backends.redis_cache import (
     CorpusCacheConfig,
     _RedisCorpusCache,
 )
-from merino.exceptions import CorpusCacheUnavailable
 
 logger = logging.getLogger(__name__)
 
@@ -145,15 +144,12 @@ class TestHappyPath:
             )
             for _ in range(10)
         ]
-        results = await asyncio.gather(*calls, return_exceptions=True)
+        results = await asyncio.gather(*calls)
 
-        # Each result is either data (list) or CorpusCacheUnavailable (503)
-        successes = [r for r in results if isinstance(r, list)]
-        errors = [r for r in results if isinstance(r, CorpusCacheUnavailable)]
-        assert len(successes) + len(errors) == 10
-        assert len(successes) >= 1
-        for s in successes:
-            assert s == ["item1"]
+        # All 10 callers should succeed: the lock winner fetches and writes to Redis
+        # in 100ms, well before the 500ms retry delay of lock losers.
+        for r in results:
+            assert r == ["item1"]
 
         # Only one fetch should have occurred (the lock winner)
         assert fetch_count == 1

@@ -90,22 +90,6 @@ At the L2 level, one pod acquires the distributed lock and fetches from the API.
 
 Note: if Redis is timing out (not just down), the lock holder blocks for the duration of each Redis timeout. During this time, all other coroutines in the pod are waiting on the `asyncio.Lock`.
 
-## Configuration
-
-Config section: `[default.curated_recommendations.corpus_cache]` in `merino/configs/default.toml`.
-
-| Setting | Default | Description |
-|---|---|---|
-| `cache` | `"none"` | `"redis"` to enable, `"none"` to disable |
-| `soft_ttl_sec` | `60` | Seconds before an entry is stale and triggers revalidation |
-| `hard_ttl_sec` | `86400` | Seconds before Redis evicts the key (1 day safety net) |
-| `lock_ttl_sec` | `30` | Auto-release timeout if the lock holder crashes |
-| `key_prefix` | `"curated:v1"` | Bump the version on schema changes to avoid deserialization errors |
-
-Env var override pattern: `MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CACHE=redis`
-
-Uses the shared Redis cluster (`[default.redis]`). No separate instance needed.
-
 ## Design decisions
 
 | Decision | Choice | Why |
