@@ -66,6 +66,10 @@ from merino.web.models_v1 import ProviderResponse, SuggestResponse
 from merino.providers.manifest.provider import Provider as ManifestProvider
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
 
+from merino.providers.games import get_particle_provider
+from merino.providers.games.particle.backends.protocol import Particle
+from merino.providers.games.particle.provider import Provider as ParticleProvider
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -577,4 +581,32 @@ async def get_picture_of_the_day(
     return ORJSONResponse(
         content=jsonable_encoder(potd),
         headers={"Cache-Control": "private, max-age=86400"},
+    )
+
+
+# Module-level variable as retrieving from settings on each
+# call is expensive
+_games_particle_ttl = settings.games_providers.particle.cache_ttl
+
+
+@router.get(
+    "/games/particle",
+    tags=["Games"],
+    summary="Particle game for New Tab",
+    response_model=Particle,
+)
+async def get_game_particle(
+    request: Request, provider: ParticleProvider = Depends(get_particle_provider)
+) -> ORJSONResponse:
+    """Return a JSON object containing the public URL for the Particle game."""
+    particle_data = None
+
+    try:
+        particle_data = await provider.get_game_url()
+    except Exception as ex:
+        logger.info(f"Error when fetching Particle game data: {ex.__class__.__name__}")
+
+    return ORJSONResponse(
+        content=jsonable_encoder(particle_data),
+        headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )

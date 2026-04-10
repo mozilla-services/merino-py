@@ -313,6 +313,24 @@ cdn_hostname = ""
 # Set to `true` in production and `false` in staging or development.
 gcs_enabled = true
 
+[default.games_particle_gcs]
+# MERINO_GAMES_PARTICLE_GCS__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = ""
+
+# MERINO_GAMES_PARTICLE__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = ""
+
+# MERINO_GAMES_PARTICLE__CDN_HOSTNAME
+# CDN hostname used for public URL
+cdn_hostname = ""
+
+# MERINO_GAMES_PARTICLE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = true
+
 [default.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = ""
@@ -1067,6 +1085,23 @@ query_timeout_sec = 1.0
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
 # URL for the Wikimedia Picture of the Day RSS feed.
 feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
+
+[default.games_providers.particle]
+# MERINO_GAMES_PROVIDERS__PARTICLE__TYPE
+# The type of this provider, should be `particle`.
+type = "particle"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED_BY_DEFAULT
+# Whether or not this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_TTL
+# The amount of time in seconds for the max-age Cache-control header.
+cache_ttl = 86400 # one day
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__GAME_URL
+# The URL pointing to the game hosted in GCP (GCS)
+game_url = "https://prod-games-particle.merino.prod.webservices.mozgcp.net/index.html"
 
 
 [default.curated_recommendations.gcs]

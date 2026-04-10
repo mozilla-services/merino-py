@@ -39,6 +39,19 @@ gcs_bucket = "merino-images-prodpy"
 # CDN hostname used for public URLs of stored images
 cdn_hostname = "merino-images.services.mozilla.com"
 
+[production.games_particle_gcs]
+# MERINO_GAMES_PARTICLE__GCS_PROJECT
+# GCS project name that contains domain data (GCP V2)
+gcs_project = "moz-fx-merino-prod-5de4"
+
+# MERINO_GAMES_PARTICLE__GCS_BUCKET
+# GCS bucket that contains domain data files (GCP V2)
+gcs_bucket = "merino-games-particle-prod"
+
+# MERINO_GAMES_PARTICLE__CDN_HOSTNAME
+# CDN hostname used for public URL (GCP V2)
+cdn_hostname = "prod-games-particle.merino.prod.webservices.mozgcp.net"
+
 
 [production.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
