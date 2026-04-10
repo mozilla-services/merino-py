@@ -44,8 +44,6 @@ class CorpusCacheConfig:
     hard_ttl_sec: int
     lock_ttl_sec: int
     key_prefix: str
-    circuit_breaker_failure_threshold: int = 10
-    circuit_breaker_recovery_timeout_sec: int = 30
 
 
 def _build_data_key(
@@ -83,9 +81,10 @@ class _RedisCorpusCache:
     Implements distributed stale-while-revalidate: when the cached value is stale,
     one pod acquires a lock and revalidates while others serve stale data.
 
-    Includes a simple circuit breaker: after consecutive Redis failures exceed the
-    threshold, Redis calls are skipped for a recovery period to avoid hammering a
-    degraded Redis instance.
+    No circuit breaker: the L1 in-memory cache's asyncio.Lock already limits Redis
+    traffic to one coroutine per cache entry per pod. Redis errors surface as
+    CorpusCacheUnavailable (HTTP 503) only on cold starts; in steady state, L1
+    serves stale data and the background revalidation task absorbs any Redis errors.
     """
 
     def __init__(
@@ -97,39 +96,6 @@ class _RedisCorpusCache:
         self._cache = cache
         self._config = config
         self._metrics = metrics_client
-        self._failure_count: int = 0
-        self._circuit_open_until: float = 0.0
-
-    def _is_circuit_open(self) -> bool:
-        """Check if the circuit breaker is open (Redis should be skipped)."""
-        if self._circuit_open_until == 0.0:
-            return False
-        if time.time() >= self._circuit_open_until:
-            # Recovery period elapsed — half-open: allow one attempt
-            self._circuit_open_until = 0.0
-            self._failure_count = 0
-            logger.info("Redis corpus cache circuit breaker: half-open, retrying")
-            return False
-        return True
-
-    def _record_failure(self) -> None:
-        """Record a Redis failure and open the circuit if threshold is reached."""
-        self._failure_count += 1
-        if self._failure_count >= self._config.circuit_breaker_failure_threshold:
-            self._circuit_open_until = (
-                time.time() + self._config.circuit_breaker_recovery_timeout_sec
-            )
-            logger.warning(
-                "Redis corpus cache circuit breaker opened after %d failures, "
-                "recovering in %ds",
-                self._failure_count,
-                self._config.circuit_breaker_recovery_timeout_sec,
-            )
-
-    def _record_success(self) -> None:
-        """Reset failure count on a successful Redis operation."""
-        if self._failure_count > 0:
-            self._failure_count = 0
 
     async def get_or_fetch(
         self,
@@ -149,12 +115,6 @@ class _RedisCorpusCache:
             serialize_fn: Converts typed models to dicts for Redis storage.
             deserialize_fn: Converts dicts from Redis back to typed models.
         """
-        # Circuit breaker: fail fast when Redis is known-degraded.
-        # L1 in-memory cache serves stale data; this only affects cold starts.
-        if self._is_circuit_open():
-            self._metrics.increment("corpus_cache.circuit_breaker_skip")
-            raise CorpusCacheUnavailable("Redis circuit breaker is open")
-
         data_key = _build_data_key(self._config, backend_type, surface_id)
         lock_key = _build_lock_key(self._config, backend_type, surface_id)
         # Try reading from Redis
@@ -252,10 +212,8 @@ class _RedisCorpusCache:
             raw = await self._cache.get(key)
             if raw is None:
                 return None
-            self._record_success()
             return _deserialize_envelope(raw)
         except CacheAdapterError:
-            self._record_failure()
             logger.warning("Redis read error for corpus cache key %s", key, exc_info=True)
             return None
         except (orjson.JSONDecodeError, KeyError, TypeError):
@@ -271,19 +229,15 @@ class _RedisCorpusCache:
         try:
             value = _serialize_envelope(data, self._config.soft_ttl_sec)
             await self._cache.set(key, value, ttl=timedelta(seconds=self._config.hard_ttl_sec))
-            self._record_success()
         except Exception:
-            self._record_failure()
             logger.warning("Redis write error for corpus cache key %s", key, exc_info=True)
 
     async def _try_acquire_lock(self, lock_key: str) -> bool:
         """Attempt to acquire a distributed lock via SET NX EX."""
         try:
             result = await self._cache.set_nx(lock_key, self._config.lock_ttl_sec)
-            self._record_success()
             return result
         except CacheAdapterError:
-            self._record_failure()
             logger.warning("Redis lock acquire error for %s", lock_key, exc_info=True)
             return False
 
@@ -299,7 +253,6 @@ class _RedisCorpusCache:
         try:
             await self._cache.delete(lock_key)
         except CacheAdapterError:
-            self._record_failure()
             logger.warning("Redis lock release error for %s", lock_key, exc_info=True)
 
 

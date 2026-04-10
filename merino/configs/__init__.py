@@ -215,12 +215,6 @@ _validators = [
         gt=0,
     ),
     Validator("curated_recommendations.corpus_cache.key_prefix", is_type_of=str),
-    Validator(
-        "curated_recommendations.corpus_cache.circuit_breaker_failure_threshold",
-        "curated_recommendations.corpus_cache.circuit_breaker_recovery_timeout_sec",
-        is_type_of=int,
-        gt=0,
-    ),
     Validator("sentry.env", is_in=["prod", "stage", "dev"]),
     Validator("sentry.mode", is_in=["disabled", "release", "debug"]),
     Validator("sentry.traces_sample_rate", gte=0, lte=1),

@@ -1276,13 +1276,6 @@ lock_ttl_sec = 30
 # Prefix for all Redis keys. Bump the version on schema changes.
 key_prefix = "curated:v1"
 
-# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CIRCUIT_BREAKER_FAILURE_THRESHOLD
-# Number of consecutive Redis failures before the circuit breaker opens.
-circuit_breaker_failure_threshold = 10
-
-# MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CIRCUIT_BREAKER_RECOVERY_TIMEOUT_SEC
-# Seconds to wait before retrying Redis after the circuit breaker opens.
-circuit_breaker_recovery_timeout_sec = 30
 
 
 [default.curated_recommendations.corpus_api]

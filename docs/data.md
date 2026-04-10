@@ -206,8 +206,6 @@ The following additional metrics are recorded when curated recommendations are r
  A counter for stale Redis cache entries that trigger revalidation.
 - `corpus_cache.miss` -
  A counter for Redis cache misses (no data in Redis).
-- `corpus_cache.circuit_breaker_skip` -
- A counter for requests that skipped Redis because the circuit breaker was open.
 
 
 
