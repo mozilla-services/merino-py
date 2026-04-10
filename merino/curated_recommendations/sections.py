@@ -199,74 +199,26 @@ def _process_corpus_sections(
     return sections
 
 
-def clean_exp_id(section_id: str) -> tuple[str, str] | None:
-    """Parse a raw experimental section ID into its base ID and experiment type.
-
-    Experimental IDs must end with the suffix ``__exp<type>``.
-    Non-experimental or malformed IDs return ``None``.
-    """
-    marker = "__exp"
-    idx = section_id.rfind(marker)
-    if idx <= 0:
-        return None
-
-    base_id = section_id[:idx]
-    exp_type = section_id[idx + len(marker) :]
-
-    if not exp_type or not exp_type.isalnum():
-        return None
-
-    return base_id, exp_type
+def resolve_5050(original_section: CorpusSection, alternate_section: CorpusSection) -> CorpusSection:
+    """Choose between the base and alternate section with 50/50 odds."""
+    return random.sample([original_section, alternate_section], 1)[0]
 
 
-def resolve_5050(original_id: str, exp_id: str) -> str:
-    """Choose between the base and experimental section IDs with 50/50 odds."""
-    return random.sample([original_id, exp_id], 1)[0]
+def resolve_section_experiment(section: CorpusSection) -> CorpusSection:
+    """Resolve a canonical section and its alternate slate to the winning section."""
+    alternate_section = section.alternateSection
+    if alternate_section is None:
+        return section
 
+    if alternate_section.experimentVariant == 5050:
+        return resolve_5050(section, alternate_section)
 
-def resolve_section_experiment(original_id: str, exp_id: str, exp_type: str) -> str:
-    """Resolve a base/experimental section pair to the winning section ID.
-
-    Unsupported experiment types always fall back to the base section.
-    """
-    if exp_type == "5050":
-        return resolve_5050(original_id, exp_id)
-    else:
-        return original_id
+    return section
 
 
 def dedupe_experiment_sections(sections: list[CorpusSection]) -> list[CorpusSection]:
-    """Resolve raw experimental section pairs and keep a single canonical section.
-
-    Experimental sections are identified by the ``__exp<type>`` suffix. When a
-    matching base section exists, the winning section content is copied into the
-    base section slot and emitted under the canonical base ID.
-    """
-    # Pull out experimental sections.
-    exp_ids = [sec.externalId for sec in sections if clean_exp_id(sec.externalId) is not None]
-    # Map IDs to sections.
-    id_to_section = {section.externalId: section for section in sections}
-    # Build the result map, dropping __exp sections until a winner is chosen.
-    id_to_result = {
-        section.externalId: section for section in sections if section.externalId not in exp_ids
-    }
-    # Find experimental pairs.
-    for eid in exp_ids:
-        parsed_eid = clean_exp_id(eid)
-        if parsed_eid is None:
-            continue
-        can_eid, exp_type = parsed_eid
-        # Check if there is a matching non-experimental section.
-        if can_eid in id_to_section:
-            # Pick the winning section ID.
-            kept_id = resolve_section_experiment(can_eid, eid, exp_type)
-            # Replace the value while keeping the canonical ID.
-            id_to_result[can_eid] = deepcopy(id_to_section[kept_id])
-            id_to_result[can_eid].externalId = can_eid
-    # Canonicalize any remaining double-underscore suffixes on surviving sections.
-    for section in id_to_result.values():
-        section.externalId = section.externalId.split("__", 1)[0]
-    return list(id_to_result.values())
+    """Resolve each canonical section to either its original or alternate slate."""
+    return [resolve_section_experiment(section) for section in sections]
 
 
 async def get_corpus_sections(

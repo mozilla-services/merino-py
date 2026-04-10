@@ -1,5 +1,7 @@
 """Protocol for the Corpus provider backend."""
 
+from __future__ import annotations
+
 from enum import Enum, unique
 from typing import Protocol
 
@@ -95,6 +97,16 @@ class CorpusSection(BaseModel):
     iab: IABMetadata | None = None
     externalId: str
     createSource: CreateSource
+    experimentVariant: int = Field(
+        default=0,
+        exclude=True,
+        description="Internal experiment variant for the section. 0 means the canonical section.",
+    )
+    alternateSection: CorpusSection | None = Field(
+        default=None,
+        exclude=True,
+        description="Internal link to an alternate slate for the canonical section.",
+    )
     followable: bool = Field(default=True, description="Whether users can follow this section.")
     allowAds: bool = Field(
         default=True, description="Whether ads can be displayed in this section."

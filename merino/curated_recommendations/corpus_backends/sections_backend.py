@@ -35,6 +35,24 @@ from merino.providers.manifest import Provider as ManifestProvider
 logger = logging.getLogger(__name__)
 
 
+def parse_section_external_id(raw_external_id: str) -> tuple[str, int]:
+    """Normalize a raw section ID into its canonical ID and experiment variant."""
+    # Strip any locale suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present.
+    external_id = raw_external_id.split("__l", 1)[0]
+
+    marker = "__exp"
+    idx = external_id.rfind(marker)
+    if idx <= 0:
+        return external_id.split("__", 1)[0], 0
+
+    base_id = external_id[:idx]
+    variant_id = external_id[idx + len(marker) :]
+    if variant_id.isdigit():
+        return base_id, int(variant_id)
+
+    return external_id.split("__", 1)[0], 0
+
+
 class SectionsBackend(SectionsProtocol):
     """Backend for fetching corpus sections using the getSections query."""
 
@@ -126,15 +144,13 @@ class SectionsBackend(SectionsProtocol):
             raise CorpusGraphQLError(f"Sections API returned GraphQL errors {data['errors']}")
 
         utm_source = get_utm_source(surface_id)
-        sections_list = []
+        parsed_sections = []
         for section in data["data"]["getSections"]:
             if not section.get("active") or section.get("externalId", "").endswith("_crawl"):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
-            # Strip any locale suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present.
-            # Keep non-locale suffixes such as "__exp5050" intact for downstream processing.
-            external_id = section["externalId"].split("__l", 1)[0]
+            external_id, experiment_variant = parse_section_external_id(section["externalId"])
 
             section_obj = CorpusSection(
                 externalId=external_id,
@@ -144,6 +160,7 @@ class SectionsBackend(SectionsProtocol):
                 heroSubtitle=section.get("heroDescription"),
                 iab=section["iab"],
                 createSource=section["createSource"],
+                experimentVariant=experiment_variant,
                 followable=section["followable"],
                 allowAds=section["allowAds"],
                 sectionItems=[
@@ -153,6 +170,28 @@ class SectionsBackend(SectionsProtocol):
                     for section_item in section["sectionItems"]
                 ],
             )
-            sections_list.append(section_obj)
+            parsed_sections.append(section_obj)
+
+        sections_list = []
+        base_sections_by_id: dict[str, CorpusSection] = {}
+        pending_alternates: dict[str, CorpusSection] = {}
+
+        for section in parsed_sections:
+            if section.experimentVariant == 0:
+                sections_list.append(section)
+                base_sections_by_id[section.externalId] = section
+
+                alternate_section = pending_alternates.pop(section.externalId, None)
+                if alternate_section is not None and section.alternateSection is None:
+                    section.alternateSection = alternate_section
+                continue
+
+            base_section = base_sections_by_id.get(section.externalId)
+            if base_section is not None:
+                if base_section.alternateSection is None:
+                    base_section.alternateSection = section
+                continue
+
+            pending_alternates.setdefault(section.externalId, section)
 
         return sections_list

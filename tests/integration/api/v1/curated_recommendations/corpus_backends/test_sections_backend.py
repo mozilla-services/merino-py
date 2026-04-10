@@ -81,9 +81,10 @@ async def test_fetch_ie_strips_locale_suffix(sections_ie_backend: SectionsBacken
 async def test_fetch_preserves_experiment_suffix(
     sections_response_data, fixture_request_data, manifest_provider
 ):
-    """Experiment suffixes should survive fetch normalization."""
+    """Experiment suffixes should be parsed into a canonical section with an alternate slate."""
     response_data = copy.deepcopy(sections_response_data)
-    response_data["data"]["getSections"][0]["externalId"] = "government__exp5050"
+    response_data["data"]["getSections"][0]["externalId"] = "government-test"
+    response_data["data"]["getSections"][1]["externalId"] = "government-test__exp5050"
 
     http_client = AsyncMock(spec=AsyncClient)
     http_client.post.return_value = Response(
@@ -100,16 +101,20 @@ async def test_fetch_preserves_experiment_suffix(
 
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
-    assert any(section.externalId == "government__exp5050" for section in sections)
+    government = next(section for section in sections if section.externalId == "government-test")
+    assert government.experimentVariant == 0
+    assert government.alternateSection is not None
+    assert government.alternateSection.experimentVariant == 5050
 
 
 @pytest.mark.asyncio
 async def test_fetch_strips_locale_suffix_after_experiment_suffix(
     sections_response_data, fixture_request_data, manifest_provider
 ):
-    """Locale stripping should preserve the experiment suffix when both are present."""
+    """Locale stripping should preserve experiment metadata when linking the alternate slate."""
     response_data = copy.deepcopy(sections_response_data)
-    response_data["data"]["getSections"][0]["externalId"] = "government__exp5050__lDE_DE"
+    response_data["data"]["getSections"][0]["externalId"] = "government-test"
+    response_data["data"]["getSections"][1]["externalId"] = "government-test__exp5050__lDE_DE"
 
     http_client = AsyncMock(spec=AsyncClient)
     http_client.post.return_value = Response(
@@ -126,4 +131,38 @@ async def test_fetch_strips_locale_suffix_after_experiment_suffix(
 
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
-    assert any(section.externalId == "government__exp5050" for section in sections)
+    government = next(section for section in sections if section.externalId == "government-test")
+    assert government.experimentVariant == 0
+    assert government.alternateSection is not None
+    assert government.alternateSection.experimentVariant == 5050
+
+
+@pytest.mark.asyncio
+async def test_fetch_links_experiment_variant_to_base_section(
+    sections_response_data, fixture_request_data, manifest_provider
+):
+    """A base/variant pair should be returned as one canonical section with an alternate slate."""
+    response_data = copy.deepcopy(sections_response_data)
+    response_data["data"]["getSections"][0]["externalId"] = "government-test"
+    response_data["data"]["getSections"][1]["externalId"] = "government-test__exp5050"
+
+    http_client = AsyncMock(spec=AsyncClient)
+    http_client.post.return_value = Response(
+        status_code=200,
+        json=response_data,
+        request=fixture_request_data,
+    )
+    backend = SectionsBackend(
+        http_client=http_client,
+        graph_config=CorpusApiGraphConfig(),
+        metrics_client=get_metrics_client(),
+        manifest_provider=manifest_provider,
+    )
+
+    sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+    government_sections = [section for section in sections if section.externalId == "government-test"]
+    assert len(government_sections) == 1
+    assert government_sections[0].experimentVariant == 0
+    assert government_sections[0].alternateSection is not None
+    assert government_sections[0].alternateSection.experimentVariant == 5050
