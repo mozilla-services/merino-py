@@ -72,7 +72,6 @@ class Provider:
         a miss metric and logs a warning so the team can debug real gaps vs.
         mistaken lookups.
         """
-        
         blob_name = f"{self.blob_prefix}/{category}/{category}_{key.lower()}.png"
         logger.debug(f"Checking for blob={blob_name}")
         # try:

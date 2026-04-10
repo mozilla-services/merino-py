@@ -16,6 +16,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class SportsDataProtocol(Protocol):
     """Protocol functions for Sports"""
 
@@ -95,17 +96,14 @@ class SportsDataBackend(SportsDataProtocol):
                 # No logos for this sport; leave icons as None
                 continue
             try:
-                home_icon = await self._logos.get_logo_url(
-                category, event.home_team.key.lower()
-            )
+                home_icon = await self._logos.get_logo_url(category, event.home_team.key.lower())
                 logger.debug(f"Home icon: {home_icon}")
                 event.home_team.icon = home_icon
                 event.away_team.icon = await self._logos.get_logo_url(
-                category, event.away_team.key.lower()
+                    category, event.away_team.key.lower()
                 )
             except Exception as e:
                 logger.error(f"Hydrate events got an error: {e}")
-            
 
     async def shutdown(self) -> None:
         """Politely shut down the datastore"""
