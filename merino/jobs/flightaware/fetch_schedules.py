@@ -148,13 +148,6 @@ async def store_flight_numbers_in_gcs(flight_number_set: set[str]) -> None:
             settings.image_gcs.cdn_hostname,
         )
 
-        # upload file to GCPV2
-        uploader_v2 = GcsUploader(
-            settings.image_gcs_v2.gcs_project,
-            settings.image_gcs_v2.gcs_bucket,
-            settings.image_gcs_v2.cdn_hostname,
-        )
-
         existing_blob = uploader.get_most_recent_file(
             match="flight_numbers",
             sort_key=lambda b: b.updated,
@@ -171,14 +164,6 @@ async def store_flight_numbers_in_gcs(flight_number_set: set[str]) -> None:
         content = json.dumps(sorted(combined), indent=2)
 
         uploader.upload_content(
-            content=content,
-            destination_name="flight_numbers_latest.json",
-            content_type="application/json",
-            forced_upload=True,
-        )
-
-        # upload file to GCPV2
-        uploader_v2.upload_content(
             content=content,
             destination_name="flight_numbers_latest.json",
             content_type="application/json",
