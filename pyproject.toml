@@ -62,7 +62,6 @@ omit = [
   "merino/jobs/utils/domain_tester.py",
   "merino/jobs/utils/system_monitor.py",
   "merino/utils/domain_categories/domain_category_mapping.py",
-  "merino/curated_recommendations/__init__.py",
 ]
 
 [dependency-groups]
