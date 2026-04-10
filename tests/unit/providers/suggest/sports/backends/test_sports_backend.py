@@ -423,3 +423,47 @@ async def test_hydrate_events_icons_unknown_sport_leaves_icons_none(
     assert summary.values[0].home_team.icon is None
     assert summary.values[0].away_team.icon is None
     logo_provider_mock.get_logo_url.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_hydrate_events_icons_mixed_sports(sport_data_store, logo_provider_mock):
+    """Icons are populated per-event sport when summary.sport is 'all' (mix_sports=True)."""
+    nhl_url = HttpUrl("https://storage.googleapis.com/logos/nhl/nhl_phi.png")
+    logo_provider_mock.get_logo_url.return_value = nhl_url
+
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store, logos=logo_provider_mock
+    )
+
+    nhl_event = SportEventDetail(
+        sport="NHL",
+        sport_category=SportCategory.Hockey,
+        query="test query",
+        date="2025-10-01T00:00:00",
+        home_team=SportTeamDetail(key="PHI", name="Flyers", colors=["D24303"], score=None),
+        away_team=SportTeamDetail(key="WPG", name="Jets", colors=["041E42"], score=None),
+        status="Scheduled",
+        status_type="scheduled",
+        touched="2025-10-01T00:00:00",
+    )
+    ucl_event = SportEventDetail(
+        sport="UCL",
+        sport_category=SportCategory.Soccer,
+        query="test query",
+        date="2025-10-02T00:00:00",
+        home_team=SportTeamDetail(key="ARS", name="Arsenal", colors=["EF0107"], score=None),
+        away_team=SportTeamDetail(key="MCI", name="Man City", colors=["6CABDD"], score=None),
+        status="Scheduled",
+        status_type="scheduled",
+        touched="2025-10-01T00:00:00",
+    )
+    summary = SportSummary(sport="all", values=[nhl_event, ucl_event])
+
+    await backend._hydrate_events_icons(summary)
+
+    # NHL event should have icons (it has a LogoCategory)
+    assert summary.values[0].home_team.icon == nhl_url
+    assert summary.values[0].away_team.icon == nhl_url
+    # UCL event should not have icons (no LogoCategory for soccer)
+    assert summary.values[1].home_team.icon is None
+    assert summary.values[1].away_team.icon is None

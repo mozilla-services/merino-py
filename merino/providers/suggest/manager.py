@@ -355,7 +355,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     cache=cache,
                     logo_provider=logos.get_provider(),
                 ),
-                logos_provider=logos.get_provider(),
                 metrics_client=get_metrics_client(),
                 score=setting.score,
                 name=provider_id,

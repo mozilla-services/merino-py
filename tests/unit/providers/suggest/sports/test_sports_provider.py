@@ -53,8 +53,8 @@ async def test_sports_ttl_from_now():
 async def test_sports_provider(mock_client: AsyncClient):
     """Test the sports data provider"""
     # we already test the backend.
-    home_team = SportTeamDetail(key="HOM", name="Home Team", colors=["000000"], score=None)
-    away_team = SportTeamDetail(key="AWY", name="Away Team", colors=["FFFFFF"], score=None)
+    home_team = SportTeamDetail(key="HOM", name="Home Team", colors=["000000"], score=None, icon="https://example.com/test_home.png")
+    away_team = SportTeamDetail(key="AWY", name="Away Team", colors=["FFFFFF"], score=None, icon=None)
     event = SportEventDetail(
         sport="test",
         query="test query",

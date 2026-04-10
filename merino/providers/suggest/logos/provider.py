@@ -53,6 +53,7 @@ class Provider:
         enabled_by_default: bool = False,
     ) -> None:
         bucket = settings.image_gcs_v2.gcs_bucket
+        logger.debug(f"Bucket={bucket}")
         self._metrics_client = metrics_client
         self._enabled_by_default = enabled_by_default
         self._storage_client = storage_client
@@ -71,16 +72,22 @@ class Provider:
         a miss metric and logs a warning so the team can debug real gaps vs.
         mistaken lookups.
         """
+        
         blob_name = f"{self.blob_prefix}/{category}/{category}_{key.lower()}.png"
-        exists = await self._bucket.blob_exists(blob_name)
-        if not exists:
-            logger.warning(f"Failed to find a logo for category={category} and key={key}")
-            self._metrics_client.increment(
-                "gcs.blob.fetch", tags={"provider": self.provider_name, "result": "not_found"}
-            )
-            return None
-        else:
-            self._metrics_client.increment(
-                "gcs.blob.fetch", tags={"provider": self.provider_name, "result": "found"}
-            )
-        return HttpUrl(f"{self.storage_base_url}/{blob_name}")
+        logger.debug(f"Checking for blob={blob_name}")
+        # try:
+        #     exists = await self._bucket.blob_exists(blob_name)
+        #     logger.debug(f"blob exists? {exists}")
+        # except Exception as e:
+        #     logger.error(f"Got an error: {e}")
+        # if not exists:
+        #     logger.warning(f"Failed to find a logo for category={category} and key={key}")
+        #     self._metrics_client.increment(
+        #         "gcs.blob.fetch", tags={"provider": self.provider_name, "result": "not_found"}
+        #     )
+        #     return None
+        # else:
+        #     self._metrics_client.increment(
+        #         "gcs.blob.fetch", tags={"provider": self.provider_name, "result": "found"}
+        #     )
+        return HttpUrl(f"{self.storage_base_url}/{self._bucket.name}/{blob_name}")

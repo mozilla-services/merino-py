@@ -40,11 +40,12 @@ async def test_get_logo_url_not_found(
     records = filter_caplog(caplog.records, "merino.providers.suggest.logos.provider")
     assert len(records) == 1
     assert "bos" in records[0].message
+    assert "mlb" in records[0].message
 
 
 @pytest.mark.asyncio
 async def test_get_logo_url_increments_found_metric(logos_provider: Provider, statsd_mock) -> None:
-    """Increments a 200 status metric when the blob exists."""
+    """Increments a found metric when the blob exists."""
     await logos_provider.get_logo_url(LogoCategory.NBA, "lal")
 
     statsd_mock.increment.assert_called_once_with(
@@ -57,7 +58,7 @@ async def test_get_logo_url_increments_found_metric(logos_provider: Provider, st
 async def test_get_logo_url_increments_not_found_metric(
     logos_provider: Provider, fixture_logos_bucket: AsyncMock, statsd_mock
 ) -> None:
-    """Increments a 404 status metric when the blob does not exist."""
+    """Increments a not found metric when the blob does not exist."""
     fixture_logos_bucket.blob_exists.return_value = False
 
     await logos_provider.get_logo_url(LogoCategory.NFL, "ne")

@@ -12,7 +12,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
 )
 from merino.providers.suggest.logos.provider import Provider as LogoProvider
 from merino.providers.suggest.logos.provider import LogoCategory
+import logging
 
+logger = logging.getLogger(__name__)
 
 class SportsDataProtocol(Protocol):
     """Protocol functions for Sports"""
@@ -81,18 +83,29 @@ class SportsDataBackend(SportsDataProtocol):
         """Populate team icons on each event in the summary by
         fetching from the logos provider.
         """
-        try:
-            category = LogoCategory(events.sport.lower())
-        except ValueError:
-            # No logos for this sport; leave icons as None
-            return
+        # try:
+        #     category = LogoCategory(events.sport.lower())
+        # except ValueError:
+        #     # No logos for this sport; leave icons as None
+        #     return
         for event in events.values:
-            event.home_team.icon = await self._logos.get_logo_url(
+            try:
+                category = LogoCategory(event.sport.lower())
+            except ValueError:
+                # No logos for this sport; leave icons as None
+                continue
+            try:
+                home_icon = await self._logos.get_logo_url(
                 category, event.home_team.key.lower()
             )
-            event.away_team.icon = await self._logos.get_logo_url(
+                logger.debug(f"Home icon: {home_icon}")
+                event.home_team.icon = home_icon
+                event.away_team.icon = await self._logos.get_logo_url(
                 category, event.away_team.key.lower()
-            )
+                )
+            except Exception as e:
+                logger.error(f"Hydrate events got an error: {e}")
+            
 
     async def shutdown(self) -> None:
         """Politely shut down the datastore"""

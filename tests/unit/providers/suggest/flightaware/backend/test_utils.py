@@ -258,6 +258,21 @@ async def test_build_flight_summary_valid(flight_with_codeshare, logo_provider_m
     assert summary.airline.code == "UA"
     assert summary.airline.name == "United Airlines"
     assert summary.airline.color == "#005DAA"
+    assert summary.airline.icon is None
+
+
+@pytest.mark.asyncio
+async def test_build_flight_summary_with_icon(flight_with_codeshare, logo_provider_mock):
+    """Airline icon is set from the logo provider when a URL is returned."""
+    icon_url = HttpUrl("https://storage.googleapis.com/logos/airline/airline_ua.png")
+    logo_provider_mock.get_logo_url.return_value = icon_url
+
+    summary = await build_flight_summary(
+        flight_with_codeshare, normalized_query="UA123", logo_provider=logo_provider_mock
+    )
+
+    assert summary is not None
+    assert summary.airline.icon == icon_url
 
 
 @pytest.mark.asyncio
