@@ -1757,7 +1757,7 @@ class TestSections:
     )
     def test_sections_contextual_ranking(self, client: TestClient, experiment_branch):
         """Test that sections feed includes both manually created and ML-generated sections for contextual ranking.
-
+        This should happen even when not in an experiment.
         Both MANUAL and ML sections should be returned together.
         """
         response = client.post(
@@ -1765,8 +1765,6 @@ class TestSections:
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-                "experimentBranch": experiment_branch,
             },
         )
         data = response.json()
