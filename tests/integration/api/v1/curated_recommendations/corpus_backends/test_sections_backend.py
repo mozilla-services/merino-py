@@ -161,7 +161,9 @@ async def test_fetch_links_experiment_variant_to_base_section(
 
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
-    government_sections = [section for section in sections if section.externalId == "government-test"]
+    government_sections = [
+        section for section in sections if section.externalId == "government-test"
+    ]
     assert len(government_sections) == 1
     assert government_sections[0].experimentVariant == 0
     assert government_sections[0].alternateSection is not None

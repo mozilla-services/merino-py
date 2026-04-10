@@ -199,7 +199,9 @@ def _process_corpus_sections(
     return sections
 
 
-def resolve_5050(original_section: CorpusSection, alternate_section: CorpusSection) -> CorpusSection:
+def resolve_5050(
+    original_section: CorpusSection, alternate_section: CorpusSection
+) -> CorpusSection:
     """Choose between the base and alternate section with 50/50 odds."""
     return random.sample([original_section, alternate_section], 1)[0]
 
