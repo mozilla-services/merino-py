@@ -85,8 +85,11 @@ class TestHappyPath:
             fetch_count += 1
             return ["item1", "item2"]
 
-        serialize_fn = lambda items: [{"v": i} for i in items]
-        deserialize_fn = lambda data: [d["v"] for d in data]
+        def serialize_fn(items: list) -> list[dict]:
+            return [{"v": i} for i in items]
+
+        def deserialize_fn(data: list[dict]) -> list:
+            return [d["v"] for d in data]
 
         # First call: cache miss → fetches from backend, writes to Redis
         result1 = await redis_cache.get_or_fetch(
@@ -125,8 +128,11 @@ class TestHappyPath:
             await asyncio.sleep(0.1)
             return ["item1"]
 
-        serialize_fn = lambda items: [{"v": i} for i in items]
-        deserialize_fn = lambda data: [d["v"] for d in data]
+        def serialize_fn(items: list) -> list[dict]:
+            return [{"v": i} for i in items]
+
+        def deserialize_fn(data: list[dict]) -> list:
+            return [d["v"] for d in data]
 
         # Launch 10 concurrent get_or_fetch calls to ensure overlap
         calls = [
