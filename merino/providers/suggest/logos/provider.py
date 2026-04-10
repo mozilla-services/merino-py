@@ -1,14 +1,14 @@
 """Logos integration."""
 
 import logging
+from datetime import datetime
 from enum import StrEnum
 from typing import Optional
 
 import aiodogstatsd
-from pydantic import HttpUrl
-from gcloud.aio.storage import Bucket, Storage
+from pydantic import HttpUrl, BaseModel
 
-from merino.configs import settings
+from merino.utils.synced_gcs_blob_v2 import SyncedGcsBlobV2
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,32 @@ class LogoCategory(StrEnum):
     NBA = "nba"
     NFL = "nfl"
     NHL = "nhl"
+
+
+class Logo(BaseModel):
+    """A logo."""
+
+    url: HttpUrl
+    format: str  # e.g. "png"
+
+
+class LogoEntry(BaseModel):
+    """A single lookup entry from the lookup manifest."""
+
+    name: str
+    abbreviation: str
+    logo: Logo
+
+
+class LogoManifest(BaseModel):
+    """Manifest mapping logo categories and keys to logo metadata."""
+
+    generated_at: datetime
+    lookups: dict[LogoCategory, dict[str, LogoEntry]]
+
+    def get(self, category: LogoCategory, key: str) -> LogoEntry | None:
+        """Return the LookupEntry for a given category and key, or None if not found."""
+        return self.lookups.get(category, {}).get(key.upper())
 
 
 class Provider:
@@ -41,52 +67,34 @@ class Provider:
     """
 
     url = HttpUrl("https://merino.services.mozilla.com/")
+    # TODO: Where should this be to be reused...
     metrics_namespace = "manifest"
     provider_name = "logos"
-    blob_prefix = "logos"
     storage_base_url = STORAGE_BASE_URL
 
     def __init__(
         self,
         metrics_client: aiodogstatsd.Client,
-        storage_client: Storage,
-        enabled_by_default: bool = False,
+        logo_manifest: SyncedGcsBlobV2[LogoManifest],
     ) -> None:
-        bucket = settings.image_gcs_v2.gcs_bucket
-        logger.debug(f"Bucket={bucket}")
         self._metrics_client = metrics_client
-        self._enabled_by_default = enabled_by_default
-        self._storage_client = storage_client
-        self._bucket = Bucket(storage=storage_client, name=bucket)
+        self._logo_manifest = logo_manifest
         super().__init__()
 
+    def initialize(self):
+        """Initialize the provider and dependencies."""
+        self._logo_manifest.initialize()
+
     async def get_logo_url(self, category: LogoCategory, key: str) -> Optional[HttpUrl]:
-        """Get a logo URL for a given category and lookup key.
-
-        This is knowingly brittle, but since the logo upload process is
-        entirely manual (and therefore not linked to existing data models),
-        it's not worth introducing additional complexity or validation at
-        this time. We rely on uploaders to adhere to the expected contract.
-
-        If a logo cannot be found for the category and key, increments
-        a miss metric and logs a warning so the team can debug real gaps vs.
-        mistaken lookups.
-        """
-        blob_name = f"{self.blob_prefix}/{category}/{category}_{key.lower()}.png"
-        logger.debug(f"Checking for blob={blob_name}")
-        # try:
-        #     exists = await self._bucket.blob_exists(blob_name)
-        #     logger.debug(f"blob exists? {exists}")
-        # except Exception as e:
-        #     logger.error(f"Got an error: {e}")
-        # if not exists:
-        #     logger.warning(f"Failed to find a logo for category={category} and key={key}")
-        #     self._metrics_client.increment(
-        #         "gcs.blob.fetch", tags={"provider": self.provider_name, "result": "not_found"}
-        #     )
-        #     return None
-        # else:
-        #     self._metrics_client.increment(
-        #         "gcs.blob.fetch", tags={"provider": self.provider_name, "result": "found"}
-        #     )
-        return HttpUrl(f"{self.storage_base_url}/{self._bucket.name}/{blob_name}")
+        """Get a logo URL for a given category and lookup key."""
+        logo_manifest = self._logo_manifest.data
+        if logo_manifest is None:
+            return None
+        logo_data = logo_manifest.get(category, key)
+        if logo_data is None:
+            logger.warning(f"Logo does not exist for category={category} and key={key}")
+            self._metrics_client.increment(
+                f"{self.metrics_namespace}.lookup.miss", tags={"provider": self.provider_name}
+            )
+            return None
+        return logo_data.logo.url
