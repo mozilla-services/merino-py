@@ -245,6 +245,9 @@ suggest/adm:
       - name: outcome
         description: |
           The sampling outcome (selected, suppressed, skipped)
+      - name: subject
+        description: |
+          The identifier of the subject that has gone through Thompson sampling
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []

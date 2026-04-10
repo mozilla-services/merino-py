@@ -65,7 +65,7 @@ async def test_query_with_thompson_returns_suggestion(
         )
     ]
     statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select", tags={"outcome": "selected"}
+        "providers.adm.thompson.select", tags={"outcome": "selected", "subject": "example.org"}
     )
 
 
@@ -87,7 +87,7 @@ async def test_query_with_thompson_dummy_suppresses_suggestion(
 
     assert res == []
     statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select", tags={"outcome": "suppressed"}
+        "providers.adm.thompson.select", tags={"outcome": "suppressed", "subject": "example.org"}
     )
 
 
@@ -219,7 +219,7 @@ async def test_query_with_thompson_single_candidate_below_threshold_returns_sugg
         )
     ]
     statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select", tags={"outcome": "skipped"}
+        "providers.adm.thompson.select", tags={"outcome": "skipped", "subject": "example.org"}
     )
 
 
@@ -287,7 +287,7 @@ async def test_query_with_thompson_returns_fallback_when_fallback_enabled(
         )
     ]
     statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select", tags={"outcome": "selected"}
+        "providers.adm.thompson.select", tags={"outcome": "selected", "subject": "example.org"}
     )
 
 
@@ -326,5 +326,5 @@ async def test_query_with_thompson_dummy_return_suggestion_when_fallback_enabled
         )
     ]
     statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select", tags={"outcome": "suppressed"}
+        "providers.adm.thompson.select", tags={"outcome": "suppressed", "subject": "example.org"}
     )
