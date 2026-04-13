@@ -58,7 +58,7 @@ request_timeout_ms = 10000
 gcs_project = "moz-fx-merino-nonprod-ee93"
 
 # MERINO_IMAGE_GCS__GCS_BUCKET
-gcs_bucket = "merino-images-stagepy"
+gcs_bucket = "merino-images-localpy"
 
 # MERINO_IMAGE_GCS__ENABLED
 # Whether to enable fetching from GCS.
@@ -67,7 +67,7 @@ gcs_enabled = true
 
 [development.image_gcs_v2]
 # MERINO_IMAGE_GCS_V2__GCS_PROJECT
-gcs_project = "moz-fx-merino-nonprod-db57"
+gcs_project = ""
 
 # MERINO_IMAGE_GCS_V2__GCS_BUCKET
-gcs_bucket = "merino-images-stage"
+gcs_bucket = "merino-images-local"
