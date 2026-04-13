@@ -272,6 +272,23 @@ suggest/mars:
       The ADM provider MARS backend data sync.
     alert_policy: []
 
+  mars_fetch_response_size_bytes:
+    description: |
+      A gauge tracking the raw HTTP response body size in bytes from the MARS
+      suggest/data endpoint. Useful for monitoring payload growth, especially
+      when testing large responses (e.g. segmented caching validation).
+    type: gauge
+    labels:
+      - name: country
+        description: |
+          The country code for the fetched segment
+      - name: form_factor
+        description: |
+          The form factor for the fetched segment
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
   mars_data_staleness_seconds:
     description: |
       A gauge tracking the time in seconds since the last successful data fetch
