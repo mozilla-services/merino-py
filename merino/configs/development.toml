@@ -57,6 +57,7 @@ request_timeout_ms = 10000
 # Leave empty to use the default Google Cloud Storage api
 # MERINO_GCS__ENDPOINT_URL
 endpoint_url = "http://localhost:4443"
+
 [development.image_gcs]
 # MERINO_IMAGE_GCS__GCS_PROJECT
 # Staging project
