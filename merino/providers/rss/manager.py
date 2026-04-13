@@ -31,7 +31,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
     match setting.type:
         case RssProviderType.WIKIMEDIA_POTD:
             http_client = create_http_client(
-                base_url=settings.rss_providers.wikimedia_potd.fed_url,
+                base_url=settings.rss_providers.wikimedia_potd.feed_url,
                 connect_timeout=settings.rss_providers.wikimedia_potd.connect_timeout_sec,
             )
 
