@@ -13,8 +13,8 @@ from merino.configs import settings
 logger = logging.getLogger(__name__)
 
 provider: Provider | None = None
-cron_interval_sec: int = settings.providers.logos.cron_interval_sec
-logos_manifest_key: str = settings.providers.logos.logos_manifest_key
+cron_interval_sec: int = settings.logos.cron_interval_sec
+logos_manifest_key: str = settings.logos.logos_manifest_key
 images_bucket: str = settings.image_gcs_v2.gcs_bucket
 
 

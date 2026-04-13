@@ -35,6 +35,15 @@ services:
       - ./local_data/gcs_emulator:/data
     command: -port=4443 -public-host=localhost:4443 -scheme=http
 
+  gcs-setup:
+    image: curlimages/curl:latest
+    depends_on:
+      - fake-gcs
+    volumes:
+      - ./gcs:/gcs:ro
+    entrypoint: ["sh", "/gcs/setup.sh"]
+    restart: "no"
+
   # Adapted from https://github.com/elastic/elasticsearch/blob/main/docs/reference/setup/install/docker/docker-compose.yml
   # Removed auth and certs, disabled ml, running in single-node rather than cluster mode
   # And using custom image to install plugins

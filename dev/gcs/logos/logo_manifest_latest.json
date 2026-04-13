@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-04-02T18:18:47.767248+00:00",
+  "lookups": {
+    "airline": {},
+    "mlb": {
+      "BAL": {
+        "name": "Baltimore Orioles",
+        "abbreviation": "BAL",
+        "logo": {
+          "url": "http://localhost:4443/merino-images-local/logos/mlb/mlb_bal.png",
+          "format": "png"
+        }
+      },
+      "CHW": {
+        "name": "Chicago White Sox",
+        "abbreviation": "CHW",
+        "logo": {
+          "url": "http://localhost:4443/merino-images-local/logos/mlb/mlb_chw.png",
+          "format": "png"
+        }
+      }
+    },
+    "nba": {
+      "CHI": {
+        "name": "Chicago Bulls",
+        "abbreviation": "CHI",
+        "logo": {
+          "url": "http://localhost:4443/merino-images-local/logos/nba/nba_chi.png",
+          "format": "png"
+        }
+      },
+      "HOU": {
+        "name": "Houston Rockets",
+        "abbreviation": "HOU",
+        "logo": {
+          "url": "http://localhost:4443/merino-images-local/logos/nba/nba_hou.png",
+          "format": "png"
+        }
+      }
+    },
+    "nfl": {},
+    "nhl": {
+      "BOS": {
+        "name": "Boston Bruins",
+        "abbreviation": "BOS",
+        "logo": {
+          "url": "http://localhost:4443/merino-images-local/logos/nhl/nhl_bos.png",
+          "format": "png"
+        }
+      },
+      "PHI": {
+        "name": "Philadelphia Flyers",
+        "abbreviation": "PHI",
+        "logo": {
+          "url": "http://localhost:4443/merino-images-local/logos/nhl/nhl_phi.png",
+          "format": "png"
+        }
+      }
+    }
+  }
+}
