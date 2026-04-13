@@ -84,6 +84,13 @@ class MarsBackend:
         self.etags = {}
         self.last_new_data_at = 0.0
 
+    def _emit_index_metrics(self, idx_id: str) -> None:
+        """Emit gauge metrics for the amp index after a successful build."""
+        stats = self.suggestion_content.index_manager.stats(idx_id)
+        tags = {"index": idx_id}
+        for key, value in stats.items():
+            self.metrics_client.gauge(f"amp.index.{key}", value=value, tags=tags)
+
     def get_segment(self, form_factor_str: str) -> SegmentType:
         """Compose segment from a form factor string.
 
@@ -133,6 +140,7 @@ class MarsBackend:
                     icons_in_use = icons_in_use.union(
                         self.suggestion_content.index_manager.list_icons(idx_id)
                     )
+                    self._emit_index_metrics(idx_id)
                 except Exception as e:
                     logger.warning(
                         f"Unable to build index or get icons for {idx_id}",
@@ -163,13 +171,6 @@ class MarsBackend:
                 icons[icon_id] = original_url
 
         self.suggestion_content.icons.update(icons)
-
-        if self.last_new_data_at > 0:
-            staleness = time.time() - self.last_new_data_at
-            self.metrics_client.gauge(
-                "mars.data.staleness_seconds",
-                value=staleness,
-            )
 
         return self.suggestion_content
 
@@ -242,9 +243,10 @@ class MarsBackend:
 
         url = urljoin(self.base_url, self.suggestion_url_path)
         try:
+            params = {"_test_padding": "true"} if settings.mars.send_test_padding else {}
             response = await self.http_client.get(
                 url,
-                params={"country": country, "form_factor": form_factor},
+                params={"country": country, "form_factor": form_factor, **params},
                 headers=headers,
             )
 

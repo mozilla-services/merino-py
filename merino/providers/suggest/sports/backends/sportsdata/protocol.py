@@ -4,8 +4,13 @@ from typing import Any
 from datetime import datetime
 
 from merino.providers.suggest.base import BaseModel
-from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
-from merino.providers.suggest.sports.backends.sportsdata.common.sports import SPORT_CATEGORY_MAP
+from merino.providers.suggest.sports.backends.sportsdata.common import (
+    GameStatus,
+    SportCategory,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
+    SPORT_CATEGORY_MAP,
+)
 
 
 class SportTeamDetail(BaseModel):

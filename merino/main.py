@@ -12,6 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from merino import curated_recommendations, governance
+from merino.providers import rss
 from merino.configs.app_configs.config_logging import configure_logging
 from merino.configs.app_configs.config_sentry import configure_sentry
 from merino.providers import suggest, manifest
@@ -45,11 +46,13 @@ async def lifespan(app: FastAPI):
     await configure_metrics()
     await suggest.init_providers()
     await manifest.init_provider()
+    await rss.init_providers()
     curated_recommendations.init_provider()
     governance.start()
     yield
     governance.shutdown()
     # Shut down providers and clean up.
+    await rss.shutdown_providers()
     await suggest.shutdown_providers()
     await get_metrics_client().close()
 

@@ -385,9 +385,11 @@ class Sport:
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
                 home_score=event_description.get("HomeTeamScore")
-                or event_description.get("HomeScore"),
+                or event_description.get("HomeScore")
+                or event_description.get("HomeTeamRuns"),
                 away_score=event_description.get("AwayTeamScore")
-                or event_description.get("AwayScore"),
+                or event_description.get("AwayScore")
+                or event_description.get("AwayTeamRuns"),
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
                 updated=updated,
@@ -501,8 +503,12 @@ class Sport:
                 ),
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
-                home_score=event_description["HomeTeamScore"],
-                away_score=event_description["AwayTeamScore"],
+                home_score=event_description.get("HomeTeamScore")
+                or event_description.get("HomeScore")
+                or event_description.get("HomeTeamRuns"),  # used by MLB
+                away_score=event_description.get("AwayTeamScore")
+                or event_description.get("AwayScore")
+                or event_description.get("AwayTeamRuns"),  # used by MLB
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
                 updated=updated,

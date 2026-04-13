@@ -245,6 +245,9 @@ suggest/adm:
       - name: outcome
         description: |
           The sampling outcome (selected, suppressed, skipped)
+      - name: subject
+        description: |
+          The identifier of the subject that has gone through Thompson sampling
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
@@ -275,6 +278,66 @@ suggest/mars:
       from MARS. Can be used to alert if data becomes stale.
     type: gauge
     labels: []
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.keyword_index_size:
+    description: |
+      A gauge tracking the number of keywords in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.suggestions_count:
+    description: |
+      A gauge tracking the number of suggestions in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.icons_count:
+    description: |
+      A gauge tracking the number of icons in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.advertisers_count:
+    description: |
+      A gauge tracking the number of advertisers in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.url_templates_count:
+    description: |
+      A gauge tracking the number of URL templates in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
     scope: |
       The ADM provider MARS backend data sync.
     alert_policy: []

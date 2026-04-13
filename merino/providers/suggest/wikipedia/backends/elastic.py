@@ -10,7 +10,7 @@ from merino.exceptions import BackendError
 from merino.search.async_elastic import AsyncElasticSearchAdapter
 
 SUGGEST_ID: Final[str] = "suggest-on-title"
-TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}ms"
+REQUEST_TIMEOUT_SEC: Final[float] = settings.providers.wikipedia.es_request_timeout_sec
 MAX_SUGGESTIONS: Final[int] = settings.providers.wikipedia.es_max_suggestions
 
 
@@ -80,7 +80,7 @@ class ElasticBackend:
             res = await self.elasticsearch.search(
                 index=index_id,
                 suggest=suggest,
-                timeout=TIMEOUT_MS,
+                timeout=REQUEST_TIMEOUT_SEC,
                 source_includes=["title"],
             )
         except Exception as e:

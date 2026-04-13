@@ -12,7 +12,7 @@ See [dependencies](./dependencies.md) for how to install uv on your machine.
 Install all the dependencies:
 
 ```
-$ uv sync --all-groups
+uv sync --all-groups
 ```
 
 Run Merino:
@@ -27,6 +27,7 @@ $ make dev
 ```
 
 ### General commands
+
 ```shell
 # List all available make commands with descriptions
 $ make help
@@ -76,7 +77,12 @@ $ make unit-tests
 $ make unit-test-fixtures
 
 # Run integration tests
+# (assumes prebuilt elasticsearch image)
 $ make integration-tests
+
+# Run integration tests locally
+# (builds custom elasticsearch image)
+$ make integration-tests-local
 
 # List fixtures in use per integration test
 $ make integration-test-fixtures

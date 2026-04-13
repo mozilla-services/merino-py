@@ -608,12 +608,32 @@ async def test_fetch_metrics_on_error(
 
 
 @pytest.mark.asyncio
-async def test_staleness_gauge(
+async def test_last_new_data_at_set_on_success(
     mocker: MockerFixture,
     mars_backend: MarsBackend,
     suggestion_response: httpx.Response,
 ) -> None:
-    """Test that mars.data.staleness_seconds gauge is emitted after fetch."""
+    """Test that last_new_data_at is set after a successful 200 with data."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    assert mars_backend.last_new_data_at == 0.0
+
+    await mars_backend.fetch()
+
+    assert mars_backend.last_new_data_at > 0
+
+
+@pytest.mark.asyncio
+async def test_index_metrics_emitted_after_build(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that amp.index.* gauges are emitted after a successful index build."""
     mocker.patch.object(
         httpx.AsyncClient,
         "get",
@@ -622,11 +642,12 @@ async def test_staleness_gauge(
 
     await mars_backend.fetch()
 
-    # last_new_data_at should be set after a successful 200 with data.
-    assert mars_backend.last_new_data_at > 0
+    gauge_calls = mars_backend.metrics_client.gauge.call_args_list  # type: ignore[attr-defined]
+    index_calls = {c[0][0]: c[1] for c in gauge_calls if c[0][0].startswith("amp.index.")}
 
-    # The staleness gauge should have been emitted.
-    mars_backend.metrics_client.gauge.assert_called_once()  # type: ignore[attr-defined]
-    call_args = mars_backend.metrics_client.gauge.call_args  # type: ignore[attr-defined]
-    assert call_args[0][0] == "mars.data.staleness_seconds"
-    assert call_args[1]["value"] >= 0
+    assert "amp.index.suggestions_count" in index_calls
+    assert index_calls["amp.index.suggestions_count"]["value"] == 1
+    assert index_calls["amp.index.suggestions_count"]["tags"] == {"index": DEFAULT_IDX_ID}
+
+    assert "amp.index.keyword_index_size" in index_calls
+    assert index_calls["amp.index.keyword_index_size"]["value"] == 5
