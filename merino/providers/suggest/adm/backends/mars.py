@@ -243,9 +243,10 @@ class MarsBackend:
 
         url = urljoin(self.base_url, self.suggestion_url_path)
         try:
+            params = {"_test_padding": "true"} if settings.mars.send_test_padding else {}
             response = await self.http_client.get(
                 url,
-                params={"country": country, "form_factor": form_factor},
+                params={"country": country, "form_factor": form_factor, **params},
                 headers=headers,
             )
 
