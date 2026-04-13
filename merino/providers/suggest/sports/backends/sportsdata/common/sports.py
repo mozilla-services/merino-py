@@ -256,9 +256,26 @@ class NHL(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
-        )
+        # NHL scores do not have GlobalGameID
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list = []
+        for _id, event in self.events.items():
+            day = event.date.strftime("%Y-%b-%d").upper()
+            if not event.status.is_scheduled() and day not in date_list:
+                # Note: NHL `ScoresBasic` does _NOT_ include the GlobalGameID.
+                url = f"{self.base_url}/GamesByDate/{day}?key={self.api_key}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                )
+                self.load_scores_from_source(
+                    response,
+                    event_timezone=local_timezone,
+                    allow_no_teams=allow_no_teams,
+                )
+            date_list.append(day)
         return self
 
 
@@ -346,9 +363,27 @@ class NBA(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
-        )
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list = []
+        # update scores based on events:
+        # Events may cross multiple days, so we should update those scores.
+        for _id, event in self.events.items():
+            day = event.date.strftime("%Y-%b-%d").upper()
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/ScoresBasic/{day}?key={self.api_key}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                )
+                self.load_scores_from_source(
+                    response,
+                    event_timezone=local_timezone,
+                    allow_no_teams=allow_no_teams,
+                )
+                date_list.append(day)
+
         return self
 
 
@@ -445,9 +480,27 @@ class UCL(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
-        )
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list = []
+        # update scores based on events:
+        # Events may cross multiple days, so we should update those scores.
+        for _id, event in self.events.items():
+            day = event.date.strftime("%Y-%b-%d").upper()
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/ScoresBasic/{day}?key={self.api_key}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                )
+                self.load_scores_from_source(
+                    response,
+                    event_timezone=local_timezone,
+                    allow_no_teams=allow_no_teams,
+                )
+                date_list.append(day)
+
         return self
 
 
@@ -527,6 +580,9 @@ class MLB(Sport):
         """Fetch the list of events for the sport. (5 min interval)"""
         local_timezone = ZoneInfo("America/New_York")
         date = datetime.now(tz=local_timezone).strftime("%Y-%b-%d").upper()
+        # MLB `SchedulesBasic` only uses local GameID and TeamID values. This breaks our
+        # foreign key system, so we'll skip that for the game date directly. (Fortunately, there are
+        # A LOT of baseball games.)
         url = f"{self.base_url}/ScoresBasic/{date}?key={self.api_key}"
         """
         [

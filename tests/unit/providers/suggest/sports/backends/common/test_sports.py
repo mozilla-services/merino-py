@@ -609,7 +609,12 @@ async def test_nhl_update_events(
     assert ev.status == GameStatus.Final
     assert ev.home_team["key"] == "TOR"
     assert ev.away_team["key"] == "VAN"
-    get_data.assert_called_once()
+    assert 2 == get_data.call_count
+    for call in get_data.call_args_list:
+        assert call.kwargs["url"] in [
+            "https://api.sportsdata.io/v3/nhl/scores/json/SchedulesBasic/2026PRE?key=",
+            "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/2025-SEP-22?key=",
+        ]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
@@ -634,7 +639,12 @@ async def test_nba_update_events(
     await nba.update_events(client=mock_client)
     assert 30023869 in nba.events and 0 not in nba.events
     assert nba.events[30023869].status == GameStatus.Final
-    get_data.assert_called_once()
+    assert 2 == get_data.call_count
+    for call in get_data.call_args_list:
+        assert call.kwargs["url"] in [
+            "https://api.sportsdata.io/v3/nba/scores/json/SchedulesBasic/2026PRE?key=",
+            "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2025-SEP-22?key=",
+        ]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
