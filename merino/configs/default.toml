@@ -217,6 +217,10 @@ connect_timeout_sec = 5.0
 # Timeout in seconds for a request to the MARS API.
 request_timeout_sec = 10.0
 
+# MERINO_MARS__SEND_TEST_PADDING
+# Toggle to send the `_test_padding=true` query param for `suggest/data`
+send_test_padding = false
+
 # MERINO_MARS__COUNTRIES
 # Countries to fetch suggestions for from the MARS API.
 countries = ["US"]

@@ -95,3 +95,6 @@ dummy_attempted_count = 1000
 [stage.mars]
 # MERINO_MARS__BASE_URL
 base_url = "https://ads.allizom.org/v1/suggest/"
+
+# MERINO_MARS__SEND_TEST_PADDING
+send_test_padding = true
