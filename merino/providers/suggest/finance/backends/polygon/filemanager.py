@@ -39,7 +39,7 @@ class PolygonFilemanager:
             return self.bucket
 
         if self.gcs_client is None:
-            self.gcs_client = Storage()
+            self.gcs_client = get_storage_client()
 
         self.bucket = Bucket(storage=self.gcs_client, name=self.gcs_bucket_path)
         return self.bucket
