@@ -140,7 +140,8 @@ class SyncedGcsBlobV2(Generic[T]):
         self._increment_fetch_status(200)
 
         blob_size = int(blob.size)
-        blob_updated = datetime.fromisoformat(blob.updated)
+        # Populated at runtime
+        blob_updated = datetime.fromisoformat(blob.updated)  # type: ignore[attr-defined]
 
         self.metrics_client.gauge(
             f"{self.metrics_namespace}.size", value=blob_size, tags=self._default_tags

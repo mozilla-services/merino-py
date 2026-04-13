@@ -9,6 +9,7 @@ fake GCS bucket.
 
 import logging
 from datetime import datetime
+from typing import cast
 from unittest.mock import MagicMock
 
 import aiohttp
@@ -39,7 +40,7 @@ class FakeModel(BaseModel):
 @pytest.fixture
 def mock_storage(mocker: MockerFixture) -> MagicMock:
     """Return a mock async Storage client."""
-    return mocker.MagicMock(spec=Storage)
+    return cast(MagicMock, mocker.MagicMock(spec=Storage))
 
 
 @pytest.fixture
@@ -49,7 +50,7 @@ def mock_blob(mocker: MockerFixture) -> MagicMock:
     blob.size = "100"
     blob.updated = BLOB_UPDATED
     blob.download = mocker.AsyncMock(return_value=orjson.dumps({"value": 1}))
-    return blob
+    return cast(MagicMock, blob)
 
 
 @pytest.fixture
@@ -57,7 +58,7 @@ def mock_bucket(mocker: MockerFixture, mock_blob: MagicMock) -> MagicMock:
     """Return a mock async GCS Bucket whose get_blob returns mock_blob."""
     bucket = mocker.AsyncMock()
     bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
-    return bucket
+    return cast(MagicMock, bucket)
 
 
 @pytest.fixture
