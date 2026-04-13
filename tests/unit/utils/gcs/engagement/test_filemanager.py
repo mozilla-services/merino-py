@@ -52,8 +52,8 @@ def test_get_bucket_lazily_creates_client_and_bucket(
     filemanager: EngagementFilemanager,
     mock_bucket,
 ) -> None:
-    """Test that get_bucket() creates the GCS client and Bucket on first call."""
-    mock_storage_cls = mocker.patch("merino.utils.gcs.engagement.filemanager.Storage")
+    """Test that get_bucket() creates the Bucket on first call using shared gcs client."""
+    mock_storage_cls = mocker.patch("merino.utils.gcs.engagement.filemanager.get_storage_client")
     mocker.patch("merino.utils.gcs.engagement.filemanager.Bucket", return_value=mock_bucket)
 
     assert filemanager.gcs_client is None

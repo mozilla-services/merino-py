@@ -51,3 +51,9 @@ dsn = "http://localhost:9200"
 # Unused, just needs to be non-empty
 api_key = "local"
 request_timeout_ms = 10000
+
+[development.gcs]
+# To enable overriding the GCS endpoint
+# Leave empty to use the default Google Cloud Storage api
+# MERINO_GCS__ENDPOINT_URL
+endpoint_url = "http://localhost:4443"

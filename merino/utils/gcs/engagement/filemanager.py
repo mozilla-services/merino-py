@@ -10,6 +10,9 @@ import orjson
 from gcloud.aio.storage import Blob, Bucket, Storage
 from pydantic import BaseModel
 
+from merino.utils.storage import get_storage_client
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,12 +42,12 @@ class EngagementFilemanager:
         self.bucket = None
 
     def get_bucket(self) -> Bucket:
-        """Lazily instantiate the GCS client and return the configured bucket."""
+        """Return the configured bucket using shared storage client."""
         if self.bucket is not None:
             return self.bucket
 
         if self.gcs_client is None:
-            self.gcs_client = Storage()
+            self.gcs_client = get_storage_client()
 
         self.bucket = Bucket(storage=self.gcs_client, name=self.gcs_bucket_path)
         return self.bucket

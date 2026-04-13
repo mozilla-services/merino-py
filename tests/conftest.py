@@ -35,6 +35,19 @@ def fixture_filter_caplog() -> FilterCaplogFixture:
     return filter_caplog
 
 
+@pytest.fixture(autouse=True)
+def reset_storage_client() -> None:
+    """Reset the shared GCS storage client singleton between tests.
+
+    The Storage client holds an aiohttp session bound to an event loop.
+    The integration tests specifically create a fresh event loop per test,
+    which leaves the cached session in a broken state, unless reset.
+    """
+    import merino.utils.storage as storage_module
+
+    storage_module._shared_storage_client = None
+
+
 @pytest.fixture(name="statsd_mock")
 def fixture_statsd_mock(mocker: MockerFixture) -> Any:
     """Create a StatsD client mock object for testing."""
