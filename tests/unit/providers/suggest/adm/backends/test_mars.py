@@ -628,6 +628,29 @@ async def test_last_new_data_at_set_on_success(
 
 
 @pytest.mark.asyncio
+async def test_fetch_response_size_metric(
+    mocker: MockerFixture,
+    mars_backend: MarsBackend,
+    suggestion_json: str,
+    suggestion_response: httpx.Response,
+) -> None:
+    """Test that mars.fetch.response_size_bytes gauge is emitted on 200."""
+    mocker.patch.object(
+        httpx.AsyncClient,
+        "get",
+        return_value=suggestion_response,
+    )
+
+    await mars_backend.fetch()
+
+    mars_backend.metrics_client.gauge.assert_any_call(  # type: ignore[attr-defined]
+        "mars.fetch.response_size_bytes",
+        value=len(suggestion_json.encode()),
+        tags={"country": "US", "form_factor": "desktop"},
+    )
+
+
+@pytest.mark.asyncio
 async def test_index_metrics_emitted_after_build(
     mocker: MockerFixture,
     mars_backend: MarsBackend,

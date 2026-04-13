@@ -258,6 +258,12 @@ class MarsBackend:
 
             response.raise_for_status()
 
+            self.metrics_client.gauge(
+                "mars.fetch.response_size_bytes",
+                value=len(response.content),
+                tags=tags,
+            )
+
             etag = response.headers.get("ETag")
             if etag:
                 self.etags[idx_id] = etag
