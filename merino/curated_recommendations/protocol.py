@@ -106,7 +106,7 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-release"
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
-    CONTEXTUAL_RANKING_CONTENT_EXPERIMENT = "content-contextual-ranking"
+    INFERRED_TIME_ZONE_EXPERIMENT = "contextual-time-zone"
 
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
@@ -154,7 +154,7 @@ class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
 class ProcessedInterests(BaseModel):
     """Internal representation of interests after processing/decoding"""
 
-    minimum_value_count_for_normalization: int = 3
+    minimum_value_count_for_normalization: int = 2
     model_id: str | None = None
     scores: dict[str, float] = Field(default_factory=dict)
     normalized_scores: dict[str, float] = Field(default_factory=dict)

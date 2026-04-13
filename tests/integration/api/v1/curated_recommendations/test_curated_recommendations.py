@@ -40,11 +40,9 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
-    CONTEXTUAL_RANKING_TREATMENT_TZ,
     DEFAULT_PRODUCTION_MODEL_ID,
-    LOCAL_AND_SERVER_V4_BRANCH_NAME,
 )
+
 from merino.curated_recommendations.ml_backends.protocol import (
     CohortModelBackend,
     ContextualArticleRankings,
@@ -103,7 +101,7 @@ class MockCohortModelBackend(CohortModelBackend):
         model_id: str | None = None,
         training_run_id: str | None = None,
     ) -> str | None:
-        """Return a sample cohort based on simple hash of interests string."""
+        """Return a sample cohort based on simple hash of interests string"""
         if not interests:
             return None
         # Simple hash to assign deterministic cohort
@@ -147,11 +145,11 @@ class MockMLRecommendationsBackend(MLRecsBackend):
             },
         )
 
-        self.data["US_16"] = tz_rankings  # PDT timezone
+        self.data["US_COHORT_6_TZ_2"] = tz_rankings
         self.data["US_COHORT_8"] = cohort_rankings
 
     def get(
-        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
+        self, region: str | None = None, cohort: str | None = None, time_zone: str | None = None
     ) -> ContextualArticleRankings | None:
         """Return sample ML recommendations"""
         if cohort and region:
@@ -159,8 +157,8 @@ class MockMLRecommendationsBackend(MLRecsBackend):
             rankings = self.data.get(key, None)
             if rankings:
                 return rankings
-        if region and utcOffset:
-            key = f"{region}_{utcOffset}"
+        if region and time_zone:
+            key = f"{region}_{time_zone}"
             rankings = self.data.get(key, None)
             if rankings:
                 return rankings
@@ -178,10 +176,10 @@ class MockMLRecommendationsBackend(MLRecsBackend):
         """Return the impression count for a given corpus item id (adjusted for propensity)"""
         return 100000
 
-    def get_most_popular_content_id_by_timezone(self, utcOffset: int) -> str:
+    def get_most_popular_content_id_by_cohort_timezone(self, cohort: int, time_zone: int) -> str:
         """Return the most popular content ID for a given timezone offset."""
-        if utcOffset == 16:
-            return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"  # High scoring item in US_16
+        if time_zone == "2" and cohort == 6:  # High scoring item
+            return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"
         return REC_HIGH_CTR_IDS[0]  # Default high CTR item
 
     def get_most_popular_content_id_by_cohort(self, cohort: int) -> str:
@@ -1748,113 +1746,6 @@ class TestSections:
             if tech_stuff_id in sections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
-    @pytest.mark.parametrize(
-        "experiment_branch",
-        [
-            CONTEXTUAL_RANKING_TREATMENT_TZ,
-            CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
-        ],
-    )
-    def test_sections_contextual_ranking(self, client: TestClient, experiment_branch):
-        """Test that sections feed includes both manually created and ML-generated sections for contextual ranking.
-
-        Both MANUAL and ML sections should be returned together.
-        """
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-                "experimentBranch": experiment_branch,
-            },
-        )
-        data = response.json()
-
-        # Check if the response is valid
-        assert response.status_code == 200
-
-        feeds = data["feeds"]
-        sections = {name: section for name, section in feeds.items() if section is not None}
-
-        # top_stories_section should always be present
-        assert "top_stories_section" in sections
-
-        # Should have ML sections (legacy topics)
-        legacy_topics = {topic.value for topic in Topic}
-        ml_sections_found = [sid for sid in sections if sid in legacy_topics]
-        assert len(ml_sections_found) > 0, "Should have at least some ML legacy topic sections"
-
-        # Check if any manually created sections appear (they may or may not, depending on
-        # whether they have enough items after top stories are removed)
-        manual_sections = [sid for sid in sections if is_manual_section(sid)]
-        if manual_sections:
-            # If the "Tech stuff" manual section appears, verify it has the correct title
-            tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
-            if tech_stuff_id in sections:
-                assert sections[tech_stuff_id]["title"] == "Tech stuff"
-
-    def test_sections_contextual_ranking_result_for_timezone(
-        self,
-        ml_recommendations_backend,
-        engagement_backend,
-        sections_backend,
-        cohort_model_backend,
-        client: TestClient,
-    ):
-        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
-        because the ml_recommendations_backend relies on it to find fresh items, which are limited
-        """
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
-                "utc_offset": 16,
-                "region": "US",
-            },
-        )
-
-        data = response.json()
-        # Check if the response is valid
-        assert response.status_code == 200
-
-        feeds = data["feeds"]
-        sections = {name: section for name, section in feeds.items() if section is not None}
-
-        # top_stories_section should always be present
-        assert "top_stories_section" in sections
-        assert sections["top_stories_section"]["recommendations"][0][
-            "corpusItemId"
-        ] == ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
-
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
-                "utc_offset": 0,
-                "region": "US",
-            },
-        )
-        data = response.json()
-        # Check if the response is valid
-        assert response.status_code == 200
-
-        feeds = data["feeds"]
-        sections = {name: section for name, section in feeds.items() if section is not None}
-
-        # top_stories_section should always be present
-        assert "top_stories_section" in sections
-        # Confirm that we have different content for different timezone
-        assert sections["top_stories_section"]["recommendations"][0][
-            "corpusItemId"
-        ] != ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
-
     def test_sections_inferred_contextual_ranking_result_for_cohort(
         self,
         ml_recommendations_backend,
@@ -1863,7 +1754,7 @@ class TestSections:
         cohort_model_backend,
         client: TestClient,
     ):
-        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
+        """Test end to end content ranking based on cohort and tz offset. Note that engagement_backend is required
         because the ml_recommendations_backend relies on it to find fresh items, which are limited
         """
         response = client.post(
@@ -1871,11 +1762,9 @@ class TestSections:
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value,
-                "experimentBranch": LOCAL_AND_SERVER_V4_BRANCH_NAME,
                 "region": "US",
                 "inferredInterests": {
-                    "values": ["1000", "1000", "1000", "1000", "0001", "1000", "0001", "0001"],
+                    "values": ["1000", "1000", "1000", "1000", "0001", "1000", "1001", "0000"],
                     "model_id": "fake",
                 },
             },
@@ -1904,12 +1793,19 @@ class TestSections:
             json={
                 "locale": "en-US",
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
                 "region": "US",
                 "inferredInterests": {
-                    "values": ["1001", "1001", "1001", "1001", "0001", "1001", "0001", "0001"],
-                    "model_id": "fake",
+                    "values": [
+                        "1000",
+                        "0000",
+                        "1000",
+                        "1000",
+                        "1000",
+                        "0000",
+                        "0001",
+                        "0010",
+                    ],  # <- this indicates time zone 2
+                    "model_id": "inferred-model-v3",
                 },
             },
         )
@@ -1927,30 +1823,8 @@ class TestSections:
         top_item = sections["top_stories_section"]["recommendations"][0]
         assert top_item[
             "corpusItemId"
-        ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+        ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort_timezone(6, 2)
         assert isinstance(top_item["serverScore"], float)
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.INFERRED_LOCAL_EXPERIMENT_V4.value,
-                "experimentBranch": LOCAL_AND_SERVER_V4_BRANCH_NAME,
-                "region": "US",
-                "inferredInterests": {
-                    # Interst vector with no clicks. This has different handling pattern
-                    "values": ["1000", "1000", "1000", "1000", "1000", "1000", "1000", "1000"],
-                    "model_id": "fake",
-                },
-            },
-        )
-        data = response.json()
-        # Check if the response is valid
-        assert response.status_code == 200
-
-        feeds = data["feeds"]
-        sections = {name: section for name, section in feeds.items() if section is not None}
-        assert len(sections) > 1
 
     @pytest.mark.parametrize(
         "sections_payload",

@@ -371,7 +371,8 @@ def test_decode_dp_interests(model_limited, pattern_func, assertion_func, suppor
 
     for key, feature in model.model_data.interest_vector.items():
         if key in model.model_data.private_features:
-            assert assertion_func(updated, key, feature.thresholds)
+            if key != TIME_ZONE_OFFSET_INFERRED_KEY:
+                assert assertion_func(updated, key, feature.thresholds)
 
 
 @pytest.mark.parametrize(
@@ -464,7 +465,10 @@ def test_process_decodes_when_same_values_present(inferred_model, local_model_ba
     # spot-check a couple of features decode to the last threshold
     for key, cfg in iv.items():
         if key in inferred_model.model_data.private_features:
-            assert out.scores[key] == cfg.thresholds[-1]
+            if key not in TIME_ZONE_OFFSET_INFERRED_KEY:
+                assert out.scores[key] == cfg.thresholds[-1]
+            else:
+                assert out.scores[key] == 3  # Time zone returns the Id simply
 
 
 def test_process_decodes_when_different_present(inferred_model, local_model_backend):

@@ -10,6 +10,9 @@ from merino.curated_recommendations.ml_backends.protocol import (
 import logging
 
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.ml_backends.static_local_model import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+)
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
     EngagementRescaler,
@@ -69,11 +72,10 @@ class ContextualRanker(Ranker):
         recs: list[CuratedRecommendation],
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
-        utcOffset: int | None = None,
         region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Pull out scores that were previously computed from the contextual ranker
-        data artifact. We need to look up the items in the ml backend using region and utcOffset.
+        data artifact. We need to look up the items in the ml backend using region.
         """
 
         def boost_interest(rec: CuratedRecommendation) -> float:
@@ -95,14 +97,18 @@ class ContextualRanker(Ranker):
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
         )
 
-        cohort = None
+        cohort: str | None = None
+        time_zone: str | None = None
         if personal_interests is not None:
             cohort = personal_interests.cohort
-        if self.disable_time_zone_context:
-            utcOffset = None
+            tz_raw: float | None = personal_interests.scores.get(
+                TIME_ZONE_OFFSET_INFERRED_KEY, None
+            )
+            if tz_raw is not None and not self.disable_time_zone_context:
+                time_zone = str(int(tz_raw))
 
         contextual_scores: ContextualArticleRankings | None
-        contextual_scores = self.ml_backend.get(region, str(utcOffset), cohort)
+        contextual_scores = self.ml_backend.get(region, cohort, time_zone)
         rng = np.random.default_rng()
         for rec in recs:
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(

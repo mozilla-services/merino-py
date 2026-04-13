@@ -1313,7 +1313,7 @@ class StubMLRecsBackend:
         return True
 
     def get(
-        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
+        self, region: str | None = None, cohort: str | None = None, time_zone: str | None = None
     ) -> ContextualArticleRankings | None:
         """Return pre-configured rankings."""
         return self._rankings

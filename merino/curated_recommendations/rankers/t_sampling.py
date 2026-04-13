@@ -41,7 +41,6 @@ class ThompsonSamplingRanker(Ranker):
         recs: list[CuratedRecommendation],
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
-        utcOffset: int | None = None,
         region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
