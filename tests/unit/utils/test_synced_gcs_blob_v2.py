@@ -79,16 +79,16 @@ def synced(
     return instance
 
 
-def test_accessing_data_while_none_emits_unavailable_metric(
+def test_accessing_data_while_none_emits_not_ready_metric(
     synced: SyncedGcsBlobV2, statsd_mock: MagicMock
 ) -> None:
-    """Data returns None and emits unavailable metric before any fetch.
+    """Data returns None and emits data.not_ready metric before any fetch.
     Note: in here and other tests, passing in the same mock that was used
     to initialize the `synced` fixture to avoid type complaints about
     StatsdClient, rather than accessing directly through synced fixture.
     """
     assert synced.data is None
-    statsd_mock.increment.assert_called_once_with("gcs.sync.unavailable", tags=DEFAULT_TAGS)
+    statsd_mock.increment.assert_called_once_with("gcs.sync.data.not_ready", tags=DEFAULT_TAGS)
 
 
 @pytest.mark.asyncio

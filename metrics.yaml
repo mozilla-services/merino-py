@@ -405,6 +405,101 @@ suggest/flightaware:
       The "api/v1/suggest" API endpoint
     alert_policy: []
 
+utils/synced_gcs_blob_v2:
+  gcs.sync.data.not_ready:
+    description: |
+      A counter incremented when synced GCS blob data is accessed before it is available.
+    type: counter
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.update.timing:
+    description: |
+      A timer covering the count and latency of GCS blob update task executions.
+    type: timing
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.valid:
+    description: |
+      A gauge indicating whether the most recently fetched GCS blob data is valid (1) or invalid (0).
+    type: gauge
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.fetch.response:
+    description: |
+      A counter for GCS blob fetch responses, labeled by HTTP status code.
+    type: counter
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+      - name: status
+        description: |
+          The HTTP status code returned by the GCS fetch (e.g., 200, 404).
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.size:
+    description: |
+      A gauge tracking the size in bytes of the fetched GCS blob.
+    type: gauge
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.last_updated:
+    description: |
+      A gauge tracking the time in seconds since the GCS blob was last successfully updated.
+      Can be used to alert if data becomes stale.
+    type: gauge
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
 weather/hourly_forecasts:
   weather_hourly_forecasts_request_timing:
     description: |

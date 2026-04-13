@@ -102,7 +102,7 @@ class SyncedGcsBlobV2(Generic[T]):
         if self._data is None:
             logger.error("Synced data accessed before it is available")
             self.metrics_client.increment(
-                f"{SyncedGcsBlobV2.metrics_namespace}.unavailable", tags=self._default_tags
+                f"{SyncedGcsBlobV2.metrics_namespace}.data.not_ready", tags=self._default_tags
             )
         return self._data
 
