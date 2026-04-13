@@ -5,15 +5,26 @@
 """Unit tests for the Wikimedia Picture of the Day provider."""
 
 import pytest
+from pytest_mock import MockerFixture
 
-from merino.providers.rss.wikimedia_potd.provider import Potd, WikimediaPotdProvider
+from merino.providers.rss.wikimedia_potd.backends.protocol import (
+    Potd,
+    WikimediaPotdBackend,
+)
+from merino.providers.rss.wikimedia_potd.provider import WikimediaPotdProvider
+
+
+@pytest.fixture(name="backend_mock")
+def fixture_backend_mock(mocker: MockerFixture):
+    """Return a mock WikimediaPotdBackend."""
+    return mocker.AsyncMock(spec=WikimediaPotdBackend)
 
 
 @pytest.fixture(name="provider")
-def fixture_provider(statsd_mock) -> WikimediaPotdProvider:
+def fixture_provider(statsd_mock, backend_mock: WikimediaPotdBackend) -> WikimediaPotdProvider:
     """Return a WikimediaPotdProvider instance for testing."""
     return WikimediaPotdProvider(
-        backend=None,
+        backend=backend_mock,
         metrics_client=statsd_mock,
         name="wikimedia_potd",
         query_timeout_sec=1.0,
@@ -49,8 +60,12 @@ async def test_shutdown(provider: WikimediaPotdProvider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_picture_of_the_day(provider: WikimediaPotdProvider) -> None:
-    """Test that get_picture_of_the_day returns a Potd with empty fields."""
+async def test_get_picture_of_the_day_returns_default_when_backend_returns_none(
+    provider: WikimediaPotdProvider, backend_mock
+) -> None:
+    """Test that get_picture_of_the_day returns an empty Potd when backend returns None."""
+    backend_mock.get_picture_of_the_day.return_value = None
+
     potd = await provider.get_picture_of_the_day()
 
     assert isinstance(potd, Potd)

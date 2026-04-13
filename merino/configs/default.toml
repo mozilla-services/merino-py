@@ -1050,9 +1050,17 @@ type = "wikimedia_potd"
 # Whether or not this provider is enabled by default.
 enabled_by_default = false
 
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to Wikimedia RSS endpoint.
+connect_timeout_sec = 3.0
+
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__QUERY_TIMEOUT_SEC
 # A float (in seconds) indicating the maximum waiting period when querying for POTD data.
 query_timeout_sec = 1.0
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
+# URL for the Wikimedia Picture of the Day RSS feed.
+feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
 
 
 [default.curated_recommendations.gcs]
