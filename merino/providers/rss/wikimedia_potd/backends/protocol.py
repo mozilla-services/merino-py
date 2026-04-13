@@ -15,7 +15,7 @@ class Potd(BaseModel):
 class WikimediaPotdBackend(Protocol):
     """Protocol for a Wikimedia POTD backend that this provider depends on."""
 
-    async def fetch(self) -> Potd | None:  # pragma: no cover
+    async def get_picture_of_the_day(self) -> Potd | None:  # pragma: no cover
         """Fetch the current Wikimedia Picture of the Day.
 
         Returns:

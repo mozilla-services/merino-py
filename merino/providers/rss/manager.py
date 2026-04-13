@@ -5,6 +5,8 @@ from enum import Enum, unique
 from dynaconf.base import Settings
 
 from merino.configs import settings
+from merino.utils.http_client import create_http_client
+from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.providers.rss.base import BaseRssProvider
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPotdBackend,
@@ -28,8 +30,22 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
     """
     match setting.type:
         case RssProviderType.WIKIMEDIA_POTD:
+            http_client = create_http_client(
+                base_url=settings.accuweather.url_base,
+                connect_timeout=settings.providers.accuweather.connect_timeout_sec,
+            )
+
             return WikimediaPotdProvider(
-                backend=WikimediaPotdBackend(feed_url=setting.feed_url),
+                backend=WikimediaPotdBackend(
+                    feed_url=setting.feed_url,
+                    gcs_uploader=GcsUploader(
+                        settings.image_gcs.gcs_project,
+                        settings.image_gcs.gcs_bucket,
+                        settings.image_gcs.cdn_hostname,
+                    ),
+                    http_client=http_client,
+                    metrics_client=get_metrics_client(),
+                ),
                 metrics_client=get_metrics_client(),
                 name=provider_id,
                 query_timeout_sec=setting.query_timeout_sec,

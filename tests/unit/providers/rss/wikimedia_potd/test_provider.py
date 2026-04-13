@@ -64,7 +64,7 @@ async def test_get_picture_of_the_day_returns_default_when_backend_returns_none(
     provider: WikimediaPotdProvider, backend_mock
 ) -> None:
     """Test that get_picture_of_the_day returns an empty Potd when backend returns None."""
-    backend_mock.fetch.return_value = None
+    backend_mock.get_picture_of_the_day.return_value = None
 
     potd = await provider.get_picture_of_the_day()
 

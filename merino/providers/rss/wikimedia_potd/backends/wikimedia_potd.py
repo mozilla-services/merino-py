@@ -27,7 +27,7 @@ class WikimediaPotdBackend:
         self.http_client = http_client
         self.gcs_uploader = gcs_uploader
 
-    async def fetch(self) -> Potd | None:
+    async def get_picture_of_the_day(self) -> Potd | None:
         """Fetch the current Wikimedia Picture of the Day.
 
         Returns:

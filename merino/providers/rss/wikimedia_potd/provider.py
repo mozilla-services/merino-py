@@ -32,7 +32,7 @@ class WikimediaPotdProvider(BaseRssProvider):
         super().__init__(
             name=name, enabled_by_default=enabled_by_default, query_timeout_sec=query_timeout_sec
         )
-        self.backend = None
+        self.backend = backend
         self.metrics_client = metrics_client
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.manifest_data = None
@@ -42,7 +42,7 @@ class WikimediaPotdProvider(BaseRssProvider):
 
     async def get_picture_of_the_day(self) -> Potd:
         """Return the current Wikimedia Picture of the Day."""
-        potd = await self.backend.fetch()
+        potd = await self.backend.get_picture_of_the_day()
         return potd if potd is not None else Potd(title="", image_url="")
 
     async def shutdown(self) -> None:
