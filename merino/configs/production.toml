@@ -63,6 +63,28 @@ gcs_bucket = "merino-images-prod"
 # CDN hostname used for public URLs of stored images
 cdn_hostname = "prod-images.merino.prod.webservices.mozgcp.net"
 
+[production.providers.adm.thompson]
+# MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
+enabled = true
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENABLED
+dummy_enabled = true
+
+# MERINO_PROVIDERS__ADM__THOMPSON__MIN_ATTEMPTED_COUNT
+min_attempted_count = 500
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENGAGED_COUNT
+dummy_engaged_count = 1
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
+dummy_attempted_count = 1000
+
+# MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
+check_client_variants = false
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
+dry_run = true
+
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 # Enum of either `remote` or `local` that defines whether domain data
