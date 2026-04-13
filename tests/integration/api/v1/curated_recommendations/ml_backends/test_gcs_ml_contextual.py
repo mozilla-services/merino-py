@@ -175,7 +175,7 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     # Test that we fall back to country if cohort is missing.
     rankings = gcs_engagement.get(region="US", cohort=None, time_zone="1")
     assert rankings is not None
-    assert rankings.granularity == "REGION"
+    assert rankings.granularity == "global"
 
 
 @pytest.mark.asyncio
