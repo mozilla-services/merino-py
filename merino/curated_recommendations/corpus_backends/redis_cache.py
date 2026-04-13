@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
+_METRICS_NAME = "corpus"
+
 
 class CorpusCacheUnavailable(Exception):
     """Raised when the corpus cache cannot serve data.
@@ -143,7 +145,7 @@ class _RedisCorpusCache:
             if is_fresh and items_data is not None:
                 try:
                     result = deserialize_fn(items_data)
-                    self._metrics.increment("corpus_cache.hit")
+                    self._metrics.increment("cache", tags={"name": _METRICS_NAME, "result": "hit"})
                     return result
                 except Exception:
                     logger.error(
@@ -154,7 +156,7 @@ class _RedisCorpusCache:
                     # Fall through to revalidation/fetch below
             elif items_data is not None:
                 # Stale — try to revalidate
-                self._metrics.increment("corpus_cache.stale")
+                self._metrics.increment("cache", tags={"name": _METRICS_NAME, "result": "stale"})
                 if await self._try_acquire_lock(lock_key):
                     return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
                 try:
@@ -167,7 +169,7 @@ class _RedisCorpusCache:
                     )
 
         # Cache miss — try to acquire lock and fetch
-        self._metrics.increment("corpus_cache.miss")
+        self._metrics.increment("cache", tags={"name": _METRICS_NAME, "result": "miss"})
         if await self._try_acquire_lock(lock_key):
             return await self._revalidate(data_key, lock_key, fetch_fn, serialize_fn)
         # Another pod is populating; wait for it to finish (P95 API latency is ~217ms)
