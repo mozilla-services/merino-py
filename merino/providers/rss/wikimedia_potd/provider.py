@@ -2,32 +2,28 @@
 
 import logging
 import aiodogstatsd
-
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import HttpUrl
 
 from merino.providers.rss.base import BaseRssProvider
+from merino.providers.rss.wikimedia_potd.backends.protocol import (
+    Potd,
+    WikimediaPotdBackend,
+)
 
 logger = logging.getLogger(__name__)
-
-
-class Potd(BaseModel):
-    """Model for the Wikimedia Picture of the Day."""
-
-    title: str = Field(description="Title of the picture of the day.")
-    image_url: str = Field(description="URL of the picture of the day image.")
 
 
 class WikimediaPotdProvider(BaseRssProvider):
     """Provider for the Wikimedia Picture of the Day feed."""
 
-    backend: None
+    backend: WikimediaPotdBackend
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     manifest_data: None
 
     def __init__(
         self,
-        backend: None,
+        backend: WikimediaPotdBackend,
         metrics_client: aiodogstatsd.Client,
         name: str,
         query_timeout_sec: float,
@@ -36,7 +32,7 @@ class WikimediaPotdProvider(BaseRssProvider):
         super().__init__(
             name=name, enabled_by_default=enabled_by_default, query_timeout_sec=query_timeout_sec
         )
-        self.backend = None
+        self.backend = backend
         self.metrics_client = metrics_client
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.manifest_data = None
@@ -46,7 +42,8 @@ class WikimediaPotdProvider(BaseRssProvider):
 
     async def get_picture_of_the_day(self) -> Potd:
         """Return the current Wikimedia Picture of the Day."""
-        return Potd(title="", image_url="")
+        potd = await self.backend.get_picture_of_the_day()
+        return potd if potd is not None else Potd(title="", image_url="")
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
