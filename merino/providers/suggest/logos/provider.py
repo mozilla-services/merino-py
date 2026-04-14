@@ -91,7 +91,7 @@ class Provider:
         if logo_data is None:
             logger.warning(f"Logo does not exist for category={category} and key={key}")
             self._metrics_client.increment(
-                f"{self.metrics_namespace}.lookup.miss", tags={"provider": self.name}
+                f"{self.metrics_namespace}.lookup", tags={"provider": self.name, "result": "miss"}
             )
             return None
         return logo_data.logo.url
