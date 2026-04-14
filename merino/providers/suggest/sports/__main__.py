@@ -19,6 +19,7 @@ from merino.providers.suggest.sports import (
     LOGGING_TAG,
     DEFAULT_INTENT_WORDS,
 )
+from merino.providers.suggest import logos
 from merino.providers.suggest.sports.provider import SportsDataProvider
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
@@ -114,7 +115,8 @@ async def main_query(
         languages=[lang for lang in settings.get("languages", ["en"])],
         index_map={"event": event_map},
     )
-    backend = SportsDataBackend(store=store, settings=settings)
+    await logos.init_provider()
+    backend = SportsDataBackend(store=store, settings=settings, logos=logos.get_provider())
     provider = SportsDataProvider(
         backend=backend,
         metrics_client=get_metrics_client(),

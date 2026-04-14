@@ -78,7 +78,7 @@ class Provider:
         self._logo_manifest = logo_manifest
         super().__init__()
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Initialize the provider and dependencies."""
         self._logo_manifest.initialize()
 
