@@ -204,6 +204,30 @@ def _process_corpus_sections(
     return sections
 
 
+def resolve_5050(
+    original_section: CorpusSection, alternate_section: CorpusSection
+) -> CorpusSection:
+    """Choose between the base and alternate section with 50/50 odds."""
+    return random.sample([original_section, alternate_section], 1)[0]
+
+
+def resolve_section_experiment(section: CorpusSection) -> CorpusSection:
+    """Resolve a canonical section and its alternate slate to the winning section."""
+    alternate_section = section.alternateSection
+    if alternate_section is None:
+        return section
+
+    if alternate_section.experimentVariant == 5050:
+        return resolve_5050(section, alternate_section)
+
+    return section
+
+
+def dedupe_experiment_sections(sections: list[CorpusSection]) -> list[CorpusSection]:
+    """Resolve each canonical section to either its original or alternate slate."""
+    return [resolve_section_experiment(section) for section in sections]
+
+
 async def get_corpus_sections(
     sections_backend: SectionsProtocol,
     surface_id: SurfaceId,
@@ -226,6 +250,9 @@ async def get_corpus_sections(
     """
     # Get raw corpus sections
     raw_corpus_sections = await sections_backend.fetch(surface_id)
+
+    # Dedupe on sections by ID
+    raw_corpus_sections = dedupe_experiment_sections(raw_corpus_sections)
 
     # Split daily-briefing section before filtering (experiment-only gate)
     raw_daily_briefing, remaining_raw = split_daily_briefing_section(raw_corpus_sections)
