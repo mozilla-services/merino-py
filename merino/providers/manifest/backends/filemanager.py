@@ -9,6 +9,8 @@ from gcloud.aio.storage import Blob, Bucket, Storage
 
 from merino.providers.manifest.backends.protocol import ManifestData, GetManifestResultCode
 from merino.utils.metrics import get_metrics_client
+from merino.utils.storage import get_storage_client
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ class ManifestRemoteFilemanager:
         """:param gcs_bucket_path: GCS bucket name to fetch from.
         :param blob_name: Name of the blob in the GCS bucket.
         """
-        self.gcs_storage_client = Storage()
+        self.gcs_storage_client = get_storage_client()
         self.blob_name = blob_name
         self.bucket = Bucket(storage=self.gcs_storage_client, name=gcs_bucket_path)
 
