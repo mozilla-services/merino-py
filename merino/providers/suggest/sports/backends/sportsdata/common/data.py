@@ -324,76 +324,93 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
-                "GlobalHomeTeamId"
-            )
-            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
-                "GlobalAwayTeamId"
-            )
-            home_name = event_description.get("HomeTeam") or event_description.get(
-                "HomeTeamKey", "UNDEFINED_HOME"
-            )
-            away_name = event_description.get("AwayTeam") or event_description.get(
-                "AwayTeamKey", "UNDEFINED_AWAY"
-            )
-            if not home_id or not away_id:
-                logger.warning(
-                    f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+            id = event_description["GlobalGameID"]
+            # only update the scores.
+            if id in self.events:
+                event = self.events[id]
+                event.home_score = (
+                    event_description.get("HomeTeamScore")
+                    or event_description.get("HomeScore")
+                    or event_description.get("HomeTeamRuns")
                 )
-                continue
-            home_team = self.teams.get(home_id)
-            away_team = self.teams.get(away_id)
-            if not home_team or not away_team:
-                logger.warning(
-                    f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+                event.away_score = (
+                    event_description.get("AwayTeamScore")
+                    or event_description.get("HomeScore")
+                    or event_description.get("HomeTeamRuns")
                 )
-                continue
-            try:
-                if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                        tzinfo=timezone.utc
+            else:
+                home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
+                    "GlobalHomeTeamId"
+                )
+                away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
+                    "GlobalAwayTeamId"
+                )
+                home_name = event_description.get("HomeTeam") or event_description.get(
+                    "HomeTeamKey", "UNDEFINED_HOME"
+                )
+                away_name = event_description.get("AwayTeam") or event_description.get(
+                    "AwayTeamKey", "UNDEFINED_AWAY"
+                )
+                if not home_id or not away_id:
+                    logger.warning(
+                        f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
                     )
-                else:
-                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
+                    continue
+                home_team = self.teams.get(home_id)
+                away_team = self.teams.get(away_id)
+                if not home_team or not away_team:
+                    logger.warning(
+                        f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+                    )
+                    continue
+                try:
+                    if "DateTimeUTC" in event_description:
+                        date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
+                            tzinfo=timezone.utc
+                        )
+                    else:
+                        date = datetime.fromisoformat(event_description["DateTime"]).replace(
+                            tzinfo=event_timezone
+                        )
+                # There have been incidents where an event returns "None" as a date value.
+                # We should ignore that event, and allow processing to continue, but note
+                # the error in case we need to escalate the problem.
+                except TypeError:
+                    # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
+                    # but if there's an error, it's probably wise to ignore this.
+                    logger.info(
+                        f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
+                    )
+                    continue
+                # Ignore any events that are outside of the event interest window.
+                if not start_window <= date <= end_window:
+                    continue
+                updated = None
+                # All "Updated" fields are always in ET.
+                if event_description.get("Updated"):
+                    updated = datetime.fromisoformat(event_description["Updated"]).replace(
                         tzinfo=event_timezone
                     )
-            # There have been incidents where an event returns "None" as a date value.
-            # We should ignore that event, and allow processing to continue, but note
-            # the error in case we need to escalate the problem.
-            except TypeError:
-                # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
-                # but if there's an error, it's probably wise to ignore this.
-                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
-                continue
-            # Ignore any events that are outside of the event interest window.
-            if not start_window <= date <= end_window:
-                continue
-            updated = None
-            # All "Updated" fields are always in ET.
-            if event_description.get("Updated"):
-                updated = datetime.fromisoformat(event_description["Updated"]).replace(
-                    tzinfo=event_timezone
+                event = Event(
+                    sport=self.name,
+                    id=id,
+                    terms=f"{home_team.terms} {away_team.terms}",
+                    date=date,
+                    original_date=event_description.get(
+                        "DateTimeUTC", event_description.get("DateTime")
+                    ),
+                    home_team=home_team.minimal(),
+                    away_team=away_team.minimal(),
+                    home_score=event_description.get("HomeTeamScore")
+                    or event_description.get("HomeScore")
+                    or event_description.get("HomeTeamRuns"),
+                    away_score=event_description.get("AwayTeamScore")
+                    or event_description.get("AwayScore")
+                    or event_description.get("AwayTeamRuns"),
+                    status=GameStatus.parse(event_description["Status"]),
+                    expiry=utc_time_from_now(self.event_ttl),
+                    updated=updated,
                 )
-            event = Event(
-                sport=self.name,
-                id=event_description["GlobalGameID"],
-                terms=f"{home_team.terms} {away_team.terms}",
-                date=date,
-                original_date=event_description.get(
-                    "DateTimeUTC", event_description.get("DateTime")
-                ),
-                home_team=home_team.minimal(),
-                away_team=away_team.minimal(),
-                home_score=event_description.get("HomeTeamScore")
-                or event_description.get("HomeScore")
-                or event_description.get("HomeTeamRuns"),
-                away_score=event_description.get("AwayTeamScore")
-                or event_description.get("AwayScore")
-                or event_description.get("AwayTeamRuns"),
-                status=GameStatus.parse(event_description["Status"]),
-                expiry=utc_time_from_now(self.event_ttl),
-                updated=updated,
-            )
             self.events[event.id] = event
         return self.events
 
@@ -458,7 +475,8 @@ class Sport:
                     f"{LOGGING_TAG} Could not find team info for event: {event_description}"
                 )
                 continue
-            game_id = event_description.get("GlobalGameID") or event_description["GameId"]
+            game_id = event_description["GlobalGameID"]
+
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
             if status == GameStatus.Canceled:
