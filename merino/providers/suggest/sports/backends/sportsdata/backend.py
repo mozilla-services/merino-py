@@ -91,8 +91,9 @@ class SportsDataBackend(SportsDataProtocol):
                 # No logos for this sport; leave icons as None
                 continue
             try:
-                home_icon = self._logos.get_logo_url(category, event.home_team.key.lower())
-                event.home_team.icon = home_icon
+                event.home_team.icon = self._logos.get_logo_url(
+                    category, event.home_team.key.lower()
+                )
                 event.away_team.icon = self._logos.get_logo_url(
                     category, event.away_team.key.lower()
                 )
