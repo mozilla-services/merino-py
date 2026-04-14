@@ -79,6 +79,8 @@ class SyncedGcsBlobV2(Generic[T]):
 
     def initialize(self) -> None:
         """Start the background cron job to get new data."""
+        if hasattr(self, "cron_task"):
+            return  # already initialized
         cron_job = cron.Job(
             name=self.cron_job_name,
             interval=self.cron_interval_seconds,

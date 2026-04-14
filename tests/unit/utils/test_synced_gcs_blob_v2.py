@@ -273,6 +273,16 @@ async def test_update_task_handles_generic_exception(
     statsd_mock.gauge.assert_any_call("gcs.sync.valid", value=0, tags=DEFAULT_TAGS)
 
 
+def test_initialize_is_idempotent(synced: SyncedGcsBlobV2, mocker: MockerFixture) -> None:
+    """Calling initialize() twice creates only one cron task."""
+    mock_create_task = mocker.patch("asyncio.create_task", return_value=mocker.MagicMock())
+
+    synced.initialize()
+    synced.initialize()
+
+    mock_create_task.assert_called_once()
+
+
 ## Tests for typed_gcs_json_blob_factory
 
 
