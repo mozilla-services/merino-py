@@ -31,11 +31,12 @@ class WikimediaPotdBackend:
         """Fetch the current Wikimedia Picture of the Day.
 
         Returns:
-            A Potd instance if data is available, otherwise None.
+            A PictureOfTheDay instance if data is available, otherwise None.
         """
-        # NOTE: These are hardcoded for now as a test. The urls are public.
+        # NOTE: These are hardcoded for now to unblock FE testing. The urls are public.
+        # dynamic logic will be added in follow up work.
         return PictureOfTheDay(
-            title="Sample Picture Title",
+            title="Wikimedia Commons picture of the day",
             thumbnail_image_url="https://storage.googleapis.com/merino-images-prod/rss/wikimedia_potd/POTD_2026_04_13.jpg",
             high_res_image_url="https://storage.googleapis.com/merino-images-prod/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg",
             published_date="Mon, 13 Apr 2026 00:00:00 GMT",

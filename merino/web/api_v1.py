@@ -572,8 +572,9 @@ async def get_picture_of_the_day(
     except Exception as ex:
         logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
 
-    # TODO figure out ttl
+    # TTL is temporarily hardcoded for 24h.
+    # Will be dynamically calculated in follow up work.
     return ORJSONResponse(
         content=jsonable_encoder(potd),
-        # headers={"Cache-Control": (f"private, max-age={ttl}")},
+        headers={"Cache-Control": "private, max-age=86400"},
     )
