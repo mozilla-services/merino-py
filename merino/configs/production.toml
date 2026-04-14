@@ -128,8 +128,7 @@ cache = "redis"
 [production.query_normalization]
 enabled = true
 data_source = "remote"
-# TODO: set GCS bucket for production environment
-gcs_bucket = ""
+gcs_bucket = "merino-ml-data-prod"
 
 [production.ml_recommendations.gcs]
 # MERINO__ML_RECOMMENDATIONS__GCS__GCP_PROJECT

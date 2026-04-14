@@ -103,8 +103,7 @@ dummy_attempted_count = 1000
 [stage.query_normalization]
 enabled = true
 data_source = "remote"
-# TODO: set GCS bucket for stage environment
-gcs_bucket = ""
+gcs_bucket = "merino-ml-data-stage"
 
 [stage.mars]
 # MERINO_MARS__BASE_URL
