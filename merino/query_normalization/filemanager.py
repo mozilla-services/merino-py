@@ -5,7 +5,7 @@ import json
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from gcloud.aio.storage import Blob, Bucket, Storage
 
@@ -96,7 +96,7 @@ class QueryNormRemoteFileManager:
         self._bucket = Bucket(storage=self._gcs_client, name=self._gcs_bucket_path)
         return self._bucket
 
-    async def _fetch_json(self, blob_name: str) -> dict | list:
+    async def _fetch_json(self, blob_name: str) -> Any:
         """Fetch and parse a JSON blob from GCS."""
         bucket = await self._get_bucket()
         blob: Blob = await bucket.get_blob(blob_name)

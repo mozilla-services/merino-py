@@ -14,7 +14,7 @@ from merino.query_normalization.filemanager import (
 _DATA_DIR = Path(__file__).parent.parent.parent / "data" / "query_normalization"
 
 
-# local filemanager tests
+# Local filemanager tests
 @pytest.fixture(name="local_fm")
 def fixture_local_fm() -> QueryNormLocalFileManager:
     """Create a local filemanager pointing at test data."""
@@ -55,14 +55,6 @@ async def test_local_get_finance_keywords(local_fm: QueryNormLocalFileManager) -
 
 
 # Remote filemanager tests
-@pytest.fixture(name="remote_fm")
-def fixture_remote_fm() -> QueryNormRemoteFileManager:
-    """Create a remote filemanager with mocked GCS bucket."""
-    fm = QueryNormRemoteFileManager(gcs_bucket_path="test-bucket")
-    fm._bucket = AsyncMock()
-    return fm
-
-
 def _mock_blob(data: bytes) -> AsyncMock:
     """Create a mock GCS blob that returns the given data."""
     blob = AsyncMock()
@@ -70,30 +62,50 @@ def _mock_blob(data: bytes) -> AsyncMock:
     return blob
 
 
+@pytest.fixture(name="mock_bucket")
+def fixture_mock_bucket() -> AsyncMock:
+    """Create a mock GCS bucket."""
+    return AsyncMock()
+
+
+@pytest.fixture(name="remote_fm")
+def fixture_remote_fm(mock_bucket: AsyncMock) -> QueryNormRemoteFileManager:
+    """Create a remote filemanager with mocked GCS bucket."""
+    fm = QueryNormRemoteFileManager(gcs_bucket_path="test-bucket")
+    fm._bucket = mock_bucket
+    return fm
+
+
 @pytest.mark.asyncio
-async def test_remote_get_sports_teams(remote_fm: QueryNormRemoteFileManager) -> None:
+async def test_remote_get_sports_teams(
+    remote_fm: QueryNormRemoteFileManager, mock_bucket: AsyncMock
+) -> None:
     """Fetch sports teams from mocked GCS."""
     teams_data = json.dumps(["lakers", "bulls", "red sox"]).encode()
-    remote_fm._bucket.get_blob.return_value = _mock_blob(teams_data)
+    mock_bucket.get_blob.return_value = _mock_blob(teams_data)
 
     teams = await remote_fm.get_sports_teams()
     assert teams == {"lakers", "bulls", "red sox"}
-    remote_fm._bucket.get_blob.assert_called_with("query_normalization/sports_teams.json")
+    mock_bucket.get_blob.assert_called_with("query_normalization/sports_teams.json")
 
 
 @pytest.mark.asyncio
-async def test_remote_get_word_freq(remote_fm: QueryNormRemoteFileManager) -> None:
+async def test_remote_get_word_freq(
+    remote_fm: QueryNormRemoteFileManager, mock_bucket: AsyncMock
+) -> None:
     """Fetch word frequencies from mocked GCS."""
     csv_data = b"word,freq\nweather,465297\nstock,193730"
-    remote_fm._bucket.get_blob.return_value = _mock_blob(csv_data)
+    mock_bucket.get_blob.return_value = _mock_blob(csv_data)
 
     vocab = await remote_fm.get_word_freq()
     assert vocab == {"weather": 465297, "stock": 193730}
-    remote_fm._bucket.get_blob.assert_called_with("query_normalization/word_freq.csv")
+    mock_bucket.get_blob.assert_called_with("query_normalization/word_freq.csv")
 
 
 @pytest.mark.asyncio
-async def test_remote_get_finance_keywords(remote_fm: QueryNormRemoteFileManager) -> None:
+async def test_remote_get_finance_keywords(
+    remote_fm: QueryNormRemoteFileManager, mock_bucket: AsyncMock
+) -> None:
     """Fetch finance keywords from mocked GCS."""
     fin_data = json.dumps(
         {
@@ -101,9 +113,9 @@ async def test_remote_get_finance_keywords(remote_fm: QueryNormRemoteFileManager
             "keyword_to_etf_tickers": {"dow jones": ["DIA"]},
         }
     ).encode()
-    remote_fm._bucket.get_blob.return_value = _mock_blob(fin_data)
+    mock_bucket.get_blob.return_value = _mock_blob(fin_data)
 
     keywords = await remote_fm.get_finance_keywords()
     assert "apple stock" in keywords
     assert "dow jones" in keywords
-    remote_fm._bucket.get_blob.assert_called_with("query_normalization/finance_tickers.json")
+    mock_bucket.get_blob.assert_called_with("query_normalization/finance_tickers.json")

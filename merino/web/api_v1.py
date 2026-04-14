@@ -252,7 +252,7 @@ async def suggest(
     pipeline = get_pipeline()
     client_variant = settings.query_normalization.client_variant
     use_normalization = pipeline is not None and client_variant in client_variants_list
-    q_normalized = pipeline.normalize(q) if use_normalization else q
+    q_normalized = pipeline.normalize(q) if use_normalization and pipeline else q
     normalization_providers = frozenset(settings.query_normalization.providers)
 
     for p in search_from:
