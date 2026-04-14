@@ -38,7 +38,8 @@ from merino.curated_recommendations.legacy.protocol import (
 from merino.middleware import ScopeKey
 from merino.middleware.user_agent import UserAgent
 from merino.providers.rss import get_wikimedia_potd_provider
-from merino.providers.rss.wikimedia_potd.provider import Potd, WikimediaPotdProvider
+from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
 from merino.providers.manifest import get_provider as get_manifest_provider
@@ -553,21 +554,26 @@ async def get_hourly_forecasts(
             headers={"Cache-Control": (f"private, max-age={ttl}")},
         )
 
+
 @router.get(
-    "/rss/potd",
+    "/rss/picture-of-the-day",
     tags=["rss"],
     summary="Get picture of the day",
-    response_model=Potd
+    response_model=PictureOfTheDay,
 )
-async def get_potd(request: Request, provider: WikimediaPotdProvider = Depends(get_wikimedia_potd_provider)) -> ORJSONResponse:
-    """Get picture of the day"""
-    # TODO undo when needed
-    # metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+async def get_picture_of_the_day(
+    request: Request,
+    provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
+) -> ORJSONResponse:
+    """Get the picture of the day."""
+    potd = None
     try:
-        if(potd := await provider.get_picture_of_the_day() is not None):
-            return ORJSONResponse(
-                content=jsonable_encoder(potd),
-                #headers={"Cache-Control": (f"private, max-age={ttl}")},
-            )
-    except Exception:
-        return ORJSONResponse(content={})
+        potd = await provider.get_picture_of_the_day()
+    except Exception as ex:
+        logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
+
+    # TODO figure out ttl
+    return ORJSONResponse(
+        content=jsonable_encoder(potd),
+        # headers={"Cache-Control": (f"private, max-age={ttl}")},
+    )

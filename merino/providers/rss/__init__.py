@@ -3,7 +3,7 @@
 import logging
 
 from merino.providers.rss.base import BaseRssProvider
-from merino.providers.rss.wikimedia_potd.provider import WikimediaPotdProvider
+from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 from merino.providers.rss.manager import load_providers
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,8 @@ async def shutdown_providers() -> None:
         logger.info("RSS provider shut down", extra={"provider": name})
 
 
-def get_wikimedia_potd_provider() -> WikimediaPotdProvider:
+def get_wikimedia_potd_provider() -> WikimediaPictureOfTheDayProvider:
     """Return the Wikimedia Picture of the Day provider."""
     provider = providers["wikimedia_potd"]
-    assert isinstance(provider, WikimediaPotdProvider)
+    assert isinstance(provider, WikimediaPictureOfTheDayProvider)
     return provider

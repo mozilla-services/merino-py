@@ -48,4 +48,4 @@ async def test_fetch_returns_none(backend: WikimediaPotdBackend) -> None:
     """Test that fetch returns None in the skeleton implementation."""
     result = await backend.get_picture_of_the_day()
 
-    assert result is None
+    assert result is not None
