@@ -416,7 +416,7 @@ async def test_hydrate_events_icons_unknown_sport_leaves_icons_none(
     backend = SportsDataBackend(
         settings=settings.providers.sports, store=sport_data_store, logos=logo_provider_mock
     )
-    summary = _make_summary("UCL")
+    summary = _make_summary("TEST")
 
     await backend._hydrate_events_icons(summary)
 
@@ -446,8 +446,8 @@ async def test_hydrate_events_icons_mixed_sports(sport_data_store, logo_provider
         status_type="scheduled",
         touched="2025-10-01T00:00:00",
     )
-    ucl_event = SportEventDetail(
-        sport="UCL",
+    test_event = SportEventDetail(
+        sport="TEST",
         sport_category=SportCategory.Soccer,
         query="test query",
         date="2025-10-02T00:00:00",
@@ -457,7 +457,7 @@ async def test_hydrate_events_icons_mixed_sports(sport_data_store, logo_provider
         status_type="scheduled",
         touched="2025-10-01T00:00:00",
     )
-    summary = SportSummary(sport="all", values=[nhl_event, ucl_event])
+    summary = SportSummary(sport="all", values=[nhl_event, test_event])
 
     await backend._hydrate_events_icons(summary)
 
