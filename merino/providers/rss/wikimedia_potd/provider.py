@@ -12,10 +12,6 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
 
 logger = logging.getLogger(__name__)
 
-FALLBACK_POTD = PictureOfTheDay(
-    title="", thumbnail_image_url="", high_res_image_url="", published_date=""
-)
-
 
 class WikimediaPictureOfTheDayProvider(BaseRssProvider):
     """Provider for the Wikimedia Picture of the Day feed."""
@@ -44,10 +40,10 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
     async def initialize(self) -> None:
         """Initialize the provider."""
 
-    async def get_picture_of_the_day(self) -> PictureOfTheDay:
+    async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
         """Return the current Wikimedia Picture of the Day."""
         potd = await self.backend.get_picture_of_the_day()
-        return potd if potd is not None else FALLBACK_POTD
+        return potd if potd else None
 
     async def shutdown(self) -> None:
         """Shut down the provider."""

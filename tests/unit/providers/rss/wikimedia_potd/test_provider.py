@@ -4,6 +4,7 @@
 
 """Unit tests for the Wikimedia Picture of the Day provider."""
 
+from pydantic.networks import HttpUrl
 import pytest
 from pytest_mock import MockerFixture
 
@@ -31,6 +32,17 @@ def fixture_provider(
         name="wikimedia_potd",
         query_timeout_sec=1.0,
         enabled_by_default=False,
+    )
+
+
+@pytest.fixture(name="test_potd")
+def fixture_test_potd() -> PictureOfTheDay:
+    """Return a test picture of the day instance."""
+    return PictureOfTheDay(
+        title="Wikimedia Commons picture of the day",
+        thumbnail_image_url="https://test-thumbnail.jpg",
+        high_res_image_url="https://test-high-res.jpg",
+        published_date="Mon, 13 Apr 2026 00:00:00 GMT",
     )
 
 
@@ -62,7 +74,7 @@ async def test_shutdown(provider: WikimediaPictureOfTheDayProvider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_picture_of_the_day_returns_default_when_backend_returns_none(
+async def test_get_picture_of_the_day_returns_none_when_backend_returns_none(
     provider: WikimediaPictureOfTheDayProvider, backend_mock
 ) -> None:
     """Test that get_picture_of_the_day returns an empty Potd when backend returns None."""
@@ -70,8 +82,20 @@ async def test_get_picture_of_the_day_returns_default_when_backend_returns_none(
 
     potd = await provider.get_picture_of_the_day()
 
-    assert isinstance(potd, PictureOfTheDay)
-    assert potd.title == ""
-    assert potd.thumbnail_image_url == ""
-    assert potd.high_res_image_url == ""
-    assert potd.published_date == ""
+    assert potd is None
+
+
+@pytest.mark.asyncio
+async def test_get_picture_of_the_day_returns_correct_potd(
+    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
+) -> None:
+    """Test that get_picture_of_the_day returns a correct potd instance."""
+    backend_mock.get_picture_of_the_day.return_value = test_potd
+
+    potd = await provider.get_picture_of_the_day()
+
+    assert potd is not None
+    assert potd.title == "Wikimedia Commons picture of the day"
+    assert potd.thumbnail_image_url == HttpUrl("https://test-thumbnail.jpg")
+    assert potd.high_res_image_url == HttpUrl("https://test-high-res.jpg")
+    assert potd.published_date == "Mon, 13 Apr 2026 00:00:00 GMT"

@@ -1,15 +1,17 @@
 """Protocol for Wikimedia Picture of the Day provider backends."""
 
 from typing import Protocol
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class PictureOfTheDay(BaseModel):
     """Model for the Wikimedia Picture of the Day."""
 
     title: str = Field(description="Title of the picture of the day.")
-    thumbnail_image_url: str = Field(description="Thumbnail URL of the picture of the day image.")
-    high_res_image_url: str = Field(
+    thumbnail_image_url: HttpUrl = Field(
+        description="Thumbnail URL of the picture of the day image."
+    )
+    high_res_image_url: HttpUrl = Field(
         description="High resolution URL of the picture of the day image."
     )
     published_date: str = Field(description="Date when the image was published.")

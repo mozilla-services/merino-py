@@ -572,7 +572,7 @@ async def get_picture_of_the_day(
     except Exception as ex:
         logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
 
-    # TTL is temporarily hardcoded for 24h.
+    # TTL is temporarily hardcoded as 24h.
     # Will be dynamically calculated in follow up work.
     return ORJSONResponse(
         content=jsonable_encoder(potd),
