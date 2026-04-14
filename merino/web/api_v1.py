@@ -65,6 +65,8 @@ from merino.utils.query_processing.geo_params import (
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 from merino.providers.manifest.provider import Provider as ManifestProvider
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
+from merino.query_normalization import get_pipeline
+from merino.query_normalization.pipeline import tier_a
 
 from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
@@ -246,9 +248,19 @@ async def suggest(
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
     client_variants_list = client_variants.split(",") if client_variants else []
 
+    # Query normalization experiment (Phase 1: sports + finance only)
+    pipeline = get_pipeline()
+    client_variant = settings.query_normalization.client_variant
+    use_normalization = pipeline is not None and client_variant in client_variants_list
+    q_normalized = pipeline.normalize(q) if use_normalization else q
+    normalization_providers = frozenset(settings.query_normalization.providers)
+
     for p in search_from:
+        q_for_provider = (
+            q_normalized if use_normalization and p.name in normalization_providers else q
+        )
         srequest = SuggestionRequest(
-            query=p.normalize_query(q),
+            query=p.normalize_query(q_for_provider),
             geolocation=geolocation,
             request_type=request_type,
             languages=languages,
@@ -290,6 +302,21 @@ async def suggest(
         )
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
+
+    # Normalization experiment metrics (Phase 1 providers only)
+    if use_normalization:
+        query_changed = q_normalized != tier_a(q)
+        suggestion_providers = {s.provider for s in suggestions}
+        for p in search_from:
+            if p.name in normalization_providers:
+                metrics_client.increment(
+                    "normalization.experiment.provider_match",
+                    tags={
+                        "provider": p.name,
+                        "matched": str(p.name in suggestion_providers),
+                        "query_changed": str(query_changed),
+                    },
+                )
 
     return build_suggestion_response(client_variants, search_from, suggestions)
 

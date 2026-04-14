@@ -22,7 +22,7 @@ GEOLOCATION = Location(country="US")
 USER_AGENT = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
 
 
-CLIENT_VARIANTS: list[str] = ["engagement_guided_suggestions"]
+CLIENT_VARIANTS: list[str] = ["engagement_guided_suggestions", "query_norm_treatment"]
 
 
 def test_thompson_attribute_is_none_by_default(adm: Provider) -> None:
