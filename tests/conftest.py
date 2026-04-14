@@ -6,6 +6,7 @@
 
 from logging import LogRecord
 from typing import Any
+from unittest.mock import MagicMock
 
 import aiodogstatsd
 import pytest
@@ -52,3 +53,9 @@ def reset_storage_client() -> None:
 def fixture_statsd_mock(mocker: MockerFixture) -> Any:
     """Create a StatsD client mock object for testing."""
     return mocker.MagicMock(spec=aiodogstatsd.Client)
+
+
+@pytest.fixture(name="logo_provider_mock")
+def fixture_logo_provider_mock() -> MagicMock:
+    """Return a mock logos provider with get_logo_url returning None."""
+    return MagicMock(get_logo_url=MagicMock(return_value=None))

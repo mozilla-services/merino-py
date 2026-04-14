@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 MetricTags = Mapping[str, float | int | str]
 
 INTENT_WORD_COUNT_METRIC_NAME = "intent_word_count"
+MANIFEST_METRICS_NAMESPACE = "manifest"
 
 
 @cache

@@ -223,11 +223,10 @@ def test_is_within_one_hour(description, timestamp, now, expected):
     assert result == expected, f"Failed: {description}"
 
 
-@pytest.mark.asyncio
-async def test_build_flight_summary_valid(flight_with_codeshare, logo_provider_mock):
+def test_build_flight_summary_valid(flight_with_codeshare, logo_provider_mock):
     """Confirm build_flight_summary returns a valid FlightSummary with local timezone conversions."""
-    summary = await build_flight_summary(
-        flight_with_codeshare, normalized_query="UA123", logo_provider=logo_provider_mock
+    summary = build_flight_summary(
+        flight_with_codeshare, normalized_query="UA123", logos_provider=logo_provider_mock
     )
 
     assert isinstance(summary, FlightSummary)
@@ -261,33 +260,30 @@ async def test_build_flight_summary_valid(flight_with_codeshare, logo_provider_m
     assert summary.airline.icon is None
 
 
-@pytest.mark.asyncio
-async def test_build_flight_summary_with_icon(flight_with_codeshare, logo_provider_mock):
+def test_build_flight_summary_with_icon(flight_with_codeshare, logo_provider_mock):
     """Airline icon is set from the logo provider when a URL is returned."""
     icon_url = HttpUrl("https://storage.googleapis.com/logos/airline/airline_ua.png")
     logo_provider_mock.get_logo_url.return_value = icon_url
 
-    summary = await build_flight_summary(
-        flight_with_codeshare, normalized_query="UA123", logo_provider=logo_provider_mock
+    summary = build_flight_summary(
+        flight_with_codeshare, normalized_query="UA123", logos_provider=logo_provider_mock
     )
 
     assert summary is not None
     assert summary.airline.icon == icon_url
 
 
-@pytest.mark.asyncio
-async def test_build_flight_summary_with_codeshare(flight_with_codeshare, logo_provider_mock):
+def test_build_flight_summary_with_codeshare(flight_with_codeshare, logo_provider_mock):
     """Confirm build_flight_summary resolves codeshare queries to the correct ICAO ident in the live URL."""
-    summary = await build_flight_summary(
-        flight_with_codeshare, normalized_query="AC9876", logo_provider=logo_provider_mock
+    summary = build_flight_summary(
+        flight_with_codeshare, normalized_query="AC9876", logos_provider=logo_provider_mock
     )
 
     assert isinstance(summary, FlightSummary)
     assert summary.url == HttpUrl("https://www.flightaware.com/live/flight/ACA9876")
 
 
-@pytest.mark.asyncio
-async def test_build_flight_summary_missing_key_returns_none(caplog, logo_provider_mock):
+def test_build_flight_summary_missing_key_returns_none(caplog, logo_provider_mock):
     """Ensure build_flight_summary returns None and logs a warning when required fields are missing."""
     flight = {
         # missing destination
@@ -302,19 +298,18 @@ async def test_build_flight_summary_missing_key_returns_none(caplog, logo_provid
         "progress_percent": 0,
     }
 
-    result = await build_flight_summary(
-        flight, normalized_query="UA123", logo_provider=logo_provider_mock
+    result = build_flight_summary(
+        flight, normalized_query="UA123", logos_provider=logo_provider_mock
     )
     assert result is None
     assert "incorrect shape" in caplog.text
 
 
-@pytest.mark.asyncio
-async def test_build_flight_summary_invalid_type_returns_none(caplog, logo_provider_mock):
+def test_build_flight_summary_invalid_type_returns_none(caplog, logo_provider_mock):
     """Ensure build_flight_summary returns None and logs a warning when input is not a dict."""
     flight = "not-a-dict"
-    result = await build_flight_summary(
-        flight, normalized_query="UA123", logo_provider=logo_provider_mock
+    result = build_flight_summary(
+        flight, normalized_query="UA123", logos_provider=logo_provider_mock
     )
     assert result is None
     assert "incorrect shape" in caplog.text
@@ -939,8 +934,7 @@ def test_get_flight_number_from_query_if_valid(description, query, mapping, expe
         ("name and code not in set/map", "TS123", None, None, None),
     ],
 )
-@pytest.mark.asyncio
-async def test_get_airline_details(
+def test_get_airline_details(
     description, flight_number, expected_code, expected_name, expected_color, logo_provider_mock
 ):
     """Verify get_airline_details correctly extracts valid IATA/ICAO codes and returns correct airline details."""
@@ -962,7 +956,7 @@ async def test_get_airline_details(
             mock_code_to_name,
         ),
     ):
-        result = await get_airline_details(flight_number, logo_provider_mock)
+        result = get_airline_details(flight_number, logo_provider_mock)
 
     assert isinstance(result, AirlineDetails)
     assert result.code == expected_code, f"Failed code match: {description}"

@@ -5,6 +5,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from unittest.mock import MagicMock
+
 import freezegun
 import pytest
 from elasticsearch import AsyncElasticsearch
@@ -61,6 +63,7 @@ def fixture_sportsdata(
     sportsdata_parameters: dict[str, Any],
     sport_data_store_parameters: dict[str, Any],
     es_client: AsyncElasticsearch,
+    logo_provider_mock: MagicMock,
     monkeypatch,
 ) -> SportsDataBackend:
     """Create a SportsDataBackend instance."""
@@ -73,6 +76,7 @@ def fixture_sportsdata(
     return SportsDataBackend(
         **sportsdata_parameters,
         store=SportsDataStore(**sport_data_store_parameters, client=es_client),
+        logos=logo_provider_mock,
     )
 
 

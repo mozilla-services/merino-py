@@ -289,7 +289,7 @@ gcs_project = ""
 
 # MERINO_IMAGE_GCS_V2__GCS_BUCKET
 # GCS bucket that contains domain data files
-gcs_bucket = "merino-images-local"
+gcs_bucket = ""
 
 # MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
 # CDN hostname used for public URLs of stored images

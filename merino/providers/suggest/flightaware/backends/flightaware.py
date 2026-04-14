@@ -27,7 +27,7 @@ from merino.providers.suggest.flightaware.backends.utils import (
     derive_ttl_for_summaries,
     pick_best_flights,
 )
-from merino.providers.suggest.logos.provider import Provider as LogoProvider
+from merino.providers.suggest.logos.provider import Provider as LogosProvider
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class FlightAwareBackend(FlightBackendProtocol):
         ident_url: str,
         metrics_client: aiodogstatsd.Client,
         cache: CacheAdapter,
-        logo_provider: LogoProvider,
+        logos_provider: LogosProvider,
     ) -> None:
         """Initialize the flight aware backend."""
         self.api_key = api_key
@@ -63,7 +63,7 @@ class FlightAwareBackend(FlightBackendProtocol):
         )
         self.metrics_client = metrics_client
         self.cache = FlightCache(cache)
-        self.logo_provider = logo_provider
+        self.logos_provider = logos_provider
 
     async def fetch_flight_details(self, flight_num: str) -> list[FlightSummary] | None:
         """Fetch flight summaries for a given flight number.
@@ -112,7 +112,7 @@ class FlightAwareBackend(FlightBackendProtocol):
                     f"{metric_base}.get.status",
                     tags={"status_code": response.status_code},
                 )
-            summaries = await self.get_flight_summaries(response.json(), flight_num)
+            summaries = self.get_flight_summaries(response.json(), flight_num)
 
             if summaries:
                 ttl = derive_ttl_for_summaries(summaries)
@@ -138,7 +138,7 @@ class FlightAwareBackend(FlightBackendProtocol):
                 FlightawareErrorMessages.UNEXPECTED_BACKEND_ERROR, flight_num=flight_num
             ) from ex
 
-    async def get_flight_summaries(
+    def get_flight_summaries(
         self, flight_response: dict | None, query: str
     ) -> list[FlightSummary]:
         """Return a prioritized list of summaries of a flight instance."""
@@ -148,12 +148,11 @@ class FlightAwareBackend(FlightBackendProtocol):
         flights = flight_response["flights"] or []
         prioritized_flights = pick_best_flights(flights)
 
-        summaries = []
-        for flight in prioritized_flights:
-            summary = await build_flight_summary(flight, query, self.logo_provider)
-            if summary is not None:
-                summaries.append(summary)
-        return summaries
+        return [
+            summary
+            for flight in prioritized_flights
+            if (summary := build_flight_summary(flight, query, self.logos_provider)) is not None
+        ]
 
     async def fetch_flight_numbers(
         self,

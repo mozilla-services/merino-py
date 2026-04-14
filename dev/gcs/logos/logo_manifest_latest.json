@@ -7,16 +7,14 @@
         "name": "Baltimore Orioles",
         "abbreviation": "BAL",
         "logo": {
-          "url": "http://localhost:4443/merino-images-local/logos/mlb/mlb_bal.png",
-          "format": "png"
+          "url": "http://localhost:4443/merino-images-local/logos/mlb/mlb_bal.png"
         }
       },
       "CHW": {
         "name": "Chicago White Sox",
         "abbreviation": "CHW",
         "logo": {
-          "url": "http://localhost:4443/merino-images-local/logos/mlb/mlb_chw.png",
-          "format": "png"
+          "url": "http://localhost:4443/merino-images-local/logos/mlb/mlb_chw.png"
         }
       }
     },
@@ -25,16 +23,14 @@
         "name": "Chicago Bulls",
         "abbreviation": "CHI",
         "logo": {
-          "url": "http://localhost:4443/merino-images-local/logos/nba/nba_chi.png",
-          "format": "png"
+          "url": "http://localhost:4443/merino-images-local/logos/nba/nba_chi.png"
         }
       },
       "HOU": {
         "name": "Houston Rockets",
         "abbreviation": "HOU",
         "logo": {
-          "url": "http://localhost:4443/merino-images-local/logos/nba/nba_hou.png",
-          "format": "png"
+          "url": "http://localhost:4443/merino-images-local/logos/nba/nba_hou.png"
         }
       }
     },
@@ -44,16 +40,14 @@
         "name": "Boston Bruins",
         "abbreviation": "BOS",
         "logo": {
-          "url": "http://localhost:4443/merino-images-local/logos/nhl/nhl_bos.png",
-          "format": "png"
+          "url": "http://localhost:4443/merino-images-local/logos/nhl/nhl_bos.png"
         }
       },
       "PHI": {
         "name": "Philadelphia Flyers",
         "abbreviation": "PHI",
         "logo": {
-          "url": "http://localhost:4443/merino-images-local/logos/nhl/nhl_phi.png",
-          "format": "png"
+          "url": "http://localhost:4443/merino-images-local/logos/nhl/nhl_phi.png"
         }
       }
     }

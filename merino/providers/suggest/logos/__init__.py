@@ -21,7 +21,8 @@ images_bucket: str = settings.image_gcs_v2.gcs_bucket
 async def init_provider() -> None:
     """Initialize logos provider.
 
-    This should only be called once at the startup of application.
+    As a dependency of suggest providers it is automatically
+    invoked in the suggest providers' initialization method.
     """
     global provider
     start = timer()

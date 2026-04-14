@@ -5,7 +5,7 @@
 """Unit tests for the __init__ suggest provider module."""
 
 import logging
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pytest import LogCaptureFixture
@@ -20,9 +20,27 @@ from merino.providers.suggest import (
     shutdown_providers,
 )
 from merino.providers.suggest.manager import ProviderType
+from merino.providers.suggest.logos.provider import Provider as LogosProvider
 from tests.types import FilterCaplogFixture
 
 DISABLED_PROVIDERS = settings.runtime.disabled_providers
+
+
+@pytest.fixture(autouse=True)
+def patch_logos_provider():
+    """Patch logos init_provider and get_provider to prevent real GCS calls."""
+    mock_provider = MagicMock(spec=LogosProvider)
+    with (
+        patch(
+            "merino.providers.suggest.logos.init_provider",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "merino.providers.suggest.logos.get_provider",
+            return_value=mock_provider,
+        ),
+    ):
+        yield mock_provider
 
 
 @pytest.fixture(autouse=True)
@@ -64,17 +82,21 @@ async def test_init_providers() -> None:
 
 @pytest.mark.parametrize("provider", ["adm", "amo", "top_picks", "wikipedia"])
 @pytest.mark.asyncio
-async def test_init_providers_with_disabled_provider(provider: str) -> None:
+async def test_init_providers_with_disabled_provider(
+    provider: str, patch_logos_provider: MagicMock
+) -> None:
     """Test for the `init_providers`and `load_providers` methods when a provider
     is disabled through the `merino.runtime.disabled_providers` config.
     """
     await init_providers()
 
-    providers = load_providers(disabled_providers_list=[])
+    providers = load_providers(disabled_providers_list=[], logos_provider=patch_logos_provider)
     assert provider in providers.keys()
 
     # Add provider from parameters to block instantiation.
-    providers = load_providers(disabled_providers_list=[provider])
+    providers = load_providers(
+        disabled_providers_list=[provider], logos_provider=patch_logos_provider
+    )
     assert provider not in providers.keys()
 
 

@@ -8,6 +8,7 @@ from merino.utils import metrics
 from merino.configs import settings
 from merino.providers.suggest.base import BaseProvider
 from merino.providers.suggest.manager import load_providers
+from merino.providers.suggest import logos
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -21,9 +22,17 @@ async def init_providers() -> None:
     This should only be called once at the startup of application.
     """
     start = timer()
+    # Dependency for providers
+    await logos.init_provider()
+    logos_provider = logos.get_provider()
 
     # register providers
-    providers.update(load_providers(disabled_providers_list=settings.runtime.disabled_providers))
+    providers.update(
+        load_providers(
+            disabled_providers_list=settings.runtime.disabled_providers,
+            logos_provider=logos_provider,
+        )
+    )
 
     # initialize providers and record time
     init_metric = "providers.initialize"

@@ -10,7 +10,7 @@ from merino.providers.suggest.sports.backends.sportsdata.protocol import SportSu
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
-from merino.providers.suggest.logos.provider import Provider as LogoProvider
+from merino.providers.suggest.logos.provider import Provider as LogosProvider
 from merino.providers.suggest.logos.provider import LogoCategory
 import logging
 
@@ -31,8 +31,8 @@ class SportsDataBackend(SportsDataProtocol):
     def __init__(
         self,
         store: SportsDataStore,
-        logos: LogoProvider,
         settings: LazySettings,
+        logos: LogosProvider,
         max_suggestions: int = 10,
         mix_sports: bool = True,
         *args,
@@ -84,11 +84,6 @@ class SportsDataBackend(SportsDataProtocol):
         """Populate team icons on each event in the summary by
         fetching from the logos provider.
         """
-        # try:
-        #     category = LogoCategory(events.sport.lower())
-        # except ValueError:
-        #     # No logos for this sport; leave icons as None
-        #     return
         for event in events.values:
             try:
                 category = LogoCategory(event.sport.lower())
@@ -96,14 +91,15 @@ class SportsDataBackend(SportsDataProtocol):
                 # No logos for this sport; leave icons as None
                 continue
             try:
-                home_icon = await self._logos.get_logo_url(category, event.home_team.key.lower())
-                logger.debug(f"Home icon: {home_icon}")
+                home_icon = self._logos.get_logo_url(category, event.home_team.key.lower())
                 event.home_team.icon = home_icon
-                event.away_team.icon = await self._logos.get_logo_url(
+                event.away_team.icon = self._logos.get_logo_url(
                     category, event.away_team.key.lower()
                 )
             except Exception as e:
-                logger.error(f"Hydrate events got an error: {e}")
+                logger.error(
+                    f"Error hydrating event icons: {e}\n(category='{category}', team keys=['{event.home_team.key}', '{event.away_team.key}'])"
+                )
 
     async def shutdown(self) -> None:
         """Politely shut down the datastore"""

@@ -14,7 +14,6 @@ from merino.providers.suggest.logos.provider import LogoCategory, Provider, STOR
 from tests.types import FilterCaplogFixture
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "category,key",
     [
@@ -23,25 +22,22 @@ from tests.types import FilterCaplogFixture
     ],
     ids=["lowercase", "capitalized"],
 )
-async def test_get_logo_url_exists(
-    logos_provider: Provider, category: LogoCategory, key: str
-) -> None:
+def test_get_logo_url_exists(logos_provider: Provider, category: LogoCategory, key: str) -> None:
     """Returns the URL from the manifest when the entry exists (regardless of capitalization)."""
-    result = await logos_provider.get_logo_url(category, key)
+    result = logos_provider.get_logo_url(category, key)
 
     assert result == HttpUrl(f"{STORAGE_BASE_URL}/logos/airline/airline_aa.png")
 
 
-@pytest.mark.asyncio
-async def test_get_logo_url_not_found(
+def test_get_logo_url_not_found(
     logos_provider: Provider,
     caplog: pytest.LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
-    statsd_mock
+    statsd_mock,
 ) -> None:
     """Returns None when the manifest has no entry for the given category and key."""
     with caplog.at_level(logging.WARNING):
-        result = await logos_provider.get_logo_url(LogoCategory.MLB, "zzz")
+        result = logos_provider.get_logo_url(LogoCategory.MLB, "zzz")
 
     assert result is None
     records = filter_caplog(caplog.records, "merino.providers.suggest.logos.provider")
@@ -56,15 +52,13 @@ async def test_get_logo_url_not_found(
     )
 
 
-@pytest.mark.asyncio
-async def test_get_logo_url_manifest_unavailable(
+def test_get_logo_url_manifest_unavailable(
     logos_provider: Provider,
     logo_manifest_mock: MagicMock,
 ) -> None:
     """Returns None when the manifest data is not yet available."""
     logo_manifest_mock.data = None
 
-    result = await logos_provider.get_logo_url(LogoCategory.Airline, "aa")
+    result = logos_provider.get_logo_url(LogoCategory.Airline, "aa")
 
     assert result is None
-

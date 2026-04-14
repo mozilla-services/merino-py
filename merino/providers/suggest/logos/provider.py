@@ -8,6 +8,7 @@ from typing import Optional
 import aiodogstatsd
 from pydantic import HttpUrl, BaseModel
 
+from merino.utils.metrics import MANIFEST_METRICS_NAMESPACE
 from merino.utils.synced_gcs_blob_v2 import SyncedGcsBlobV2
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,6 @@ class Logo(BaseModel):
     """A logo."""
 
     url: HttpUrl
-    format: str  # e.g. "png"
 
 
 class LogoEntry(BaseModel):
@@ -54,22 +54,19 @@ class LogoManifest(BaseModel):
 class Provider:
     """Suggestion provider for Logos.
 
-    The process for creating suggestions is currently manual.
-    All icon names must adhere to the following name contract:
+    The process for creating suggestions is currently manual,
+    and must follow the LogoManifest schema.
 
-    "/logos/{category}/{category}_{key}.png" (all lowercased)
-
-    where category is enumerated in LogoCategory, e.g. "airline", "mlb"
-    and the key is the unique lookup key. For airlines, that is the 2-letter
-    IATA code (lowercased). For sports teams, it corresponds to
-    the "key" field in merino.providers.suggest.sports.backends.sportsdata.common.Team
+    Each category dict is comprised of lookup keys to identify
+    a particular entity in the category.
+    For airlines, that is the 2-letter IATA code (lowercased).
+    For sports teams, it corresponds to the "key" field in the
+    `merino.providers.suggest.sports.backends.sportsdata.common.Team`
     model.
     """
 
-    url = HttpUrl("https://merino.services.mozilla.com/")
-    # TODO: Where should this be to be reused...
-    metrics_namespace = "manifest"
-    provider_name = "logos"
+    name = "logos"
+    metrics_namespace = MANIFEST_METRICS_NAMESPACE
     storage_base_url = STORAGE_BASE_URL
 
     def __init__(
@@ -85,7 +82,7 @@ class Provider:
         """Initialize the provider and dependencies."""
         self._logo_manifest.initialize()
 
-    async def get_logo_url(self, category: LogoCategory, key: str) -> Optional[HttpUrl]:
+    def get_logo_url(self, category: LogoCategory, key: str) -> Optional[HttpUrl]:
         """Get a logo URL for a given category and lookup key."""
         logo_manifest = self._logo_manifest.data
         if logo_manifest is None:
@@ -94,7 +91,7 @@ class Provider:
         if logo_data is None:
             logger.warning(f"Logo does not exist for category={category} and key={key}")
             self._metrics_client.increment(
-                f"{self.metrics_namespace}.lookup.miss", tags={"provider": self.provider_name}
+                f"{self.metrics_namespace}.lookup.miss", tags={"provider": self.name}
             )
             return None
         return logo_data.logo.url
