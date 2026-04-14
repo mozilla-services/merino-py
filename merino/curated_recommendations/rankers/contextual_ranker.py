@@ -1,6 +1,5 @@
 """Algorithms for ranking curated recommendations."""
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
 import numpy as np
 
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -44,7 +43,11 @@ logger = logging.getLogger(__name__)
 # These topics are in the current interest vector but not being used to determine the
 # cohort selection.
 CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING = {
-    Topic.TECHNOLOGY: 1.0,
+    #    Example interst boost:
+    #    Topic.PERSONAL_FINANCE: 1.0,
+    #    Currently our cohort based contextual ranker is handling the boosting so
+    #    we don't currently need manual score boosts.
+    "example_unused_topic": 1.0,
 }
 
 CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0001

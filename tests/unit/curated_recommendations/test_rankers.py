@@ -1418,8 +1418,11 @@ class TestContextualRanker:
         ranked = ranker.rank_items(recs, personal_interests=tech_interests)
         assert len(ranked) == 3
         assert ranked[0].ranking_data is not None
+        """ Re-enable if boosting is turned on. Currently boosting is off """
+        """
         assert ranked[0].corpusItemId == "b"
         assert ranked[0].ranking_data.score > A_RANK
+        """
 
         tech_interests = ProcessedInterests(scores={Topic.TECHNOLOGY.value: 0.0})
         ranked = ranker.rank_items(recs, personal_interests=tech_interests)

@@ -655,7 +655,7 @@ def test_get_dummy_experiment_name(model_limited):
     assert result.model_data.private_features and len(result.model_data.private_features) > 0
 
     # Some interests have been removed
-    zeroed_interest = result.model_data.interest_vector[Topic.POLITICS.value]
+    zeroed_interest = result.model_data.interest_vector[Topic.TECHNOLOGY.value]
     assert len(zeroed_interest.thresholds) == len(THRESHOLDS_V3_NORMALIZED)
     assert zeroed_interest.thresholds[0] > 10
 
