@@ -1132,7 +1132,7 @@ bucket_name = ""
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
 # The maximum size in bytes of the contextual ranking scores file. If exceeded, an error will be logged.
-max_size = 2_000_000
+max_size = 3_000_000
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
 # GCS path of the priors JSON file.
