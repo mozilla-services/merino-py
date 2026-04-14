@@ -11,7 +11,7 @@ from merino.providers.rss.base import BaseRssProvider
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPotdBackend,
 )
-from merino.providers.rss.wikimedia_potd.provider import WikimediaPotdProvider
+from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 from merino.utils.metrics import get_metrics_client
 
 
@@ -35,7 +35,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
                 connect_timeout=settings.rss_providers.wikimedia_potd.connect_timeout_sec,
             )
 
-            return WikimediaPotdProvider(
+            return WikimediaPictureOfTheDayProvider(
                 backend=WikimediaPotdBackend(
                     feed_url=setting.feed_url,
                     gcs_uploader=GcsUploader(

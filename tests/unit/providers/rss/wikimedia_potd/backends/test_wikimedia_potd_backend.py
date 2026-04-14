@@ -7,6 +7,7 @@
 import pytest
 from unittest.mock import MagicMock
 from httpx import AsyncClient
+from pydantic import HttpUrl
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
@@ -44,8 +45,12 @@ def fixture_backend(
 
 
 @pytest.mark.asyncio
-async def test_fetch_returns_none(backend: WikimediaPotdBackend) -> None:
-    """Test that fetch returns None in the skeleton implementation."""
+async def test_get_pitcture_of_the_day_returns_correct_potd(backend: WikimediaPotdBackend) -> None:
+    """Test that get_picture_of_the_day method returns the correct potd instance."""
     result = await backend.get_picture_of_the_day()
 
-    assert result is None
+    assert result is not None
+    assert result.title == "Wikimedia Commons picture of the day"
+    assert result.published_date == "Mon, 13 Apr 2026 00:00:00 GMT"
+    assert isinstance(result.thumbnail_image_url, HttpUrl)
+    assert isinstance(result.high_res_image_url, HttpUrl)
