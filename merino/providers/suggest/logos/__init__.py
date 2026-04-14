@@ -3,12 +3,12 @@
 from timeit import default_timer as timer
 import logging
 
-from gcloud.aio.storage import Storage
-
 from merino.utils import metrics
+from merino.utils.storage import get_storage_client
 from merino.utils.synced_gcs_blob_v2 import typed_gcs_json_blob_factory
 from merino.providers.suggest.logos.provider import Provider, LogoManifest
 from merino.configs import settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ async def init_provider() -> None:
 
     logo_manifest = typed_gcs_json_blob_factory(
         LogoManifest,
-        storage_client=Storage(),
+        storage_client=get_storage_client(),
         metrics_client=metrics.get_metrics_client(),
         bucket_name=images_bucket,
         blob_name=logos_manifest_key,
