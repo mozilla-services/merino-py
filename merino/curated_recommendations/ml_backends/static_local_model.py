@@ -177,7 +177,7 @@ class FakeLocalModelSections(LocalModelBackend):
 
 
 # See calculation https://colab.research.google.com/drive/1GlEr2TScikP8YLKpAL1sGTawnimD1IyV#scrollTo=KawDDJnjBwIM
-# Section March 2026 rollout
+# Section March 2026 rollout. This also rougly applies to experiments with the same p/q but 5 interests
 MODEL_P_VALUE = 0.92
 MODEL_Q_VALUE = 0.0288
 
@@ -239,8 +239,9 @@ class SuperInferredModel(LocalModelBackend):
     # These are the only features supported in a small experiment (in addition to time zone)
     v3_small_experiment_topics = {
         Topic.SPORTS.value,
-        Topic.PARENTING.value,
         Topic.SCIENCE.value,
+        Topic.POLITICS.value,
+        Topic.ARTS.value,
     }
 
     limited_topics_set = set(v3_limited_topics)
