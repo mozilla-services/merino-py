@@ -42,7 +42,7 @@ CTR_SECTION_MODEL_ID = "ctr_model_section_1"
 SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID}
 
 DEFAULT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID
-EXPERIMENT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID + "_exp"
+EXPERIMENT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID  # Because we just have a few features zeroed out, we can use the same model id
 
 # These cause interest vector to have no randomization and should only be used
 # when thresholds force a constant ouput
