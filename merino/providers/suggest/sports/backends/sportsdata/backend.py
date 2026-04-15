@@ -67,8 +67,7 @@ class SportsDataBackend(SportsDataProtocol):
                 # TODO: collect the es_score from the events, calculate an average, and
                 # apply that as an adjustment value to the returned score value.
                 # Waiting for guidance about what ranges to have scores.
-                summary = SportSummary.from_events(sport=sport, events=events)
-                suggestions.append(summary)
+                suggestions.append(SportSummary.from_events(sport=sport, events=events))
             return suggestions
         return []
 

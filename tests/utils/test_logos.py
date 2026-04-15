@@ -64,4 +64,3 @@ def test_load_manifest_parses_real_file() -> None:
     manifest = load_manifest()
 
     assert isinstance(manifest, LogoManifest)
-
