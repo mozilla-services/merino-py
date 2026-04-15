@@ -336,8 +336,8 @@ class Sport:
                 )
                 event.away_score = (
                     event_description.get("AwayTeamScore")
-                    or event_description.get("HomeScore")
-                    or event_description.get("HomeTeamRuns")
+                    or event_description.get("AwayScore")
+                    or event_description.get("AwayTeamRuns")
                 )
             else:
                 if no_new:
