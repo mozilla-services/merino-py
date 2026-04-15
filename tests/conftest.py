@@ -77,8 +77,14 @@ def make_manifest():
 
 
 @pytest.fixture(autouse=True)
-def mock_load_manifest(mocker: MockerFixture, make_manifest) -> None:
-    """Patch load_manifest for all tests to avoid reading the real file."""
+def mock_load_manifest(request, mocker: MockerFixture, make_manifest) -> None:
+    """Patch load_manifest for all tests to avoid reading the real file.
+
+    Tests marked with @pytest.mark.restore_load_manifest bypass this mock
+    and exercise the real file I/O.
+    """
+    if request.node.get_closest_marker("restore_load_manifest"):
+        return
     mocker.patch(
         "merino.utils.logos.load_manifest",
         return_value=make_manifest((LogoCategory.Airline, "aa")),

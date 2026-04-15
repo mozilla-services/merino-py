@@ -8,7 +8,7 @@ import logging
 
 import pytest
 
-from merino.utils.logos import get_logo_url, LogoCategory
+from merino.utils.logos import get_logo_url, load_manifest, LogoCategory, LogoManifest
 from tests.types import FilterCaplogFixture
 from merino.configs import settings
 
@@ -51,3 +51,17 @@ def test_get_logo_url_not_found(
         "manifest.lookup",
         tags={"name": "logos", "result": "miss"},
     )
+
+
+@pytest.mark.restore_load_manifest
+def test_load_manifest_parses_real_file() -> None:
+    """Reads and validates the shipped logos_manifest.json file.
+
+    Guards against file corruption, schema drift, or accidental deletion.
+    """
+    load_manifest.cache_clear()
+
+    manifest = load_manifest()
+
+    assert isinstance(manifest, LogoManifest)
+
