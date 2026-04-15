@@ -87,4 +87,3 @@ def mock_load_manifest(request, mocker: MockerFixture, make_manifest) -> None:
         "merino.utils.logos.load_manifest",
         return_value=make_manifest((LogoCategory.Airline, "aa")),
     )
-
