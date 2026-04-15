@@ -178,6 +178,8 @@ filterwarnings = [
   "ignore::pytest.PytestUnraisableExceptionWarning",
   # Ignored as `robobro` still uses an old version of `werkzeug`
   "ignore:'OrderedMultiDict' is deprecated",
+  # Ignored while callers are being migrated to SyncedGcsBlobV2
+  "ignore:Prefer SyncedGcsBlobV2:DeprecationWarning",
 ]
 [tool.hatch.build.targets.sdist]
 include = ["merino"]
