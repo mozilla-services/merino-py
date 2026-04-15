@@ -1,0 +1,9 @@
+{
+  "uid": "merino-dashboard",
+  "title": "Merino",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "panels": []
+}

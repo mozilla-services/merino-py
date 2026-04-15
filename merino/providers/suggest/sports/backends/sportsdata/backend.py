@@ -11,6 +11,10 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
 )
 
+from opentelemetry import trace
+
+tracer = trace.get_tracer(__name__)
+
 
 class SportsDataProtocol(Protocol):
     """Protocol functions for Sports"""
@@ -40,6 +44,7 @@ class SportsDataBackend(SportsDataProtocol):
         self.mix_sports = mix_sports
         self.settings = settings
 
+    @tracer.start_as_current_span("query")
     async def query(
         self,
         query_string: str | None = None,
