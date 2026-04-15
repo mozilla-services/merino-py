@@ -165,7 +165,6 @@ class NFL(Sport):
                 response,
                 event_timezone=local_timezone,
                 allow_no_teams=allow_no_teams,
-                no_new=True,
             )
         return self
 
