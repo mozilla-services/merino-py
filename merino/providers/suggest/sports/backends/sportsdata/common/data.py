@@ -274,6 +274,7 @@ class Sport:
         data: list[dict[str, Any]],
         event_timezone: ZoneInfo = ZoneInfo("UTC"),
         allow_no_teams: bool = False,  # Allow no team information, useful for `quick updates`
+        no_new: bool = False,  # Prevent new items from being added to events.
     ) -> dict[int, "Event"]:
         """Scan the list of Event scores for any event within the 'current' window.
 
