@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from merino import curated_recommendations, governance
 from merino.providers import rss
 from merino.configs.app_configs.config_logging import configure_logging
+from merino.configs.app_configs.config_otel import configure_otel
 from merino.configs.app_configs.config_sentry import configure_sentry
 from merino.providers import suggest, manifest
 from merino.utils.metrics import configure_metrics, get_metrics_client
@@ -58,6 +59,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(openapi_tags=tags_metadata, lifespan=lifespan, default_response_class=ORJSONResponse)
+configure_otel(app)
 
 
 @app.exception_handler(RequestValidationError)

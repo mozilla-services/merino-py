@@ -280,7 +280,8 @@ class ElasticDataStore(ABC):
             raise SportsDataError("Missing credentials for storage")
         if not self.client:
             self.client = AsyncElasticsearch(
-                self.credentials.dsn, api_key=self.credentials.api_key
+                self.credentials.dsn,
+                api_key=self.credentials.api_key,
             )
 
     async def shutdown(self) -> None:
