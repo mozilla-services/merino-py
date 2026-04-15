@@ -157,6 +157,9 @@ warn_unused_ignores = true
 warn_unreachable = true
 
 [tool.pytest.ini_options]
+markers = [
+  "restore_load_manifest: disable the mock_load_manifest autouse fixture and use the real file",
+]
 testpaths = ["tests"]
 norecursedirs = [
   "tests/data/",
