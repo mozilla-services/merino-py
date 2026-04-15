@@ -377,12 +377,76 @@ def test_pipeline_split_then_bm25() -> None:
     assert result == "stock costco"
 
 
+def test_pipeline_split_then_bm25_reorder() -> None:
+    """Split result should be reordered by BM25 when applicable."""
+    # Use words wordsegment won't split correctly but exhaustive split will
+    canonical = {"zaxby treats"}
+    fin_bm25 = BM25Index(["treats zaxby"])
+    p = NormalizePipeline(canonical=canonical, finance_bm25=fin_bm25)
+    # "zaxbytreats" -> wordsegment won't find canonical -> split -> "zaxby treats"
+    # -> BM25 reorder -> "treats zaxby"
+    result = p.normalize("zaxbytreats")
+    assert result == "treats zaxby"
+
+
+def test_pipeline_split_no_bm25() -> None:
+    """Split without BM25 should return split result directly."""
+    canonical = {"zaxby treats"}
+    p = NormalizePipeline(canonical=canonical)
+    result = p.normalize("zaxbytreats")
+    assert result == "zaxby treats"
+
+
 def test_pipeline_no_finance_bm25() -> None:
     """Pipeline without BM25 should still run other steps."""
     canonical = {"red sox", "lakers"}
     p = NormalizePipeline(canonical=canonical)
     assert p.normalize("redsox") == "red sox"
     assert p.normalize("lakers") == "lakers"
+
+
+def test_pipeline_prefix_then_bm25_reorder() -> None:
+    """Prefix complete result should be passed to BM25 reorder."""
+    canonical = {"stock costco"}
+    fin_bm25 = BM25Index(["stock costco"])
+    prefix_idx = build_prefix_index({"costco": 100000, "stock": 193730})
+    p = NormalizePipeline(
+        canonical=canonical,
+        finance_bm25=fin_bm25,
+        canonical_prefix_index=prefix_idx,
+    )
+    # "foo costc" -> prefix -> "foo costco" (not canonical) -> BM25 won't match
+    result = p.normalize("foo costc")
+    assert result == "foo costco"
+
+
+def test_build_prefix_index_short_words_skipped() -> None:
+    """Words shorter than min prefix length should be skipped."""
+    vocab = {"the": 1000000, "weather": 465297}
+    idx = build_prefix_index(vocab)
+    assert "the" not in idx
+    assert "weat" in idx
+
+
+def test_build_prefix_index_replaces_best() -> None:
+    """Higher frequency word should replace lower one as best."""
+    vocab = {"weatherford": 100, "weather": 465297}
+    idx = build_prefix_index(vocab)
+    entry = idx.get("weath")
+    assert entry is not None
+    assert entry[0] == "weather"
+    assert entry[1] == 465297
+    assert entry[2] == 100
+
+
+def test_build_prefix_index_updates_second() -> None:
+    """Third word should update second-best if higher."""
+    vocab = {"weather": 465297, "weatherford": 100, "weatherly": 5000}
+    idx = build_prefix_index(vocab)
+    entry = idx.get("weath")
+    assert entry is not None
+    assert entry[0] == "weather"
+    assert entry[2] == 5000  # weatherly beats weatherford as second
 
 
 def test_pipeline_no_match_passthrough(
