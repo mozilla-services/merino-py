@@ -162,7 +162,10 @@ class NFL(Sport):
             )
 
             self.load_scores_from_source(
-                response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
+                response,
+                event_timezone=local_timezone,
+                allow_no_teams=allow_no_teams,
+                no_new=True,
             )
         return self
 
@@ -274,6 +277,7 @@ class NHL(Sport):
                     response,
                     event_timezone=local_timezone,
                     allow_no_teams=allow_no_teams,
+                    no_new=True,
                 )
             date_list.append(day)
         return self
@@ -381,6 +385,7 @@ class NBA(Sport):
                     response,
                     event_timezone=local_timezone,
                     allow_no_teams=allow_no_teams,
+                    no_new=True,
                 )
                 date_list.append(day)
 
@@ -498,6 +503,7 @@ class UCL(Sport):
                     response,
                     event_timezone=local_timezone,
                     allow_no_teams=allow_no_teams,
+                    no_new=True,
                 )
                 date_list.append(day)
 
