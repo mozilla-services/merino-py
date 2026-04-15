@@ -5,6 +5,7 @@ from merino.query_normalization.pipeline import (
     NormalizePipeline,
     _apply_prefix_complete,
     _try_join_normalize,
+    _try_split_normalize,
     _try_split_token,
     _try_wordsegment,
     build_prefix_index,
@@ -93,6 +94,14 @@ def test_join_ambiguous(canonical: set[str]) -> None:
     assert _try_join_normalize(tokens, canonical) is None
 
 
+def test_join_merged_in_canonical(canonical: set[str]) -> None:
+    """Merge accepted when merged token alone is in canonical."""
+    canonical.add("seatgeek")
+    tokens = ["seat", "geek", "tickets"]
+    result = _try_join_normalize(tokens, canonical)
+    assert result == "seatgeek tickets"
+
+
 # wordsegment
 def test_wordsegment_fused_canonical(canonical: set[str]) -> None:
     """Fused token should be split when result is canonical."""
@@ -145,6 +154,32 @@ def test_split_no_match(canonical: set[str]) -> None:
     assert result is None
 
 
+# split_normalize
+def test_split_normalize_success(canonical: set[str]) -> None:
+    """Split normalize should return canonical form when split matches full query."""
+    canonical.add("slick deals")
+    result = _try_split_normalize(["slickdeals"], canonical)
+    assert result == "slick deals"
+
+
+def test_split_normalize_no_match(canonical: set[str]) -> None:
+    """Split normalize should return None when no split matches."""
+    result = _try_split_normalize(["xyzxyzxyz"], canonical)
+    assert result is None
+
+
+def test_split_normalize_short_skip(canonical: set[str]) -> None:
+    """Split normalize should skip tokens shorter than 5 chars."""
+    result = _try_split_normalize(["abc"], canonical)
+    assert result is None
+
+
+def test_split_normalize_already_canonical(canonical: set[str]) -> None:
+    """Split normalize should skip tokens already in canonical."""
+    result = _try_split_normalize(["lakers"], canonical)
+    assert result is None
+
+
 # build prefix index + prefix autocomplete
 def test_build_prefix_index() -> None:
     """Prefix index should map prefixes to the highest-frequency word."""
@@ -153,6 +188,16 @@ def test_build_prefix_index() -> None:
     entry = idx.get("weat")
     assert entry is not None
     assert entry[0] == "weather"
+
+
+def test_build_prefix_index_second_best() -> None:
+    """Prefix index should track second-best frequency."""
+    vocab = {"weather": 465297, "weatherford": 100}
+    idx = build_prefix_index(vocab)
+    entry = idx.get("weath")
+    assert entry is not None
+    assert entry[0] == "weather"
+    assert entry[2] == 100  # second best freq
 
 
 def test_prefix_complete_last_token(
@@ -195,6 +240,41 @@ def test_prefix_complete_single_token(
     assert result == "weather"
 
 
+def test_prefix_complete_low_freq() -> None:
+    """Completion below min frequency should not fire."""
+    idx = build_prefix_index({"weather": 100})  # below 3000 threshold
+    result = _apply_prefix_complete("nyc weathe", idx, set())
+    assert result == "nyc weathe"
+
+
+def test_prefix_complete_ambiguous_ratio() -> None:
+    """Completion with close second-best should not fire."""
+    idx = build_prefix_index({"weather": 10000, "weatherford": 9000})
+    result = _apply_prefix_complete("nyc weathe", idx, set())
+    assert result == "nyc weathe"
+
+
+def test_prefix_complete_empty_query() -> None:
+    """Empty query should return unchanged."""
+    idx = build_prefix_index({"weather": 465297})
+    result = _apply_prefix_complete("", idx, set())
+    assert result == ""
+
+
+def test_prefix_complete_no_entry() -> None:
+    """Token not in prefix index should return unchanged."""
+    idx = build_prefix_index({"weather": 465297})
+    result = _apply_prefix_complete("test zzzzz", idx, set())
+    assert result == "test zzzzz"
+
+
+def test_prefix_complete_already_best_word() -> None:
+    """Token that is already the best word should not be completed."""
+    idx = build_prefix_index({"weather": 465297})
+    result = _apply_prefix_complete("nyc weather", idx, set())
+    assert result == "nyc weather"
+
+
 # bm25 reorder
 def test_bm25_reorder(finance_bm25: BM25Index) -> None:
     """Query with same tokens in wrong order should be reordered."""
@@ -217,6 +297,13 @@ def test_bm25_different_tokens(finance_bm25: BM25Index) -> None:
 def test_bm25_single_token(finance_bm25: BM25Index) -> None:
     """Single token query should return None."""
     result = finance_bm25.get_top_reorder("stock")
+    assert result is None
+
+
+def test_bm25_empty_scores() -> None:
+    """Query with no matching terms should return None."""
+    bm25 = BM25Index(["apple stock", "tesla stock"])
+    result = bm25.get_top_reorder("xyz abc")
     assert result is None
 
 
@@ -263,11 +350,53 @@ def test_pipeline_prefix_complete(
     assert pipeline.normalize("dow jone") == "dow jones"
 
 
+def test_pipeline_prefix_complete_non_canonical(
+    canonical: set[str],
+    finance_bm25: BM25Index,
+) -> None:
+    """Prefix complete result not in canonical should still update query for BM25."""
+    prefix_idx = build_prefix_index({"weather": 465297, "stock": 193730})
+    p = NormalizePipeline(
+        canonical=canonical,
+        finance_bm25=finance_bm25,
+        canonical_prefix_index=prefix_idx,
+    )
+    # "dow stoc" -> prefix complete -> "dow stock" (not canonical)
+    # -> BM25 won't reorder (not a reorder case) -> returns "dow stock"
+    result = p.normalize("dow stoc")
+    assert result == "dow stock"
+
+
+def test_pipeline_split_then_bm25() -> None:
+    """Split normalize followed by BM25 reorder should work."""
+    canonical = {"stock costco"}
+    fin_bm25 = BM25Index(["stock costco"])
+    p = NormalizePipeline(canonical=canonical, finance_bm25=fin_bm25)
+    # "stockcostco" -> split -> "stock costco" -> already canonical from split
+    result = p.normalize("stockcostco")
+    assert result == "stock costco"
+
+
+def test_pipeline_no_finance_bm25() -> None:
+    """Pipeline without BM25 should still run other steps."""
+    canonical = {"red sox", "lakers"}
+    p = NormalizePipeline(canonical=canonical)
+    assert p.normalize("redsox") == "red sox"
+    assert p.normalize("lakers") == "lakers"
+
+
 def test_pipeline_no_match_passthrough(
     pipeline: NormalizePipeline,
 ) -> None:
     """Non-matching query should pass through unchanged."""
     assert pipeline.normalize("purple elephant") == "purple elephant"
+
+
+def test_pipeline_long_query_skips_split(
+    pipeline: NormalizePipeline,
+) -> None:
+    """Queries with more than 2 tokens should skip split step."""
+    assert pipeline.normalize("this is a long query") == "this is a long query"
 
 
 def test_pipeline_empty_query(
