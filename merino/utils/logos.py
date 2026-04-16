@@ -18,6 +18,11 @@ logger = logging.getLogger(__name__)
 metrics_client = get_metrics_client()
 
 
+_cdn_host_name: str = settings.image_gcs_v2.cdn_hostname
+_protocol = "http" if "localhost" in _cdn_host_name else "https"
+CDN_ROOT_URL: str = f"{_protocol}://{_cdn_host_name}"
+
+
 class LogoCategory(StrEnum):
     """Enumeration of logo categories available in GCS."""
 
@@ -71,7 +76,4 @@ def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
         logger.warning(f"Logo does not exist for category={category} and key={key}")
         metrics_client.increment("manifest.lookup", tags={"name": "logos", "result": "miss"})
         return None
-    host_name: str = settings.image_gcs_v2.cdn_hostname
-    bucket: str = settings.image_gcs_v2.gcs_bucket
-    protocol = "http" if "localhost" in host_name else "https"
-    return HttpUrl(urljoin(f"{protocol}://{host_name}", f"{bucket}/{logo.url}"))
+    return HttpUrl(urljoin(CDN_ROOT_URL, logo.url))
