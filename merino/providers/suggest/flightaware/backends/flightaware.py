@@ -28,7 +28,6 @@ from merino.providers.suggest.flightaware.backends.utils import (
     pick_best_flights,
 )
 
-
 logger = logging.getLogger(__name__)
 
 GCS_BLOB_NAME = "flight_numbers_latest.json"

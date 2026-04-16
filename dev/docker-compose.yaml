@@ -33,7 +33,6 @@ services:
       - 4443:4443
     volumes:
       - ./local_data/gcs_emulator:/data
-      - ./gcs/:/data
     command: -port=4443 -public-host=localhost:4443 -scheme=http
 
   # Adapted from https://github.com/elastic/elasticsearch/blob/main/docs/reference/setup/install/docker/docker-compose.yml
