@@ -405,6 +405,24 @@ suggest/flightaware:
       The "api/v1/suggest" API endpoint
     alert_policy: []
 
+providers/manifest:
+  manifest.lookup:
+    description: |
+      A counter incremented when a manifest-backed provider performs a key lookup.
+      The result label indicates whether the lookup found a match or not.
+    type: counter
+    labels:
+      - name: name
+        description: |
+          An identifier for the manifest, e.g. "logos"
+      - name: result
+        description: |
+          The outcome of the lookup (e.g. "miss" when the requested key
+          does not exist in the manifest).
+    scope: |
+      Any provider that uses the shared manifest metrics namespace.
+    alert_policy: []
+
 utils/synced_gcs_blob_v2:
   gcs.sync.data.not_ready:
     description: |

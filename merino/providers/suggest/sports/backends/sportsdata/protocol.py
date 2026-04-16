@@ -1,7 +1,8 @@
 """Protocol for sport suggestion backends."""
 
-from typing import Any
+from typing import Any, Optional
 from datetime import datetime
+from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseModel
 from merino.providers.suggest.sports.backends.sportsdata.common import (
@@ -11,6 +12,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     SPORT_CATEGORY_MAP,
 )
+from merino.utils.logos import get_logo_url, LogoCategory
 
 
 class SportTeamDetail(BaseModel):
@@ -20,6 +22,7 @@ class SportTeamDetail(BaseModel):
     name: str  # Full name of the team
     colors: list[str]  # list of hex colors from primary to quaternary
     score: int | None  # Current score (if available)
+    icon: HttpUrl | None = None  # Team icon (if available)
 
 
 def build_query(event: dict[str, Any]) -> str:
@@ -48,6 +51,19 @@ class SportEventDetail(BaseModel):
         This presumes that it's reading a json loaded sport Event that was returned by elastic search.
         """
         status: GameStatus = event["event_status"]
+        try:
+            category = LogoCategory(event["sport"].lower())
+        except ValueError:
+            # No logos for this sport; leave icons as None
+            category = None
+
+        def _get_logo_closure(key: Optional[str]) -> Optional[HttpUrl]:
+            if category is None or key is None:
+                return None
+            return get_logo_url(category, key)
+
+        home_team_key = event.get("home_team", {}).get("key")
+        away_team_key = event.get("away_team", {}).get("key")
         return cls(
             sport=event["sport"],
             query=build_query(event),
@@ -55,16 +71,18 @@ class SportEventDetail(BaseModel):
             # keeps the output consistent with prior versions
             date=datetime.fromisoformat(event["date"]).isoformat(),
             home_team=SportTeamDetail(
-                key=event.get("home_team", {}).get("key"),
+                key=home_team_key,
                 name=event.get("home_team", {}).get("name"),
                 colors=event.get("home_team", {}).get("colors"),
                 score=event.get("home_score"),
+                icon=_get_logo_closure(home_team_key),
             ),
             away_team=SportTeamDetail(
-                key=event.get("away_team", {}).get("key"),
+                key=away_team_key,
                 name=event.get("away_team", {}).get("name"),
                 colors=event.get("away_team", {}).get("colors"),
                 score=event.get("away_score"),
+                icon=_get_logo_closure(away_team_key),
             ),
             status=status.as_str(),
             status_type=str(status.as_ui_status()),
