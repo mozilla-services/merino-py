@@ -26,10 +26,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
     SportsDataStore,
 )
-from merino.providers.suggest.sports.backends.sportsdata.protocol import (
-    SportEventDetail,
-)
-from merino.utils.logos import LogoCategory
+from merino.providers.suggest.sports.backends.sportsdata.protocol import SportEventDetail
 
 
 VALID_TEST_RESPONSE: dict = {}
@@ -356,69 +353,3 @@ def test_sport_event_detail_category(sport: str, expected_category: SportCategor
     event = {**base_event, "sport": sport}
     result = SportEventDetail.from_event_dict(event)
     assert result.sport_category == expected_category
-
-
-def test_sport_event_detail_icon_set_when_team_in_manifest(
-    mocker: MockerFixture, make_manifest
-) -> None:
-    """Icons are populated from the manifest when the sport and team key are found."""
-    mocker.patch(
-        "merino.utils.logos.load_manifest",
-        return_value=make_manifest(
-            (LogoCategory.NHL, "phi"),
-            (LogoCategory.NHL, "wpg"),
-        ),
-    )
-
-    event = {
-        "date": "2025-10-01T00:00:00+00:00",
-        "sport": "NHL",
-        "event_status": GameStatus.Scheduled,
-        "home_team": {"key": "PHI", "name": "Philadelphia Flyers", "colors": ["D24303"]},
-        "away_team": {"key": "WPG", "name": "Winnipeg Jets", "colors": ["041E42"]},
-        "home_score": None,
-        "away_score": None,
-        "touched": "2025-10-01T00:00:00+00:00",
-    }
-    result = SportEventDetail.from_event_dict(event)
-
-    host = f"https://{settings.image_gcs_v2.cdn_hostname}"
-    bucket = settings.image_gcs_v2.gcs_bucket
-    assert str(result.home_team.icon) == f"{host}/{bucket}/logos/nhl/nhl_phi.png"
-    assert str(result.away_team.icon) == f"{host}/{bucket}/logos/nhl/nhl_wpg.png"
-
-
-def test_sport_event_detail_icon_none_for_unknown_sport() -> None:
-    """Icons are None when the sport has no corresponding LogoCategory."""
-    event = {
-        "date": "2025-10-01T00:00:00+00:00",
-        "sport": "TEST",
-        "event_status": GameStatus.Scheduled,
-        "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
-        "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
-        "home_score": None,
-        "away_score": None,
-        "touched": "2025-10-01T00:00:00+00:00",
-    }
-    result = SportEventDetail.from_event_dict(event)
-
-    assert result.home_team.icon is None
-    assert result.away_team.icon is None
-
-
-def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
-    """Icons are None when the team key is absent from the manifest."""
-    event = {
-        "date": "2025-10-01T00:00:00+00:00",
-        "sport": "NHL",
-        "event_status": GameStatus.Scheduled,
-        "home_team": {"key": "ZZZ", "name": "Unknown Team", "colors": ["000000"]},
-        "away_team": {"key": "YYY", "name": "Other Team", "colors": ["FFFFFF"]},
-        "home_score": None,
-        "away_score": None,
-        "touched": "2025-10-01T00:00:00+00:00",
-    }
-    result = SportEventDetail.from_event_dict(event)
-
-    assert result.home_team.icon is None
-    assert result.away_team.icon is None

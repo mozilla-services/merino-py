@@ -18,8 +18,6 @@ from merino.providers.suggest.flightaware.backends.protocol import (
     FlightStatus,
     FlightSummary,
 )
-from merino.utils.logos import get_logo_url, LogoCategory
-
 from merino.configs import settings
 
 logger = logging.getLogger(__name__)
@@ -365,16 +363,11 @@ def get_airline_details(flight_number: str) -> AirlineDetails:
     name = name.title() if name else None
     color = airline_data.get("color")
 
-    if code:
-        icon = get_logo_url(LogoCategory.Airline, code)
-    else:
-        icon = None
-
     return AirlineDetails(
         code=code,
         name=name,
         color=color,
-        icon=icon,
+        icon=None,
     )
 
 
