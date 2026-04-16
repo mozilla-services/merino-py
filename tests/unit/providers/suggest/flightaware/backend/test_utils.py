@@ -272,8 +272,7 @@ def test_build_flight_summary_with_icon(flight_with_codeshare, mocker, make_mani
 
     assert summary is not None
     host = f"https://{settings.image_gcs_v2.cdn_hostname}"
-    bucket = settings.image_gcs_v2.gcs_bucket
-    assert str(summary.airline.icon) == f"{host}/{bucket}/logos/airline/airline_ua.png"
+    assert str(summary.airline.icon) == f"{host}/logos/airline/airline_ua.png"
 
 
 def test_build_flight_summary_with_codeshare(flight_with_codeshare):

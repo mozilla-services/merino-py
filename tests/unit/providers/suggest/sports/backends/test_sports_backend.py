@@ -383,9 +383,8 @@ def test_sport_event_detail_icon_set_when_team_in_manifest(
     result = SportEventDetail.from_event_dict(event)
 
     host = f"https://{settings.image_gcs_v2.cdn_hostname}"
-    bucket = settings.image_gcs_v2.gcs_bucket
-    assert str(result.home_team.icon) == f"{host}/{bucket}/logos/nhl/nhl_phi.png"
-    assert str(result.away_team.icon) == f"{host}/{bucket}/logos/nhl/nhl_wpg.png"
+    assert str(result.home_team.icon) == f"{host}/logos/nhl/nhl_phi.png"
+    assert str(result.away_team.icon) == f"{host}/logos/nhl/nhl_wpg.png"
 
 
 def test_sport_event_detail_icon_none_for_unknown_sport() -> None:
