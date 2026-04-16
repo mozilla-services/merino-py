@@ -28,15 +28,17 @@ def test_get_logo_url_exists(category: LogoCategory, key: str) -> None:
     """Returns the URL from the manifest when the entry exists (regardless of capitalization)."""
     result = get_logo_url(category, key)
 
-    assert str(result) == f"{host}/{bucket}/logos/airline/airline_aa.png"
+    assert str(result) == f"{host}/logos/airline/airline_aa.png"
 
 
 def test_get_logo_url_not_found(
     caplog: pytest.LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     statsd_mock,
+    mocker,
 ) -> None:
     """Returns None when the manifest has no entry for the given category and key."""
+    mocker.patch("merino.utils.logos.metrics_client", statsd_mock)
     with caplog.at_level(logging.WARNING):
         result = get_logo_url(LogoCategory.MLB, "zzzzz")
 
