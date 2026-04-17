@@ -52,7 +52,7 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
     )
 
 
-def extract_latest_entry(parsed_feed: FeedParserDict) -> FeedParserDict | None:
+def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict | None:
     """Extract the latest valid entry from a parsed RSS feed.
 
     Returns:

@@ -8,7 +8,7 @@ from httpx import AsyncClient, HTTPError, Response
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.rss.wikimedia_potd.backends.utils import (
-    extract_latest_entry,
+    extract_potd,
     parse_potd,
     RSS_FETCH_REQUEST_HEADERS,
 )
@@ -64,7 +64,7 @@ class WikimediaPotdBackend:
 
             parsed_feed: FeedParserDict = feedparser.parse(feed.text)
 
-            return extract_latest_entry(parsed_feed)
+            return extract_potd(parsed_feed)
         except HTTPError as ex:
             logger.error(
                 f"HTTP error occurred when fetching Wikimedia POTD feed: {ex.__class__.__name__}"
