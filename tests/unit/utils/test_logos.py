@@ -51,7 +51,7 @@ def test_get_logo_url_not_found(
     # Increments miss metric
     statsd_mock.increment.assert_called_once_with(
         "manifest.lookup",
-        tags={"name": "logos", "result": "miss"},
+        tags={"name": "logos.mlb", "result": "miss"},
     )
 
 

@@ -74,6 +74,8 @@ def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
     logo = load_manifest().get(category, key)
     if logo is None:
         logger.warning(f"Logo does not exist for category={category} and key={key}")
-        metrics_client.increment("manifest.lookup", tags={"name": "logos", "result": "miss"})
+        metrics_client.increment(
+            "manifest.lookup", tags={"name": f"logos.{category}", "result": "miss"}
+        )
         return None
     return HttpUrl(urljoin(CDN_ROOT_URL, logo.url))
