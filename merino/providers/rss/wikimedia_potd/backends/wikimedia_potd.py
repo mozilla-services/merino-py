@@ -1,16 +1,20 @@
 """Wikimedia Picture of the Day backend."""
 
-from urllib.parse import urlparse, urlunparse
-
+import logging
 import aiodogstatsd
 import feedparser
-from bs4 import BeautifulSoup, Tag
 from feedparser import FeedParserDict
-from httpx import AsyncClient, Response
-from pydantic import HttpUrl
+from httpx import AsyncClient, HTTPError, Response
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.backends.utils import (
+    extract_latest_entry,
+    parse_potd,
+    RSS_FETCH_REQUEST_HEADERS,
+)
 from merino.utils.gcs.gcs_uploader import GcsUploader
+
+logger = logging.getLogger(__name__)
 
 
 class WikimediaPotdBackend:
@@ -39,65 +43,30 @@ class WikimediaPotdBackend:
         Returns:
             A PictureOfTheDay instance if data is available, otherwise None.
         """
-        return await self.fetch_picture_of_the_day()
+        potd = await self.fetch_picture_of_the_day()
 
-    def _parse_description_html(self, html: str) -> tuple[str, str, str]:
-        """Parse the RSS entry description HTML to extract image URLs and text.
+        if potd is None:
+            return None
+        else:
+            return parse_potd(potd=potd)
 
-        Returns:
-            A tuple of (thumbnail_url, high_res_url, description_text).
-        """
-        soup = BeautifulSoup(html, "html.parser")
-
-        img = soup.find("img")
-
-        src = img.get("src") if isinstance(img, Tag) else None
-        thumbnail_url: str = src if isinstance(src, str) else ""
-
-        parsed = urlparse(thumbnail_url)
-        parts = parsed.path.split("/")
-        if "thumb" in parts:
-            parts.remove("thumb")
-            parts.pop()
-        high_res_url = urlunparse(parsed._replace(path="/".join(parts)))
-
-        desc_div = soup.find("div", class_="description")
-        description_text = desc_div.get_text(separator=" ", strip=True) if desc_div else ""
-
-        return thumbnail_url, high_res_url, description_text
-
-    async def fetch_picture_of_the_day(self) -> PictureOfTheDay | None:
+    async def fetch_picture_of_the_day(self) -> FeedParserDict | None:
         """Fetch Wikimedia Commons picture of the day RSS feed."""
-        feed: Response = await self.http_client.get(
-            self.feed_url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (compatible; Merino/1.0; +https://github.com/mozilla-services/merino-py)"
-            },
-        )
+        try:
+            feed: Response = await self.http_client.get(
+                self.feed_url, headers=RSS_FETCH_REQUEST_HEADERS
+            )
 
-        feed.raise_for_status()
+            feed.raise_for_status()
 
-        if not feed.content:
+            if not feed.content:
+                return None
+
+            parsed_feed: FeedParserDict = feedparser.parse(feed.text)
+
+            return extract_latest_entry(parsed_feed)
+        except HTTPError as ex:
+            logger.error(
+                f"HTTP error occurred when fetching Wikimedia POTD feed: {ex.__class__.__name__}"
+            )
             return None
-
-        parsed_feed: FeedParserDict = feedparser.parse(feed.text)
-
-        if not parsed_feed.entries:
-            return None
-
-        # last item in the list is the latest picture of the day.
-        potd = parsed_feed.entries[-1]
-        title = str(potd.title)
-        published_date = str(potd.published)
-
-        thumbnail_url, high_res_url, description = self._parse_description_html(
-            str(potd.description)
-        )
-
-        return PictureOfTheDay(
-            title=title,
-            thumbnail_image_url=HttpUrl(thumbnail_url),
-            high_res_image_url=HttpUrl(high_res_url),
-            description=description,
-            published_date=published_date,
-        )
