@@ -54,7 +54,10 @@ from merino.utils import task_runner
 from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
 )
-from merino.utils.api.metrics import emit_suggestions_per_metrics
+from merino.utils.api.metrics import (
+    emit_normalization_metrics,
+    emit_suggestions_per_metrics,
+)
 from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
@@ -65,8 +68,8 @@ from merino.utils.query_processing.geo_params import (
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 from merino.providers.manifest.provider import Provider as ManifestProvider
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
-from merino.query_normalization import get_pipeline
-from merino.query_normalization.pipeline import tier_a
+from merino.utils.query_processing.normalization import get_pipeline
+from merino.utils.query_processing.normalization.pipeline import tier_a
 
 from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
@@ -74,6 +77,9 @@ from merino.providers.games.particle.provider import Provider as ParticleProvide
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Query normalization experiment
+NORMALIZATION_CLIENT_VARIANT: str = "query_norm_treatment"
 
 # Param to capture all enabled_by_default=True providers.
 DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
@@ -250,8 +256,9 @@ async def suggest(
 
     # Query normalization experiment (Phase 1: sports + finance only)
     pipeline = get_pipeline()
-    client_variant = settings.query_normalization.client_variant
-    use_normalization = pipeline is not None and client_variant in client_variants_list
+    use_normalization = (
+        pipeline is not None and NORMALIZATION_CLIENT_VARIANT in client_variants_list
+    )
     q_normalized = pipeline.normalize(q) if use_normalization and pipeline else q
     normalization_providers = frozenset(settings.query_normalization.providers)
 
@@ -303,20 +310,14 @@ async def suggest(
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
-    # Normalization experiment metrics (Phase 1 providers only)
     if use_normalization:
-        query_changed = q_normalized != tier_a(q)
-        suggestion_providers = {s.provider for s in suggestions}
-        for p in search_from:
-            if p.name in normalization_providers:
-                metrics_client.increment(
-                    "normalization.experiment.provider_match",
-                    tags={
-                        "provider": p.name,
-                        "matched": str(p.name in suggestion_providers),
-                        "query_changed": str(query_changed),
-                    },
-                )
+        emit_normalization_metrics(
+            metrics_client,
+            suggestions,
+            search_from,
+            normalization_providers,
+            query_changed=q_normalized != tier_a(q),
+        )
 
     return build_suggestion_response(client_variants, search_from, suggestions)
 

@@ -52,7 +52,7 @@ FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
 CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
 TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
-ENGAGEMENT_GUIDED_SUGGESTIONS: str = settings.providers.adm.thompson.engagement_guided_suggestions
+ENGAGEMENT_GUIDED_SUGGESTIONS: str = "engagement_guided_suggestions"
 
 
 class SponsoredSuggestion(BaseSuggestion):

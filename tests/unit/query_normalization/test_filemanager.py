@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from merino.query_normalization.filemanager import (
+from merino.utils.query_processing.normalization.filemanager import (
     QueryNormLocalFileManager,
     QueryNormRemoteFileManager,
 )

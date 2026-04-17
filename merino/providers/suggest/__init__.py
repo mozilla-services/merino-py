@@ -8,7 +8,7 @@ from merino.utils import metrics
 from merino.configs import settings
 from merino.providers.suggest.base import BaseProvider
 from merino.providers.suggest.manager import load_providers
-from merino.query_normalization import init_pipeline
+from merino.utils.query_processing.normalization import init_pipeline
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []

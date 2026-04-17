@@ -126,7 +126,7 @@ cache = "redis"
 cache = "redis"
 
 [production.query_normalization]
-enabled = true
+enabled = false
 data_source = "remote"
 gcs_bucket = "merino-ml-data-prod"
 

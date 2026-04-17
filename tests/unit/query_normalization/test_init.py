@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-import merino.query_normalization as qn_module
-from merino.query_normalization import get_pipeline, init_pipeline
+import merino.utils.query_processing.normalization as qn_module
+from merino.utils.query_processing.normalization import get_pipeline, init_pipeline
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +17,7 @@ def _reset_pipeline() -> None:
 @pytest.mark.asyncio
 async def test_init_pipeline_disabled() -> None:
     """Pipeline should not initialize when disabled."""
-    with patch("merino.query_normalization.settings") as mock_settings:
+    with patch("merino.utils.query_processing.normalization.settings") as mock_settings:
         mock_settings.query_normalization.enabled = False
         await init_pipeline()
         assert get_pipeline() is None
@@ -26,7 +26,7 @@ async def test_init_pipeline_disabled() -> None:
 @pytest.mark.asyncio
 async def test_init_pipeline_local() -> None:
     """Pipeline should initialize with local filemanager."""
-    with patch("merino.query_normalization.settings") as mock_settings:
+    with patch("merino.utils.query_processing.normalization.settings") as mock_settings:
         mock_settings.query_normalization.enabled = True
         mock_settings.query_normalization.data_source = "local"
         mock_settings.query_normalization.sports_teams_file = (
@@ -48,8 +48,10 @@ async def test_init_pipeline_local() -> None:
 async def test_init_pipeline_remote() -> None:
     """Pipeline should initialize with remote filemanager."""
     with (
-        patch("merino.query_normalization.settings") as mock_settings,
-        patch("merino.query_normalization.QueryNormRemoteFileManager") as mock_remote_cls,
+        patch("merino.utils.query_processing.normalization.settings") as mock_settings,
+        patch(
+            "merino.utils.query_processing.normalization.QueryNormRemoteFileManager"
+        ) as mock_remote_cls,
     ):
         mock_settings.query_normalization.enabled = True
         mock_settings.query_normalization.data_source = "remote"

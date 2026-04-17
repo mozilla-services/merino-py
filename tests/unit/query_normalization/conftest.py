@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import wordsegment
 
-from merino.query_normalization.pipeline import (
+from merino.utils.query_processing.normalization.pipeline import (
     BM25Index,
     NormalizePipeline,
     build_prefix_index,

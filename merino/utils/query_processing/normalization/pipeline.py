@@ -1,16 +1,31 @@
 """Precision-first query normalization cascade.
 
-Pipeline (in order):
-  1. Tier A:           NFKC + punct normalization + casefold + whitespace collapse
-  2. Exact hit:        query already canonical -> return immediately
-  3. Join normalize:   "door dash" -> "doordash" via adjacent-pair join
-  4. Word segment:     "homedepot" -> "home depot" via statistical bigram splitter
-                       (exhaustive split as secondary fallback)
-  5. Prefix complete:  autocomplete the last partial token when one completion
-                       clearly dominates (log-weighted vocab, multi-token queries only)
-  6. BM25 reorder:     snap to canonical when same token set appears in wrong order
+Steps run in order. Each step either returns a normalized result (short-circuiting
+the rest of the pipeline) or returns None to pass control to the next step. If no
+step produces a match, the pipeline returns the tier_a cleaned query unchanged.
 
-Conservative fallback: when no step fires, return tier_a(query) unchanged.
+Pipeline (in order):
+  1. Tier A:           NFKC + punct normalization + casefold + whitespace collapse.
+                       Always runs. Output is passed to all subsequent steps.
+
+  2. Exact hit:        If query is already in the canonical set, return immediately.
+
+  3. Join normalize:   Try merging adjacent tokens ("door dash" -> "doordash").
+                       Returns on first unambiguous canonical hit, else falls through.
+
+  4. Word segment:     Try splitting fused tokens ("homedepot" -> "home depot") using
+                       a statistical bigram model from wordsegment python module. Falls
+                       back to exhaustive split if wordsegment misses. Returns on
+                       canonical hit, else falls through.
+
+  5. Prefix complete:  Autocomplete the last partial token ("dow jone" -> "dow jones")
+                       when one completion clearly dominates in the frequency index.
+                       Only fires on multi-token queries. Updates the query but does
+                       not short-circuit — the updated query is passed to step 6.
+
+  6. BM25 reorder:     Reorder tokens to match a canonical form when the query has the
+                       same tokens in a different order ("costco stock" -> "stock costco").
+                       Returns the reordered form if found, else returns query as-is.
 """
 
 import functools
@@ -18,9 +33,11 @@ import math
 import re
 import unicodedata
 from collections import Counter
-from itertools import combinations
+from itertools import combinations, pairwise
 
 import wordsegment as _wordsegment
+
+from merino.configs import settings
 
 # normalize unicode punctuation to ascii equivalents
 _PUNCT_MAP = str.maketrans(
@@ -45,21 +62,12 @@ _PUNCT_MAP = str.maketrans(
     }
 )
 
-# detect urls so we can skip tier_a()
-_URL_RE = re.compile(
-    r"^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$"
-    r"|^(https?://|www\.)\S+$"
-    r"|^[a-z0-9\-]+\.[a-z]{2,}(/\S*)?$",
-    re.IGNORECASE,
-)
-
 
 # Step 1: do canonicalization on the query string
 def tier_a(query: str) -> str:
     """NFKC + punctuation normalization + casefold + whitespace collapse."""
-    if not _URL_RE.match(query.strip()):
-        query = unicodedata.normalize("NFKC", query)
-        query = query.translate(_PUNCT_MAP)
+    query = unicodedata.normalize("NFKC", query)
+    query = query.translate(_PUNCT_MAP)
     return re.sub(r"\s+", " ", query.casefold().strip())
 
 
@@ -70,18 +78,13 @@ def _try_join_normalize(tokens: list[str], canonical: set[str]) -> str | None:
 
     Skips merges where either token is < 2 chars to prevent false joins.
     """
-    if len(tokens) < 2:
-        return None
-
     hits: list[str] = []
-    for i in range(len(tokens) - 1):
-        if len(tokens[i]) < 2 or len(tokens[i + 1]) < 2:
-            # skip short tokens
+    for i, (left, right) in enumerate(pairwise(tokens)):
+        if len(left) < 2 or len(right) < 2:
             continue
-        merged = tokens[i] + tokens[i + 1]
-        candidate_tokens = tokens[:i] + [merged] + tokens[i + 2 :]
-        candidate = " ".join(candidate_tokens)
-        # return if candidate is in canonical set
+        merged = f"{left}{right}"
+        # form a new candidate with the joined adjacent tokens and the rest
+        candidate = " ".join([*tokens[:i], merged, *tokens[i + 2 :]])
         if candidate in canonical or merged in canonical:
             hits.append(candidate)
     # only return if unambiguous
@@ -89,8 +92,10 @@ def _try_join_normalize(tokens: list[str], canonical: set[str]) -> str | None:
 
 
 # Step 4: segment query into tokens with wordsegment
-# maxsize can be changed to tune perf.
-@functools.lru_cache(maxsize=10_000)
+_WORDSEGMENT_CACHE_SIZE: int = settings.query_normalization.wordsegment_cache_size
+
+
+@functools.lru_cache(maxsize=_WORDSEGMENT_CACHE_SIZE)
 def _ws_segment(tok: str) -> str:
     """Cache and return wordsegment splits for a token."""
     return " ".join(_wordsegment.segment(tok))
@@ -102,7 +107,6 @@ def _try_wordsegment(tokens: list[str], canonical: set[str]) -> str | None:
     Accepts the rewrite if either the full rebuilt query OR the segmented
     portion alone is in canonical.
     """
-    result_tokens = list(tokens)
     for i, tok in enumerate(tokens):
         if len(tok) < 5 or tok in canonical:
             continue
@@ -110,8 +114,7 @@ def _try_wordsegment(tokens: list[str], canonical: set[str]) -> str | None:
         if segmented == tok:
             continue
         # e.g. "redsox game" -> "red sox game"
-        candidate_tokens = result_tokens[:i] + segmented.split() + result_tokens[i + 1 :]
-        candidate = " ".join(candidate_tokens)
+        candidate = " ".join([*tokens[:i], segmented, *tokens[i + 1 :]])
         if candidate in canonical or segmented in canonical:
             return candidate
     return None
@@ -152,24 +155,16 @@ def _try_split_token(token: str, canonical: set[str], max_splits: int = 4) -> st
 
 def _try_split_normalize(tokens: list[str], canonical: set[str]) -> str | None:
     """Split each fused token; return canonical hit."""
-    changed = False
-    result_tokens = list(tokens)
-
     for i, tok in enumerate(tokens):
         if len(tok) < 5 or tok in canonical:
             continue
 
         split = _try_split_token(tok, canonical)
         if split is not None:
-            candidate_tokens = result_tokens[:i] + split.split() + result_tokens[i + 1 :]
-            candidate = " ".join(candidate_tokens)
+            candidate = " ".join([*tokens[:i], split, *tokens[i + 1 :]])
             if candidate in canonical:
-                result_tokens = candidate_tokens
-                changed = True
-                break
+                return candidate
 
-    if changed:
-        return " ".join(result_tokens)
     return None
 
 
@@ -212,12 +207,12 @@ def build_prefix_index(
 
 def _apply_prefix_complete(
     query: str,
+    tokens: list[str],
     prefix_index: dict[str, tuple[str, int, int]],
     allowlist: set[str],
     min_abs_freq: int = _AUTOCOMPLETE_MIN_ABS_FREQ,
 ) -> str:
     """Complete the last token only when one completion clearly dominates."""
-    tokens = query.split()
     if not tokens:
         return query
 
@@ -244,8 +239,7 @@ def _apply_prefix_complete(
     if tok_freq is not None and tok_freq >= _AUTOCOMPLETE_COMMON_WORD_FREQ:
         return query
 
-    tokens[-1] = best_word
-    return " ".join(tokens)
+    return " ".join([*tokens[:-1], best_word])
 
 
 # Step 6: BM25 reorder (finance only for Phase 1)
@@ -354,10 +348,15 @@ class NormalizePipeline:
                 if len(tok) >= 5 and tok not in _wordsegment.UNIGRAMS:
                     _ws_segment(tok)
 
+    # skip normalization for queries longer than this. The API already
+    # rejects queries > 500 chars but this prevents excessive processing
+    # from wordsegment and other expensive steps.
+    _MAX_QUERY_LENGTH = 200
+
     def normalize(self, query: str) -> str:
         """Run the full normalization cascade."""
         q = tier_a(query)
-        if not q:
+        if not q or len(q) > self._MAX_QUERY_LENGTH:
             return q
 
         if q in self._canonical:
@@ -389,6 +388,7 @@ class NormalizePipeline:
         if self._canonical_prefix_index and len(tokens) >= 2:
             completed = _apply_prefix_complete(
                 q,
+                tokens,
                 self._canonical_prefix_index,
                 self._canonical_words,
             )

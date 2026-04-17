@@ -1,6 +1,8 @@
 """Unit tests for the query normalization pipeline."""
 
-from merino.query_normalization.pipeline import (
+import pytest
+
+from merino.utils.query_processing.normalization.pipeline import (
     BM25Index,
     NormalizePipeline,
     _apply_prefix_complete,
@@ -14,49 +16,34 @@ from merino.query_normalization.pipeline import (
 
 
 # tier_a
-def test_tier_a_casefold() -> None:
-    """Uppercase input should be lowercased."""
-    assert tier_a("AMAZON") == "amazon"
-
-
-def test_tier_a_whitespace_collapse() -> None:
-    """Multiple spaces should collapse to one."""
-    assert tier_a("home   depot") == "home depot"
-
-
-def test_tier_a_strip() -> None:
-    """Leading and trailing whitespace should be removed."""
-    assert tier_a("  amazon  ") == "amazon"
-
-
-def test_tier_a_unicode_punct() -> None:
-    """Smart quotes should be normalized to straight quotes."""
-    assert tier_a("\u201chome depot\u201d") == '"home depot"'
-
-
-def test_tier_a_em_dash() -> None:
-    """Em dash should be normalized to hyphen."""
-    assert tier_a("a\u2014b") == "a-b"
-
-
-def test_tier_a_url_passthrough() -> None:
-    """URL-like queries should skip NFKC and punct normalization."""
-    assert tier_a("example.com/path") == "example.com/path"
-
-
-def test_tier_a_email_passthrough() -> None:
-    """Email-like queries should skip NFKC and punct normalization."""
-    assert tier_a("user@example.com") == "user@example.com"
-
-
-def test_tier_a_empty() -> None:
-    """Empty input should return empty string."""
-    assert tier_a("") == ""
-
-
-def test_tier_a_nfkc() -> None:
-    """Fullwidth characters should be normalized via NFKC."""
-    assert tier_a("\uff21mazon") == "amazon"
+@pytest.mark.parametrize(
+    "input_query, expected",
+    [
+        ("AMAZON", "amazon"),  # casefold
+        ("home   depot", "home depot"),  # whitespace collapse
+        ("  amazon  ", "amazon"),  # strip
+        ("\u201chome depot\u201d", '"home depot"'),  # smart quotes
+        ("a\u2014b", "a-b"),  # em dash
+        ("example.com/path", "example.com/path"),  # url unchanged
+        ("user@example.com", "user@example.com"),  # email unchanged
+        ("", ""),  # empty
+        ("\uff21mazon", "amazon"),  # nfkc fullwidth
+    ],
+    ids=[
+        "casefold",
+        "whitespace_collapse",
+        "strip",
+        "unicode_punct",
+        "em_dash",
+        "url_unchanged",
+        "email_unchanged",
+        "empty",
+        "nfkc",
+    ],
+)
+def test_tier_a(input_query: str, expected: str) -> None:
+    """Verify tier_a canonicalization for various input types."""
+    assert tier_a(input_query) == expected
 
 
 # join normalize
@@ -81,7 +68,7 @@ def test_join_no_match(canonical: set[str]) -> None:
 
 
 def test_join_single_token(canonical: set[str]) -> None:
-    """Single token input should return None."""
+    """Single token input should return None. Only multi-token inputs can be merged."""
     tokens = ["amazon"]
     assert _try_join_normalize(tokens, canonical) is None
 
@@ -204,7 +191,7 @@ def test_prefix_complete_last_token(
     prefix_index: dict[str, tuple[str, int, int]],
 ) -> None:
     """Partial last token should be completed."""
-    result = _apply_prefix_complete("nyc weathe", prefix_index, set())
+    result = _apply_prefix_complete("nyc weathe", ["nyc", "weathe"], prefix_index, set())
     assert result == "nyc weather"
 
 
@@ -212,7 +199,9 @@ def test_prefix_complete_last_token_sports(
     prefix_index: dict[str, tuple[str, int, int]],
 ) -> None:
     """Partial sports intent word should be completed."""
-    result = _apply_prefix_complete("lakers game scor", prefix_index, set())
+    result = _apply_prefix_complete(
+        "lakers game scor", ["lakers", "game", "scor"], prefix_index, set()
+    )
     assert result == "lakers game score"
 
 
@@ -220,7 +209,7 @@ def test_prefix_complete_already_complete(
     prefix_index: dict[str, tuple[str, int, int]],
 ) -> None:
     """Token in allowlist should not be completed."""
-    result = _apply_prefix_complete("nyc weather", prefix_index, {"weather"})
+    result = _apply_prefix_complete("nyc weather", ["nyc", "weather"], prefix_index, {"weather"})
     assert result == "nyc weather"
 
 
@@ -228,7 +217,7 @@ def test_prefix_complete_too_short(
     prefix_index: dict[str, tuple[str, int, int]],
 ) -> None:
     """Token shorter than min prefix length should not be completed."""
-    result = _apply_prefix_complete("test nyc", prefix_index, set())
+    result = _apply_prefix_complete("test nyc", ["test", "nyc"], prefix_index, set())
     assert result == "test nyc"
 
 
@@ -236,42 +225,42 @@ def test_prefix_complete_single_token(
     prefix_index: dict[str, tuple[str, int, int]],
 ) -> None:
     """Single token should still be completed by prefix complete."""
-    result = _apply_prefix_complete("weathe", prefix_index, set())
+    result = _apply_prefix_complete("weathe", ["weathe"], prefix_index, set())
     assert result == "weather"
 
 
 def test_prefix_complete_low_freq() -> None:
     """Completion below min frequency should not fire."""
     idx = build_prefix_index({"weather": 100})  # below 3000 threshold
-    result = _apply_prefix_complete("nyc weathe", idx, set())
+    result = _apply_prefix_complete("nyc weathe", ["nyc", "weathe"], idx, set())
     assert result == "nyc weathe"
 
 
 def test_prefix_complete_ambiguous_ratio() -> None:
     """Completion with close second-best should not fire."""
     idx = build_prefix_index({"weather": 10000, "weatherford": 9000})
-    result = _apply_prefix_complete("nyc weathe", idx, set())
+    result = _apply_prefix_complete("nyc weathe", ["nyc", "weathe"], idx, set())
     assert result == "nyc weathe"
 
 
 def test_prefix_complete_empty_query() -> None:
     """Empty query should return unchanged."""
     idx = build_prefix_index({"weather": 465297})
-    result = _apply_prefix_complete("", idx, set())
+    result = _apply_prefix_complete("", [], idx, set())
     assert result == ""
 
 
 def test_prefix_complete_no_entry() -> None:
     """Token not in prefix index should return unchanged."""
     idx = build_prefix_index({"weather": 465297})
-    result = _apply_prefix_complete("test zzzzz", idx, set())
+    result = _apply_prefix_complete("test zzzzz", ["test", "zzzzz"], idx, set())
     assert result == "test zzzzz"
 
 
 def test_prefix_complete_already_best_word() -> None:
     """Token that is already the best word should not be completed."""
     idx = build_prefix_index({"weather": 465297})
-    result = _apply_prefix_complete("nyc weather", idx, set())
+    result = _apply_prefix_complete("nyc weather", ["nyc", "weather"], idx, set())
     assert result == "nyc weather"
 
 
