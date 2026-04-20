@@ -6,6 +6,7 @@ from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 
+# This is needed to prevent Wikimedia from blocking our requests as bot requests.
 RSS_FETCH_REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; Merino/1.0; +https://github.com/mozilla-services/merino-py)"
 }
@@ -58,11 +59,13 @@ def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict | None:
     Returns:
         The latest entry if it contains the required fields, otherwise None.
     """
+    # Malformed feed if entries property doesn't exist.
     if not parsed_feed.entries:
         return None
 
     potd = parsed_feed.entries[-1]
 
+    # Malformed feed entry if the below properties don't exist.
     if not ("title" in potd and "description" in potd and "published" in potd):
         return None
 
