@@ -4,7 +4,6 @@ import logging
 import aiodogstatsd
 import feedparser
 from pydantic import HttpUrl
-from merino.configs import settings
 from feedparser import FeedParserDict
 from httpx import AsyncClient, HTTPError, Response
 
@@ -16,9 +15,6 @@ from merino.providers.rss.wikimedia_potd.backends.utils import (
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
-
-# TODO: remove when the gcs_uploader object is used to upload assets.
-CDN_HOST = settings.image_gcs.cdn_hostname
 
 
 class WikimediaPotdBackend:
