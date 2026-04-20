@@ -32,13 +32,21 @@ gcs_bucket = "merino-images-stagepy"
 # Set to `true` in production and `false` in staging or development.
 gcs_enabled = false
 
-
 [stage.image_gcs_v2]
 # MERINO_IMAGE_GCS_V2__GCS_PROJECT
 gcs_project = "moz-fx-merino-nonprod-ee93"
 
 # MERINO_IMAGE_GCS_V2__GCS_BUCKET
 gcs_bucket = "merino-images-stagepy"
+
+[stage.games_particle.gcs]
+# MERINO_GAMES_PARTICLE_GCS__GCS_PROJECT (GCP V2)
+gcs_project = "moz-fx-merino-nonprod-db57"
+
+# MERINO_GAMES_PARTICLE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = false
 
 [stage.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
