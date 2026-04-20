@@ -329,15 +329,11 @@ class Sport:
             # only update the scores.
             if id in self.events:
                 event = self.events[id]
-                event.home_score = (
-                    event_description.get("HomeTeamScore")
-                    or event_description.get("HomeScore")
-                    or event_description.get("HomeTeamRuns")
+                event.home_score = self.get_score(
+                    event_description, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]
                 )
-                event.away_score = (
-                    event_description.get("AwayTeamScore")
-                    or event_description.get("AwayScore")
-                    or event_description.get("AwayTeamRuns")
+                event.away_score = self.get_score(
+                    event_description, ["AwayTeamScore", "AwayScore", "AwayTeamRuns"]
                 )
             else:
                 if no_new:
@@ -404,12 +400,12 @@ class Sport:
                     ),
                     home_team=home_team.minimal(),
                     away_team=away_team.minimal(),
-                    home_score=event_description.get("HomeTeamScore")
-                    or event_description.get("HomeScore")
-                    or event_description.get("HomeTeamRuns"),
-                    away_score=event_description.get("AwayTeamScore")
-                    or event_description.get("AwayScore")
-                    or event_description.get("AwayTeamRuns"),
+                    home_score=self.get_score(
+                        event_description, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]
+                    ),
+                    away_score=self.get_score(
+                        event_description, ["AwayTeamScore", "AwayScore", "AwayTeamRuns"]
+                    ),
                     status=GameStatus.parse(event_description["Status"]),
                     expiry=utc_time_from_now(self.event_ttl),
                     updated=updated,
@@ -524,15 +520,23 @@ class Sport:
                 ),
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
-                home_score=event_description.get("HomeTeamScore")
-                or event_description.get("HomeScore")
-                or event_description.get("HomeTeamRuns"),  # used by MLB
-                away_score=event_description.get("AwayTeamScore")
-                or event_description.get("AwayScore")
-                or event_description.get("AwayTeamRuns"),  # used by MLB
+                home_score=self.get_score(
+                    event_description, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]
+                ),  # HomeTeamRuns used by MLB
+                away_score=self.get_score(
+                    event_description, ["AwayTeamScore", "AwayScore", "AwayTeamRuns"]
+                ),  # AwayTeamRuns used by MLB
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
                 updated=updated,
             )
             self.events[event.id] = event
         return self.events
+
+    def get_score(self, data: dict[str, Any], score_keys: list[str]):
+        """Get first non None score or return None."""
+        for key in score_keys:
+            score = data.get(key)
+            if score is not None:
+                return score
+        return None
