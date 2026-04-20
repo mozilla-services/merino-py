@@ -37,6 +37,8 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.62b0",
     "opentelemetry-instrumentation-aiohttp-client>=0.62b0",
     "opentelemetry-instrumentation-elasticsearch>=0.62b0",
+    "opentelemetry-distro>=0.62b0",
+    "opentelemetry-exporter-otlp>=1.41.0",
 ]
 
 [[tool.uv.index]]
@@ -53,6 +55,11 @@ torch = [
 [project.scripts]
 merino-jobs = "merino.jobs.cli:cli"
 probe-images = "merino.jobs.utils.domain_tester:main"
+
+[project.entry-points."opentelemetry_traces_sampler"]
+# Custom otel sampler
+bg_task_sampler = "merino.utils.otel:BgTaskDownSamplerFactory"
+
 
 [tool.coverage.run]
 source = ["merino"]

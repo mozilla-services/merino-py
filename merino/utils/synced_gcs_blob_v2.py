@@ -20,6 +20,10 @@ from pydantic import BaseModel, ValidationError
 
 from merino.utils import cron
 
+from opentelemetry import trace
+
+tracer = trace.get_tracer(__name__)
+
 
 logger = logging.getLogger(__name__)
 
@@ -110,10 +114,14 @@ class SyncedGcsBlobV2(Generic[T]):
 
     async def _update_task_async(self) -> None:
         """Fetch the latest data from GCS and invoke the appropriate callback."""
-        with self.metrics_client.timeit(
-            f"{self.metrics_namespace}.update.timing", tags=self._default_tags
+        with tracer.start_as_current_span(
+            f"{self.cron_job_name}",
+            attributes={"is_bg_task": True, "bucket": self.bucket_name, "blob": self.blob_name},
         ):
-            await self._update_task()
+            with self.metrics_client.timeit(
+                f"{self.metrics_namespace}.update.timing", tags=self._default_tags
+            ):
+                await self._update_task()
 
     def _gauge_validity(self, value: int):
         self.metrics_client.gauge(

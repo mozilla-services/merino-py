@@ -69,7 +69,11 @@ format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
 
 .PHONY: dev
 dev: $(INSTALL_STAMP)  ##  Run merino locally and reload automatically
-	OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 $(UV) run fastapi dev $(APP_DIR)/main.py --reload
+	$(UV) run fastapi dev $(APP_DIR)/main.py --reload
+
+.PHONY: dev-otel
+dev-otel: $(INSTALL_STAMP)  ##  Run merino locally with OTEL auto-instrumentation (mimics k8s operator)
+	OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 $(UV) run opentelemetry-instrument fastapi run $(APP_DIR)/main.py --host 0.0.0.0 --port 8000
 
 .PHONY: run
 run: $(INSTALL_STAMP)  ##  Run merino locally

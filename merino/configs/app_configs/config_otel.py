@@ -9,8 +9,9 @@ import os
 
 from fastapi import FastAPI
 
-logger = logging.getLogger(__name__)
+from merino.utils.otel import BgTaskDownSamplerFactory
 
+logger = logging.getLogger(__name__)
 
 def configure_otel(app: FastAPI) -> None:  # pragma: no cover
     """Configure OpenTelemetry tracing if OTEL_EXPORTER_OTLP_ENDPOINT is set.
@@ -18,10 +19,23 @@ def configure_otel(app: FastAPI) -> None:  # pragma: no cover
     Reads standard OTEL_* environment variables:
       OTEL_EXPORTER_OTLP_ENDPOINT - collector endpoint (e.g. http://localhost:4318)
       OTEL_SERVICE_NAME            - service name reported in traces (default: merino)
+
+    If a real TracerProvider is already registered (e.g. via opentelemetry-instrument
+    or the Kubernetes OTEL operator), this function is a no-op to avoid double
+    instrumentation.
     """
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
+
+    # TODO: Full setup only in development environment
+    if isinstance(trace.get_tracer_provider(), SDKTracerProvider):
+        logger.info("OTEL is already configured")
+        return
+
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
     if not endpoint:
         return
+
 
     from opentelemetry import trace
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -34,7 +48,9 @@ def configure_otel(app: FastAPI) -> None:  # pragma: no cover
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
     service_name = os.getenv("OTEL_SERVICE_NAME", "merino")
-    provider = TracerProvider(resource=Resource.create({SERVICE_NAME: service_name}))
+    sampler_arg = os.getenv("OTEL_TRACES_SAMPLER_ARG", "")
+    provider = TracerProvider(sampler=BgTaskDownSamplerFactory.get_sampler(sampler_arg),
+                              resource=Resource.create({SERVICE_NAME: service_name}))
     provider.add_span_processor(
         BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces"))
     )
