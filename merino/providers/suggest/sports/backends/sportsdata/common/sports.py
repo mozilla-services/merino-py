@@ -67,6 +67,16 @@ class NFL(Sport):
             lock=asyncio.Lock(),
         )
         self._lock = asyncio.Lock()
+        self.translate_terms.update(
+            {
+                "GameID": "GlobalGameID",
+                "AwayTeamID": "GlobalAwayTeamID",
+                "HomeTeamID": "GlobalHomeTeamID",
+                "HomeTeamScore": "HomeScore",
+                "AwayTeamScore": "AwayScore",
+                "TeamID": "GlobalTeamID",
+            }
+        )
 
     async def get_team(self, id: int) -> Team | None:
         """Attempt to find the team information in a thread-locking manner."""
@@ -191,6 +201,12 @@ class NHL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.translate_terms.update(
+            {
+                "GameID": "GameID",
+                "TeamID": "GlobalTeamID",
+            }
+        )
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch team information using local locking"""
@@ -258,13 +274,11 @@ class NHL(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        # NHL scores do not have GlobalGameID
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list = []
         for _id, event in self.events.items():
             day = event.date.strftime("%Y-%b-%d").upper()
             if not event.status.is_scheduled() and day not in date_list:
-                # Note: NHL `ScoresBasic` does _NOT_ include the GlobalGameID.
                 url = f"{self.base_url}/GamesByDate/{day}?key={self.api_key}"
                 response = await get_data(
                     client=client,
@@ -301,6 +315,14 @@ class NBA(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.translate_terms.update(
+            {
+                "GameID": "GlobalGameID",
+                "AwayTeamID": "GlobalAwayTeamID",
+                "HomeTeamID": "GlobalHomeTeamID",
+                "TeamID": "GlobalTeamID",
+            }
+        )
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
@@ -410,6 +432,16 @@ class UCL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.translate_terms.update(
+            {
+                "GameID": "GlobalGameId",
+                "AwayTeamID": "GlobalAwayTeamId",
+                "AwayTeamKey": "AwayTeamKey",
+                "HomeTeamID": "GlobalHomeTeamId",
+                "HomeTeamKey": "HomeTeamKey",
+                "TeamID": "GlobalTeamId",
+            }
+        )
 
     async def get_season(self, client: AsyncClient):
         """Get the current season (which is just the current year)"""
@@ -530,6 +562,14 @@ class MLB(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.translate_terms.update(
+            {
+                "GameID": "GameID",
+                "AwayTeamScore": "AwayTeamRuns",
+                "HomeTeamScore": "HomeTeamRuns",
+                "TeamID": "GlobalTeamID",
+            }
+        )
 
     async def get_season(self, client: AsyncClient):
         """Get the current season"""
@@ -589,6 +629,13 @@ class MLB(Sport):
         # foreign key system, so we'll skip that for the game date directly. (Fortunately, there are
         # A LOT of baseball games.)
         url = f"{self.base_url}/ScoresBasic/{date}?key={self.api_key}"
+        self.translate_terms.update(
+            {
+                "AwayScore": "AwayTeamRuns",
+                "HomeScore": "HomeTeamRuns",
+            }
+        )
+
         """
         [
             {
