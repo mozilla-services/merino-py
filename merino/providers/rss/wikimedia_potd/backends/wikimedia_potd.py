@@ -3,18 +3,22 @@
 import logging
 import aiodogstatsd
 import feedparser
+from pydantic import HttpUrl
+from merino.configs import settings
 from feedparser import FeedParserDict
 from httpx import AsyncClient, HTTPError, Response
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     extract_potd,
-    parse_potd,
     RSS_FETCH_REQUEST_HEADERS,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
+
+# TODO: remove when the gcs_uploader object is used to upload assets.
+CDN_HOST = settings.image_gcs.cdn_hostname
 
 
 class WikimediaPotdBackend:
@@ -43,12 +47,24 @@ class WikimediaPotdBackend:
         Returns:
             A PictureOfTheDay instance if data is available, otherwise None.
         """
-        potd = await self.fetch_picture_of_the_day()
+        # TODO: remove when ready to fetch from live rss feed.
+        # potd = await self.fetch_picture_of_the_day()
 
-        if potd is None:
-            return None
-        else:
-            return parse_potd(potd=potd)
+        # if potd is None:
+        #     return None
+        # else:
+        #     return parse_potd(potd=potd)
+        return PictureOfTheDay(
+            title="Wikimedia Commons picture of the day",
+            thumbnail_image_url=HttpUrl(
+                "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_2026_04_13.jpg"
+            ),
+            high_res_image_url=HttpUrl(
+                "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
+            ),
+            published_date="Mon, 13 Apr 2026 00:00:00 GMT",
+            description="Sample Picture of the day description.",
+        )
 
     async def fetch_picture_of_the_day(self) -> FeedParserDict | None:
         """Fetch Wikimedia Commons picture of the day RSS feed."""
@@ -66,7 +82,5 @@ class WikimediaPotdBackend:
 
             return extract_potd(parsed_feed)
         except HTTPError as ex:
-            logger.error(
-                f"HTTP error occurred when fetching Wikimedia POTD feed: {ex.__class__.__name__}"
-            )
+            logger.error(f"HTTP error occurred when fetching Wikimedia POTD feed: {ex}")
             return None
