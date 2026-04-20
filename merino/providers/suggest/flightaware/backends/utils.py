@@ -95,7 +95,7 @@ def parse_timestamp(
         if timezone:
             return dt.astimezone(ZoneInfo(timezone))
         return dt
-    except (ValueError, ZoneInfoNotFoundError):
+    except ValueError, ZoneInfoNotFoundError:
         return None
 
 
@@ -234,7 +234,7 @@ def build_flight_summary(flight: dict, normalized_query: str) -> FlightSummary |
             url=url,
         )
 
-    except (KeyError, IndexError, TypeError):
+    except KeyError, IndexError, TypeError:
         logger.warning(f"Flightaware response json has incorrect shape: {flight}")
         return None
     except Exception as e:
