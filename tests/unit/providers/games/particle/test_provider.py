@@ -69,7 +69,7 @@ async def test_get_game_url_returns_none_when_backend_returns_none(
 
 
 @pytest.mark.asyncio
-async def test_get_game_url_returns_correct_potd(
+async def test_get_game_url_returns_correct_particle(
     provider: Provider, backend_mock, test_particle
 ) -> None:
     """Test that get_game_url returns a correct Particle instance."""
