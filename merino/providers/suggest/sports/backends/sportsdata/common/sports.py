@@ -152,7 +152,7 @@ class NFL(Sport):
             self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update the events for this sport in the elastic search database"""
         logger = logging.getLogger(__name__)
         await self.get_season(client=client)
@@ -174,7 +174,6 @@ class NFL(Sport):
             self.load_scores_from_source(
                 response,
                 event_timezone=local_timezone,
-                allow_no_teams=allow_no_teams,
             )
         return self
 
@@ -261,7 +260,7 @@ class NHL(Sport):
         self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
         logger = logging.getLogger(__name__)
@@ -286,12 +285,7 @@ class NHL(Sport):
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
                 )
-                self.load_scores_from_source(
-                    response,
-                    event_timezone=local_timezone,
-                    allow_no_teams=allow_no_teams,
-                    no_new=True,
-                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
             date_list.append(day)
         return self
 
@@ -373,7 +367,7 @@ class NBA(Sport):
             self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
         logger = logging.getLogger(__name__)
@@ -402,12 +396,7 @@ class NBA(Sport):
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
                 )
-                self.load_scores_from_source(
-                    response,
-                    event_timezone=local_timezone,
-                    allow_no_teams=allow_no_teams,
-                    no_new=True,
-                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
                 date_list.append(day)
 
         return self
@@ -503,7 +492,7 @@ class UCL(Sport):
             self.load_teams_from_source(response)
         return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
         logger = logging.getLogger(__name__)
@@ -530,12 +519,7 @@ class UCL(Sport):
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
                 )
-                self.load_scores_from_source(
-                    response,
-                    event_timezone=local_timezone,
-                    allow_no_teams=allow_no_teams,
-                    no_new=True,
-                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
                 date_list.append(day)
 
         return self
@@ -621,7 +605,7 @@ class MLB(Sport):
             team = self.teams.get(id)
         return team
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Fetch the list of events for the sport. (5 min interval)"""
         local_timezone = ZoneInfo("America/New_York")
         date = datetime.now(tz=local_timezone).strftime("%Y-%b-%d").upper()
@@ -681,9 +665,7 @@ class MLB(Sport):
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
-        )
+        self.load_scores_from_source(response, event_timezone=local_timezone)
         return self
 
 

@@ -265,7 +265,7 @@ class Sport:
         """Update team information and store in common storage (usually called nightly)"""
 
     @abstractmethod
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Fetch the list of current and upcoming events for this sport"""
 
     def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
@@ -294,8 +294,6 @@ class Sport:
         self,
         data: list[dict[str, Any]],
         event_timezone: ZoneInfo = ZoneInfo("UTC"),
-        allow_no_teams: bool = False,  # Allow no team information, useful for `quick updates`
-        no_new: bool = False,  # Prevent new items from being added to events.
     ) -> dict[int, "Event"]:
         """Scan the list of Event scores for any event within the 'current' window.
 
@@ -307,8 +305,6 @@ class Sport:
 
         """
         logger = logging.getLogger(__name__)
-        if self.events is None:
-            self.events = {}
         """
         [
             {'Quarter': None,
@@ -372,6 +368,7 @@ class Sport:
                         f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
                     )
                     continue
+
                 try:
                     if "DateTimeUTC" in event_description:
                         date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
@@ -403,11 +400,11 @@ class Sport:
                 event = Event(
                     sport=self.name,
                     id=game_id,
-                    terms=f"{home_team.terms} {away_team.terms}",
                     date=date,
                     original_date=event_description.get(
                         "DateTimeUTC", event_description.get("DateTime")
                     ),
+                    terms=f"{home_team.terms} {away_team.terms}",
                     home_team=home_team.minimal(),
                     away_team=away_team.minimal(),
                     home_score=home_score,
