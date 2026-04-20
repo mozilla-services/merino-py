@@ -44,7 +44,7 @@ def fixture_sportsdata_parameters(
 
 
 @pytest.fixture(name="sport_data_store_parameters")
-def fixture_sport_data_store_parameters(es_client) -> dict[str, Any]:
+def fixture_sport_data_store_parameters(es_client, statsd_mock: Any) -> dict[str, Any]:
     """SportsDataStore constructor parameters."""
     return {
         "credentials": ElasticCredentials(dsn="", api_key=""),
@@ -53,6 +53,7 @@ def fixture_sport_data_store_parameters(es_client) -> dict[str, Any]:
         "index_map": {
             "event": "sports-{lang}-event",
         },
+        "metrics_client": statsd_mock,
     }
 
 

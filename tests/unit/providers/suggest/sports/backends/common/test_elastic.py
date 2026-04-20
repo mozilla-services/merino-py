@@ -3,7 +3,7 @@
 import datetime
 import json
 import logging
-from typing import cast, Any
+from typing import Any, cast
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock
 
@@ -11,7 +11,7 @@ import freezegun
 import pytest
 
 from dynaconf import LazySettings
-from elasticsearch import BadRequestError, ConflictError
+from elasticsearch import ApiError, BadRequestError, ConflictError
 from elastic_transport import ApiResponseMeta, HttpHeaders, NodeConfig
 from pytest_mock import MockerFixture
 
@@ -51,7 +51,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture(name="sport_data_store")
-def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
+def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDataStore:
     """Test Sport Data Store instance."""
     creds = ElasticCredentials(dsn="http://es.test:9200", api_key="test-key")
     s = SportsDataStore(
@@ -59,6 +59,7 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events"},
+        metrics_client=statsd_mock,
     )
     s.client = es_client
     return s
@@ -448,6 +449,131 @@ async def test_search_event_raise_exception(
         await sport_data_store.search_events(q="oops", language_code="en", mix_sports=False)
 
 
+@freezegun.freeze_time("2025-09-22T12:00:00Z")
+@pytest.mark.asyncio
+async def test_search_events_count_metric_on_success(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a successful search increments the count metric."""
+    es_client.search.return_value = {"hits": {"total": {"value": 0}, "hits": []}}
+
+    await sport_data_store.search_events(q="game", language_code="en")
+
+    statsd_mock.increment.assert_called_once_with(
+        "es.search.count", tags={"index": "sports-en-events"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_events_error_metric_on_api_error(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that an ApiError increments both the count and error metrics."""
+    api_error = ApiError(
+        message="service unavailable",
+        meta=ApiResponseMeta(
+            status=503,
+            http_version="",
+            headers=HttpHeaders(),
+            duration=0.0,
+            node=NodeConfig(scheme="", host="", port=0),
+        ),
+        body={},
+    )
+    es_client.search.side_effect = api_error
+
+    with pytest.raises(BackendError):
+        await sport_data_store.search_events(q="game", language_code="en")
+
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": "sports-en-events"})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": "sports-en-events", "status": 503}
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_events_error_metric_on_exception(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a generic exception increments both the count and error metrics."""
+    es_client.search.side_effect = Exception("connection reset")
+
+    with pytest.raises(BackendError):
+        await sport_data_store.search_events(q="game", language_code="en")
+
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": "sports-en-events"})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": "sports-en-events", "status": "unknown"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_meta_count_metric_on_success(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a successful query_meta increments the count metric."""
+    es_client.search.return_value = {"hits": {"hits": []}}
+
+    await sport_data_store.query_meta("last_update")
+
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": META_INDEX})
+
+
+@pytest.mark.asyncio
+async def test_query_meta_error_metric_on_api_error(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that an ApiError in query_meta increments both count and error metrics."""
+    api_error = ApiError(
+        message="service unavailable",
+        meta=ApiResponseMeta(
+            status=503,
+            http_version="",
+            headers=HttpHeaders(),
+            duration=0.0,
+            node=NodeConfig(scheme="", host="", port=0),
+        ),
+        body={},
+    )
+    es_client.search.side_effect = api_error
+
+    result = await sport_data_store.query_meta("last_update")
+
+    assert result is None
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": META_INDEX})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": META_INDEX, "status": 503}
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_meta_error_metric_on_exception(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a generic exception in query_meta increments both count and error metrics."""
+    es_client.search.side_effect = Exception("connection reset")
+
+    result = await sport_data_store.query_meta("last_update")
+
+    assert result is None
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": META_INDEX})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": META_INDEX, "status": "unknown"}
+    )
+
+
 @pytest.mark.asyncio
 async def test_meta_store(sport_data_store: SportsDataStore, es_client: AsyncMock):
     """Test storing data to meta"""
@@ -518,14 +644,26 @@ async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_bad_creds():
+async def test_bad_creds(statsd_mock: Any):
     """Test failure if credentials are not present"""
     creds = ElasticCredentials(dsn="", api_key="")
-    store = SportsDataStore(credentials=creds, languages=["en"], platform="sports", index_map={})
+    store = SportsDataStore(
+        credentials=creds,
+        languages=["en"],
+        platform="sports",
+        index_map={},
+        metrics_client=statsd_mock,
+    )
     with pytest.raises(SportsDataError):
         await store.startup()
     creds = ElasticCredentials(dsn="bogus", api_key="")
-    store = SportsDataStore(credentials=creds, languages=["en"], platform="sports", index_map={})
+    store = SportsDataStore(
+        credentials=creds,
+        languages=["en"],
+        platform="sports",
+        index_map={},
+        metrics_client=statsd_mock,
+    )
     with pytest.raises(SportsDataError):
         await store.startup()
 

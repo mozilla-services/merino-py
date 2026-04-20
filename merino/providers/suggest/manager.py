@@ -235,6 +235,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         ElasticBackend(
                             api_key=setting.es_api_key,
                             url=setting.es_url,
+                            metrics_client=get_metrics_client(),
                         )
                     )
                     if setting.backend == "elasticsearch"
@@ -379,6 +380,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 platform=platform,
                 languages=[lang for lang in setting.get("languages", ["en"])],
                 index_map={"event": event_map},
+                metrics_client=get_metrics_client(),
             )
             return SportsDataProvider(
                 backend=SportsDataBackend(

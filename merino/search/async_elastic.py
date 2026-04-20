@@ -3,6 +3,7 @@
 from typing import Any, Optional, cast
 
 from elasticsearch import AsyncElasticsearch
+from elastic_transport.client_utils import DEFAULT, DefaultType
 
 
 class AsyncElasticSearchAdapter:
@@ -13,18 +14,18 @@ class AsyncElasticSearchAdapter:
     """
 
     def __init__(
-        self,
-        *,
-        url: str,
-        api_key: str,
+        self, *, url: str, api_key: str, max_retries: int | DefaultType = DEFAULT
     ) -> None:
         self._url = url
         self._api_key = api_key
         self._client: Optional[AsyncElasticsearch] = None
+        self._max_retries = max_retries
 
     def create_client(self) -> AsyncElasticsearch:
         """Create an AsyncElasticsearch client."""
-        self._client = AsyncElasticsearch(self._url, api_key=self._api_key)
+        self._client = AsyncElasticsearch(
+            self._url, api_key=self._api_key, max_retries=self._max_retries
+        )
         return self._client
 
     def get_client(self) -> AsyncElasticsearch:
