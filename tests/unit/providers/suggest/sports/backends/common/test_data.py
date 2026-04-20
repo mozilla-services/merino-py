@@ -305,3 +305,26 @@ def test_load_bad_teams_from_source(
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {456}
+
+
+@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+def test_get_score_returns_zero(sport_cls: type[Sport]):
+    """Ensure get_score returns 0 when a score of 0 is present."""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    data = {"HomeTeamScore": None, "HomeScore": 0, "HomeTeamRuns": None}
+    assert sport.get_score(data, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]) == 0
+
+
+@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+def test_get_score_returns_value(sport_cls: type[Sport]):
+    """Ensure get_score returns a non-none value."""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    data = {"HomeTeamScore": 7, "HomeScore": None, "HomeTeamRuns": None}
+    assert sport.get_score(data, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]) == 7
+
+
+@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+def test_get_score_returns_none_when_no_keys_present(sport_cls: type[Sport]):
+    """Ensure get_score returns None when none of the keys are present."""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    assert sport.get_score({}, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]) is None
