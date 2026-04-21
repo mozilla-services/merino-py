@@ -51,6 +51,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     # EPL,
 )
 from merino.utils.http_client import create_http_client
+from merino.utils.metrics import get_metrics_client
 
 
 class Options:
@@ -242,6 +243,7 @@ if elastic_credentials.validate():
             platform=platform,
             languages=[lang for lang in sports_settings.get("languages", ["en"])],
             index_map={"event": event_map},
+            metrics_client=get_metrics_client(),
         )
         provider = SportDataUpdater(
             settings=sports_settings,

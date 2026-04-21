@@ -59,6 +59,7 @@ async def main_loader(
         platform=platform,
         languages=[lang for lang in settings.get("languages", ["en"])],
         index_map={"event": event_map},
+        metrics_client=get_metrics_client(),
     )
     await store.startup()
     await store.prune()
@@ -113,6 +114,7 @@ async def main_query(
         platform=platform,
         languages=[lang for lang in settings.get("languages", ["en"])],
         index_map={"event": event_map},
+        metrics_client=get_metrics_client(),
     )
     backend = SportsDataBackend(store=store, settings=settings)
     provider = SportsDataProvider(

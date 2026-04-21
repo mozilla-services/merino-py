@@ -13,7 +13,7 @@ import httpx
 
 from unittest.mock import MagicMock
 from pytest_mock import MockerFixture
-from typing import cast
+from typing import Any, cast
 
 from merino.configs import settings
 from merino.providers.suggest.sports.backends import get_data
@@ -238,7 +238,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture(name="sport_data_store")
-def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
+def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDataStore:
     """Test Sport Data Store instance"""
     creds = ElasticCredentials(
         dsn="http://es.test:9200",
@@ -249,6 +249,7 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events-test"},
+        metrics_client=statsd_mock,
     )
     s.client = es_client
     return s

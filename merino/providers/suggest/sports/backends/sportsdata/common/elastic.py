@@ -5,8 +5,10 @@ import logging
 
 # import sys
 from abc import abstractmethod, ABC
+from aiodogstatsd import Client as StatsDClient
 from datetime import datetime, timezone
 from typing import Any, Final
+
 
 from dynaconf import LazySettings
 from elasticsearch import (
@@ -15,6 +17,7 @@ from elasticsearch import (
     NotFoundError,
     ConflictError,
     helpers,
+    ApiError,
 )
 
 from merino.configs import settings
@@ -29,6 +32,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
+from merino.utils.metrics import ES_SEARCH_METRIC_NAME
+
 
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
 
@@ -357,6 +362,7 @@ class SportsDataStore(ElasticDataStore):
         platform: str,
         index_map: dict[str, str],
         meta_map: str = META_INDEX,
+        metrics_client: StatsDClient,
         **kwargs,
     ) -> None:
         """Initialize a connection to ElasticSearch"""
@@ -367,6 +373,7 @@ class SportsDataStore(ElasticDataStore):
         self.index_map = index_map
         self.meta_map = meta_map
         self.index_settings = {lang: EN_INDEX_SETTINGS for lang in languages}
+        self._metrics_client = metrics_client
         logging.getLogger(__name__).info(
             f"{LOGGING_TAG} Initialized Elastic search at {credentials.dsn}"
         )
@@ -390,7 +397,13 @@ class SportsDataStore(ElasticDataStore):
         if not self.client:
             return None
         try:
-            res = await self.client.search(
+            # Do not retry due to strict latency requirements,
+            # and to avoid overloading cluster (suggest triggers search
+            # on every keystroke with matching intent word)
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": self.meta_map}
+            )
+            res = await self.client.options(max_retries=0).search(
                 index=self.meta_map,
                 query={"term": {"_id": key.lower()}},
                 # query={"term": {"key": key.lower()}},
@@ -402,8 +415,19 @@ class SportsDataStore(ElasticDataStore):
             if not len(hits):
                 return None
             return hits[0]["_source"].get("meta_value") or None
+        except ApiError as ex:
+            logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error",
+                tags={"index": self.meta_map, "status": ex.meta.status},
+            )
+            return None
         except Exception as ex:
             logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error",
+                tags={"index": self.meta_map, "status": "unknown"},
+            )
             return None
 
     async def store_meta(self, key: str, value: str):
@@ -598,15 +622,32 @@ class SportsDataStore(ElasticDataStore):
             }
 
             logger.debug(f"{LOGGING_TAG} Searching {index_id} for `{q}`")
-
-            res = await self.client.options(request_timeout=REQUEST_TIMEOUT_SEC).search(
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": index_id}
+            )
+            # Do not retry due to strict latency requirements, and to avoid overloading
+            # cluster (searched via suggest on every keystroke when query contains
+            # matching intent word)
+            res = await self.client.options(
+                request_timeout=REQUEST_TIMEOUT_SEC, max_retries=0
+            ).search(
                 index=index_id,
                 query=query,
                 sort=[{"date": "desc"}, {"updated": "desc"}],
                 # The list of fields to return from Elasticsearch
                 source_includes=["event", "touched"],
             )
+        except ApiError as e:
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error", tags={"index": index_id, "status": e.meta.status}
+            )
+            raise BackendError(
+                f"Failed to search from Elasticsearch for {language_code}: {e}"
+            ) from e
         except Exception as ex:
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error", tags={"index": index_id, "status": "unknown"}
+            )
             raise BackendError(f"Elasticsearch error for {index_id}") from ex
         logger.debug(f"{LOGGING_TAG} found {res} for `{q}`")
         if res.get("hits", {}).get("total", {}).get("value", 0) > 0:

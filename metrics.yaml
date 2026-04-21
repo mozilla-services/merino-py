@@ -518,6 +518,36 @@ utils/synced_gcs_blob_v2:
       Any component using SyncedGcsBlobV2.
     alert_policy: []
 
+search/elasticsearch:
+  es.search.count:
+    description: |
+      A counter for all Elasticsearch search attempts, incremented before the
+      request is issued. Use alongside es.search.error to derive a success rate.
+    type: counter
+    labels:
+      - name: index
+        description: |
+          The Elasticsearch index that was searched.
+    scope: |
+      Any provider backed by Elasticsearch (Wikipedia, Sports).
+    alert_policy: []
+
+  es.search.error:
+    description: |
+      A counter for failed Elasticsearch search requests.
+    type: counter
+    labels:
+      - name: index
+        description: |
+          The Elasticsearch index that was searched.
+      - name: status
+        description: |
+          The HTTP status code returned by Elasticsearch, or "unknown" for
+          non-HTTP errors (e.g. connection errors, timeouts).
+    scope: |
+      Any provider backed by Elasticsearch (Wikipedia, Sports).
+    alert_policy: []
+
 weather/hourly_forecasts:
   weather_hourly_forecasts_request_timing:
     description: |
