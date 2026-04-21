@@ -63,7 +63,7 @@ def generic_teams_payload() -> list[dict]:
     ]
 
 
-# **NOTE**L The provider is not very consistent about data values, or key names
+# **NOTE**: The provider is not very consistent about data values, or key names
 # It is, therefore, important to use samples taken directly from their API
 # in order to validate our testing. The following are truncated versions of the
 # various API calls. Some values have been modified from JSON to Python.
@@ -1372,7 +1372,7 @@ async def test_nhl_update_teams(
     )
     await nhl.update_teams(client=mock_client)
     assert nhl.season == "2026PRE"
-    assert set(nhl.teams.keys()) == {30000001, 30000002}
+    assert set(nhl.teams.keys()) == {1, 2}
     assert get_data.call_count == 2
 
 
@@ -1404,7 +1404,7 @@ async def test_mlb_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     )
     await sport.update_teams(client=mock_client)
     assert sport.season == "2026PRE"
-    assert set(sport.teams.keys()) == {10000001, 10000002}
+    assert set(sport.teams.keys()) == {1, 2}
     assert get_data.call_count == 2
 
 
@@ -1489,7 +1489,6 @@ async def test_nfl_update_events_with_bad_date_time(
     """Test NFL event updates."""
     nfl = NFL(settings=settings.providers.sports)
     scores_payload = nfl_test_scores_payload()
-    scores_payload[0].update()
     nfl.load_teams_from_source(nfl_teams_payload())
     nfl.season = "2025REG"
     nfl.week = 3
@@ -1796,3 +1795,12 @@ async def test_sportsdata_errors() -> None:
 
     error = SportsDataError("Foo")
     assert str(error) == "SportsDataError: Foo"
+
+
+def test_sport_term_pollution() -> None:
+    """Test that the translate terms don't cross pollute"""
+    sport = NFL(settings=settings.providers.sports)
+    terms = sport.translate_terms.copy()
+    sport2 = MLB(settings=settings.providers.sports)
+    assert sport.translate_terms != sport2.translate_terms
+    assert sport.translate_terms == terms

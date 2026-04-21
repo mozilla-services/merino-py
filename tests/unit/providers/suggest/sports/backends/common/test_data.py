@@ -52,6 +52,7 @@ def time_frame_response():
 def events_response():
     """Events response for testing."""
     # NOTE: Since this data is testing the general function, we are feeding it artificial constructs
+    # with all variations populated.
     # Please refer to `test_sports` for more accurate data returns from the provider.
 
     return [
@@ -66,8 +67,10 @@ def events_response():
             "IsClosed": True,
             "AwayTeam": "AWA",
             "AwayTeamId": 456,
+            "AwayTeamID": 456,
             "HomeTeam": "HOM",
             "HomeTeamId": 123,
+            "HomeTeamID": 123,
             "StadiumID": 9,
             "AwayScore": 2,
             "HomeScore": 3,
@@ -97,7 +100,9 @@ def events_response():
             "IsClosed": True,
             "AwayTeam": "AWA",
             "AwayTeamId": 456,
+            "AwayTeamID": 456,
             "HomeTeam": "HOM",
+            "HomeTeamId": 123,
             "HomeTeamID": 123,
             "StadiumID": 9,
             "AwayScore": 0,
@@ -127,8 +132,10 @@ def events_response():
             "Updated": "2025-01-02T04:10:57",
             "IsClosed": True,
             "AwayTeam": "AWA",
+            "AwayTeamId": 456,
             "AwayTeamID": 456,
             "HomeTeam": "HOM",
+            "HomeTeamId": 123,
             "HomeTeamID": 123,
             "StadiumID": 9,
             "AwayScore": 0,
@@ -295,8 +302,10 @@ def test_load_incomplete_schedules_from_source(
         456: away_team,
     }
 
-    del events_response[0]["GlobalAwayTeamID"]
-    del events_response[0]["GlobalAwayTeamId"]
+    # Remove all traces of the "away" team from the test data, because there can be a lot.
+    away_keys = list(filter(lambda x: "awayteam" in x.lower(), events_response[0].keys()))
+    for key in away_keys:
+        del events_response[0][key]
     sport.events = {}
     events = sport.load_scores_from_source(events_response)
     assert not events
@@ -332,8 +341,9 @@ def test_load_bad_teams_from_source(
 ):
     """Ensure bad teams are not loaded."""
     sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
-    del teams[0]["GlobalTeamId"]
-    del teams[0]["GlobalTeamID"]
+    keys = list(filter(lambda x: "teamid" in x.lower(), teams[0].keys()))
+    for key in keys:
+        del teams[0][key]
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {456}

@@ -209,16 +209,7 @@ class Sport:
     # You should prefer to use the `Global*` version when possible, but not all sports
     # provide that value, nor do all returned data sets.
     # This array is used by both Schedule and Score lookups.
-    translate_terms: dict = {
-        "GameID": "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
-        "AwayTeamID": "AwayTeamID",
-        "AwayTeamKey": "AwayTeam",
-        "AwayTeamScore": "AwayTeamScore",
-        "HomeTeamID": "HomeTeamID",
-        "HomeTeamKey": "HomeTeam",
-        "HomeTeamScore": "HomeTeamScore",
-        "TeamID": "TeamID",
-    }
+    translate_terms: dict = {}
 
     def __init__(
         self,
@@ -251,6 +242,16 @@ class Sport:
         self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
         self.term_filter = term_filter
         self.cache_dir = cache_dir
+        self.translate_terms = {
+            "GameID": "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
+            "AwayTeamID": "AwayTeamID",
+            "AwayTeamKey": "AwayTeam",
+            "AwayTeamScore": "AwayTeamScore",
+            "HomeTeamID": "HomeTeamID",
+            "HomeTeamKey": "HomeTeam",
+            "HomeTeamScore": "HomeTeamScore",
+            "TeamID": "TeamID",
+        }.copy()
 
     @abstractmethod
     async def get_team(self, id: int) -> Team | None:
@@ -305,6 +306,7 @@ class Sport:
 
         """
         logger = logging.getLogger(__name__)
+        # Sample raw score (Each Sport will have slight variations.)
         """
         [
             {'Quarter': None,
@@ -349,7 +351,7 @@ class Sport:
                 event.home_score = event_description.get(self.translate_terms["HomeTeamScore"])
                 event.away_score = event_description.get(self.translate_terms["AwayTeamScore"])
             else:
-                logger.warning("Adding unscheduled event...")
+                # Some Sports may not pull Schedules first
                 home_id = event_description.get(self.translate_terms["HomeTeamID"])
                 away_id = event_description.get(self.translate_terms["AwayTeamID"])
                 home_name = event_description.get(self.translate_terms["HomeTeamKey"])
@@ -428,7 +430,7 @@ class Sport:
         `ScheduleBasic` Data dictionary (See https://sportsdata.io/developers/data-dictionary/nhl#schedulebasic)
 
         """
-        # Sample raw event
+        # Sample raw event (Each Sport will have slight variations.)
         """
         [
             {"GameID":23869,

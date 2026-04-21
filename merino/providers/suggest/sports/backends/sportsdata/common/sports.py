@@ -200,10 +200,14 @@ class NHL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.translate_terms = self.translate_terms.copy()
+        # GlobalTeam* not available for scores, use TeamID
         self.translate_terms.update(
             {
                 "GameID": "GameID",
-                "TeamID": "GlobalTeamID",
+                "AwayTeamID": "AwayTeamID",
+                "HomeTeamID": "HomeTeamID",
+                "TeamID": "TeamID",
             }
         )
 
@@ -546,12 +550,13 @@ class MLB(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        # GlobalTeamID not in schedule
         self.translate_terms.update(
             {
                 "GameID": "GameID",
                 "AwayTeamScore": "AwayTeamRuns",
                 "HomeTeamScore": "HomeTeamRuns",
-                "TeamID": "GlobalTeamID",
+                "TeamID": "TeamID",
             }
         )
 
@@ -613,12 +618,6 @@ class MLB(Sport):
         # foreign key system, so we'll skip that for the game date directly. (Fortunately, there are
         # A LOT of baseball games.)
         url = f"{self.base_url}/ScoresBasic/{date}?key={self.api_key}"
-        self.translate_terms.update(
-            {
-                "AwayScore": "AwayTeamRuns",
-                "HomeScore": "HomeTeamRuns",
-            }
-        )
 
         """
         [
