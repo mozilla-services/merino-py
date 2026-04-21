@@ -86,7 +86,9 @@ class ElasticBackend:
             }
         }
 
-        self._metrics_client.increment(f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": index_id})
+        # Add this if wikipedia gets more than one index; for now it's covered by the provider
+        # search count
+        # self._metrics_client.increment(f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": index_id})
         try:
             res = await self.elasticsearch.search(
                 index=index_id,
