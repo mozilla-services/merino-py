@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, status, Request
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -58,18 +58,18 @@ async def lifespan(app: FastAPI):
     await get_metrics_client().close()
 
 
-app = FastAPI(openapi_tags=tags_metadata, lifespan=lifespan, default_response_class=ORJSONResponse)
+app = FastAPI(openapi_tags=tags_metadata, lifespan=lifespan, default_response_class=JSONResponse)
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
-) -> ORJSONResponse:
+) -> JSONResponse:
     """Use HTTP status code: 400 for all invalid requests."""
     # `exe.errors()` is intentionally omitted in the log to avoid log excessively
     # large error messages.
     logger.warning(f"HTTP 400: request validation error for path: {request.url.path}")
-    return ORJSONResponse(
+    return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
         content=jsonable_encoder({"detail": exc.errors()}),
     )
