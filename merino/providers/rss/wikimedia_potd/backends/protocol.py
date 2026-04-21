@@ -15,6 +15,7 @@ class PictureOfTheDay(BaseModel):
         description="High resolution URL of the picture of the day image."
     )
     published_date: str = Field(description="Date when the image was published.")
+    description: str = Field(description="Description of the image.")
 
 
 class WikimediaPictureOfTheDayBackend(Protocol):

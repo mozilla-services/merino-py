@@ -1,11 +1,20 @@
 """Wikimedia Picture of the Day backend."""
 
+import logging
 import aiodogstatsd
-from httpx import AsyncClient
+import feedparser
 from pydantic import HttpUrl
+from feedparser import FeedParserDict
+from httpx import AsyncClient, HTTPError, Response
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.backends.utils import (
+    extract_potd,
+    RSS_FETCH_REQUEST_HEADERS,
+)
 from merino.utils.gcs.gcs_uploader import GcsUploader
+
+logger = logging.getLogger(__name__)
 
 
 class WikimediaPotdBackend:
@@ -34,15 +43,40 @@ class WikimediaPotdBackend:
         Returns:
             A PictureOfTheDay instance if data is available, otherwise None.
         """
-        # NOTE: These are hardcoded for now to unblock FE testing. The urls are public.
-        # dynamic logic will be added in follow up work.
+        # TODO: remove when ready to fetch from live rss feed.
+        # potd = await self.fetch_picture_of_the_day()
+
+        # if potd is None:
+        #     return None
+        # else:
+        #     return parse_potd(potd=potd)
         return PictureOfTheDay(
             title="Wikimedia Commons picture of the day",
             thumbnail_image_url=HttpUrl(
-                "https://storage.googleapis.com/merino-images-prod/rss/wikimedia_potd/POTD_2026_04_13.jpg"
+                "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_2026_04_13.jpg"
             ),
             high_res_image_url=HttpUrl(
-                "https://storage.googleapis.com/merino-images-prod/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
+                "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
             ),
             published_date="Mon, 13 Apr 2026 00:00:00 GMT",
+            description="Sample Picture of the day description.",
         )
+
+    async def fetch_picture_of_the_day(self) -> FeedParserDict | None:
+        """Fetch Wikimedia Commons picture of the day RSS feed."""
+        try:
+            feed: Response = await self.http_client.get(
+                self.feed_url, headers=RSS_FETCH_REQUEST_HEADERS
+            )
+
+            feed.raise_for_status()
+
+            if not feed.content:
+                return None
+
+            parsed_feed: FeedParserDict = feedparser.parse(feed.text)
+
+            return extract_potd(parsed_feed)
+        except HTTPError as ex:
+            logger.error(f"HTTP error occurred when fetching Wikimedia POTD feed: {ex}")
+            return None
