@@ -84,10 +84,10 @@ class MarsBackend:
         self.etags = {}
         self.last_new_data_at = 0.0
 
-    def _emit_index_metrics(self, idx_id: str) -> None:
+    def _emit_index_metrics(self, idx_id: str, index_label: str) -> None:
         """Emit gauge metrics for the amp index after a successful build."""
         stats = self.suggestion_content.index_manager.stats(idx_id)
-        tags = {"index": idx_id}
+        tags = {"index": index_label}
         for key, value in stats.items():
             self.metrics_client.gauge(f"amp.index.{key}", value=value, tags=tags)
 
@@ -117,11 +117,13 @@ class MarsBackend:
 
         # Build the list of segments.
         segments: list[tuple[str, SegmentType, str, str]] = []
+        segment_labels: dict[SegmentType, str] = {}
         for country in countries:
             for form_factor in form_factors:
                 segment = self.get_segment(form_factor)
                 idx_id = f"{country}/{segment}"
                 segments.append((country, segment, form_factor, idx_id))
+                segment_labels[segment] = form_factor
 
         # Fetch suggestion data for all segments concurrently.
         mars_suggestions: defaultdict[str, dict[SegmentType, str]] = await self.get_suggestions(
@@ -140,7 +142,8 @@ class MarsBackend:
                     icons_in_use = icons_in_use.union(
                         self.suggestion_content.index_manager.list_icons(idx_id)
                     )
-                    self._emit_index_metrics(idx_id)
+                    index_label = f"{country}/{segment_labels.get(segment, str(segment))}"
+                    self._emit_index_metrics(idx_id, index_label)
                 except Exception as e:
                     logger.warning(
                         f"Unable to build index or get icons for {idx_id}",
