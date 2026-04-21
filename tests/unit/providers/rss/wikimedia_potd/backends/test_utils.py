@@ -125,3 +125,20 @@ def test_parse_potd_returns_none_when_img_has_no_src(potd_entry: FeedParserDict)
     potd_entry["description"] = '<img alt="missing src" />'
 
     assert parse_potd(potd_entry) is None
+
+
+def test_parse_potd_derives_high_res_url_from_thumbnail(potd_entry: FeedParserDict) -> None:
+    """Derives high_res_image_url by stripping /thumb and the trailing size segment from the thumbnail URL."""
+    thumbnail = (
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Photo.jpg/640px-Photo.jpg"
+    )
+    potd_entry["description"] = f'<img src="{thumbnail}" />'
+
+    result = parse_potd(potd_entry)
+
+    assert result is not None
+    assert str(result.thumbnail_image_url) == thumbnail
+    assert (
+        str(result.high_res_image_url)
+        == "https://upload.wikimedia.org/wikipedia/commons/a/ab/Photo.jpg"
+    )

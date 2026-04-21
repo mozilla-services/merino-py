@@ -26,11 +26,13 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
 
     img_tag = parser.find("img")
 
+    # <img> tag is required to extract thumbnail url.
     if not isinstance(img_tag, Tag):
         return None
 
     thumbnail_url = img_tag.get("src")
 
+    # Thumbnail url is required.
     if not thumbnail_url or not isinstance(thumbnail_url, str):
         return None
 
@@ -39,6 +41,7 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
     high_res_url = thumbnail_url.replace("/thumb", "").rsplit("/", 1)[0]
 
     # Extract plain text from the description div, stripping inner HTML.
+    # Description text is optional.
     desc_div = parser.find("div", class_="description")
     description_text = (
         desc_div.get_text(separator=" ", strip=True) if isinstance(desc_div, Tag) else ""
@@ -66,6 +69,8 @@ def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict | None:
     potd = parsed_feed.entries[-1]
 
     # Malformed feed entry if the below properties don't exist.
+    # The "description" entry contains the html that contain image urls and actual description text,
+    # which is parsed in the parse_potd method.
     if not ("title" in potd and "description" in potd and "published" in potd):
         return None
 
