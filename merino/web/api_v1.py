@@ -80,6 +80,7 @@ router = APIRouter()
 
 # Query normalization experiment
 NORMALIZATION_CLIENT_VARIANT: str = "query_norm_treatment"
+NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
 
 # Param to capture all enabled_by_default=True providers.
 DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
@@ -260,11 +261,10 @@ async def suggest(
         pipeline is not None and NORMALIZATION_CLIENT_VARIANT in client_variants_list
     )
     q_normalized = pipeline.normalize(q) if use_normalization and pipeline else q
-    normalization_providers = frozenset(settings.query_normalization.providers)
 
     for p in search_from:
         q_for_provider = (
-            q_normalized if use_normalization and p.name in normalization_providers else q
+            q_normalized if use_normalization and p.name in NORMALIZATION_PROVIDERS else q
         )
         srequest = SuggestionRequest(
             query=p.normalize_query(q_for_provider),
@@ -315,7 +315,7 @@ async def suggest(
             metrics_client,
             suggestions,
             search_from,
-            normalization_providers,
+            NORMALIZATION_PROVIDERS,
             query_changed=q_normalized != tier_a(q),
         )
 

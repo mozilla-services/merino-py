@@ -63,12 +63,15 @@ _PUNCT_MAP = str.maketrans(
 )
 
 
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
 # Step 1: do canonicalization on the query string
 def tier_a(query: str) -> str:
     """NFKC + punctuation normalization + casefold + whitespace collapse."""
     query = unicodedata.normalize("NFKC", query)
     query = query.translate(_PUNCT_MAP)
-    return re.sub(r"\s+", " ", query.casefold().strip())
+    return _WHITESPACE_RE.sub(" ", query.casefold().strip())
 
 
 # Step 2 is exact hit check
@@ -87,7 +90,9 @@ def _try_join_normalize(tokens: list[str], canonical: set[str]) -> str | None:
         candidate = " ".join([*tokens[:i], merged, *tokens[i + 2 :]])
         if candidate in canonical or merged in canonical:
             hits.append(candidate)
-    # only return if unambiguous
+            if len(hits) > 1:
+                # abort normalization if ambiguous
+                return None
     return hits[0] if len(hits) == 1 else None
 
 
@@ -139,14 +144,16 @@ def _try_split_token(token: str, canonical: set[str], max_splits: int = 4) -> st
         # try every way to place num_splits cut points in the token
         # e.g. for "slickdeals", n=10, num_splits=1, cuts=[3] -> "slic kdeals"
         for cuts in combinations(range(min_seg, n - min_seg + 1), num_splits):
-            parts = []
+            parts: list[str] = []
             prev = 0
-            for cut in cuts:
+            # sentinel so the tail is checked inside the loop
+            for cut in (*cuts, n):
+                if cut - prev < min_seg:
+                    break
                 parts.append(token[prev:cut])
                 prev = cut
-            parts.append(token[prev:])
-
-            if all(len(p) >= min_seg for p in parts):
+            else:
+                # only entered when the loop completes without breaking
                 candidate = " ".join(parts)
                 if candidate in canonical:
                     return candidate
@@ -253,24 +260,25 @@ class BM25Index:
         self.b = b  # document length saturation, how much longer documents are penalized
         self._tokenized = [doc.split() for doc in corpus]
         self._corpus_set: set[str] = set(corpus)
-        n = len(self._tokenized)
+        n = len(self.corpus)
         self._avgdl = sum(len(d) for d in self._tokenized) / max(
             n, 1
         )  # average document length across corpus
         self._doc_lens = [len(d) for d in self._tokenized]
 
-        df: dict[str, int] = {}
-        # counts how many times each term appears in the corpus
+        # counts how many documents each term appears in
+        df: Counter[str] = Counter()
         for doc in self._tokenized:
-            for term in set(doc):
-                df[term] = df.get(term, 0) + 1
+            df.update(set(doc))
 
         # scores rarer terms more highly
         self._idf: dict[str, float] = {
             term: math.log((n - cnt + 0.5) / (cnt + 0.5) + 1) for term, cnt in df.items()
         }
-        # builds inverted index
-        # e.g.{"stock": [(0, 1), (1, 1), (2, 1)]}
+        # Inverted index: maps each term to a list of (doc_index, term_frequency)
+        # tuples. doc_index is the position in self.corpus, term_frequency is how
+        # many times the term appears in that document.
+        # e.g. {"stock": [(0, 1), (2, 1)]} means "stock" appears once in docs 0 and 2.
         self._inv: dict[str, list[tuple[int, int]]] = {}
         for i, doc in enumerate(self._tokenized):
             for term, count in Counter(doc).items():
@@ -289,7 +297,6 @@ class BM25Index:
         q_tokens = query.split()
         if len(q_tokens) < 2:
             return None
-        q_sorted = sorted(q_tokens)
 
         scores: dict[int, float] = {}
         # scoring loop for each term in the query
@@ -312,12 +319,10 @@ class BM25Index:
 
         # get top score and matching document index
         top_idx = max(scores, key=lambda i: scores[i])
-        if scores[top_idx] == 0.0:
-            return None
 
-        # guard to make sure we have the same number of tokens
-        # for document and query
-        if q_sorted != sorted(self._tokenized[top_idx]):
+        # guard to make sure we have the same tokens
+        # for document and query (just reordered, not different)
+        if sorted(q_tokens) != sorted(self._tokenized[top_idx]):
             return None
 
         return self.corpus[top_idx]
@@ -351,7 +356,7 @@ class NormalizePipeline:
     # skip normalization for queries longer than this. The API already
     # rejects queries > 500 chars but this prevents excessive processing
     # from wordsegment and other expensive steps.
-    _MAX_QUERY_LENGTH = 200
+    _MAX_QUERY_LENGTH = 50
 
     def normalize(self, query: str) -> str:
         """Run the full normalization cascade."""
