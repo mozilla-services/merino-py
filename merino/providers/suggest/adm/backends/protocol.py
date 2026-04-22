@@ -24,6 +24,28 @@ class EngagementData(BaseModel):
     amp_aggregated: dict[str, int]
 
 
+class KeywordMetrics(BaseModel):
+    """Impressions and clicks for a single time window."""
+
+    impressions: int
+    clicks: int
+
+
+class KeywordEntry(BaseModel):
+    """Live and historical engagement metrics for a single advertiser/keyword pair."""
+
+    live: KeywordMetrics
+    historical: KeywordMetrics
+
+
+class KeywordEngagementData(BaseModel):
+    """Model for keyword-level engagement data file content."""
+
+    amp: dict[str, KeywordEntry] = {}
+    amp_aggregated: dict[str, int] = {}
+    wiki_aggregated: dict[str, int] = {}
+
+
 class SuggestionContent(BaseModel):
     """Class that holds the result from a fetch operation."""
 
