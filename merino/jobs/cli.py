@@ -14,6 +14,7 @@ from merino.jobs.polygon import cli as polygon_ingestion_cmd
 from merino.jobs.flightaware import cli as flightaware_fetch_schedules_cmd
 from merino.jobs.sportsdata_jobs import cli as sportsdata_cmd
 from merino.jobs.engagement_model import cli as engagement_data_cmd
+from merino.jobs.engagement_model.amp_live_probe import cli as amp_live_probe_cmd
 
 # Include your new jobs module here.
 
@@ -49,6 +50,9 @@ cli.add_typer(sportsdata_cmd, no_args_is_help=True)
 
 # Add the engagement data fetch subcommand
 cli.add_typer(engagement_data_cmd, no_args_is_help=True)
+
+# Add the AMP live dataset access probe subcommand
+cli.add_typer(amp_live_probe_cmd, no_args_is_help=True)
 
 
 @cli.callback()
