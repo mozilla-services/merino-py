@@ -48,10 +48,11 @@ def test_get_logo_url_not_found(
     assert "mlb" in records[0].message
     assert "zzzzz" in records[0].message
 
-    # Increments miss metric
+    # Increments miss metric with the normalized key so dashboards can show
+    # which specific logo is missing, not just the category.
     statsd_mock.increment.assert_called_once_with(
         "manifest.lookup",
-        tags={"name": "logos.mlb", "result": "miss"},
+        tags={"name": "logos.mlb", "key": "ZZZZZ", "result": "miss"},
     )
 
 

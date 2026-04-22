@@ -74,8 +74,12 @@ def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
     logo = load_manifest().get(category, key)
     if logo is None:
         logger.warning(f"Logo does not exist for category={category} and key={key}")
+        # Normalize to the manifest's uppercase storage form so "aa" and "AA"
+        # collapse to a single series. Cardinality is bounded by the known key
+        # spaces (IATA codes, sports team keys), so this is safe for Prometheus.
         metrics_client.increment(
-            "manifest.lookup", tags={"name": f"logos.{category}", "result": "miss"}
+            "manifest.lookup",
+            tags={"name": f"logos.{category}", "key": key.upper(), "result": "miss"},
         )
         return None
     return HttpUrl(urljoin(CDN_ROOT_URL, logo.url))
