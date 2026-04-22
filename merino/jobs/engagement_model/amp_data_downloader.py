@@ -29,8 +29,8 @@ ORDER BY 1, 3 DESC, 2 DESC
 
     KEYWORD_QUERY = """
 SELECT
- LOWER(advertiser),
- LOWER(query),
+ LOWER(advertiser) AS advertiser,
+ LOWER(query) AS query,
  COUNTIF(is_clicked) AS clicks,
  COUNT(*) AS impressions
 FROM `moz-fx-data-shared-prod.search_terms_derived.suggest_impression_sanitized_v3`
