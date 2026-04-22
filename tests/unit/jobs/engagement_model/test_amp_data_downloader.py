@@ -111,8 +111,8 @@ def test_download_by_advertiser_returns_empty_list_when_no_rows():
         assert data == []
 
 
-def test_download_by_keyword():
-    """Test downloading keyword-level AMP engagement data."""
+def test_download_historical_data_by_keyword():
+    """Test downloading historical keyword-level AMP engagement data."""
     rows = [
         {
             "advertiser": "mozilla",
@@ -138,12 +138,12 @@ def test_download_by_keyword():
         return_value=mock_client,
     ):
         downloader = EngagementDataDownloader(source_gcp_project="merino-test")
-        data = downloader.download_by_keyword()
+        data = downloader.download_historical_data_by_keyword()
         assert data == rows
         mock_client.query.assert_called_once()
 
 
-def test_download_by_keyword_raises_runtime_error_on_bigquery_failure():
+def test_download_historical_data_by_keyword_raises_runtime_error_on_bigquery_failure():
     """Test that a BigQuery failure is wrapped in RuntimeError."""
     mock_client = MagicMock()
     mock_client.query.side_effect = GoogleAPIError("BigQuery failed")
@@ -156,14 +156,14 @@ def test_download_by_keyword_raises_runtime_error_on_bigquery_failure():
 
         with pytest.raises(
             RuntimeError,
-            match="Failed to fetch keyword-level AMP engagement data from BigQuery",
+            match="Failed to fetch historical keyword-level AMP engagement data from BigQuery",
         ):
-            downloader.download_by_keyword()
+            downloader.download_historical_data_by_keyword()
 
         mock_client.query.assert_called_once()
 
 
-def test_download_by_keyword_skips_malformed_rows():
+def test_download_historical_data_by_keyword_skips_malformed_rows():
     """Test that malformed rows are skipped."""
     rows = [
         {
@@ -190,7 +190,7 @@ def test_download_by_keyword_skips_malformed_rows():
         return_value=mock_client,
     ):
         downloader = EngagementDataDownloader(source_gcp_project="merino-test")
-        data = downloader.download_by_keyword()
+        data = downloader.download_historical_data_by_keyword()
 
         assert data == [
             {
@@ -202,7 +202,7 @@ def test_download_by_keyword_skips_malformed_rows():
         ]
 
 
-def test_download_by_keyword_returns_empty_list_when_no_rows():
+def test_download_historical_data_by_keyword_returns_empty_list_when_no_rows():
     """Test that an empty result set returns an empty list."""
     mock_client = MagicMock()
     mock_query = MagicMock()
@@ -214,7 +214,115 @@ def test_download_by_keyword_returns_empty_list_when_no_rows():
         return_value=mock_client,
     ):
         downloader = EngagementDataDownloader(source_gcp_project="merino-test")
-        data = downloader.download_by_keyword()
+        data = downloader.download_historical_data_by_keyword()
+
+        assert data == []
+
+
+def test_download_live_data_by_keyword():
+    """Test downloading live keyword-level AMP engagement data."""
+    rows = [
+        {
+            "advertiser": "mozilla",
+            "query": "firefox",
+            "impressions": 500,
+            "clicks": 10,
+        },
+        {
+            "advertiser": "firefox",
+            "query": "browser",
+            "impressions": 200,
+            "clicks": 5,
+        },
+    ]
+
+    mock_client = MagicMock()
+    mock_query = MagicMock()
+    mock_query.result.return_value = rows
+    mock_client.query.return_value = mock_query
+
+    with patch(
+        "merino.jobs.engagement_model.amp_data_downloader.Client",
+        return_value=mock_client,
+    ):
+        downloader = EngagementDataDownloader(source_gcp_project="merino-test")
+        data = downloader.download_live_data_by_keyword()
+        assert data == rows
+        mock_client.query.assert_called_once()
+
+
+def test_download_live_data_by_keyword_raises_runtime_error_on_bigquery_failure():
+    """Test that a BigQuery failure is wrapped in RuntimeError."""
+    mock_client = MagicMock()
+    mock_client.query.side_effect = GoogleAPIError("BigQuery failed")
+
+    with patch(
+        "merino.jobs.engagement_model.amp_data_downloader.Client",
+        return_value=mock_client,
+    ):
+        downloader = EngagementDataDownloader(source_gcp_project="merino-test")
+
+        with pytest.raises(
+            RuntimeError,
+            match="Failed to fetch live keyword-level AMP engagement data from BigQuery",
+        ):
+            downloader.download_live_data_by_keyword()
+
+        mock_client.query.assert_called_once()
+
+
+def test_download_live_data_by_keyword_skips_malformed_rows():
+    """Test that malformed rows are skipped."""
+    rows = [
+        {
+            "advertiser": "mozilla",
+            "query": "firefox",
+            "impressions": 500,
+            "clicks": 10,
+        },
+        {
+            "advertiser": "firefox",
+            "query": "browser",
+            "impressions": 200,
+            # missing clicks
+        },
+    ]
+
+    mock_client = MagicMock()
+    mock_query = MagicMock()
+    mock_query.result.return_value = rows
+    mock_client.query.return_value = mock_query
+
+    with patch(
+        "merino.jobs.engagement_model.amp_data_downloader.Client",
+        return_value=mock_client,
+    ):
+        downloader = EngagementDataDownloader(source_gcp_project="merino-test")
+        data = downloader.download_live_data_by_keyword()
+
+        assert data == [
+            {
+                "advertiser": "mozilla",
+                "query": "firefox",
+                "impressions": 500,
+                "clicks": 10,
+            }
+        ]
+
+
+def test_download_live_data_by_keyword_returns_empty_list_when_no_rows():
+    """Test that an empty result set returns an empty list."""
+    mock_client = MagicMock()
+    mock_query = MagicMock()
+    mock_query.result.return_value = []
+    mock_client.query.return_value = mock_query
+
+    with patch(
+        "merino.jobs.engagement_model.amp_data_downloader.Client",
+        return_value=mock_client,
+    ):
+        downloader = EngagementDataDownloader(source_gcp_project="merino-test")
+        data = downloader.download_live_data_by_keyword()
 
         assert data == []
 
@@ -255,36 +363,85 @@ def test_aggregate_by_advertiser_returns_zeros_for_empty_input():
     }
 
 
-def test_transform_by_keyword_returns_advertiser_query_keyed_dict():
-    """Test that keyword rows are keyed by advertiser/query with historical wrapper."""
-    data = [
+def test_transform_by_keyword_with_historical_only():
+    """Test that historical-only rows produce entries with only a historical key."""
+    historical = [
         {"advertiser": "mozilla", "query": "firefox", "impressions": 1000, "clicks": 22},
         {"advertiser": "firefox", "query": "browser", "impressions": 5666, "clicks": 0},
     ]
-    result = EngagementDataDownloader.transform_by_keyword(data)
+    result = EngagementDataDownloader.transform_by_keyword(historical=historical, live=[])
     assert result == {
         "mozilla/firefox": {"historical": {"impressions": 1000, "clicks": 22}},
         "firefox/browser": {"historical": {"impressions": 5666, "clicks": 0}},
     }
 
 
-def test_transform_by_keyword_returns_empty_dict_for_empty_input():
-    """Test that an empty input returns an empty dict."""
-    assert EngagementDataDownloader.transform_by_keyword([]) == {}
-
-
-def test_aggregate_by_keyword_sums_impressions_and_clicks():
-    """Test that impressions and clicks are summed from the historical data."""
-    transformed = {
-        "mozilla/firefox": {"historical": {"impressions": 1000, "clicks": 22}},
-        "firefox/browser": {"historical": {"impressions": 5666, "clicks": 0}},
+def test_transform_by_keyword_with_live_only():
+    """Test that live-only rows produce entries with only a live key."""
+    live = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 500, "clicks": 10},
+        {"advertiser": "firefox", "query": "browser", "impressions": 200, "clicks": 5},
+    ]
+    result = EngagementDataDownloader.transform_by_keyword(historical=[], live=live)
+    assert result == {
+        "mozilla/firefox": {"live": {"impressions": 500, "clicks": 10}},
+        "firefox/browser": {"live": {"impressions": 200, "clicks": 5}},
     }
-    result = EngagementDataDownloader.aggregate_by_keyword(transformed)
-    assert result == {"impressions": 6666, "clicks": 22}
+
+
+def test_transform_by_keyword_merges_matching_pairs():
+    """Test that matching advertiser/query pairs from both datasets are merged."""
+    historical = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 1000, "clicks": 22},
+    ]
+    live = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 500, "clicks": 10},
+    ]
+    result = EngagementDataDownloader.transform_by_keyword(historical=historical, live=live)
+    assert result == {
+        "mozilla/firefox": {
+            "historical": {"impressions": 1000, "clicks": 22},
+            "live": {"impressions": 500, "clicks": 10},
+        }
+    }
+
+
+def test_transform_by_keyword_unions_non_matching_pairs():
+    """Test that non-overlapping pairs appear with only their respective data source."""
+    historical = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 1000, "clicks": 22},
+    ]
+    live = [
+        {"advertiser": "firefox", "query": "browser", "impressions": 200, "clicks": 5},
+    ]
+    result = EngagementDataDownloader.transform_by_keyword(historical=historical, live=live)
+    assert result == {
+        "mozilla/firefox": {"historical": {"impressions": 1000, "clicks": 22}},
+        "firefox/browser": {"live": {"impressions": 200, "clicks": 5}},
+    }
+
+
+def test_transform_by_keyword_returns_empty_dict_for_empty_inputs():
+    """Test that empty historical and live inputs return an empty dict."""
+    assert EngagementDataDownloader.transform_by_keyword(historical=[], live=[]) == {}
+
+
+def test_aggregate_by_keyword_returns_zeros():
+    """Test that aggregate_by_keyword returns zeros (not yet consumed)."""
+    transformed = {
+        "mozilla/firefox": {
+            "historical": {"impressions": 1000, "clicks": 22},
+            "live": {"impressions": 500, "clicks": 10},
+        },
+    }
+    assert EngagementDataDownloader.aggregate_by_keyword(transformed) == {
+        "impressions": 0,
+        "clicks": 0,
+    }
 
 
 def test_aggregate_by_keyword_returns_zeros_for_empty_input():
-    """Test that an empty input returns zero totals."""
+    """Test that an empty input also returns zeros."""
     assert EngagementDataDownloader.aggregate_by_keyword({}) == {
         "impressions": 0,
         "clicks": 0,

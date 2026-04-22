@@ -38,13 +38,21 @@ def upload_engagement_data() -> None:  # pragma: no cover
         wiki_data_downloader = WikiDownloader(gcs_bq_project)
 
         amp_by_advertiser: list[dict[str, Any]] = amp_data_downloader.download_by_advertiser()
-        amp_by_keyword: list[dict[str, Any]] = amp_data_downloader.download_by_keyword()
+        amp_keyword_historical: list[dict[str, Any]] = (
+            amp_data_downloader.download_historical_data_by_keyword()
+        )
+        amp_keyword_live: list[dict[str, Any]] = (
+            amp_data_downloader.download_live_data_by_keyword()
+        )
         wiki_data: dict[str, int] = wiki_data_downloader.download_data()
 
         transformed_amp_by_advertiser = amp_data_downloader.transform_by_advertiser(
             amp_by_advertiser
         )
-        transformed_amp_by_keyword = amp_data_downloader.transform_by_keyword(amp_by_keyword)
+        transformed_amp_by_keyword = amp_data_downloader.transform_by_keyword(
+            historical=amp_keyword_historical,
+            live=amp_keyword_live,
+        )
 
         amp_aggregated_by_advertiser = amp_data_downloader.aggregate_by_advertiser(
             amp_by_advertiser
