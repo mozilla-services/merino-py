@@ -7,7 +7,7 @@ from itertools import chain
 from typing import Annotated, Literal
 
 from asgi_correlation_id.context import correlation_id
-from fastapi import APIRouter, Depends, Query, Header
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
@@ -482,11 +482,20 @@ async def curated_content_legacy_fx_114(
     "/manifest",
     tags=["manifest"],
     summary="Get latest website favicons manifest",
+    description=(
+        "Returns the full manifest, plus an ``ETag`` derived from the "
+        "underlying GCS generation. Clients that cache the manifest should "
+        "send the ETag back as ``If-None-Match`` on subsequent requests; "
+        "when the manifest has not changed the server replies with "
+        "``304 Not Modified`` and an empty body."
+    ),
     response_model=ManifestData,
 )
 async def get_manifest(
-    request: Request, provider: ManifestProvider = Depends(get_manifest_provider)
-) -> ORJSONResponse:
+    request: Request,
+    provider: ManifestProvider = Depends(get_manifest_provider),
+    if_none_match: Annotated[str | None, Header()] = None,
+) -> Response:
     """Query merino for manifest data."""
     logger.info("Attempting to get manifest")
 
@@ -498,22 +507,34 @@ async def get_manifest(
         manifest_data = provider.get_manifest_data()
 
         if manifest_data and manifest_data.domains:
+            etag = provider.get_etag()
+            cache_control = (
+                f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"
+            )
+
+            if etag is not None and if_none_match == etag:
+                metrics_client.increment("manifest.request.not_modified")
+                return Response(
+                    status_code=status.HTTP_304_NOT_MODIFIED,
+                    headers={"ETag": etag, "Cache-Control": cache_control},
+                )
+
             metrics_client.increment("manifest.request.success")
+
+            headers = {"Cache-Control": cache_control}
+            if etag is not None:
+                headers["ETag"] = etag
 
             return ORJSONResponse(
                 content=jsonable_encoder(manifest_data),
-                headers={
-                    "Cache-Control": (
-                        f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"
-                    )
-                },
+                headers=headers,
             )
 
         metrics_client.increment("manifest.request.error")
         logger.error("Manifest file not found")
-        return ORJSONResponse(
-            content=jsonable_encoder(manifest_data),
-            status_code=404,
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Manifest not found",
         )
 
 
