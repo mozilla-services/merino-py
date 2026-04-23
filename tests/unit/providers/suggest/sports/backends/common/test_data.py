@@ -1,6 +1,6 @@
 """Unit Test for Sports Data models."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import freezegun
@@ -328,3 +328,31 @@ def test_get_score_returns_none_when_no_keys_present(sport_cls: type[Sport]):
     """Ensure get_score returns None when none of the keys are present."""
     sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
     assert sport.get_score({}, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]) is None
+
+
+@pytest.mark.parametrize(
+    "name,expected_key",
+    [
+        ("Korea Republic", "KOR"),
+        ("Curaçao", "CUW"),
+    ],
+    ids=["korea-keeps-kor", "curacao-remapped-to-cuw"],
+)
+def test_from_data_disambiguates_kor_collision(name: str, expected_key: str) -> None:
+    """Verify Curaçao is remapped to CUW while Korea keeps KOR.
+
+    sportsdata's international-soccer feed returns Key=KOR for both Korea
+    Republic and Curaçao, so Team.from_data must disambiguate by Name to keep
+    the two teams distinct downstream.
+    """
+    team = Team.from_data(
+        {
+            "Key": "KOR",
+            "Name": name,
+            "AreaName": name,
+            "GlobalTeamId": 12345,
+        },
+        term_filter=[],
+        team_ttl=timedelta(weeks=1),
+    )
+    assert team.key == expected_key
