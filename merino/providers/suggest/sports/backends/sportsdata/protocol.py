@@ -18,7 +18,7 @@ from merino.utils.logos import get_logo_url, LogoCategory
 class SportTeamDetail(BaseModel):
     """Data about the specific Sport team."""
 
-    key: str  # Sport unique abbreviated identifier (e.g. "SFG", "DAL", etc)
+    key: str  # Sport unique abbreviated identifier (e.g. "SF", "DAL", etc)
     name: str  # Full name of the team
     colors: list[str]  # list of hex colors from primary to quaternary
     score: int | None  # Current score (if available)

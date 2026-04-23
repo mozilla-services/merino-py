@@ -173,7 +173,7 @@
       "COL": { "name": "Colorado Rockies", "url": "logos/mlb/mlb_col.png" },
       "DET": { "name": "Detroit Tigers", "url": "logos/mlb/mlb_det.png" },
       "HOU": { "name": "Houston Astros", "url": "logos/mlb/mlb_hou.png" },
-      "KCR": { "name": "Kansas City Royals", "url": "logos/mlb/mlb_kcr.png" },
+      "KC": { "name": "Kansas City Royals", "url": "logos/mlb/mlb_kcr.png" },
       "LAA": { "name": "Los Angeles Angels", "url": "logos/mlb/mlb_laa.png" },
       "LAD": { "name": "Los Angeles Dodgers", "url": "logos/mlb/mlb_lad.png" },
       "MIA": { "name": "Miami Marlins", "url": "logos/mlb/mlb_mia.png" },
@@ -181,20 +181,20 @@
       "MIN": { "name": "Minnesota Twins", "url": "logos/mlb/mlb_min.png" },
       "NYM": { "name": "New York Mets", "url": "logos/mlb/mlb_nym.png" },
       "NYY": { "name": "New York Yankees", "url": "logos/mlb/mlb_nyy.png" },
-      "OAK": { "name": "Athletics", "url": "logos/mlb/mlb_oak.png" },
+      "ATH": { "name": "Athletics", "url": "logos/mlb/mlb_oak.png" },
       "PHI": {
         "name": "Philadelphia Phillies",
         "url": "logos/mlb/mlb_phi.png"
       },
       "PIT": { "name": "Pittsburgh Pirates", "url": "logos/mlb/mlb_pit.png" },
-      "SDP": { "name": "San Diego Padres", "url": "logos/mlb/mlb_sdp.png" },
+      "SD": { "name": "San Diego Padres", "url": "logos/mlb/mlb_sdp.png" },
       "SEA": { "name": "Seattle Mariners", "url": "logos/mlb/mlb_sea.png" },
-      "SFG": { "name": "San Francisco Giants", "url": "logos/mlb/mlb_sfg.png" },
+      "SF": { "name": "San Francisco Giants", "url": "logos/mlb/mlb_sfg.png" },
       "STL": { "name": "St. Louis Cardinals", "url": "logos/mlb/mlb_stl.png" },
-      "TBR": { "name": "Tampa Bay Rays", "url": "logos/mlb/mlb_tbr.png" },
+      "TB": { "name": "Tampa Bay Rays", "url": "logos/mlb/mlb_tbr.png" },
       "TEX": { "name": "Texas Rangers", "url": "logos/mlb/mlb_tex.png" },
       "TOR": { "name": "Toronto Blue Jays", "url": "logos/mlb/mlb_tor.png" },
-      "WSN": { "name": "Washington Nationals", "url": "logos/mlb/mlb_wsn.png" }
+      "WSH": { "name": "Washington Nationals", "url": "logos/mlb/mlb_wsn.png" }
     },
     "nba": {
       "ATL": { "name": "Atlanta Hawks", "url": "logos/nba/nba_atl.png" },
@@ -206,7 +206,7 @@
       "DAL": { "name": "Dallas Mavericks", "url": "logos/nba/nba_dal.png" },
       "DEN": { "name": "Denver Nuggets", "url": "logos/nba/nba_den.png" },
       "DET": { "name": "Detroit Pistons", "url": "logos/nba/nba_det.png" },
-      "GSW": {
+      "GS": {
         "name": "Golden State Warriors",
         "url": "logos/nba/nba_gsw.png"
       },
@@ -221,21 +221,21 @@
         "name": "Minnesota Timberwolves",
         "url": "logos/nba/nba_min.png"
       },
-      "NOP": { "name": "New Orleans Pelicans", "url": "logos/nba/nba_nop.png" },
-      "NYK": { "name": "New York Knicks", "url": "logos/nba/nba_nyk.png" },
+      "NO": { "name": "New Orleans Pelicans", "url": "logos/nba/nba_nop.png" },
+      "NY": { "name": "New York Knicks", "url": "logos/nba/nba_nyk.png" },
       "OKC": {
         "name": "Oklahoma City Thunder",
         "url": "logos/nba/nba_okc.png"
       },
       "ORL": { "name": "Orlando Magic", "url": "logos/nba/nba_orl.png" },
       "PHI": { "name": "Philadelphia 76ers", "url": "logos/nba/nba_phi.png" },
-      "PHX": { "name": "Phoenix Suns", "url": "logos/nba/nba_phx.png" },
+      "PHO": { "name": "Phoenix Suns", "url": "logos/nba/nba_phx.png" },
       "POR": {
         "name": "Portland Trail Blazers",
         "url": "logos/nba/nba_por.png"
       },
       "SAC": { "name": "Sacramento Kings", "url": "logos/nba/nba_sac.png" },
-      "SAS": { "name": "San Antonio Spurs", "url": "logos/nba/nba_sas.png" },
+      "SA": { "name": "San Antonio Spurs", "url": "logos/nba/nba_sas.png" },
       "TOR": { "name": "Toronto Raptors", "url": "logos/nba/nba_tor.png" },
       "UTA": { "name": "Utah Jazz", "url": "logos/nba/nba_uta.png" },
       "WAS": { "name": "Washington Wizards", "url": "logos/nba/nba_was.png" }
@@ -290,26 +290,26 @@
       "DET": { "name": "Detroit Red Wings", "url": "logos/nhl/nhl_det.png" },
       "EDM": { "name": "Edmonton Oilers", "url": "logos/nhl/nhl_edm.png" },
       "FLA": { "name": "Florida Panthers", "url": "logos/nhl/nhl_fla.png" },
-      "LAK": { "name": "Los Angeles Kings", "url": "logos/nhl/nhl_lak.png" },
+      "LA": { "name": "Los Angeles Kings", "url": "logos/nhl/nhl_lak.png" },
       "MIN": { "name": "Minnesota Wild", "url": "logos/nhl/nhl_min.png" },
-      "MTL": { "name": "Montreal Canadiens", "url": "logos/nhl/nhl_mtl.png" },
-      "NJD": { "name": "New Jersey Devils", "url": "logos/nhl/nhl_njd.png" },
-      "NSH": { "name": "Nashville Predators", "url": "logos/nhl/nhl_nsh.png" },
+      "MON": { "name": "Montreal Canadiens", "url": "logos/nhl/nhl_mtl.png" },
+      "NJ": { "name": "New Jersey Devils", "url": "logos/nhl/nhl_njd.png" },
+      "NAS": { "name": "Nashville Predators", "url": "logos/nhl/nhl_nsh.png" },
       "NYI": { "name": "New York Islanders", "url": "logos/nhl/nhl_nyi.png" },
       "NYR": { "name": "New York Rangers", "url": "logos/nhl/nhl_nyr.png" },
       "OTT": { "name": "Ottawa Senators", "url": "logos/nhl/nhl_ott.png" },
       "PHI": { "name": "Philadelphia Flyers", "url": "logos/nhl/nhl_phi.png" },
       "PIT": { "name": "Pittsburgh Penguins", "url": "logos/nhl/nhl_pit.png" },
       "SEA": { "name": "Seattle Kraken", "url": "logos/nhl/nhl_sea.png" },
-      "SJS": { "name": "San Jose Sharks", "url": "logos/nhl/nhl_sjs.png" },
+      "SJ": { "name": "San Jose Sharks", "url": "logos/nhl/nhl_sjs.png" },
       "STL": { "name": "St. Louis Blues", "url": "logos/nhl/nhl_stl.png" },
-      "TBL": { "name": "Tampa Bay Lightning", "url": "logos/nhl/nhl_tbl.png" },
+      "TB": { "name": "Tampa Bay Lightning", "url": "logos/nhl/nhl_tbl.png" },
       "TOR": { "name": "Toronto Maple Leafs", "url": "logos/nhl/nhl_tor.png" },
       "UTA": { "name": "Utah Mammoth", "url": "logos/nhl/nhl_uta.png" },
       "VAN": { "name": "Vancouver Canucks", "url": "logos/nhl/nhl_van.png" },
-      "VGK": { "name": "Vegas Golden Knights", "url": "logos/nhl/nhl_vgk.png" },
+      "VEG": { "name": "Vegas Golden Knights", "url": "logos/nhl/nhl_vgk.png" },
       "WPG": { "name": "Winnipeg Jets", "url": "logos/nhl/nhl_wpg.png" },
-      "WSH": { "name": "Washington Capitals", "url": "logos/nhl/nhl_wsh.png" }
+      "WAS": { "name": "Washington Capitals", "url": "logos/nhl/nhl_wsh.png" }
     }
   }
 }
