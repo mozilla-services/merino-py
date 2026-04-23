@@ -1279,7 +1279,9 @@ async def test_get_team_lookup(cls: type[Sport]) -> None:
 
 @pytest.mark.asyncio
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
-async def test_nfl_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+async def test_nfl_update_teams(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
     """Test NFL team updates."""
     nfl = NFL(settings=settings.providers.sports)
     timeframe = [
@@ -1377,7 +1379,9 @@ async def test_nhl_update_teams(
 
 
 @pytest.mark.asyncio
-async def test_nba_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+async def test_nba_update_teams(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
     """Test NHL team updates."""
     nba = NBA(settings=settings.providers.sports)
     teams_payload = nba_teams_payload()
@@ -1393,7 +1397,9 @@ async def test_nba_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
 
 
 @pytest.mark.asyncio
-async def test_mlb_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+async def test_mlb_update_teams(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
     """Test MLB team updates."""
     sport = MLB(settings=settings.providers.sports)
     teams_payload = mlb_teams_payload()
@@ -1410,13 +1416,15 @@ async def test_mlb_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
-async def test_ucl_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+async def test_ucl_update_teams(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
     """Test ucl team updates."""
     ucl = UCL(settings=settings.providers.sports)
     teams_payload = soccer_teams_payload()
     get_data = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
-        side_effect=[teams_payload],  # called twice per code
+        side_effect=[teams_payload],
     )
     await ucl.update_teams(client=mock_client)
     assert ucl.season == "2025"
@@ -1782,7 +1790,8 @@ def test_sport_subclasses_have_category_mapping() -> None:
     missing = [
         cls.__name__
         for cls in Sport.__subclasses__()
-        if cls.__module__ == sports_module.__name__ and cls.__name__ not in SPORT_CATEGORY_MAP
+        if cls.__module__ == sports_module.__name__
+        and cls.__name__ not in SPORT_CATEGORY_MAP
     ]
     assert missing == [], f"Sport subclasses missing from SPORT_CATEGORY_MAP: {missing}"
 
@@ -1800,7 +1809,7 @@ async def test_sportsdata_errors() -> None:
 def test_sport_term_pollution() -> None:
     """Test that the translate terms don't cross pollute"""
     sport = NFL(settings=settings.providers.sports)
-    terms = sport.translate_terms.copy()
+    terms = sport.normalized_terms.copy()
     sport2 = MLB(settings=settings.providers.sports)
-    assert sport.translate_terms != sport2.translate_terms
-    assert sport.translate_terms == terms
+    assert sport.normalized_terms != sport2.normalized_terms
+    assert sport.normalized_terms == terms

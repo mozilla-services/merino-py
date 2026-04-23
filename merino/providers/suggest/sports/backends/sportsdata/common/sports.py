@@ -67,7 +67,7 @@ class NFL(Sport):
             lock=asyncio.Lock(),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GlobalGameID",
                 "AwayTeamID": "GlobalAwayTeamID",
@@ -135,7 +135,9 @@ class NFL(Sport):
             return
         start = response[0].get("StartDate")
         end = response[0].get("EndDate")
-        logger.debug(f"{LOGGING_TAG} {self.name} {self.season} week {self.week} {start} to {end}")
+        logger.debug(
+            f"{LOGGING_TAG} {self.name} {self.season} week {self.week} {start} to {end}"
+        )
 
     async def update_teams(self, client: AsyncClient):
         """NFL requires a nightly "Timeframe" lookup."""
@@ -200,9 +202,9 @@ class NHL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms = self.translate_terms.copy()
+        self.normalized_terms = self.normalized_terms.copy()
         # GlobalTeam* not available for scores, use TeamID
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GameID",
                 "AwayTeamID": "AwayTeamID",
@@ -313,7 +315,7 @@ class NBA(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GlobalGameID",
                 "AwayTeamID": "GlobalAwayTeamID",
@@ -425,7 +427,7 @@ class UCL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GlobalGameId",
                 "AwayTeamID": "GlobalAwayTeamId",
@@ -551,7 +553,7 @@ class MLB(Sport):
         )
         self._lock = asyncio.Lock()
         # GlobalTeamID not in schedule
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GameID",
                 "AwayTeamScore": "AwayTeamRuns",
