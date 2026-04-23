@@ -65,7 +65,13 @@ class Team(BaseModel):
     expiry: datetime
 
     @classmethod
-    def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
+    def from_data(
+        cls,
+        team_data: dict[str, Any],
+        term_filter: list[str],
+        team_ttl: timedelta,
+        translate_terms: dict,
+    ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
@@ -89,7 +95,7 @@ class Team(BaseModel):
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
-        team_id = team_data.get("GlobalTeamID", team_data.get("GlobalTeamId"))
+        team_id = team_data.get(translate_terms["TeamID"])
         if not team_id:
             logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
             raise SportsDataError(f"No GlobalTeamID found for {fullname}")
@@ -210,6 +216,11 @@ class Sport:
     # and ownership reasons.
     term_filter: list[str] = []
     cache_dir: str | None
+    # Each sport may use a different term for these values.
+    # You should prefer to use the `Global*` version when possible, but not all sports
+    # provide that value, nor do all returned data sets.
+    # This array is used by both Schedule and Score lookups.
+    translate_terms: dict = {}
 
     def __init__(
         self,
@@ -242,6 +253,16 @@ class Sport:
         self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
         self.term_filter = term_filter
         self.cache_dir = cache_dir
+        self.translate_terms = {
+            "GameID": "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
+            "AwayTeamID": "AwayTeamID",
+            "AwayTeamKey": "AwayTeam",
+            "AwayTeamScore": "AwayTeamScore",
+            "HomeTeamID": "HomeTeamID",
+            "HomeTeamKey": "HomeTeam",
+            "HomeTeamScore": "HomeTeamScore",
+            "TeamID": "TeamID",
+        }.copy()
 
     @abstractmethod
     async def get_team(self, id: int) -> Team | None:
@@ -256,7 +277,7 @@ class Sport:
         """Update team information and store in common storage (usually called nightly)"""
 
     @abstractmethod
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Fetch the list of current and upcoming events for this sport"""
 
     def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
@@ -274,6 +295,7 @@ class Sport:
                     team_data=team_data,
                     term_filter=self.term_filter,
                     team_ttl=self.team_ttl,
+                    translate_terms=self.translate_terms,
                 )
                 self.teams[team.id] = team
             except SportsDataError:
@@ -284,8 +306,6 @@ class Sport:
         self,
         data: list[dict[str, Any]],
         event_timezone: ZoneInfo = ZoneInfo("UTC"),
-        allow_no_teams: bool = False,  # Allow no team information, useful for `quick updates`
-        no_new: bool = False,  # Prevent new items from being added to events.
     ) -> dict[int, "Event"]:
         """Scan the list of Event scores for any event within the 'current' window.
 
@@ -297,8 +317,7 @@ class Sport:
 
         """
         logger = logging.getLogger(__name__)
-        if not self.events:
-            self.events = {}
+        # Sample raw score (Each Sport will have slight variations.)
         """
         [
             {'Quarter': None,
@@ -336,31 +355,20 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            id = event_description["GlobalGameID"]
+            game_id = event_description[self.translate_terms["GameID"]]
             # only update the scores.
-            if id in self.events:
-                event = self.events[id]
-                event.home_score = self.get_score(
-                    event_description, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]
-                )
-                event.away_score = self.get_score(
-                    event_description, ["AwayTeamScore", "AwayScore", "AwayTeamRuns"]
-                )
+            if game_id in self.events:
+                event = self.events[game_id]
+                event.home_score = event_description.get(self.translate_terms["HomeTeamScore"])
+                event.away_score = event_description.get(self.translate_terms["AwayTeamScore"])
             else:
-                if no_new:
-                    continue
-                home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
-                    "GlobalHomeTeamId"
-                )
-                away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
-                    "GlobalAwayTeamId"
-                )
-                home_name = event_description.get("HomeTeam") or event_description.get(
-                    "HomeTeamKey", "UNDEFINED_HOME"
-                )
-                away_name = event_description.get("AwayTeam") or event_description.get(
-                    "AwayTeamKey", "UNDEFINED_AWAY"
-                )
+                # Some Sports may not pull Schedules first
+                home_id = event_description.get(self.translate_terms["HomeTeamID"])
+                away_id = event_description.get(self.translate_terms["AwayTeamID"])
+                home_name = event_description.get(self.translate_terms["HomeTeamKey"])
+                away_name = event_description.get(self.translate_terms["AwayTeamKey"])
+                home_score = event_description.get(self.translate_terms["HomeTeamScore"])
+                away_score = event_description.get(self.translate_terms["AwayTeamScore"])
                 if not home_id or not away_id:
                     logger.warning(
                         f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
@@ -373,6 +381,7 @@ class Sport:
                         f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
                     )
                     continue
+
                 try:
                     if "DateTimeUTC" in event_description:
                         date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
@@ -403,25 +412,22 @@ class Sport:
                     )
                 event = Event(
                     sport=self.name,
-                    id=id,
-                    terms=f"{home_team.terms} {away_team.terms}",
+                    id=game_id,
                     date=date,
                     original_date=event_description.get(
                         "DateTimeUTC", event_description.get("DateTime")
                     ),
+                    terms=f"{home_team.terms} {away_team.terms}",
                     home_team=home_team.minimal(),
                     away_team=away_team.minimal(),
-                    home_score=self.get_score(
-                        event_description, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]
-                    ),
-                    away_score=self.get_score(
-                        event_description, ["AwayTeamScore", "AwayScore", "AwayTeamRuns"]
-                    ),
+                    home_score=home_score,
+                    away_score=away_score,
                     status=GameStatus.parse(event_description["Status"]),
                     expiry=utc_time_from_now(self.event_ttl),
                     updated=updated,
                 )
-            self.events[event.id] = event
+                self.events[event.id] = event
+
         return self.events
 
     def load_schedules_from_source(
@@ -435,7 +441,7 @@ class Sport:
         `ScheduleBasic` Data dictionary (See https://sportsdata.io/developers/data-dictionary/nhl#schedulebasic)
 
         """
-        # Sample raw event
+        # Sample raw event (Each Sport will have slight variations.)
         """
         [
             {"GameID":23869,
@@ -464,17 +470,18 @@ class Sport:
              ...
              ]
         ]"""
+
         logger = logging.getLogger(__name__)
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            # US sports use "(Away|Home)Team", Soccer uses "(Away|Home)TeamKey"
-            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
-                "GlobalHomeTeamId"
-            )
-            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
-                "GlobalAwayTeamId"
-            )
+            game_id = event_description[self.translate_terms["GameID"]]
+            home_id = event_description.get(self.translate_terms["HomeTeamID"])
+            away_id = event_description.get(self.translate_terms["AwayTeamID"])
+            # home_name = event_description.get(self.translate_terms["HomeTeamKey"])
+            # away_name = event_description.get(self.translate_terms["AwayTeamKey"])
+            home_score = event_description.get(self.translate_terms["HomeTeamScore"])
+            away_score = event_description.get(self.translate_terms["AwayTeamScore"])
             if not home_id or not away_id:
                 logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
                 continue
@@ -485,7 +492,6 @@ class Sport:
                     f"{LOGGING_TAG} Could not find team info for event: {event_description}"
                 )
                 continue
-            game_id = event_description["GlobalGameID"]
 
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
@@ -531,23 +537,11 @@ class Sport:
                 ),
                 home_team=home_team.minimal(),
                 away_team=away_team.minimal(),
-                home_score=self.get_score(
-                    event_description, ["HomeTeamScore", "HomeScore", "HomeTeamRuns"]
-                ),  # HomeTeamRuns used by MLB
-                away_score=self.get_score(
-                    event_description, ["AwayTeamScore", "AwayScore", "AwayTeamRuns"]
-                ),  # AwayTeamRuns used by MLB
+                home_score=home_score,
+                away_score=away_score,
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
                 updated=updated,
             )
             self.events[event.id] = event
         return self.events
-
-    def get_score(self, data: dict[str, Any], score_keys: list[str]):
-        """Get first non None score or return None."""
-        for key in score_keys:
-            score = data.get(key)
-            if score is not None:
-                return score
-        return None
