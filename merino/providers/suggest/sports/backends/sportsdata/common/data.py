@@ -27,6 +27,16 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 )
 
 
+# sportsdata.io's international-soccer feed returns the same "KOR" key for
+# both Korea Republic and Curaçao, collapsing them into a single entry
+# downstream (logo lookup, team caches, event dedup). Disambiguate by team
+# name and remap Curaçao to its ISO 3166-1 alpha-3 code. Drop this entry
+# when sportsdata fixes upstream.
+_TEAM_KEY_OVERRIDES: dict[tuple[str, str], str] = {
+    ("KOR", "Curaçao"): "CUW",
+}
+
+
 class Team(BaseModel):
     """Contain the truncated 'Team' information.
 
@@ -83,9 +93,10 @@ class Team(BaseModel):
         if not team_id:
             logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
             raise SportsDataError(f"No GlobalTeamID found for {fullname}")
+        raw_key = team_data["Key"]
         return cls(
             terms=" ".join(terms),
-            key=team_data["Key"],
+            key=_TEAM_KEY_OVERRIDES.get((raw_key, name), raw_key),
             id=team_id,
             fullname=fullname,
             name=name,
