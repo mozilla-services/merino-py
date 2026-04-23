@@ -1,7 +1,7 @@
 """Protocol for the AdM provider backends."""
 
 from enum import Enum
-from typing import Protocol
+from typing import Optional, Protocol
 
 from pydantic import BaseModel, ConfigDict
 from moz_merino_ext.amp import AmpIndexManager
@@ -34,8 +34,8 @@ class KeywordMetrics(BaseModel):
 class KeywordEntry(BaseModel):
     """Live and historical engagement metrics for a single advertiser/keyword pair."""
 
-    live: KeywordMetrics
-    historical: KeywordMetrics
+    live: Optional[KeywordMetrics]
+    historical: Optional[KeywordMetrics]
 
 
 class KeywordEngagementData(BaseModel):
