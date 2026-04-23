@@ -40,7 +40,7 @@ SPORT_CATEGORY_MAP: dict[str, SportCategory] = {
     "NBA": SportCategory.Basketball,
     "UCL": SportCategory.Soccer,
     "MLB": SportCategory.Baseball,
-    "EPL": SportCategory.Soccer,
+    # "EPL": SportCategory.Soccer,
     "FIFA": SportCategory.Soccer,
 }
 
@@ -136,9 +136,7 @@ class NFL(Sport):
             return
         start = response[0].get("StartDate")
         end = response[0].get("EndDate")
-        logger.debug(
-            f"{LOGGING_TAG} {self.name} {self.season} week {self.week} {start} to {end}"
-        )
+        logger.debug(f"{LOGGING_TAG} {self.name} {self.season} week {self.week} {start} to {end}")
 
     async def update_teams(self, client: AsyncClient):
         """NFL requires a nightly "Timeframe" lookup."""
