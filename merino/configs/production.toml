@@ -125,6 +125,11 @@ cache = "redis"
 # If `redis`, the global Redis settings must be set. See redis.server.
 cache = "redis"
 
+[production.query_normalization]
+enabled = false
+data_source = "remote"
+gcs_bucket = "merino-ml-data-prod"
+
 [production.ml_recommendations.gcs]
 # MERINO__ML_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.

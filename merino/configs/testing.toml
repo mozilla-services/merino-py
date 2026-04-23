@@ -157,6 +157,13 @@ test_repeat_count = 1
 bucket_name = "test-bucket"
 gcp_project = "test-project"
 
+[testing.query_normalization]
+enabled = true
+data_source = "local"
+sports_teams_file = "tests/data/query_normalization/sports_teams.json"
+word_freq_file = "tests/data/query_normalization/word_freq.csv"
+finance_tickers_file = "tests/data/query_normalization/finance_tickers.json"
+
 [testing.interest_cohort_model.gcs]
 bucket_name = "test-bucket"
 gcp_project = "test-project"

@@ -54,7 +54,10 @@ from merino.utils import task_runner
 from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
 )
-from merino.utils.api.metrics import emit_suggestions_per_metrics
+from merino.utils.api.metrics import (
+    emit_normalization_metrics,
+    emit_suggestions_per_metrics,
+)
 from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
@@ -65,6 +68,8 @@ from merino.utils.query_processing.geo_params import (
 from merino.web.models_v1 import ProviderResponse, SuggestResponse
 from merino.providers.manifest.provider import Provider as ManifestProvider
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
+from merino.utils.query_processing.normalization import get_pipeline
+from merino.utils.query_processing.normalization.pipeline import tier_a
 
 from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
@@ -72,6 +77,10 @@ from merino.providers.games.particle.provider import Provider as ParticleProvide
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Query normalization experiment
+NORMALIZATION_CLIENT_VARIANT: str = "query_norm_treatment"
+NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
 
 # Param to capture all enabled_by_default=True providers.
 DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
@@ -246,9 +255,19 @@ async def suggest(
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
     client_variants_list = client_variants.split(",") if client_variants else []
 
+    # Query normalization experiment (Phase 1: sports + finance only)
+    pipeline = get_pipeline()
+    use_normalization = (
+        pipeline is not None and NORMALIZATION_CLIENT_VARIANT in client_variants_list
+    )
+    q_normalized = pipeline.normalize(q) if use_normalization and pipeline else q
+
     for p in search_from:
+        q_for_provider = (
+            q_normalized if use_normalization and p.name in NORMALIZATION_PROVIDERS else q
+        )
         srequest = SuggestionRequest(
-            query=p.normalize_query(q),
+            query=p.normalize_query(q_for_provider),
             geolocation=geolocation,
             request_type=request_type,
             languages=languages,
@@ -290,6 +309,15 @@ async def suggest(
         )
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
+
+    if use_normalization:
+        emit_normalization_metrics(
+            metrics_client,
+            suggestions,
+            search_from,
+            NORMALIZATION_PROVIDERS,
+            query_changed=q_normalized != tier_a(q),
+        )
 
     return build_suggestion_response(client_variants, search_from, suggestions)
 

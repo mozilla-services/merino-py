@@ -1206,6 +1206,7 @@ dependencies = [
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "types-python-dateutil" },
     { name = "ua-parser" },
+    { name = "wordsegment" },
     { name = "wrapt" },
 ]
 
@@ -1272,6 +1273,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.9.1", index = "https://download.pytorch.org/whl/cpu" },
     { name = "types-python-dateutil", specifier = ">=2.8.19.13,<3" },
     { name = "ua-parser", specifier = ">=1.0,<2.0" },
+    { name = "wordsegment", specifier = ">=1.3.1,<2" },
     { name = "wrapt", specifier = ">=1.14.1,<2" },
 ]
 
@@ -2553,6 +2555,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8a/98/2d9906746cdc6a6ef809ae6338005b3f21bb568bea3165cfc6a243fdc25c/wheel-0.45.1.tar.gz", hash = "sha256:661e1abd9198507b1409a20c02106d9670b2576e916d58f520316666abca6729", size = 107545 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl", hash = "sha256:708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248", size = 72494 },
+]
+
+[[package]]
+name = "wordsegment"
+version = "1.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/64/68/08112f4c2888f41520e54e2d0b22dcec5adb28cddf4eeca344eb9da04177/wordsegment-1.3.1.tar.gz", hash = "sha256:3dcc7cd1e9bba3f3ffe6a0e54d98377bc502fc34e9e9d8c8199ac5636924f023", size = 4828756, upload-time = "2018-07-07T03:51:29.142Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/6c/e6f4734d6f7d28305f52ec81377d7ce7d1856b97b814278e9960183235ad/wordsegment-1.3.1-py2.py3-none-any.whl", hash = "sha256:dd10e32fdb890079532ddffc1d179f839627af8345ecf52b84627a536449648d", size = 4827997, upload-time = "2018-07-07T03:51:19.955Z" },
 ]
 
 [[package]]

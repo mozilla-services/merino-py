@@ -405,6 +405,28 @@ suggest/flightaware:
       The "api/v1/suggest" API endpoint
     alert_policy: []
 
+suggest/normalization:
+  normalization_experiment_provider_match:
+    description: |
+      Tracks whether a normalized query produced a suggestion for a given
+      provider. Emitted once per provider per request for treatment users
+      in the query normalization experiment. Used to monitor how often
+      normalization fires and whether it leads to new provider matches.
+    type: counter
+    labels:
+      - name: provider
+        description: |
+          The provider being checked (e.g. "sports", "polygon")
+      - name: matched
+        description: |
+          Whether the provider returned a suggestion ("True" or "False")
+      - name: query_changed
+        description: |
+          Whether the normalization pipeline changed the query ("True" or "False")
+    scope: |
+      The "api/v1/suggest" API endpoint, treatment branch only.
+    alert_policy: []
+
 providers/manifest:
   manifest.lookup:
     description: |

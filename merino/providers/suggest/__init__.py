@@ -8,6 +8,7 @@ from merino.utils import metrics
 from merino.configs import settings
 from merino.providers.suggest.base import BaseProvider
 from merino.providers.suggest.manager import load_providers
+from merino.utils.query_processing.normalization import init_pipeline
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -38,6 +39,9 @@ async def init_providers() -> None:
             "Provider initialization completed",
             extra={"providers": [*providers.keys()], "elapsed": timer() - start},
         )
+
+    # init query normalization pipeline
+    await init_pipeline()
 
 
 async def shutdown_providers() -> None:
