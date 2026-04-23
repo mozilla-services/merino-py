@@ -16,6 +16,8 @@ _connect_timeout = settings.games_providers.particle.connect_timeout_sec
 _gcs_project = settings.games_particle_gcs.gcs_project
 _gcs_bucket = settings.games_particle_gcs.gcs_bucket
 _gcs_cdn_hostname = settings.games_particle_gcs.cdn_hostname
+_url_root = settings.games_providers.particle.url_root
+_url_path_manifest = settings.games_providers.particle.url_path_manifest
 
 
 async def init_providers() -> None:
@@ -33,7 +35,11 @@ async def init_providers() -> None:
     metrics_client = get_metrics_client()
 
     particle_backend = ParticleBackend(
-        gcs_uploader=gcs_uploader, http_client=http_client, metrics_client=metrics_client
+        gcs_uploader=gcs_uploader,
+        http_client=http_client,
+        metrics_client=metrics_client,
+        particle_url_root=_url_root,
+        particle_url_path_manifest=_url_path_manifest,
     )
 
     _particle_provider = Provider(

@@ -19,6 +19,10 @@ from merino.providers.games.particle.backends.particle import ParticleBackend
 
 _game_url = settings.games_providers.particle.game_url
 
+# these values don't really matter, as the http calls are mocked
+PARTICLE_URL_ROOT = "http://test.com"
+PARTICLE_URL_PATH_MANIFEST = "/manifest.v1.json"
+
 
 # FIXTURES
 @pytest.fixture()
@@ -43,6 +47,8 @@ def fixture_backend(
         gcs_uploader=gcs_uploader_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
         metrics_client=statsd_mock,
+        particle_url_root=PARTICLE_URL_ROOT,
+        particle_url_path_manifest=PARTICLE_URL_PATH_MANIFEST,
     )
 
 
@@ -72,7 +78,7 @@ async def test_fetch_manifest_json_returns_json(
     client_mock.get.return_value = Response(
         status_code=200,
         content=valid_manifest_data,
-        request=Request(method="GET", url="https://test.com"),
+        request=Request(method="GET", url=PARTICLE_URL_ROOT),
     )
 
     result = await backend._fetch_manifest_json()
@@ -91,7 +97,7 @@ async def test_fetch_manifest_json_returns_none_for_invalid_json(
         status_code=200,
         # foo below isn't double quoted, so json conversion fails
         content="{foo: 1}",
-        request=Request(method="GET", url="https://test.com"),
+        request=Request(method="GET", url=PARTICLE_URL_ROOT),
     )
 
     caplog.set_level(logging.ERROR)
@@ -117,7 +123,7 @@ async def test_fetch_manifest_json_returns_none_for_http_error(
     """Test fetching invalid manifest JSON returns None."""
     client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
     client_mock.get.return_value = Response(
-        status_code=500, request=Request(method="GET", url="https://test.com")
+        status_code=500, request=Request(method="GET", url=PARTICLE_URL_ROOT)
     )
 
     caplog.set_level(logging.ERROR)

@@ -1,8 +1,8 @@
 """Particle game backend."""
 
-import json
-import logging
 import aiodogstatsd
+import logging
+import orjson
 
 from httpx import AsyncClient, HTTPError, Response
 from pydantic import Json
@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 # Module-level variable as retrieving from settings each time is expensive.
 _game_url = settings.games_providers.particle.game_url
-_url_root = settings.games_providers.particle.url_root
-_url_path_manifest = settings.games_providers.particle.url_path_manifest
 
 
 class ParticleBackend:
@@ -25,17 +23,23 @@ class ParticleBackend:
     gcs_uploader: GcsUploader
     http_client: AsyncClient
     metrics_client: aiodogstatsd.Client
+    particle_url_root: str
+    particle_url_path_manifest: str
 
     def __init__(
         self,
         gcs_uploader: GcsUploader,
         http_client: AsyncClient,
         metrics_client: aiodogstatsd.Client,
+        particle_url_root: str,
+        particle_url_path_manifest: str,
     ) -> None:
         """Initialize the Polygon backend."""
         self.gcs_uploader = gcs_uploader
         self.http_client = http_client
         self.metrics_client = metrics_client
+        self.particle_url_root = particle_url_root
+        self.particle_url_path_manifest = particle_url_path_manifest
 
     async def get_game_url(self) -> Particle | None:
         """Return the public URL for the Particle game"""
@@ -48,7 +52,9 @@ class ParticleBackend:
 
         # try to get the manifest from the internet
         try:
-            manifest = await self.http_client.get(f"{_url_root}{_url_path_manifest}")
+            manifest = await self.http_client.get(
+                f"{self.particle_url_root}{self.particle_url_path_manifest}"
+            )
 
             manifest.raise_for_status()
         except HTTPError as ex:
@@ -58,7 +64,7 @@ class ParticleBackend:
         if manifest and manifest.content:
             # try to convert the contents of manifest.content to JSON
             try:
-                manifest_json = json.loads(manifest.content)
+                manifest_json = orjson.loads(manifest.content)
             except ValueError:
                 logger.error("JSON error when converting Particle response")
 

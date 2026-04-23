@@ -14,7 +14,10 @@ from pydantic import Json
 from pytest import LogCaptureFixture
 from typing import Any
 
-import merino.providers.games.particle.backends.utils as utils
+from merino.providers.games.particle.backends.utils import (
+    validate_manifest_schema_version,
+    validate_manifest_against_schema,
+)
 
 
 # BEGIN FIXTURES
@@ -46,7 +49,7 @@ def manifest_schema_data():
 def test_validate_manifest_schema_version_does_not_raise_with_valid_json(valid_manifest_data):
     """Verify valid JSON results in no exception raised."""
     with does_not_raise():
-        utils.validate_manifest_schema_version(valid_manifest_data)
+        validate_manifest_schema_version(valid_manifest_data)
 
 
 def test_validate_manifest_schema_version_raises_with_invalid_json(
@@ -56,7 +59,7 @@ def test_validate_manifest_schema_version_raises_with_invalid_json(
     caplog.set_level(logging.ERROR)
 
     with pytest.raises(Exception):
-        utils.validate_manifest_schema_version("Not valid JSON")
+        validate_manifest_schema_version("Not valid JSON")
 
         # get error records
         error_records = filter_caplog(
@@ -76,7 +79,7 @@ def test_validate_manifest_schema_version_raises_with_invalid_schema_version(
 ):
     """Verify invalid schema version raises an exception."""
     with pytest.raises(Exception):
-        utils.validate_manifest_schema_version(json.loads('{"schemaVersion": 2}'))
+        validate_manifest_schema_version(json.loads('{"schemaVersion": 2}'))
 
     # get error records
     error_records = filter_caplog(
@@ -98,7 +101,7 @@ def test_validate_manifest_against_schema_does_not_raise_with_valid_json(
 ):
     """Verify no exception raised if manifest JSON is valid."""
     with does_not_raise():
-        utils.validate_manifest_against_schema(valid_manifest_data, manifest_schema_data)
+        validate_manifest_against_schema(valid_manifest_data, manifest_schema_data)
 
 
 def test_validate_manifest_against_schema_raises_with_invalid_json(
@@ -109,7 +112,7 @@ def test_validate_manifest_against_schema_raises_with_invalid_json(
 ):
     """Verify expected error is raised if manifest JSON does not conform to the schema."""
     with pytest.raises(exceptions.ValidationError):
-        utils.validate_manifest_against_schema(invalid_manifest_data, manifest_schema_data)
+        validate_manifest_against_schema(invalid_manifest_data, manifest_schema_data)
 
     # get error records
     error_records = filter_caplog(

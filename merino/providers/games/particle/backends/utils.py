@@ -16,7 +16,7 @@ def validate_manifest_schema_version(manifest_json: Json) -> None:
     """Validate schema version exists in the JSON and is of the expected value."""
     try:
         schema_version = manifest_json["schemaVersion"]
-    except Exception:
+    except KeyError:
         logger.error("JSON error retrieving 'schemaVersion' from manifest JSON.")
         schema_version = None
 
