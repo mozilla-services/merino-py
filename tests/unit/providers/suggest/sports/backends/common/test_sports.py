@@ -25,6 +25,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NBA,
     UCL,
     MLB,
+    FIFA,
     SPORT_CATEGORY_MAP,
 )
 
@@ -1094,6 +1095,164 @@ def soccer_score_payload() -> list[dict]:
     ]
 
 
+def fifa_teams_payload() -> list[dict]:
+    """Return FIFA/WC sample team data"""
+    # https://api.sportsdata.io/v4/soccer/scores/json/Teams/FIFA?key=
+    # return soccer_teams_payload()
+    return [
+        {
+            "TeamId": 1,
+            "AreaId": 68,
+            "VenueId": 199,
+            "Key": "ENG",
+            "Name": "England",
+            "FullName": "The Football Association",
+            "Active": True,
+            "AreaName": "England",
+            "VenueName": "Wembley Stadium connected by EE",
+            "Gender": "Male",
+            "Type": "National",
+            "Address": None,
+            "City": None,
+            "Zip": None,
+            "Phone": None,
+            "Fax": None,
+            "Website": "https://www.thefa.com",
+            "Email": None,
+            "Founded": 1863,
+            "ClubColor1": "White",
+            "ClubColor2": "Red",
+            "ClubColor3": "Navy Blue",
+            "Nickname1": "The Three Lions",
+            "Nickname2": None,
+            "Nickname3": None,
+            "WikipediaLogoUrl": "https://upload.wikimedia.org/wikipedia/en/b/be/Flag_of_England.svg",
+            "WikipediaWordMarkUrl": None,
+            "GlobalTeamId": 90000001,
+        },
+        {
+            "TeamId": 2,
+            "AreaId": 16,
+            "VenueId": 133,
+            "Key": "ARG",
+            "Name": "Argentina",
+            "FullName": "Asociación del Fútbol Argentino",
+            "Active": True,
+            "AreaName": "Argentina",
+            "VenueName": "Estadio Mâs Monumental",
+            "Gender": "Male",
+            "Type": "National",
+            "Address": None,
+            "City": None,
+            "Zip": None,
+            "Phone": None,
+            "Fax": None,
+            "Website": "http://www.afa.org.ar",
+            "Email": None,
+            "Founded": 1893,
+            "ClubColor1": "Sky Blue",
+            "ClubColor2": "White",
+            "ClubColor3": "Black",
+            "Nickname1": "La Albiceleste",
+            "Nickname2": None,
+            "Nickname3": None,
+            "WikipediaLogoUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg",
+            "WikipediaWordMarkUrl": None,
+            "GlobalTeamId": 90000002,
+        },
+    ]
+
+
+def fifa_schedule_payload() -> list[dict]:
+    """Return FIFA/WC sample schedule data"""
+    # https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2026?key=...
+    return [
+        {
+            "GameId": 11111,
+            "RoundId": 1615,
+            "Season": 2026,
+            "SeasonType": 1,
+            "Group": "Group A",
+            "AwayTeamId": 1,
+            "HomeTeamId": 2,
+            "VenueId": 420,
+            "Day": "2026-06-11T00:00:00",
+            "DateTime": "2026-06-11T19:00:00",
+            "Status": "Scheduled",
+            "Week": 1,
+            "Winner": None,
+            "VenueType": "Neutral",
+            "AwayTeamKey": "RSA",
+            "AwayTeamName": "South Africa",
+            "AwayTeamCountryCode": "RSA",
+            "AwayTeamScore": None,
+            "AwayTeamScorePeriod1": None,
+            "AwayTeamScorePeriod2": None,
+            "AwayTeamScoreExtraTime": None,
+            "AwayTeamScorePenalty": None,
+            "HomeTeamKey": "MEX",
+            "HomeTeamName": "Mexico",
+            "HomeTeamCountryCode": "MEX",
+            "HomeTeamScore": None,
+            "HomeTeamScorePeriod1": None,
+            "HomeTeamScorePeriod2": None,
+            "HomeTeamScoreExtraTime": None,
+            "HomeTeamScorePenalty": None,
+            "Updated": "2026-03-23T04:22:23",
+            "UpdatedUtc": "2026-03-23T08:22:23",
+            "GlobalGameId": 90011111,
+            "GlobalAwayTeamId": 90000001,
+            "GlobalHomeTeamId": 90000002,
+            "IsClosed": False,
+            "PlayoffAggregateScore": None,
+        },
+        {
+            "GameId": 22222,
+            "RoundId": 1615,
+            "Season": 2026,
+            "SeasonType": 1,
+            "Group": "Group A",
+            "AwayTeamId": 945,
+            "HomeTeamId": 1209,
+            "VenueId": 418,
+            "Day": "2026-06-12T00:00:00",
+            "DateTime": "2026-06-12T02:00:00",
+            "Status": "Scheduled",
+            "Week": 1,
+            "Winner": None,
+            "VenueType": "Neutral",
+            "AwayTeamKey": "CZE",
+            "AwayTeamName": "Czechia",
+            "AwayTeamCountryCode": "CZE",
+            "AwayTeamScore": None,
+            "AwayTeamScorePeriod1": None,
+            "AwayTeamScorePeriod2": None,
+            "AwayTeamScoreExtraTime": None,
+            "AwayTeamScorePenalty": None,
+            "HomeTeamKey": "KOR",
+            "HomeTeamName": "Korea Republic",
+            "HomeTeamCountryCode": "KOR",
+            "HomeTeamScore": None,
+            "HomeTeamScorePeriod1": None,
+            "HomeTeamScorePeriod2": None,
+            "HomeTeamScoreExtraTime": None,
+            "HomeTeamScorePenalty": None,
+            "Updated": "2026-04-01T04:19:30",
+            "UpdatedUtc": "2026-04-01T08:19:30",
+            "GlobalGameId": 90022222,
+            "GlobalAwayTeamId": 90000002,
+            "GlobalHomeTeamId": 90000001,
+            "IsClosed": False,
+            "PlayoffAggregateScore": None,
+        },
+    ]
+
+
+def fifa_score_payload() -> list[dict]:
+    """Return FIFA/WC sample score data"""
+    return soccer_score_payload()
+
+
 @pytest.fixture
 def weird_schedules_payload() -> list[dict]:
     """Schedules payload that are out and in window."""
@@ -1751,6 +1910,57 @@ async def test_ucl_update_events(
     await ucl.update_events(client=mock_client)
     assert 90011111 in ucl.events and 90022222 not in ucl.events
     assert "/SchedulesBasic/UCL/2025?key=" in get_data.call_args_list[0].kwargs["url"]
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_fifa_update_events(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Test FIFA event updates."""
+    ucl = FIFA(settings=settings.providers.sports)
+    teams_payload = soccer_teams_payload()
+    ucl.load_teams_from_source(teams_payload)
+    ucl.season = "2025"  # set by update_teams normally
+    ucl.event_ttl = timedelta(weeks=2)
+
+    schedules_payload = soccer_schedule_payload()
+    scores_payload = soccer_score_payload()
+    within = "2025-09-22T13:30:00"  # UTC
+    outside = "2026-01-22T13:30:00"
+    schedules_payload[0].update(
+        {
+            "Date": within,
+            "Day": within,
+            "DateTime": within,
+            "Status": "Final",
+        }
+    )
+    schedules_payload[1].update(
+        {
+            "Date": outside,
+            "Day": outside,
+            "DateTime": outside,
+            "Status": "Scheduled",
+        }
+    )
+    scores_payload[0].update(
+        {
+            "Date": within,
+            "Day": within,
+            "DateTime": within,
+            "Status": "Final",
+        }
+    )
+    scores_payload[1].update(
+        {
+            "Date": outside,
+            "Day": outside,
+            "DateTime": outside,
+            "Status": "Scheduled",
+        }
+    )
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
