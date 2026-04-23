@@ -427,6 +427,17 @@ suggest/normalization:
       The "api/v1/suggest" API endpoint, treatment branch only.
     alert_policy: []
 
+  normalization_experiment_timing:
+    description: |
+      Time taken by the normalization pipeline to process a query, in
+      milliseconds. Only emitted for treatment users when the pipeline
+      is active.
+    type: timer
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint, treatment branch only.
+    alert_policy: []
+
 providers/manifest:
   manifest.lookup:
     description: |
