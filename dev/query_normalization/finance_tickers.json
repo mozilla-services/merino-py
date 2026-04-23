@@ -1,0 +1,29 @@
+{
+  "stock_tickers": {
+    "AAPL": {"company": "Apple Inc", "exchange": "NASDAQ"},
+    "AMZN": {"company": "Amazon.com Inc", "exchange": "NASDAQ"},
+    "COST": {"company": "Costco Wholesale", "exchange": "NASDAQ"},
+    "GOOGL": {"company": "Alphabet Inc", "exchange": "NASDAQ"},
+    "TSLA": {"company": "Tesla Inc", "exchange": "NASDAQ"}
+  },
+  "stock_blocklist": ["AM", "AL"],
+  "etf_tickers": {
+    "DIA": {"company": "SPDR Dow Jones Industrial Average ETF", "exchange": "NYSE"},
+    "SPY": {"company": "SPDR S&P 500 ETF Trust", "exchange": "NYSE"},
+    "QQQ": {"company": "Invesco QQQ Trust", "exchange": "NASDAQ"}
+  },
+  "etf_blocklist": [],
+  "keyword_to_stock_ticker": {
+    "apple stock": "AAPL",
+    "amazon stock": "AMZN",
+    "google stock": "GOOGL",
+    "tesla stock": "TSLA"
+  },
+  "keyword_to_etf_tickers": {
+    "dow jones": ["DIA"],
+    "dow jones today": ["DIA"],
+    "stock market today": ["DIA", "SPY"],
+    "dow futures": ["DIA"],
+    "stock costco": ["COST"]
+  }
+}

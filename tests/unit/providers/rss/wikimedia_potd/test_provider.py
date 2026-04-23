@@ -42,6 +42,7 @@ def fixture_test_potd() -> PictureOfTheDay:
         title="Wikimedia Commons picture of the day",
         thumbnail_image_url="https://test-thumbnail.jpg",
         high_res_image_url="https://test-high-res.jpg",
+        description="test description",
         published_date="Mon, 13 Apr 2026 00:00:00 GMT",
     )
 

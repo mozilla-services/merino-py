@@ -37,30 +37,50 @@ def upload_engagement_data() -> None:  # pragma: no cover
         amp_data_downloader = AMPDownloader(gcs_bq_project)
         wiki_data_downloader = WikiDownloader(gcs_bq_project)
 
-        amp_data: list[dict[str, Any]] = amp_data_downloader.download_data()
+        amp_by_advertiser: list[dict[str, Any]] = amp_data_downloader.download_by_advertiser()
+        amp_by_keyword: list[dict[str, Any]] = amp_data_downloader.download_by_keyword()
         wiki_data: dict[str, int] = wiki_data_downloader.download_data()
 
-        transformed_amp_data = {row["advertiser"]: row for row in amp_data}
+        transformed_amp_by_advertiser = amp_data_downloader.transform_by_advertiser(
+            amp_by_advertiser
+        )
+        transformed_amp_by_keyword = amp_data_downloader.transform_by_keyword(amp_by_keyword)
 
-        amp_aggregated = {
-            "impressions": sum(int(row["impressions"]) for row in amp_data),
-            "clicks": sum(int(row["clicks"]) for row in amp_data),
-        }
+        amp_aggregated_by_advertiser = amp_data_downloader.aggregate_by_advertiser(
+            amp_by_advertiser
+        )
+        amp_aggregated_by_keyword = amp_data_downloader.aggregate_by_keyword(
+            transformed_amp_by_keyword
+        )
 
-        payload = {
-            "amp": transformed_amp_data,
+        advertiser_payload = {
+            "amp": transformed_amp_by_advertiser,
             "wiki_aggregated": {
                 "impressions": int(wiki_data["impressions"]),
                 "clicks": int(wiki_data["clicks"]),
             },
-            "amp_aggregated": amp_aggregated,
+            "amp_aggregated": amp_aggregated_by_advertiser,
         }
 
-        content = json.dumps(payload, indent=2)
+        advertiser_content = json.dumps(advertiser_payload, indent=2)
+
+        keyword_payload = {
+            "amp": transformed_amp_by_keyword,
+            "wiki_aggregated": {
+                "impressions": int(wiki_data["impressions"]),
+                "clicks": int(wiki_data["clicks"]),
+            },
+            "amp_aggregated": amp_aggregated_by_keyword,
+        }
+
+        keyword_content = json.dumps(keyword_payload, indent=2)
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        destination_name = f"suggest-merino-exports/engagement/{timestamp}.json"
-        latest_name = "suggest-merino-exports/engagement/latest.json"
+        destination_name_advertiser = f"suggest-merino-exports/engagement/{timestamp}.json"
+        destination_name_keyword = f"suggest-merino-exports/engagement/keyword/{timestamp}.json"
+
+        latest_name_advertiser = "suggest-merino-exports/engagement/latest.json"
+        latest_name_keyword = "suggest-merino-exports/engagement/keyword/latest.json"
 
         uploader = GcsUploader(
             destination_gcp_project=gcs_storage_project,
@@ -69,20 +89,36 @@ def upload_engagement_data() -> None:  # pragma: no cover
         )
 
         uploader.upload_content(
-            content=content,
-            destination_name=destination_name,
+            content=advertiser_content,
+            destination_name=destination_name_advertiser,
             content_type="application/json",
             forced_upload=True,
         )
 
         uploader.upload_content(
-            content=content,
-            destination_name=latest_name,
+            content=advertiser_content,
+            destination_name=latest_name_advertiser,
             content_type="application/json",
             forced_upload=True,
         )
 
-        logger.info("Uploaded engagement data")
+        logger.info("Uploaded advertiser engagement data")
+
+        uploader.upload_content(
+            content=keyword_content,
+            destination_name=destination_name_keyword,
+            content_type="application/json",
+            forced_upload=True,
+        )
+
+        uploader.upload_content(
+            content=keyword_content,
+            destination_name=latest_name_keyword,
+            content_type="application/json",
+            forced_upload=True,
+        )
+
+        logger.info("Uploaded keyword engagement data")
 
     except Exception as ex:
         logger.error(

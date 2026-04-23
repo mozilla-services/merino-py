@@ -405,6 +405,28 @@ suggest/flightaware:
       The "api/v1/suggest" API endpoint
     alert_policy: []
 
+suggest/normalization:
+  normalization_experiment_provider_match:
+    description: |
+      Tracks whether a normalized query produced a suggestion for a given
+      provider. Emitted once per provider per request for treatment users
+      in the query normalization experiment. Used to monitor how often
+      normalization fires and whether it leads to new provider matches.
+    type: counter
+    labels:
+      - name: provider
+        description: |
+          The provider being checked (e.g. "sports", "polygon")
+      - name: matched
+        description: |
+          Whether the provider returned a suggestion ("True" or "False")
+      - name: query_changed
+        description: |
+          Whether the normalization pipeline changed the query ("True" or "False")
+    scope: |
+      The "api/v1/suggest" API endpoint, treatment branch only.
+    alert_policy: []
+
 providers/manifest:
   manifest.lookup:
     description: |
@@ -414,7 +436,14 @@ providers/manifest:
     labels:
       - name: name
         description: |
-          An identifier for the manifest, e.g. "logos"
+          An identifier for the manifest namespace, e.g. "logos.airline",
+          "logos.nba".
+      - name: key
+        description: |
+          The specific key that was looked up, normalized to the manifest's
+          uppercase storage form (e.g. IATA code "AA", sports team key "GSW").
+          Only emitted on miss events so dashboards can show which entries
+          are missing without loading cardinality on the hot path.
       - name: result
         description: |
           The outcome of the lookup (e.g. "miss" when the requested key
@@ -516,6 +545,36 @@ utils/synced_gcs_blob_v2:
           The full path to the GCS blob.
     scope: |
       Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+search/elasticsearch:
+  es.search.count:
+    description: |
+      A counter for all Elasticsearch search attempts, incremented before the
+      request is issued. Use alongside es.search.error to derive a success rate.
+    type: counter
+    labels:
+      - name: index
+        description: |
+          The Elasticsearch index that was searched.
+    scope: |
+      Any provider backed by Elasticsearch (Wikipedia, Sports).
+    alert_policy: []
+
+  es.search.error:
+    description: |
+      A counter for failed Elasticsearch search requests.
+    type: counter
+    labels:
+      - name: index
+        description: |
+          The Elasticsearch index that was searched.
+      - name: status
+        description: |
+          The HTTP status code returned by Elasticsearch, or "unknown" for
+          non-HTTP errors (e.g. connection errors, timeouts).
+    scope: |
+      Any provider backed by Elasticsearch (Wikipedia, Sports).
     alert_policy: []
 
 weather/hourly_forecasts:

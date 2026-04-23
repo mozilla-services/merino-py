@@ -1,14 +1,19 @@
 """Unit tests for the Elastic Backend."""
 
 import string
-from unittest.mock import AsyncMock
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
 
+from elastic_transport import ApiResponseMeta, HttpHeaders, NodeConfig
+from elasticsearch import ApiError
+
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.wikipedia.backends.elastic import (
+    INDICES,
     SUGGEST_ID,
     ElasticBackend,
     get_best_keyword,
@@ -17,11 +22,12 @@ from merino.search.async_elastic import AsyncElasticSearchAdapter
 
 
 @pytest.fixture(name="es_backend")
-def fixture_es_backend() -> ElasticBackend:
+def fixture_es_backend(statsd_mock: Any) -> ElasticBackend:
     """Return an ES backend instance."""
     return ElasticBackend(
         url="https://localhost:9200",
         api_key=settings.providers.wikipedia.es_api_key,
+        metrics_client=statsd_mock,
     )
 
 
@@ -30,6 +36,7 @@ def test_es_backend_initialize_with_url():
     backend = ElasticBackend(
         url="https://localhost:9200",
         api_key=settings.providers.wikipedia.es_api_key,
+        metrics_client=MagicMock(),
     )
     assert backend
 
@@ -249,6 +256,53 @@ async def test_es_backend_search_exception_it(
         await es_backend.search("bis", "it")
 
     assert str(excinfo.value) == "Failed to search from Elasticsearch for it: 404 error"
+
+
+@pytest.mark.asyncio
+async def test_es_backend_search_error_metric_on_api_error(
+    mocker: MockerFixture,
+    es_backend: ElasticBackend,
+    statsd_mock: Any,
+) -> None:
+    """Test that an ApiError increments the error metric with the HTTP status code."""
+    api_error = ApiError(
+        message="service unavailable",
+        meta=ApiResponseMeta(
+            status=503,
+            http_version="",
+            headers=HttpHeaders(),
+            duration=0.0,
+            node=NodeConfig(scheme="", host="", port=0),
+        ),
+        body={},
+    )
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=api_error)
+
+    with pytest.raises(BackendError):
+        await es_backend.search("foo", "en")
+
+    statsd_mock.increment.assert_called_once_with(
+        "es.search.error", tags={"index": INDICES["en"], "status": 503}
+    )
+
+
+@pytest.mark.asyncio
+async def test_es_backend_search_error_metric_on_exception(
+    mocker: MockerFixture,
+    es_backend: ElasticBackend,
+    statsd_mock: Any,
+) -> None:
+    """Test that a generic exception increments the error metric with status 'unknown'."""
+    mocker.patch.object(
+        AsyncElasticSearchAdapter, "search", side_effect=Exception("connection reset")
+    )
+
+    with pytest.raises(BackendError):
+        await es_backend.search("foo", "en")
+
+    statsd_mock.increment.assert_called_once_with(
+        "es.search.error", tags={"index": INDICES["en"], "status": "unknown"}
+    )
 
 
 @pytest.mark.asyncio

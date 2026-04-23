@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-22T10:01:47.409Z",
+  "compatibility": {
+    "engineApiVersion": "1.0.0",
+    "uiContractVersion": "1"
+  },
+  "channels": {
+    "runtime": {
+      "version": "61f1e3ec84a96e690acfe13e6db370c5c787e045ce5e6dba0046fa7c5c50e2e4",
+      "digest": "d9eb07c0d2c04626b34d02c88c4c022fcd2aee0fd998712dde3db9f744c23586",
+      "publishedAt": "2026-04-22T10:01:47.409Z",
+      "entrypointUrl": "runtime/widget-61f1e3ec84a96e690acfe13e6db370c5c787e045ce5e6dba0046fa7c5c50e2e4.html",
+      "archive": {
+        "path": "archives/runtime-61f1e3ec84a96e690acfe13e6db370c5c787e045ce5e6dba0046fa7c5c50e2e4.zip",
+        "url": "archives/runtime-61f1e3ec84a96e690acfe13e6db370c5c787e045ce5e6dba0046fa7c5c50e2e4.zip",
+        "size": 897873,
+        "contentType": "application/zip",
+        "cacheControl": "public,max-age=31536000,immutable"
+      },
+      "files": [
+        {
+          "path": "assets/crossword_engine_bindings_wasm_bg-D5i4ARx9.wasm",
+          "url": "assets/crossword_engine_bindings_wasm_bg-D5i4ARx9.wasm",
+          "size": 595442,
+          "sha256": "f90205cdb42d75d046d8c7280c8ea2e0599503674c239008c4a3f9927acaa941",
+          "contentType": "application/wasm",
+          "cacheControl": "public,max-age=31536000,immutable"
+        },
+        {
+          "path": "assets/index-7wt06ylr.css",
+          "url": "assets/index-7wt06ylr.css",
+          "size": 41579,
+          "sha256": "ed6fd634694b6deaccf7390bad2bff3423107a99bcd5c456657059458e6a67ab",
+          "contentType": "text/css; charset=utf-8",
+          "cacheControl": "public,max-age=31536000,immutable"
+        },
+        {
+          "path": "assets/index-rc_Uh052.js",
+          "url": "assets/index-rc_Uh052.js",
+          "size": 254111,
+          "sha256": "70cc7c0d0dedea8f181408fc15a656a87114f475c74cfa35c53f834105e18908",
+          "contentType": "text/javascript; charset=utf-8",
+          "cacheControl": "public,max-age=31536000,immutable"
+        },
+        {
+          "path": "assets/particle-logo-white-DKZgcqee.svg",
+          "url": "assets/particle-logo-white-DKZgcqee.svg",
+          "size": 5474,
+          "sha256": "23af9901c3da519f49f2abb170cd91d50ada69aee08ebfbe18894bb16d4ec260",
+          "contentType": "image/svg+xml",
+          "cacheControl": "public,max-age=31536000,immutable"
+        },
+        {
+          "path": "runtime/widget-61f1e3ec84a96e690acfe13e6db370c5c787e045ce5e6dba0046fa7c5c50e2e4.html",
+          "url": "runtime/widget-61f1e3ec84a96e690acfe13e6db370c5c787e045ce5e6dba0046fa7c5c50e2e4.html",
+          "size": 413,
+          "sha256": "04374672f58e0a6a28448c985edc7d2f2f1a7e530429acc8aba07145866b9411",
+          "contentType": "text/html; charset=utf-8",
+          "cacheControl": "public,max-age=31536000,immutable"
+        }
+      ]
+    },
+    "daily": {
+      "version": "e8cb472335dc7101cbb542708055c957f5361896b71136cdf020419401c3cf8c",
+      "digest": "e8cb472335dc7101cbb542708055c957f5361896b71136cdf020419401c3cf8c",
+      "publishedAt": "2026-04-22T10:01:47.409Z",
+      "archive": {
+        "path": "archives/daily-e8cb472335dc7101cbb542708055c957f5361896b71136cdf020419401c3cf8c.zip",
+        "url": "archives/daily-e8cb472335dc7101cbb542708055c957f5361896b71136cdf020419401c3cf8c.zip",
+        "size": 1885200,
+        "sha256": "706810a8df9c8d8a0a7b3a9a87ac545d77b7a7d0ff8f38cca682e78ad12aa4c7",
+        "contentType": "application/zip",
+        "cacheControl": "public,max-age=31536000,immutable"
+      },
+      "files": [
+        {
+          "path": "assets/cluster-images/42a376c9467b635c6c31c997020ec3f68ee8365992d4fb93e1a61e54712cde74.jpg",
+          "url": "assets/cluster-images/42a376c9467b635c6c31c997020ec3f68ee8365992d4fb93e1a61e54712cde74.jpg",
+          "size": 442513,
+          "sha256": "dc1f0f0fcf8b20ad2aef86135308df5cffec7cd9b785aacb2e62239529be1215",
+          "contentType": "image/jpeg",
+          "cacheControl": "public,max-age=31536000,immutable"
+        },
+        {
+          "path": "assets/cluster-images/5060e2ba850a7032b2a4a606b2b59781cc85cb7a20833c12aa5c5c7d8d654d58.jpg",
+          "url": "assets/cluster-images/5060e2ba850a7032b2a4a606b2b59781cc85cb7a20833c12aa5c5c7d8d654d58.jpg",
+          "size": 1419242,
+          "sha256": "84df41d405c9c94a8faf2c60a77d160a1777ccef6bb95860adfc54408450128f",
+          "contentType": "image/jpeg",
+          "cacheControl": "public,max-age=31536000,immutable"
+        },
+        {
+          "path": "generated/cluster-images.manifest.v1.json",
+          "url": "generated/cluster-images.manifest.v1.json",
+          "size": 1479,
+          "sha256": "c8a6c7ee8d85acdc88b6236ce790b14ea40197b2f33eed10143e2bb3a35c7397",
+          "contentType": "application/json; charset=utf-8",
+          "cacheControl": "public,max-age=60,must-revalidate"
+        },
+        {
+          "path": "generated/daily-puzzle.v1.json",
+          "url": "generated/daily-puzzle.v1.json",
+          "size": 21138,
+          "sha256": "3814f708e62f348699f33a929e9205bfae66bcc52627aaeb322d52b591c24abd",
+          "contentType": "application/json; charset=utf-8",
+          "cacheControl": "public,max-age=60,must-revalidate"
+        }
+      ]
+    }
+  }
+}

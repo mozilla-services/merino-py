@@ -13,7 +13,7 @@ import httpx
 
 from unittest.mock import MagicMock
 from pytest_mock import MockerFixture
-from typing import cast
+from typing import Any, cast
 
 from merino.configs import settings
 from merino.providers.suggest.sports.backends import get_data
@@ -247,7 +247,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture(name="sport_data_store")
-def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
+def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDataStore:
     """Test Sport Data Store instance"""
     creds = ElasticCredentials(
         dsn="http://es.test:9200",
@@ -258,15 +258,14 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events-test"},
+        metrics_client=statsd_mock,
     )
     s.client = es_client
     return s
 
 
 @pytest.mark.asyncio
-async def test_sportsdata_backend(
-    sport_data_store: SportsDataStore, mocker: MockerFixture
-):
+async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
     """Test the backend"""
     sport_data_store.search_events = AsyncMock(  # type: ignore
         side_effect=[
@@ -319,9 +318,7 @@ async def test_sportsdata_backend(
         ]
     )
 
-    backend = SportsDataBackend(
-        settings=settings.providers.sports, store=sport_data_store
-    )
+    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
     res = await backend.query(
         query_string="Some Search String",
     )
@@ -332,9 +329,7 @@ async def test_sportsdata_backend(
 
 
 @pytest.mark.asyncio
-async def test_sports_backend_startup(
-    sport_data_store: SportsDataStore, mocker: MockerFixture
-):
+async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker: MockerFixture):
     """Test that the backend calls the storage startup"""
     mock_store = AsyncMock()
     # Create and test the backend
@@ -356,9 +351,7 @@ async def test_sports_backend_startup(
     ],
     ids=["NFL", "NHL", "NBA", "UCL", "MLB", "miscellaneous"],
 )
-def test_sport_event_detail_category(
-    sport: str, expected_category: SportCategory
-) -> None:
+def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
     """Test sport name mapping and fallback behavior"""
     base_event: dict = {
         "date": "2025-10-01T00:00:00+00:00",

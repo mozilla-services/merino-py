@@ -1,6 +1,6 @@
 """Unit Test for Sports Data models."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import freezegun
@@ -11,6 +11,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common import GameStatu
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Team,
     Sport,
+    SportNormalizedTerms,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
@@ -347,3 +348,32 @@ def test_load_bad_teams_from_source(
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {456}
+
+
+@pytest.mark.parametrize(
+    "name,expected_key",
+    [
+        ("Korea Republic", "KOR"),
+        ("Curaçao", "CUW"),
+    ],
+    ids=["korea-keeps-kor", "curacao-remapped-to-cuw"],
+)
+def test_from_data_disambiguates_kor_collision(name: str, expected_key: str) -> None:
+    """Verify Curaçao is remapped to CUW while Korea keeps KOR.
+
+    sportsdata's international-soccer feed returns Key=KOR for both Korea
+    Republic and Curaçao, so Team.from_data must disambiguate by Name to keep
+    the two teams distinct downstream.
+    """
+    team = Team.from_data(
+        {
+            "Key": "KOR",
+            "Name": name,
+            "AreaName": name,
+            "TeamID": 12345,
+        },
+        term_filter=[],
+        team_ttl=timedelta(weeks=1),
+        normalized_terms=SportNormalizedTerms,
+    )
+    assert team.key == expected_key

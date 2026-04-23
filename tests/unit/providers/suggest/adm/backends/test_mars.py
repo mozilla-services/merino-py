@@ -670,7 +670,7 @@ async def test_index_metrics_emitted_after_build(
 
     assert "amp.index.suggestions_count" in index_calls
     assert index_calls["amp.index.suggestions_count"]["value"] == 1
-    assert index_calls["amp.index.suggestions_count"]["tags"] == {"index": DEFAULT_IDX_ID}
+    assert index_calls["amp.index.suggestions_count"]["tags"] == {"index": "US/desktop"}
 
     assert "amp.index.keyword_index_size" in index_calls
     assert index_calls["amp.index.keyword_index_size"]["value"] == 5

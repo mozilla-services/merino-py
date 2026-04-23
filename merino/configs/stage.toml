@@ -100,6 +100,11 @@ dummy_engaged_count = 5
 # MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
 dummy_attempted_count = 1000
 
+[stage.query_normalization]
+enabled = true
+data_source = "remote"
+gcs_bucket = "merino-ml-data-stage"
+
 [stage.mars]
 # MERINO_MARS__BASE_URL
 base_url = "https://ads.allizom.org/v1/suggest/"

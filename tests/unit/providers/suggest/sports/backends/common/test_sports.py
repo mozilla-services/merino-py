@@ -1279,9 +1279,7 @@ async def test_get_team_lookup(cls: type[Sport]) -> None:
 
 @pytest.mark.asyncio
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
-async def test_nfl_update_teams(
-    mock_client: AsyncClient, mocker: MockerFixture
-) -> None:
+async def test_nfl_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test NFL team updates."""
     nfl = NFL(settings=settings.providers.sports)
     timeframe = [
@@ -1379,9 +1377,7 @@ async def test_nhl_update_teams(
 
 
 @pytest.mark.asyncio
-async def test_nba_update_teams(
-    mock_client: AsyncClient, mocker: MockerFixture
-) -> None:
+async def test_nba_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test NHL team updates."""
     nba = NBA(settings=settings.providers.sports)
     teams_payload = nba_teams_payload()
@@ -1397,9 +1393,7 @@ async def test_nba_update_teams(
 
 
 @pytest.mark.asyncio
-async def test_mlb_update_teams(
-    mock_client: AsyncClient, mocker: MockerFixture
-) -> None:
+async def test_mlb_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test MLB team updates."""
     sport = MLB(settings=settings.providers.sports)
     teams_payload = mlb_teams_payload()
@@ -1416,9 +1410,7 @@ async def test_mlb_update_teams(
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
-async def test_ucl_update_teams(
-    mock_client: AsyncClient, mocker: MockerFixture
-) -> None:
+async def test_ucl_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test ucl team updates."""
     ucl = UCL(settings=settings.providers.sports)
     teams_payload = soccer_teams_payload()
@@ -1790,8 +1782,7 @@ def test_sport_subclasses_have_category_mapping() -> None:
     missing = [
         cls.__name__
         for cls in Sport.__subclasses__()
-        if cls.__module__ == sports_module.__name__
-        and cls.__name__ not in SPORT_CATEGORY_MAP
+        if cls.__module__ == sports_module.__name__ and cls.__name__ not in SPORT_CATEGORY_MAP
     ]
     assert missing == [], f"Sport subclasses missing from SPORT_CATEGORY_MAP: {missing}"
 

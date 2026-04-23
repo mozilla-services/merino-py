@@ -30,9 +30,9 @@ async def shutdown_providers() -> None:
     """
     for name, provider in providers.items():
         await provider.shutdown()
-        # remove provider from
-        providers.pop(name)
         logger.info("RSS provider shut down", extra={"provider": name})
+    # remove all providers from the module level providers dict.
+    providers.clear()
 
 
 def get_wikimedia_potd_provider() -> WikimediaPictureOfTheDayProvider:

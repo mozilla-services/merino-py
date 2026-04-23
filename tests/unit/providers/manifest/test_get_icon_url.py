@@ -4,7 +4,11 @@ import pytest
 from pydantic import HttpUrl
 from unittest.mock import MagicMock
 
-from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
+from merino.providers.manifest.backends.protocol import (
+    GetManifestResultCode,
+    ManifestData,
+    ManifestFetchResult,
+)
 from merino.providers.manifest.provider import Provider
 from unittest.mock import patch
 
@@ -16,7 +20,9 @@ async def test_domain_lookup_table_initialization(
     """Test that domain_lookup_table is correctly initialized during provider setup."""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -63,7 +69,9 @@ async def test_get_icon_url_domain_variants(
     """Test icon URL retrieval with different domain format variants."""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -78,7 +86,9 @@ async def test_get_icon_url_not_found(
     """Test icon URL retrieval for non-existent domain."""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -93,7 +103,9 @@ async def test_get_icon_url_invalid_url(
     """Test icon URL retrieval with invalid URLs."""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -116,7 +128,9 @@ async def test_get_icon_url_with_pydantic_url(
     """Test icon URL retrieval with Pydantic HttpUrl type."""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -154,7 +168,9 @@ async def test_get_icon_url_invalid_icon_metric(
         patch.object(manifest_provider, "metrics_client", mock_metrics_client),
         patch(
             "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-            return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+            return_value=ManifestFetchResult(
+                code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+            ),
         ),
     ):
         await manifest_provider.initialize()
@@ -199,7 +215,9 @@ async def test_get_icon_url_tld_specific_matching(manifest_provider: Provider, c
 
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, custom_manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=custom_manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)

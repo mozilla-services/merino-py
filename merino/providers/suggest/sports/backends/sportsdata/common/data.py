@@ -27,6 +27,16 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
 )
 
 
+# sportsdata.io's international-soccer feed returns the same "KOR" key for
+# both Korea Republic and Curaçao, collapsing them into a single entry
+# downstream (logo lookup, team caches, event dedup). Disambiguate by team
+# name and remap Curaçao to its ISO 3166-1 alpha-3 code. Drop this entry
+# when sportsdata fixes upstream.
+_TEAM_KEY_OVERRIDES: dict[tuple[str, str], str] = {
+    ("KOR", "Curaçao"): "CUW",
+}
+
+
 class Team(BaseModel):
     """Contain the truncated 'Team' information.
 
@@ -81,19 +91,18 @@ class Team(BaseModel):
                     lword = word.lower()
                     if word not in term_filter:
                         terms.add(lword)
-        locale = " ".join(
-            [team_data.get("City") or "", team_data.get("AreaName") or ""]
-        ).strip()
+        locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
         team_id = team_data.get(normalized_terms["TeamID"])
         if not team_id:
             logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
-            raise SportsDataError(f"No GlobalTeamID found for {fullname}")
+            raise SportsDataError(f"No {normalized_terms["TeamID"]} found for {fullname}")
+        raw_key = team_data["Key"]
         return cls(
             terms=" ".join(terms),
-            key=team_data["Key"],
+            key=_TEAM_KEY_OVERRIDES.get((raw_key, name), raw_key),
             id=team_id,
             fullname=fullname,
             name=name,
@@ -192,6 +201,18 @@ class Event(BaseModel):
         return result
 
 
+SportNormalizedTerms = {
+    "GameID": "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
+    "AwayTeamID": "AwayTeamID",
+    "AwayTeamKey": "AwayTeam",
+    "AwayTeamScore": "AwayTeamScore",
+    "HomeTeamID": "HomeTeamID",
+    "HomeTeamKey": "HomeTeam",
+    "HomeTeamScore": "HomeTeamScore",
+    "TeamID": "TeamID",
+}
+
+
 class Sport:
     """Root Model for Sport data"""
 
@@ -241,21 +262,10 @@ class Sport:
         self.event_ttl = event_ttl or timedelta(
             weeks=settings.sportsdata.get("event_ttl_weeks", EVENT_TTL_WEEKS)
         )
-        self.team_ttl = team_ttl or timedelta(
-            weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS)
-        )
+        self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
         self.term_filter = term_filter
         self.cache_dir = cache_dir
-        self.normalized_terms = {
-            "GameID": "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
-            "AwayTeamID": "AwayTeamID",
-            "AwayTeamKey": "AwayTeam",
-            "AwayTeamScore": "AwayTeamScore",
-            "HomeTeamID": "HomeTeamID",
-            "HomeTeamKey": "HomeTeam",
-            "HomeTeamScore": "HomeTeamScore",
-            "TeamID": "TeamID",
-        }.copy()
+        self.normalized_terms = SportNormalizedTerms.copy()
 
     @abstractmethod
     async def get_team(self, id: int) -> Team | None:
@@ -352,24 +362,16 @@ class Sport:
             # only update the scores.
             if game_id in self.events:
                 event = self.events[game_id]
-                event.home_score = event_description.get(
-                    self.normalized_terms["HomeTeamScore"]
-                )
-                event.away_score = event_description.get(
-                    self.normalized_terms["AwayTeamScore"]
-                )
+                event.home_score = event_description.get(self.normalized_terms["HomeTeamScore"])
+                event.away_score = event_description.get(self.normalized_terms["AwayTeamScore"])
             else:
                 # Some Sports may not pull Schedules first
                 home_id = event_description.get(self.normalized_terms["HomeTeamID"])
                 away_id = event_description.get(self.normalized_terms["AwayTeamID"])
                 home_name = event_description.get(self.normalized_terms["HomeTeamKey"])
                 away_name = event_description.get(self.normalized_terms["AwayTeamKey"])
-                home_score = event_description.get(
-                    self.normalized_terms["HomeTeamScore"]
-                )
-                away_score = event_description.get(
-                    self.normalized_terms["AwayTeamScore"]
-                )
+                home_score = event_description.get(self.normalized_terms["HomeTeamScore"])
+                away_score = event_description.get(self.normalized_terms["AwayTeamScore"])
                 if not home_id or not away_id:
                     logger.warning(
                         f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
@@ -385,13 +387,13 @@ class Sport:
 
                 try:
                     if "DateTimeUTC" in event_description:
-                        date = datetime.fromisoformat(
-                            event_description["DateTimeUTC"]
-                        ).replace(tzinfo=timezone.utc)
+                        date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
+                            tzinfo=timezone.utc
+                        )
                     else:
-                        date = datetime.fromisoformat(
-                            event_description["DateTime"]
-                        ).replace(tzinfo=event_timezone)
+                        date = datetime.fromisoformat(event_description["DateTime"]).replace(
+                            tzinfo=event_timezone
+                        )
                 # There have been incidents where an event returns "None" as a date value.
                 # We should ignore that event, and allow processing to continue, but note
                 # the error in case we need to escalate the problem.
@@ -408,9 +410,9 @@ class Sport:
                 updated = None
                 # All "Updated" fields are always in ET.
                 if event_description.get("Updated"):
-                    updated = datetime.fromisoformat(
-                        event_description["Updated"]
-                    ).replace(tzinfo=event_timezone)
+                    updated = datetime.fromisoformat(event_description["Updated"]).replace(
+                        tzinfo=event_timezone
+                    )
                 event = Event(
                     sport=self.name,
                     id=game_id,
@@ -482,9 +484,7 @@ class Sport:
             home_score = event_description.get(self.normalized_terms["HomeTeamScore"])
             away_score = event_description.get(self.normalized_terms["AwayTeamScore"])
             if not home_id or not away_id:
-                logger.warning(
-                    f"{LOGGING_TAG} Could not find team for event: {event_description}"
-                )
+                logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
                 continue
             home_team = self.teams.get(home_id)
             away_team = self.teams.get(away_id)
@@ -501,19 +501,17 @@ class Sport:
                 continue
             try:
                 if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(
-                        event_description["DateTimeUTC"]
-                    ).replace(tzinfo=timezone.utc)
+                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
+                        tzinfo=timezone.utc
+                    )
                 else:
-                    date = datetime.fromisoformat(
-                        event_description["DateTime"]
-                    ).replace(tzinfo=event_timezone)
+                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
+                        tzinfo=event_timezone
+                    )
             except TypeError as ex:
                 # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
                 # but if there's an error, it's probably wise to ignore this.
-                logger.info(
-                    f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]"""
-                )
+                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
                 logger.debug(
                     f"{LOGGING_TAG} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )

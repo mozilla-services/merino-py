@@ -109,7 +109,7 @@ client_variant_character_max = 100
 
 # MERINO_WEB__API__V1__CLIENT_VARIANT_ALLOW_LIST
 # list of client variants the merino will be aware about
-client_variant_allow_list = ["engagement_guided_suggestions"]
+client_variant_allow_list = ["engagement_guided_suggestions", "query_norm_treatment"]
 
 # MERINO_WEB__API__V1__HEADER_CHARACTER_MAX
 # A non-negative integer that limits the string character length of a given header string,
@@ -352,6 +352,41 @@ favicons_root = "favicons"
 max_size = 16777216 # 16MB
 # HTTP timeout for favicon downloads (in seconds)
 http_timeout = 5
+
+[default.query_normalization]
+# MERINO_QUERY_NORMALIZATION__ENABLED
+# Whether to build the normalization pipeline at startup.
+enabled = true
+
+# MERINO_QUERY_NORMALIZATION__DATA_SOURCE
+# "local" for dev/testing, "remote" for stage/prod (GCS).
+data_source = "local"
+
+# MERINO_QUERY_NORMALIZATION__SPORTS_TEAMS_FILE
+# Local path to sports teams JSON (used when data_source = "local").
+sports_teams_file = "dev/query_normalization/sports_teams.json"
+
+# MERINO_QUERY_NORMALIZATION__WORD_FREQ_FILE
+# Local path to word frequency CSV.
+word_freq_file = "dev/query_normalization/word_freq.csv"
+
+# MERINO_QUERY_NORMALIZATION__FINANCE_TICKERS_FILE
+# Local path to finance tickers JSON.
+finance_tickers_file = "dev/query_normalization/finance_tickers.json"
+
+# MERINO_QUERY_NORMALIZATION__WORDSEGMENT_CACHE_SIZE
+# Max entries in the wordsegment LRU cache. Each entry is a token->segmentation
+# mapping (~200 bytes). 10000 entries ≈ 2 MB.
+wordsegment_cache_size = 10000
+
+# MERINO_QUERY_NORMALIZATION__PROVIDERS
+# List of provider names that receive normalized queries.
+# Other providers get the raw query even for treatment users.
+providers = ["sports", "polygon"]
+
+# MERINO_QUERY_NORMALIZATION__GCS_BUCKET
+# GCS bucket for remote data files (used when data_source = "remote").
+gcs_bucket = ""
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
@@ -1102,6 +1137,23 @@ cache_ttl = 86400 # one day
 # MERINO_GAMES_PROVIDERS__PARTICLE__GAME_URL
 # The URL pointing to the game hosted in GCP (GCS)
 game_url = "https://prod-games-particle.merino.prod.webservices.mozgcp.net/index.html"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__URL_ROOT
+# The root URL for Particle data.
+url_root = "https://crossword-widget.vercel.app"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__URL_PATH_MANIFEST
+# The URL path to the Particle manifest JSON file.
+url_path_manifest = "/runtime-manifest.v1.json"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__MANIFEST_SCHEMA_VERSION
+# The expected schema version to be present in the manifest JSON.
+# Used to validate manifest JSON.
+manifest_schema_version = 1
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to Particle endpoint.
+connect_timeout_sec = 3.0
 
 
 [default.curated_recommendations.gcs]
