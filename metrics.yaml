@@ -414,7 +414,14 @@ providers/manifest:
     labels:
       - name: name
         description: |
-          An identifier for the manifest, e.g. "logos"
+          An identifier for the manifest namespace, e.g. "logos.airline",
+          "logos.nba".
+      - name: key
+        description: |
+          The specific key that was looked up, normalized to the manifest's
+          uppercase storage form (e.g. IATA code "AA", sports team key "GSW").
+          Only emitted on miss events so dashboards can show which entries
+          are missing without loading cardinality on the hot path.
       - name: result
         description: |
           The outcome of the lookup (e.g. "miss" when the requested key
