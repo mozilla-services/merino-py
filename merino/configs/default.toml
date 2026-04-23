@@ -1138,6 +1138,23 @@ cache_ttl = 86400 # one day
 # The URL pointing to the game hosted in GCP (GCS)
 game_url = "https://prod-games-particle.merino.prod.webservices.mozgcp.net/index.html"
 
+# MERINO_GAMES_PROVIDERS__PARTICLE__URL_ROOT
+# The root URL for Particle data.
+url_root = "https://crossword-widget.vercel.app"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__URL_PATH_MANIFEST
+# The URL path to the Particle manifest JSON file.
+url_path_manifest = "/runtime-manifest.v1.json"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__MANIFEST_SCHEMA_VERSION
+# The expected schema version to be present in the manifest JSON.
+# Used to validate manifest JSON.
+manifest_schema_version = 1
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to Particle endpoint.
+connect_timeout_sec = 3.0
+
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
