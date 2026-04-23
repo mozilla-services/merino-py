@@ -746,7 +746,7 @@ class FIFA(Sport):
         for _id, event in self.events.items():
             day = event.date.strftime("%Y-%b-%d").upper()
             if not event.status.is_scheduled() and day not in date_list:
-                url = f"{self.base_url}/ScoresBasic/{day}?key={self.api_key}"
+                url = f"{self.base_url}/GamesByDate/{self.name}/{day}?key={self.api_key}"
                 response = await get_data(
                     client=client,
                     url=url,

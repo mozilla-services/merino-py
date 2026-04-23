@@ -36,34 +36,6 @@ def mock_client(mocker: MockerFixture) -> AsyncClient:
     return cast(AsyncClient, mocker.Mock(spec=AsyncClient))
 
 
-@pytest.fixture
-def generic_teams_payload() -> list[dict]:
-    """Provide Generic team payload (for US based sports)."""
-    return [
-        {
-            "Key": "HOM",
-            "Name": "Homebodies",
-            "City": "Springfield",
-            "AreaName": "US",
-            "FullName": "Springfield Homebodies",
-            "Nickname1": "Homers",
-            "GlobalTeamId": 98,
-            "PrimaryColor": "000000",
-            "SecondaryColor": "FFFFFF",
-        },
-        {
-            "Key": "AWY",
-            "Name": "Visitors",
-            "City": "Elsewhere",
-            "AreaName": "OS",
-            "GlobalTeamId": 99,
-            "FullName": "Visitors from Elsewhere",
-            "PrimaryColor": "FFFFFF",
-            "SecondaryColor": "000000",
-        },
-    ]
-
-
 # **NOTE**: The provider is not very consistent about data values, or key names
 # It is, therefore, important to use samples taken directly from their API
 # in order to validate our testing. The following are truncated versions of the
@@ -1919,14 +1891,14 @@ async def test_fifa_update_events(
     mocker: MockerFixture,
 ) -> None:
     """Test FIFA event updates."""
-    ucl = FIFA(settings=settings.providers.sports)
-    teams_payload = soccer_teams_payload()
-    ucl.load_teams_from_source(teams_payload)
-    ucl.season = "2025"  # set by update_teams normally
-    ucl.event_ttl = timedelta(weeks=2)
+    sport = FIFA(settings=settings.providers.sports)
+    teams_payload = fifa_teams_payload()
+    sport.load_teams_from_source(teams_payload)
+    sport.season = "2025"  # set by update_teams normally
+    sport.event_ttl = timedelta(weeks=2)
 
-    schedules_payload = soccer_schedule_payload()
-    scores_payload = soccer_score_payload()
+    schedules_payload = fifa_schedule_payload()
+    scores_payload = fifa_score_payload()
     within = "2025-09-22T13:30:00"  # UTC
     outside = "2026-01-22T13:30:00"
     schedules_payload[0].update(
@@ -1962,6 +1934,40 @@ async def test_fifa_update_events(
         }
     )
 
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[schedules_payload, scores_payload],
+    )
+
+    global_offset = 90000000
+    await sport.update_events(client=mock_client)
+    assert global_offset + 11111 in sport.events and global_offset + 22222 not in sport.events
+    assert sport.events[global_offset + 11111].status == GameStatus.Final
+    assert 2 == get_data.call_count
+    for call in get_data.call_args_list:
+        assert call.kwargs["url"] in [
+            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2025?key=",
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/FIFA/2025-SEP-22?key=",
+        ]
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_fifa_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """Test FIFA team updates."""
+    sport = FIFA(settings=settings.providers.sports)
+    teams_payload = fifa_teams_payload()
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[teams_payload],  # called twice per code
+    )
+    await sport.update_teams(client=mock_client)
+    assert sport.season == "2025"
+    assert set(sport.teams.keys()) == {90000001, 90000002}
+    assert get_data.call_count == 1
+
+    assert "/Teams/fifa?key=" in get_data.call_args_list[0].kwargs["url"]
+
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
@@ -1982,6 +1988,32 @@ async def test_weird_afc_update_events(
     )
     await sport.update_events(client=mock_client)
     assert not sport.events
+
+
+@pytest.mark.asyncio
+async def test_sport_no_season(mock_client: AsyncClient, mocker: MockerFixture):
+    """Test sport events with no season"""
+    sport = NFL(settings=settings.providers.sports)
+    timeframe = [
+        {
+            "SeasonType": 4,
+            "Season": 2025,
+            "Week": None,
+            "Name": "Draft",
+            "ApiSeason": "2025REG",
+            "ApiWeek": None,
+            "StartDate": "2025-09-17T00:00:00",
+            "EndDate": "2025-09-23T23:59:59",
+        }
+    ]
+    _get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[timeframe],
+    )
+
+    await sport.get_season(client=mock_client)
+
+    assert sport.week is None
 
 
 def test_sport_subclasses_have_category_mapping() -> None:
