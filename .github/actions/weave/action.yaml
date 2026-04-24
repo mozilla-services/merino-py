@@ -21,6 +21,7 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential libxml2-dev libxslt-dev python3-dev libffi-dev
+      shell: bash
     - name: Create Workspace
       run: mkdir -p ${{ inputs.workspace-path }}
       shell: bash
