@@ -24,7 +24,10 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
     SportCategory,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+    Team,
+    SportTerms,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
     SportsDataStore,
@@ -215,7 +218,13 @@ async def test_team():
         term_filter=["La", "The", "fc"],
         team_ttl=ttl,
         # Semi-hack unless you want to instantiate a version of UCL
-        normalized_terms={"TeamID": "TeamId"},
+        normalized_terms={
+            SportTerms.TEAM_ID: "TeamId",
+            SportTerms.COLOR1: "ClubColor1",
+            SportTerms.COLOR2: "ClubColor2",
+            SportTerms.COLOR3: "ClubColor3",
+            SportTerms.COLOR4: "ClubColor4",
+        },
     )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
@@ -265,7 +274,9 @@ def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDa
 
 
 @pytest.mark.asyncio
-async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
+async def test_sportsdata_backend(
+    sport_data_store: SportsDataStore, mocker: MockerFixture
+):
     """Test the backend"""
     sport_data_store.search_events = AsyncMock(  # type: ignore
         side_effect=[
@@ -318,7 +329,9 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
         ]
     )
 
-    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
+    backend = SportsDataBackend(
+        settings=settings.providers.sports, store=sport_data_store
+    )
     res = await backend.query(
         query_string="Some Search String",
     )
@@ -329,7 +342,9 @@ async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: Moc
 
 
 @pytest.mark.asyncio
-async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker: MockerFixture):
+async def test_sports_backend_startup(
+    sport_data_store: SportsDataStore, mocker: MockerFixture
+):
     """Test that the backend calls the storage startup"""
     mock_store = AsyncMock()
     # Create and test the backend
@@ -351,7 +366,9 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
     ],
     ids=["NFL", "NHL", "NBA", "UCL", "MLB", "miscellaneous"],
 )
-def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
+def test_sport_event_detail_category(
+    sport: str, expected_category: SportCategory
+) -> None:
     """Test sport name mapping and fallback behavior"""
     base_event: dict = {
         "date": "2025-10-01T00:00:00+00:00",
