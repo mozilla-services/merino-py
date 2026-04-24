@@ -10,13 +10,12 @@ import pytest
 from pydantic import ValidationError
 from pytest_mock import MockerFixture
 
+from merino.providers.suggest.adm.backends.protocol import KeywordEntry, KeywordMetrics
 from merino.utils.gcs.engagement.filemanager import (
     EngagementData,
     EngagementFilemanager,
     KeywordEngagementData,
     KeywordEngagementFilemanager,
-    KeywordEntry,
-    KeywordMetrics,
 )
 
 GCS_BUCKET = "test-bucket"
