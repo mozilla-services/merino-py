@@ -193,15 +193,12 @@ class SportDataUpdater:
         )
         try:
             last_update_str = (
-                await self.store.query_meta("last_update")
-                or default_prior_update.isoformat()
+                await self.store.query_meta("last_update") or default_prior_update.isoformat()
             )
             last_update = datetime.fromisoformat(last_update_str)
         except Exception as ex:
             logger.error(f"{LOGGING_TAG} quick_update date error {ex}")
-            last_update = datetime.now(tz=timezone.utc) - timedelta(
-                seconds=UPDATE_PERIOD_SECS
-            )
+            last_update = datetime.now(tz=timezone.utc) - timedelta(seconds=UPDATE_PERIOD_SECS)
         for sport in self.sports.values():
             start = time()
             await sport.update_events(client=self.client)
@@ -209,9 +206,7 @@ class SportDataUpdater:
                 f"""{LOGGING_TAG} sports.time.quick_update.event ["sport": {sport.name}] = {time() - start}"""
             )
             start = time()
-            await self.store.update_events(
-                sport, language_code="en", last_update=last_update
-            )
+            await self.store.update_events(sport, language_code="en", last_update=last_update)
             logger.info(
                 f"""{LOGGING_TAG} sports.time.quick_update.update ["sport": {sport.name}] = {time() - start}"""
             )
@@ -262,9 +257,7 @@ if elastic_credentials.validate():
         # except SportsDataError as ex:
         logger.error(f"{LOGGING_TAG} Sports Unavailable: {ex}")
 else:
-    logger.error(
-        f"{LOGGING_TAG} Sports Unavailable: Missing Elasticsearch Credentials:"
-    )
+    logger.error(f"{LOGGING_TAG} Sports Unavailable: Missing Elasticsearch Credentials:")
 
 
 @cli.command("initialize")

@@ -7,7 +7,6 @@ from typing import Any, cast
 
 from redis.asyncio import Redis, RedisError
 from redis.commands.core import AsyncScript
-from redis.typing import EncodableT
 
 from merino.exceptions import CacheAdapterError
 
@@ -140,7 +139,7 @@ class RedisAdapter:
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def hget(self, key: str, field: str) -> EncodableT | None:
+    async def hget(self, key: str, field: str) -> Any | None:
         """Return the field value for a hash key"""
         try:
             return await self.replica.hget(key, field)
@@ -185,25 +184,26 @@ class RedisAdapter:
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def hdel(self, key: str) -> int:
+    async def hdel(self, key: str, field: str) -> int:
         """Remove a hash key record"""
         try:
-            return await self.primary.hdel(key)
+            return await self.primary.hdel(key, field)
         except RedisError as exc:
             raise CacheAdapterError(
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def hmset(self, key: str, values: dict[str, Any]) -> dict[str, Any] | None:
+    # Technically, dict[str, Any] works fine, but mypy complains.
+    async def hmset(self, key: str, values: dict[str, Any]) -> int:
         """Return all fields for a hash key"""
         try:
-            return await self.primary.hgetall(key)
+            return await self.primary.hset(key, mapping=values)  # type: ignore
         except RedisError as exc:
             raise CacheAdapterError(
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def hsetnx(self, key: str, field: str, value: Any) -> int:
+    async def hsetnx(self, key: str, field: str, value: Any, expiry: int | None = None) -> int:
         """Set field for a hash key if not already present"""
         try:
             return await self.primary.hsetnx(key, field, value)
@@ -303,7 +303,7 @@ class RedisAdapter:
             ) from exc
 
     # ==
-    async def setnx(self, key: str, value: EncodableT) -> int:
+    async def setnx(self, key: str, value: Any) -> int:
         """Set a value if it is not present"""
         try:
             return await self.primary.setnx(key, value)

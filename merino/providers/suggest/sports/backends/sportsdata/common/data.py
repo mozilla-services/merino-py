@@ -21,6 +21,8 @@ from merino.providers.suggest.sports import (
     utc_time_from_now,
 )
 
+from merino.cache.redis import RedisAdapter
+from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -228,6 +230,7 @@ class Sport:
     # and ownership reasons.
     term_filter: list[str] = []
     cache_dir: str | None
+    cache: RedisAdapter | NoCacheAdapter
     # Each sport may use a different term for these values.
     # You should prefer to use the `Global*` version when possible, but not all sports
     # provide that value, nor do all returned data sets.
@@ -240,6 +243,7 @@ class Sport:
         base_url: str,
         name: str,
         cache_dir: str | None = None,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         api_key: str | None = None,
         event_ttl: timedelta | None = None,
         team_ttl: timedelta | None = None,
@@ -265,6 +269,7 @@ class Sport:
         self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
         self.term_filter = term_filter
         self.cache_dir = cache_dir
+        self.cache = cache
         self.normalized_terms = SportNormalizedTerms.copy()
 
     @abstractmethod

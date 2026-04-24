@@ -12,6 +12,7 @@ from httpx import AsyncClient
 from merino.providers.suggest.sports import LOGGING_TAG
 
 
+# TODO: convert this to use `sport.cache`; obsolete the `cache_dir` arg
 async def get_data(
     client: AsyncClient,
     url: str,
