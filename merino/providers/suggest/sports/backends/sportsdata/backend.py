@@ -5,6 +5,8 @@ from dynaconf.base import LazySettings
 from pydantic import HttpUrl
 from typing import Protocol
 
+from merino.cache.redis import RedisAdapter
+from merino.cache.none import NoCacheAdapter
 
 from merino.providers.suggest.sports.backends.sportsdata.protocol import SportSummary
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
@@ -26,6 +28,7 @@ class SportsDataBackend(SportsDataProtocol):
     def __init__(
         self,
         store: SportsDataStore,
+        cache: RedisAdapter | NoCacheAdapter,
         settings: LazySettings,
         max_suggestions: int = 10,
         mix_sports: bool = True,
@@ -34,6 +37,7 @@ class SportsDataBackend(SportsDataProtocol):
     ):
         super().__init__(*args, **kwargs)
         self.data_store = store
+        self.cache = cache
         self.max_suggestions = max_suggestions
         self.mix_sports = mix_sports
         self.settings = settings

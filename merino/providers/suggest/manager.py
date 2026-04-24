@@ -369,6 +369,24 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             ]
             # Use wikipedia as a backup for the Elasticsearch credentials.
             # TODO, use a central Elasticsearch credential set.
+
+            # "RedisAdapter" is a very primitive construct. We're gonna need a bigger
+            # adapter.
+
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.server,
+                        settings.redis.replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                    )
+                )
+                if setting.cache == "redis"
+                else NoCacheAdapter()
+            )
+
             credentials = ElasticCredentials(settings=settings)
 
             name = setting.get("platform", setting.type)
@@ -385,6 +403,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             return SportsDataProvider(
                 backend=SportsDataBackend(
                     store=store,
+                    cache=cache,
                     settings=setting,
                     max_suggestions=setting.max_suggestions,
                     mix_sports=setting.get("mix_sports", True),

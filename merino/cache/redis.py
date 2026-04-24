@@ -1,10 +1,13 @@
 """Redis cache adapter."""
 
+import inspect
+import types
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
 
 from redis.asyncio import Redis, RedisError
 from redis.commands.core import AsyncScript
+from redis.typing import EncodableT
 
 from merino.exceptions import CacheAdapterError
 
@@ -54,7 +57,7 @@ def create_redis_clients(
 
 
 class RedisAdapter:
-    """A cache adapter that stores key-value pairs in Redis.
+    """A cache adapter for Redis.
     Merino's Redis server employes replication for high availability. Hence
     each adapter maintains two clients connected to the primary endpoint and
     the replica endpoint, respectively. To ease the development and testing,
@@ -126,6 +129,188 @@ class RedisAdapter:
             return await self.replica.scard(key)
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to SCARD {key} with error: {exc}") from exc
+
+    # == Hash Functions
+    async def hexists(self, key: str, field: str) -> int:
+        """Check if a hash field exists"""
+        try:
+            return await self.replica.hexists(key, field)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hget(self, key: str, field: str) -> EncodableT | None:
+        """Return the field value for a hash key"""
+        try:
+            return await self.replica.hget(key, field)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hmget(self, key: str, fields: list[str]) -> list[Any] | None:
+        """Return values for multiple keys for a hash key"""
+        try:
+            return await self.replica.hmget(key, fields)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hkeys(self, key: str) -> list[str] | None:
+        """Return all field names for a hash key"""
+        try:
+            return await self.replica.hkeys(key)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hvals(self, key: str) -> list[str] | None:
+        """Return all field names for a hash key"""
+        try:
+            return await self.replica.hvals(key)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hgetall(self, key: str) -> dict[str, Any] | None:
+        """Return all fields keys and values for a hash key"""
+        try:
+            return await self.replica.hgetall(key)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hdel(self, key: str) -> int:
+        """Remove a hash key record"""
+        try:
+            return await self.primary.hdel(key)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hmset(self, key: str, values: dict[str, Any]) -> dict[str, Any] | None:
+        """Return all fields for a hash key"""
+        try:
+            return await self.primary.hgetall(key)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def hsetnx(self, key: str, field: str, value: Any) -> int:
+        """Set field for a hash key if not already present"""
+        try:
+            return await self.primary.hsetnx(key, field, value)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    # == Sorted Set functions
+    async def zadd(
+        self,
+        key: str,
+        mapping: dict[Any, int],
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> int:
+        """Set scored values (identified as a dict where the key is the name and the value is the score)
+
+        an example of the mapping might be:
+        {f"fifa:event:{eventId}": int(time.time())}
+
+        flags:
+            `nx`: if Not eXists
+            `xx`: only if eXists
+            `gt`: if provided value is Greater Than
+            `lt`: if provided value is Less Than
+        """
+        try:
+            return await self.primary.zadd(key, mapping, nx=nx, xx=xx, gt=gt, lt=lt)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def zrange(
+        self,
+        key: str,
+        min: int,
+        max: int,
+        byScore: bool = True,
+        limit: int | None = None,
+        offset: int | None = None,
+        rev: bool = False,
+        withScores: bool = False,
+    ) -> list[Any]:
+        """Return values (with optional scores) that fall between the min and max inclusively"""
+        try:
+            return await self.replica.zrange(
+                key,
+                start=min,
+                end=max,
+                desc=rev,
+                withscores=withScores,
+                byscore=byScore,
+                offset=offset,
+                num=limit,
+            )
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def zrem(
+        self,
+        key: str,
+        *field: str,
+    ) -> int:
+        """Remove a field from a zrange key"""
+        try:
+            return await self.replica.zrem(
+                key,
+                *field,
+            )
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    async def zremrange(
+        self,
+        key: str,
+        min: int,
+        max: int,
+    ) -> int:
+        """Remove any values that fall between the min and max inclusively"""
+        try:
+            return await self.replica.zremrangebyscore(
+                name=key,
+                min=min,
+                max=max,
+            )
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
+
+    # ==
+    async def setnx(self, key: str, value: EncodableT) -> int:
+        """Set a value if it is not present"""
+        try:
+            return await self.primary.setnx(key, value)
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
+            ) from exc
 
     async def close(self) -> None:
         """Close the Redis connection."""
