@@ -453,7 +453,7 @@ class Sport:
                     expiry=utc_time_from_now(self.event_ttl),
                     updated=updated,
                 )
-                self.events[event.id] = event
+            self.events[event.id] = event
 
         return self.events
 
@@ -505,7 +505,7 @@ class Sport:
             game_id = event_description[self.normalized_terms[SportTerms.GAME_ID]]
             home_id = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_ID])
             away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
-            home_score = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_Score])
+            home_score = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_SCORE])
             away_score = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_SCORE])
             if not home_id or not away_id:
                 logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
