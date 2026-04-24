@@ -215,7 +215,7 @@ async def test_team():
         term_filter=["La", "The", "fc"],
         team_ttl=ttl,
         # Semi-hack unless you want to instantiate a version of UCL
-        translate_terms={"TeamID": "TeamId"},
+        normalized_terms={"TeamID": "TeamId"},
     )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"

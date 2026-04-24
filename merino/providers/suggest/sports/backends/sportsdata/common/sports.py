@@ -68,7 +68,7 @@ class NFL(Sport):
             lock=asyncio.Lock(),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GlobalGameID",
                 "AwayTeamID": "GlobalAwayTeamID",
@@ -201,9 +201,9 @@ class NHL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms = self.translate_terms.copy()
+        self.normalized_terms = self.normalized_terms.copy()
         # GlobalTeam* not available for scores, use TeamID
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GameID",
                 "AwayTeamID": "AwayTeamID",
@@ -314,7 +314,7 @@ class NBA(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GlobalGameID",
                 "AwayTeamID": "GlobalAwayTeamID",
@@ -426,7 +426,7 @@ class UCL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GlobalGameId",
                 "AwayTeamID": "GlobalAwayTeamId",
@@ -552,7 +552,7 @@ class MLB(Sport):
         )
         self._lock = asyncio.Lock()
         # GlobalTeamID not in schedule
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
                 "GameID": "GameID",
                 "AwayTeamScore": "AwayTeamRuns",

@@ -1547,7 +1547,7 @@ async def test_ucl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     teams_payload = soccer_teams_payload()
     get_data = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
-        side_effect=[teams_payload],  # called twice per code
+        side_effect=[teams_payload],
     )
     await ucl.update_teams(client=mock_client)
     assert ucl.season == "2025"
@@ -2042,7 +2042,7 @@ async def test_sportsdata_errors() -> None:
 def test_sport_term_pollution() -> None:
     """Test that the translate terms don't cross pollute"""
     sport = NFL(settings=settings.providers.sports)
-    terms = sport.translate_terms.copy()
+    terms = sport.normalized_terms.copy()
     sport2 = MLB(settings=settings.providers.sports)
-    assert sport.translate_terms != sport2.translate_terms
-    assert sport.translate_terms == terms
+    assert sport.normalized_terms != sport2.normalized_terms
+    assert sport.normalized_terms == terms
