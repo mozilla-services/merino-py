@@ -10,6 +10,7 @@ import orjson
 from gcloud.aio.storage import Blob, Bucket, Storage
 from pydantic import BaseModel
 
+from merino.providers.suggest.adm.backends.protocol import KeywordEntry
 from merino.utils.storage import get_storage_client
 
 
@@ -22,20 +23,6 @@ class EngagementData(BaseModel):
     amp: dict[str, dict[str, str | int]] = {}
     amp_aggregated: dict[str, int] = {}
     wiki_aggregated: dict[str, int] = {}
-
-
-class KeywordMetrics(BaseModel):
-    """Impressions and clicks for a given window."""
-
-    impressions: int
-    clicks: int
-
-
-class KeywordEntry(BaseModel):
-    """Live and historical engagement metrics for a single advertiser/keyword pair."""
-
-    live: KeywordMetrics
-    historical: KeywordMetrics
 
 
 class KeywordEngagementData(BaseModel):

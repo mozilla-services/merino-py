@@ -7,6 +7,7 @@
 import json
 
 import pytest
+from pydantic import ValidationError
 from pytest_mock import MockerFixture
 
 from merino.utils.gcs.engagement.filemanager import (
@@ -240,8 +241,10 @@ async def test_keyword_get_file_success(
     assert isinstance(result, KeywordEngagementData)
     assert isinstance(result.amp["mozilla/firefox"], KeywordEntry)
     assert isinstance(result.amp["mozilla/firefox"].live, KeywordMetrics)
+    assert result.amp["mozilla/firefox"].live is not None
     assert result.amp["mozilla/firefox"].live.impressions == 3333
     assert result.amp["mozilla/firefox"].live.clicks == 88
+    assert result.amp["mozilla/firefox"].historical is not None
     assert result.amp["mozilla/firefox"].historical.impressions == 6666
     assert result.amp["mozilla/firefox"].historical.clicks == 333
     assert result.amp_aggregated["impressions"] == 463225
@@ -289,3 +292,9 @@ async def test_keyword_get_file_gcs_exception(
 
     assert result is None
     assert any("GCS timeout" in r.message for r in caplog.records)
+
+
+def test_keyword_entry_requires_at_least_one_metrics_window() -> None:
+    """Test that KeywordEntry raises if both live and historical are absent."""
+    with pytest.raises(ValidationError):
+        KeywordEntry()

@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import Optional, Protocol
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from moz_merino_ext.amp import AmpIndexManager
 
 SegmentType = tuple[int]
@@ -34,8 +34,15 @@ class KeywordMetrics(BaseModel):
 class KeywordEntry(BaseModel):
     """Live and historical engagement metrics for a single advertiser/keyword pair."""
 
-    live: Optional[KeywordMetrics]
-    historical: Optional[KeywordMetrics]
+    live: Optional[KeywordMetrics] = None
+    historical: Optional[KeywordMetrics] = None
+
+    @model_validator(mode="after")
+    def at_least_one_present(self) -> "KeywordEntry":
+        """Check that there is at least one type of metrics set."""
+        if self.live is None and self.historical is None:
+            raise ValueError("at least one of live or historical must be set")
+        return self
 
 
 class KeywordEngagementData(BaseModel):
@@ -43,7 +50,6 @@ class KeywordEngagementData(BaseModel):
 
     amp: dict[str, KeywordEntry] = {}
     amp_aggregated: dict[str, int] = {}
-    wiki_aggregated: dict[str, int] = {}
 
 
 class SuggestionContent(BaseModel):
