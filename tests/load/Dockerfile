@@ -19,6 +19,7 @@ RUN apt-get update && \
     uv sync --frozen --no-cache --group load --no-dev && \
     apt-get remove --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev libzmq3-dev && \
     apt-get clean && \
+    rm -rf /root/.cache && \
     rm -rf /var/lib/apt/lists/*
 
 ENV LANG=C.UTF-8
