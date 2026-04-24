@@ -20,7 +20,10 @@ from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
+from merino.providers.suggest.sports.backends.sportsdata.common import (
+    GameStatus,
+    SportCategory,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
@@ -207,7 +210,13 @@ async def test_team():
         "GlobalTeamId": 90000694,
     }
     ttl = timedelta(seconds=300)
-    team = Team.from_data(team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl)
+    team = Team.from_data(
+        team_data=team_data,
+        term_filter=["La", "The", "fc"],
+        team_ttl=ttl,
+        # Semi-hack unless you want to instantiate a version of UCL
+        normalized_terms={"TeamID": "TeamId"},
+    )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
     assert team.colors == ["FF0000", "FFFFFF"]
@@ -375,7 +384,11 @@ def test_sport_event_detail_icon_set_when_team_in_manifest(
         "date": "2025-10-01T00:00:00+00:00",
         "sport": "NHL",
         "event_status": GameStatus.Scheduled,
-        "home_team": {"key": "PHI", "name": "Philadelphia Flyers", "colors": ["D24303"]},
+        "home_team": {
+            "key": "PHI",
+            "name": "Philadelphia Flyers",
+            "colors": ["D24303"],
+        },
         "away_team": {"key": "WPG", "name": "Winnipeg Jets", "colors": ["041E42"]},
         "home_score": None,
         "away_score": None,
