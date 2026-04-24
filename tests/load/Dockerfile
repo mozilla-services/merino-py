@@ -15,8 +15,9 @@ COPY ./pyproject.toml ./uv.lock ./
 # Add gcc since there are no wheels for some packages for arm64/aarch64
 # (g++/make for gevent on pypy)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git build-essential python3-dev && \
+    apt-get install -y --no-install-recommends git build-essential libxml2-dev libxslt-dev libzmq3-dev python3-dev libffi-dev && \
     uv sync --frozen --no-cache --group load --no-dev && \
+    apt-get remove --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev libzmq3-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

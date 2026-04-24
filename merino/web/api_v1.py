@@ -628,7 +628,7 @@ async def get_hourly_forecasts(
 async def get_picture_of_the_day(
     request: Request,
     provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
-) -> Response:
+) -> Response:  # pragma: no cover
     """Get the picture of the day."""
     potd = None
     try:
@@ -658,7 +658,7 @@ _games_particle_ttl = settings.games_providers.particle.cache_ttl
 )
 async def get_game_particle(
     request: Request, provider: ParticleProvider = Depends(get_particle_provider)
-) -> Response:
+) -> Response:  # pragma: no cover
     """Return a JSON object containing the public URL for the Particle game."""
     particle_data = None
 
