@@ -260,7 +260,11 @@ async def suggest(
     use_normalization = (
         pipeline is not None and NORMALIZATION_CLIENT_VARIANT in client_variants_list
     )
-    q_normalized = pipeline.normalize(q) if use_normalization and pipeline else q
+    if use_normalization and pipeline:
+        with metrics_client.timeit("normalization.experiment.timing"):
+            q_normalized = pipeline.normalize(q)
+    else:
+        q_normalized = q
 
     for p in search_from:
         q_for_provider = (
