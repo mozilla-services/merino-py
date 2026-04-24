@@ -1,6 +1,6 @@
 """Unit Test for Sports Data models."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import freezegun
@@ -304,9 +304,7 @@ def test_load_incomplete_schedules_from_source(
     }
 
     # Remove all traces of the "away" team from the test data, because there can be a lot.
-    away_keys = list(
-        filter(lambda x: "awayteam" in x.lower(), events_response[0].keys())
-    )
+    away_keys = list(filter(lambda x: "awayteam" in x.lower(), events_response[0].keys()))
     for key in away_keys:
         del events_response[0][key]
     sport.events = {}
