@@ -274,9 +274,7 @@ def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDa
 
 
 @pytest.mark.asyncio
-async def test_sportsdata_backend(
-    sport_data_store: SportsDataStore, mocker: MockerFixture
-):
+async def test_sportsdata_backend(sport_data_store: SportsDataStore, mocker: MockerFixture):
     """Test the backend"""
     sport_data_store.search_events = AsyncMock(  # type: ignore
         side_effect=[
@@ -329,9 +327,7 @@ async def test_sportsdata_backend(
         ]
     )
 
-    backend = SportsDataBackend(
-        settings=settings.providers.sports, store=sport_data_store
-    )
+    backend = SportsDataBackend(settings=settings.providers.sports, store=sport_data_store)
     res = await backend.query(
         query_string="Some Search String",
     )
@@ -342,9 +338,7 @@ async def test_sportsdata_backend(
 
 
 @pytest.mark.asyncio
-async def test_sports_backend_startup(
-    sport_data_store: SportsDataStore, mocker: MockerFixture
-):
+async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker: MockerFixture):
     """Test that the backend calls the storage startup"""
     mock_store = AsyncMock()
     # Create and test the backend
@@ -366,9 +360,7 @@ async def test_sports_backend_startup(
     ],
     ids=["NFL", "NHL", "NBA", "UCL", "MLB", "miscellaneous"],
 )
-def test_sport_event_detail_category(
-    sport: str, expected_category: SportCategory
-) -> None:
+def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
     """Test sport name mapping and fallback behavior"""
     base_event: dict = {
         "date": "2025-10-01T00:00:00+00:00",
