@@ -4,7 +4,7 @@ import logging
 from asyncio import Task
 from functools import partial
 from itertools import chain
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated, Literal
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from aiodogstatsd import Client
+from starlette.responses import Response
 
 from merino.configs import settings
 from merino.curated_recommendations import (
@@ -110,7 +111,6 @@ MANIFEST_TTL_SEC = settings.runtime.default_manifest_response_ttl_sec
 async def suggest(
     request: Request,
     q: Annotated[str, Query(max_length=QUERY_CHARACTER_MAX)],
-    response: Response,
     country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
     region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
@@ -120,7 +120,7 @@ async def suggest(
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
     request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
-) -> Any:
+) -> Response:
     """Query Merino for suggestions.
 
     This is the primary endpoint that consumes user input and suggests
@@ -136,7 +136,6 @@ async def suggest(
     - `q`: The query that the user has typed. This is expected to be a partial
         input, sent as fast as once per keystroke, though a slower period may be
         appropriate for the user agent.
-    - `response`: The FastAPI temporal response object used to send response headers.
     - `city`: [Optional] City name. E.g. “New York”. If provided,
         Accuweather provider returns weather suggestions based on this city. Note: If provided,
         `region` and `country` must also be provided to successfully return weather suggestions.
@@ -243,7 +242,7 @@ async def suggest(
             metrics_client.increment(
                 "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
             )
-            return build_suggestion_response(client_variants, search_from, [], response)
+            return build_suggestion_response(client_variants, search_from, [])
         case PIIType.NUMERIC:
             metrics_client.increment(
                 "suggestions.query.pii_detected", tags={"type": pii_type.name.lower()}
@@ -318,7 +317,6 @@ async def suggest(
 
     emit_suggestions_per_metrics(metrics_client, suggestions, search_from)
 
-<<<<<<< HEAD
     if use_normalization:
         emit_normalization_metrics(
             metrics_client,
@@ -329,21 +327,15 @@ async def suggest(
         )
 
     return build_suggestion_response(client_variants, search_from, suggestions)
-||||||| parent of 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
-    return build_suggestion_response(client_variants, search_from, suggestions)
-=======
-    return build_suggestion_response(client_variants, search_from, suggestions, response)
->>>>>>> 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
 
 
 def build_suggestion_response(
     client_variants: str | None,
     search_from: list[BaseProvider],
     suggestions: list[BaseSuggestion],
-    response: Response,
-) -> SuggestResponse:
+) -> Response:
     """Build the Suggestion Response."""
-    resp = SuggestResponse(
+    response = SuggestResponse(
         suggestions=suggestions,
         request_id=correlation_id.get(),
         # [:CLIENT_VARIANT_MAX] filter at end to drop any trailing string beyond max_split.
@@ -353,10 +345,15 @@ def build_suggestion_response(
             else []
         ),
     )
+    # response headers
+    response_headers = {}
     # could be specific or default
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
-    response.headers["Cache-Control"] = f"private, max-age={ttl}"
-    return resp
+    response_headers["Cache-Control"] = f"private, max-age={ttl}"
+    return JSONResponse(
+        content=jsonable_encoder(response, exclude_none=True),
+        headers=response_headers,
+    )
 
 
 @router.get(
@@ -367,7 +364,7 @@ def build_suggestion_response(
 )
 async def providers(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-) -> list[ProviderResponse]:
+) -> Response:
     """Query Merino for suggestion providers.
 
     This endpoint gives a list of available providers, along with their
@@ -397,7 +394,7 @@ async def providers(
         ProviderResponse(**{"id": id, "availability": provider.availability()})
         for id, provider in active_providers.items()
     ]
-    return providers
+    return JSONResponse(content=jsonable_encoder(providers))
 
 
 @router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
@@ -507,18 +504,9 @@ async def curated_content_legacy_fx_114(
 )
 async def get_manifest(
     request: Request,
-<<<<<<< HEAD
     provider: ManifestProvider = Depends(get_manifest_provider),
     if_none_match: Annotated[str | None, Header()] = None,
 ) -> Response:
-||||||| parent of 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
-    request: Request, provider: ManifestProvider = Depends(get_manifest_provider)
-) -> ORJSONResponse:
-=======
-    response: Response,
-    provider: ManifestProvider = Depends(get_manifest_provider),
-) -> Any:
->>>>>>> 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
     """Query merino for manifest data."""
     logger.info("Attempting to get manifest")
 
@@ -544,44 +532,20 @@ async def get_manifest(
 
             metrics_client.increment("manifest.request.success")
 
-<<<<<<< HEAD
             headers = {"Cache-Control": cache_control}
             if etag is not None:
                 headers["ETag"] = etag
 
-            return ORJSONResponse(
+            return JSONResponse(
                 content=jsonable_encoder(manifest_data),
                 headers=headers,
             )
-||||||| parent of 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
-            return ORJSONResponse(
-                content=jsonable_encoder(manifest_data),
-                headers={
-                    "Cache-Control": (
-                        f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"
-                    )
-                },
-            )
-=======
-            response.headers["Cache-Control"] = f"private, max-age={MANIFEST_TTL_SEC}"
-            return manifest_data
->>>>>>> 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
 
         metrics_client.increment("manifest.request.error")
         logger.error("Manifest file not found")
-<<<<<<< HEAD
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Manifest not found",
-||||||| parent of 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
-        return ORJSONResponse(
-            content=jsonable_encoder(manifest_data),
-            status_code=404,
-=======
-        return JSONResponse(
-            content=jsonable_encoder(manifest_data),
-            status_code=404,
->>>>>>> 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
         )
 
 
@@ -593,13 +557,12 @@ async def get_manifest(
 )
 async def get_hourly_forecasts(
     request: Request,
-    response: Response,
     country: Annotated[str | None, Query(max_length=2, min_length=2)] = None,
     region: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WeatherProvider = Depends(get_weather_provider),
-) -> list[HourlyForecast]:
+) -> Response:
     """Query merino for hourly forecast data.
 
     **Args**:
@@ -650,8 +613,10 @@ async def get_hourly_forecasts(
             # this failure before re-raising, so the breaker will still trip as expected.
             pass
 
-        response.headers["Cache-Control"] = f"private, max-age={ttl}"
-        return hourly_forecasts
+        return JSONResponse(
+            content=jsonable_encoder(hourly_forecasts),
+            headers={"Cache-Control": (f"private, max-age={ttl}")},
+        )
 
 
 @router.get(
@@ -661,10 +626,9 @@ async def get_hourly_forecasts(
     response_model=PictureOfTheDay,
 )
 async def get_picture_of_the_day(
-    _request: Request,
-    response: Response,
+    request: Request,
     provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
-) -> PictureOfTheDay:
+) -> Response:
     """Get the picture of the day."""
     potd = None
     try:
@@ -674,8 +638,8 @@ async def get_picture_of_the_day(
 
     # TTL is temporarily hardcoded as 24h.
     # Will be dynamically calculated in follow up work.
-<<<<<<< HEAD
-    return ORJSONResponse(
+
+    return JSONResponse(
         content=jsonable_encoder(potd),
         headers={"Cache-Control": "private, max-age=86400"},
     )
@@ -694,7 +658,7 @@ _games_particle_ttl = settings.games_providers.particle.cache_ttl
 )
 async def get_game_particle(
     request: Request, provider: ParticleProvider = Depends(get_particle_provider)
-) -> ORJSONResponse:
+) -> Response:
     """Return a JSON object containing the public URL for the Particle game."""
     particle_data = None
 
@@ -703,17 +667,7 @@ async def get_game_particle(
     except Exception as ex:
         logger.info(f"Error when fetching Particle game data: {ex.__class__.__name__}")
 
-    return ORJSONResponse(
+    return JSONResponse(
         content=jsonable_encoder(particle_data),
         headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )
-||||||| parent of 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
-    return ORJSONResponse(
-        content=jsonable_encoder(potd),
-        headers={"Cache-Control": "private, max-age=86400"},
-    )
-=======
-    response.headers["Cache-Control"] = "private, max-age=86400"
-    # FIXME: handle the special case of `potd = None`.
-    return cast(PictureOfTheDay, potd)
->>>>>>> 3f9fadd4 ([part-2]: Fix deprecation warnings and busted tests)
