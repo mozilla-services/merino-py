@@ -689,14 +689,18 @@ class FIFA(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
-        self.translate_terms.update(
+        self.normalized_terms.update(
             {
-                "GameID": "GlobalGameId",
-                "AwayTeamID": "GlobalAwayTeamId",
-                "AwayTeamKey": "AwayTeamKey",
-                "HomeTeamID": "GlobalHomeTeamId",
-                "HomeTeamKey": "HomeTeamKey",
-                "TeamID": "GlobalTeamId",
+                SportTerms.GAME_ID: "GlobalGameId",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamId",
+                SportTerms.AWAY_TEAM_KEY: "AwayTeamKey",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamId",
+                SportTerms.HOME_TEAM_KEY: "HomeTeamKey",
+                SportTerms.TEAM_ID: "GlobalTeamId",
+                SportTerms.COLOR1: "ClubColor1",
+                SportTerms.COLOR2: "ClubColor2",
+                SportTerms.COLOR3: "ClubColor3",
+                SportTerms.COLOR4: "ClubColor4",
             }
         )
 
