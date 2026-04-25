@@ -24,7 +24,10 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
     GameStatus,
     SportCategory,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+    Team,
+    SportTerms,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
     SportsDataStore,
@@ -215,7 +218,13 @@ async def test_team():
         term_filter=["La", "The", "fc"],
         team_ttl=ttl,
         # Semi-hack unless you want to instantiate a version of UCL
-        normalized_terms={"TeamID": "TeamId"},
+        normalized_terms={
+            SportTerms.TEAM_ID: "TeamId",
+            SportTerms.COLOR1: "ClubColor1",
+            SportTerms.COLOR2: "ClubColor2",
+            SportTerms.COLOR3: "ClubColor3",
+            SportTerms.COLOR4: "ClubColor4",
+        },
     )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
