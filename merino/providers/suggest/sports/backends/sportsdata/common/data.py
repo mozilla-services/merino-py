@@ -7,6 +7,7 @@ import os
 
 from abc import abstractmethod
 from datetime import datetime, timedelta, timezone
+from enum import StrEnum
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -97,10 +98,12 @@ class Team(BaseModel):
         name = team_data["Name"]
         fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
-        team_id = team_data.get(normalized_terms["TeamID"])
+        team_id = team_data.get(normalized_terms[SportTerms.TEAM_ID])
         if not team_id:
             logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
-            raise SportsDataError(f"No {normalized_terms["TeamID"]} found for {fullname}")
+            raise SportsDataError(
+                f"No {normalized_terms[SportTerms.TEAM_ID]} found for {fullname}"
+            )
         raw_key = team_data["Key"]
         return cls(
             terms=" ".join(terms),
@@ -127,11 +130,10 @@ class Team(BaseModel):
                 filter(
                     lambda x: x is not None,
                     [
-                        # Some Teams use "ClubColor#"
-                        team_data.get("PrimaryColor", team_data.get("ClubColor1")),
-                        team_data.get("SecondaryColor", team_data.get("ClubColor2")),
-                        team_data.get("TertiaryColor", team_data.get("ClubColor3")),
-                        team_data.get("QuaternaryColor", team_data.get("ClubColor4")),
+                        team_data.get(normalized_terms[SportTerms.COLOR1]),
+                        team_data.get(normalized_terms[SportTerms.COLOR2]),
+                        team_data.get(normalized_terms[SportTerms.COLOR3]),
+                        team_data.get(normalized_terms[SportTerms.COLOR4]),
                     ],
                 )
             ),
@@ -203,15 +205,36 @@ class Event(BaseModel):
         return result
 
 
-SportNormalizedTerms = {
-    "GameID": "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
-    "AwayTeamID": "AwayTeamID",
-    "AwayTeamKey": "AwayTeam",
-    "AwayTeamScore": "AwayTeamScore",
-    "HomeTeamID": "HomeTeamID",
-    "HomeTeamKey": "HomeTeam",
-    "HomeTeamScore": "HomeTeamScore",
-    "TeamID": "TeamID",
+class SportTerms(StrEnum):
+    """Define enums for normalized field names"""
+
+    GAME_ID = "GameID"
+    AWAY_TEAM_ID = "AwayTeamID"
+    AWAY_TEAM_KEY = "AwayTeamKey"
+    AWAY_TEAM_SCORE = "AwayTeamScore"
+    HOME_TEAM_ID = "HomeTeamID"
+    HOME_TEAM_KEY = "HomeTeamKey"
+    HOME_TEAM_SCORE = "HomeTeamScore"
+    TEAM_ID = "TeamID"
+    COLOR1 = "PrimaryColor"
+    COLOR2 = "SecondaryColor"
+    COLOR3 = "TertiaryColor"
+    COLOR4 = "QuaternaryColor"
+
+
+SportNormalizedTerms: dict[SportTerms, str] = {
+    SportTerms.GAME_ID: "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
+    SportTerms.AWAY_TEAM_ID: "AwayTeamID",
+    SportTerms.AWAY_TEAM_KEY: "AwayTeam",
+    SportTerms.AWAY_TEAM_SCORE: "AwayTeamScore",
+    SportTerms.HOME_TEAM_ID: "HomeTeamID",
+    SportTerms.HOME_TEAM_KEY: "HomeTeam",
+    SportTerms.HOME_TEAM_SCORE: "HomeTeamScore",
+    SportTerms.TEAM_ID: "TeamID",
+    SportTerms.COLOR1: "PrimaryColor",
+    SportTerms.COLOR2: "SecondaryColor",
+    SportTerms.COLOR3: "TertiaryColor",
+    SportTerms.COLOR4: "QuaternaryColor",
 }
 
 
@@ -363,20 +386,28 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            game_id = event_description[self.normalized_terms["GameID"]]
+            game_id = event_description[self.normalized_terms[SportTerms.GAME_ID]]
             # only update the scores.
             if game_id in self.events:
                 event = self.events[game_id]
-                event.home_score = event_description.get(self.normalized_terms["HomeTeamScore"])
-                event.away_score = event_description.get(self.normalized_terms["AwayTeamScore"])
+                event.home_score = event_description.get(
+                    self.normalized_terms[SportTerms.HOME_TEAM_SCORE]
+                )
+                event.away_score = event_description.get(
+                    self.normalized_terms[SportTerms.AWAY_TEAM_SCORE]
+                )
             else:
                 # Some Sports may not pull Schedules first
-                home_id = event_description.get(self.normalized_terms["HomeTeamID"])
-                away_id = event_description.get(self.normalized_terms["AwayTeamID"])
-                home_name = event_description.get(self.normalized_terms["HomeTeamKey"])
-                away_name = event_description.get(self.normalized_terms["AwayTeamKey"])
-                home_score = event_description.get(self.normalized_terms["HomeTeamScore"])
-                away_score = event_description.get(self.normalized_terms["AwayTeamScore"])
+                home_id = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_ID])
+                away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
+                home_name = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_KEY])
+                away_name = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_KEY])
+                home_score = event_description.get(
+                    self.normalized_terms[SportTerms.HOME_TEAM_SCORE]
+                )
+                away_score = event_description.get(
+                    self.normalized_terms[SportTerms.AWAY_TEAM_SCORE]
+                )
                 if not home_id or not away_id:
                     logger.warning(
                         f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
@@ -434,7 +465,7 @@ class Sport:
                     expiry=utc_time_from_now(self.event_ttl),
                     updated=updated,
                 )
-                self.events[event.id] = event
+            self.events[event.id] = event
 
         return self.events
 
@@ -483,11 +514,11 @@ class Sport:
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
-            game_id = event_description[self.normalized_terms["GameID"]]
-            home_id = event_description.get(self.normalized_terms["HomeTeamID"])
-            away_id = event_description.get(self.normalized_terms["AwayTeamID"])
-            home_score = event_description.get(self.normalized_terms["HomeTeamScore"])
-            away_score = event_description.get(self.normalized_terms["AwayTeamScore"])
+            game_id = event_description[self.normalized_terms[SportTerms.GAME_ID]]
+            home_id = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_ID])
+            away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
+            home_score = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_SCORE])
+            away_score = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_SCORE])
             if not home_id or not away_id:
                 logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
                 continue

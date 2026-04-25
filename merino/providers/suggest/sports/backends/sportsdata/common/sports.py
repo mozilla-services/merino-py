@@ -20,6 +20,7 @@ from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
+    SportTerms,
     Team,
 )
 
@@ -71,12 +72,12 @@ class NFL(Sport):
         self._lock = asyncio.Lock()
         self.normalized_terms.update(
             {
-                "GameID": "GlobalGameID",
-                "AwayTeamID": "GlobalAwayTeamID",
-                "HomeTeamID": "GlobalHomeTeamID",
-                "HomeTeamScore": "HomeScore",
-                "AwayTeamScore": "AwayScore",
-                "TeamID": "GlobalTeamID",
+                SportTerms.GAME_ID: "GlobalGameID",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamID",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamID",
+                SportTerms.HOME_TEAM_SCORE: "HomeScore",
+                SportTerms.AWAY_TEAM_SCORE: "AwayScore",
+                SportTerms.TEAM_ID: "GlobalTeamID",
             }
         )
 
@@ -206,10 +207,10 @@ class NHL(Sport):
         # GlobalTeam* not available for scores, use TeamID
         self.normalized_terms.update(
             {
-                "GameID": "GameID",
-                "AwayTeamID": "AwayTeamID",
-                "HomeTeamID": "HomeTeamID",
-                "TeamID": "TeamID",
+                SportTerms.GAME_ID: "GameID",
+                SportTerms.AWAY_TEAM_ID: "AwayTeamID",
+                SportTerms.HOME_TEAM_ID: "HomeTeamID",
+                SportTerms.TEAM_ID: "TeamID",
             }
         )
 
@@ -317,10 +318,10 @@ class NBA(Sport):
         self._lock = asyncio.Lock()
         self.normalized_terms.update(
             {
-                "GameID": "GlobalGameID",
-                "AwayTeamID": "GlobalAwayTeamID",
-                "HomeTeamID": "GlobalHomeTeamID",
-                "TeamID": "GlobalTeamID",
+                SportTerms.GAME_ID: "GlobalGameID",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamID",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamID",
+                SportTerms.TEAM_ID: "GlobalTeamID",
             }
         )
 
@@ -429,12 +430,12 @@ class UCL(Sport):
         self._lock = asyncio.Lock()
         self.normalized_terms.update(
             {
-                "GameID": "GlobalGameId",
-                "AwayTeamID": "GlobalAwayTeamId",
-                "AwayTeamKey": "AwayTeamKey",
-                "HomeTeamID": "GlobalHomeTeamId",
-                "HomeTeamKey": "HomeTeamKey",
-                "TeamID": "GlobalTeamId",
+                SportTerms.GAME_ID: "GlobalGameId",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamId",
+                SportTerms.AWAY_TEAM_KEY: "AwayTeamKey",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamId",
+                SportTerms.HOME_TEAM_KEY: "HomeTeamKey",
+                SportTerms.TEAM_ID: "GlobalTeamId",
             }
         )
 
@@ -555,10 +556,10 @@ class MLB(Sport):
         # GlobalTeamID not in schedule
         self.normalized_terms.update(
             {
-                "GameID": "GameID",
-                "AwayTeamScore": "AwayTeamRuns",
-                "HomeTeamScore": "HomeTeamRuns",
-                "TeamID": "TeamID",
+                SportTerms.GAME_ID: "GameID",
+                SportTerms.AWAY_TEAM_SCORE: "AwayTeamRuns",
+                SportTerms.HOME_TEAM_SCORE: "HomeTeamRuns",
+                SportTerms.TEAM_ID: "TeamID",
             }
         )
 
