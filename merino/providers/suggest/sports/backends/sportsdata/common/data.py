@@ -382,6 +382,9 @@ class Sport:
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
             game_id = event_description[self.normalized_terms[SportTerms.GAME_ID]]
+            status = GameStatus.parse(event_description["Status"])
+            if status in [GameStatus.NotNecessary, GameStatus.Canceled]:
+                continue
             # only update the scores.
             if game_id in self.events:
                 event = self.events[game_id]
@@ -397,6 +400,7 @@ class Sport:
                 away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
                 home_name = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_KEY])
                 away_name = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_KEY])
+                logger.warning(f"Adding game...{away_name} at {home_name} :: {status}")
                 home_score = event_description.get(
                     self.normalized_terms[SportTerms.HOME_TEAM_SCORE]
                 )
@@ -456,7 +460,7 @@ class Sport:
                     away_team=away_team.minimal(),
                     home_score=home_score,
                     away_score=away_score,
-                    status=GameStatus.parse(event_description["Status"]),
+                    status=status,
                     expiry=utc_time_from_now(self.event_ttl),
                     updated=updated,
                 )
