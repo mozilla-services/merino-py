@@ -1660,10 +1660,29 @@ async def test_mlb_update_events(
     sport.season = "2026PRE"
     sport.event_ttl = timedelta(weeks=2)
 
-    # schedules_payload = mlb_schedule_payload()
+    schedules_payload = mlb_schedule_payload()
     scores_payload = mlb_score_payload()
     within = "2025-09-22T13:30:00"  # UTC
     outside = "2026-01-22T13:30:00"
+    schedules_payload[0].update(
+        {
+            "Date": within,
+            "Day": within,
+            "DateTime": within,
+            "DateTimeUTC": within,
+            "Status": "Final",
+        }
+    )
+    schedules_payload[1].update(
+        {
+            "Date": outside,
+            "Day": outside,
+            "DateTime": outside,
+            "DateTimeUTC": outside,
+            "Status": "Scheduled",
+        }
+    )
+
     scores_payload[0].update(
         {
             "Date": within,
@@ -1684,13 +1703,13 @@ async def test_mlb_update_events(
 
     get_data = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
-        side_effect=[scores_payload],
+        side_effect=[schedules_payload, scores_payload],
     )
 
     await sport.update_events(client=mock_client)
     assert 11111 in sport.events and 22222 not in sport.events
     assert sport.events[11111].status == GameStatus.Final
-    get_data.assert_called_once()
+    assert get_data.call_count == 2
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
