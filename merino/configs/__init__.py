@@ -203,6 +203,18 @@ _validators = [
         lte=600.0,
         env=["development"],
     ),
+    Validator(
+        "curated_recommendations.corpus_cache.cache",
+        is_in=["none", "redis"],
+    ),
+    Validator(
+        "curated_recommendations.corpus_cache.soft_ttl_sec",
+        "curated_recommendations.corpus_cache.hard_ttl_sec",
+        "curated_recommendations.corpus_cache.lock_ttl_sec",
+        is_type_of=int,
+        gt=0,
+    ),
+    Validator("curated_recommendations.corpus_cache.key_prefix", is_type_of=str),
     Validator("sentry.env", is_in=["prod", "stage", "dev"]),
     Validator("sentry.mode", is_in=["disabled", "release", "debug"]),
     Validator("sentry.traces_sample_rate", gte=0, lte=1),
