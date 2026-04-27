@@ -31,9 +31,11 @@ def get_suggest_mapping(analyzer_suffix: str) -> dict:
 
 
 FR_INDEX_SETTINGS: dict = {
-    "number_of_replicas": "1",
+    # Note: for all indices, we are starting with 0 replicas to maximize
+    # indexing speed, and updating to desired replica count after creation
+    "number_of_replicas": "0",
     "refresh_interval": "-1",
-    "number_of_shards": "2",
+    "number_of_shards": "1", # <10gb
     "index.lifecycle.name": "frwiki_policy",
     "analysis": {
         "filter": {
@@ -110,9 +112,9 @@ FR_INDEX_SETTINGS: dict = {
 
 
 DE_INDEX_SETTINGS: dict = {
-    "number_of_replicas": "1",
+    "number_of_replicas": "0",
     "refresh_interval": "-1",
-    "number_of_shards": "2",
+    "number_of_shards": "1",
     "index.lifecycle.name": "dewiki_policy",
     "analysis": {
         "filter": {
@@ -167,9 +169,9 @@ DE_INDEX_SETTINGS: dict = {
 }
 
 EN_INDEX_SETTINGS: dict = {
-    "number_of_replicas": "1",
+    "number_of_replicas": "0",
     "refresh_interval": "-1",
-    "number_of_shards": "2",
+    "number_of_shards": "1",
     "index.lifecycle.name": "enwiki_policy",
     "analysis": {
         "filter": {
@@ -264,9 +266,9 @@ EN_INDEX_SETTINGS: dict = {
 
 
 IT_INDEX_SETTINGS: dict = {
-    "number_of_replicas": "1",
+    "number_of_replicas": "0",
     "refresh_interval": "-1",
-    "number_of_shards": "2",
+    "number_of_shards": "1",
     "index.lifecycle.name": "itwiki_policy",
     "analysis": {
         "filter": {
@@ -350,9 +352,9 @@ IT_INDEX_SETTINGS: dict = {
 
 
 PL_INDEX_SETTINGS: dict = {
-    "number_of_replicas": "1",
+    "number_of_replicas": "0",
     "refresh_interval": "-1",
-    "number_of_shards": "2",
+    "number_of_shards": "1",
     "index.lifecycle.name": "plwiki_policy",
     "analysis": {
         "filter": {
