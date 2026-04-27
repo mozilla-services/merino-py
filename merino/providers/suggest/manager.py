@@ -370,9 +370,6 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             # Use wikipedia as a backup for the Elasticsearch credentials.
             # TODO, use a central Elasticsearch credential set.
 
-            # "RedisAdapter" is a very primitive construct. We're gonna need a bigger
-            # adapter.
-
             cache = (
                 RedisAdapter(
                     *create_redis_clients(
@@ -383,7 +380,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         settings.redis.socket_timeout_sec,
                     )
                 )
-                if setting.cache == "redis"
+                if settings.get("cache") == "redis"
                 else NoCacheAdapter()
             )
 

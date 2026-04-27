@@ -28,8 +28,8 @@ class SportsDataBackend(SportsDataProtocol):
     def __init__(
         self,
         store: SportsDataStore,
-        cache: RedisAdapter | NoCacheAdapter,
         settings: LazySettings,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         max_suggestions: int = 10,
         mix_sports: bool = True,
         *args,
