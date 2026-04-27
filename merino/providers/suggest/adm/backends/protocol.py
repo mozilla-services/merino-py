@@ -1,9 +1,9 @@
 """Protocol for the AdM provider backends."""
 
 from enum import Enum
-from typing import Protocol
+from typing import Optional, Protocol
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from moz_merino_ext.amp import AmpIndexManager
 
 SegmentType = tuple[int]
@@ -22,6 +22,34 @@ class EngagementData(BaseModel):
 
     amp: dict[str, dict[str, str | int]]
     amp_aggregated: dict[str, int]
+
+
+class KeywordMetrics(BaseModel):
+    """Impressions and clicks for a single time window."""
+
+    impressions: int
+    clicks: int
+
+
+class KeywordEntry(BaseModel):
+    """Live and historical engagement metrics for a single advertiser/keyword pair."""
+
+    live: Optional[KeywordMetrics] = None
+    historical: Optional[KeywordMetrics] = None
+
+    @model_validator(mode="after")
+    def at_least_one_present(self) -> "KeywordEntry":
+        """Check that there is at least one type of metrics set."""
+        if self.live is None and self.historical is None:
+            raise ValueError("at least one of live or historical must be set")
+        return self
+
+
+class KeywordEngagementData(BaseModel):
+    """Model for keyword-level engagement data file content."""
+
+    amp: dict[str, KeywordEntry] = {}
+    amp_aggregated: dict[str, int] = {}
 
 
 class SuggestionContent(BaseModel):
