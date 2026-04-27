@@ -393,7 +393,8 @@ class NBA(Sport):
         date_list = []
         # update scores based on events:
         # Events may cross multiple days, so we should update those scores.
-        for _id, event in self.events.items():
+        events = list(self.events.items())
+        for _id, event in events:
             day = event.date.strftime("%Y-%b-%d").upper()
             if not event.status.is_scheduled() and day not in date_list:
                 url = f"{self.base_url}/ScoresBasic/{day}?key={self.api_key}"

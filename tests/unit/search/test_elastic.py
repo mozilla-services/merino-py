@@ -233,6 +233,17 @@ def test_get_indices_for_alias_returns_keys(
     client.indices.get_alias.assert_called_once_with(name="my-alias")
 
 
+def test_forcemerge_calls_indices_forcemerge(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that forcemerge calls indices.forcemerge with the provided index and segment count."""
+    client = _mock_client()
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.forcemerge(index="my-index", max_num_segments=1)
+    client.indices.forcemerge.assert_called_once_with(index="my-index", max_num_segments=1)
+
+
 def test_update_aliases_calls_indices_update_aliases(
     adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -14,8 +14,15 @@ from pydantic import HttpUrl
 from merino.configs import settings
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
-from merino.providers.suggest.adm.backends.protocol import EngagementData, FormFactor
-from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
+from merino.providers.suggest.adm.backends.protocol import (
+    EngagementData,
+    FormFactor,
+    KeywordEngagementData,
+)
+from merino.utils.gcs.engagement.filemanager import (
+    EngagementFilemanager,
+    KeywordEngagementFilemanager,
+)
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.suggest.base import (
@@ -98,6 +105,10 @@ class Provider(BaseProvider):
     engagement_resync_interval_sec: float
     last_engagement_fetch_at: float
     engagement_cron_task: asyncio.Task
+    keyword_engagement_data: KeywordEngagementData
+    keyword_filemanager: KeywordEngagementFilemanager
+    last_keyword_engagement_fetch_at: float
+    keyword_engagement_cron_task: asyncio.Task
     staleness_cron_task: asyncio.Task
 
     def __init__(
@@ -111,6 +122,7 @@ class Provider(BaseProvider):
         engagement_gcs_bucket: str,
         engagement_blob_name: str,
         engagement_resync_interval_sec: float,
+        keyword_engagement_blob_name: str,
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
@@ -134,6 +146,12 @@ class Provider(BaseProvider):
         self.filemanager = EngagementFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
+        )
+        self.keyword_engagement_data = KeywordEngagementData(amp={}, amp_aggregated={})
+        self.last_keyword_engagement_fetch_at = 0
+        self.keyword_filemanager = KeywordEngagementFilemanager(
+            gcs_bucket_path=engagement_gcs_bucket,
+            blob_name=keyword_engagement_blob_name,
         )
         self.should_check_client_variants = should_check_client_variants
         super().__init__(**kwargs)
@@ -172,6 +190,15 @@ class Provider(BaseProvider):
         )
         self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
 
+        await self._fetch_keyword_engagement_data()
+        keyword_engagement_cron_job = cron.Job(
+            name="resync_keyword_engagement_data",
+            interval=self.cron_interval_sec,
+            condition=self._should_fetch_keyword_engagement,
+            task=self._fetch_keyword_engagement_data,
+        )
+        self.keyword_engagement_cron_task = asyncio.create_task(keyword_engagement_cron_job())
+
         staleness_cron_job = cron.Job(
             name="mars_staleness_metric",
             interval=self.cron_interval_sec,
@@ -202,6 +229,12 @@ class Provider(BaseProvider):
         """Check if it should fetch engagement data from GCS."""
         return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
 
+    def _should_fetch_keyword_engagement(self) -> bool:
+        """Check if it should fetch keyword engagement data from GCS."""
+        return (
+            time.time() - self.last_keyword_engagement_fetch_at
+        ) >= self.engagement_resync_interval_sec
+
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         self.suggestion_content = await self.backend.fetch()
@@ -223,6 +256,27 @@ class Provider(BaseProvider):
         except Exception as e:
             logger.warning(
                 "Failed to fetch engagement data from GCS",
+                extra={"error": str(e)},
+            )
+
+    async def _fetch_keyword_engagement_data(self) -> None:
+        """Fetch keyword engagement data from GCS and store it in memory.
+
+        If the fetch returns no data, `last_keyword_engagement_fetch_at` is not updated
+        so the cron job retries on the next tick.
+        """
+        try:
+            data = await self.keyword_filemanager.get_file()
+            if data is None:
+                logger.warning(
+                    "Keyword engagement data fetch returned None, will retry on next tick"
+                )
+                return
+            self.keyword_engagement_data = KeywordEngagementData.model_validate(data.model_dump())
+            self.last_keyword_engagement_fetch_at = time.time()
+        except Exception as e:
+            logger.warning(
+                "Failed to fetch keyword engagement data from GCS",
                 extra={"error": str(e)},
             )
 
