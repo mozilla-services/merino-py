@@ -519,9 +519,7 @@ async def get_manifest(
 
         if manifest_data and manifest_data.domains:
             etag = provider.get_etag()
-            cache_control = (
-                f"private, max-age={MANIFEST_TTL_SEC}"
-            )
+            cache_control = f"private, max-age={MANIFEST_TTL_SEC}"
 
             if etag is not None and if_none_match == etag:
                 metrics_client.increment("manifest.request.not_modified")
