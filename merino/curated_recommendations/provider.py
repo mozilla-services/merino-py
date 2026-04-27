@@ -4,6 +4,7 @@ import logging
 from typing import cast
 
 
+from merino.cache.protocol import CacheAdapter
 from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
 from merino.curated_recommendations.ml_backends.protocol import (
     LOCAL_MODEL_MODEL_ID_KEY,
@@ -65,6 +66,7 @@ class CuratedRecommendationsProvider:
         local_model_backend: LocalModelBackend,
         ml_recommendations_backend: MLRecsBackend,
         cohort_model_backend: CohortModelBackend,
+        cache_adapter: CacheAdapter | None = None,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
@@ -73,6 +75,12 @@ class CuratedRecommendationsProvider:
         self.local_model_backend = local_model_backend
         self.ml_recommendations_backend = ml_recommendations_backend
         self.cohort_model_backend = cohort_model_backend
+        self._cache_adapter = cache_adapter
+
+    async def shutdown(self) -> None:
+        """Close resources owned by this provider."""
+        if self._cache_adapter is not None:
+            await self._cache_adapter.close()
 
     @staticmethod
     def is_sections_experiment(
