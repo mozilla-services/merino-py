@@ -199,7 +199,7 @@ class SportDataUpdater:
             last_update = datetime.now(tz=timezone.utc) - timedelta(seconds=UPDATE_PERIOD_SECS)
         for sport in self.sports.values():
             start = time()
-            await sport.update_events(client=self.client, allow_no_teams=True)
+            await sport.update_events(client=self.client)
             logger.info(
                 f"""{LOGGING_TAG} sports.time.quick_update.event ["sport": {sport.name}] = {time() - start}"""
             )

@@ -122,4 +122,3 @@ async def test_updater(
     await updater.quick_update()
     assert not mock_sport.update_teams.called
     assert mock_sport.update_events.called
-    assert mock_sport.update_events.call_args_list[0][1]["allow_no_teams"]
