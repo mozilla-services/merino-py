@@ -17,6 +17,9 @@ def validate_manifest_schema_version(manifest_json: Json) -> None:
     try:
         schema_version = manifest_json["schemaVersion"]
     except KeyError:
+        logger.error("JSON key error retrieving 'schemaVersion' from manifest JSON.")
+        schema_version = None
+    except Exception:
         logger.error("JSON error retrieving 'schemaVersion' from manifest JSON.")
         schema_version = None
 
@@ -37,7 +40,3 @@ def validate_manifest_against_schema(manifest_json: Json, manifest_schema: Json)
     except exceptions.ValidationError as ex:
         logger.error(f"Schema validation failed for manifest JSON: {ex}")
         raise ex
-    # in case the above validation fails in an unexpected way
-    except Exception as ex:
-        logger.error(f"Unexpected error when validation manifest JSON schema: {ex}")
-        raise Exception(f"Unexpected error when validation manifest JSON schema: {ex}")
