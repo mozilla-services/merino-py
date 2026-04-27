@@ -33,6 +33,7 @@ def fixture_adm_parameters() -> dict[str, Any]:
         "engagement_gcs_bucket": "test-engagement-bucket",
         "engagement_blob_name": "suggest-merino-exports/engagement/latest.json",
         "engagement_resync_interval_sec": 3600,
+        "keyword_engagement_blob_name": "suggest-merino-exports/engagement/keyword/latest.json",
     }
 
 
