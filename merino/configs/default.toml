@@ -1258,14 +1258,18 @@ cron_interval_seconds = 600
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__CACHE
 # Shared corpus cache backend. "redis" enables Redis as an L2 cache
 # between in-memory SWR (L1) and the Corpus GraphQL API. "none" disables it.
+# With "none", every pod (~300 in production) hits the Corpus API independently on each refresh.
+# This was the default until May 2026; reverting may now exceed Apollo's monthly volume or Corpus API capacity.
 cache = "none"
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__SOFT_TTL_SEC
 # Soft TTL in seconds. Balances propagating time-sensitive content quickly vs backend load.
+# Average time for new content to reach New Tab is ~half this value (e.g. 60s => ~30s avg propagation).
 soft_ttl_sec = 60
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__HARD_TTL_SEC
 # Hard TTL in seconds. Safety net so data survives extended API outages (1 day).
+# During a Corpus API outage, New Tab keeps serving stale data up to this age before requests fail.
 hard_ttl_sec = 86400
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_CACHE__LOCK_TTL_SEC
