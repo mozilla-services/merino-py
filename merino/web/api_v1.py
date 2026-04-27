@@ -520,7 +520,7 @@ async def get_manifest(
         if manifest_data and manifest_data.domains:
             etag = provider.get_etag()
             cache_control = (
-                f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"
+                f"private, max-age={MANIFEST_TTL_SEC}"
             )
 
             if etag is not None and if_none_match == etag:
