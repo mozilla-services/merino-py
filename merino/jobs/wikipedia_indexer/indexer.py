@@ -104,12 +104,6 @@ class Indexer:
             self.elasticsearch.forcemerge(index=index_name, max_num_segments=1)
             logger.info("Force merged index", extra={"index": index_name})
 
-            # Restore replicas now that indexing and merging are complete
-            self.elasticsearch.put_settings(
-                index=index_name, settings={"number_of_replicas": "1"}
-            )
-            logger.info("Restored replicas", extra={"index": index_name})
-
             # Flip the alias pointer to the new index and remove the previous index
             self._flip_alias_to_latest(index_name, elasticsearch_alias)
             logger.info(

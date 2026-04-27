@@ -244,19 +244,6 @@ def test_forcemerge_calls_indices_forcemerge(
     client.indices.forcemerge.assert_called_once_with(index="my-index", max_num_segments=1)
 
 
-def test_put_settings_calls_indices_put_settings(
-    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Verify that put_settings calls indices.put_settings with the provided index and settings."""
-    client = _mock_client()
-    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
-
-    adapter.put_settings(index="my-index", settings={"number_of_replicas": "1"})
-    client.indices.put_settings.assert_called_once_with(
-        index="my-index", settings={"number_of_replicas": "1"}
-    )
-
-
 def test_update_aliases_calls_indices_update_aliases(
     adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
 ) -> None:

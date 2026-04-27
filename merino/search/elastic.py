@@ -138,10 +138,6 @@ class ElasticSearchAdapter:
         """
         self.get_client().indices.forcemerge(index=index, max_num_segments=max_num_segments)
 
-    def put_settings(self, *, index: str, settings: dict[str, Any]) -> None:
-        """Update dynamic index settings."""
-        self.get_client().indices.put_settings(index=index, settings=settings)
-
     def update_aliases(self, *, actions: list[dict[str, Any]]) -> None:
         """Apply alias update actions atomically."""
         self.get_client().indices.update_aliases(
