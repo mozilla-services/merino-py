@@ -60,7 +60,7 @@ class TopPicksLocalFilemanager:
 
 
 class TopPicksRemoteFilemanager:
-    """Filemanager for processing local Top Picks data."""
+    """Filemanager for processing remote Top Picks data."""
 
     gcs_client: GcsUploader
     blob_generation: int

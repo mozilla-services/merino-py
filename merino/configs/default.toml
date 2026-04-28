@@ -338,11 +338,6 @@ gcs_bucket = ""
 # CDN hostname used for public URL
 cdn_hostname = ""
 
-# MERINO_GAMES_PARTICLE_GCS__ENABLED
-# Whether to enable fetching from GCS.
-# Set to `true` in production and `false` in staging or development.
-gcs_enabled = true
-
 [default.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = ""
@@ -1141,7 +1136,7 @@ feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=pot
 type = "particle"
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED
-# Whether or not this provider is enabled.
+# Whether or not the provider's cron runs to regularly update game files.
 enabled = false
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_TTL

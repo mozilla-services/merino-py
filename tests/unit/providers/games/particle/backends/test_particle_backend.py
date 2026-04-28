@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from merino.configs import settings
 from merino.utils.gcs.gcs_uploader import GcsUploader
+from merino.providers.games.particle.backends.filemanager import ParticleRemoteFileManager
 from merino.providers.games.particle.backends.particle import ParticleBackend
 
 _game_url = settings.games_providers.particle.game_url
@@ -38,17 +39,36 @@ def fixture_gcs_uploader_mock() -> GcsUploader:
     return MagicMock(spec=GcsUploader)
 
 
+@pytest.fixture(name="particle_remote_filemanager_parameters")
+def fixture_particle_remote_filemanager_parameters(gcs_uploader_mock) -> dict[str, Any]:
+    """Define ParticleRemoteFileManager parameters for test."""
+    return {"gcs_client": gcs_uploader_mock, "manifest_file_name": "test_file.json"}
+
+
+@pytest.fixture(name="particle_remote_filemanager")
+def fixture_particle_remote_filemanager(
+    particle_remote_filemanager_parameters: dict[str, Any],
+) -> ParticleRemoteFileManager:
+    """Create a ParticleRemoteFileManager object for test."""
+    return ParticleRemoteFileManager(**particle_remote_filemanager_parameters)
+
+
 @pytest.fixture(name="backend")
 def fixture_backend(
-    gcs_uploader_mock: GcsUploader, mocker: MockerFixture, statsd_mock
+    gcs_uploader_mock: GcsUploader,
+    mocker: MockerFixture,
+    statsd_mock,
+    particle_remote_filemanager: ParticleRemoteFileManager,
 ) -> ParticleBackend:
-    """Return a WikimediaPotdBackend instance for testing."""
+    """Return a ParticleBackend instance for testing."""
     return ParticleBackend(
         gcs_uploader=gcs_uploader_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
+        manifest_gcs_file_name="test.json",
         metrics_client=statsd_mock,
         particle_url_root=PARTICLE_URL_ROOT,
         particle_url_path_manifest=PARTICLE_URL_PATH_MANIFEST,
+        remote_file_manager=particle_remote_filemanager,
     )
 
 
@@ -81,7 +101,7 @@ async def test_fetch_manifest_json_returns_json(
         request=Request(method="GET", url=PARTICLE_URL_ROOT),
     )
 
-    result = await backend._fetch_manifest_json()
+    result = await backend.fetch_manifest_json_from_remote()
 
     # result should be a python object (result of json.loads)
     assert isinstance(result, object)
@@ -102,7 +122,7 @@ async def test_fetch_manifest_json_returns_none_for_invalid_json(
 
     caplog.set_level(logging.ERROR)
 
-    result = await backend._fetch_manifest_json()
+    result = await backend.fetch_manifest_json_from_remote()
 
     # get error records
     error_records = filter_caplog(
@@ -128,7 +148,7 @@ async def test_fetch_manifest_json_returns_none_for_http_error(
 
     caplog.set_level(logging.ERROR)
 
-    result = await backend._fetch_manifest_json()
+    result = await backend.fetch_manifest_json_from_remote()
 
     # get error records
     error_records = filter_caplog(
