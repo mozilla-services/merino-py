@@ -287,32 +287,38 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
-    def _fetch_engagement_metrics(self, suggestion: PyAmpResult) -> EngagementMetrics:
+    def _fetch_engagement_metrics(self, suggestion: PyAmpResult, query: str) -> EngagementMetrics:
         """Fetch engagement metrics for an AMP suggestion."""
         advertiser = suggestion.advertiser.lower()
         engaged, attempted = 1, 1
-        if self.engagement_data and (metrics := self.engagement_data.amp.get(advertiser)):
-            attempted = int(metrics.get("impressions", attempted))
-            engaged = int(metrics.get("clicks", engaged))
+
+        keyword_key = f"{advertiser}/{query}"
+        if entry := self.keyword_engagement_data.amp.get(keyword_key):
+            kw_metrics = entry.live or entry.historical
+            if kw_metrics:
+                return EngagementMetrics(
+                    engaged=kw_metrics.clicks, attempted=kw_metrics.impressions
+                )
+
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
     def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
         """Return True if Thompson sampling should be applied to this request."""
         if not self.thompson:
             return False
-        if not self.engagement_data.amp:
+        if not self.keyword_engagement_data.amp:
             return False
         if self.should_check_client_variants:
             return ENGAGEMENT_GUIDED_SUGGESTIONS in client_variants
         return True
 
     def _select(
-        self, suggestions: list[PyAmpResult], client_variants: list[str]
+        self, suggestions: list[PyAmpResult], client_variants: list[str], query: str
     ) -> PyAmpResult | None:
         def _sampling() -> PyAmpResult | None:
             """Thompson sampling helper function."""
             candidates = [
-                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
+                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion, query))
                 for i, suggestion in enumerate(suggestions)
             ]
 
@@ -365,7 +371,7 @@ class Provider(BaseProvider):
         if (
             self.suggestion_content.index_manager.has(idx_id)
             and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
-            and (res := self._select(suggestions, client_variants))
+            and (res := self._select(suggestions, client_variants, q))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 
