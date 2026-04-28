@@ -105,8 +105,12 @@ ORDER BY 1, 4 DESC
 
         return engagement_data
 
-    def download_historical_data_by_keyword(self) -> list[dict[str, Any]]:
-        """Execute the keyword-level AMP engagement query.
+    def _fetch_keyword_rows(self, query: str, label: str) -> list[dict[str, Any]]:
+        """Execute a keyword-level BigQuery query and return parsed rows.
+
+        Args:
+            query: The SQL query to execute.
+            label: A short label (e.g. "historical", "live") used in log messages.
 
         Returns:
             list[dict[str, Any]]: A list of engagement records containing
@@ -116,16 +120,16 @@ ORDER BY 1, 4 DESC
             RuntimeError: If the BigQuery query fails.
         """
         try:
-            query_job = self.client.query(self.KEYWORD_QUERY_HISTORICAL)
+            query_job = self.client.query(query)
             results = query_job.result()
-
         except GoogleAPIError as e:
             logger.error(
-                "BigQuery query failed while downloading historical keyword-level AMP engagement data",
+                "BigQuery query failed while downloading %s keyword-level AMP engagement data",
+                label,
                 exc_info=True,
             )
             raise RuntimeError(
-                "Failed to fetch historical keyword-level AMP engagement data from BigQuery"
+                f"Failed to fetch {label} keyword-level AMP engagement data from BigQuery"
             ) from e
 
         engagement_data: list[dict[str, Any]] = []
@@ -141,57 +145,21 @@ ORDER BY 1, 4 DESC
                     }
                 )
             except KeyError:
-                logger.warning("Unexpected row format in BigQuery results (historical): %s", row)
+                logger.warning("Unexpected row format in BigQuery results (%s): %s", label, row)
                 continue
 
         if not engagement_data:
-            logger.warning("Historical keyword-level AMP engagement query returned no rows")
+            logger.warning("%s keyword-level AMP engagement query returned no rows", label)
 
         return engagement_data
+
+    def download_historical_data_by_keyword(self) -> list[dict[str, Any]]:
+        """Execute the historical keyword-level AMP engagement query."""
+        return self._fetch_keyword_rows(self.KEYWORD_QUERY_HISTORICAL, "historical")
 
     def download_live_data_by_keyword(self) -> list[dict[str, Any]]:
-        """Execute the keyword-level AMP engagement query.
-
-        Returns:
-            list[dict[str, Any]]: A list of engagement records containing
-            advertiser, query, impressions, and clicks.
-
-        Raises:
-            RuntimeError: If the BigQuery query fails.
-        """
-        try:
-            query_job = self.client.query(self.KEYWORD_QUERY_LIVE)
-            results = query_job.result()
-
-        except GoogleAPIError as e:
-            logger.error(
-                "BigQuery query failed while downloading live keyword-level AMP engagement data",
-                exc_info=True,
-            )
-            raise RuntimeError(
-                "Failed to fetch live keyword-level AMP engagement data from BigQuery"
-            ) from e
-
-        engagement_data: list[dict[str, Any]] = []
-
-        for row in results:
-            try:
-                engagement_data.append(
-                    {
-                        "advertiser": row["advertiser"],
-                        "query": row["query"],
-                        "impressions": int(row["impressions"]),
-                        "clicks": int(row["clicks"]),
-                    }
-                )
-            except KeyError:
-                logger.warning("Unexpected row format in BigQuery results (live): %s", row)
-                continue
-
-        if not engagement_data:
-            logger.warning("Live keyword-level AMP engagement query returned no rows")
-
-        return engagement_data
+        """Execute the live keyword-level AMP engagement query."""
+        return self._fetch_keyword_rows(self.KEYWORD_QUERY_LIVE, "live")
 
     @staticmethod
     def transform_by_advertiser(data: list[dict[str, Any]]) -> dict[str, Any]:
