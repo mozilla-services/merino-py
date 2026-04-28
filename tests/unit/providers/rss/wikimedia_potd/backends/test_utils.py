@@ -23,9 +23,7 @@ VALID_FIELDS: dict[str, str] = {
 THUMBNAIL_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Test.jpg/320px-Test.jpg"
 HIGH_RES_URL = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Test.jpg"
 
-DESCRIPTION_HTML = (
-    f'<img src="{THUMBNAIL_URL}" />' '<div class="description">Test description.</div>'
-)
+DESCRIPTION_HTML = f'<img src="{THUMBNAIL_URL}" /><div class="description">Test description.</div>'
 
 
 def _make_entry(**fields: str) -> FeedParserDict:

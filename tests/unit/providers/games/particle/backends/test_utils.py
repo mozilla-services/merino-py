@@ -92,6 +92,27 @@ def test_validate_manifest_schema_version_raises_with_invalid_schema_version(
     assert "Schema version mismatch when validating manifest JSON" in error_records[0].message
 
 
+def test_validate_manifest_schema_version_raises_with_no_schema_version_in_json(
+    caplog: LogCaptureFixture, filter_caplog: Any
+):
+    """Verify missing schema version raises an exception."""
+    with pytest.raises(Exception):
+        validate_manifest_schema_version(json.loads('{"cremaVersion": 1}'))
+
+    # get error records
+    error_records = filter_caplog(
+        caplog.records,
+        "merino.providers.games.particle.backends.utils",
+    )
+
+    # verify expected errors were logged
+    assert len(error_records) == 2
+    assert (
+        "JSON key error retrieving 'schemaVersion' from manifest JSON." == error_records[0].message
+    )
+    assert "Schema version mismatch when validating manifest JSON" in error_records[1].message
+
+
 # END validate_manifest_schema_version TESTS
 
 

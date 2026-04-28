@@ -96,7 +96,7 @@ class Team(BaseModel):
                         terms.add(lword)
         locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
         name = team_data["Name"]
-        fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
+        fullname = team_data.get("FullName") or f"{locale} {team_data['Name']}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
         team_id = team_data.get(normalized_terms[SportTerms.TEAM_ID])
         if not team_id:
@@ -174,7 +174,7 @@ class Event(BaseModel):
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
-        return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
+        return f"{self.sport}:{self.home_team['key']}:{self.away_team['key']}".lower()
 
     def serialize(self) -> dict[str, Any]:
         """Condition Event for JSON serialization. This converts dates from datetime and
@@ -278,7 +278,7 @@ class Sport:
         self.api_key = api_key or settings.sportsdata.get(
             "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
         )
-        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or "None"}")
+        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or 'None'}")
         self.base_url = base_url
         self.name = name
         self.teams = {}

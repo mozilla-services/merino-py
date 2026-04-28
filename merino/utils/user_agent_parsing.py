@@ -20,10 +20,7 @@ def _parse_browser(user_agent: UserAgent) -> str:
     """Parse the browser family and version from the user agent dictionary."""
     match user_agent:
         case UserAgent(
-            family="Firefox"
-            | "Firefox iOS"
-            | "Firefox Mobile"
-            | "Firefox Alpha",
+            family="Firefox" | "Firefox iOS" | "Firefox Mobile" | "Firefox Alpha",
             major=major,
             minor=minor,
             patch=patch,

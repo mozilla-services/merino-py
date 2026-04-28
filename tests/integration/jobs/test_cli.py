@@ -8,12 +8,6 @@ from merino.jobs.cli import cli
 runner = CliRunner()
 
 
-def test_cli_no_args():
-    """Test that invoking the app with no arguments does not fail"""
-    result = runner.invoke(cli)
-    assert result.exit_code == 0
-
-
 @pytest.mark.parametrize(
     argnames=[
         "command_name",

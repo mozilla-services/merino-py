@@ -1033,9 +1033,9 @@ def test_derive_ttl_for_summaries(
 
         ttl = derive_ttl_for_summaries([summary])
 
-    assert (
-        expected_range[0] <= ttl <= expected_range[1]
-    ), f"Status {status}: expected TTL in {expected_range}, got {ttl} for {description}"
+    assert expected_range[0] <= ttl <= expected_range[1], (
+        f"Status {status}: expected TTL in {expected_range}, got {ttl} for {description}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -1121,9 +1121,9 @@ def test_compute_enroute_progress(
 
         progress, time_left = compute_enroute_progress(summary)
 
-    assert (
-        progress == expected_progress
-    ), f"Failed: {description} — expected {expected_progress}, got {progress}"
-    assert (
-        time_left == expected_time_left
-    ), f"Failed: {description} — expected {expected_time_left}, got {time_left}"
+    assert progress == expected_progress, (
+        f"Failed: {description} — expected {expected_progress}, got {progress}"
+    )
+    assert time_left == expected_time_left, (
+        f"Failed: {description} — expected {expected_time_left}, got {time_left}"
+    )

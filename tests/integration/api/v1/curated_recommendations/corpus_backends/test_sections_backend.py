@@ -17,9 +17,9 @@ async def test_fetch(sections_backend: SectionsBackend):
     """Test that fetch returns expected sections from the backend."""
     sections = await sections_backend.fetch(SurfaceId.NEW_TAB_EN_US)
     # We no longer expect crawl sections from fixtures.
-    assert all(
-        not section.externalId.endswith("_crawl") for section in sections
-    ), "Fixture should not contain crawl sections"
+    assert all(not section.externalId.endswith("_crawl") for section in sections), (
+        "Fixture should not contain crawl sections"
+    )
     assert len(sections) >= 20, f"Expected at least 20 sections in fixture, got {len(sections)}"
 
     # Check that we have exactly 1 section with createSource == "MANUAL"
@@ -59,9 +59,9 @@ async def test_fetch_ca_strips_locale_suffix(sections_ca_backend: SectionsBacken
 
     # Verify no externalId retains the '__lEN_CA' suffix
     for section in sections:
-        assert (
-            "__" not in section.externalId
-        ), f"externalId '{section.externalId}' still contains locale suffix"
+        assert "__" not in section.externalId, (
+            f"externalId '{section.externalId}' still contains locale suffix"
+        )
 
 
 @pytest.mark.asyncio
@@ -72,9 +72,9 @@ async def test_fetch_ie_strips_locale_suffix(sections_ie_backend: SectionsBacken
 
     # Verify no externalId retains the '__lEN_IE' suffix
     for section in sections:
-        assert (
-            "__" not in section.externalId
-        ), f"externalId '{section.externalId}' still contains locale suffix"
+        assert "__" not in section.externalId, (
+            f"externalId '{section.externalId}' still contains locale suffix"
+        )
 
 
 @pytest.mark.asyncio

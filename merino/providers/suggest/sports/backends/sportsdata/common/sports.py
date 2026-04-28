@@ -616,59 +616,32 @@ class MLB(Sport):
     async def update_events(self, client: AsyncClient):
         """Fetch the list of events for the sport. (5 min interval)"""
         local_timezone = ZoneInfo("America/New_York")
-        date = datetime.now(tz=local_timezone).strftime("%Y-%b-%d").upper()
-        # MLB `SchedulesBasic` only uses local GameID and TeamID values. This breaks our
-        # foreign key system, so we'll skip that for the game date directly. (Fortunately, there are
-        # A LOT of baseball games.)
-        url = f"{self.base_url}/ScoresBasic/{date}"
-
-        """
-        [
-            {
-                "AwayTeamRuns": 0,
-                "HomeTeamRuns": 0,
-                "AwayTeamHits": 2,
-                "HomeTeamHits": 5,
-                "AwayTeamErrors": 0,
-                "HomeTeamErrors": 0,
-                "Attendance": null,
-                "GlobalGameID": 10076415,
-                "GlobalAwayTeamID": 10000012,
-                "GlobalHomeTeamID": 10000032,
-                "NeutralVenue": false,
-                "Inning": 4,
-                "InningHalf": "B",
-                "GameID": 76415,
-                "Season": 2025,
-                "SeasonType": 1,
-                "Status": "InProgress",
-                "Day": "2025-09-04T00:00:00",
-                "DateTime": "2025-09-04T16:10:00",
-                "AwayTeam": "PHI",
-                "HomeTeam": "MIL",
-                "AwayTeamID": 12,
-                "HomeTeamID": 32,
-                "RescheduledGameID": null,
-                "StadiumID": 92,
-                "IsClosed": false,
-                "Updated": "2025-09-04T17:19:20",
-                "GameEndDateTime": null,
-                "DateTimeUTC": "2025-09-04T20:10:00",
-                "RescheduledFromGameID": null,
-                "SuspensionResumeDay": null,
-                "SuspensionResumeDateTime": null,
-                "SeriesInfo": null
-            },
-        ...]
-        """
+        logger = logging.getLogger(__name__)
+        logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
+        url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
+        local_timezone = ZoneInfo("UTC")
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
         )
-        self.load_scores_from_source(response, event_timezone=local_timezone)
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list = []
+        # update scores based on events:
+        # Events may cross multiple days, so we should update those scores.
+        for _id, event in self.events.items():
+            day = event.date.strftime("%Y-%b-%d").upper()
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/ScoresBasic/{day}?key={self.api_key}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
+                date_list.append(day)
 
 
 class WCS(Sport):

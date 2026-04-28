@@ -66,7 +66,7 @@ class DynamicAmoBackend:
             }
         except httpx.HTTPError as e:
             logger.error(f"Addons API could not find key: {addon_key}, {e}, {e.__class__}")
-        except (KeyError, JSONDecodeError):
+        except KeyError, JSONDecodeError:
             logger.error(
                 "Problem with Addons API formatting. "
                 "Check that the API response structure hasn't changed."
