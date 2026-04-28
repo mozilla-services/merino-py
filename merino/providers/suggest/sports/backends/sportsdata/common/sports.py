@@ -22,6 +22,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
     SportTerms,
     Team,
+    Event,
 )
 
 FORCE_IMPORT = ""
@@ -823,6 +824,8 @@ class FIFA(Sport):
         )
         async with self._lock:
             self.load_teams_from_source(response)
+        for teamId, team in self.teams.items():
+            await self.cache.hmset(f"{self.cache_prefix}:team:{teamId}", team)
         return self
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
@@ -842,7 +845,8 @@ class FIFA(Sport):
         date_list = []
         # update scores based on events:
         # Events may cross multiple days, so we should update those scores.
-        for _id, event in self.events.items():
+        event_list = list(self.events.items())
+        for _id, event in event_list:
             day = event.date.strftime("%Y-%b-%d").upper()
             if not event.status.is_scheduled() and day not in date_list:
                 url = f"{self.base_url}/GamesByDate/{self.name}/{day}?key={self.api_key}"
@@ -858,7 +862,55 @@ class FIFA(Sport):
                 )
                 date_list.append(day)
 
+        # Go through one more time to catch any stray events.
+        # TODO: Put these in their own function?
+        event_list = list(self.events.items())
+        for event_id, event in event_list:
+            # Add the event to redis
+            self.cache.hmset(f"{self.cache_prefix}:event:{event_id}", event)
+            # Add the event to the zorder for date lookups
+            self.cache.zadd(
+                f"{self.cache_prefix}:calendar",
+                {f"{self.cache_prefix}:event:{event_id}", int(event.date.timestamp())},
+                gt=True,
+            )
+            # Add to the by-team lookup list.
+            self.cache.setnx(
+                f"{self.cache_prefix}:team_cal:{event.home_team["key"]:{event_id}}",
+                f"{self.cache_prefix}:event:{event_id}",
+                event.expiry,
+            )
+            self.cache.setnx(
+                f"{self.cache_prefix}:team_cal:{event.away_team["key"]:{event_id}}",
+                f"{self.cache_prefix}:event:{event_id}",
+                event.expiry,
+            )
         return self
+
+    async def get_events_by_team(
+        self, team_key: str, start: datetime | None = None, end: datetime | None = None
+    ) -> list[Event]:
+        """Scan the cache looking for data that matches"""
+        event_ids = await self.cache.scan(f"{self.cache_prefix}:{team_key}:*") or []
+        if datetime:
+            # filter by date-time:
+            start = start or datetime.min
+            end = end or datetime.max
+            event_ids = filter(event_ids, lambda event: start <= event.date <= end)
+        if not event_ids:
+            return []
+        events = []
+        for id in event_ids:
+            event = self.cache.get(id)
+            # TODO: Check for expiry?
+            if event:
+                events.append(event)
+        return events
+
+    async def get_events_by_date(self, start: datetime | None = None, end: datetime | None = None):
+        """Get events by start,end"""
+        # TODO: build
+        pass
 
 
 # THE FOLLOWING CLASSES ARE WIP:::

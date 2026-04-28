@@ -32,6 +32,9 @@ from typing import cast
 from aiodogstatsd import Client
 
 from merino.configs import settings
+from merino.cache.redis import RedisAdapter, create_redis_clients
+from merino.cache.none import NoCacheAdapter
+
 from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
@@ -79,6 +82,7 @@ class SportDataUpdater:
     connect_timeout: int
     read_timeout: int
     client: AsyncClient
+    cache: RedisAdapter | NoCacheAdapter
 
     # Copy of the general configuration
     # settings: LazySettings
@@ -89,6 +93,7 @@ class SportDataUpdater:
         store: SportsDataStore,
         connect_timeout: int = 1,
         read_timeout: int = 1,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         *args,
         **kwargs,
     ) -> None:
@@ -123,6 +128,7 @@ class SportDataUpdater:
             sports[sport_name] = sport
         self.sports = sports
         self.store = store
+        self.cache = cache
         self.connect_timeout = connect_timeout
         self.read_timeout = read_timeout
         self.client = create_http_client(
@@ -220,6 +226,18 @@ class SportDataUpdater:
         await self.update_data()
         await self.store.shutdown()
 
+    async def update_widget(self) -> None:
+        """Fetch widget based info and store into the cache"""
+        # we only deal with FIFA for now.
+        sport = self.sports.get("FIFA")
+        if sport is None:
+            return
+        sport.store.startup()
+        sport.init_cache(client=self.client)
+        if not sport.teams:
+            sport.update_teams(client=self.client)
+        sport.cache_teams()
+
 
 logger = logging.getLogger(__name__)
 sports_settings = settings.providers.sports
@@ -247,9 +265,23 @@ if elastic_credentials.validate():
             index_map={"event": event_map},
             metrics_client=get_metrics_client(),
         )
+        cache = (
+            RedisAdapter(
+                *create_redis_clients(
+                    settings.redis.server,
+                    settings.redis.replica,
+                    settings.redis.max_connections,
+                    settings.redis.socket_connect_timeout_sec,
+                    settings.redis.socket_timeout_sec,
+                )
+            )
+            if sports_settings.get("cache") == "redis"
+            else NoCacheAdapter()
+        )
         provider = SportDataUpdater(
             settings=sports_settings,
             store=store,
+            cache=cache,
             connect_timeout=sports_settings.get("connect_timeout"),
             read_timeout=sports_settings.get("read_timeout"),
         )
@@ -283,6 +315,15 @@ def update():  # pragma: no cover
     """Perform the frequently required tasks (Approx once every 5 min)"""
     if provider:
         asyncio.run(provider.update_data())
+    else:
+        logger.error("Sports provider unavailable.")
+
+
+@cli.command("update-widget")
+def update_widget():
+    """Update widget based info"""
+    if provider:
+        asyncio.run(provider.update_widget())
     else:
         logger.error("Sports provider unavailable.")
 

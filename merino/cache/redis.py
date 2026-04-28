@@ -303,6 +303,16 @@ class RedisAdapter:
             ) from exc
 
     # ==
+    async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
+        """Scan keys for matching values"""
+        try:
+            cursor, items = await self.replica(pattern, count=limit)
+            return items
+        except RedisError as exc:
+            raise CacheAdapterError(
+                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {pattern} with error: {exc}"
+            ) from exc
+
     async def setnx(self, key: str, value: Any) -> int:
         """Set a value if it is not present"""
         try:
