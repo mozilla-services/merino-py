@@ -77,7 +77,7 @@ def configure_logging() -> None:
     )
 
 
-class GCPCompatibleJSONFormatter(dockerflow_logging.JsonLogFormatter):
+class GCPCompatibleJSONFormatter(dockerflow_logging.MozlogFormatter):
     """Override the dockerflow log formatter with GCP compatible levels."""
 
     STACKDRIVER_LEVEL_MAP = {

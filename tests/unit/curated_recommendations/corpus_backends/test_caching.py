@@ -251,6 +251,6 @@ class TestStaleWhileRevalidate:
 
             # Only the first request after expiration triggers an update; subsequent ones
             # see the extended expiration and return stale data without retrying.
-            assert (
-                self.call_count == 2
-            ), f"Expected 2 backend calls (1 initial + 1 failed retry), but got {self.call_count}."
+            assert self.call_count == 2, (
+                f"Expected 2 backend calls (1 initial + 1 failed retry), but got {self.call_count}."
+            )

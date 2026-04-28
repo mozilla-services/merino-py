@@ -105,9 +105,9 @@ class TestCustomFavicons:
         """Test that there are no duplicate domains in CUSTOM_FAVICONS."""
         domains = list(CUSTOM_FAVICONS.keys())
         unique_domains = set(domains)
-        assert len(domains) == len(
-            unique_domains
-        ), "CUSTOM_FAVICONS should not have duplicate domains"
+        assert len(domains) == len(unique_domains), (
+            "CUSTOM_FAVICONS should not have duplicate domains"
+        )
 
     def test_custom_favicons_no_empty_values(self):
         """Test that there are no empty URLs in CUSTOM_FAVICONS."""
@@ -151,17 +151,17 @@ class TestCustomFavicons:
             # Domain should not contain common TLD suffixes (as per module docstring)
             invalid_suffixes = [".com", ".org", ".net", ".edu", ".gov"]
             for suffix in invalid_suffixes:
-                assert not domain.endswith(
-                    suffix
-                ), f"Domain {domain} should not contain suffix {suffix}"
+                assert not domain.endswith(suffix), (
+                    f"Domain {domain} should not contain suffix {suffix}"
+                )
 
             # Domain should not be empty or contain only whitespace
             assert domain.strip(), "Domain should not be empty or whitespace-only"
 
             # Domain should not contain protocol or slashes
-            assert not domain.startswith(
-                ("http://", "https://")
-            ), f"Domain {domain} should not contain protocol"
+            assert not domain.startswith(("http://", "https://")), (
+                f"Domain {domain} should not contain protocol"
+            )
             assert "/" not in domain, f"Domain {domain} should not contain slashes"
 
     def test_custom_favicons_url_security_validation(self):
@@ -173,9 +173,9 @@ class TestCustomFavicons:
             # URLs should not contain suspicious patterns
             suspicious_patterns = ["javascript:", "data:", "file:", "ftp:"]
             for pattern in suspicious_patterns:
-                assert (
-                    pattern not in url.lower()
-                ), f"URL for {domain} contains suspicious pattern {pattern}: {url}"
+                assert pattern not in url.lower(), (
+                    f"URL for {domain} contains suspicious pattern {pattern}: {url}"
+                )
 
             # URLs should be well-formed (basic check)
             assert " " not in url, f"URL for {domain} should not contain spaces: {url}"
@@ -215,9 +215,9 @@ class TestCustomFavicons:
         # Should have various formats represented
         common_extensions = {"ico", "png", "svg"}
         found_extensions = url_extensions.intersection(common_extensions)
-        assert (
-            len(found_extensions) >= 2
-        ), f"Should have multiple favicon formats, found: {url_extensions}"
+        assert len(found_extensions) >= 2, (
+            f"Should have multiple favicon formats, found: {url_extensions}"
+        )
 
     def test_custom_favicons_domains_alphabetical_suggestion(self):
         """Suggest keeping domains in alphabetical order for maintainability."""

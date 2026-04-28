@@ -1303,7 +1303,7 @@ async def test_nfl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
 
     assert nfl.season == "2025REG"
     assert nfl.week == "3"
-    assert set(nfl.teams.keys()) == {1, 2}
+    assert set(nfl.teams.keys()) == {1, 2}  # type: ignore[unreachable]
     t1 = nfl.teams[1]
     assert t1.name == "Cardinals"
     assert get_data.call_count == 2
