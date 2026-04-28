@@ -45,6 +45,9 @@ SPORT_CATEGORY_MAP: dict[str, SportCategory] = {
     "WCS": SportCategory.Soccer,
 }
 
+# Global logger
+logger = logging.getLogger(__name__)
+
 
 class NFL(Sport):
     """National Football League"""
@@ -91,7 +94,6 @@ class NFL(Sport):
         # see: https://sportsdata.io/developers/api-documentation/nfl#timeframesepl
         if self.season is not None:
             return
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting timeframe for {self.name} ")
         url = f"{self.base_url}/Timeframes/current"
         response = await get_data(
@@ -157,7 +159,6 @@ class NFL(Sport):
 
     async def update_events(self, client: AsyncClient):
         """Update the events for this sport in the elastic search database"""
-        logger = logging.getLogger(__name__)
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
         local_timezone = ZoneInfo("America/New_York")
@@ -223,7 +224,6 @@ class NHL(Sport):
         """Get the current season"""
         if self.season is not None:
             return
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} season ")
         url = f"{self.base_url}/CurrentSeason"
         response = await get_data(
@@ -250,7 +250,6 @@ class NHL(Sport):
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         if self.season is None:
             logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
             return
@@ -270,7 +269,6 @@ class NHL(Sport):
     async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.season}"
         local_timezone = ZoneInfo("America/New_York")
@@ -335,7 +333,6 @@ class NBA(Sport):
         """Get the current season"""
         if self.season:
             return
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} season ")
         url = f"{self.base_url}/CurrentSeason"
         response = await get_data(
@@ -362,7 +359,6 @@ class NBA(Sport):
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
         url = f"{self.base_url}/teams"
         response = await get_data(
@@ -378,7 +374,6 @@ class NBA(Sport):
     async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         if self.season is None:
             logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
@@ -451,7 +446,6 @@ class UCL(Sport):
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
-        logger = logging.getLogger(__name__)
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
         url = f"{self.base_url}/Teams/{self.name.lower()}"
@@ -502,7 +496,6 @@ class UCL(Sport):
     async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
         local_timezone = ZoneInfo("UTC")
@@ -567,7 +560,6 @@ class MLB(Sport):
         """Get the current season"""
         if self.season is not None:
             return
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} season")
         url = f"{self.base_url}/CurrentSeason"
         response = await get_data(
@@ -591,7 +583,6 @@ class MLB(Sport):
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         if self.season is None:
             logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
             return
@@ -616,29 +607,30 @@ class MLB(Sport):
     async def update_events(self, client: AsyncClient):
         """Fetch the list of events for the sport. (5 min interval)"""
         local_timezone = ZoneInfo("America/New_York")
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
-        url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
+        url = f"{self.base_url}/SchedulesBasic/{self.season}"
         local_timezone = ZoneInfo("UTC")
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
+            args={"key": self.api_key},
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list = []
         # update scores based on events:
         # Events may cross multiple days, so we should update those scores.
-        for _id, event in self.events.items():
+        for _id, event in list(self.events.items()):
             day = event.date.strftime("%Y-%b-%d").upper()
             if not event.status.is_scheduled() and day not in date_list:
-                url = f"{self.base_url}/ScoresBasic/{day}?key={self.api_key}"
+                url = f"{self.base_url}/ScoresBasic/{day}"
                 response = await get_data(
                     client=client,
                     url=url,
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
+                    args={"key": self.api_key},
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
                 date_list.append(day)
@@ -690,7 +682,6 @@ class WCS(Sport):
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
-        logger = logging.getLogger(__name__)
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
         url = f"{self.base_url}/Teams/{self.name.lower()}"
@@ -708,7 +699,6 @@ class WCS(Sport):
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
         local_timezone = ZoneInfo("UTC")
