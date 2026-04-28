@@ -3,12 +3,14 @@
 import aiodogstatsd
 import logging
 import orjson
+import sentry_sdk
 
 from httpx import AsyncClient, HTTPError, Response
 from pydantic import Json
 
 from merino.configs import settings
 from merino.providers.games.particle.backends.protocol import Particle
+from merino.providers.games.particle.backends.filemanager import ParticleRemoteFileManager
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
@@ -23,16 +25,22 @@ class ParticleBackend:
     gcs_uploader: GcsUploader
     http_client: AsyncClient
     metrics_client: aiodogstatsd.Client
+    # remote endpoint
     particle_url_root: str
+    # path to the manifest on the remote endpoint
     particle_url_path_manifest: str
+    # manages files stored in GCS
+    remote_file_manager: ParticleRemoteFileManager
 
     def __init__(
         self,
         gcs_uploader: GcsUploader,
         http_client: AsyncClient,
+        manifest_gcs_file_name: str,
         metrics_client: aiodogstatsd.Client,
         particle_url_root: str,
         particle_url_path_manifest: str,
+        remote_file_manager: ParticleRemoteFileManager,
     ) -> None:
         """Initialize the Polygon backend."""
         self.gcs_uploader = gcs_uploader
@@ -40,12 +48,13 @@ class ParticleBackend:
         self.metrics_client = metrics_client
         self.particle_url_root = particle_url_root
         self.particle_url_path_manifest = particle_url_path_manifest
+        self.remote_file_manager = remote_file_manager
 
     async def get_game_url(self) -> Particle | None:
         """Return the public URL for the Particle game"""
         return Particle(url=_game_url)
 
-    async def _fetch_manifest_json(self) -> Json | None:
+    async def fetch_manifest_json_from_remote(self) -> Json | None:
         """Retrieve the latest manifest JSON from Particle"""
         manifest: Response | None = None
         manifest_json: Json | None = None
@@ -58,7 +67,14 @@ class ParticleBackend:
 
             manifest.raise_for_status()
         except HTTPError as ex:
-            logger.error(f"HTTP error when fetching Particle manifest: {ex}")
+            error_msg = f"HTTP error when fetching Particle manifest: {ex}"
+
+            logger.error(error_msg)
+
+            sentry_sdk.capture_message(
+                error_msg,
+                level="error",
+            )
 
         # if the manifest was retrieved and has a content property, we're good
         if manifest and manifest.content:
@@ -66,7 +82,14 @@ class ParticleBackend:
             try:
                 manifest_json = orjson.loads(manifest.content)
             except ValueError:
-                logger.error("JSON error when converting Particle response")
+                error_msg = "JSON error when converting Particle response"
+
+                logger.error(error_msg)
+
+                sentry_sdk.capture_message(
+                    error_msg,
+                    level="error",
+                )
 
         # returning json or None
         return manifest_json
