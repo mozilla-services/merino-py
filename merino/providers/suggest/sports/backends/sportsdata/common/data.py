@@ -37,6 +37,9 @@ _TEAM_KEY_OVERRIDES: dict[tuple[str, str], str] = {
     ("KOR", "Curaçao"): "CUW",
 }
 
+# Global Logger
+logger = logging.getLogger(__name__)
+
 
 class Team(BaseModel):
     """Contain the truncated 'Team' information.
@@ -74,7 +77,6 @@ class Team(BaseModel):
         normalized_terms: dict,
     ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
-        logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
         terms = set()
         for item in [
@@ -269,7 +271,6 @@ class Sport:
         term_filter: list[str] = [],
         **kwargs,
     ):
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
         # NOTE: This also handles a potential typo in the AirFlow environment variable name.
@@ -342,7 +343,6 @@ class Sport:
         SportData provider class.
 
         """
-        logger = logging.getLogger(__name__)
         # Sample raw score (Each Sport will have slight variations.)
         """
         [
@@ -383,7 +383,7 @@ class Sport:
         for event_description in data:
             game_id = event_description[self.normalized_terms[SportTerms.GAME_ID]]
             status = GameStatus.parse(event_description["Status"])
-            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
+            if status in [GameStatus.NotNecessary, GameStatus.Canceled]:
                 continue
             # only update the scores.
             if game_id in self.events:
@@ -400,9 +400,7 @@ class Sport:
                 away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
                 home_name = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_KEY])
                 away_name = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_KEY])
-                logger.warning(
-                    f"{LOGGING_TAG} Adding event [{game_id}] between {away_name} at {home_name} :: {status}"
-                )
+                logger.warning(f"Adding game...{away_name} at {home_name} :: {status}")
                 home_score = event_description.get(
                     self.normalized_terms[SportTerms.HOME_TEAM_SCORE]
                 )
@@ -511,7 +509,6 @@ class Sport:
              ]
         ]"""
 
-        logger = logging.getLogger(__name__)
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
@@ -533,7 +530,7 @@ class Sport:
 
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
-            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
+            if status == GameStatus.Canceled:
                 # Cancelled games have no UTC time stamp, so we can't know how recent they were.
                 continue
             try:
