@@ -25,7 +25,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NBA,
     UCL,
     MLB,
-    FIFA,
+    WCS,
     SPORT_CATEGORY_MAP,
 )
 
@@ -1067,8 +1067,8 @@ def soccer_score_payload() -> list[dict]:
     ]
 
 
-def fifa_teams_payload() -> list[dict]:
-    """Return FIFA/WC sample team data"""
+def wcs_teams_payload() -> list[dict]:
+    """Return WCS sample team data"""
     # https://api.sportsdata.io/v4/soccer/scores/json/Teams/FIFA?key=
     # return soccer_teams_payload()
     return [
@@ -1135,8 +1135,8 @@ def fifa_teams_payload() -> list[dict]:
     ]
 
 
-def fifa_schedule_payload() -> list[dict]:
-    """Return FIFA/WC sample schedule data"""
+def wcs_schedule_payload() -> list[dict]:
+    """Return WCS sample schedule data"""
     # https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2026?key=...
     return [
         {
@@ -1220,8 +1220,8 @@ def fifa_schedule_payload() -> list[dict]:
     ]
 
 
-def fifa_score_payload() -> list[dict]:
-    """Return FIFA/WC sample score data"""
+def wcs_score_payload() -> list[dict]:
+    """Return WCS sample score data"""
     return soccer_score_payload()
 
 
@@ -1439,7 +1439,7 @@ async def test_nfl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert t1.name == "Cardinals"
     assert get_data.call_count == 2
     assert "/Timeframes/current" in get_data.call_args_list[0].kwargs["url"]
-    assert "/Teams?key=" in get_data.call_args_list[1].kwargs["url"]
+    assert "/Teams" in get_data.call_args_list[1].kwargs["url"]
 
 
 @pytest.mark.asyncio
@@ -1480,8 +1480,7 @@ async def test_nhl_update_teams_with_None_season(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
         return_value={"ApiSeason": None},
     )
-    out = await nhl.update_teams(client=mock_client)
-    assert out is nhl
+    await nhl.update_teams(client=mock_client)
     assert nhl.season is None
     assert nhl.teams == {}
     get_data.assert_called_once()
@@ -1553,8 +1552,7 @@ async def test_ucl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert ucl.season == "2025"
     assert set(ucl.teams.keys()) == {90000001, 90000002}
     assert get_data.call_count == 1
-
-    assert "/Teams/ucl?key=" in get_data.call_args_list[0].kwargs["url"]
+    assert "/Teams/ucl" in get_data.call_args_list[0].kwargs["url"]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
@@ -1705,8 +1703,8 @@ async def test_nhl_update_events(
     assert 2 == get_data.call_count
     for call in get_data.call_args_list:
         assert call.kwargs["url"] in [
-            "https://api.sportsdata.io/v3/nhl/scores/json/SchedulesBasic/2026PRE?key=",
-            "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/2025-SEP-22?key=",
+            "https://api.sportsdata.io/v3/nhl/scores/json/SchedulesBasic/2026PRE",
+            "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/2025-SEP-22",
         ]
 
 
@@ -1774,8 +1772,8 @@ async def test_nba_update_events(
     assert 2 == get_data.call_count
     for call in get_data.call_args_list:
         assert call.kwargs["url"] in [
-            "https://api.sportsdata.io/v3/nba/scores/json/SchedulesBasic/2026PRE?key=",
-            "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2025-SEP-22?key=",
+            "https://api.sportsdata.io/v3/nba/scores/json/SchedulesBasic/2026PRE",
+            "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2025-SEP-22",
         ]
 
 
@@ -1881,24 +1879,24 @@ async def test_ucl_update_events(
 
     await ucl.update_events(client=mock_client)
     assert 90011111 in ucl.events and 90022222 not in ucl.events
-    assert "/SchedulesBasic/UCL/2025?key=" in get_data.call_args_list[0].kwargs["url"]
+    assert "/SchedulesBasic/UCL/2025" in get_data.call_args_list[0].kwargs["url"]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
-async def test_fifa_update_events(
+async def test_wcs_update_events(
     mock_client: AsyncClient,
     mocker: MockerFixture,
 ) -> None:
-    """Test FIFA event updates."""
-    sport = FIFA(settings=settings.providers.sports)
-    teams_payload = fifa_teams_payload()
+    """Test WCS event updates."""
+    sport = WCS(settings=settings.providers.sports)
+    teams_payload = wcs_teams_payload()
     sport.load_teams_from_source(teams_payload)
     sport.season = "2025"  # set by update_teams normally
     sport.event_ttl = timedelta(weeks=2)
 
-    schedules_payload = fifa_schedule_payload()
-    scores_payload = fifa_score_payload()
+    schedules_payload = wcs_schedule_payload()
+    scores_payload = wcs_score_payload()
     within = "2025-09-22T13:30:00"  # UTC
     outside = "2026-01-22T13:30:00"
     schedules_payload[0].update(
@@ -1946,17 +1944,17 @@ async def test_fifa_update_events(
     assert 2 == get_data.call_count
     for call in get_data.call_args_list:
         assert call.kwargs["url"] in [
-            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2025?key=",
-            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/FIFA/2025-SEP-22?key=",
+            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2025",
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/FIFA/2025-SEP-22",
         ]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
-async def test_fifa_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
-    """Test FIFA team updates."""
-    sport = FIFA(settings=settings.providers.sports)
-    teams_payload = fifa_teams_payload()
+async def test_wcs_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """Test WCS team updates."""
+    sport = WCS(settings=settings.providers.sports)
+    teams_payload = wcs_teams_payload()
     get_data = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
         side_effect=[teams_payload],  # called twice per code
@@ -1966,7 +1964,7 @@ async def test_fifa_update_teams(mock_client: AsyncClient, mocker: MockerFixture
     assert set(sport.teams.keys()) == {90000001, 90000002}
     assert get_data.call_count == 1
 
-    assert "/Teams/fifa?key=" in get_data.call_args_list[0].kwargs["url"]
+    assert "/Teams/fifa" in get_data.call_args_list[0].kwargs["url"]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)

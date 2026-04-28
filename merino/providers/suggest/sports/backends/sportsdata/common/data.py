@@ -37,6 +37,9 @@ _TEAM_KEY_OVERRIDES: dict[tuple[str, str], str] = {
     ("KOR", "Curaçao"): "CUW",
 }
 
+# Global Logger
+logger = logging.getLogger(__name__)
+
 
 class Team(BaseModel):
     """Contain the truncated 'Team' information.
@@ -74,7 +77,6 @@ class Team(BaseModel):
         normalized_terms: dict,
     ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
-        logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
         terms = set()
         for item in [
@@ -269,7 +271,6 @@ class Sport:
         term_filter: list[str] = [],
         **kwargs,
     ):
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
         # NOTE: This also handles a potential typo in the AirFlow environment variable name.
@@ -342,7 +343,6 @@ class Sport:
         SportData provider class.
 
         """
-        logger = logging.getLogger(__name__)
         # Sample raw score (Each Sport will have slight variations.)
         """
         [
@@ -509,7 +509,6 @@ class Sport:
              ]
         ]"""
 
-        logger = logging.getLogger(__name__)
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
