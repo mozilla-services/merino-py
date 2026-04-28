@@ -302,4 +302,6 @@ async def test_gcs_cohort_model_metrics(gcs_storage_client, gcs_bucket, metrics_
         call[0][0] == "recommendation.ml.interest_cohort_model.last_updated"
         and 0 <= call[1]["value"] <= 10
         for call in metrics_client.gauge.call_args_list
-    ), "The gauge recommendation.ml.interest_cohort_model.last_updated was not called with value between 0 and 10"
+    ), (
+        "The gauge recommendation.ml.interest_cohort_model.last_updated was not called with value between 0 and 10"
+    )

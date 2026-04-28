@@ -50,14 +50,14 @@ def fixture_hourly_forecasts_with_ttl() -> HourlyForecastsWithTTL:
 
     hourly_forecasts = [
         HourlyForecast(
-            date_time=f"2026-02-18T{14+i:02d}:00:00-05:00",
+            date_time=f"2026-02-18T{14 + i:02d}:00:00-05:00",
             epoch_date_time=1708281600 + (i * 3600),
             temperature=Temperature(f=60 + i),
             icon_id=6,
             summary="Sunny",
             url=HttpUrl(
                 f"http://www.accuweather.com/en/us/san-francisco/94105/"
-                f"hourly-weather-forecast/39376?day=1&hbhhour={14+i}&lang=en-us"
+                f"hourly-weather-forecast/39376?day=1&hbhhour={14 + i}&lang=en-us"
             ),
         )
         for i in range(5)

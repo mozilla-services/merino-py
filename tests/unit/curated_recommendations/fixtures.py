@@ -45,6 +45,7 @@ def generate_recommendations(
 
     for i, item_id in enumerate(item_ids):
         rec = CuratedRecommendation(
+            experiment_flags=set(),
             corpusItemId=item_id,
             tileId=MIN_TILE_ID + random.randint(0, 101),
             receivedRank=i,

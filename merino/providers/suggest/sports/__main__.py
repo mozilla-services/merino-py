@@ -128,7 +128,7 @@ async def main_query(
     sreq = SuggestionRequest(query="Jets game", geolocation=Location())
     start = datetime.now()
     res = await provider.query(sreq=sreq)
-    log.debug(f"{LOGGING_TAG}⏱ query [{(datetime.now()-start).microseconds}μs]")
+    log.debug(f"{LOGGING_TAG}⏱ query [{(datetime.now() - start).microseconds}μs]")
     print("## Output >>> ")
 
     print("===\n".join([rr.model_dump_json(indent=2) for rr in res]))

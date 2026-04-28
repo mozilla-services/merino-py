@@ -370,9 +370,9 @@ class TestValidatorsIntegration:
 
         for url, expected in test_cases:
             result = is_problematic_favicon_url(url)
-            assert (
-                result == expected
-            ), f"URL {url} should be {'problematic' if expected else 'not problematic'}"
+            assert result == expected, (
+                f"URL {url} should be {'problematic' if expected else 'not problematic'}"
+            )
 
     def test_blocked_domain_various_formats(self):
         """Test blocked domain checking with various domain formats."""
@@ -391,9 +391,9 @@ class TestValidatorsIntegration:
 
         for domain, suffix, expected in test_cases:
             result = is_domain_blocked(domain, suffix, blocked_domains)
-            assert (
-                result == expected
-            ), f"Domain {domain} should be {'blocked' if expected else 'not blocked'}"
+            assert result == expected, (
+                f"Domain {domain} should be {'blocked' if expected else 'not blocked'}"
+            )
 
     def test_title_sanitization_edge_cases(self):
         """Test title sanitization with edge cases."""
@@ -428,9 +428,9 @@ class TestValidatorsIntegration:
 
         for domain, suffix, expected in edge_cases:
             result = get_second_level_domain(domain, suffix)
-            assert (
-                result == expected
-            ), f"Domain '{domain}' with suffix '{suffix}' should extract '{expected}'"
+            assert result == expected, (
+                f"Domain '{domain}' with suffix '{suffix}' should extract '{expected}'"
+            )
 
     def test_error_handling_in_validators(self):
         """Test error handling in validator functions."""
@@ -446,7 +446,7 @@ class TestValidatorsIntegration:
             result = sanitize_title(StringableObject())
             # If it works, it should return a string
             assert isinstance(result, str)
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             # If it raises an exception, that's also acceptable behavior
             pass
 

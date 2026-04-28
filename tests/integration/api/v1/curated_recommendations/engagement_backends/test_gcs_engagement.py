@@ -268,4 +268,6 @@ async def test_gcs_engagement_metrics(gcs_storage_client, gcs_bucket, metrics_cl
     assert any(
         call[0][0] == "recommendation.engagement.last_updated" and 0 <= call[1]["value"] <= 10
         for call in metrics_client.gauge.call_args_list
-    ), "The gauge recommendation.engagement.last_updated was not called with value between 0 and 10"
+    ), (
+        "The gauge recommendation.engagement.last_updated was not called with value between 0 and 10"
+    )

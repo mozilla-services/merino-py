@@ -178,7 +178,7 @@ class MockMLRecommendationsBackend(MLRecsBackend):
 
     def get_most_popular_content_id_by_cohort_timezone(self, cohort: int, time_zone: int) -> str:
         """Return the most popular content ID for a given timezone offset."""
-        if time_zone == "2" and cohort == 6:  # High scoring item
+        if time_zone == 2 and cohort == 6:  # High scoring item
             return "1ac64aea-fdce-41e7-b017-0dc2103bb3fd"
         return REC_HIGH_CTR_IDS[0]  # Default high CTR item
 
@@ -1526,9 +1526,9 @@ class TestSections:
         localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
         # Assert top-stories has a translation (the only key used)
-        assert (
-            "top-stories" in localized_titles and localized_titles["top-stories"]
-        ), f"Missing translation for 'top-stories' in {surface_id}"
+        assert "top-stories" in localized_titles and localized_titles["top-stories"], (
+            f"Missing translation for 'top-stories' in {surface_id}"
+        )
 
     def test_corpus_sections_feed_content(
         self,
@@ -2054,9 +2054,9 @@ class TestSections:
         if expect_subtopics:
             assert ml_subtopic_section_ids, "Expected ML subtopic sections for US treatment"
         else:
-            assert (
-                not ml_subtopic_section_ids
-            ), f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
+            assert not ml_subtopic_section_ids, (
+                f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
+            )
 
         # Manually created sections may appear regardless of experiment settings
 
@@ -2793,9 +2793,9 @@ def test_uk_sections_with_gb_backend_data(
         sections = {name: section for name, section in feeds.items() if section is not None}
 
         # Should have top_stories_section and topic sections
-        assert (
-            len(sections) >= 2
-        ), f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
+        assert len(sections) >= 2, (
+            f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
+        )
         assert "top_stories_section" in sections
 
         # Verify that GB-specific sections are present
@@ -2818,9 +2818,9 @@ def test_uk_sections_with_gb_backend_data(
         # Verify that locale suffixes are stripped from section IDs
         # The backend returns IDs like "food__lEN_GB" but they should be normalized to "food"
         sections_with_suffix = [s for s in sections.keys() if s.endswith("__lEN_GB")]
-        assert (
-            len(sections_with_suffix) == 0
-        ), f"Section IDs should not contain '__lEN_GB' suffix, but found: {sections_with_suffix}"
+        assert len(sections_with_suffix) == 0, (
+            f"Section IDs should not contain '__lEN_GB' suffix, but found: {sections_with_suffix}"
+        )
 
         # data array should be empty (all recommendations in feeds)
         assert len(data["data"]) == 0

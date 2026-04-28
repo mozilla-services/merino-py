@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from aiodogstatsd import Client
 from starlette.responses import Response
@@ -43,7 +43,7 @@ from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDa
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
 from merino.providers.manifest import get_provider as get_manifest_provider
-from merino.providers.suggest.base import BaseProvider, SuggestionRequest
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
@@ -98,12 +98,15 @@ HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 WEATHER_PROVIDER = settings.providers.accuweather.backend
 SOURCE_TYPE = Literal["urlbar", "newtab", "unknown"]
 
+MANIFEST_TTL_SEC = settings.runtime.default_manifest_response_ttl_sec
+
 
 @router.get(
     "/suggest",
     tags=["suggest"],
     summary="Merino suggest endpoint",
     response_model=SuggestResponse,
+    response_model_exclude_none=True,
 )
 async def suggest(
     request: Request,
@@ -326,7 +329,11 @@ async def suggest(
     return build_suggestion_response(client_variants, search_from, suggestions)
 
 
-def build_suggestion_response(client_variants, search_from, suggestions) -> Response:
+def build_suggestion_response(
+    client_variants: str | None,
+    search_from: list[BaseProvider],
+    suggestions: list[BaseSuggestion],
+) -> Response:
     """Build the Suggestion Response."""
     response = SuggestResponse(
         suggestions=suggestions,
@@ -342,8 +349,8 @@ def build_suggestion_response(client_variants, search_from, suggestions) -> Resp
     response_headers = {}
     # could be specific or default
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
-    response_headers["Cache-control"] = f"private, max-age={ttl}"
-    return ORJSONResponse(
+    response_headers["Cache-Control"] = f"private, max-age={ttl}"
+    return JSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
     )
@@ -357,7 +364,7 @@ def build_suggestion_response(client_variants, search_from, suggestions) -> Resp
 )
 async def providers(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-) -> ORJSONResponse:
+) -> Response:
     """Query Merino for suggestion providers.
 
     This endpoint gives a list of available providers, along with their
@@ -387,7 +394,7 @@ async def providers(
         ProviderResponse(**{"id": id, "availability": provider.availability()})
         for id, provider in active_providers.items()
     ]
-    return ORJSONResponse(content=jsonable_encoder(providers))
+    return JSONResponse(content=jsonable_encoder(providers))
 
 
 @router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
@@ -512,9 +519,7 @@ async def get_manifest(
 
         if manifest_data and manifest_data.domains:
             etag = provider.get_etag()
-            cache_control = (
-                f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"
-            )
+            cache_control = f"private, max-age={MANIFEST_TTL_SEC}"
 
             if etag is not None and if_none_match == etag:
                 metrics_client.increment("manifest.request.not_modified")
@@ -529,7 +534,7 @@ async def get_manifest(
             if etag is not None:
                 headers["ETag"] = etag
 
-            return ORJSONResponse(
+            return JSONResponse(
                 content=jsonable_encoder(manifest_data),
                 headers=headers,
             )
@@ -555,7 +560,7 @@ async def get_hourly_forecasts(
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WeatherProvider = Depends(get_weather_provider),
-) -> ORJSONResponse:
+) -> Response:
     """Query merino for hourly forecast data.
 
     **Args**:
@@ -606,7 +611,7 @@ async def get_hourly_forecasts(
             # this failure before re-raising, so the breaker will still trip as expected.
             pass
 
-        return ORJSONResponse(
+        return JSONResponse(
             content=jsonable_encoder(hourly_forecasts),
             headers={"Cache-Control": (f"private, max-age={ttl}")},
         )
@@ -621,7 +626,7 @@ async def get_hourly_forecasts(
 async def get_picture_of_the_day(
     request: Request,
     provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
-) -> ORJSONResponse:
+) -> Response:  # pragma: no cover
     """Get the picture of the day."""
     potd = None
     try:
@@ -631,7 +636,8 @@ async def get_picture_of_the_day(
 
     # TTL is temporarily hardcoded as 24h.
     # Will be dynamically calculated in follow up work.
-    return ORJSONResponse(
+
+    return JSONResponse(
         content=jsonable_encoder(potd),
         headers={"Cache-Control": "private, max-age=86400"},
     )
@@ -650,7 +656,7 @@ _games_particle_ttl = settings.games_providers.particle.cache_ttl
 )
 async def get_game_particle(
     request: Request, provider: ParticleProvider = Depends(get_particle_provider)
-) -> ORJSONResponse:
+) -> Response:  # pragma: no cover
     """Return a JSON object containing the public URL for the Particle game."""
     particle_data = None
 
@@ -659,7 +665,7 @@ async def get_game_particle(
     except Exception as ex:
         logger.info(f"Error when fetching Particle game data: {ex.__class__.__name__}")
 
-    return ORJSONResponse(
+    return JSONResponse(
         content=jsonable_encoder(particle_data),
         headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )

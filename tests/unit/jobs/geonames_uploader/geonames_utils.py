@@ -379,7 +379,7 @@ class DownloaderFixture:
     def __init__(
         self,
         requests_mock,
-        countries: list[str] = [c for c in GEONAMES_BY_COUNTRY.keys()],
+        countries: list[str] = list(GEONAMES_BY_COUNTRY.keys()),
     ):
         """Initialize fixture"""
         self.zips_by_country = {}

@@ -27,7 +27,7 @@ GROUP BY 1
 ORDER BY 1, 3 DESC, 2 DESC
 """
 
-    KEYWORD_QUERY = """
+    KEYWORD_QUERY_HISTORICAL = """
 SELECT
  LOWER(advertiser) AS advertiser,
  LOWER(query) AS query,
@@ -35,10 +35,25 @@ SELECT
  COUNT(*) AS impressions
 FROM `moz-fx-data-shared-prod.search_terms_derived.suggest_impression_sanitized_v3`
 WHERE
- submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND CURRENT_TIMESTAMP()
+ submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 9 DAY) AND TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
 AND query is not NULL
 GROUP BY 1, 2
 HAVING impressions > 500
+ORDER BY 1, 4 DESC
+"""
+
+    KEYWORD_QUERY_LIVE = """
+SELECT
+ LOWER(advertiser) AS advertiser,
+ LOWER(query) AS query,
+ COUNTIF(is_clicked) AS clicks,
+ COUNT(*) AS impressions
+FROM `moz-fx-data-shared-prod.search_terms_derived.suggest_impression_sanitized_v3`
+WHERE
+ submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR) AND CURRENT_TIMESTAMP()
+AND query is not NULL
+GROUP BY 1, 2
+HAVING impressions > 200
 ORDER BY 1, 4 DESC
 """
 
@@ -90,8 +105,12 @@ ORDER BY 1, 4 DESC
 
         return engagement_data
 
-    def download_by_keyword(self) -> list[dict[str, Any]]:
-        """Execute the keyword-level AMP engagement query.
+    def _fetch_keyword_rows(self, query: str, label: str) -> list[dict[str, Any]]:
+        """Execute a keyword-level BigQuery query and return parsed rows.
+
+        Args:
+            query: The SQL query to execute.
+            label: A short label (e.g. "historical", "live") used in log messages.
 
         Returns:
             list[dict[str, Any]]: A list of engagement records containing
@@ -101,16 +120,16 @@ ORDER BY 1, 4 DESC
             RuntimeError: If the BigQuery query fails.
         """
         try:
-            query_job = self.client.query(self.KEYWORD_QUERY)
+            query_job = self.client.query(query)
             results = query_job.result()
-
         except GoogleAPIError as e:
             logger.error(
-                "BigQuery query failed while downloading keyword-level AMP engagement data",
+                "BigQuery query failed while downloading %s keyword-level AMP engagement data",
+                label,
                 exc_info=True,
             )
             raise RuntimeError(
-                "Failed to fetch keyword-level AMP engagement data from BigQuery"
+                f"Failed to fetch {label} keyword-level AMP engagement data from BigQuery"
             ) from e
 
         engagement_data: list[dict[str, Any]] = []
@@ -126,13 +145,21 @@ ORDER BY 1, 4 DESC
                     }
                 )
             except KeyError:
-                logger.warning("Unexpected row format in BigQuery results: %s", row)
+                logger.warning("Unexpected row format in BigQuery results (%s): %s", label, row)
                 continue
 
         if not engagement_data:
-            logger.warning("Keyword-level AMP engagement query returned no rows")
+            logger.warning("%s keyword-level AMP engagement query returned no rows", label)
 
         return engagement_data
+
+    def download_historical_data_by_keyword(self) -> list[dict[str, Any]]:
+        """Execute the historical keyword-level AMP engagement query."""
+        return self._fetch_keyword_rows(self.KEYWORD_QUERY_HISTORICAL, "historical")
+
+    def download_live_data_by_keyword(self) -> list[dict[str, Any]]:
+        """Execute the live keyword-level AMP engagement query."""
+        return self._fetch_keyword_rows(self.KEYWORD_QUERY_LIVE, "live")
 
     @staticmethod
     def transform_by_advertiser(data: list[dict[str, Any]]) -> dict[str, Any]:
@@ -148,22 +175,39 @@ ORDER BY 1, 4 DESC
         }
 
     @staticmethod
-    def transform_by_keyword(data: list[dict[str, Any]]) -> dict[str, Any]:
-        """Transform keyword-level AMP data into an advertiser/query-keyed dict with historical metrics."""
-        return {
-            f"{row['advertiser']}/{row['query']}": {
-                "historical": {
-                    "impressions": row["impressions"],
-                    "clicks": row["clicks"],
-                }
+    def transform_by_keyword(
+        historical: list[dict[str, Any]],
+        live: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Merge historical and live keyword-level AMP data into an advertiser/query-keyed dict.
+
+        Both datasets are optional per advertiser/query pair — a key may have only
+        historical, only live, or both.
+        """
+        result: dict[str, Any] = {}
+
+        for row in historical:
+            key = f"{row['advertiser']}/{row['query']}"
+            if key not in result:
+                result[key] = {}
+            result[key]["historical"] = {
+                "impressions": row["impressions"],
+                "clicks": row["clicks"],
             }
-            for row in data
-        }
+
+        for row in live:
+            key = f"{row['advertiser']}/{row['query']}"
+            if key not in result:
+                result[key] = {}
+            result[key]["live"] = {
+                "impressions": row["impressions"],
+                "clicks": row["clicks"],
+            }
+
+        return result
 
     @staticmethod
-    def aggregate_by_keyword(transformed: dict[str, Any]) -> dict[str, int]:
-        """Aggregate impressions and clicks from keyword-level transformed AMP data."""
-        return {
-            "impressions": sum(int(v["historical"]["impressions"]) for v in transformed.values()),
-            "clicks": sum(int(v["historical"]["clicks"]) for v in transformed.values()),
-        }
+    def aggregate_by_keyword(_transformed: dict[str, Any]) -> dict[str, int]:
+        """Aggregate impressions and clicks from keyword-level AMP data."""
+        # Not currently consumed — returning zeros until a use case is defined.
+        return {"impressions": 0, "clicks": 0}

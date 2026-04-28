@@ -39,6 +39,9 @@ _TEAM_KEY_OVERRIDES: dict[tuple[str, str], str] = {
     ("KOR", "Curaçao"): "CUW",
 }
 
+# Global Logger
+logger = logging.getLogger(__name__)
+
 
 class Team(BaseModel):
     """Contain the truncated 'Team' information.
@@ -76,7 +79,6 @@ class Team(BaseModel):
         normalized_terms: dict,
     ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
-        logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
         terms = set()
         for item in [
@@ -96,7 +98,7 @@ class Team(BaseModel):
                         terms.add(lword)
         locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
         name = team_data["Name"]
-        fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
+        fullname = team_data.get("FullName") or f"{locale} {team_data['Name']}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
         team_id = team_data.get(normalized_terms[SportTerms.TEAM_ID])
         if not team_id:
@@ -174,7 +176,7 @@ class Event(BaseModel):
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
-        return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
+        return f"{self.sport}:{self.home_team['key']}:{self.away_team['key']}".lower()
 
     def serialize(self) -> dict[str, Any]:
         """Condition Event for JSON serialization. This converts dates from datetime and
@@ -273,7 +275,6 @@ class Sport:
         term_filter: list[str] = [],
         **kwargs,
     ):
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
         # NOTE: This also handles a potential typo in the AirFlow environment variable name.
@@ -281,7 +282,7 @@ class Sport:
         self.api_key = api_key or settings.sportsdata.get(
             "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
         )
-        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or "None"}")
+        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or 'None'}")
         self.base_url = base_url
         self.name = name
         self.teams = {}
@@ -347,7 +348,6 @@ class Sport:
         SportData provider class.
 
         """
-        logger = logging.getLogger(__name__)
         # Sample raw score (Each Sport will have slight variations.)
         """
         [
@@ -388,7 +388,7 @@ class Sport:
         for event_description in data:
             game_id = event_description[self.normalized_terms[SportTerms.GAME_ID]]
             status = GameStatus.parse(event_description["Status"])
-            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
+            if status in [GameStatus.NotNecessary, GameStatus.Canceled]:
                 continue
             # only update the scores.
             if game_id in self.events:
@@ -516,7 +516,6 @@ class Sport:
              ]
         ]"""
 
-        logger = logging.getLogger(__name__)
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
         for event_description in data:
@@ -538,7 +537,7 @@ class Sport:
 
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
-            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
+            if status == GameStatus.Canceled:
                 # Cancelled games have no UTC time stamp, so we can't know how recent they were.
                 continue
             try:

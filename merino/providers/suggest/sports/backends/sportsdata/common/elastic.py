@@ -179,7 +179,7 @@ class ElasticCredentials:
             # Try to get the data from the settings
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or 'None'}"  # type: ignore
                 )
                 self.dsn = settings.providers.sports.es.dsn  # type: ignore
             except AttributeError:
@@ -187,7 +187,7 @@ class ElasticCredentials:
                 pass
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or 'None'}"  # type: ignore
                 )
                 self.api_key = settings.providers.sports.es.api_key  # type: ignore
             except AttributeError:
@@ -197,7 +197,7 @@ class ElasticCredentials:
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or 'None'}"  # type: ignore
                 )
                 self.dsn = settings.providers.wikipedia.es_url  # type: ignore
             except AttributeError:
@@ -206,7 +206,7 @@ class ElasticCredentials:
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or 'None'}"  # type: ignore
                 )
                 self.dsn = settings.jobs.wikipedia_indexer.es_url  # type: ignore
             except AttributeError:
@@ -215,7 +215,7 @@ class ElasticCredentials:
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or 'None'}"  # type: ignore
                 )
                 self.api_key = settings.providers.wikipedia.es_api_key  # type: ignore
             except AttributeError:
@@ -224,7 +224,7 @@ class ElasticCredentials:
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or 'None'}"  # type: ignore
                 )
                 self.api_key = settings.jobs.wikipedia_indexer.es_api_key  # type: ignore
             except AttributeError:
@@ -592,7 +592,7 @@ class SportsDataStore(ElasticDataStore):
                 start = datetime.now()
                 res = await self.client.delete_by_query(index=index, query=query)
                 logger.info(
-                    f"{LOGGING_TAG}⏱ sports.time.prune [{res.get("deleted")} records] in [{(datetime.now()-start).microseconds}μs]"
+                    f"{LOGGING_TAG}⏱ sports.time.prune [{res.get('deleted')} records] in [{(datetime.now() - start).microseconds}μs]"
                 )
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
@@ -823,5 +823,5 @@ class SportsDataStore(ElasticDataStore):
             logger.error(f"{LOGGING_TAG} could not update meta data: {ex}")
         await self.client.indices.refresh(index=index)
         logger.info(
-            f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"
+            f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now() - start).microseconds}μs]"
         )
