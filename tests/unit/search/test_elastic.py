@@ -238,10 +238,15 @@ def test_forcemerge_calls_indices_forcemerge(
 ) -> None:
     """Verify that forcemerge calls indices.forcemerge with the provided index and segment count."""
     client = _mock_client()
+    scoped_client = _mock_client()
+    client.options.return_value = scoped_client
     monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
 
-    adapter.forcemerge(index="my-index", max_num_segments=1)
-    client.indices.forcemerge.assert_called_once_with(index="my-index", max_num_segments=1)
+    adapter.forcemerge(index="my-index", max_num_segments=1, wait_for_completion=True)
+    client.options.assert_called_once_with(request_timeout=None)
+    scoped_client.indices.forcemerge.assert_called_once_with(
+        index="my-index", max_num_segments=1, wait_for_completion=True
+    )
 
 
 def test_update_aliases_calls_indices_update_aliases(
