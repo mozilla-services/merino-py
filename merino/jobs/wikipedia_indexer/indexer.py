@@ -100,8 +100,14 @@ class Indexer:
             self.elasticsearch.refresh_index(index=index_name)
             logger.info("Refreshed index", extra={"index": index_name})
 
-            # Force merge to a single segment for optimal read performance
-            self.elasticsearch.forcemerge(index=index_name, max_num_segments=1)
+            # Force merge to a single segment for optimal read performance.
+            # This is a long-running operation on large indices; use a 2-hour timeout.
+            self.elasticsearch.forcemerge(
+                index=index_name,
+                max_num_segments=1,
+                request_timeout=7200,
+                wait_for_completion=True,
+            )
             logger.info("Force merged index", extra={"index": index_name})
 
             # Flip the alias pointer to the new index and remove the previous index
