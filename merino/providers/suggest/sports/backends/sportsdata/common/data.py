@@ -537,7 +537,7 @@ class Sport:
 
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
-            if status == GameStatus.Canceled:
+            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
                 # Cancelled games have no UTC time stamp, so we can't know how recent they were.
                 continue
             try:
@@ -554,7 +554,7 @@ class Sport:
                 # but if there's an error, it's probably wise to ignore this.
                 logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
                 logger.debug(
-                    f"{LOGGING_TAG} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
+                    f"{LOGGING_TAG} {status} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
                 continue
             # Ignore any events that are outside of the event interest window.

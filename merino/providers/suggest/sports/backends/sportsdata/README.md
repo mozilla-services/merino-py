@@ -7,6 +7,7 @@ The following are the World Cup specific modifications. These are contained in t
 The `RedisAdapter` will be used as the primary way to communicate with Redis. Jobs will require read/write access. Suggest/Widget publication endpoints only really need `read` access.
 
 ### Meta Information
+
 key: **sport:wcs:meta**
 
 type: Hash
@@ -25,6 +26,7 @@ key: **sport:wcs:venue:{ _venueId_ }**
 type: Hash
 
 values:
+
 | name | type | description |
 | --- | --- | --- |
 | id  | int | unique venue id |
@@ -57,7 +59,7 @@ values:
 
 | key | value |
 | --- | --- |
-| eventKey | UTC timestamp |
+| eventKey [2] | UTC timestamp |
 
 ### Event fast lookup
 
@@ -72,3 +74,4 @@ _See EventInfo_
 
 ---
 [1] Note that country codes are not provided by the `.../venues` provider endpoint. These will need to be fetched from `.../areas` endpoint.
+[2] SortedSets operate by having a single key with a value that defines the score. You later can use `zrange` to fetch keys with scores that fall between the min/max.

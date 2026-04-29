@@ -515,7 +515,7 @@ class UCL(Sport):
         for _id, event in list(self.events.items()):
             day = event.date.strftime("%Y-%b-%d").upper()
             if not event.status.is_scheduled() and day not in date_list:
-                url = f"{self.base_url}/ScoresBasic/{day}"
+                url = f"{self.base_url}/ScoresBasic/{self.name}/{day}"
                 response = await get_data(
                     client=client,
                     url=url,
@@ -621,7 +621,7 @@ class MLB(Sport):
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list = []
-        # update scores based on events:
+        # update scores based on events
         # Events may cross multiple days, so we should update those scores.
         for _id, event in list(self.events.items()):
             day = event.date.strftime("%Y-%b-%d").upper()
