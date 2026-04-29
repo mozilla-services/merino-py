@@ -132,11 +132,22 @@ class ElasticSearchAdapter:
         indices = cast(dict[str, Any], self.get_client().indices.get_alias(name=alias))
         return list(indices.keys())
 
-    def forcemerge(self, *, index: str, max_num_segments: int = 1) -> None:
+    def forcemerge(
+        self,
+        *,
+        index: str,
+        max_num_segments: int = 1,
+        request_timeout: float | None = None,
+        wait_for_completion: bool | None = None,
+    ) -> None:
         """Force merge index segments to increase performance on read-only indices.
         See https://www.elastic.co/docs/deploy-manage/production-guidance/optimize-performance/search-speed#_force_merge_read_only_indices
         """
-        self.get_client().indices.forcemerge(index=index, max_num_segments=max_num_segments)
+        self.get_client().options(request_timeout=request_timeout).indices.forcemerge(
+            index=index,
+            max_num_segments=max_num_segments,
+            wait_for_completion=wait_for_completion,
+        )
 
     def update_aliases(self, *, actions: list[dict[str, Any]]) -> None:
         """Apply alias update actions atomically."""
