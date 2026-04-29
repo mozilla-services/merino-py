@@ -2,6 +2,8 @@
 
 import logging
 from asyncio import Task
+from datetime import UTC, datetime
+from datetime import date as Date
 from functools import partial
 from itertools import chain
 from typing import Annotated, Literal
@@ -74,6 +76,9 @@ from merino.utils.query_processing.normalization.pipeline import tier_a
 from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
 from merino.providers.games.particle.provider import Provider as ParticleProvider
+from merino.providers.wcs import get_provider as get_wcs_provider
+from merino.providers.wcs.protocol import MatchesResponse
+from merino.providers.wcs.provider import WcsProvider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -669,3 +674,34 @@ async def get_game_particle(
         content=jsonable_encoder(particle_data),
         headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )
+
+
+@router.get(
+    "/wcs/matches",
+    tags=["wcs"],
+    summary="World Cup Soccer matches in the +/- 7 day window around `date`",
+    response_model=MatchesResponse,
+    response_model_by_alias=True,
+)
+async def get_wcs_matches(
+    date: Annotated[
+        Date | None, Query(description="RFC date YYYY-MM-DD; defaults to today UTC.")
+    ] = None,
+    limit: Annotated[int | None, Query(ge=1, le=100)] = None,
+    teams: Annotated[
+        str | None,
+        Query(description="Comma-separated 3-letter team keys, e.g. 'BRA,ARG'."),
+    ] = None,
+    provider: WcsProvider = Depends(get_wcs_provider),
+) -> MatchesResponse:
+    """Return matches grouped into `previous`, `current`, and `next`.
+
+    The window is `+/- 7 days` around `date`. `current` holds matches on `date`,
+    `previous` is older, `next` is newer. Each bucket is sorted ascending by
+    event date. Returns fake-but-plausible data until the vendor backend lands.
+    """
+    target_date = date or datetime.now(UTC).date()
+    team_keys = (
+        frozenset(t.strip().upper() for t in teams.split(",") if t.strip()) if teams else None
+    )
+    return provider.get_matches(target_date, limit, team_keys)

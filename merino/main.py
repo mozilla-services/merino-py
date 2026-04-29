@@ -29,6 +29,10 @@ tags_metadata = [
         "name": "providers",
         "description": "Get a list of Firefox Suggest providers and their availability.",
     },
+    {
+        "name": "wcs",
+        "description": "World Cup Soccer match data for the New Tab widget.",
+    },
 ]
 
 logger = logging.getLogger(__name__)
