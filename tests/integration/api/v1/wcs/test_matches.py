@@ -73,11 +73,12 @@ def test_invalid_date_returns_400(client: TestClient) -> None:
     assert response.status_code == 400
 
 
-def test_team_icons_resolve_to_cdn_urls(client: TestClient) -> None:
-    """End-to-end check that get_logo_url(LogoCategory.Nations, key) resolves."""
+def test_team_icons_pinned_to_prod_logo_bucket(client: TestClient) -> None:
+    """Stage lacks a CDN host override, so icons hardcode the prod GCS bucket."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()
     events = body["previous"] + body["current"] + body["next"]
 
     assert events
     icons = [e["home_team"]["icon"] for e in events] + [e["away_team"]["icon"] for e in events]
-    assert any(icon and icon.startswith("https://") for icon in icons)
+    expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/nations_"
+    assert all(icon and icon.startswith(expected_prefix) for icon in icons)
