@@ -77,7 +77,7 @@ from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
 from merino.providers.games.particle.provider import Provider as ParticleProvider
 from merino.providers.wcs import get_provider as get_wcs_provider
-from merino.providers.wcs.protocol import MatchesResponse
+from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse
 from merino.providers.wcs.provider import WcsProvider
 
 logger = logging.getLogger(__name__)
@@ -701,7 +701,34 @@ async def get_wcs_matches(
     event date. Returns fake-but-plausible data until the vendor backend lands.
     """
     target_date = date or datetime.now(UTC).date()
-    team_keys = (
-        frozenset(t.strip().upper() for t in teams.split(",") if t.strip()) if teams else None
-    )
+    team_keys = _parse_team_keys(teams)
     return provider.get_matches(target_date, limit, team_keys)
+
+
+@router.get(
+    "/wcs/live",
+    tags=["wcs"],
+    summary="World Cup Soccer matches currently in progress",
+    response_model=LiveMatchesResponse,
+)
+async def get_wcs_live(
+    teams: Annotated[
+        str | None,
+        Query(description="Comma-separated 3-letter team keys, e.g. 'BRA,ARG'."),
+    ] = None,
+    provider: WcsProvider = Depends(get_wcs_provider),
+) -> LiveMatchesResponse:
+    """Return matches with `status_type == "live"`, sorted ascending by date.
+
+    Anchored to the current UTC date. Returns fake-but-plausible data until
+    the vendor backend lands.
+    """
+    return provider.get_live_matches(_parse_team_keys(teams))
+
+
+def _parse_team_keys(teams: str | None) -> frozenset[str] | None:
+    """Parse a comma-separated list of team keys into an upper-case frozen set."""
+    if not teams:
+        return None
+    keys = frozenset(t.strip().upper() for t in teams.split(",") if t.strip())
+    return keys or None

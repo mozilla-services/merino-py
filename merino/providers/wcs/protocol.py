@@ -11,7 +11,7 @@ class TeamInfo(BaseModel):
     name: str = Field(description="Long form team name, e.g. 'Brazil'.")
     region: str = Field(description="ISO3 region designation; may differ from `name`.")
     colors: list[str] = Field(description="Branding colors, primary first.")
-    icon: HttpUrl | None = Field(default=None, description="Team flag URL, if available.")
+    icon_url: HttpUrl | None = Field(default=None, description="Team flag URL, if available.")
     group: str = Field(description="Group label for this team, e.g. 'Group A'.")
     eliminated: bool = Field(description="True once the team is out of the tournament.")
     standing: dict[str, int] = Field(description="Group standings: wins, losses, draws, points.")
@@ -51,3 +51,12 @@ class MatchesResponse(BaseModel):
     previous: list[EventInfo]
     current: list[EventInfo]
     next_: list[EventInfo] = Field(alias="next")
+
+
+class LiveMatchesResponse(BaseModel):
+    """Response payload for `GET /api/v1/wcs/live`.
+
+    Holds events with `status_type == "live"`, sorted by `date` ascending.
+    """
+
+    matches: list[EventInfo]

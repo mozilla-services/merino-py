@@ -79,6 +79,8 @@ def test_team_icons_pinned_to_prod_logo_bucket(client: TestClient) -> None:
     events = body["previous"] + body["current"] + body["next"]
 
     assert events
-    icons = [e["home_team"]["icon"] for e in events] + [e["away_team"]["icon"] for e in events]
+    icons = [e["home_team"]["icon_url"] for e in events] + [
+        e["away_team"]["icon_url"] for e in events
+    ]
     expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/nations_"
     assert all(icon and icon.startswith(expected_prefix) for icon in icons)

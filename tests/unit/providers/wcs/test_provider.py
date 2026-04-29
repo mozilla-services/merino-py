@@ -106,3 +106,39 @@ def test_live_extra_time_match_shows_clock_in_extra_play() -> None:
     in_extra = [e for e in response.current if e.period == "ET"]
     assert len(in_extra) == 1
     assert in_extra[0].clock.startswith("90+")
+
+
+def test_live_returns_only_in_progress_events() -> None:
+    """`get_live_matches` returns the two `live` events from the fake set."""
+    response = WcsProvider().get_live_matches(team_keys=None)
+
+    assert len(response.matches) == 2
+    assert all(e.status_type == "live" for e in response.matches)
+
+
+def test_live_matches_sorted_ascending_by_date() -> None:
+    """Live events are sorted ascending by `date`."""
+    matches = WcsProvider().get_live_matches(team_keys=None).matches
+    assert matches == sorted(matches, key=lambda e: e.date)
+
+
+def test_live_teams_filter_matches_either_side() -> None:
+    """Filter retains live events where either side plays for the listed team."""
+    response = WcsProvider().get_live_matches(team_keys=frozenset({"BRA"}))
+
+    assert response.matches
+    for event in response.matches:
+        assert "BRA" in {event.home_team.key, event.away_team.key}
+
+
+def test_live_unknown_team_returns_empty() -> None:
+    """No match for the filter yields an empty list, not an error."""
+    response = WcsProvider().get_live_matches(team_keys=frozenset({"ZZZ"}))
+    assert response.matches == []
+
+
+def test_live_is_deterministic_within_same_utc_day() -> None:
+    """Two calls in the same UTC day produce identical payloads."""
+    a = WcsProvider().get_live_matches(team_keys=None)
+    b = WcsProvider().get_live_matches(team_keys=None)
+    assert a.model_dump() == b.model_dump()
