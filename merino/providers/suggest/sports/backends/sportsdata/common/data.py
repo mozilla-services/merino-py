@@ -69,6 +69,8 @@ class Team(BaseModel):
     updated: datetime
     # Team Data expiration date:
     expiry: datetime
+    # Country / Area
+    country: str | None
 
     @classmethod
     def from_data(
@@ -77,6 +79,7 @@ class Team(BaseModel):
         term_filter: list[str],
         team_ttl: timedelta,
         normalized_terms: dict,
+        areas: dict[int, Any] | None = None,
     ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         # build the list of terms we want to search:
@@ -106,6 +109,10 @@ class Team(BaseModel):
             raise SportsDataError(
                 f"No {normalized_terms[SportTerms.TEAM_ID]} found for {fullname}"
             )
+        # WCS Find the country
+        country = None
+        if areas:
+            country = areas.get(team_data.get(normalized_terms.get("AreaId", "AreaId"), 9999))
         raw_key = team_data["Key"]
         return cls(
             terms=" ".join(terms),
@@ -139,11 +146,22 @@ class Team(BaseModel):
                     ],
                 )
             ),
+            country=country,
         )
 
     def minimal(self) -> dict[str, Any]:
         """Return the very minimal version of the team info used in Events"""
         return dict(key=self.key, name=self.fullname, colors=self.colors)
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a dict form of self (for WCS)"""
+        return dict(
+            key=self.key,
+            global_team_id=self.id,
+            name=self.name,
+            region=self.country,
+            colors=self.colors,
+        )
 
 
 class Event(BaseModel):

@@ -49,8 +49,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NBA,
     NHL,
     MLB,
-    # FIFA,
     UCL,
+    WCS,
     # EPL,
 )
 from merino.utils.http_client import create_http_client
@@ -118,6 +118,8 @@ class SportDataUpdater:
                     sport = UCL(settings)
                 case "MLB":
                     sport = MLB(settings)
+                case "WCS":
+                    sport = WCS(settings, cache=cache)
                 # case "EPL":
                 #    sport = EPL(settings)
                 # case "FIFA":
@@ -228,12 +230,12 @@ class SportDataUpdater:
 
     async def update_widget(self) -> None:
         """Fetch widget based info and store into the cache"""
-        # we only deal with FIFA for now.
-        sport = self.sports.get("FIFA")
+        # we only deal with WCS for now.
+        sport = self.sports.get("WCS")
         if sport is None:
             return
-        sport.store.startup()
-        sport.init_cache(client=self.client)
+        await self.store.startup()
+        await sport.init_cache(client=self.client)
         if not sport.teams:
             sport.update_teams(client=self.client)
         sport.cache_teams()

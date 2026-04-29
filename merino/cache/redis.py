@@ -284,7 +284,7 @@ class RedisAdapter:
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def zremrange(
+    async def zremrangebyscore(
         self,
         key: str,
         min: int,
@@ -306,7 +306,7 @@ class RedisAdapter:
     async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
         """Scan keys for matching values"""
         try:
-            cursor, items = await self.replica(pattern, count=limit)
+            _cursor, items = await self.replica.scan(0, pattern, count=limit)
             return items
         except RedisError as exc:
             raise CacheAdapterError(

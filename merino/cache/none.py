@@ -38,6 +38,7 @@ class NoCacheAdapter:  # pragma: no cover
     async def scard(self, key: str) -> int:  # noqa: D102
         return 0
 
+    # == Hash Functions
     async def hexists(self, key: str, field: str) -> int:
         """Check if a hash field exists"""
         return 0
@@ -62,15 +63,16 @@ class NoCacheAdapter:  # pragma: no cover
         """Return all fields keys and values for a hash key"""
         return None
 
-    async def hdel(self, key: str) -> int:
+    async def hdel(self, key: str, field: str) -> int:
         """Remove a hash key record"""
         return 0
 
-    async def hmset(self, key: str, values: dict[str, Any]) -> dict[str, Any] | None:
+    # Technically, dict[str, Any] works fine, but mypy complains.
+    async def hmset(self, key: str, values: dict[str, Any]) -> int:
         """Return all fields for a hash key"""
-        return None
+        return 0
 
-    async def hsetnx(self, key: str, field: str, value: Any) -> int:
+    async def hsetnx(self, key: str, field: str, value: Any, expiry: int | None = None) -> int:
         """Set field for a hash key if not already present"""
         return 0
 
@@ -119,15 +121,11 @@ class NoCacheAdapter:  # pragma: no cover
         """Remove a field from a zrange key"""
         return 0
 
-    async def zremrange(
+    async def zremrangebyscore(
         self,
         key: str,
         min: int,
         max: int,
     ) -> int:
         """Remove any values that fall between the min and max inclusively"""
-        return 0
-
-    async def setnx(self, key: str, value: Any) -> int:
-        """Set a value if it is not present"""
         return 0

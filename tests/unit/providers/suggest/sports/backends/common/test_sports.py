@@ -1986,6 +1986,15 @@ async def test_wcs_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert "/Teams/fifa" in get_data.call_args_list[0].kwargs["url"]
 
 
+# WCS Widget tests ===
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_init_cache(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """Test WCS cache initialization"""
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_weird_afc_update_events(

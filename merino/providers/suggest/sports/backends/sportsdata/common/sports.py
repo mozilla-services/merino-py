@@ -15,6 +15,8 @@ from zoneinfo import ZoneInfo
 from dynaconf.base import LazySettings
 from httpx import AsyncClient
 
+from merino.cache.redis import RedisAdapter
+from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
@@ -645,9 +647,15 @@ class WCS(Sport):
     cache_prefix: str = "sport:wcs"
     _lock: asyncio.Lock
 
-    def __init__(self, settings: LazySettings, *args, **kwargs):
+    def __init__(
+        self,
+        settings: LazySettings,
+        *args,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
+        **kwargs,
+    ):
         # name = self.__class__.__name__
-        name = "FIFA"
+        name = "fifa"
         super().__init__(
             settings=settings,
             name=name,
@@ -659,6 +667,7 @@ class WCS(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.cache = cache
         self.normalized_terms.update(
             {
                 SportTerms.GAME_ID: "GlobalGameId",
@@ -676,28 +685,30 @@ class WCS(Sport):
 
     async def init_cache(self, client: AsyncClient):
         """Initialize the cache, if needed"""
-        meta_key = self.cache.hgetall(f"{self.cache_prefix}:meta")
+        meta_data = await self.cache.hgetall(f"{self.cache_prefix}:meta")
         # Has it been over a year since we last updated the meta info?
-        updated = await self.cache.hget(meta_key, "meta_updated")
-        if updated and updated < (datetime.now() - timedelta.days(365)):
-            return
+        if meta_data:
+            updated = meta_data.get("meta_updated")
+            if updated and updated < (datetime.now() - timedelta(days=365)):
+                return
         # sigh, `hexpire` is not yet implemented (7.4.0), so manually check and clear any locks
         mylock = int(time())
         meta_key = f"{self.cache_prefix}:meta"
         prev = await self.cache.hget(meta_key, "lock")
         if prev is not None and prev < mylock:
             await self.cache.hdel(meta_key, "lock")
-        if self.cache.hsetnx(meta_key, "lock", mylock) == 1:
+        if await self.cache.hsetnx(meta_key, "lock", mylock) == 1:
             logging.info(f"{LOGGING_TAG} Initializing Cache")
             # We got the lock, we can initialize things.
-            # await self.load_venues(client)
+            # to initial stuff.
+            await self.load_areas(client)
             complete = int(time())
             logging.info(f"{LOGGING_TAG} Marking db initialized as of {complete}")
             # We're done, carry on...
             await self.cache.hsetnx(meta_key, "meta_updated", complete)
-            await self.cache.hdel(meta_key, "lock")
+            await self.cache.hdel(meta_key, field="lock")
 
-    async def load_venues(self, client):
+    async def load_areas(self, client):
         """Fetch and load the countries to the cache"""
         url = f"{self.base_url}/Areas?key={self.api_key}"
         response = await get_data(
@@ -723,72 +734,18 @@ class WCS(Sport):
             }
         ]
         """
-        countries = {}
-        logging.info(f"{LOGGING_TAG} Pre Loading Countries and Venues")
+        self.countries = {}
+        logging.info(f"{LOGGING_TAG} Pre Loading Countries")
         for area in response:
             # build the reverse index to get the country code and id.
-            countries[area["Name"]] = {
-                "id": area["AreaId"],
+            self.countries[area["AreaId"]] = {
+                "name": area["Name"],
                 "code": area["CountryCode"],
             }
-        # Now that we have the long form of the countries, we can get the venues.
-        url = f"{self.base_url}/Venues?key={self.api_key}"
-        response = await get_data(
-            client=client,
-            url=url,
-            ttl=timedelta(weeks=25),
-            cache_dir=self.cache_dir,
-        )
-        # Sample Response
-        """
-        [
-        {
-            "VenueId": 1,
-            "Name": "Vitality Stadium",
-            "Address": "Dean Court",
-            "City": "Bournemouth",
-            "Zip": "BH7 7AF",
-            "Country": "England",
-            "Open": true,
-            "Opened": 2001,
-            "Nickname1": null,
-            "Nickname2": null,
-            "Capacity": 12000,
-            "Surface": "Grass",
-            "GeoLat": 50.73524,
-            "GeoLong": -1.838309
-        },
-        {
-            "VenueId": 2,
-            "Name": "Emirates Stadium",
-            "Address": "Queensland Road",
-            "City": "Islington, Borough of London",
-            "Zip": "N7 7AJ",
-            "Country": "England",
-            "Open": true,
-            "Opened": 2006,
-            "Nickname1": "Arsenal Stadium",
-            "Nickname2": "Ashburton Grove",
-            "Capacity": 60355,
-            "Surface": "Grass",
-            "GeoLat": 51.555074,
-            "GeoLong": -0.108457
-        }
-        ]
-
-        """
-        for venue in response:
-            if venue.get("Open") is True:
-                continue
-            record = {
-                "id": venue["VenueId"],
-                "name": venue["Name"],
-                "city": venue["City"],
-                "country": countries.get(venue["Country"]),
-                "geo": [venue["GeoLat"], venue["GeoLong"]],
-            }
-            # Stuff this into a transaction?
-            await self.cache.hmset(f"{self.cache_prefix}:venue:{venue['VenueId']}", record)
+            # cache this for later, we're gonna need them for teams.
+            await self.cache.hmset(
+                f"{self.cache_prefix}:area:{area['AreaId']}", self.countries[area["AreaId"]]
+            )
 
     async def get_season(self, client: AsyncClient):
         """Get the current season (which is just the current year)"""
