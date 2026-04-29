@@ -17,11 +17,9 @@ from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.protocol import (
     EngagementData,
     FormFactor,
-    KeywordEngagementData,
 )
 from merino.utils.gcs.engagement.filemanager import (
     EngagementFilemanager,
-    KeywordEngagementFilemanager,
 )
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
@@ -100,15 +98,11 @@ class Provider(BaseProvider):
     min_attempted_count: int
     should_check_client_variants: bool
     thompson: ThompsonSampler | None = None
+    engagement_resync_interval_sec: float
     engagement_data: EngagementData
     filemanager: EngagementFilemanager
-    engagement_resync_interval_sec: float
     last_engagement_fetch_at: float
     engagement_cron_task: asyncio.Task
-    keyword_engagement_data: KeywordEngagementData
-    keyword_filemanager: KeywordEngagementFilemanager
-    last_keyword_engagement_fetch_at: float
-    keyword_engagement_cron_task: asyncio.Task
     staleness_cron_task: asyncio.Task
 
     def __init__(
@@ -120,9 +114,8 @@ class Provider(BaseProvider):
         resync_interval_sec: float,
         cron_interval_sec: float,
         engagement_gcs_bucket: str,
-        engagement_blob_name: str,
         engagement_resync_interval_sec: float,
-        keyword_engagement_blob_name: str,
+        engagement_blob_name: str,
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
@@ -140,18 +133,12 @@ class Provider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.min_attempted_count = min_attempted_count
         self.thompson = thompson
-        self.engagement_data = EngagementData(amp={}, amp_aggregated={})
         self.engagement_resync_interval_sec = engagement_resync_interval_sec
+        self.engagement_data = EngagementData(amp={}, amp_aggregated={})
         self.last_engagement_fetch_at = 0
         self.filemanager = EngagementFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
-        )
-        self.keyword_engagement_data = KeywordEngagementData(amp={}, amp_aggregated={})
-        self.last_keyword_engagement_fetch_at = 0
-        self.keyword_filemanager = KeywordEngagementFilemanager(
-            gcs_bucket_path=engagement_gcs_bucket,
-            blob_name=keyword_engagement_blob_name,
         )
         self.should_check_client_variants = should_check_client_variants
         super().__init__(**kwargs)
@@ -190,15 +177,6 @@ class Provider(BaseProvider):
         )
         self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
 
-        await self._fetch_keyword_engagement_data()
-        keyword_engagement_cron_job = cron.Job(
-            name="resync_keyword_engagement_data",
-            interval=self.cron_interval_sec,
-            condition=self._should_fetch_keyword_engagement,
-            task=self._fetch_keyword_engagement_data,
-        )
-        self.keyword_engagement_cron_task = asyncio.create_task(keyword_engagement_cron_job())
-
         staleness_cron_job = cron.Job(
             name="mars_staleness_metric",
             interval=self.cron_interval_sec,
@@ -229,12 +207,6 @@ class Provider(BaseProvider):
         """Check if it should fetch engagement data from GCS."""
         return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
 
-    def _should_fetch_keyword_engagement(self) -> bool:
-        """Check if it should fetch keyword engagement data from GCS."""
-        return (
-            time.time() - self.last_keyword_engagement_fetch_at
-        ) >= self.engagement_resync_interval_sec
-
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         self.suggestion_content = await self.backend.fetch()
@@ -259,27 +231,6 @@ class Provider(BaseProvider):
                 extra={"error": str(e)},
             )
 
-    async def _fetch_keyword_engagement_data(self) -> None:
-        """Fetch keyword engagement data from GCS and store it in memory.
-
-        If the fetch returns no data, `last_keyword_engagement_fetch_at` is not updated
-        so the cron job retries on the next tick.
-        """
-        try:
-            data = await self.keyword_filemanager.get_file()
-            if data is None:
-                logger.warning(
-                    "Keyword engagement data fetch returned None, will retry on next tick"
-                )
-                return
-            self.keyword_engagement_data = KeywordEngagementData.model_validate(data.model_dump())
-            self.last_keyword_engagement_fetch_at = time.time()
-        except Exception as e:
-            logger.warning(
-                "Failed to fetch keyword engagement data from GCS",
-                extra={"error": str(e)},
-            )
-
     def hidden(self) -> bool:  # noqa: D102
         return False
 
@@ -287,13 +238,19 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
-    def _fetch_engagement_metrics(self, suggestion: PyAmpResult) -> EngagementMetrics:
+    def _fetch_engagement_metrics(self, suggestion: PyAmpResult, query: str) -> EngagementMetrics:
         """Fetch engagement metrics for an AMP suggestion."""
         advertiser = suggestion.advertiser.lower()
         engaged, attempted = 1, 1
-        if self.engagement_data and (metrics := self.engagement_data.amp.get(advertiser)):
-            attempted = int(metrics.get("impressions", attempted))
-            engaged = int(metrics.get("clicks", engaged))
+
+        keyword_key = f"{advertiser}/{query}"
+        if entry := self.engagement_data.amp.get(keyword_key):
+            kw_metrics = entry.live or entry.historical
+            if kw_metrics:
+                return EngagementMetrics(
+                    engaged=kw_metrics.clicks, attempted=kw_metrics.impressions
+                )
+
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
     def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
@@ -307,12 +264,12 @@ class Provider(BaseProvider):
         return True
 
     def _select(
-        self, suggestions: list[PyAmpResult], client_variants: list[str]
+        self, suggestions: list[PyAmpResult], client_variants: list[str], query: str
     ) -> PyAmpResult | None:
         def _sampling() -> PyAmpResult | None:
             """Thompson sampling helper function."""
             candidates = [
-                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
+                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion, query))
                 for i, suggestion in enumerate(suggestions)
             ]
 
@@ -365,7 +322,7 @@ class Provider(BaseProvider):
         if (
             self.suggestion_content.index_manager.has(idx_id)
             and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
-            and (res := self._select(suggestions, client_variants))
+            and (res := self._select(suggestions, client_variants, q))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 

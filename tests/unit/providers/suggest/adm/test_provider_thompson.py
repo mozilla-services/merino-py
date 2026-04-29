@@ -13,7 +13,11 @@ from pydantic import HttpUrl
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.optimizers.thompson import ThompsonSampler
-from merino.providers.suggest.adm.backends.protocol import EngagementData
+from merino.providers.suggest.adm.backends.protocol import (
+    EngagementData,
+    KeywordEntry,
+    KeywordMetrics,
+)
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
 
 from tests.unit.types import SuggestionRequestFixture
@@ -78,7 +82,8 @@ async def test_query_with_thompson_dummy_suppresses_suggestion(
     """Provider with a dominant dummy should suppress the suggestion (return empty list)."""
     await adm_with_thompson_dummy.initialize()
     adm_with_thompson_dummy.engagement_data = EngagementData(
-        amp={"something": {}}, amp_aggregated={}
+        amp={"something": KeywordEntry(historical=KeywordMetrics(impressions=1, clicks=0))},
+        amp_aggregated={},
     )
 
     res = await adm_with_thompson_dummy.query(
@@ -302,7 +307,8 @@ async def test_query_with_thompson_dummy_return_suggestion_when_fallback_enabled
     """Provider with a dominant dummy should return fallback suggestion when TS_DRY_RUN is enabled."""
     await adm_with_thompson_dummy.initialize()
     adm_with_thompson_dummy.engagement_data = EngagementData(
-        amp={"something": {}}, amp_aggregated={}
+        amp={"something": KeywordEntry(historical=KeywordMetrics(impressions=1, clicks=0))},
+        amp_aggregated={},
     )
 
     res = await adm_with_thompson_dummy.query(
