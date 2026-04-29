@@ -37,7 +37,7 @@ def _team(
         name=name,
         region=region,
         colors=colors,
-        icon=_icon(key),
+        icon_url=_icon(key),
         group=group,
         eliminated=False,
         standing={"wins": 0, "losses": 0, "draws": 0, "points": 0},

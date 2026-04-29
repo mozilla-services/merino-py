@@ -1,9 +1,9 @@
 """World Cup Soccer match provider."""
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from merino.providers.wcs.fake_data import build_events
-from merino.providers.wcs.protocol import EventInfo, MatchesResponse
+from merino.providers.wcs.protocol import EventInfo, LiveMatchesResponse, MatchesResponse
 
 _WINDOW = timedelta(days=7)
 
@@ -47,6 +47,20 @@ class WcsProvider:
             previous, current, next_ = previous[-limit:], current[:limit], next_[:limit]
 
         return MatchesResponse(previous=previous, current=current, next_=next_)
+
+    def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
+        """Return events currently in progress, sorted ascending by `date`.
+
+        Anchored to the current UTC date so the fake set always exposes its
+        `live` bucket. `team_keys` restricts results to matches with that team
+        on either side.
+        """
+        matches = [
+            event
+            for event in sorted(build_events(datetime.now(UTC).date()), key=lambda e: e.date)
+            if event.status_type == "live" and (team_keys is None or _has_team(event, team_keys))
+        ]
+        return LiveMatchesResponse(matches=matches)
 
 
 def _event_date(event: EventInfo) -> date:
