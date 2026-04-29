@@ -17,13 +17,6 @@ class FormFactor(Enum):
     PHONE = 1
 
 
-class EngagementData(BaseModel):
-    """Model for engagement data file content"""
-
-    amp: dict[str, dict[str, str | int]]
-    amp_aggregated: dict[str, int]
-
-
 class KeywordMetrics(BaseModel):
     """Impressions and clicks for a single time window."""
 

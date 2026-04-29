@@ -19,7 +19,6 @@ from merino.providers.suggest.adm.backends.protocol import (
     KeywordEntry,
     KeywordMetrics,
     SuggestionContent,
-    EngagementData,
 )
 from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.provider import Provider
@@ -34,7 +33,6 @@ def fixture_adm_parameters() -> dict[str, Any]:
         "resync_interval_sec": 10800,
         "cron_interval_sec": 60,
         "engagement_gcs_bucket": "test-engagement-bucket",
-        "engagement_blob_name": "suggest-merino-exports/engagement/latest.json",
         "engagement_resync_interval_sec": 3600,
         "keyword_engagement_blob_name": "suggest-merino-exports/engagement/keyword/latest.json",
     }
@@ -209,34 +207,6 @@ def fixture_thompson_sampler_with_dummy() -> ThompsonSampler:
     )
 
 
-@pytest.fixture(name="engagement_data")
-def fixture_engagement_data() -> EngagementData:
-    """Engagement data for testing."""
-    return EngagementData(
-        amp={
-            "mozilla": {
-                "advertiser": "mozilla",
-                "impressions": 100,
-                "clicks": 5,
-            },
-            "Example.org": {
-                "advertiser": "example.org",
-                "impressions": 10001,
-                "clicks": 10000,
-            },
-            "LowEngagement": {
-                "advertiser": "lowengagement",
-                "impressions": 9999,
-                "clicks": 5,
-            },
-        },
-        amp_aggregated={
-            "impressions": 300,
-            "clicks": 15,
-        },
-    )
-
-
 @pytest.fixture(name="keyword_engagement_data")
 def fixture_keyword_engagement_data() -> KeywordEngagementData:
     """Keyword engagement data for testing."""
@@ -264,7 +234,6 @@ def fixture_adm_with_thompson(
     thompson_backend_mock: Any,
     adm_parameters: dict[str, Any],
     thompson_sampler: ThompsonSampler,
-    engagement_data: EngagementData,
     keyword_engagement_data: KeywordEngagementData,
     statsd_mock: Any,
 ) -> Provider:
@@ -275,7 +244,6 @@ def fixture_adm_with_thompson(
         thompson=thompson_sampler,
         **adm_parameters,
     )
-    provider.engagement_data = engagement_data
     provider.keyword_engagement_data = keyword_engagement_data
     return provider
 
@@ -304,7 +272,6 @@ def fixture_adm_with_thompson_dummy(
 def fixture_adm_with_thompson_dummy_min_attempted_count(
     thompson_backend_mock: Any,
     adm_parameters: dict[str, Any],
-    engagement_data: EngagementData,
     keyword_engagement_data: KeywordEngagementData,
     thompson_sampler_with_dummy: ThompsonSampler,
     statsd_mock: Any,
@@ -319,7 +286,6 @@ def fixture_adm_with_thompson_dummy_min_attempted_count(
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
     )
-    provider.engagement_data = engagement_data
     provider.keyword_engagement_data = keyword_engagement_data
     return provider
 
@@ -347,7 +313,6 @@ def fixture_adm_with_thompson_single_candidate_below_threshold(
     adm_parameters: dict[str, Any],
     thompson_sampler_with_dummy: ThompsonSampler,
     statsd_mock: Any,
-    engagement_data: EngagementData,
 ) -> Provider:
     """Create an AdM Provider with Thompson sampling and a min_attempted_count threshold."""
     provider = Provider(
@@ -356,12 +321,6 @@ def fixture_adm_with_thompson_single_candidate_below_threshold(
         min_attempted_count=1000,
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
-    )
-    provider.engagement_data = EngagementData(
-        amp={
-            "example.org": {"click": 10, "impression": 100},
-        },
-        amp_aggregated={},
     )
     provider.keyword_engagement_data = KeywordEngagementData(
         amp={
