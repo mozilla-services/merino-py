@@ -15,7 +15,7 @@ from merino.optimizers.models import EngagementMetrics, ThompsonConfig
 from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.protocol import (
     AdmBackend,
-    KeywordEngagementData,
+    EngagementData,
     KeywordEntry,
     KeywordMetrics,
     SuggestionContent,
@@ -34,7 +34,7 @@ def fixture_adm_parameters() -> dict[str, Any]:
         "cron_interval_sec": 60,
         "engagement_gcs_bucket": "test-engagement-bucket",
         "engagement_resync_interval_sec": 3600,
-        "keyword_engagement_blob_name": "suggest-merino-exports/engagement/keyword/latest.json",
+        "engagement_blob_name": "suggest-merino-exports/engagement/keyword/latest.json",
     }
 
 
@@ -207,10 +207,10 @@ def fixture_thompson_sampler_with_dummy() -> ThompsonSampler:
     )
 
 
-@pytest.fixture(name="keyword_engagement_data")
-def fixture_keyword_engagement_data() -> KeywordEngagementData:
+@pytest.fixture(name="engagement_data")
+def fixture_engagement_data() -> EngagementData:
     """Keyword engagement data for testing."""
-    return KeywordEngagementData(
+    return EngagementData(
         amp={
             "mozilla/firefox": KeywordEntry(
                 live=KeywordMetrics(impressions=100, clicks=5),
@@ -234,7 +234,7 @@ def fixture_adm_with_thompson(
     thompson_backend_mock: Any,
     adm_parameters: dict[str, Any],
     thompson_sampler: ThompsonSampler,
-    keyword_engagement_data: KeywordEngagementData,
+    engagement_data: EngagementData,
     statsd_mock: Any,
 ) -> Provider:
     """Create an AdM Provider with Thompson sampling enabled for testing."""
@@ -244,7 +244,7 @@ def fixture_adm_with_thompson(
         thompson=thompson_sampler,
         **adm_parameters,
     )
-    provider.keyword_engagement_data = keyword_engagement_data
+    provider.engagement_data = engagement_data
     return provider
 
 
@@ -272,7 +272,7 @@ def fixture_adm_with_thompson_dummy(
 def fixture_adm_with_thompson_dummy_min_attempted_count(
     thompson_backend_mock: Any,
     adm_parameters: dict[str, Any],
-    keyword_engagement_data: KeywordEngagementData,
+    engagement_data: EngagementData,
     thompson_sampler_with_dummy: ThompsonSampler,
     statsd_mock: Any,
 ) -> Provider:
@@ -286,7 +286,7 @@ def fixture_adm_with_thompson_dummy_min_attempted_count(
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
     )
-    provider.keyword_engagement_data = keyword_engagement_data
+    provider.engagement_data = engagement_data
     return provider
 
 
@@ -322,7 +322,7 @@ def fixture_adm_with_thompson_single_candidate_below_threshold(
         thompson=thompson_sampler_with_dummy,
         **adm_parameters,
     )
-    provider.keyword_engagement_data = KeywordEngagementData(
+    provider.engagement_data = EngagementData(
         amp={
             "example.org/firefox": KeywordEntry(
                 live=KeywordMetrics(impressions=100, clicks=10),

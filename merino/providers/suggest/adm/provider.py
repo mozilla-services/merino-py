@@ -15,11 +15,11 @@ from merino.configs import settings
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.protocol import (
+    EngagementData,
     FormFactor,
-    KeywordEngagementData,
 )
 from merino.utils.gcs.engagement.filemanager import (
-    KeywordEngagementFilemanager,
+    EngagementFilemanager,
 )
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
@@ -99,10 +99,10 @@ class Provider(BaseProvider):
     should_check_client_variants: bool
     thompson: ThompsonSampler | None = None
     engagement_resync_interval_sec: float
-    keyword_engagement_data: KeywordEngagementData
-    keyword_filemanager: KeywordEngagementFilemanager
-    last_keyword_engagement_fetch_at: float
-    keyword_engagement_cron_task: asyncio.Task
+    engagement_data: EngagementData
+    filemanager: EngagementFilemanager
+    last_engagement_fetch_at: float
+    engagement_cron_task: asyncio.Task
     staleness_cron_task: asyncio.Task
 
     def __init__(
@@ -115,7 +115,7 @@ class Provider(BaseProvider):
         cron_interval_sec: float,
         engagement_gcs_bucket: str,
         engagement_resync_interval_sec: float,
-        keyword_engagement_blob_name: str,
+        engagement_blob_name: str,
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
@@ -134,11 +134,11 @@ class Provider(BaseProvider):
         self.min_attempted_count = min_attempted_count
         self.thompson = thompson
         self.engagement_resync_interval_sec = engagement_resync_interval_sec
-        self.keyword_engagement_data = KeywordEngagementData(amp={}, amp_aggregated={})
-        self.last_keyword_engagement_fetch_at = 0
-        self.keyword_filemanager = KeywordEngagementFilemanager(
+        self.engagement_data = EngagementData(amp={}, amp_aggregated={})
+        self.last_engagement_fetch_at = 0
+        self.filemanager = EngagementFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
-            blob_name=keyword_engagement_blob_name,
+            blob_name=engagement_blob_name,
         )
         self.should_check_client_variants = should_check_client_variants
         super().__init__(**kwargs)
@@ -168,14 +168,14 @@ class Provider(BaseProvider):
         # reference to it.
         self.cron_task = asyncio.create_task(cron_job())
 
-        await self._fetch_keyword_engagement_data()
-        keyword_engagement_cron_job = cron.Job(
-            name="resync_keyword_engagement_data",
+        await self._fetch_engagement_data()
+        engagement_cron_job = cron.Job(
+            name="resync_engagement_data",
             interval=self.cron_interval_sec,
-            condition=self._should_fetch_keyword_engagement,
-            task=self._fetch_keyword_engagement_data,
+            condition=self._should_fetch_engagement,
+            task=self._fetch_engagement_data,
         )
-        self.keyword_engagement_cron_task = asyncio.create_task(keyword_engagement_cron_job())
+        self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
 
         staleness_cron_job = cron.Job(
             name="mars_staleness_metric",
@@ -203,35 +203,31 @@ class Provider(BaseProvider):
         """Check if it should fetch data from Remote Settings."""
         return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
 
-    def _should_fetch_keyword_engagement(self) -> bool:
-        """Check if it should fetch keyword engagement data from GCS."""
-        return (
-            time.time() - self.last_keyword_engagement_fetch_at
-        ) >= self.engagement_resync_interval_sec
+    def _should_fetch_engagement(self) -> bool:
+        """Check if it should fetch engagement data from GCS."""
+        return (time.time() - self.last_engagement_fetch_at) >= self.engagement_resync_interval_sec
 
     async def _fetch(self) -> None:
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         self.suggestion_content = await self.backend.fetch()
         self.last_fetch_at = time.time()
 
-    async def _fetch_keyword_engagement_data(self) -> None:
-        """Fetch keyword engagement data from GCS and store it in memory.
+    async def _fetch_engagement_data(self) -> None:
+        """Fetch engagement data from GCS and store it in memory.
 
-        If the fetch returns no data, `last_keyword_engagement_fetch_at` is not updated
+        If the fetch returns no data, `last_engagement_fetch_at` is not updated
         so the cron job retries on the next tick.
         """
         try:
-            data = await self.keyword_filemanager.get_file()
+            data = await self.filemanager.get_file()
             if data is None:
-                logger.warning(
-                    "Keyword engagement data fetch returned None, will retry on next tick"
-                )
+                logger.warning("Engagement data fetch returned None, will retry on next tick")
                 return
-            self.keyword_engagement_data = KeywordEngagementData.model_validate(data.model_dump())
-            self.last_keyword_engagement_fetch_at = time.time()
+            self.engagement_data = EngagementData.model_validate(data.model_dump())
+            self.last_engagement_fetch_at = time.time()
         except Exception as e:
             logger.warning(
-                "Failed to fetch keyword engagement data from GCS",
+                "Failed to fetch engagement data from GCS",
                 extra={"error": str(e)},
             )
 
@@ -248,7 +244,7 @@ class Provider(BaseProvider):
         engaged, attempted = 1, 1
 
         keyword_key = f"{advertiser}/{query}"
-        if entry := self.keyword_engagement_data.amp.get(keyword_key):
+        if entry := self.engagement_data.amp.get(keyword_key):
             kw_metrics = entry.live or entry.historical
             if kw_metrics:
                 return EngagementMetrics(
@@ -261,7 +257,7 @@ class Provider(BaseProvider):
         """Return True if Thompson sampling should be applied to this request."""
         if not self.thompson:
             return False
-        if not self.keyword_engagement_data.amp:
+        if not self.engagement_data.amp:
             return False
         if self.should_check_client_variants:
             return ENGAGEMENT_GUIDED_SUGGESTIONS in client_variants

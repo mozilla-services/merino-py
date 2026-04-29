@@ -47,8 +47,8 @@ ORDER BY 1, 4 DESC
     def __init__(self, source_gcp_project: str) -> None:
         self.client = Client(source_gcp_project)
 
-    def _fetch_keyword_rows(self, query: str, label: str) -> list[dict[str, Any]]:
-        """Execute a keyword-level BigQuery query and return parsed rows.
+    def _fetch_rows(self, query: str, label: str) -> list[dict[str, Any]]:
+        """Execute a BigQuery query and return parsed rows.
 
         Args:
             query: The SQL query to execute.
@@ -66,13 +66,11 @@ ORDER BY 1, 4 DESC
             results = query_job.result()
         except GoogleAPIError as e:
             logger.error(
-                "BigQuery query failed while downloading %s keyword-level AMP engagement data",
+                "BigQuery query failed while downloading %s AMP engagement data",
                 label,
                 exc_info=True,
             )
-            raise RuntimeError(
-                f"Failed to fetch {label} keyword-level AMP engagement data from BigQuery"
-            ) from e
+            raise RuntimeError(f"Failed to fetch {label} AMP engagement data from BigQuery") from e
 
         engagement_data: list[dict[str, Any]] = []
 
@@ -91,20 +89,20 @@ ORDER BY 1, 4 DESC
                 continue
 
         if not engagement_data:
-            logger.warning("%s keyword-level AMP engagement query returned no rows", label)
+            logger.warning("%s AMP engagement query returned no rows", label)
 
         return engagement_data
 
-    def download_historical_data_by_keyword(self) -> list[dict[str, Any]]:
-        """Execute the historical keyword-level AMP engagement query."""
-        return self._fetch_keyword_rows(self.KEYWORD_QUERY_HISTORICAL, "historical")
+    def download_historical_data(self) -> list[dict[str, Any]]:
+        """Execute the historical AMP engagement query."""
+        return self._fetch_rows(self.KEYWORD_QUERY_HISTORICAL, "historical")
 
-    def download_live_data_by_keyword(self) -> list[dict[str, Any]]:
-        """Execute the live keyword-level AMP engagement query."""
-        return self._fetch_keyword_rows(self.KEYWORD_QUERY_LIVE, "live")
+    def download_live_data(self) -> list[dict[str, Any]]:
+        """Execute the live AMP engagement query."""
+        return self._fetch_rows(self.KEYWORD_QUERY_LIVE, "live")
 
     @staticmethod
-    def transform_by_keyword(
+    def transform_data(
         historical: list[dict[str, Any]],
         live: list[dict[str, Any]],
     ) -> dict[str, Any]:
@@ -136,7 +134,7 @@ ORDER BY 1, 4 DESC
         return result
 
     @staticmethod
-    def aggregate_by_keyword(_transformed: dict[str, Any]) -> dict[str, int]:
+    def aggregate_data(_transformed: dict[str, Any]) -> dict[str, int]:
         """Aggregate impressions and clicks from keyword-level AMP data."""
         # Not currently consumed — returning zeros until a use case is defined.
         return {"impressions": 0, "clicks": 0}

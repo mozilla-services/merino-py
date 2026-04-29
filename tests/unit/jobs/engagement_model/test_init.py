@@ -18,7 +18,7 @@ def test_upload_engagement_data_success() -> None:
     ]
     wiki_data = {"impressions": 300, "clicks": 20}
 
-    transformed_by_keyword = {
+    transformed_amp_data = {
         "mozilla/firefox": {
             "historical": {"impressions": 100, "clicks": 5},
             "live": {"impressions": 50, "clicks": 3},
@@ -26,13 +26,13 @@ def test_upload_engagement_data_success() -> None:
         "firefox/browser": {"historical": {"impressions": 200, "clicks": 10}},
         "chrome/search": {"live": {"impressions": 80, "clicks": 2}},
     }
-    aggregated_by_keyword = {"impressions": 0, "clicks": 0}
+    aggregated_amp_data = {"impressions": 0, "clicks": 0}
 
     mock_amp_downloader = MagicMock()
-    mock_amp_downloader.download_historical_data_by_keyword.return_value = amp_keyword_historical
-    mock_amp_downloader.download_live_data_by_keyword.return_value = amp_keyword_live
-    mock_amp_downloader.transform_by_keyword.return_value = transformed_by_keyword
-    mock_amp_downloader.aggregate_by_keyword.return_value = aggregated_by_keyword
+    mock_amp_downloader.download_historical_data.return_value = amp_keyword_historical
+    mock_amp_downloader.download_live_data.return_value = amp_keyword_live
+    mock_amp_downloader.transform_data.return_value = transformed_amp_data
+    mock_amp_downloader.aggregate_data.return_value = aggregated_amp_data
 
     mock_wiki_downloader = MagicMock()
     mock_wiki_downloader.download_data.return_value = wiki_data
@@ -73,19 +73,19 @@ def test_upload_engagement_data_success() -> None:
         destination_cdn_hostname="",
     )
 
-    mock_amp_downloader.download_historical_data_by_keyword.assert_called_once()
-    mock_amp_downloader.download_live_data_by_keyword.assert_called_once()
-    mock_amp_downloader.transform_by_keyword.assert_called_once_with(
+    mock_amp_downloader.download_historical_data.assert_called_once()
+    mock_amp_downloader.download_live_data.assert_called_once()
+    mock_amp_downloader.transform_data.assert_called_once_with(
         historical=amp_keyword_historical,
         live=amp_keyword_live,
     )
-    mock_amp_downloader.aggregate_by_keyword.assert_called_once_with(transformed_by_keyword)
+    mock_amp_downloader.aggregate_data.assert_called_once_with(transformed_amp_data)
     mock_wiki_downloader.download_data.assert_called_once()
 
     expected_keyword_payload = {
-        "amp": transformed_by_keyword,
+        "amp": transformed_amp_data,
         "wiki_aggregated": {"impressions": 300, "clicks": 20},
-        "amp_aggregated": aggregated_by_keyword,
+        "amp_aggregated": aggregated_amp_data,
     }
     expected_keyword_content = json.dumps(expected_keyword_payload, indent=2)
 
@@ -112,9 +112,7 @@ def test_upload_engagement_data_logs_error_on_keyword_download_failure() -> None
     mock_settings.engagement.gcs_storage_project = "test-storage-project"
 
     mock_amp_downloader = MagicMock()
-    mock_amp_downloader.download_historical_data_by_keyword.side_effect = RuntimeError(
-        "BigQuery failed"
-    )
+    mock_amp_downloader.download_historical_data.side_effect = RuntimeError("BigQuery failed")
 
     mock_wiki_downloader = MagicMock()
 

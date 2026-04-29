@@ -20,7 +20,7 @@ from merino.providers.suggest.wikipedia.backends.protocol import (
     EngagementData,
     WikipediaBackend,
 )
-from merino.utils.gcs.engagement.filemanager import KeywordEngagementFilemanager
+from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
 from merino.utils import cron
 
@@ -57,7 +57,7 @@ class Provider(BaseProvider):
     score: float
     title_block_list: set[str]
     engagement_data: EngagementData
-    filemanager: KeywordEngagementFilemanager
+    filemanager: EngagementFilemanager
     engagement_resync_interval_sec: float
     cron_interval_sec: float
     last_engagement_fetch_at: float
@@ -89,7 +89,7 @@ class Provider(BaseProvider):
         self.engagement_resync_interval_sec = engagement_resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
         self.last_engagement_fetch_at = 0
-        self.filemanager = KeywordEngagementFilemanager(
+        self.filemanager = EngagementFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
         )

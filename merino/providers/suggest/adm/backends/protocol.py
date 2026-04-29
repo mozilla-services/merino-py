@@ -38,7 +38,7 @@ class KeywordEntry(BaseModel):
         return self
 
 
-class KeywordEngagementData(BaseModel):
+class EngagementData(BaseModel):
     """Model for keyword-level engagement data file content."""
 
     amp: dict[str, KeywordEntry] = {}

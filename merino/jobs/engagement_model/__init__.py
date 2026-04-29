@@ -37,37 +37,31 @@ def upload_engagement_data() -> None:  # pragma: no cover
         amp_data_downloader = AMPDownloader(gcs_bq_project)
         wiki_data_downloader = WikiDownloader(gcs_bq_project)
 
-        amp_keyword_historical: list[dict[str, Any]] = (
-            amp_data_downloader.download_historical_data_by_keyword()
-        )
-        amp_keyword_live: list[dict[str, Any]] = (
-            amp_data_downloader.download_live_data_by_keyword()
-        )
+        amp_historical: list[dict[str, Any]] = amp_data_downloader.download_historical_data()
+        amp_live: list[dict[str, Any]] = amp_data_downloader.download_live_data()
         wiki_data: dict[str, int] = wiki_data_downloader.download_data()
 
-        transformed_amp_by_keyword = amp_data_downloader.transform_by_keyword(
-            historical=amp_keyword_historical,
-            live=amp_keyword_live,
+        transformed_amp_data = amp_data_downloader.transform_data(
+            historical=amp_historical,
+            live=amp_live,
         )
 
-        amp_aggregated_by_keyword = amp_data_downloader.aggregate_by_keyword(
-            transformed_amp_by_keyword
-        )
+        amp_aggregated_data = amp_data_downloader.aggregate_data(transformed_amp_data)
 
-        keyword_payload = {
-            "amp": transformed_amp_by_keyword,
+        payload = {
+            "amp": transformed_amp_data,
             "wiki_aggregated": {
                 "impressions": int(wiki_data["impressions"]),
                 "clicks": int(wiki_data["clicks"]),
             },
-            "amp_aggregated": amp_aggregated_by_keyword,
+            "amp_aggregated": amp_aggregated_data,
         }
 
-        keyword_content = json.dumps(keyword_payload, indent=2)
+        content = json.dumps(payload, indent=2)
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        destination_name_keyword = f"suggest-merino-exports/engagement/keyword/{timestamp}.json"
-        latest_name_keyword = "suggest-merino-exports/engagement/keyword/latest.json"
+        destination_name = f"suggest-merino-exports/engagement/keyword/{timestamp}.json"
+        latest_name = "suggest-merino-exports/engagement/keyword/latest.json"
 
         uploader = GcsUploader(
             destination_gcp_project=gcs_storage_project,
@@ -76,15 +70,15 @@ def upload_engagement_data() -> None:  # pragma: no cover
         )
 
         uploader.upload_content(
-            content=keyword_content,
-            destination_name=destination_name_keyword,
+            content=content,
+            destination_name=destination_name,
             content_type="application/json",
             forced_upload=True,
         )
 
         uploader.upload_content(
-            content=keyword_content,
-            destination_name=latest_name_keyword,
+            content=content,
+            destination_name=latest_name,
             content_type="application/json",
             forced_upload=True,
         )

@@ -15,7 +15,7 @@ from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.adm.backends.protocol import (
     FormFactor,
-    KeywordEngagementData,
+    EngagementData,
     KeywordEntry,
     KeywordMetrics,
 )
@@ -101,9 +101,7 @@ async def test_initialize_remote_settings_failure(
     of provider to return an empty suggestion.
     """
     error_message: str = "The remote server was unreachable"
-    error_message_kw_engagement: str = (
-        "Keyword engagement data fetch returned None, will retry on next tick"
-    )
+    error_message_engagement: str = "Engagement data fetch returned None, will retry on next tick"
     # override default mocked behavior for fetch
     backend_mock.fetch.side_effect = Exception(error_message)
 
@@ -113,14 +111,14 @@ async def test_initialize_remote_settings_failure(
         # Clean up the cron tasks. Unlike other test cases, this action is necessary here
         # since the cron jobs have kicked in as the initial fetch fails.
         adm.cron_task.cancel()
-        adm.keyword_engagement_cron_task.cancel()
+        adm.engagement_cron_task.cancel()
         adm.staleness_cron_task.cancel()
 
     records = filter_caplog(caplog.records, "merino.providers.suggest.adm.provider")
     assert len(records) == 2
     assert records[0].__dict__["error message"] == error_message
     assert adm.last_fetch_at == 0
-    assert records[1].message == error_message_kw_engagement
+    assert records[1].message == error_message_engagement
     # SuggestionContent should be empty as initialize was unsuccessful.
     assert adm.suggestion_content.index_manager.list() == []
     assert adm.suggestion_content.icons == {}
@@ -190,7 +188,7 @@ async def test_query_with_missing_key(
     ]
 
 
-SAMPLE_KEYWORD_ENGAGEMENT_DATA = KeywordEngagementData(
+SAMPLE_ENGAGEMENT_DATA = EngagementData(
     amp={
         "mozilla/firefox": KeywordEntry(
             live=KeywordMetrics(impressions=3333, clicks=88),
@@ -203,24 +201,22 @@ SAMPLE_KEYWORD_ENGAGEMENT_DATA = KeywordEngagementData(
 
 
 @pytest.mark.asyncio
-async def test_fetch_keyword_engagement_data_success(
+async def test_fetch_engagement_data_success(
     mocker: MockerFixture,
     adm: Provider,
 ) -> None:
-    """Test that _fetch_keyword_engagement_data stores data and updates the timestamp on success."""
-    mocker.patch.object(
-        adm.keyword_filemanager, "get_file", return_value=SAMPLE_KEYWORD_ENGAGEMENT_DATA
-    )
+    """Test that _fetch_engagement_data stores data and updates the timestamp on success."""
+    mocker.patch.object(adm.filemanager, "get_file", return_value=SAMPLE_ENGAGEMENT_DATA)
 
-    assert adm.last_keyword_engagement_fetch_at == 0
-    await adm._fetch_keyword_engagement_data()
+    assert adm.last_engagement_fetch_at == 0
+    await adm._fetch_engagement_data()
 
-    assert adm.keyword_engagement_data == SAMPLE_KEYWORD_ENGAGEMENT_DATA
-    assert adm.last_keyword_engagement_fetch_at > 0
+    assert adm.engagement_data == SAMPLE_ENGAGEMENT_DATA
+    assert adm.last_engagement_fetch_at > 0
 
 
 @pytest.mark.asyncio
-async def test_fetch_keyword_engagement_data_returns_none(
+async def test_fetch_engagement_data_returns_none(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     mocker: MockerFixture,
@@ -229,38 +225,36 @@ async def test_fetch_keyword_engagement_data_returns_none(
     """Test that a None return from get_file logs a warning and does not update the timestamp,
     so the cron retries on the next tick.
     """
-    mocker.patch.object(adm.keyword_filemanager, "get_file", return_value=None)
-    original_data = adm.keyword_engagement_data
+    mocker.patch.object(adm.filemanager, "get_file", return_value=None)
+    original_data = adm.engagement_data
 
-    await adm._fetch_keyword_engagement_data()
+    await adm._fetch_engagement_data()
 
     records = filter_caplog(caplog.records, "merino.providers.suggest.adm.provider")
     assert len(records) == 1
     assert "None" in records[0].message
-    assert adm.keyword_engagement_data == original_data
-    assert adm.last_keyword_engagement_fetch_at == 0
+    assert adm.engagement_data == original_data
+    assert adm.last_engagement_fetch_at == 0
 
 
 @pytest.mark.asyncio
-async def test_fetch_keyword_engagement_data_exception(
+async def test_fetch_engagement_data_exception(
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     mocker: MockerFixture,
     adm: Provider,
 ) -> None:
     """Test that an exception from get_file logs a warning and does not update the timestamp."""
-    mocker.patch.object(
-        adm.keyword_filemanager, "get_file", side_effect=Exception("GCS unavailable")
-    )
-    original_data = adm.keyword_engagement_data
+    mocker.patch.object(adm.filemanager, "get_file", side_effect=Exception("GCS unavailable"))
+    original_data = adm.engagement_data
 
-    await adm._fetch_keyword_engagement_data()
+    await adm._fetch_engagement_data()
 
     records = filter_caplog(caplog.records, "merino.providers.suggest.adm.provider")
     assert len(records) == 1
     assert records[0].__dict__["error"] == "GCS unavailable"
-    assert adm.keyword_engagement_data == original_data
-    assert adm.last_keyword_engagement_fetch_at == 0
+    assert adm.engagement_data == original_data
+    assert adm.last_engagement_fetch_at == 0
 
 
 @pytest.mark.asyncio
