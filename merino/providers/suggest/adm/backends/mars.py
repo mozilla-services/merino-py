@@ -286,7 +286,7 @@ class MarsBackend:
             suggestions_list = data["suggestions"]
             if not suggestions_list:
                 logger.warning(
-                    "MARS returned empty suggestions for " f"{country}/{form_factor}",
+                    f"MARS returned empty suggestions for {country}/{form_factor}",
                 )
                 self.metrics_client.increment(
                     "mars.fetch", tags={**tags, "status": "empty_response"}

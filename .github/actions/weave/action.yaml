@@ -15,6 +15,13 @@ runs:
     - uses: actions/setup-python@v5
       with:
         python-version-file: "pyproject.toml"
+    - name: Install Build Dependencies
+    # Needed b/c various dependencies do not have prebuilt wheels
+    # and uv needs to build them from source.
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libxml2-dev libxslt-dev python3-dev libffi-dev
+      shell: bash
     - name: Create Workspace
       run: mkdir -p ${{ inputs.workspace-path }}
       shell: bash

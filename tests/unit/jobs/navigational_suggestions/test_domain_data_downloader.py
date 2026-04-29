@@ -62,22 +62,22 @@ def test_custom_domains(mock_bigquery_client):
     found_domains = {domain["domain"] for domain in domains}
     common_domains = expected_domains.intersection(found_domains)
 
-    assert (
-        common_domains
-    ), f"None of the expected domains {expected_domains} were found in {found_domains}"
+    assert common_domains, (
+        f"None of the expected domains {expected_domains} were found in {found_domains}"
+    )
 
     for domain in domains[:5]:
         assert isinstance(domain, dict), f"Domain should be a dict, got {type(domain)}"
         assert "domain" in domain, f"Missing 'domain' in {domain}"
         assert "categories" in domain, f"Missing 'categories' in {domain}"
         assert "source" in domain, f"Missing 'source' in {domain}"
-        assert (
-            domain["source"] == "custom-domains"
-        ), f"Expected source to be 'custom-domains', got {domain['source']}"
+        assert domain["source"] == "custom-domains", (
+            f"Expected source to be 'custom-domains', got {domain['source']}"
+        )
         assert isinstance(domain["categories"], list), f"Categories should be a list in {domain}"
-        assert all(
-            isinstance(cat, str) for cat in domain["categories"]
-        ), f"All categories should be strings in {domain}"
+        assert all(isinstance(cat, str) for cat in domain["categories"]), (
+            f"All categories should be strings in {domain}"
+        )
 
 
 def test_parse_custom_domain_basic(domain_data_downloader):

@@ -640,9 +640,11 @@ def pick_random_fresh_story(
     """
     fresh_items = list(
         filter(
-            lambda a: a.ranking_data
-            and a.ranking_data.is_fresh
-            and not a.is_story_blocked_for_top_stories(),
+            lambda a: (
+                a.ranking_data
+                and a.ranking_data.is_fresh
+                and not a.is_story_blocked_for_top_stories()
+            ),
             items,
         )
     )

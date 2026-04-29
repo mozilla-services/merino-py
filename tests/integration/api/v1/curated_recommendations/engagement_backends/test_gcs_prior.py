@@ -120,7 +120,7 @@ async def test_gcs_prior_logs_error_for_large_blob(
     await wait_until_prior_is_updated(gcs_prior)
 
     max_size = settings.curated_recommendations.gcs.prior.max_size
-    assert f"Blob '{large_blob.name}' size {max_size+3} exceeds {max_size}" in caplog.text
+    assert f"Blob '{large_blob.name}' size {max_size + 3} exceeds {max_size}" in caplog.text
 
 
 @pytest.mark.asyncio

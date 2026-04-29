@@ -323,11 +323,9 @@ def test_decode_with_multiple_ones_sets_valid_value(model_limited):
         ),
         # middle value: pick index 2 if available, else 1, else 0
         (
-            lambda thresholds: (
-                (lambda i, n: "0" * i + "1" + "0" * (n - 1 - i))(
-                    2 if len(thresholds) >= 2 else (1 if len(thresholds) == 1 else 0),
-                    len(thresholds) + 1,
-                )
+            lambda thresholds: (lambda i, n: "0" * i + "1" + "0" * (n - 1 - i))(
+                2 if len(thresholds) >= 2 else (1 if len(thresholds) == 1 else 0),
+                len(thresholds) + 1,
             ),
             lambda result, key, thresholds: (
                 result[key]

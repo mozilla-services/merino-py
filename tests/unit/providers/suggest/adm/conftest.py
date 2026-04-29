@@ -95,7 +95,7 @@ def fixture_rs_attachment_raw_de() -> str:
                     "mozilla",
                     "mozilla firefox",
                     "mozilla firefox account",
-                    "mozilla firefox accounts" "mozilla firefox accounts de",
+                    "mozilla firefox accountsmozilla firefox accounts de",
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://de.example.org/target/mozfirefoxaccounts",

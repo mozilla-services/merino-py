@@ -94,7 +94,7 @@ class Team(BaseModel):
                         terms.add(lword)
         locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
         name = team_data["Name"]
-        fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
+        fullname = team_data.get("FullName") or f"{locale} {team_data['Name']}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
         team_id = team_data.get(normalized_terms[SportTerms.TEAM_ID])
         if not team_id:
@@ -172,7 +172,7 @@ class Event(BaseModel):
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
-        return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
+        return f"{self.sport}:{self.home_team['key']}:{self.away_team['key']}".lower()
 
     def serialize(self) -> dict[str, Any]:
         """Condition Event for JSON serialization. This converts dates from datetime and
@@ -277,7 +277,7 @@ class Sport:
         self.api_key = api_key or settings.sportsdata.get(
             "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
         )
-        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or "None"}")
+        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or 'None'}")
         self.base_url = base_url
         self.name = name
         self.teams = {}
@@ -383,7 +383,7 @@ class Sport:
         for event_description in data:
             game_id = event_description[self.normalized_terms[SportTerms.GAME_ID]]
             status = GameStatus.parse(event_description["Status"])
-            if status in [GameStatus.NotNecessary, GameStatus.Canceled]:
+            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
                 continue
             # only update the scores.
             if game_id in self.events:
@@ -400,7 +400,9 @@ class Sport:
                 away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
                 home_name = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_KEY])
                 away_name = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_KEY])
-                logger.warning(f"Adding game...{away_name} at {home_name} :: {status}")
+                logger.warning(
+                    f"{LOGGING_TAG} Adding event [{game_id}] between {away_name} at {home_name} :: {status}"
+                )
                 home_score = event_description.get(
                     self.normalized_terms[SportTerms.HOME_TEAM_SCORE]
                 )
@@ -531,7 +533,7 @@ class Sport:
 
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
-            if status == GameStatus.Canceled:
+            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
                 # Cancelled games have no UTC time stamp, so we can't know how recent they were.
                 continue
             try:

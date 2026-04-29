@@ -9,7 +9,7 @@ from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.http_client import create_http_client
 from merino.utils.metrics import get_metrics_client
 
-_particle_provider: Provider
+_particle_provider: Provider | None = None
 
 # Module-level variables as looking up from settings each time is expensive.
 _connect_timeout = settings.games_providers.particle.connect_timeout_sec
@@ -51,5 +51,7 @@ async def init_providers() -> None:
 
 def get_particle_provider() -> Provider:
     """Return the provider for the Particle game"""
-    global _particle_provider
+    if _particle_provider is None:
+        raise ValueError("Particle provider has not been initialized.")
+
     return _particle_provider

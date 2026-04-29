@@ -828,6 +828,6 @@ class TestIntegratedFaviconWorkflow:
         ]
 
         for expected_url in expected_urls:
-            assert any(
-                expected_url in url for url in favicon_urls
-            ), f"Expected URL {expected_url} not found in {favicon_urls}"
+            assert any(expected_url in url for url in favicon_urls), (
+                f"Expected URL {expected_url} not found in {favicon_urls}"
+            )

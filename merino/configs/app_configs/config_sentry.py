@@ -59,8 +59,7 @@ def strip_sensitive_data(event: Event, hint: Hint) -> Event | None:
                     case {"query": _}:
                         vars["query"] = REDACTED_TEXT
                     case {"values": {"q": _}, "solved_result": [{"q": _}, *_]}:
-                        vars["values"]["q"] = REDACTED_TEXT  # type: ignore
-                        # https://github.com/python/mypy/issues/12770
+                        vars["values"]["q"] = REDACTED_TEXT
                         vars["solved_result"][0]["q"] = REDACTED_TEXT
                     case {"values": {"q": _}}:
                         vars["values"]["q"] = REDACTED_TEXT

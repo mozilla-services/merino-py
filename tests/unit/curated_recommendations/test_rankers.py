@@ -628,6 +628,7 @@ class TestCuratedRecommendationsProviderBoostPreferredTopic:
         i = 1
         for topic in topics:
             rec = CuratedRecommendation(
+                experiment_flags=set(),
                 corpusItemId=str(uuid.uuid4()),
                 tileId=MIN_TILE_ID + random.randint(0, 101),
                 receivedRank=i,

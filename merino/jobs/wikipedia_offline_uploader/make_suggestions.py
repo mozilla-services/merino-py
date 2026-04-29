@@ -112,5 +112,5 @@ def make_suggestions(language, want, data) -> list:
     """Construct Suggestions and write to json files."""
     gen = scan(language, data)
     results = list(islice(gen, want))
-    print(f"Total suggestions: {len(results)}\n" f"Total keywords: {len(SEEN_KEYWORDS)}")
+    print(f"Total suggestions: {len(results)}\nTotal keywords: {len(SEEN_KEYWORDS)}")
     return results

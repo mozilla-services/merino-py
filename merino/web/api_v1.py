@@ -2,6 +2,8 @@
 
 import logging
 from asyncio import Task
+from datetime import UTC, datetime
+from datetime import date as Date
 from functools import partial
 from itertools import chain
 from typing import Annotated, Literal
@@ -9,7 +11,7 @@ from typing import Annotated, Literal
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from aiodogstatsd import Client
 from starlette.responses import Response
@@ -43,7 +45,7 @@ from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDa
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
 from merino.providers.manifest import get_provider as get_manifest_provider
-from merino.providers.suggest.base import BaseProvider, SuggestionRequest
+from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
 
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
@@ -74,6 +76,9 @@ from merino.utils.query_processing.normalization.pipeline import tier_a
 from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
 from merino.providers.games.particle.provider import Provider as ParticleProvider
+from merino.providers.wcs import get_provider as get_wcs_provider
+from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse
+from merino.providers.wcs.provider import WcsProvider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -98,12 +103,15 @@ HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 WEATHER_PROVIDER = settings.providers.accuweather.backend
 SOURCE_TYPE = Literal["urlbar", "newtab", "unknown"]
 
+MANIFEST_TTL_SEC = settings.runtime.default_manifest_response_ttl_sec
+
 
 @router.get(
     "/suggest",
     tags=["suggest"],
     summary="Merino suggest endpoint",
     response_model=SuggestResponse,
+    response_model_exclude_none=True,
 )
 async def suggest(
     request: Request,
@@ -326,7 +334,11 @@ async def suggest(
     return build_suggestion_response(client_variants, search_from, suggestions)
 
 
-def build_suggestion_response(client_variants, search_from, suggestions) -> Response:
+def build_suggestion_response(
+    client_variants: str | None,
+    search_from: list[BaseProvider],
+    suggestions: list[BaseSuggestion],
+) -> Response:
     """Build the Suggestion Response."""
     response = SuggestResponse(
         suggestions=suggestions,
@@ -342,8 +354,8 @@ def build_suggestion_response(client_variants, search_from, suggestions) -> Resp
     response_headers = {}
     # could be specific or default
     ttl = get_ttl_for_cache_control_header_for_suggestions(search_from, suggestions)
-    response_headers["Cache-control"] = f"private, max-age={ttl}"
-    return ORJSONResponse(
+    response_headers["Cache-Control"] = f"private, max-age={ttl}"
+    return JSONResponse(
         content=jsonable_encoder(response, exclude_none=True),
         headers=response_headers,
     )
@@ -357,7 +369,7 @@ def build_suggestion_response(client_variants, search_from, suggestions) -> Resp
 )
 async def providers(
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-) -> ORJSONResponse:
+) -> Response:
     """Query Merino for suggestion providers.
 
     This endpoint gives a list of available providers, along with their
@@ -387,7 +399,7 @@ async def providers(
         ProviderResponse(**{"id": id, "availability": provider.availability()})
         for id, provider in active_providers.items()
     ]
-    return ORJSONResponse(content=jsonable_encoder(providers))
+    return JSONResponse(content=jsonable_encoder(providers))
 
 
 @router.post("/curated-recommendations", summary="Curated recommendations for New Tab")
@@ -512,9 +524,7 @@ async def get_manifest(
 
         if manifest_data and manifest_data.domains:
             etag = provider.get_etag()
-            cache_control = (
-                f"private, max-age={settings.runtime.default_manifest_response_ttl_sec}"
-            )
+            cache_control = f"private, max-age={MANIFEST_TTL_SEC}"
 
             if etag is not None and if_none_match == etag:
                 metrics_client.increment("manifest.request.not_modified")
@@ -529,7 +539,7 @@ async def get_manifest(
             if etag is not None:
                 headers["ETag"] = etag
 
-            return ORJSONResponse(
+            return JSONResponse(
                 content=jsonable_encoder(manifest_data),
                 headers=headers,
             )
@@ -555,7 +565,7 @@ async def get_hourly_forecasts(
     city: Annotated[str | None, Query(max_length=QUERY_CHARACTER_MAX)] = None,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WeatherProvider = Depends(get_weather_provider),
-) -> ORJSONResponse:
+) -> Response:
     """Query merino for hourly forecast data.
 
     **Args**:
@@ -606,7 +616,7 @@ async def get_hourly_forecasts(
             # this failure before re-raising, so the breaker will still trip as expected.
             pass
 
-        return ORJSONResponse(
+        return JSONResponse(
             content=jsonable_encoder(hourly_forecasts),
             headers={"Cache-Control": (f"private, max-age={ttl}")},
         )
@@ -621,7 +631,7 @@ async def get_hourly_forecasts(
 async def get_picture_of_the_day(
     request: Request,
     provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
-) -> ORJSONResponse:
+) -> Response:  # pragma: no cover
     """Get the picture of the day."""
     potd = None
     try:
@@ -631,7 +641,8 @@ async def get_picture_of_the_day(
 
     # TTL is temporarily hardcoded as 24h.
     # Will be dynamically calculated in follow up work.
-    return ORJSONResponse(
+
+    return JSONResponse(
         content=jsonable_encoder(potd),
         headers={"Cache-Control": "private, max-age=86400"},
     )
@@ -650,7 +661,7 @@ _games_particle_ttl = settings.games_providers.particle.cache_ttl
 )
 async def get_game_particle(
     request: Request, provider: ParticleProvider = Depends(get_particle_provider)
-) -> ORJSONResponse:
+) -> Response:  # pragma: no cover
     """Return a JSON object containing the public URL for the Particle game."""
     particle_data = None
 
@@ -659,7 +670,65 @@ async def get_game_particle(
     except Exception as ex:
         logger.info(f"Error when fetching Particle game data: {ex.__class__.__name__}")
 
-    return ORJSONResponse(
+    return JSONResponse(
         content=jsonable_encoder(particle_data),
         headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )
+
+
+@router.get(
+    "/wcs/matches",
+    tags=["wcs"],
+    summary="World Cup Soccer matches in the +/- 7 day window around `date`",
+    response_model=MatchesResponse,
+    response_model_by_alias=True,
+)
+async def get_wcs_matches(
+    date: Annotated[
+        Date | None, Query(description="RFC date YYYY-MM-DD; defaults to today UTC.")
+    ] = None,
+    limit: Annotated[int | None, Query(ge=1, le=100)] = None,
+    teams: Annotated[
+        str | None,
+        Query(description="Comma-separated 3-letter team keys, e.g. 'BRA,ARG'."),
+    ] = None,
+    provider: WcsProvider = Depends(get_wcs_provider),
+) -> MatchesResponse:
+    """Return matches grouped into `previous`, `current`, and `next`.
+
+    The window is `+/- 7 days` around `date`. `current` holds matches on `date`,
+    `previous` is older, `next` is newer. Each bucket is sorted ascending by
+    event date. Returns fake-but-plausible data until the vendor backend lands.
+    """
+    target_date = date or datetime.now(UTC).date()
+    team_keys = _parse_team_keys(teams)
+    return provider.get_matches(target_date, limit, team_keys)
+
+
+@router.get(
+    "/wcs/live",
+    tags=["wcs"],
+    summary="World Cup Soccer matches currently in progress",
+    response_model=LiveMatchesResponse,
+)
+async def get_wcs_live(
+    teams: Annotated[
+        str | None,
+        Query(description="Comma-separated 3-letter team keys, e.g. 'BRA,ARG'."),
+    ] = None,
+    provider: WcsProvider = Depends(get_wcs_provider),
+) -> LiveMatchesResponse:
+    """Return matches with `status_type == "live"`, sorted ascending by date.
+
+    Anchored to the current UTC date. Returns fake-but-plausible data until
+    the vendor backend lands.
+    """
+    return provider.get_live_matches(_parse_team_keys(teams))
+
+
+def _parse_team_keys(teams: str | None) -> frozenset[str] | None:
+    """Parse a comma-separated list of team keys into an upper-case frozen set."""
+    if not teams:
+        return None
+    keys = frozenset(t.strip().upper() for t in teams.split(",") if t.strip())
+    return keys or None

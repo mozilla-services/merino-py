@@ -448,9 +448,9 @@ class TestDomainProcessorValidationIntegration:
 
         for domain, suffix, expected in test_cases:
             result = get_second_level_domain(domain, suffix)
-            assert (
-                result == expected
-            ), f"Failed for {domain}, {suffix}: got {result}, expected {expected}"
+            assert result == expected, (
+                f"Failed for {domain}, {suffix}: got {result}, expected {expected}"
+            )
 
     def test_title_validation_integration(self):
         """Test title validation and sanitization integration."""

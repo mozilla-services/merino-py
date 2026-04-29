@@ -12,9 +12,13 @@ def test_upload_engagement_data_success() -> None:
         {"advertiser": "mozilla", "impressions": 100, "clicks": 5},
         {"advertiser": "firefox", "impressions": 200, "clicks": 10},
     ]
-    amp_by_keyword = [
+    amp_keyword_historical = [
         {"advertiser": "mozilla", "query": "firefox", "impressions": 100, "clicks": 5},
         {"advertiser": "firefox", "query": "browser", "impressions": 200, "clicks": 10},
+    ]
+    amp_keyword_live = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 50, "clicks": 3},
+        {"advertiser": "chrome", "query": "search", "impressions": 80, "clicks": 2},
     ]
     wiki_data = {"impressions": 300, "clicks": 20}
 
@@ -23,15 +27,20 @@ def test_upload_engagement_data_success() -> None:
         "firefox": {"advertiser": "firefox", "impressions": 200, "clicks": 10},
     }
     transformed_by_keyword = {
-        "mozilla/firefox": {"historical": {"impressions": 100, "clicks": 5}},
+        "mozilla/firefox": {
+            "historical": {"impressions": 100, "clicks": 5},
+            "live": {"impressions": 50, "clicks": 3},
+        },
         "firefox/browser": {"historical": {"impressions": 200, "clicks": 10}},
+        "chrome/search": {"live": {"impressions": 80, "clicks": 2}},
     }
     aggregated_by_advertiser = {"impressions": 300, "clicks": 15}
-    aggregated_by_keyword = {"impressions": 300, "clicks": 15}
+    aggregated_by_keyword = {"impressions": 0, "clicks": 0}
 
     mock_amp_downloader = MagicMock()
     mock_amp_downloader.download_by_advertiser.return_value = amp_by_advertiser
-    mock_amp_downloader.download_by_keyword.return_value = amp_by_keyword
+    mock_amp_downloader.download_historical_data_by_keyword.return_value = amp_keyword_historical
+    mock_amp_downloader.download_live_data_by_keyword.return_value = amp_keyword_live
     mock_amp_downloader.transform_by_advertiser.return_value = transformed_by_advertiser
     mock_amp_downloader.transform_by_keyword.return_value = transformed_by_keyword
     mock_amp_downloader.aggregate_by_advertiser.return_value = aggregated_by_advertiser
@@ -77,9 +86,13 @@ def test_upload_engagement_data_success() -> None:
     )
 
     mock_amp_downloader.download_by_advertiser.assert_called_once()
-    mock_amp_downloader.download_by_keyword.assert_called_once()
+    mock_amp_downloader.download_historical_data_by_keyword.assert_called_once()
+    mock_amp_downloader.download_live_data_by_keyword.assert_called_once()
     mock_amp_downloader.transform_by_advertiser.assert_called_once_with(amp_by_advertiser)
-    mock_amp_downloader.transform_by_keyword.assert_called_once_with(amp_by_keyword)
+    mock_amp_downloader.transform_by_keyword.assert_called_once_with(
+        historical=amp_keyword_historical,
+        live=amp_keyword_live,
+    )
     mock_amp_downloader.aggregate_by_advertiser.assert_called_once_with(amp_by_advertiser)
     mock_amp_downloader.aggregate_by_keyword.assert_called_once_with(transformed_by_keyword)
     mock_wiki_downloader.download_data.assert_called_once()
@@ -167,7 +180,9 @@ def test_upload_engagement_data_logs_error_on_keyword_download_failure() -> None
     mock_settings.engagement.gcs_storage_project = "test-storage-project"
 
     mock_amp_downloader = MagicMock()
-    mock_amp_downloader.download_by_keyword.side_effect = RuntimeError("BigQuery failed")
+    mock_amp_downloader.download_historical_data_by_keyword.side_effect = RuntimeError(
+        "BigQuery failed"
+    )
 
     mock_wiki_downloader = MagicMock()
 

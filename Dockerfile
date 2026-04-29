@@ -1,4 +1,4 @@
-ARG PYTHON_VERSION=3.13
+ARG PYTHON_VERSION=3.14
 
 FROM python:${PYTHON_VERSION}-slim AS app_base
 
@@ -21,12 +21,13 @@ COPY . $APP_HOME
 
 # Install maxmind db and app dependencies. Clean up build tools after
 RUN apt-get update && \
-    apt-get install --yes build-essential libmaxminddb0 libmaxminddb-dev && \
+    apt-get install --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev libmaxminddb0 libmaxminddb-dev && \
     uv sync --frozen --no-cache --no-dev --no-group load && \
-    apt-get remove --yes build-essential && \
+    apt-get remove --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev && \
     apt-get -q --yes autoremove && \
     apt-get clean && \
-    rm -rf /root/.cache
+    rm -rf /root/.cache && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set the PATH environment variable
 ENV PATH="$APP_HOME/.venv/bin:$PATH"

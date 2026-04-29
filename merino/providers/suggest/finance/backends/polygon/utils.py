@@ -120,7 +120,7 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
             todays_change_percent=todays_change_percent,
             last_trade_price=last_trade_price,
         )
-    except (KeyError, IndexError, TypeError):
+    except KeyError, IndexError, TypeError:
         logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
         return None
 

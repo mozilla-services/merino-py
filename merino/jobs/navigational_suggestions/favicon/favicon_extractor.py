@@ -161,7 +161,7 @@ class FaviconExtractor:
             try:
                 width = int(sizes.lower().split("x")[0])
                 return (2, -width)
-            except (ValueError, IndexError):
+            except ValueError, IndexError:
                 pass
 
         # Priority 3: Everything else

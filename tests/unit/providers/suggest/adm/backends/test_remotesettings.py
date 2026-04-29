@@ -257,7 +257,7 @@ def test_init_invalid_remote_settings_parameter_error(
     values.
     """
     expected_error_value: str = (
-        "The Remote Settings 'server', 'collection' or 'bucket' parameters are not " "specified"
+        "The Remote Settings 'server', 'collection' or 'bucket' parameters are not specified"
     )
     rs_parameters[parameter] = ""
 
