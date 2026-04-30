@@ -2535,6 +2535,35 @@ class TestSections:
         assert "top_stories_section" in sections
         assert len(sections["top_stories_section"]["recommendations"]) > 0
 
+    def test_en_ca_with_small_population_values_returns_result(
+        self, monkeypatch, corpus_provider, client: TestClient
+    ):
+        """Sanity test: EN-CA with small-population dp values returns the model id and content."""
+        monkeypatch.setattr(corpus_provider, "local_model_backend", SuperInferredModel())
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": Locale.EN_CA,
+                "feeds": ["sections"],
+                "inferredInterests": {
+                    "values": ["11", "10", "10"],
+                    "model_id": SMALL_POPULATION_MODEL_ID,
+                },
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        local_model = data["inferredLocalModel"]
+        assert local_model is not None
+        assert local_model["model_id"] == SMALL_POPULATION_MODEL_ID
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+        assert "top_stories_section" in sections
+        assert len(sections["top_stories_section"]["recommendations"]) > 0
+
     def test_topic_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""
         np.random.seed(43)  # NumPy's RNG (used internally by scikit-learn)
