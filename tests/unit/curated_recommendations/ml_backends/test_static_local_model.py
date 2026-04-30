@@ -6,12 +6,17 @@ from types import SimpleNamespace
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
     EXPERIMENT_PRODUCTION_MODEL_ID,
+    MODEL_P_VALUE_SMALL_POPULATION,
+    MODEL_Q_VALUE_SMALL_POPULATION,
     SERVER_V3_MODEL_ID,
+    SMALL_POPULATION_MODEL_ID,
+    THRESHOLDS_SMALL_POPULATION,
     THRESHOLDS_V3_NORMALIZED,
     TIME_ZONE_OFFSET_INFERRED_KEY,
     FakeLocalModelSections,
     SuperInferredModel,
     CTR_SECTION_MODEL_ID,
+    small_population_topics,
 )
 from merino.curated_recommendations.ml_backends.protocol import (
     CohortModelBackend,
@@ -636,9 +641,9 @@ def test_get_with_experiment_and_model_id_correct_branch_returns_model(
 
 
 def test_get_dummy_experiment_name(model_limited):
-    """Control check: an unknown experiment name and no model_id defaults to reduced model."""
+    """An experiment name on the EN-US surface triggers the small_experiment branch."""
     result = model_limited.get(
-        TEST_SURFACE,
+        SurfaceId.NEW_TAB_EN_US.value,
         model_id=None,
         experiment_name="moo",
         experiment_branch="cow",
@@ -651,6 +656,9 @@ def test_get_dummy_experiment_name(model_limited):
     assert TIME_ZONE_OFFSET_INFERRED_KEY in result.model_data.private_features
 
     assert result.model_data.private_features and len(result.model_data.private_features) > 0
+
+    # small_experiment sets a CTR prior strength
+    assert result.model_data.ctr_prior_strength == 100
 
     # Some interests have been removed
     zeroed_interest = result.model_data.interest_vector[Topic.TECHNOLOGY.value]
@@ -667,3 +675,68 @@ def test_get_dummy_experiment_name(model_limited):
     assert result.privacy_overrides.random_content_click_probability_epsilon_micro > 1000
     assert result.privacy_overrides.iv_in_telemetry is False
     assert result.privacy_overrides.local_popular_today_rerank is None
+
+
+def test_non_en_us_surface_with_experiment_name_does_not_use_small_experiment(model_limited):
+    """The small_experiment branch is gated on EN-US: other surfaces fall through to default."""
+    result = model_limited.get(
+        TEST_SURFACE,
+        model_id=None,
+        experiment_name="moo",
+        experiment_branch="cow",
+    )
+    assert result is not None
+    assert result.model_id == SERVER_V3_MODEL_ID
+    # default path: no small_experiment privacy overrides, no ctr prior strength
+    assert result.privacy_overrides is None
+    assert result.model_data.ctr_prior_strength is None
+    # TECHNOLOGY is not zeroed out in the default path
+    tech = result.model_data.interest_vector[Topic.TECHNOLOGY.value]
+    assert tech.thresholds == THRESHOLDS_V3_NORMALIZED
+
+
+def test_get_en_ca_returns_small_population_model(model_limited):
+    """EN-CA surface returns the small-population model with reranking and small thresholds."""
+    result = model_limited.get(SurfaceId.NEW_TAB_EN_CA.value)
+
+    assert isinstance(result, InferredLocalModel)
+    assert result.model_id == SMALL_POPULATION_MODEL_ID
+    assert result.surface_id == SurfaceId.NEW_TAB_EN_CA.value
+
+    # Topic features are restricted to small_population_topics
+    iv = result.model_data.interest_vector
+    for topic in small_population_topics:
+        assert topic in iv
+        assert iv[topic].thresholds == THRESHOLDS_SMALL_POPULATION
+    # Topics from v3_limited_topics that aren't in small_population_topics are NOT included
+    assert Topic.ARTS.value not in iv
+    assert Topic.POLITICS.value not in iv
+
+    # Time zone uses a single split-threshold and small-population p/q
+    tz = iv[TIME_ZONE_OFFSET_INFERRED_KEY]
+    assert len(tz.thresholds) == 1
+    assert tz.diff_p == MODEL_P_VALUE_SMALL_POPULATION
+    assert tz.diff_q == MODEL_Q_VALUE_SMALL_POPULATION
+
+    # include_local_reranking=True -> section features present (excluding topics already in the model)
+    section_keys = set(iv.keys()) - set(small_population_topics) - {TIME_ZONE_OFFSET_INFERRED_KEY}
+    assert len(section_keys) > 0
+
+    # private_features = topics + time zone (no sections)
+    assert result.model_data.private_features == [
+        *small_population_topics,
+        TIME_ZONE_OFFSET_INFERRED_KEY,
+    ]
+
+    # Not a small_experiment, so no privacy overrides and no CTR prior strength
+    assert result.privacy_overrides is None
+    assert result.model_data.ctr_prior_strength is None
+
+
+def test_small_population_model_id_is_supported(model_limited):
+    """SMALL_POPULATION_MODEL_ID is in SUPPORTED_LIVE_MODELS and can be requested."""
+    result = model_limited.get(
+        SurfaceId.NEW_TAB_EN_CA.value, model_id=SMALL_POPULATION_MODEL_ID
+    )
+    assert result is not None
+    assert result.model_id == SMALL_POPULATION_MODEL_ID
