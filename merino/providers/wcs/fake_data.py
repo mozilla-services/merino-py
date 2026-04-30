@@ -5,7 +5,9 @@ response contains two completed (yesterday), two in-progress (today), and
 two upcoming (tomorrow) events.
 """
 
+import json
 from datetime import UTC, date, datetime, time, timedelta
+from pathlib import Path
 
 from pydantic import HttpUrl
 
@@ -56,6 +58,41 @@ _TEAMS: dict[str, TeamInfo] = {
         _team("USA", 90000006, "United States", "USA", ["Navy", "White", "Red"], "Group C"),
     ]
 }
+
+
+def _team_from_json(entry: dict) -> TeamInfo:
+    """Build a TeamInfo from a wcs_teams.json entry."""
+    colors = [
+        color
+        for color in [entry.get("ClubColor1"), entry.get("ClubColor2"), entry.get("ClubColor3")]
+        if color
+    ]
+    return TeamInfo(
+        key=entry["Key"],
+        global_team_id=entry["GlobalTeamId"],
+        name=entry["Name"],
+        region=entry["Key"],
+        colors=colors,
+        icon_url=_icon(entry["Key"]),
+        group=entry["Group"],
+        eliminated=False,
+        standing={"wins": 0, "losses": 0, "draws": 0, "points": 0},
+    )
+
+
+def _load_all_teams() -> list[TeamInfo]:
+    """Load all teams from wcs_teams.json file."""
+    path = Path(__file__).parent.parent.parent / "data" / "wcs_teams.json"
+    with path.open() as f:
+        return [_team_from_json(entry) for entry in json.load(f)]
+
+
+_ALL_TEAMS: list[TeamInfo] = _load_all_teams()
+
+
+def get_all_teams() -> list[TeamInfo]:
+    """Return all tournament teams from the static teams list."""
+    return _ALL_TEAMS
 
 
 # (day_offset, hour_utc, home, away, status_type, home_score, away_score,

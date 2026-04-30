@@ -2,8 +2,13 @@
 
 from datetime import UTC, date, datetime, timedelta
 
-from merino.providers.wcs.fake_data import build_events
-from merino.providers.wcs.protocol import EventInfo, LiveMatchesResponse, MatchesResponse
+from merino.providers.wcs.fake_data import build_events, get_all_teams
+from merino.providers.wcs.protocol import (
+    EventInfo,
+    LiveMatchesResponse,
+    MatchesResponse,
+    TeamsResponse,
+)
 
 _WINDOW = timedelta(days=7)
 
@@ -61,6 +66,10 @@ class WcsProvider:
             if event.status_type == "live" and (team_keys is None or _has_team(event, team_keys))
         ]
         return LiveMatchesResponse(matches=matches)
+
+    def get_teams(self) -> TeamsResponse:
+        """Return all teams participating in the tournament."""
+        return TeamsResponse(teams=get_all_teams())
 
 
 def _event_date(event: EventInfo) -> date:

@@ -60,3 +60,9 @@ class LiveMatchesResponse(BaseModel):
     """
 
     matches: list[EventInfo]
+
+
+class TeamsResponse(BaseModel):
+    """Response payload for `GET /api/v1/wcs/teams`."""
+
+    teams: list[TeamInfo]
