@@ -15,8 +15,10 @@ from merino.optimizers.models import EngagementMetrics, ThompsonConfig
 from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.protocol import (
     AdmBackend,
-    SuggestionContent,
     EngagementData,
+    KeywordEntry,
+    KeywordMetrics,
+    SuggestionContent,
 )
 from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.provider import Provider
@@ -31,9 +33,8 @@ def fixture_adm_parameters() -> dict[str, Any]:
         "resync_interval_sec": 10800,
         "cron_interval_sec": 60,
         "engagement_gcs_bucket": "test-engagement-bucket",
-        "engagement_blob_name": "suggest-merino-exports/engagement/latest.json",
         "engagement_resync_interval_sec": 3600,
-        "keyword_engagement_blob_name": "suggest-merino-exports/engagement/keyword/latest.json",
+        "engagement_blob_name": "suggest-merino-exports/engagement/keyword/latest.json",
     }
 
 
@@ -208,29 +209,23 @@ def fixture_thompson_sampler_with_dummy() -> ThompsonSampler:
 
 @pytest.fixture(name="engagement_data")
 def fixture_engagement_data() -> EngagementData:
-    """Engagement data for testing."""
+    """Keyword engagement data for testing."""
     return EngagementData(
         amp={
-            "mozilla": {
-                "advertiser": "mozilla",
-                "impressions": 100,
-                "clicks": 5,
-            },
-            "Example.org": {
-                "advertiser": "example.org",
-                "impressions": 10001,
-                "clicks": 10000,
-            },
-            "LowEngagement": {
-                "advertiser": "lowengagement",
-                "impressions": 9999,
-                "clicks": 5,
-            },
+            "mozilla/firefox": KeywordEntry(
+                live=KeywordMetrics(impressions=100, clicks=5),
+                historical=KeywordMetrics(impressions=200, clicks=10),
+            ),
+            "example.org/firefox": KeywordEntry(
+                live=KeywordMetrics(impressions=10001, clicks=10000),
+                historical=KeywordMetrics(impressions=110001, clicks=11000),
+            ),
+            "lowengagement/low engagement": KeywordEntry(
+                live=KeywordMetrics(impressions=9999, clicks=5),
+                historical=KeywordMetrics(impressions=19999, clicks=15),
+            ),
         },
-        amp_aggregated={
-            "impressions": 300,
-            "clicks": 15,
-        },
+        amp_aggregated={"impressions": 300, "clicks": 15},
     )
 
 
@@ -318,7 +313,6 @@ def fixture_adm_with_thompson_single_candidate_below_threshold(
     adm_parameters: dict[str, Any],
     thompson_sampler_with_dummy: ThompsonSampler,
     statsd_mock: Any,
-    engagement_data: EngagementData,
 ) -> Provider:
     """Create an AdM Provider with Thompson sampling and a min_attempted_count threshold."""
     provider = Provider(
@@ -330,8 +324,9 @@ def fixture_adm_with_thompson_single_candidate_below_threshold(
     )
     provider.engagement_data = EngagementData(
         amp={
-            "example.org": {"click": 10, "impression": 100},
-        },
-        amp_aggregated={},
+            "example.org/firefox": KeywordEntry(
+                live=KeywordMetrics(impressions=100, clicks=10),
+            )
+        }
     )
     return provider

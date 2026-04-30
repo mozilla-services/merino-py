@@ -413,9 +413,7 @@ class Sport:
                 away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
                 home_name = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_KEY])
                 away_name = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_KEY])
-                logger.warning(
-                    f"{LOGGING_TAG} Adding event [{game_id}] between {away_name} at {home_name} :: {status}"
-                )
+                logger.warning(f"Adding game...{away_name} at {home_name} :: {status}")
                 home_score = event_description.get(
                     self.normalized_terms[SportTerms.HOME_TEAM_SCORE]
                 )
@@ -545,7 +543,7 @@ class Sport:
 
             status = GameStatus.parse(event_description["Status"])
             # Ignore cancelled games.
-            if status in [GameStatus.Canceled, GameStatus.NotNecessary]:
+            if status == GameStatus.Canceled:
                 # Cancelled games have no UTC time stamp, so we can't know how recent they were.
                 continue
             try:
