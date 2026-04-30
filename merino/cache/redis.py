@@ -157,7 +157,7 @@ class RedisAdapter:
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def hkeys(self, key: str) -> list[str] | None:
+    async def hkeys(self, key: str) -> list[bytes] | None:
         """Return all field names for a hash key"""
         try:
             return await self.replica.hkeys(key)
@@ -166,7 +166,7 @@ class RedisAdapter:
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def hvals(self, key: str) -> list[str] | None:
+    async def hvals(self, key: str) -> list[bytes] | None:
         """Return all field names for a hash key"""
         try:
             return await self.replica.hvals(key)
@@ -175,7 +175,7 @@ class RedisAdapter:
                 f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
             ) from exc
 
-    async def hgetall(self, key: str) -> dict[str, Any] | None:
+    async def hgetall(self, key: str) -> dict[bytes, Any] | None:
         """Return all fields keys and values for a hash key"""
         try:
             return await self.replica.hgetall(key)
@@ -194,7 +194,7 @@ class RedisAdapter:
             ) from exc
 
     # Technically, dict[str, Any] works fine, but mypy complains.
-    async def hmset(self, key: str, values: dict[str, Any]) -> int:
+    async def hset(self, key: str, values: dict[str, Any]) -> int:
         """Return all fields for a hash key"""
         try:
             return await self.primary.hset(key, mapping=values)  # type: ignore

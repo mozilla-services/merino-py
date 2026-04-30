@@ -151,17 +151,7 @@ class Team(BaseModel):
 
     def minimal(self) -> dict[str, Any]:
         """Return the very minimal version of the team info used in Events"""
-        return dict(key=self.key, name=self.fullname, colors=self.colors)
-
-    def as_dict(self) -> dict[str, Any]:
-        """Return a dict form of self (for WCS)"""
-        return dict(
-            key=self.key,
-            global_team_id=self.id,
-            name=self.name,
-            region=self.country,
-            colors=self.colors,
-        )
+        return dict(key=self.key, name=self.fullname, colors=self.colors, id=self.id)
 
 
 class Event(BaseModel):

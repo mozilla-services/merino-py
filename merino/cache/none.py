@@ -51,15 +51,15 @@ class NoCacheAdapter:  # pragma: no cover
         """Return values for multiple keys for a hash key"""
         return None
 
-    async def hkeys(self, key: str) -> list[str] | None:
+    async def hkeys(self, key: str) -> list[bytes] | None:
         """Return all field names for a hash key"""
         return None
 
-    async def hvals(self, key: str) -> list[str] | None:
+    async def hvals(self, key: str) -> list[bytes] | None:
         """Return all field names for a hash key"""
         return None
 
-    async def hgetall(self, key: str) -> dict[str, Any] | None:
+    async def hgetall(self, key: str) -> dict[bytes, Any] | None:
         """Return all fields keys and values for a hash key"""
         return None
 
@@ -68,7 +68,7 @@ class NoCacheAdapter:  # pragma: no cover
         return 0
 
     # Technically, dict[str, Any] works fine, but mypy complains.
-    async def hmset(self, key: str, values: dict[str, Any]) -> int:
+    async def hset(self, key: str, values: dict[bytes, Any]) -> int:
         """Return all fields for a hash key"""
         return 0
 

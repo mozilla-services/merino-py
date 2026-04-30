@@ -19,29 +19,13 @@ values:
 | lock | _timestamp_ | initialization lock (Set on NX) |
 | meta_updated | _timestamp_ | timestamp for when the last initialization completed |
 
-### Venue information (optional)
-
-key: **sport:wcs:venue:{ _venueId_ }**
-
-type: Hash
-
-values:
-
-| name | type | description |
-| --- | --- | --- |
-| id  | int | unique venue id |
-| name | str | Long form name of the venue |
-| city | str | Host city for the venue |
-| country | str | ISO3 country code [1] |
-| geo | tuple[float] | Lat/Long location information for the venue |
-
 ### Team information
 
 This is a reference table for team information. (May include standings?)
 
 key: **sport:wcs:team:{ _teamId_ }**
 
-type: Hash
+type: JSON serialized Hash
 
 values:
 
@@ -65,7 +49,7 @@ values:
 
 key: **sport:wcs:event:{ _eventId_ }**
 
-type: Hash
+type: JSON serialized hash
 
 values:
 

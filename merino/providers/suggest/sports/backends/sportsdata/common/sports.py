@@ -5,6 +5,7 @@ This contains the sport specific calls and data formats which are normalized.
 
 import asyncio
 import logging
+import json
 from datetime import datetime, timedelta, timezone
 from time import time
 from typing import Any
@@ -18,6 +19,7 @@ from httpx import AsyncClient
 from merino.cache.redis import RedisAdapter
 from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
@@ -683,25 +685,29 @@ class WCS(Sport):
             }
         )
 
-    async def init_cache(self, client: AsyncClient):
+    async def init_cache(self, client: AsyncClient, force: bool = False):
         """Initialize the cache, if needed"""
         meta_data = await self.cache.hgetall(f"{self.cache_prefix}:meta")
         # Has it been over a year since we last updated the meta info?
-        if meta_data:
+        lock_period = 365
+        if not force and meta_data:
             updated = meta_data.get("meta_updated")
-            if updated and updated < (datetime.now() - timedelta(days=365)):
+            # TODO: change to days.
+            if updated and updated < (datetime.now() - timedelta(days=lock_period)):
                 return
-        # sigh, `hexpire` is not yet implemented (7.4.0), so manually check and clear any locks
-        mylock = int(time())
+        now = datetime.now(tz=timezone.utc)
+        mylock = int((now + timedelta(seconds=30)).timestamp())
         meta_key = f"{self.cache_prefix}:meta"
         prev = await self.cache.hget(meta_key, "lock")
-        if prev is not None and prev < mylock:
+        if force or (prev is not None and int(prev) < int(now.timestamp())):
             await self.cache.hdel(meta_key, "lock")
         if await self.cache.hsetnx(meta_key, "lock", mylock) == 1:
             logging.info(f"{LOGGING_TAG} Initializing Cache")
             # We got the lock, we can initialize things.
             # to initial stuff.
             await self.load_areas(client)
+            await self.update_teams(client)
+            await self.cache_teams()
             complete = int(time())
             logging.info(f"{LOGGING_TAG} Marking db initialized as of {complete}")
             # We're done, carry on...
@@ -743,7 +749,7 @@ class WCS(Sport):
                 "code": area["CountryCode"],
             }
             # cache this for later, we're gonna need them for teams.
-            await self.cache.hmset(
+            await self.cache.hset(
                 f"{self.cache_prefix}:area:{area['AreaId']}", self.countries[area["AreaId"]]
             )
 
@@ -754,7 +760,41 @@ class WCS(Sport):
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
         async with self._lock:
+            # import pdb;pdb.set_trace()
+            team_data = await self.cache.get(f"{self.cache_prefix}:team:{id}")
+            if team_data:
+                team = Team()
+                data = json.loads(team_data)
+                team.id = data.get("id")
+                return team
             return self.teams.get(id)
+
+    async def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
+        """Create the Team entries from the data source
+
+        This presumes that we are receiving data that complies with the SportsData.io
+        `Team` data dictionary (See https://sportsdata.io/developers/data-dictionary/nfl#team)
+
+        If we ever have a different data provider, this will need to be moved to the
+        SportData provider class.
+        """
+        for team_data in data:
+            try:
+                area = await self.cache.hgetall(
+                    f"{self.cache_prefix}:area:{team_data.get('AreaId')}"
+                )
+                team = Team.from_data(
+                    team_data=team_data,
+                    term_filter=self.term_filter,
+                    team_ttl=self.team_ttl,
+                    normalized_terms=self.normalized_terms,
+                )
+                if area:
+                    team.country = area.get(b"code", b"UNK").decode()
+                self.teams[team.id] = team
+            except SportsDataError:
+                pass
+        return self.teams
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
@@ -770,12 +810,45 @@ class WCS(Sport):
             args={"key": self.api_key},
         )
         async with self._lock:
-            self.load_teams_from_source(response)
+            await self.load_teams_from_source(response)
 
+    def team_as_str(self, team: Team) -> str:
+        """Serialize a team as a dictionary for the widget"""
+        # TODO: Populate the eliminated field (from old team info?)
+        return json.dumps(
+            dict(
+                key=team.key,
+                global_team_id=team.id,
+                region=team.key,
+                colors=team.colors,
+                icon=None,
+                group=None,
+                eliminated=False,
+            )
+        )
+
+    async def cache_teams(self):
+        """Write the team data to the redis cache for the widget"""
         # Widget: Store teams to Redis
         for teamId, team in self.teams.items():
-            await self.cache.hmset(f"{self.cache_prefix}:team:{teamId}", team)
+            await self.cache.set(
+                f"{self.cache_prefix}:team:{teamId}", self.team_as_str(team).encode()
+            )
         return self
+
+    def event_as_str(self, event: Event) -> str:
+        """Serialize the event as a dictionary for the widget"""
+        # import pdb; pdb.set_trace()
+        home_team = self.cache.get(f"{self.cache_prefix}:team{event.home.get('id')}")
+        away_team = self.cache.get(f"{self.cache_prefix}:team{event.away.get('id')}")
+        return json.dumps(
+            dict(
+                date=event.date,
+                global_event_id=event.id,
+                home_team=home_team,
+                away_team=away_team,
+            )
+        )
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
@@ -815,11 +888,13 @@ class WCS(Sport):
         # Go through one more time to catch any stray events.
         # TODO: Put these in their own function?
         for event_id, event in list(self.events.items()):
-            self.cache.hmset(f"{self.cache_prefix}:event:{event_id}", event)
+            # import pdb; pdb.set_trace()
+            event_dict = self.event_as_str(event)
+            await self.cache.set(f"{self.cache_prefix}:event:{event_id}", event_dict.encode())
             # Add the event to the zorder for date lookups
-            self.cache.zadd(
+            await self.cache.zadd(
                 f"{self.cache_prefix}:calendar",
-                {f"{self.cache_prefix}:event:{event_id}", int(event.date.timestamp())},
+                {f"{self.cache_prefix}:event:{event_id}": int(event.date.timestamp())},
                 gt=True,
             )
         return self
