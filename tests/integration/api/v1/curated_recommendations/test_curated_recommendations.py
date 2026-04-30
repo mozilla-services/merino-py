@@ -41,6 +41,8 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
     DEFAULT_PRODUCTION_MODEL_ID,
+    SMALL_POPULATION_MODEL_ID,
+    SuperInferredModel,
 )
 
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -2506,6 +2508,32 @@ class TestSections:
             assert local_model is not None
         else:
             assert local_model is None
+
+    def test_en_ca_returns_small_population_model(
+        self, monkeypatch, corpus_provider, client: TestClient
+    ):
+        """Sanity test: EN-CA with empty inferredInterests returns the small-population model id and content."""
+        monkeypatch.setattr(corpus_provider, "local_model_backend", SuperInferredModel())
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": Locale.EN_CA,
+                "feeds": ["sections"],
+                "inferredInterests": {},
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        local_model = data["inferredLocalModel"]
+        assert local_model is not None
+        assert local_model["model_id"] == SMALL_POPULATION_MODEL_ID
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+        assert "top_stories_section" in sections
+        assert len(sections["top_stories_section"]["recommendations"]) > 0
 
     def test_topic_model_interest_vector_most_popular(self, monkeypatch, client: TestClient):
         """Test the curated recommendations endpoint ranks sections accorcding to inferredInterests"""

@@ -658,7 +658,7 @@ def test_get_dummy_experiment_name(model_limited):
     assert result.model_data.private_features and len(result.model_data.private_features) > 0
 
     # small_experiment sets a CTR prior strength
-    assert result.model_data.ctr_prior_strength == 100
+    assert result.model_data.ctr_prior_strength is None
 
     # Some interests have been removed
     zeroed_interest = result.model_data.interest_vector[Topic.TECHNOLOGY.value]
@@ -709,8 +709,11 @@ def test_get_en_ca_returns_small_population_model(model_limited):
         assert topic in iv
         assert iv[topic].thresholds == THRESHOLDS_SMALL_POPULATION
     # Topics from v3_limited_topics that aren't in small_population_topics are NOT included
-    assert Topic.ARTS.value not in iv
-    assert Topic.POLITICS.value not in iv
+    assert Topic.SPORTS.value in result.model_data.private_features
+    assert Topic.SPORTS.value in iv
+
+    assert Topic.ARTS.value not in result.model_data.private_features
+    assert Topic.ARTS.value in iv  # local sections ranking
 
     # Time zone uses a single split-threshold and small-population p/q
     tz = iv[TIME_ZONE_OFFSET_INFERRED_KEY]
@@ -728,15 +731,14 @@ def test_get_en_ca_returns_small_population_model(model_limited):
         TIME_ZONE_OFFSET_INFERRED_KEY,
     ]
 
-    # Not a small_experiment, so no privacy overrides and no CTR prior strength
+    # Not a small_experiment, so no privacy overrides
     assert result.privacy_overrides is None
-    assert result.model_data.ctr_prior_strength is None
+    # We are using newer thresholding method with prior impressions
+    assert result.model_data.ctr_prior_strength > 0
 
 
 def test_small_population_model_id_is_supported(model_limited):
     """SMALL_POPULATION_MODEL_ID is in SUPPORTED_LIVE_MODELS and can be requested."""
-    result = model_limited.get(
-        SurfaceId.NEW_TAB_EN_CA.value, model_id=SMALL_POPULATION_MODEL_ID
-    )
+    result = model_limited.get(SurfaceId.NEW_TAB_EN_CA.value, model_id=SMALL_POPULATION_MODEL_ID)
     assert result is not None
     assert result.model_id == SMALL_POPULATION_MODEL_ID

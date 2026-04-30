@@ -198,6 +198,7 @@ SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 TIME_ZONE_OFFSET_INFERRED_KEY = "timeZoneOffset"
 
 CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXPERIMENT = 14700000
+CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_SMALL_COUNTRY = 9780000
 
 SPECIAL_ALL_TOPIC_KEYWOWRD = "all"
 
@@ -215,7 +216,6 @@ class PrivacyOverridesForFivePercentExperimentUS(PrivacyOverrides):
             "daily_click_event_cap", 2
         )  # Cap of 10 click events per day to reduce risk of outliers
         super().__init__(**data)
-
 
 
 v3_limited_topics = [
@@ -300,7 +300,7 @@ class SuperInferredModel(LocalModelBackend):
         if small_population:
             return InterestVectorConfig(
                 features={},
-                thresholds=[pacific_bucket + 1.1], # split west from east
+                thresholds=[pacific_bucket + 1.1],  # split west from east
                 diff_p=MODEL_P_VALUE_SMALL_POPULATION,
                 diff_q=MODEL_Q_VALUE_SMALL_POPULATION,
             )
@@ -323,9 +323,17 @@ class SuperInferredModel(LocalModelBackend):
         )
 
     def _build_local(
-        self, model_id, surface_id, topics:list[str], small_experiment=False, small_population=False, include_local_reranking=False,
+        self,
+        model_id,
+        surface_id,
+        topics: list[str],
+        small_experiment=False,
+        small_population=False,
+        include_local_reranking=False,
     ) -> InferredLocalModel | None:
-        model_thresholds = THRESHOLDS_SMALL_POPULATION if small_population else THRESHOLDS_V3_NORMALIZED
+        model_thresholds = (
+            THRESHOLDS_SMALL_POPULATION if small_population else THRESHOLDS_V3_NORMALIZED
+        )
         private_features: list[str] | None = None
         section_features = (
             {
@@ -347,15 +355,13 @@ class SuperInferredModel(LocalModelBackend):
                 for a in topics
             }
         else:
-            topic_features = {
-                a: self._get_topic(a, model_thresholds) for a in topics
-            }
+            topic_features = {a: self._get_topic(a, model_thresholds) for a in topics}
 
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=True,
             noise_scale=0.0,
-            ctr_prior_strength=100 if small_experiment else None,
+            ctr_prior_strength=100 if small_population else None,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],
                 relative_weight=[1],
@@ -368,9 +374,10 @@ class SuperInferredModel(LocalModelBackend):
             private_features=private_features,
         )
         # No privacy overrides until this is implemented in Merino
-        privacy_overrides: PrivacyOverrides | None = (
-            PrivacyOverridesForFivePercentExperimentUS() if small_experiment else None
-        )
+        privacy_overrides: PrivacyOverrides | None = None
+        if small_experiment:
+            privacy_overrides = PrivacyOverridesForFivePercentExperimentUS()
+
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
@@ -406,9 +413,18 @@ class SuperInferredModel(LocalModelBackend):
             ## switch on experiment name, not using util because we have string name instead of request object
             if surface_id == SurfaceId.NEW_TAB_EN_US.value and experiment_name is not None:
                 return self._build_local(
-                    EXPERIMENT_PRODUCTION_MODEL_ID, surface_id, topics=v3_limited_topics, small_experiment=True
+                    EXPERIMENT_PRODUCTION_MODEL_ID,
+                    surface_id,
+                    topics=v3_limited_topics,
+                    small_experiment=True,
                 )
         if surface_id == SurfaceId.NEW_TAB_EN_CA.value:
-            return self._build_local(SMALL_POPULATION_MODEL_ID, surface_id, topics=small_population_topics, small_population=True, include_local_reranking=True)
+            return self._build_local(
+                SMALL_POPULATION_MODEL_ID,
+                surface_id,
+                topics=small_population_topics,
+                small_population=True,
+                include_local_reranking=True,
+            )
         else:
             return self._build_local(SERVER_V3_MODEL_ID, surface_id, topics=v3_limited_topics)
