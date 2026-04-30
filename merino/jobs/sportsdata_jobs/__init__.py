@@ -235,10 +235,10 @@ class SportDataUpdater:
         if sport is None:
             return
         await self.store.startup()
-        await sport.init_cache(client=self.client, force=True)
+        await sport.init_cache(client=self.client)  # type: ignore
         if not sport.teams:
             await sport.update_teams(client=self.client)
-        await sport.cache_teams()
+        await sport.cache_teams()  # type: ignore
 
 
 logger = logging.getLogger(__name__)

@@ -173,6 +173,7 @@ def home_team_fixture():
         colors=[],
         updated=datetime(2025, 9, 21, 10, 30, 00),
         expiry=1760502209,
+        country=None,
     )
 
 
@@ -190,6 +191,7 @@ def away_team_fixture():
         colors=[],
         updated=datetime(2025, 9, 22, 10, 30, 00),
         expiry=1760502209,
+        country=None,
     )
 
 

@@ -645,8 +645,12 @@ class MLB(Sport):
 class WCS(Sport):
     """Soccer: World Cup support"""
 
+    ## Right, this class is the general handler for all things World Cup. Ideally, all the other
+    ## jobs, interfaces, and what-not call into this class in order to get things running, fetch
+    ## and process data, or return results.
+
     season: str | None = None
-    cache_prefix: str = "sport:wcs"
+    cache_prefix: str = "sport:wcs"  # Unique prefix for Redis
     _lock: asyncio.Lock
 
     def __init__(
@@ -686,14 +690,27 @@ class WCS(Sport):
         )
 
     async def init_cache(self, client: AsyncClient, force: bool = False):
-        """Initialize the cache, if needed"""
+        """Initialize the Redis cache, if needed
+
+        There are some bits of data that are long lived. In our case, each team
+        and event has a `RegionId` that maps to the Areas returned by `../Areas` endpoint.
+        The Area result contains a LOT of information, but we really only care about
+        the country code, because that's how we will identify a given team.
+
+        There's a STRONG temptation to use the `team.key` since that also appears to map
+        to the country code, but SportsData may not be consistent about that (see the
+        fact that they used the same key code for two different countries).
+
+        """
         meta_data = await self.cache.hgetall(f"{self.cache_prefix}:meta")
+
         # Has it been over a year since we last updated the meta info?
         lock_period = 365
         if not force and meta_data:
-            updated = meta_data.get("meta_updated")
-            # TODO: change to days.
-            if updated and updated < (datetime.now() - timedelta(days=lock_period)):
+            updated = int(meta_data.get(b"meta_updated") or 0)
+            if updated and updated < int(
+                (datetime.now() - timedelta(days=lock_period)).timestamp()
+            ):
                 return
         now = datetime.now(tz=timezone.utc)
         mylock = int((now + timedelta(seconds=30)).timestamp())
@@ -701,6 +718,8 @@ class WCS(Sport):
         prev = await self.cache.hget(meta_key, "lock")
         if force or (prev is not None and int(prev) < int(now.timestamp())):
             await self.cache.hdel(meta_key, "lock")
+
+        # if we can get the lock, initialize the data.
         if await self.cache.hsetnx(meta_key, "lock", mylock) == 1:
             logging.info(f"{LOGGING_TAG} Initializing Cache")
             # We got the lock, we can initialize things.
@@ -714,8 +733,12 @@ class WCS(Sport):
             await self.cache.hsetnx(meta_key, "meta_updated", complete)
             await self.cache.hdel(meta_key, field="lock")
 
-    async def load_areas(self, client):
+    async def load_areas(self, client) -> None:
         """Fetch and load the countries to the cache"""
+        # Fetch the area info, specifically the country code.
+        # Each event and team has an `AreaId` which we will use to map
+        # to the individual country. This should not change, so we only need
+        # to update once, and maybe once per year.
         url = f"{self.base_url}/Areas?key={self.api_key}"
         response = await get_data(
             client=client,
@@ -753,23 +776,39 @@ class WCS(Sport):
                 f"{self.cache_prefix}:area:{area['AreaId']}", self.countries[area["AreaId"]]
             )
 
-    async def get_season(self, client: AsyncClient):
+    async def get_season(self, client: AsyncClient) -> None:
         """Get the current season (which is just the current year)"""
         self.season = str(datetime.now(tz=timezone.utc).year)
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
+        # This may become a high traffic function, so we should try to use
+        # a cached value if at all possible.
+        # Normally, this is only used by the ingestion job, which pre-loads
+        # the teams whenever it's updating events and scores. For the widget,
+        # though, this may be needed more often.
         async with self._lock:
             # import pdb;pdb.set_trace()
+            """
             team_data = await self.cache.get(f"{self.cache_prefix}:team:{id}")
-            if team_data:
-                team = Team()
+            if False:  # team_data:
+                TODO: recreate the Team using the cached data.
                 data = json.loads(team_data)
+                TODO: Fill this out.
+                team = Team(  # type: ignore
+                    id=data.get("id"),
+                    fullname=data.get("name"),
+                    key=data.get("key"),
+                    locale=data.get("country"),
+                    aliases="",
+                    colors=data.get("colors"),
+                )
                 team.id = data.get("id")
                 return team
+            """
             return self.teams.get(id)
 
-    async def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
+    async def async_load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
         """Create the Team entries from the data source
 
         This presumes that we are receiving data that complies with the SportsData.io
@@ -778,11 +817,14 @@ class WCS(Sport):
         If we ever have a different data provider, this will need to be moved to the
         SportData provider class.
         """
+        # this is a specialized version of the normal `load_teams_from_source`.
+        # This should try to
         for team_data in data:
             try:
                 area = await self.cache.hgetall(
                     f"{self.cache_prefix}:area:{team_data.get('AreaId')}"
                 )
+                # TODO: get `eliminated` field from ??
                 team = Team.from_data(
                     team_data=team_data,
                     term_filter=self.term_filter,
@@ -792,6 +834,7 @@ class WCS(Sport):
                 if area:
                     team.country = area.get(b"code", b"UNK").decode()
                 self.teams[team.id] = team
+                # TODO: self.cache_teams() ? individual team cache write?
             except SportsDataError:
                 pass
         return self.teams
@@ -810,45 +853,36 @@ class WCS(Sport):
             args={"key": self.api_key},
         )
         async with self._lock:
-            await self.load_teams_from_source(response)
+            await self.async_load_teams_from_source(response)
 
     def team_as_str(self, team: Team) -> str:
         """Serialize a team as a dictionary for the widget"""
         # TODO: Populate the eliminated field (from old team info?)
-        return json.dumps(
-            dict(
-                key=team.key,
-                global_team_id=team.id,
-                region=team.key,
-                colors=team.colors,
-                icon=None,
-                group=None,
-                eliminated=False,
-            )
-        )
+        serialized = dict(
+            team.__dict__
+        )  # Because BaseModel is clever and helpful instead of dumb and useful.
+        serialized["expiry"] = team.expiry.timestamp()
+        serialized["updated"] = team.updated.timestamp()
+        return json.dumps(serialized)
 
-    async def cache_teams(self):
+    def event_as_str(self, event: Event) -> str:
+        """Serialize an event as a dictionary for the widget"""
+        # import pdb;pdb.set_trace()
+        # TODO: add more team info?
+        serialized = dict(event.__dict__)
+        # munge the dates.
+        serialized["date"] = event.date.timestamp()
+        serialized["expiry"] = event.expiry.timestamp()
+        serialized["updated"] = event.updated.timestamp() if event.updated else None
+        return json.dumps(serialized)
+
+    async def cache_teams(self) -> None:
         """Write the team data to the redis cache for the widget"""
         # Widget: Store teams to Redis
         for teamId, team in self.teams.items():
             await self.cache.set(
                 f"{self.cache_prefix}:team:{teamId}", self.team_as_str(team).encode()
             )
-        return self
-
-    def event_as_str(self, event: Event) -> str:
-        """Serialize the event as a dictionary for the widget"""
-        # import pdb; pdb.set_trace()
-        home_team = self.cache.get(f"{self.cache_prefix}:team{event.home.get('id')}")
-        away_team = self.cache.get(f"{self.cache_prefix}:team{event.away.get('id')}")
-        return json.dumps(
-            dict(
-                date=event.date,
-                global_event_id=event.id,
-                home_team=home_team,
-                away_team=away_team,
-            )
-        )
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
@@ -903,25 +937,16 @@ class WCS(Sport):
         self, team_key: str, start: datetime | None = None, end: datetime | None = None
     ) -> list[Event]:
         """Scan the cache looking for data that matches"""
-        event_ids = await self.cache.scan(f"{self.cache_prefix}:{team_key}:*") or []
-        if datetime:
-            # filter by date-time:
-            start = start or datetime.min
-            end = end or datetime.max
-            event_ids = filter(event_ids, lambda event: start <= event.date <= end)
-        if not event_ids:
-            return []
-        events = []
-        for id in event_ids:
-            event = self.cache.get(id)
-            # TODO: Check for expiry?
-            if event:
-                events.append(event)
-        return events
+        # This will need to fetch all events for a given team
+        # TODO: we might be able to store this as a unique key "...:team_games:{team_key}": [global_event_id,...]
+        # but that feels gross.
+        raise NotImplementedError
 
     async def get_events_by_date(self, start: datetime | None = None, end: datetime | None = None):
         """Get events by start,end"""
         # TODO: build
+        # scan the ssort list for events that fall between the start (min) and end (max)
+        # fetch those event info.
         pass
 
 

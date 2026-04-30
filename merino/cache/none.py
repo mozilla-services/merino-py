@@ -68,7 +68,7 @@ class NoCacheAdapter:  # pragma: no cover
         return 0
 
     # Technically, dict[str, Any] works fine, but mypy complains.
-    async def hset(self, key: str, values: dict[bytes, Any]) -> int:
+    async def hset(self, key: str, values: dict[str, Any]) -> int:
         """Return all fields for a hash key"""
         return 0
 
@@ -129,3 +129,8 @@ class NoCacheAdapter:  # pragma: no cover
     ) -> int:
         """Remove any values that fall between the min and max inclusively"""
         return 0
+
+    # ==
+    async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
+        """Scan keys for matching values"""
+        return []

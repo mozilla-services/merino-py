@@ -1386,6 +1386,7 @@ def _mk_team(key: str, name: str, locale: str, id: int) -> Team:
         colors=["000000"],
         updated=datetime(2025, 9, 22, tzinfo=timezone.utc),
         expiry=datetime(2026, 9, 22, tzinfo=timezone.utc),
+        country=key,
     )
 
 
@@ -1910,7 +1911,7 @@ async def test_wcs_update_events(
     """Test WCS event updates."""
     sport = WCS(settings=settings.providers.sports)
     teams_payload = wcs_teams_payload()
-    sport.load_teams_from_source(teams_payload)
+    await sport.async_load_teams_from_source(teams_payload)
     sport.season = "2025"  # set by update_teams normally
     sport.event_ttl = timedelta(weeks=2)
 
@@ -1963,8 +1964,8 @@ async def test_wcs_update_events(
     assert 2 == get_data.call_count
     for call in get_data.call_args_list:
         assert call.kwargs["url"] in [
-            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2025",
-            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/FIFA/2025-SEP-22",
+            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/fifa/2025",
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2025-SEP-22",
         ]
 
 
