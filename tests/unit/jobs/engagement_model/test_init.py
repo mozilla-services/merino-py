@@ -1,6 +1,7 @@
 """Unit tests for engagement_model CLI."""
 
 import json
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 from merino.jobs.engagement_model import upload_engagement_data
@@ -44,8 +45,11 @@ def test_upload_engagement_data_success() -> None:
     mock_settings.engagement.gcs_storage_bucket = "test-bucket"
     mock_settings.engagement.gcs_storage_project = "test-storage-project"
 
+    fixed_now = datetime(2026, 3, 16, 12, 0, 0, tzinfo=timezone.utc)
+    expected_retain_until = fixed_now + timedelta(days=30)
+
     mock_datetime = MagicMock()
-    mock_datetime.now.return_value.strftime.return_value = "20260316120000"
+    mock_datetime.now.return_value = fixed_now
 
     with (
         patch("merino.jobs.engagement_model.settings", mock_settings),
@@ -95,6 +99,7 @@ def test_upload_engagement_data_success() -> None:
         destination_name="suggest-merino-exports/engagement/keyword/20260316120000.json",
         content_type="application/json",
         forced_upload=True,
+        retain_until=expected_retain_until,
     )
     mock_uploader.upload_content.assert_any_call(
         content=expected_keyword_content,
