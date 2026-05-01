@@ -52,6 +52,7 @@ class ModelData(BaseModel):
     model_type: ModelType
     # Whether to rescale the values based on 1 max value
     rescale: bool
+    ctr_prior_strength: float | None = None
     day_time_weighting: DayTimeWeightingConfig
     # Output key, and inputs for how fields affect it
     interest_vector: dict[str, InterestVectorConfig]

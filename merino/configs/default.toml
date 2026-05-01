@@ -343,11 +343,7 @@ gcs_storage_project = ""
 
 # MERINO_ENGAGEMENT__BLOB_NAME
 # Path within the GCS bucket to the engagement data blob.
-blob_name = "suggest-merino-exports/engagement/latest.json"
-
-# MERINO_ENGAGEMENT__KEYWORD_BLOB_NAME
-# Path within the GCS bucket to the keyword-level engagement data blob.
-keyword_blob_name = "suggest-merino-exports/engagement/keyword/latest.json"
+blob_name = "suggest-merino-exports/engagement/keyword/latest.json"
 
 [default.icon]
 # Subdirectory within bucket for favicons
@@ -455,7 +451,7 @@ hourly_forecast_ttl_sec = 1800
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
 # e.g. ["NFL","NBA","NHL"]
-sports=["NFL","NBA","NHL","MLB"]
+sports=["NFL","NBA","NHL","MLB","UCL"]
 # Index names for Elastic Search.
 event_index="sports-{lang}-event"
 team_index="sports-{lang}-team"

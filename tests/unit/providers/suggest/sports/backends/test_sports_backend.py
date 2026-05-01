@@ -57,9 +57,10 @@ async def test_get_data():
                 url="http://example.org",
                 ttl=ttl,
                 cache_dir="/tmp",  # nosec
+                args={"key": "abc123"},
             )
             # was the URL called?
-            mock_client.get.assert_called_with("http://example.org")
+            mock_client.get.assert_called_with("http://example.org", params={"key": "abc123"})
             # see if it tried to write the file to the cache dir...
             assert (
                 mock_json.call_args_list[0].args[1].buffer.name
@@ -89,11 +90,9 @@ async def test_get_data_with_no_cache_dir():
     ) as mock_client:
         with patch.object(json, "dump") as mock_json:
             await get_data(
-                client=mock_client,
-                url="http://example.org",
-                ttl=ttl,
+                client=mock_client, url="http://example.org", ttl=ttl, args={"key": "abc123"}
             )
-            mock_client.get.assert_called_with("http://example.org")
+            mock_client.get.assert_called_with("http://example.org", params={"key": "abc123"})
             mock_json.assert_not_called()
 
 
@@ -116,9 +115,10 @@ async def test_get_data_handles_permission_error():
                 url="http://example.org",
                 ttl=ttl,
                 cache_dir="/tmp",  # nosec
+                args={"key": "12345"},
             )
             # Permission Error file not read, request need to be made
-            mock_client.get.assert_called_with("http://example.org")
+            mock_client.get.assert_called_with("http://example.org", params={"key": "12345"})
 
 
 @pytest.mark.asyncio

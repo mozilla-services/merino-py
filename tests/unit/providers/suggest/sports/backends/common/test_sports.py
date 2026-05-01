@@ -25,6 +25,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NBA,
     UCL,
     MLB,
+    WCS,
     SPORT_CATEGORY_MAP,
 )
 
@@ -33,34 +34,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
 def mock_client(mocker: MockerFixture) -> AsyncClient:
     """Mock Async Client."""
     return cast(AsyncClient, mocker.Mock(spec=AsyncClient))
-
-
-@pytest.fixture
-def generic_teams_payload() -> list[dict]:
-    """Provide Generic team payload (for US based sports)."""
-    return [
-        {
-            "Key": "HOM",
-            "Name": "Homebodies",
-            "City": "Springfield",
-            "AreaName": "US",
-            "FullName": "Springfield Homebodies",
-            "Nickname1": "Homers",
-            "GlobalTeamId": 98,
-            "PrimaryColor": "000000",
-            "SecondaryColor": "FFFFFF",
-        },
-        {
-            "Key": "AWY",
-            "Name": "Visitors",
-            "City": "Elsewhere",
-            "AreaName": "OS",
-            "GlobalTeamId": 99,
-            "FullName": "Visitors from Elsewhere",
-            "PrimaryColor": "FFFFFF",
-            "SecondaryColor": "000000",
-        },
-    ]
 
 
 # **NOTE**: The provider is not very consistent about data values, or key names
@@ -1094,6 +1067,164 @@ def soccer_score_payload() -> list[dict]:
     ]
 
 
+def wcs_teams_payload() -> list[dict]:
+    """Return WCS sample team data"""
+    # https://api.sportsdata.io/v4/soccer/scores/json/Teams/FIFA?key=
+    # return soccer_teams_payload()
+    return [
+        {
+            "TeamId": 1,
+            "AreaId": 68,
+            "VenueId": 199,
+            "Key": "ENG",
+            "Name": "England",
+            "FullName": "The Football Association",
+            "Active": True,
+            "AreaName": "England",
+            "VenueName": "Wembley Stadium connected by EE",
+            "Gender": "Male",
+            "Type": "National",
+            "Address": None,
+            "City": None,
+            "Zip": None,
+            "Phone": None,
+            "Fax": None,
+            "Website": "https://www.thefa.com",
+            "Email": None,
+            "Founded": 1863,
+            "ClubColor1": "White",
+            "ClubColor2": "Red",
+            "ClubColor3": "Navy Blue",
+            "Nickname1": "The Three Lions",
+            "Nickname2": None,
+            "Nickname3": None,
+            "WikipediaLogoUrl": "https://upload.wikimedia.org/wikipedia/en/b/be/Flag_of_England.svg",
+            "WikipediaWordMarkUrl": None,
+            "GlobalTeamId": 90000001,
+        },
+        {
+            "TeamId": 2,
+            "AreaId": 16,
+            "VenueId": 133,
+            "Key": "ARG",
+            "Name": "Argentina",
+            "FullName": "Asociación del Fútbol Argentino",
+            "Active": True,
+            "AreaName": "Argentina",
+            "VenueName": "Estadio Mâs Monumental",
+            "Gender": "Male",
+            "Type": "National",
+            "Address": None,
+            "City": None,
+            "Zip": None,
+            "Phone": None,
+            "Fax": None,
+            "Website": "http://www.afa.org.ar",
+            "Email": None,
+            "Founded": 1893,
+            "ClubColor1": "Sky Blue",
+            "ClubColor2": "White",
+            "ClubColor3": "Black",
+            "Nickname1": "La Albiceleste",
+            "Nickname2": None,
+            "Nickname3": None,
+            "WikipediaLogoUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg",
+            "WikipediaWordMarkUrl": None,
+            "GlobalTeamId": 90000002,
+        },
+    ]
+
+
+def wcs_schedule_payload() -> list[dict]:
+    """Return WCS sample schedule data"""
+    # https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2026?key=...
+    return [
+        {
+            "GameId": 11111,
+            "RoundId": 1615,
+            "Season": 2026,
+            "SeasonType": 1,
+            "Group": "Group A",
+            "AwayTeamId": 1,
+            "HomeTeamId": 2,
+            "VenueId": 420,
+            "Day": "2026-06-11T00:00:00",
+            "DateTime": "2026-06-11T19:00:00",
+            "Status": "Scheduled",
+            "Week": 1,
+            "Winner": None,
+            "VenueType": "Neutral",
+            "AwayTeamKey": "RSA",
+            "AwayTeamName": "South Africa",
+            "AwayTeamCountryCode": "RSA",
+            "AwayTeamScore": None,
+            "AwayTeamScorePeriod1": None,
+            "AwayTeamScorePeriod2": None,
+            "AwayTeamScoreExtraTime": None,
+            "AwayTeamScorePenalty": None,
+            "HomeTeamKey": "MEX",
+            "HomeTeamName": "Mexico",
+            "HomeTeamCountryCode": "MEX",
+            "HomeTeamScore": None,
+            "HomeTeamScorePeriod1": None,
+            "HomeTeamScorePeriod2": None,
+            "HomeTeamScoreExtraTime": None,
+            "HomeTeamScorePenalty": None,
+            "Updated": "2026-03-23T04:22:23",
+            "UpdatedUtc": "2026-03-23T08:22:23",
+            "GlobalGameId": 90011111,
+            "GlobalAwayTeamId": 90000001,
+            "GlobalHomeTeamId": 90000002,
+            "IsClosed": False,
+            "PlayoffAggregateScore": None,
+        },
+        {
+            "GameId": 22222,
+            "RoundId": 1615,
+            "Season": 2026,
+            "SeasonType": 1,
+            "Group": "Group A",
+            "AwayTeamId": 945,
+            "HomeTeamId": 1209,
+            "VenueId": 418,
+            "Day": "2026-06-12T00:00:00",
+            "DateTime": "2026-06-12T02:00:00",
+            "Status": "Scheduled",
+            "Week": 1,
+            "Winner": None,
+            "VenueType": "Neutral",
+            "AwayTeamKey": "CZE",
+            "AwayTeamName": "Czechia",
+            "AwayTeamCountryCode": "CZE",
+            "AwayTeamScore": None,
+            "AwayTeamScorePeriod1": None,
+            "AwayTeamScorePeriod2": None,
+            "AwayTeamScoreExtraTime": None,
+            "AwayTeamScorePenalty": None,
+            "HomeTeamKey": "KOR",
+            "HomeTeamName": "Korea Republic",
+            "HomeTeamCountryCode": "KOR",
+            "HomeTeamScore": None,
+            "HomeTeamScorePeriod1": None,
+            "HomeTeamScorePeriod2": None,
+            "HomeTeamScoreExtraTime": None,
+            "HomeTeamScorePenalty": None,
+            "Updated": "2026-04-01T04:19:30",
+            "UpdatedUtc": "2026-04-01T08:19:30",
+            "GlobalGameId": 90022222,
+            "GlobalAwayTeamId": 90000002,
+            "GlobalHomeTeamId": 90000001,
+            "IsClosed": False,
+            "PlayoffAggregateScore": None,
+        },
+    ]
+
+
+def wcs_score_payload() -> list[dict]:
+    """Return WCS sample score data"""
+    return soccer_score_payload()
+
+
 @pytest.fixture
 def weird_schedules_payload() -> list[dict]:
     """Schedules payload that are out and in window."""
@@ -1308,7 +1439,7 @@ async def test_nfl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert t1.name == "Cardinals"
     assert get_data.call_count == 2
     assert "/Timeframes/current" in get_data.call_args_list[0].kwargs["url"]
-    assert "/Teams?key=" in get_data.call_args_list[1].kwargs["url"]
+    assert "/Teams" in get_data.call_args_list[1].kwargs["url"]
 
 
 @pytest.mark.asyncio
@@ -1349,8 +1480,7 @@ async def test_nhl_update_teams_with_None_season(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
         return_value={"ApiSeason": None},
     )
-    out = await nhl.update_teams(client=mock_client)
-    assert out is nhl
+    await nhl.update_teams(client=mock_client)
     assert nhl.season is None
     assert nhl.teams == {}
     get_data.assert_called_once()
@@ -1422,8 +1552,7 @@ async def test_ucl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert ucl.season == "2025"
     assert set(ucl.teams.keys()) == {90000001, 90000002}
     assert get_data.call_count == 1
-
-    assert "/Teams/ucl?key=" in get_data.call_args_list[0].kwargs["url"]
+    assert "/Teams/ucl" in get_data.call_args_list[0].kwargs["url"]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
@@ -1574,8 +1703,8 @@ async def test_nhl_update_events(
     assert 2 == get_data.call_count
     for call in get_data.call_args_list:
         assert call.kwargs["url"] in [
-            "https://api.sportsdata.io/v3/nhl/scores/json/SchedulesBasic/2026PRE?key=",
-            "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/2025-SEP-22?key=",
+            "https://api.sportsdata.io/v3/nhl/scores/json/SchedulesBasic/2026PRE",
+            "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/2025-SEP-22",
         ]
 
 
@@ -1643,8 +1772,8 @@ async def test_nba_update_events(
     assert 2 == get_data.call_count
     for call in get_data.call_args_list:
         assert call.kwargs["url"] in [
-            "https://api.sportsdata.io/v3/nba/scores/json/SchedulesBasic/2026PRE?key=",
-            "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2025-SEP-22?key=",
+            "https://api.sportsdata.io/v3/nba/scores/json/SchedulesBasic/2026PRE",
+            "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2025-SEP-22",
         ]
 
 
@@ -1655,10 +1784,10 @@ async def test_mlb_update_events(
     mocker: MockerFixture,
 ) -> None:
     """Test MLB event updates."""
-    sport = MLB(settings=settings.providers.sports)
-    sport.load_teams_from_source(mlb_teams_payload())
-    sport.season = "2026PRE"
-    sport.event_ttl = timedelta(weeks=2)
+    mlb = MLB(settings=settings.providers.sports)
+    mlb.load_teams_from_source(mlb_teams_payload())
+    mlb.season = "2026PRE"
+    mlb.event_ttl = timedelta(weeks=2)
 
     schedules_payload = mlb_schedule_payload()
     scores_payload = mlb_score_payload()
@@ -1706,9 +1835,9 @@ async def test_mlb_update_events(
         side_effect=[schedules_payload, scores_payload],
     )
 
-    await sport.update_events(client=mock_client)
-    assert 11111 in sport.events and 22222 not in sport.events
-    assert sport.events[11111].status == GameStatus.Final
+    await mlb.update_events(client=mock_client)
+    assert 11111 in mlb.events and 22222 not in mlb.events
+    assert mlb.events[11111].status == GameStatus.Final
     assert get_data.call_count == 2
 
 
@@ -1769,7 +1898,92 @@ async def test_ucl_update_events(
 
     await ucl.update_events(client=mock_client)
     assert 90011111 in ucl.events and 90022222 not in ucl.events
-    assert "/SchedulesBasic/UCL/2025?key=" in get_data.call_args_list[0].kwargs["url"]
+    assert "/SchedulesBasic/UCL/2025" in get_data.call_args_list[0].kwargs["url"]
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Test WCS event updates."""
+    sport = WCS(settings=settings.providers.sports)
+    teams_payload = wcs_teams_payload()
+    sport.load_teams_from_source(teams_payload)
+    sport.season = "2025"  # set by update_teams normally
+    sport.event_ttl = timedelta(weeks=2)
+
+    schedules_payload = wcs_schedule_payload()
+    scores_payload = wcs_score_payload()
+    within = "2025-09-22T13:30:00"  # UTC
+    outside = "2026-01-22T13:30:00"
+    schedules_payload[0].update(
+        {
+            "Date": within,
+            "Day": within,
+            "DateTime": within,
+            "Status": "Final",
+        }
+    )
+    schedules_payload[1].update(
+        {
+            "Date": outside,
+            "Day": outside,
+            "DateTime": outside,
+            "Status": "Scheduled",
+        }
+    )
+    scores_payload[0].update(
+        {
+            "Date": within,
+            "Day": within,
+            "DateTime": within,
+            "Status": "Final",
+        }
+    )
+    scores_payload[1].update(
+        {
+            "Date": outside,
+            "Day": outside,
+            "DateTime": outside,
+            "Status": "Scheduled",
+        }
+    )
+
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[schedules_payload, scores_payload],
+    )
+
+    global_offset = 90000000
+    await sport.update_events(client=mock_client)
+    assert global_offset + 11111 in sport.events and global_offset + 22222 not in sport.events
+    assert sport.events[global_offset + 11111].status == GameStatus.Final
+    assert 2 == get_data.call_count
+    for call in get_data.call_args_list:
+        assert call.kwargs["url"] in [
+            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2025",
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/FIFA/2025-SEP-22",
+        ]
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """Test WCS team updates."""
+    sport = WCS(settings=settings.providers.sports)
+    teams_payload = wcs_teams_payload()
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[teams_payload],  # called twice per code
+    )
+    await sport.update_teams(client=mock_client)
+    assert sport.season == "2025"
+    assert set(sport.teams.keys()) == {90000001, 90000002}
+    assert get_data.call_count == 1
+
+    assert "/Teams/fifa" in get_data.call_args_list[0].kwargs["url"]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
@@ -1791,6 +2005,32 @@ async def test_weird_afc_update_events(
     )
     await sport.update_events(client=mock_client)
     assert not sport.events
+
+
+@pytest.mark.asyncio
+async def test_sport_no_season(mock_client: AsyncClient, mocker: MockerFixture):
+    """Test sport events with no season"""
+    sport = NFL(settings=settings.providers.sports)
+    timeframe = [
+        {
+            "SeasonType": 4,
+            "Season": 2025,
+            "Week": None,
+            "Name": "Draft",
+            "ApiSeason": "2025REG",
+            "ApiWeek": None,
+            "StartDate": "2025-09-17T00:00:00",
+            "EndDate": "2025-09-23T23:59:59",
+        }
+    ]
+    _get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[timeframe],
+    )
+
+    await sport.get_season(client=mock_client)
+
+    assert sport.week is None
 
 
 def test_sport_subclasses_have_category_mapping() -> None:
