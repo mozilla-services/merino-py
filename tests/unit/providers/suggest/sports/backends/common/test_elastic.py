@@ -301,6 +301,20 @@ async def test_sports_search_event_hits(
                 )
             },
         },
+        {
+            "_score": 3.1,  # No date (skipped) game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "NotNecessary",
+                        "label": "psi",
+                        "date": None,
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
     ]
     es_client.search.return_value = {"hits": {"total": {"value": 1}, "hits": hits}}
 

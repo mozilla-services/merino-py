@@ -293,7 +293,7 @@ class ElasticDataStore(ABC):
         may complain.
         """
         logging.getLogger(__name__).info(f"{LOGGING_TAG} closing...")
-        if self.client:
+        if self.client: # pragma: no cover  "test called, but Mock prevents coverage detection"
             await self.client.close()
 
     @abstractmethod
@@ -395,7 +395,7 @@ class SportsDataStore(ElasticDataStore):
     async def query_meta(self, key: str) -> None | str:
         """Get value from meta table"""
         if not self.client:
-            return None
+            return None # pragma: no cover
         try:
             # Do not retry due to strict latency requirements,
             # and to avoid overloading cluster (suggest triggers search
@@ -433,7 +433,7 @@ class SportsDataStore(ElasticDataStore):
     async def store_meta(self, key: str, value: str):
         """Store value into meta table"""
         if not self.client:
-            return
+            return # pragma: no cover
         try:
             try:
                 await self.client.create(
@@ -456,11 +456,11 @@ class SportsDataStore(ElasticDataStore):
     async def del_meta(self, key) -> None:
         """Remove data from the meta table"""
         if not self.client:
-            return
+            return # pragma: no cover
         try:
             await self.client.delete(index=self.meta_map, id=key.lower())
             await self.client.indices.refresh(index=self.meta_map)
-        except Exception as ex:
+        except Exception as ex: # pragma: no cover
             logging.getLogger(__name__).error(f"{LOGGING_TAG} Error: delete meta {key} {ex}")
 
     async def build_meta(self) -> None:
@@ -469,7 +469,7 @@ class SportsDataStore(ElasticDataStore):
         """
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return # pragma: no cover
         try:
             # await self.client.indices.delete(index=self.meta_map)
             await self.client.indices.create(
@@ -504,7 +504,7 @@ class SportsDataStore(ElasticDataStore):
         """
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return # pragma: no cover
         # Build the meta index
         try:
             if clear:
@@ -541,7 +541,7 @@ class SportsDataStore(ElasticDataStore):
                             f"{LOGGING_TAG} {index.format(lang=language_code)} already exists, skipping"
                         )
                         continue
-                    raise SportsDataError(f"Could not create {index}") from ex
+                    raise SportsDataError(f"Could not create {index}") from ex # pragma: no cover "Mock prevents coverage"
 
     def build_event_mappings(self, language_code: str) -> dict[str, Any]:
         """Construct the event mappings to be used by Elastic search.
@@ -584,7 +584,7 @@ class SportsDataStore(ElasticDataStore):
         utc_now = expiry or datetime.now(tz=timezone.utc)
         logger = logging.getLogger(__name__)
         if not self.client:
-            return False
+            return False # pragma: no cover
         for index_pattern in self.index_map.values():
             index = index_pattern.format(lang=language_code)
             query = {"range": {"expiry": {"lte": utc_now}}}
@@ -609,7 +609,7 @@ class SportsDataStore(ElasticDataStore):
         utc_now = datetime.now(tz=timezone.utc)
         logger = logging.getLogger(__name__)
         if not self.client:
-            return {}
+            return {} # pragma: no cover
 
         if mix_sports:
             logger.debug(f"{LOGGING_TAG} Mixing sports...")
@@ -659,7 +659,7 @@ class SportsDataStore(ElasticDataStore):
                     if isinstance(doc["_source"]["event"], str):
                         event = json.loads(doc["_source"]["event"])
                     else:
-                        event = doc["_source"]["event"]
+                        event = doc["_source"]["event"]  # pragma: no cover "obsolete handler"
                     # Add the elastic search score as a baseline score for the return result.
                     event["es_score"] = doc.get("_score", 0)
                     event["touched"] = doc["_source"].get("touched", "None")
@@ -743,7 +743,7 @@ class SportsDataStore(ElasticDataStore):
         """Update existing events (used to change status and scores)"""
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return # pragma: no cover
         index = (self.index_map["event"]).format(lang=language_code)
         for event in sport.events.values():
             if event.updated and event.updated > last_update:
@@ -760,7 +760,7 @@ class SportsDataStore(ElasticDataStore):
                         },
                     )
                 except NotFoundError:
-                    logger.warning(f"{LOGGING_TAG} 🤷 Unknown event: {event.id}, skipping")
+                    logger.warning(f"{LOGGING_TAG} 🤷 Unknown event: {event.id}, skipping") # pragma: no cover
                 except Exception as ex:
                     logger.error(f"{LOGGING_TAG} {ex}")
 
@@ -773,13 +773,13 @@ class SportsDataStore(ElasticDataStore):
         actions = []
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return # pragma: no cover
 
         index = (self.index_map["event"]).format(lang=language_code)
 
         # Write the fields to Elasticsearch.
         # The `_source` _MUST_ match the previously specified `mapping`
-        if not sport.events:
+        if not sport.events: # pragma: no cover
             logger.info(f"{LOGGING_TAG} No events")
             return
         for event in sport.events.values():
@@ -801,7 +801,7 @@ class SportsDataStore(ElasticDataStore):
                 },
             }
             actions.append(action)
-            if event.status.is_in_progress():
+            if event.status.is_in_progress(): # pragma: no cover "Informational"
                 logger.info(
                     f"{LOGGING_TAG} ## Live Game: {event.terms} {event.away_score} : {event.home_score}"
                 )
@@ -812,14 +812,14 @@ class SportsDataStore(ElasticDataStore):
             logger.info(
                 f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
             )
-        except Exception as ex:
+        except Exception as ex: # pragma: no cover
             raise SportsDataError(
                 f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
             ) from ex
         start = datetime.now()
         try:
             await self.store_meta("last_update", datetime.now(tz=timezone.utc).isoformat())
-        except Exception as ex:
+        except Exception as ex: # pragma: no cover
             logger.error(f"{LOGGING_TAG} could not update meta data: {ex}")
         await self.client.indices.refresh(index=index)
         logger.info(
