@@ -513,7 +513,7 @@ class UCL(Sport):
         for _id, event in list(self.events.items()):
             day = event.date.strftime("%Y-%b-%d").upper()
             if not event.status.is_scheduled() and day not in date_list:
-                url = f"{self.base_url}/ScoresBasic/{self.name}/{day}?key={self.api_key}"
+                url = f"{self.base_url}/ScoresBasic/{self.name}/{day}"
                 response = await get_data(
                     client=client,
                     url=url,
