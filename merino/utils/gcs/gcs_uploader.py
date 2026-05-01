@@ -1,6 +1,7 @@
 """Uploads Content to GCS"""
 
 import logging
+from datetime import datetime
 from typing import Callable
 from urllib.parse import urljoin
 
@@ -50,6 +51,7 @@ class GcsUploader(BaseContentUploader):
         destination_name: str,
         content_type: str = "text/plain",
         forced_upload: bool = False,
+        custom_time: datetime | None = None,
     ) -> Blob:
         """Upload the content then return the blob."""
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
@@ -63,6 +65,10 @@ class GcsUploader(BaseContentUploader):
                     content_type=content_type,
                 )
                 destination_blob.make_public()
+
+                if custom_time is not None:
+                    destination_blob.custom_time = custom_time
+                    destination_blob.patch()
 
         except Exception as e:
             logger.error(f"Exception {e} occurred while uploading {destination_name}")
