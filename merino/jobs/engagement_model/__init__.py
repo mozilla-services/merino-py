@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 import typer
@@ -63,8 +63,6 @@ def upload_engagement_data() -> None:  # pragma: no cover
         timestamp = now.strftime("%Y%m%d%H%M%S")
         destination_name = f"suggest-merino-exports/engagement/keyword/{timestamp}.json"
         latest_name = "suggest-merino-exports/engagement/keyword/latest.json"
-        retain_until = now + timedelta(days=30)
-
         uploader = GcsUploader(
             destination_gcp_project=gcs_storage_project,
             destination_bucket_name=gcs_storage_bucket,
@@ -76,7 +74,7 @@ def upload_engagement_data() -> None:  # pragma: no cover
             destination_name=destination_name,
             content_type="application/json",
             forced_upload=True,
-            retain_until=retain_until,
+            custom_time=now,
         )
 
         uploader.upload_content(

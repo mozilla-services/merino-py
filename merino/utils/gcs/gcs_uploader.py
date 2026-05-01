@@ -51,7 +51,7 @@ class GcsUploader(BaseContentUploader):
         destination_name: str,
         content_type: str = "text/plain",
         forced_upload: bool = False,
-        retain_until: datetime | None = None,
+        custom_time: datetime | None = None,
     ) -> Blob:
         """Upload the content then return the blob."""
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
@@ -66,9 +66,8 @@ class GcsUploader(BaseContentUploader):
                 )
                 destination_blob.make_public()
 
-                if retain_until is not None:
-                    destination_blob.retention.mode = "Unlocked"
-                    destination_blob.retention.retain_until_time = retain_until
+                if custom_time is not None:
+                    destination_blob.custom_time = custom_time
                     destination_blob.patch()
 
         except Exception as e:

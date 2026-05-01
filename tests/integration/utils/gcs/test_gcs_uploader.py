@@ -17,10 +17,10 @@ def gcs_uploader(gcs_storage_client, gcs_storage_bucket) -> GcsUploader:
     )
 
 
-def test_upload_content_without_retain_until(gcs_uploader, gcs_storage_bucket):
-    """Test that blob is uploaded and accessible when retain_until is not set."""
+def test_upload_content_without_custom_time(gcs_uploader, gcs_storage_bucket):
+    """Test that blob is uploaded and accessible when custom_time is not set."""
     content = b"hello world"
-    blob_name = "no_retain.txt"
+    blob_name = "no_custom_time.txt"
 
     result = gcs_uploader.upload_content(content, blob_name)
 
@@ -31,13 +31,13 @@ def test_upload_content_without_retain_until(gcs_uploader, gcs_storage_bucket):
     assert uploaded.download_as_bytes() == content
 
 
-def test_upload_content_with_retain_until(gcs_uploader, gcs_storage_bucket):
-    """Test that blob is uploaded and retain_until_time is set on the blob when retain_until is provided."""
-    content = b"retained content"
-    blob_name = "retain_until.txt"
-    retain_time = datetime(2030, 6, 1, tzinfo=timezone.utc)
+def test_upload_content_with_custom_time(gcs_uploader, gcs_storage_bucket):
+    """Test that blob is uploaded and custom_time is set on the blob when custom_time is provided."""
+    content = b"test content"
+    blob_name = "custom_time.txt"
+    custom_time = datetime(2030, 6, 1, tzinfo=timezone.utc)
 
-    result = gcs_uploader.upload_content(content, blob_name, retain_until=retain_time)
+    result = gcs_uploader.upload_content(content, blob_name, custom_time=custom_time)
 
     assert result is not None
     assert result.name == blob_name
@@ -47,9 +47,8 @@ def test_upload_content_with_retain_until(gcs_uploader, gcs_storage_bucket):
     assert uploaded.download_as_bytes() == content
 
     uploaded.reload()
-    if uploaded.retention.retain_until_time is not None:
-        assert uploaded.retention.retain_until_time == retain_time
-        assert uploaded.retention.mode == "Unlocked"
+    if uploaded.custom_time is not None:
+        assert uploaded.custom_time == custom_time
 
 
 def test_upload_content_skips_existing_blob(gcs_uploader, gcs_storage_bucket):
