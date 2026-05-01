@@ -400,7 +400,9 @@ class Sport:
                 away_id = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_ID])
                 home_name = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_KEY])
                 away_name = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_KEY])
-                logger.warning(f"Adding game...{away_name} at {home_name} :: {status}")
+                logger.warning(
+                    f"{LOGGING_TAG} Adding game...{away_name} at {home_name} :: {status}"
+                )
                 home_score = event_description.get(
                     self.normalized_terms[SportTerms.HOME_TEAM_SCORE]
                 )
