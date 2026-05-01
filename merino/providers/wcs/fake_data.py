@@ -40,9 +40,7 @@ def _team(
         region=region,
         colors=colors,
         icon_url=_icon(key),
-        group=group,
         eliminated=False,
-        standing={"wins": 0, "losses": 0, "draws": 0, "points": 0},
     )
 
 
@@ -60,6 +58,8 @@ _TEAMS: dict[str, TeamInfo] = {
 }
 
 
+# NOTE: This is building and providing static team data only to allow for UI devlepment.
+# Actual data from external APIs will be wired in follow up work.
 def _team_from_json(entry: dict) -> TeamInfo:
     """Build a TeamInfo from a wcs_teams.json entry."""
     colors = [
@@ -74,9 +74,7 @@ def _team_from_json(entry: dict) -> TeamInfo:
         region=entry["Key"],
         colors=colors,
         icon_url=_icon(entry["Key"]),
-        group=entry["Group"],
         eliminated=False,
-        standing={"wins": 0, "losses": 0, "draws": 0, "points": 0},
     )
 
 
