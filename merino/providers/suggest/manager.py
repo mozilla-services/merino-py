@@ -380,7 +380,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         settings.redis.socket_timeout_sec,
                     )
                 )
-                if settings.get("cache") == "redis"
+                if setting.get("cache") == "redis"
                 else NoCacheAdapter()
             )
 

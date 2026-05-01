@@ -1,9 +1,7 @@
 """Redis cache adapter."""
 
-import inspect
-import types
 from datetime import timedelta
-from typing import Any, cast
+from typing import Any
 
 from redis.asyncio import Redis, RedisError
 from redis.commands.core import AsyncScript
@@ -87,6 +85,17 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to get `{repr(key)}` with error: `{exc}`") from exc
 
+    async def delete(self, key: str) -> int:
+        """Delete the value associated with the key from Redis.
+
+        Raises:
+            - `CacheAdapterError` if Redis returns an error.
+        """
+        try:
+            return await self.primary.delete(key)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to get `{repr(key)}` with error: `{exc}`") from exc
+
     async def set(
         self,
         key: str,
@@ -101,6 +110,29 @@ class RedisAdapter:
         """
         try:
             await self.primary.set(key, value, ex=ttl.days * 86400 + ttl.seconds if ttl else None)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to set `{repr(key)}` with error: `{exc}`") from exc
+
+    async def setnx(
+        self,
+        key: str,
+        value: bytes,
+        ttl: timedelta | None = None,
+        nx: bool = False,
+    ) -> bool:
+        """Store a key-value pair in Redis, overwriting the previous value if set, and optionally
+        expiring after the time-to-live.
+
+        Raises:
+            - `CacheAdapterError` if Redis returns an error.
+        """
+        try:
+            return (
+                await self.primary.set(
+                    key, value, nx=nx, ex=ttl.days * 86400 + ttl.seconds if ttl else None
+                )
+                or False
+            )
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to set `{repr(key)}` with error: `{exc}`") from exc
 
@@ -135,63 +167,49 @@ class RedisAdapter:
         try:
             return await self.replica.hexists(key, field)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def hget(self, key: str, field: str) -> Any | None:
         """Return the field value for a hash key"""
         try:
             return await self.replica.hget(key, field)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def hmget(self, key: str, fields: list[str]) -> list[Any] | None:
         """Return values for multiple keys for a hash key"""
         try:
             return await self.replica.hmget(key, fields)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def hkeys(self, key: str) -> list[bytes] | None:
         """Return all field names for a hash key"""
         try:
             return await self.replica.hkeys(key)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def hvals(self, key: str) -> list[bytes] | None:
         """Return all field names for a hash key"""
         try:
             return await self.replica.hvals(key)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def hgetall(self, key: str) -> dict[bytes, Any] | None:
         """Return all fields keys and values for a hash key"""
         try:
             return await self.replica.hgetall(key)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def hdel(self, key: str, field: str) -> int:
         """Remove a hash key record"""
         try:
             return await self.primary.hdel(key, field)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     # Technically, dict[str, Any] works fine, but mypy complains.
     async def hset(self, key: str, values: dict[str, Any]) -> int:
@@ -199,18 +217,18 @@ class RedisAdapter:
         try:
             return await self.primary.hset(key, mapping=values)  # type: ignore
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def hsetnx(self, key: str, field: str, value: Any, expiry: int | None = None) -> int:
         """Set field for a hash key if not already present"""
         try:
-            return await self.primary.hsetnx(key, field, value)
+            return await self.primary.hsetnx(
+                key,
+                field,
+                value,
+            )
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     # == Sorted Set functions
     async def zadd(
@@ -236,9 +254,7 @@ class RedisAdapter:
         try:
             return await self.primary.zadd(key, mapping, nx=nx, xx=xx, gt=gt, lt=lt)
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def zrange(
         self,
@@ -264,9 +280,7 @@ class RedisAdapter:
                 num=limit,
             )
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def zrem(
         self,
@@ -275,14 +289,12 @@ class RedisAdapter:
     ) -> int:
         """Remove a field from a zrange key"""
         try:
-            return await self.replica.zrem(
+            return await self.primary.zrem(
                 key,
                 *field,
             )
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     async def zremrangebyscore(
         self,
@@ -292,35 +304,24 @@ class RedisAdapter:
     ) -> int:
         """Remove any values that fall between the min and max inclusively"""
         try:
-            return await self.replica.zremrangebyscore(
+            return await self.primary.zremrangebyscore(
                 name=key,
                 min=min,
                 max=max,
             )
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
     # ==
     async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
         """Scan keys for matching values"""
+        items: list[bytes] = []
         try:
-            _cursor, items = await self.replica.scan(0, pattern, count=limit)
+            async for item in self.replica.scan_iter(pattern, count=limit):
+                items.append(item)
             return items
         except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {pattern} with error: {exc}"
-            ) from exc
-
-    async def setnx(self, key: str, value: Any) -> int:
-        """Set a value if it is not present"""
-        try:
-            return await self.primary.setnx(key, value)
-        except RedisError as exc:
-            raise CacheAdapterError(
-                f"Failed to {cast(types.FrameType, inspect.currentframe()).f_code.co_name.upper()} {key} with error: {exc}"
-            ) from exc
+            raise CacheAdapterError(f"Failed to cache {pattern} with error: {exc}") from exc
 
     async def close(self) -> None:
         """Close the Redis connection."""

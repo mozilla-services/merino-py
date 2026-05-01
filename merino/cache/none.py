@@ -10,6 +10,9 @@ class NoCacheAdapter:  # pragma: no cover
     async def get(self, key: str) -> bytes | None:  # noqa: D102
         return None
 
+    async def delete(self, key: str) -> bytes | None:  # noqa: D102
+        return None
+
     async def set(  # noqa: D102
         self,
         key: str,
@@ -17,6 +20,21 @@ class NoCacheAdapter:  # pragma: no cover
         ttl: timedelta | None = None,
     ) -> None:
         pass
+
+    async def setnx(
+        self,
+        key: str,
+        value: bytes,
+        ttl: timedelta | None = None,
+        nx: bool = False,
+    ) -> bool:
+        """Store a key-value pair in Redis, overwriting the previous value if set, and optionally
+        expiring after the time-to-live.
+
+        Raises:
+            - `CacheAdapterError` if Redis returns an error.
+        """
+        return False
 
     async def close(self) -> None:  # noqa: D102
         pass

@@ -7,7 +7,6 @@ import asyncio
 import logging
 import json
 from datetime import datetime, timedelta, timezone
-from time import time
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -711,36 +710,35 @@ class WCS(Sport):
         fact that they used the same key code for two different countries).
 
         """
-        meta_data = await self.cache.hgetall(f"{self.cache_prefix}:meta")
+        meta_key = f"{self.cache_prefix}:meta"
+        last_update = int.from_bytes(
+            await self.cache.get(f"{meta_key}:updated") or int(0).to_bytes()
+        )
 
         # Has it been over a year since we last updated the meta info?
         lock_period = 365
-        if not force and meta_data:  # pragma: no cache "widget"
-            updated = int(meta_data.get(b"meta_updated") or 0)
-            if updated and updated < int(
-                (datetime.now() - timedelta(days=lock_period)).timestamp()
+        if not force and last_update:  # pragma: no cache "widget"
+            if last_update > int(
+                (datetime.now(tz=timezone.utc) - timedelta(days=lock_period)).timestamp()
             ):
                 return
         now = datetime.now(tz=timezone.utc)
         mylock = int((now + timedelta(seconds=30)).timestamp())
-        meta_key = f"{self.cache_prefix}:meta"
-        prev = await self.cache.hget(meta_key, "lock")
-        if force or (prev is not None and int(prev) < int(now.timestamp())):
-            await self.cache.hdel(meta_key, "lock")
-
         # if we can get the lock, initialize the data.
-        if await self.cache.hsetnx(meta_key, "lock", mylock) == 1:
+        if await self.cache.setnx(
+            f"{meta_key}:lock", value=mylock.to_bytes(8), nx=True, ttl=timedelta(seconds=30)
+        ):
             logging.info(f"{LOGGING_TAG} Initializing Cache")
             # We got the lock, we can initialize things.
             # to initial stuff.
             await self.load_areas(client)
             await self.update_teams(client)
             await self.cache_teams()
-            complete = int(time())
+            complete = int(datetime.now(tz=timezone.utc).timestamp())
             logging.info(f"{LOGGING_TAG} Marking db initialized as of {complete}")
             # We're done, carry on...
-            await self.cache.hsetnx(meta_key, "meta_updated", complete)
-            await self.cache.hdel(meta_key, field="lock")
+            await self.cache.set(f"{meta_key}:updated", complete.to_bytes(8))
+            await self.cache.delete(f"{meta_key}:lock")
 
     async def load_areas(self, client) -> None:
         """Fetch and load the countries to the cache"""

@@ -54,6 +54,7 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     adapter.replica = mredis
 
     # purely for coverage:
+    mredis.delete.side_effect = RedisError
     mredis.hexists.side_effect = RedisError
     mredis.hget.side_effect = RedisError
     mredis.hmget.side_effect = RedisError
@@ -71,6 +72,8 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     mredis.setnx.side_effect = RedisError
 
     expy = time() + 60
+    with pytest.raises(RedisError):
+        await mredis.delete("key")
     with pytest.raises(RedisError):
         await mredis.hexists("key", "field")
     with pytest.raises(RedisError):
