@@ -30,6 +30,7 @@
   - [Test Failures in CI](./operations/testfailures.md)
   - [Configs](./operations/configs.md)
   - [Elasticsearch](./operations/elasticsearch.md)
+  - [Curated Recommendations](./operations/curated-recommendations/corpus-cache.md)
   - [Jobs](./operations/jobs.md)
     - [Navigational Suggestions](./operations/jobs/navigational_suggestions.md)
     - [Dynamic Wikipedia Indexer](./operations/jobs/dynamic-wiki-indexer.md)
