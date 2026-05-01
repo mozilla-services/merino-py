@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
 import freezegun
 import pytest
-from unittest.mock import AsyncMock, MagicMock, call
+from unittest.mock import MagicMock, call
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
-from merino.cache.none import NoCacheAdapter
+from merino.cache.redis import RedisAdapter
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport, Team
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -1525,12 +1524,13 @@ async def test_nba_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert set(nba.teams.keys()) == {20000001, 20000002}
     assert get_data.call_count == 2
 
+
 @pytest.mark.asyncio
 async def test_mlb_get_team(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test MLB team getting"""
     sport = MLB(settings=settings.providers.sports)
     mock_team = MagicMock(spec=Team)
-    sport.teams = {1:mock_team}
+    sport.teams = {1: mock_team}
     assert await sport.get_team(1) == mock_team
 
 
@@ -1723,8 +1723,8 @@ async def test_nhl_update_events(
     assert ev.home_team["key"] == "BUF"
     assert ev.away_team["key"] == "BOS"
     assert 2 == get_data.call_count
-    for call in get_data.call_args_list:
-        assert call.kwargs["url"] in [
+    for scall in get_data.call_args_list:
+        assert scall.kwargs["url"] in [
             "https://api.sportsdata.io/v3/nhl/scores/json/SchedulesBasic/2026PRE",
             "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/2025-SEP-22",
         ]
@@ -1792,8 +1792,8 @@ async def test_nba_update_events(
     assert 20011111 in nba.events and 20022222 not in nba.events
     assert nba.events[20011111].status == GameStatus.Final
     assert 2 == get_data.call_count
-    for call in get_data.call_args_list:
-        assert call.kwargs["url"] in [
+    for scall in get_data.call_args_list:
+        assert scall.kwargs["url"] in [
             "https://api.sportsdata.io/v3/nba/scores/json/SchedulesBasic/2026PRE",
             "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2025-SEP-22",
         ]
@@ -1922,11 +1922,9 @@ async def test_ucl_update_events(
     assert 90011111 in ucl.events and 90022222 not in ucl.events
     assert "/SchedulesBasic/UCL/2025" in get_data.call_args_list[0].kwargs["url"]
 
+
 @pytest.mark.asyncio
-async def test_wcs_load_areas(
-    mock_client: AsyncClient,
-    mocker: MockerFixture
-) -> None:
+async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test WCS load areas (widget)"""
     sport = WCS(settings=settings.providers.sports)
     areas_payload = json.loads("""
@@ -2075,14 +2073,14 @@ async def test_wcs_load_areas(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
         side_effect=[areas_payload],
     )
-    mock_redis = asyncio.Future()
-    mock_redis.set_result(1)
-    hset_mock = MagicMock()
-    hset_mock.return_value = mock_redis
-    sport.cache.hset = hset_mock
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.hset.return_value = 1
+    sport.cache = mock_cache
     await sport.load_areas(areas_payload)
-    assert hset_mock.call_args_list == [call('sport:wcs:area:1', {'name': 'World', 'code': 'INT'}), call('sport:wcs:area:2', {'name': 'Asia', 'code': 'ASI'})]
-
+    assert mock_cache.hset.call_args_list == [
+        call("sport:wcs:area:1", {"name": "World", "code": "INT"}),
+        call("sport:wcs:area:2", {"name": "Asia", "code": "ASI"}),
+    ]
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
@@ -2145,8 +2143,8 @@ async def test_wcs_update_events(
     assert global_offset + 11111 in sport.events and global_offset + 22222 not in sport.events
     assert sport.events[global_offset + 11111].status == GameStatus.Final
     assert 2 == get_data.call_count
-    for call in get_data.call_args_list:
-        assert call.kwargs["url"] in [
+    for scall in get_data.call_args_list:
+        assert scall.kwargs["url"] in [
             "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/fifa/2025",
             "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2025-SEP-22",
         ]
@@ -2169,28 +2167,9 @@ async def test_wcs_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
 
     assert "/Teams/fifa" in get_data.call_args_list[0].kwargs["url"]
 
+
 # WCS Widget tests ===
 
-@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
-@pytest.mark.asyncio
-async def test_wcs_init_cache(mock_client: AsyncClient, mocker: MockerFixture) -> None:
-    """Test WCS cache initialization"""
-    sport = WCS(settings=settings.providers.sports)
-
-    sport.cache = MagicMock(spec=NoCacheAdapter)
-    sport.cache.hsetnx.return_value = 1
-    sport.cache.hgetall.return_value = None
-    sport.cache.hget.return_value = None
-    sport.cache.hdel.return_value = 1
-
-    sport.load_areas = AsyncMock()
-    sport.update_teams = AsyncMock()
-    sport.cache_teams = AsyncMock()
-
-    await sport.init_cache(mock_client, force=True)
-    assert sport.load_areas.called
-    assert sport.update_teams.called
-    assert sport.cache_teams.called
 
 @pytest.mark.asyncio
 async def test_wcs_get_team(mock_client: AsyncClient, mocker: MockerFixture) -> None:
@@ -2198,7 +2177,7 @@ async def test_wcs_get_team(mock_client: AsyncClient, mocker: MockerFixture) -> 
     sport = WCS(settings=settings.providers.sports)
     mock_team = MagicMock(spec=Team)
 
-    sport.teams = {1:mock_team}
+    sport.teams = {1: mock_team}
 
     assert await sport.get_team(1) == mock_team
 

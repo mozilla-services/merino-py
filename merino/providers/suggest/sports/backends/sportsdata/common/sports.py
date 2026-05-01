@@ -289,7 +289,9 @@ class NHL(Sport):
         date_list = []
         for _id, event in list(self.events.items()):
             day = event.date.strftime("%Y-%b-%d").upper()
-            if not event.status.is_scheduled() and day not in date_list: # pragma: no cover "covered by test_nhl_update_events"
+            if (
+                not event.status.is_scheduled() and day not in date_list
+            ):  # pragma: no cover "covered by test_nhl_update_events"
                 url = f"{self.base_url}/GamesByDate/{day}"
                 response = await get_data(
                     client=client,
@@ -381,7 +383,9 @@ class NBA(Sport):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
         if self.season is None:
-            logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}") # pragma: no cover "informational"
+            logger.info(
+                f"{LOGGING_TAG} Skipping out of season {self.name}"
+            )  # pragma: no cover "informational"
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         local_timezone = ZoneInfo("America/New_York")
         url = f"{self.base_url}/SchedulesBasic/{self.season}"
@@ -565,7 +569,7 @@ class MLB(Sport):
     async def get_season(self, client: AsyncClient):
         """Get the current season"""
         if self.season is not None:
-            return # pragma: no cover
+            return  # pragma: no cover
         logger.debug(f"{LOGGING_TAG} Getting {self.name} season")
         url = f"{self.base_url}/CurrentSeason"
         response = await get_data(
@@ -589,7 +593,7 @@ class MLB(Sport):
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
         await self.get_season(client=client)
-        if self.season is None: # pragma: no cover
+        if self.season is None:  # pragma: no cover
             logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
             return
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
@@ -692,7 +696,9 @@ class WCS(Sport):
     # Note: this is covered by `test_wcs_init_cache` but I believe that the heavy use of Mocks
     # prevents coverage from detecting that the lines are accessed. Adding "no cover" to get
     # coverage numbers under control. (it's temporary anyway, we're dropping it with the WCS widget.)
-    async def init_cache(self, client: AsyncClient, force: bool = False): # pragma: no cover "widget/mocks"
+    async def init_cache(  # pragma: no cover "widget"
+        self, client: AsyncClient, force: bool = False
+    ):  # pragma: no cover "widget/mocks"
         """Initialize the Redis cache, if needed
 
         There are some bits of data that are long lived. In our case, each team
@@ -709,7 +715,7 @@ class WCS(Sport):
 
         # Has it been over a year since we last updated the meta info?
         lock_period = 365
-        if not force and meta_data: # pragma: no cache "widget"
+        if not force and meta_data:  # pragma: no cache "widget"
             updated = int(meta_data.get(b"meta_updated") or 0)
             if updated and updated < int(
                 (datetime.now() - timedelta(days=lock_period)).timestamp()
@@ -835,11 +841,11 @@ class WCS(Sport):
                     normalized_terms=self.normalized_terms,
                 )
                 if area:
-                    team.country = area.get(b"code", b"UNK").decode() # pragma: no cover "widget"
+                    team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
                 self.teams[team.id] = team
                 # TODO: self.cache_teams() ? individual team cache write?
             except SportsDataError:
-                pass # pragma: no cover "skip error"
+                pass  # pragma: no cover "skip error"
         return self.teams
 
     async def update_teams(self, client: AsyncClient):
@@ -868,7 +874,7 @@ class WCS(Sport):
         serialized["updated"] = team.updated.timestamp()
         return json.dumps(serialized)
 
-    def event_as_str(self, event: Event) -> str: # pragma: no cover "widget"
+    def event_as_str(self, event: Event) -> str:  # pragma: no cover "widget"
         """Serialize an event as a dictionary for the widget"""
         # import pdb;pdb.set_trace()
         # TODO: add more team info?
@@ -879,7 +885,7 @@ class WCS(Sport):
         serialized["updated"] = event.updated.timestamp() if event.updated else None
         return json.dumps(serialized)
 
-    async def cache_teams(self) -> None: # pragma: no cover "widget"
+    async def cache_teams(self) -> None:  # pragma: no cover "widget"
         """Write the team data to the redis cache for the widget"""
         # Widget: Store teams to Redis
         for teamId, team in self.teams.items():
@@ -936,7 +942,7 @@ class WCS(Sport):
             )
         return self
 
-    async def get_events_by_team( # pragma: no cover "widget"
+    async def get_events_by_team(  # pragma: no cover "widget"
         self, team_key: str, start: datetime | None = None, end: datetime | None = None
     ) -> list[Event]:
         """Scan the cache looking for data that matches"""
@@ -945,7 +951,9 @@ class WCS(Sport):
         # but that feels gross.
         raise NotImplementedError
 
-    async def get_events_by_date(self, start: datetime | None = None, end: datetime | None = None): # pragma: no cover "widget"
+    async def get_events_by_date(
+        self, start: datetime | None = None, end: datetime | None = None
+    ):  # pragma: no cover "widget"
         """Get events by start,end"""
         # TODO: build
         # scan the ssort list for events that fall between the start (min) and end (max)
