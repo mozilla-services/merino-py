@@ -7,10 +7,11 @@
 import pytest
 from pytest_mock import MockerFixture
 from unittest.mock import MagicMock
-from time import time
+from datetime import datetime, timedelta, timezone
 
 from redis.asyncio import Redis, RedisError
 
+from merino.exceptions import CacheAdapterError
 from merino.cache.redis import create_redis_clients, RedisAdapter
 
 
@@ -54,6 +55,8 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     adapter.replica = mredis
 
     # purely for coverage:
+    mredis.get.side_effect = RedisError
+    mredis.set.side_effect = RedisError
     mredis.delete.side_effect = RedisError
     mredis.hexists.side_effect = RedisError
     mredis.hget.side_effect = RedisError
@@ -68,39 +71,45 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     mredis.zrange.side_effect = RedisError
     mredis.zrem.side_effect = RedisError
     mredis.zremrangebyscore.side_effect = RedisError
-    mredis.scan.side_effect = RedisError
-    mredis.setnx.side_effect = RedisError
+    mredis.scan_iter.side_effect = RedisError
 
-    expy = time() + 60
-    with pytest.raises(RedisError):
-        await mredis.delete("key")
-    with pytest.raises(RedisError):
-        await mredis.hexists("key", "field")
-    with pytest.raises(RedisError):
-        await mredis.hget("key")
-    with pytest.raises(RedisError):
-        await mredis.hmget("key", "field")
-    with pytest.raises(RedisError):
-        await mredis.hkeys("key", ["field"])
-    with pytest.raises(RedisError):
-        await mredis.hvals("key")
-    with pytest.raises(RedisError):
-        await mredis.hgetall("key")
-    with pytest.raises(RedisError):
-        await mredis.hdel("key", "field")
-    with pytest.raises(RedisError):
-        await mredis.hmset("key", {"field": 123})
-    with pytest.raises(RedisError):
-        await mredis.hsetnx("key", "field", "value", expy)
-    with pytest.raises(RedisError):
-        await mredis.zadd("key", {"field", 123}, nx=True)
-    with pytest.raises(RedisError):
-        await mredis.zrange("key", min=0, max=200)
-    with pytest.raises(RedisError):
-        await mredis.zrem("key", "field")
-    with pytest.raises(RedisError):
-        await mredis.zremrangebyscore("key", "field", min=0, max=200)
-    with pytest.raises(RedisError):
-        await mredis.scan("key")
-    with pytest.raises(RedisError):
-        await mredis.setnx("key", "value")
+    now = datetime.now(tz=timezone.utc)
+    expy = timedelta(seconds=30)
+    with pytest.raises(CacheAdapterError):
+        await adapter.get("key")
+    with pytest.raises(CacheAdapterError):
+        await adapter.set("key", b"value", expy)
+    with pytest.raises(CacheAdapterError):
+        await adapter.delete("key")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hexists("key", "field")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hget("key", "value")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hmget("key", ["field"])
+    with pytest.raises(CacheAdapterError):
+        await adapter.hkeys("key")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hvals("key")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hgetall("key")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hdel("key", "field")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hmget("key", ["field"])
+    with pytest.raises(CacheAdapterError):
+        await adapter.hsetnx("key", "field", "value", int((now + expy).timestamp()))
+    with pytest.raises(CacheAdapterError):
+        await adapter.zadd("key", {"field": 123}, nx=True)
+    with pytest.raises(CacheAdapterError):
+        await adapter.zrange("key", min=0, max=200)
+    with pytest.raises(CacheAdapterError):
+        await adapter.zrem("key", "field")
+    with pytest.raises(CacheAdapterError):
+        await adapter.zremrangebyscore("key", min=0, max=200)
+    with pytest.raises(CacheAdapterError):
+        await adapter.scan("key")
+    with pytest.raises(CacheAdapterError):
+        await adapter.setnx("key", b"value")
+    with pytest.raises(CacheAdapterError):
+        await adapter.set("key", b"value", ttl=expy)
