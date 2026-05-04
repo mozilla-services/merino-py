@@ -6,6 +6,8 @@
 
 from datetime import date, datetime
 
+from merino.providers.wcs.protocol import TeamsResponse
+from merino.providers.wcs.protocol import TeamInfo
 from merino.providers.wcs.provider import WcsProvider
 
 
@@ -142,3 +144,11 @@ def test_live_is_deterministic_within_same_utc_day() -> None:
     a = WcsProvider().get_live_matches(team_keys=None)
     b = WcsProvider().get_live_matches(team_keys=None)
     assert a.model_dump() == b.model_dump()
+
+
+def test_get_teams_count() -> None:
+    """The full tournament roster has exactly 48 teams (12 groups × 4), all TeamInfo instances."""
+    response = WcsProvider().get_teams()
+    assert len(response.teams) == 48
+    assert isinstance(response, TeamsResponse)
+    assert all(isinstance(team, TeamInfo) for team in response.teams)
