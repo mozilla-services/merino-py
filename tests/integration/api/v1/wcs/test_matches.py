@@ -8,7 +8,8 @@ from starlette.testclient import TestClient
 
 
 _PATH = "/api/v1/wcs/matches"
-# Pick an anchor inside the fake-data window so buckets are populated.
+# Inside the tournament window; the ±7-day slice around this anchor has
+# 11 previous, 4 current, and 27 next events in wcs_schedules.json.
 _ANCHOR = "2026-06-15"
 
 
@@ -38,15 +39,14 @@ def test_explicit_date_is_deterministic(client: TestClient) -> None:
     assert a == b
 
 
-def test_two_matches_per_bucket(client: TestClient) -> None:
-    """Each of `previous`, `current`, `next` has exactly two events sharing a status."""
+def test_buckets_populated_from_schedule(client: TestClient) -> None:
+    """An anchor inside the tournament returns events in every bucket, all Scheduled."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()
-    assert len(body["previous"]) == 2
-    assert len(body["current"]) == 2
-    assert len(body["next"]) == 2
-    assert all(e["status"] == "Final" for e in body["previous"])
-    assert all(e["status"] == "In Progress" for e in body["current"])
-    assert all(e["status"] == "Scheduled" for e in body["next"])
+    assert body["previous"]
+    assert body["current"]
+    assert body["next"]
+    for event in body["previous"] + body["current"] + body["next"]:
+        assert event["status"] == "Scheduled"
 
 
 def test_limit_clamps_each_bucket(client: TestClient) -> None:

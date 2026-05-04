@@ -8,7 +8,8 @@ from datetime import date, datetime
 
 from merino.providers.wcs.provider import WcsProvider
 
-
+# Inside the tournament window (June 11 – July 2026); the ±7-day slice
+# around this anchor has 11 previous, 4 current, and 27 next events.
 _ANCHOR = date(2026, 6, 15)
 
 
@@ -74,45 +75,19 @@ def test_response_is_deterministic_for_same_anchor() -> None:
     assert a.model_dump() == b.model_dump()
 
 
-def test_six_records_two_per_status_type() -> None:
-    """The fake set has exactly two past, two live, and two scheduled matches."""
+def test_buckets_populated_for_anchor_in_tournament() -> None:
+    """An anchor inside the tournament window returns events in every bucket."""
     response = WcsProvider().get_matches(_ANCHOR, limit=None, team_keys=None)
 
-    assert len(response.previous) == 2
-    assert len(response.current) == 2
-    assert len(response.next_) == 2
-    assert all(e.status_type == "past" for e in response.previous)
-    assert all(e.status_type == "live" for e in response.current)
-    assert all(e.status_type == "scheduled" for e in response.next_)
-
-
-def test_extra_and_penalty_populated_on_one_finalized_match() -> None:
-    """Exactly one finalized match exposes extra-time and penalty-shootout values."""
-    response = WcsProvider().get_matches(_ANCHOR, limit=None, team_keys=None)
-
-    finalized_with_extras = [
-        e for e in response.previous if e.home_extra is not None and e.home_penalty is not None
-    ]
-    assert len(finalized_with_extras) == 1
-    event = finalized_with_extras[0]
-    assert event.away_extra is not None
-    assert event.away_penalty is not None
-
-
-def test_live_extra_time_match_shows_clock_in_extra_play() -> None:
-    """A live match in extra time renders its clock in '90+x' form."""
-    response = WcsProvider().get_matches(_ANCHOR, limit=None, team_keys=None)
-
-    in_extra = [e for e in response.current if e.period == "ET"]
-    assert len(in_extra) == 1
-    assert in_extra[0].clock.startswith("90+")
+    assert response.previous
+    assert response.current
+    assert response.next_
 
 
 def test_live_returns_only_in_progress_events() -> None:
-    """`get_live_matches` returns the two `live` events from the fake set."""
+    """`get_live_matches` never returns events with a non-live status_type."""
     response = WcsProvider().get_live_matches(team_keys=None)
 
-    assert len(response.matches) == 2
     assert all(e.status_type == "live" for e in response.matches)
 
 
@@ -142,3 +117,34 @@ def test_live_is_deterministic_within_same_utc_day() -> None:
     a = WcsProvider().get_live_matches(team_keys=None)
     b = WcsProvider().get_live_matches(team_keys=None)
     assert a.model_dump() == b.model_dump()
+
+
+def test_event_info_contract() -> None:
+    """Every EventInfo exposes required typed fields."""
+    response = WcsProvider().get_matches(_ANCHOR, limit=1, team_keys=None)
+    events = response.previous + response.current + response.next_
+
+    assert events
+    for event in events:
+        datetime.fromisoformat(event.date)  # parseable ISO datetime with tz
+        assert isinstance(event.global_event_id, int)
+        assert isinstance(event.status, str)
+        assert event.status_type in ("past", "live", "scheduled")
+        assert isinstance(event.clock, str)
+        assert isinstance(event.updated, int)
+        assert event.sport == "soccer"
+
+
+def test_team_info_contract() -> None:
+    """TeamInfo fields are present and correctly typed on every event."""
+    response = WcsProvider().get_matches(_ANCHOR, limit=1, team_keys=None)
+    events = response.previous + response.current + response.next_
+
+    assert events
+    for event in events:
+        for team in (event.home_team, event.away_team):
+            assert len(team.key) == 3
+            assert isinstance(team.global_team_id, int)
+            assert isinstance(team.name, str)
+            assert isinstance(team.eliminated, bool)
+            assert set(team.standing.keys()) >= {"wins", "losses", "draws", "points"}

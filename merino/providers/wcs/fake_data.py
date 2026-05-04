@@ -7,20 +7,8 @@ two upcoming (tomorrow) events.
 
 from datetime import UTC, date, datetime, time, timedelta
 
-from pydantic import HttpUrl
-
 from merino.providers.wcs.protocol import EventInfo, TeamInfo
-from merino.utils.logos import LogoCategory, load_manifest
-
-# Stage's `image_gcs_v2.cdn_hostname` is unset, so `get_logo_url` produces
-# `https://logos/...`. Pin to the prod bucket directly so stage renders the
-# same flags as production. Remove once SRE wires up the stage CDN host.
-_LOGO_HOST = "https://storage.googleapis.com/merino-images-prod"
-
-
-def _icon(key: str) -> HttpUrl | None:
-    entry = load_manifest().get(LogoCategory.Nations, key)
-    return HttpUrl(f"{_LOGO_HOST}/{entry.url}") if entry else None
+from merino.providers.wcs.schedules import get_icon as _icon
 
 
 def _team(
