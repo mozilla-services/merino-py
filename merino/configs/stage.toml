@@ -52,6 +52,9 @@ gcs_enabled = false
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 domain_data_source = "remote"
 
+[stage.curated_recommendations.corpus_cache]
+cache = "redis"
+
 [stage.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains aggregate engagement and prior data

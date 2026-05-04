@@ -35,3 +35,9 @@ class NoCacheAdapter:  # pragma: no cover
 
     async def scard(self, key: str) -> int:  # noqa: D102
         return 0
+
+    async def set_nx(self, key: str, ttl_sec: int) -> bool:  # noqa: D102
+        return True
+
+    async def delete(self, key: str) -> None:  # noqa: D102
+        pass

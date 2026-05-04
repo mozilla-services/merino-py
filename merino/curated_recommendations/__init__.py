@@ -6,7 +6,17 @@
 import logging
 import random
 
+from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
+from merino.curated_recommendations.corpus_backends.protocol import (
+    ScheduledSurfaceProtocol,
+    SectionsProtocol,
+)
+from merino.curated_recommendations.corpus_backends.redis_cache import (
+    CorpusCacheConfig,
+    RedisCachedScheduledSurface,
+    RedisCachedSections,
+)
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
     ScheduledSurfaceBackend,
     CorpusApiGraphConfig,
@@ -169,6 +179,49 @@ def init_ml_cohort_model_backend() -> CohortModelBackend:
         return EmptyCohortModel()
 
 
+def _init_corpus_cache(
+    scheduled_surface_backend: ScheduledSurfaceProtocol,
+    sections_backend: SectionsProtocol,
+) -> tuple[ScheduledSurfaceProtocol, SectionsProtocol, RedisAdapter | None]:
+    """Optionally wrap corpus backends with a Redis L2 cache layer.
+
+    Returns the backends (possibly wrapped) and the Redis adapter (if created).
+    The caller owns the adapter and is responsible for closing it on shutdown.
+    """
+    cache_settings = settings.curated_recommendations.corpus_cache
+    if cache_settings.cache != "redis":
+        return scheduled_surface_backend, sections_backend, None
+
+    try:
+        logger.info("Initializing Redis L2 cache for corpus backends")
+        adapter = RedisAdapter(
+            *create_redis_clients(
+                primary=settings.redis.server,
+                replica=settings.redis.replica,
+                max_connections=settings.redis.max_connections,
+                socket_connect_timeout=settings.redis.socket_connect_timeout_sec,
+                socket_timeout=settings.redis.socket_timeout_sec,
+            )
+        )
+        config = CorpusCacheConfig(
+            soft_ttl_sec=cache_settings.soft_ttl_sec,
+            hard_ttl_sec=cache_settings.hard_ttl_sec,
+            lock_ttl_sec=cache_settings.lock_ttl_sec,
+            key_prefix=cache_settings.key_prefix,
+        )
+        metrics_client = get_metrics_client()
+        return (
+            RedisCachedScheduledSurface(
+                scheduled_surface_backend, adapter, config, metrics_client
+            ),
+            RedisCachedSections(sections_backend, adapter, config, metrics_client),
+            adapter,
+        )
+    except Exception as e:
+        logger.error("Failed to initialize Redis corpus cache, proceeding without it: %s", e)
+        return scheduled_surface_backend, sections_backend, None
+
+
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -179,18 +232,22 @@ def init_provider() -> None:
     ml_recommendations_backend = init_ml_recommendations_backend()
     cohort_model_backend = init_ml_cohort_model_backend()
 
-    scheduled_surface_backend = ScheduledSurfaceBackend(
+    scheduled_surface_backend: ScheduledSurfaceProtocol = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=get_manifest_provider(),
     )
 
-    sections_backend = SectionsBackend(
+    sections_backend: SectionsProtocol = SectionsBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=get_manifest_provider(),
+    )
+
+    scheduled_surface_backend, sections_backend, cache_adapter = _init_corpus_cache(
+        scheduled_surface_backend, sections_backend
     )
 
     _provider = CuratedRecommendationsProvider(
@@ -201,6 +258,7 @@ def init_provider() -> None:
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
+        cache_adapter=cache_adapter,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 
@@ -215,3 +273,15 @@ def get_legacy_provider() -> LegacyCuratedRecommendationsProvider:
     """Return the legacy curated recommendations provider"""
     global _legacy_provider
     return _legacy_provider
+
+
+async def shutdown() -> None:
+    """Clean up resources used by curated recommendations."""
+    try:
+        provider = _provider
+    except NameError:
+        return
+    try:
+        await provider.shutdown()
+    except Exception:
+        logger.warning("Error shutting down curated recommendations", exc_info=True)
