@@ -20,7 +20,7 @@ SELECT
  COUNT(*) AS impressions
 FROM `moz-fx-data-shared-prod.search_terms_derived.suggest_impression_sanitized_v3`
 WHERE
- submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 16 DAY) AND TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
+ submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY) AND CURRENT_TIMESTAMP()
 AND query is not NULL
 GROUP BY 1, 2
 HAVING impressions > 500
