@@ -38,7 +38,8 @@ def upload_engagement_data() -> None:  # pragma: no cover
         wiki_data_downloader = WikiDownloader(gcs_bq_project)
 
         amp_historical: list[dict[str, Any]] = amp_data_downloader.download_historical_data()
-        amp_live: list[dict[str, Any]] = amp_data_downloader.download_live_data()
+        amp_historical = amp_data_downloader.apply_click_adjustment(amp_historical)
+        amp_live: list[dict[str, Any]] = []
         wiki_data: dict[str, int] = wiki_data_downloader.download_data()
 
         transformed_amp_data = amp_data_downloader.transform_data(
