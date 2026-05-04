@@ -1,16 +1,19 @@
 """World Cup Soccer match provider."""
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 
-from merino.providers.wcs.fake_data import build_events as build_fake_events
+from merino.providers.wcs.backends.protocol import WcsBackend
 from merino.providers.wcs.protocol import EventInfo, LiveMatchesResponse, MatchesResponse
-from merino.providers.wcs.schedules import build_events
 
 _WINDOW = timedelta(days=7)
 
 
 class WcsProvider:
     """Serves match data for the World Cup Soccer endpoint."""
+
+    def __init__(self, backend: WcsBackend) -> None:
+        """Initialise with a backend supplying both schedule and live events."""
+        self._backend = backend
 
     def get_matches(
         self,
@@ -31,7 +34,7 @@ class WcsProvider:
 
         # Sorting up-front means each bucket inherits ascending order without
         # a per-bucket sort pass.
-        for event in sorted(build_events(), key=lambda e: e.date):
+        for event in sorted(self._backend.get_events(), key=lambda e: e.date):
             event_date = _event_date(event)
             if abs(event_date - target_date) > _WINDOW:
                 continue
@@ -47,18 +50,16 @@ class WcsProvider:
         if limit is not None:
             previous, current, next_ = previous[-limit:], current[:limit], next_[:limit]
 
-        return MatchesResponse(previous=previous, current=current, next_=next_)
+        return MatchesResponse(previous=previous, current=current, next=next_)
 
     def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
         """Return events currently in progress, sorted ascending by `date`.
 
-        Anchored to the current UTC date so the fake set always exposes its
-        `live` bucket. `team_keys` restricts results to matches with that team
-        on either side.
+        `team_keys` restricts results to matches with that team on either side.
         """
         matches = [
             event
-            for event in sorted(build_fake_events(datetime.now(UTC).date()), key=lambda e: e.date)
+            for event in sorted(self._backend.get_live_events(), key=lambda e: e.date)
             if event.status_type == "live" and (team_keys is None or _has_team(event, team_keys))
         ]
         return LiveMatchesResponse(matches=matches)

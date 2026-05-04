@@ -7,6 +7,7 @@ import orjson
 from importlib.resources import files
 from pydantic import HttpUrl
 
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.wcs.protocol import EventInfo, TeamInfo
 from merino.utils.logos import LogoCategory, load_manifest
 
@@ -47,14 +48,6 @@ def _make_team(key: str, global_id: int, name: str, group: str) -> TeamInfo:
         standing={"wins": 0, "losses": 0, "draws": 0, "points": 0},
     )
 
-
-def _status_type(status: str) -> str:
-    """Map a feed Status string to the simplified status_type token."""
-    if status == "Scheduled":
-        return "scheduled"
-    if status.startswith("F"):
-        return "past"
-    return "live"
 
 
 def _map_period(status: str, period_raw: str) -> str:
@@ -125,8 +118,8 @@ def build_events() -> list[EventInfo]:
                     away_penalty=game.get("AwayTeamScorePenalty"),
                     clock=clock,
                     updated=updated_ts,
-                    status=status,
-                    status_type=_status_type(status),
+                    status=GameStatus.parse(status).as_str(),
+                    status_type=GameStatus.parse(status).as_ui_status(),
                 )
             )
     return events
