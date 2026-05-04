@@ -94,13 +94,36 @@ class RedisAdapter:
         try:
             return await self.primary.delete(key)
         except RedisError as exc:
-            raise CacheAdapterError(f"Failed to get `{repr(key)}` with error: `{exc}`") from exc
+            raise CacheAdapterError(f"Failed to delete `{repr(key)}` with error: `{exc}`") from exc
+
+    # define a setnx() function because we should not modify `set`. Doing so would touch too
+    # much code for this PR.
+
+    async def setnx(
+        self,
+        key: str,
+        value: bytes,
+        ttl: timedelta | None = None,
+        nx: bool = True,  # include as opt arg for if/when this replaces `set`
+    ) -> bool | None:
+        """Store a key-value pair in Redis, if there is not previous value, and optionally
+        expiring after the time-to-live.
+        """
+        # TODO: modify `self.set` to accept the `nx` param, but that requires too much code for the
+        # initial PR.
+        try:
+            return await self.primary.set(
+                key, value, ex=ttl.days * 86400 + ttl.seconds if ttl else None, nx=nx
+            )
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to setnx `{repr(key)}` with error: `{exc}`") from exc
 
     async def set(
         self,
         key: str,
         value: bytes,
         ttl: timedelta | None = None,
+        nx: bool = False,
     ) -> None:
         """Store a key-value pair in Redis, overwriting the previous value if set, and optionally
         expiring after the time-to-live.
@@ -110,29 +133,6 @@ class RedisAdapter:
         """
         try:
             await self.primary.set(key, value, ex=ttl.days * 86400 + ttl.seconds if ttl else None)
-        except RedisError as exc:
-            raise CacheAdapterError(f"Failed to set `{repr(key)}` with error: `{exc}`") from exc
-
-    async def setnx(
-        self,
-        key: str,
-        value: bytes,
-        ttl: timedelta | None = None,
-        nx: bool = False,
-    ) -> bool:
-        """Store a key-value pair in Redis, overwriting the previous value if set, and optionally
-        expiring after the time-to-live.
-
-        Raises:
-            - `CacheAdapterError` if Redis returns an error.
-        """
-        try:
-            return (
-                await self.primary.set(
-                    key, value, nx=nx, ex=ttl.days * 86400 + ttl.seconds if ttl else None
-                )
-                or False
-            )
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to set `{repr(key)}` with error: `{exc}`") from exc
 
@@ -219,7 +219,7 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
-    async def hsetnx(self, key: str, field: str, value: Any, expiry: int | None = None) -> int:
+    async def hsetnx(self, key: str, field: str, value: Any) -> int:
         """Set field for a hash key if not already present"""
         try:
             return await self.primary.hsetnx(
@@ -314,7 +314,7 @@ class RedisAdapter:
 
     # ==
     async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
-        """Scan keys for matching values"""
+        """Scan keys for matching values. NOTE: This is VERY slow and should be avoided."""
         items: list[bytes] = []
         try:
             async for item in self.replica.scan_iter(pattern, count=limit):

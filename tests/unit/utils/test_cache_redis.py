@@ -7,7 +7,7 @@
 import pytest
 from pytest_mock import MockerFixture
 from unittest.mock import MagicMock
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from redis.asyncio import Redis, RedisError
 
@@ -57,9 +57,11 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     # purely for coverage:
     mredis.get.side_effect = RedisError
     mredis.set.side_effect = RedisError
+    mredis.setnx.side_effect = RedisError
     mredis.delete.side_effect = RedisError
     mredis.hexists.side_effect = RedisError
     mredis.hget.side_effect = RedisError
+    mredis.hset.side_effect = RedisError
     mredis.hmget.side_effect = RedisError
     mredis.hkeys.side_effect = RedisError
     mredis.hvals.side_effect = RedisError
@@ -73,18 +75,21 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     mredis.zremrangebyscore.side_effect = RedisError
     mredis.scan_iter.side_effect = RedisError
 
-    now = datetime.now(tz=timezone.utc)
     expy = timedelta(seconds=30)
     with pytest.raises(CacheAdapterError):
         await adapter.get("key")
     with pytest.raises(CacheAdapterError):
         await adapter.set("key", b"value", expy)
     with pytest.raises(CacheAdapterError):
+        await adapter.setnx("key", b"value", expy)
+    with pytest.raises(CacheAdapterError):
         await adapter.delete("key")
     with pytest.raises(CacheAdapterError):
         await adapter.hexists("key", "field")
     with pytest.raises(CacheAdapterError):
         await adapter.hget("key", "value")
+    with pytest.raises(CacheAdapterError):
+        await adapter.hset("key", {"field": "value"})
     with pytest.raises(CacheAdapterError):
         await adapter.hmget("key", ["field"])
     with pytest.raises(CacheAdapterError):
@@ -98,7 +103,7 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     with pytest.raises(CacheAdapterError):
         await adapter.hmget("key", ["field"])
     with pytest.raises(CacheAdapterError):
-        await adapter.hsetnx("key", "field", "value", int((now + expy).timestamp()))
+        await adapter.hsetnx("key", "field", "value")
     with pytest.raises(CacheAdapterError):
         await adapter.zadd("key", {"field": 123}, nx=True)
     with pytest.raises(CacheAdapterError):
@@ -110,6 +115,4 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     with pytest.raises(CacheAdapterError):
         await adapter.scan("key")
     with pytest.raises(CacheAdapterError):
-        await adapter.setnx("key", b"value")
-    with pytest.raises(CacheAdapterError):
-        await adapter.set("key", b"value", ttl=expy)
+        await adapter.set("key", b"value", ttl=expy, nx=False)

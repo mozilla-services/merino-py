@@ -653,7 +653,7 @@ class WCS(Sport):
     ## and process data, or return results.
 
     season: str | None = None
-    cache_prefix: str = "sport:wcs"  # Unique prefix for Redis
+    cache_prefix: str = "sport:wcs:v1"  # Unique prefix for Redis
     _lock: asyncio.Lock
 
     def __init__(
@@ -770,22 +770,25 @@ class WCS(Sport):
             }
         ]
         """
-        self.countries = {}
         logging.info(f"{LOGGING_TAG} Pre Loading Countries")
         for area in response:
             # build the reverse index to get the country code and id.
-            self.countries[area["AreaId"]] = {
+            country_data = {
                 "name": area["Name"],
                 "code": area["CountryCode"],
             }
             # cache this for later, we're gonna need them for teams.
-            await self.cache.hset(
-                f"{self.cache_prefix}:area:{area['AreaId']}", self.countries[area["AreaId"]]
-            )
+            await self.cache.hset(f"{self.cache_prefix}:area:{area['AreaId']}", country_data)
 
     async def get_season(self, client: AsyncClient) -> None:
         """Get the current season (which is just the current year)"""
         self.season = str(datetime.now(tz=timezone.utc).year)
+
+    async def get_country(self, area_id: int | None) -> dict[bytes, bytes] | None:
+        """Return cached country info for this ID"""
+        if not area_id:
+            return None
+        return await self.cache.hgetall(f"{self.cache_prefix}:area:{area_id}")
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
@@ -828,9 +831,7 @@ class WCS(Sport):
         # This should try to
         for team_data in data:
             try:
-                area = await self.cache.hgetall(
-                    f"{self.cache_prefix}:area:{team_data.get('AreaId')}"
-                )
+                area = await self.get_country(team_data.get("AreaId"))
                 # TODO: get `eliminated` field from ??
                 team = Team.from_data(
                     team_data=team_data,
@@ -938,7 +939,6 @@ class WCS(Sport):
                 {f"{self.cache_prefix}:event:{event_id}": int(event.date.timestamp())},
                 gt=True,
             )
-        return self
 
     async def get_events_by_team(  # pragma: no cover "widget"
         self, team_key: str, start: datetime | None = None, end: datetime | None = None
@@ -956,7 +956,7 @@ class WCS(Sport):
         # TODO: build
         # scan the ssort list for events that fall between the start (min) and end (max)
         # fetch those event info.
-        pass
+        raise NotImplementedError
 
 
 # THE FOLLOWING CLASSES ARE WIP:::

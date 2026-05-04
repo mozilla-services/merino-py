@@ -2078,8 +2078,8 @@ async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -
     sport.cache = mock_cache
     await sport.load_areas(areas_payload)
     assert mock_cache.hset.call_args_list == [
-        call("sport:wcs:area:1", {"name": "World", "code": "INT"}),
-        call("sport:wcs:area:2", {"name": "Asia", "code": "ASI"}),
+        call("sport:wcs:v1:area:1", {"name": "World", "code": "INT"}),
+        call("sport:wcs:v1:area:2", {"name": "Asia", "code": "ASI"}),
     ]
 
 

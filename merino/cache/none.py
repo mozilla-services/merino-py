@@ -10,7 +10,15 @@ class NoCacheAdapter:  # pragma: no cover
     async def get(self, key: str) -> bytes | None:  # noqa: D102
         return None
 
-    async def delete(self, key: str) -> bytes | None:  # noqa: D102
+    async def delete(self, key: str) -> int | None:  # noqa: D102
+        return None
+
+    async def setnx(
+        self, key: str, value: bytes, ttl: timedelta | None = None, nx: bool = False
+    ) -> bool | None:
+        """Store a key-value pair in Redis, if there is not previous value, and optionally
+        expiring after the time-to-live.
+        """
         return None
 
     async def set(  # noqa: D102
@@ -18,23 +26,15 @@ class NoCacheAdapter:  # pragma: no cover
         key: str,
         value: bytes | str,
         ttl: timedelta | None = None,
-    ) -> None:
-        pass
-
-    async def setnx(
-        self,
-        key: str,
-        value: bytes,
-        ttl: timedelta | None = None,
         nx: bool = False,
-    ) -> bool:
+    ) -> None:
         """Store a key-value pair in Redis, overwriting the previous value if set, and optionally
         expiring after the time-to-live.
 
         Raises:
             - `CacheAdapterError` if Redis returns an error.
         """
-        return False
+        pass
 
     async def close(self) -> None:  # noqa: D102
         pass
@@ -90,7 +90,7 @@ class NoCacheAdapter:  # pragma: no cover
         """Return all fields for a hash key"""
         return 0
 
-    async def hsetnx(self, key: str, field: str, value: Any, expiry: int | None = None) -> int:
+    async def hsetnx(self, key: str, field: str, value: Any) -> int:
         """Set field for a hash key if not already present"""
         return 0
 
@@ -150,5 +150,5 @@ class NoCacheAdapter:  # pragma: no cover
 
     # ==
     async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
-        """Scan keys for matching values"""
+        """Scan keys for matching values. NOTE: This is VERY slow and should be avoided."""
         return []
