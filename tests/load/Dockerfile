@@ -9,6 +9,8 @@ LABEL maintainer="Content Discovery Services (DISCO) Team <disco-team@mozilla.co
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
+WORKDIR /app
+
 # Copy over app dependencies
 COPY ./pyproject.toml ./uv.lock ./
 
@@ -24,7 +26,7 @@ RUN apt-get update && \
 
 ENV LANG=C.UTF-8
 ENV PYTHONUNBUFFERED=1
-ENV PYTHON_VENV=/.venv
+ENV PYTHON_VENV=/app/.venv
 ENV PATH="${PYTHON_VENV}/bin:${PATH}"
 
 # Add locust as a non-root user
