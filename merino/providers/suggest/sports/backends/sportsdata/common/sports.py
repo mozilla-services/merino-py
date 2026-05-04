@@ -674,8 +674,8 @@ class WCS(Sport):
                 "base_url", "https://api.sportsdata.io/v4/soccer/scores/json"
             ),
             cache_dir=settings.sportsdata.get("cache_dir"),
-            team_ttl=timedelta(weeks=sport_settings.get("team_ttl_weeks", 6)),
-            event_ttl=timedelta(weeks=sport_settings.get("event_ttl_weeks.wcs", 6)),
+            team_ttl=timedelta(weeks=sport_settings.get("team_ttl_weeks", 12)),
+            event_ttl=timedelta(weeks=sport_settings.get("event_ttl_weeks.wcs", 12)),
         )
         self._lock = asyncio.Lock()
         self.cache = cache

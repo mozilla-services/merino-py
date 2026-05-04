@@ -376,8 +376,8 @@ finance_tickers_file = "dev/query_normalization/finance_tickers.json"
 
 # MERINO_QUERY_NORMALIZATION__WORDSEGMENT_CACHE_SIZE
 # Max entries in the wordsegment LRU cache. Each entry is a token->segmentation
-# mapping (~200 bytes). 10000 entries ≈ 2 MB.
-wordsegment_cache_size = 10000
+# mapping (~200 bytes). 1000 entries ≈ 0.2 MB.
+wordsegment_cache_size = 1000
 
 # MERINO_QUERY_NORMALIZATION__PROVIDERS
 # List of provider names that receive normalized queries.

@@ -77,7 +77,7 @@ from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
 from merino.providers.games.particle.provider import Provider as ParticleProvider
 from merino.providers.wcs import get_provider as get_wcs_provider
-from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse
+from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse, TeamsResponse
 from merino.providers.wcs.provider import WcsProvider
 
 logger = logging.getLogger(__name__)
@@ -724,6 +724,19 @@ async def get_wcs_live(
     the vendor backend lands.
     """
     return provider.get_live_matches(_parse_team_keys(teams))
+
+
+@router.get(
+    "/wcs/teams",
+    tags=["wcs"],
+    summary="All World Cup Soccer teams",
+    response_model=TeamsResponse,
+)
+async def get_wcs_teams(
+    provider: WcsProvider = Depends(get_wcs_provider),
+) -> TeamsResponse:
+    """Return all teams participating in the World Cup."""
+    return provider.get_teams()
 
 
 def _parse_team_keys(teams: str | None) -> frozenset[str] | None:
