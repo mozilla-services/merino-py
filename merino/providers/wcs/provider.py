@@ -47,7 +47,7 @@ class WcsProvider:
         if limit is not None:
             previous, current, next_ = previous[-limit:], current[:limit], next_[:limit]
 
-        return MatchesResponse(previous=previous, current=current, next=next_)
+        return MatchesResponse(previous=previous, current=current, next_=next_)
 
     def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
         """Return events currently in progress, sorted ascending by `date`.

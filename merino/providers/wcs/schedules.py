@@ -33,9 +33,7 @@ def _make_team(key: str, global_id: int, name: str, group: str) -> TeamInfo:
     """Build a TeamInfo from the schedule feed, hydrating colors from wcs_teams.json."""
     team = _load_teams().get(key, {})
     colors = [
-        c
-        for c in (team.get("ClubColor1"), team.get("ClubColor2"), team.get("ClubColor3"))
-        if c
+        c for c in (team.get("ClubColor1"), team.get("ClubColor2"), team.get("ClubColor3")) if c
     ]
     return TeamInfo(
         key=key,
