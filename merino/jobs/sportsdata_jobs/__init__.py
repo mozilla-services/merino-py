@@ -122,8 +122,6 @@ class SportDataUpdater:
                     sport = WCS(settings, cache=cache)
                 # case "EPL":
                 #    sport = EPL(settings)
-                # case "FIFA":
-                #    sport = FIFA(settings)
                 case _:
                     logger.warning(f"{LOGGING_TAG}⚠️ Ignoring sport {sport_name}")
                     continue

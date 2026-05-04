@@ -891,6 +891,7 @@ class WCS(Sport):
             await self.cache.set(
                 f"{self.cache_prefix}:team:{teamId}", self.team_as_str(team).encode()
             )
+        await self.cache.hset(f"{self.cache_prefix}:meta:team_ids", )
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""

@@ -144,4 +144,4 @@ bucket_name = "merino-ml-data-prod"
 gcp_project = "moz-fx-merino-prod-5de4"
 
 # GCS bucket that contains cohort model data
-qbucket_name = "merino-ml-data-prod"
+bucket_name = "merino-ml-data-prod"
