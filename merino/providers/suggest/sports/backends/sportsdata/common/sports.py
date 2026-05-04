@@ -653,7 +653,8 @@ class WCS(Sport):
                 default="https://api.sportsdata.io/v4/soccer/scores/json",
             ),
             cache_dir=settings.sportsdata.get("cache_dir"),
-            team_ttl=timedelta(weeks=4),
+            team_ttl=timedelta(weeks=12),
+            event_ttl=timedelta(weeks=12),
         )
         self._lock = asyncio.Lock()
         self.normalized_terms.update(
