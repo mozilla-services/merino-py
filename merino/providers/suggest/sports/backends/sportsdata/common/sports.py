@@ -748,12 +748,13 @@ class WCS(Sport):
         # Each event and team has an `AreaId` which we will use to map
         # to the individual country. This should not change, so we only need
         # to update once, and maybe once per year.
-        url = f"{self.base_url}/Areas?key={self.api_key}"
+        url = f"{self.base_url}/Areas"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(weeks=25),
             cache_dir=self.cache_dir,
+            args={"key": self.api_key},
         )
         # Sample Response:
         """
