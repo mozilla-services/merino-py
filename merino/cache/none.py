@@ -10,6 +10,10 @@ class NoCacheAdapter:  # pragma: no cover
     async def get(self, key: str) -> bytes | None:  # noqa: D102
         return None
 
+    async def mget(self, keys: list[bytes]) -> None | list[Any]:
+        """Get data for multiple keys"""
+        return None
+
     async def delete(self, key: str) -> int | None:  # noqa: D102
         return None
 

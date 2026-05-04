@@ -85,6 +85,13 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to get `{repr(key)}` with error: `{exc}`") from exc
 
+    async def mget(self, keys: list[bytes]) -> None | list[Any]:
+        """Get data for multiple keys"""
+        try:
+            return await self.replica.mget(keys)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to mget `{repr(keys)}` with error: `{exc}`") from exc
+
     async def delete(self, key: str) -> int:
         """Delete the value associated with the key from Redis.
 

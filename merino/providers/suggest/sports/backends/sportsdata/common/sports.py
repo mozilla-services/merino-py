@@ -665,15 +665,17 @@ class WCS(Sport):
     ):
         # name = self.__class__.__name__
         name = "fifa"
+        # sport specific settings TODO: copy this to other sports.
+        sport_settings = settings.sportsdata.get(self.__class__.__name__, {})
         super().__init__(
             settings=settings,
             name=name,
-            base_url=settings.sportsdata.get(
-                "base_url.wcs",
-                default="https://api.sportsdata.io/v4/soccer/scores/json",
+            base_url=sport_settings.get(
+                "base_url", "https://api.sportsdata.io/v4/soccer/scores/json"
             ),
             cache_dir=settings.sportsdata.get("cache_dir"),
-            team_ttl=timedelta(weeks=4),
+            team_ttl=timedelta(weeks=sport_settings.get("team_ttl_weeks", 6)),
+            event_ttl=timedelta(weeks=sport_settings.get("event_ttl_weeks.wcs", 6)),
         )
         self._lock = asyncio.Lock()
         self.cache = cache
@@ -887,11 +889,30 @@ class WCS(Sport):
     async def cache_teams(self) -> None:  # pragma: no cover "widget"
         """Write the team data to the redis cache for the widget"""
         # Widget: Store teams to Redis
+        ids = []
         for teamId, team in self.teams.items():
-            await self.cache.set(
-                f"{self.cache_prefix}:team:{teamId}", self.team_as_str(team).encode()
-            )
-        await self.cache.hset(f"{self.cache_prefix}:meta:team_ids", )
+            id = f"{self.cache_prefix}:team:{teamId}"
+            await self.cache.set(id, self.team_as_str(team).encode())
+            ids.append(id)
+        # for now, dump the list of team ids into a meta list so that we can save doing a scan later.
+        # TODO: replace with vadd when available.
+        await self.cache.set(f"{self.cache_prefix}:meta:team_ids", json.dumps(ids).encode())
+
+    async def get_all_teams(self) -> dict[int, Any]:
+        """Return all the cached teams.
+
+        For the `/teams` endpoint, return the `.values()` of the result.
+        """
+        teams: dict[int, Any] = {}
+        team_ids = await self.cache.get(f"{self.cache_prefix}:meta:team_ids")
+        if team_ids:
+            team_ids = json.loads(team_ids)
+            str_teams = await self.cache.mget(team_ids)
+            if str_teams:
+                for bteam in str_teams:
+                    team = Team(**json.loads(bteam))
+                    teams[int(team.id)] = team
+        return teams
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
