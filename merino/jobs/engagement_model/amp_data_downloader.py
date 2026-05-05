@@ -20,7 +20,7 @@ SELECT
  COUNT(*) AS impressions
 FROM `moz-fx-data-shared-prod.search_terms_derived.suggest_impression_sanitized_v3`
 WHERE
- submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 9 DAY) AND TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
+ submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY) AND CURRENT_TIMESTAMP()
 AND query is not NULL
 GROUP BY 1, 2
 HAVING impressions > 500
@@ -132,6 +132,17 @@ ORDER BY 1, 4 DESC
             }
 
         return result
+
+    @staticmethod
+    def apply_click_adjustment(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Add 3 to the click count for each row where impressions >= 3.
+        This adjustment is based on the 95% confidence interval when observing 0 event
+        for a rare random variable (which follows a Poisson Distribution).
+        """
+        return [
+            {**row, "clicks": row["clicks"] + 3} if row["impressions"] >= 3 else row
+            for row in data
+        ]
 
     @staticmethod
     def aggregate_data(_transformed: dict[str, Any]) -> dict[str, int]:
