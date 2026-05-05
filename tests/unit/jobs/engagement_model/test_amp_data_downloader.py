@@ -175,6 +175,19 @@ def test_transform_data_returns_empty_dict_for_empty_inputs():
     assert EngagementDataDownloader.transform_data(historical=[], live=[]) == {}
 
 
+def test_apply_click_adjustment_adds_3_to_clicks_when_impressions_at_least_3():
+    """Test that 3 is added to clicks for rows where impressions >= 3."""
+    data = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 2, "clicks": 0},
+        {"advertiser": "firefox", "query": "browser", "impressions": 100, "clicks": 10},
+    ]
+    result = EngagementDataDownloader.apply_click_adjustment(data)
+    assert result == [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 2, "clicks": 0},
+        {"advertiser": "firefox", "query": "browser", "impressions": 100, "clicks": 13},
+    ]
+
+
 def test_aggregate_data_returns_zeros():
     """Test that aggregate_data returns zeros (not yet consumed)."""
     transformed = {

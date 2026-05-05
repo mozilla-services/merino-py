@@ -12,25 +12,21 @@ def test_upload_engagement_data_success() -> None:
         {"advertiser": "mozilla", "query": "firefox", "impressions": 100, "clicks": 5},
         {"advertiser": "firefox", "query": "browser", "impressions": 200, "clicks": 10},
     ]
-    amp_keyword_live = [
-        {"advertiser": "mozilla", "query": "firefox", "impressions": 50, "clicks": 3},
-        {"advertiser": "chrome", "query": "search", "impressions": 80, "clicks": 2},
+    amp_keyword_historical_adjusted = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 100, "clicks": 8},
+        {"advertiser": "firefox", "query": "browser", "impressions": 200, "clicks": 13},
     ]
     wiki_data = {"impressions": 300, "clicks": 20}
 
     transformed_amp_data = {
-        "mozilla/firefox": {
-            "historical": {"impressions": 100, "clicks": 5},
-            "live": {"impressions": 50, "clicks": 3},
-        },
-        "firefox/browser": {"historical": {"impressions": 200, "clicks": 10}},
-        "chrome/search": {"live": {"impressions": 80, "clicks": 2}},
+        "mozilla/firefox": {"historical": {"impressions": 100, "clicks": 8}},
+        "firefox/browser": {"historical": {"impressions": 200, "clicks": 13}},
     }
     aggregated_amp_data = {"impressions": 0, "clicks": 0}
 
     mock_amp_downloader = MagicMock()
     mock_amp_downloader.download_historical_data.return_value = amp_keyword_historical
-    mock_amp_downloader.download_live_data.return_value = amp_keyword_live
+    mock_amp_downloader.apply_click_adjustment.return_value = amp_keyword_historical_adjusted
     mock_amp_downloader.transform_data.return_value = transformed_amp_data
     mock_amp_downloader.aggregate_data.return_value = aggregated_amp_data
 
@@ -74,10 +70,11 @@ def test_upload_engagement_data_success() -> None:
     )
 
     mock_amp_downloader.download_historical_data.assert_called_once()
-    mock_amp_downloader.download_live_data.assert_called_once()
+    mock_amp_downloader.download_live_data.assert_not_called()
+    mock_amp_downloader.apply_click_adjustment.assert_called_once_with(amp_keyword_historical)
     mock_amp_downloader.transform_data.assert_called_once_with(
-        historical=amp_keyword_historical,
-        live=amp_keyword_live,
+        historical=amp_keyword_historical_adjusted,
+        live=[],
     )
     mock_amp_downloader.aggregate_data.assert_called_once_with(transformed_amp_data)
     mock_wiki_downloader.download_data.assert_called_once()

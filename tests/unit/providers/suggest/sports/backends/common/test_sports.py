@@ -1799,6 +1799,55 @@ async def test_nba_update_events(
         ]
 
 
+@freezegun.freeze_time("2026-05-05T12:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_nba_update_events_score_url_uses_local_game_day(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """ScoresBasic URL must be keyed on the league's ET game day, not UTC.
+
+    Regression for DISCO-4164: an evening-ET game whose DateTimeUTC rolls into the
+    next UTC day was being looked up under the wrong /ScoresBasic/{day} endpoint,
+    so its score never landed.
+    """
+    nba = NBA(settings=settings.providers.sports)
+    nba.load_teams_from_source(nba_teams_payload())
+    nba.season = "2026POST"
+    nba.event_ttl = timedelta(weeks=2)
+
+    # 9:30pm ET on May 4, which is 01:30 UTC on May 5 — the bug case.
+    game_utc = "2026-05-05T01:30:00"
+    schedules_payload = nba_schedule_payload()
+    schedules_payload[0].update(
+        {
+            "Day": "2026-05-04T00:00:00",
+            "DateTime": "2026-05-04T21:30:00",
+            "DateTimeUTC": game_utc,
+            "Status": "Final",
+        }
+    )
+    schedules_payload[1].update(
+        {
+            "Day": "2026-05-04T00:00:00",
+            "DateTime": "2026-05-04T21:30:00",
+            "DateTimeUTC": game_utc,
+            "Status": "Scheduled",
+        }
+    )
+
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[schedules_payload, []],
+    )
+
+    await nba.update_events(client=mock_client)
+
+    urls = [call.kwargs["url"] for call in get_data.call_args_list]
+    assert "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2026-MAY-04" in urls
+    assert "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2026-MAY-05" not in urls
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_mlb_update_events(
