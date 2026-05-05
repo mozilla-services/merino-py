@@ -451,7 +451,7 @@ hourly_forecast_ttl_sec = 1800
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
 # e.g. ["NFL","NBA","NHL"]
-sports=["NFL","NBA","NHL","MLB","UCL", "WCS"]
+sports=["NFL","NBA","NHL","MLB","UCL"]
 # required for WCS:
 cache="redis"
 # Index names for Elastic Search.
