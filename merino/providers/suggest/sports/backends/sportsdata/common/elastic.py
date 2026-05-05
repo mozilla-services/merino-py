@@ -716,8 +716,10 @@ class SportsDataStore(ElasticDataStore):
                         if "next" not in filter[sport]:
                             filter[sport]["next"] = event
                             continue
-                        # get the most recent "next" game
-                        if datetime.fromisoformat(filter[sport]["next"]["date"]) < event_date:
+                        # Keep the soonest scheduled game. Hits arrive sorted by date desc,
+                        # so without this comparator the farthest-future game wins and
+                        # today's game is shadowed by next week's. (DISCO-4167)
+                        if datetime.fromisoformat(filter[sport]["next"]["date"]) > event_date:
                             filter[sport]["next"] = event
                     if status.is_in_progress():
                         # remove the previous game info because we have a current one.
