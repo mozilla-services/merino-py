@@ -730,17 +730,19 @@ class WCS(Sport):
         if await self.cache.setnx(
             f"{meta_key}:lock", value=mylock.to_bytes(8), nx=True, ttl=timedelta(seconds=30)
         ):
-            logging.info(f"{LOGGING_TAG} Initializing Cache")
-            # We got the lock, we can initialize things.
-            # to initial stuff.
-            await self.load_areas(client)
-            await self.update_teams(client)
-            await self.cache_teams()
-            complete = int(datetime.now(tz=timezone.utc).timestamp())
-            logging.info(f"{LOGGING_TAG} Marking db initialized as of {complete}")
-            # We're done, carry on...
-            await self.cache.set(f"{meta_key}:updated", complete.to_bytes(8))
-            await self.cache.delete(f"{meta_key}:lock")
+            try:
+                logging.info(f"{LOGGING_TAG} Initializing Cache")
+                # We got the lock, we can initialize things.
+                # to initial stuff.
+                await self.load_areas(client)
+                await self.update_teams(client)
+                await self.cache_teams()
+                complete = int(datetime.now(tz=timezone.utc).timestamp())
+                logging.info(f"{LOGGING_TAG} Marking db initialized as of {complete}")
+                # We're done, carry on...
+                await self.cache.set(f"{meta_key}:updated", complete.to_bytes(8))
+            finally:
+                await self.cache.delete(f"{meta_key}:lock")
 
     async def load_areas(self, client) -> None:
         """Fetch and load the countries to the cache"""
