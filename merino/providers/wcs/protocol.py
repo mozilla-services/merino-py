@@ -1,6 +1,23 @@
 """World Cup Soccer match endpoint request and response models."""
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+import webcolors
+
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+
+
+def as_hex_color(color_name: str) -> str:
+    """Convert the sportsdata color name to a hex value"""
+    return str(
+        webcolors.rgb_to_hex(
+            webcolors.html5_parse_legacy_color(color_name.replace(" ", "").lower())
+        )
+    )
+
+
+def get_team_url(team_key: str) -> str:
+    """Return the team icon URL"""
+    return f"https://example.com?key={team_key}"
 
 
 class TeamInfo(BaseModel):
@@ -13,6 +30,22 @@ class TeamInfo(BaseModel):
     colors: list[str] = Field(description="Branding colors, primary first.")
     icon_url: HttpUrl | None = Field(default=None, description="Team flag URL, if available.")
     eliminated: bool = Field(description="True once the team is out of the tournament.")
+
+    @classmethod
+    def from_Team(cls, team: Team):
+        """Convert a Team to the widget TeamInfo"""
+        colors = map(lambda color: as_hex_color(color), team.colors)
+        icon_url = get_team_url(team.key)
+
+        return cls(
+            key=team.key,
+            global_team_id=team.id,
+            name=team.name,
+            region=team.country,
+            colors=colors,
+            icon_url=icon_url,
+            eliminated=team.eliminated,
+        )
 
 
 class EventInfo(BaseModel):

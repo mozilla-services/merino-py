@@ -813,15 +813,7 @@ class WCS(Sport):
                 TODO: recreate the Team using the cached data.
                 data = json.loads(team_data)
                 TODO: Fill this out.
-                team = Team(  # type: ignore
-                    id=data.get("id"),
-                    fullname=data.get("name"),
-                    key=data.get("key"),
-                    locale=data.get("country"),
-                    aliases="",
-                    colors=data.get("colors"),
-                )
-                team.id = data.get("id")
+                team = Team(**data)
                 return team
             """
             return self.teams.get(id)
@@ -874,9 +866,7 @@ class WCS(Sport):
     def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
         """Serialize a team as a dictionary for the widget"""
         # TODO: Populate the eliminated field (from old team info?)
-        serialized = dict(
-            team.__dict__
-        )  # Because BaseModel is clever and helpful instead of dumb and useful.
+        serialized = team.model_dump()
         serialized["expiry"] = team.expiry.timestamp()
         serialized["updated"] = team.updated.timestamp()
         return json.dumps(serialized)
@@ -885,7 +875,7 @@ class WCS(Sport):
         """Serialize an event as a dictionary for the widget"""
         # import pdb;pdb.set_trace()
         # TODO: add more team info?
-        serialized = dict(event.__dict__)
+        serialized = event.model_dump()
         # munge the dates.
         serialized["date"] = event.date.timestamp()
         serialized["expiry"] = event.expiry.timestamp()
@@ -984,6 +974,7 @@ class WCS(Sport):
         # TODO: build
         # scan the ssort list for events that fall between the start (min) and end (max)
         # fetch those event info.
+
         raise NotImplementedError
 
 

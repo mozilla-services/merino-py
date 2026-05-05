@@ -1,8 +1,18 @@
 """World Cup Soccer match provider."""
 
 from datetime import UTC, date, datetime, timedelta
+from dynaconf.base import LazySettings
+import logging
 
-from merino.providers.wcs.fake_data import build_events, get_all_teams
+from merino.cache.redis import RedisAdapter
+from merino.cache.none import NoCacheAdapter
+
+
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import WCS
+from merino.providers.wcs.protocol import TeamInfo
+
+from merino.providers.wcs.fake_data import build_events
 from merino.providers.wcs.protocol import (
     EventInfo,
     LiveMatchesResponse,
@@ -12,9 +22,24 @@ from merino.providers.wcs.protocol import (
 
 _WINDOW = timedelta(days=7)
 
+# Global logger
+logger = logging.getLogger(__name__)
+
 
 class WcsProvider:
     """Serves match data for the World Cup Soccer endpoint."""
+
+    sport: WCS  # Should be Sports, but we do a lot of special stuff in WCS
+
+    def __init__(
+        self,
+        settings: LazySettings,
+        *args,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
+        **kwargs,
+    ):
+        # Note: This presumes that the cache has already been initialized.
+        self.sport = WCS(settings, cache)
 
     def get_matches(
         self,
@@ -67,9 +92,16 @@ class WcsProvider:
         ]
         return LiveMatchesResponse(matches=matches)
 
-    def get_teams(self) -> TeamsResponse:
+    async def get_teams(self) -> TeamsResponse:
         """Return all teams participating in the tournament."""
-        return TeamsResponse(teams=get_all_teams())
+        all_teams: dict[int, Team] = await self.sport.get_all_teams()
+        if not all_teams:
+            logger.warning("No team info found for WCS")
+            return TeamsResponse(teams=[])
+        teams: list[TeamInfo] = list(
+            map(lambda team: TeamInfo.from_Team(team), list(all_teams.values()))
+        )
+        return TeamsResponse(teams=list(teams))
 
 
 def _event_date(event: EventInfo) -> date:

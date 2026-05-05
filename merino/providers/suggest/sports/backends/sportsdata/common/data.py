@@ -71,6 +71,8 @@ class Team(BaseModel):
     expiry: datetime
     # Country / Area
     country: str | None
+    # has the team been eliminated?
+    eliminated: bool = False
 
     @classmethod
     def from_data(
@@ -147,6 +149,7 @@ class Team(BaseModel):
                 )
             ),
             country=country,
+            eliminated=team_data.get("eliminated", False),
         )
 
     def minimal(self) -> dict[str, Any]:
