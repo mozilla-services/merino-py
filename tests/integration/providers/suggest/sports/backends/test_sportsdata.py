@@ -92,6 +92,7 @@ def fixture_nfl() -> NFL:
         colors=["000000", "FFFFFF"],
         updated=FROZEN_TIME,
         expiry=FROZEN_TIME + timedelta(seconds=3600),
+        country="UNK",
     ).minimal()
     away = Team(
         terms="fake away",
@@ -104,6 +105,7 @@ def fixture_nfl() -> NFL:
         colors=["000000", "FFFFFF"],
         updated=FROZEN_TIME,
         expiry=FROZEN_TIME + timedelta(seconds=3600),
+        country="UNK",
     ).minimal()
 
     ev = Event(

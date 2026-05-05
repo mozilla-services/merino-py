@@ -13,6 +13,7 @@ from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 
 
+# TODO: convert this to use `sport.cache`; obsolete the `cache_dir` arg
 async def get_data(
     client: AsyncClient,
     url: str,

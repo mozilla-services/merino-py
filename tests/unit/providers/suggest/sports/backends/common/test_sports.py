@@ -8,10 +8,12 @@ from typing import Any, cast
 
 import freezegun
 import pytest
+from unittest.mock import MagicMock, call
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
+from merino.cache.redis import RedisAdapter
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport, Team
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -1386,6 +1388,7 @@ def _mk_team(key: str, name: str, locale: str, id: int) -> Team:
         colors=["000000"],
         updated=datetime(2025, 9, 22, tzinfo=timezone.utc),
         expiry=datetime(2026, 9, 22, tzinfo=timezone.utc),
+        country=key,
     )
 
 
@@ -1523,6 +1526,15 @@ async def test_nba_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
 
 
 @pytest.mark.asyncio
+async def test_mlb_get_team(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """Test MLB team getting"""
+    sport = MLB(settings=settings.providers.sports)
+    mock_team = MagicMock(spec=Team)
+    sport.teams = {1: mock_team}
+    assert await sport.get_team(1) == mock_team
+
+
+@pytest.mark.asyncio
 async def test_mlb_update_teams(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test MLB team updates."""
     sport = MLB(settings=settings.providers.sports)
@@ -1647,6 +1659,7 @@ async def test_nhl_update_events(
 
     within = "2025-09-22T13:30:00"  # UTC
     outside = "2026-01-22T13:30:00"
+    before = "2026-07-22T13:30:00"
     schedules_payload[0].update(
         {
             "Date": within,
@@ -1683,6 +1696,15 @@ async def test_nhl_update_events(
             "Status": "Scheduled",
         }
     )
+    scores_payload[1].update(
+        {
+            "Date": before,
+            "Day": before,
+            "DateTime": before,
+            "DateTimeUTC": before,
+            "Status": "Final",
+        }
+    )
 
     nhl = NHL(settings=settings.providers.sports)
     nhl.load_teams_from_source(teams_payload)
@@ -1691,7 +1713,7 @@ async def test_nhl_update_events(
 
     get_data = mocker.patch(
         "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
-        side_effect=[schedules_payload, scores_payload],
+        side_effect=[schedules_payload, scores_payload, scores_payload],
     )
 
     await nhl.update_events(client=mock_client)
@@ -1701,8 +1723,8 @@ async def test_nhl_update_events(
     assert ev.home_team["key"] == "BUF"
     assert ev.away_team["key"] == "BOS"
     assert 2 == get_data.call_count
-    for call in get_data.call_args_list:
-        assert call.kwargs["url"] in [
+    for scall in get_data.call_args_list:
+        assert scall.kwargs["url"] in [
             "https://api.sportsdata.io/v3/nhl/scores/json/SchedulesBasic/2026PRE",
             "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/2025-SEP-22",
         ]
@@ -1770,8 +1792,8 @@ async def test_nba_update_events(
     assert 20011111 in nba.events and 20022222 not in nba.events
     assert nba.events[20011111].status == GameStatus.Final
     assert 2 == get_data.call_count
-    for call in get_data.call_args_list:
-        assert call.kwargs["url"] in [
+    for scall in get_data.call_args_list:
+        assert scall.kwargs["url"] in [
             "https://api.sportsdata.io/v3/nba/scores/json/SchedulesBasic/2026PRE",
             "https://api.sportsdata.io/v3/nba/scores/json/ScoresBasic/2025-SEP-22",
         ]
@@ -1901,6 +1923,166 @@ async def test_ucl_update_events(
     assert "/SchedulesBasic/UCL/2025" in get_data.call_args_list[0].kwargs["url"]
 
 
+@pytest.mark.asyncio
+async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """Test WCS load areas (widget)"""
+    sport = WCS(settings=settings.providers.sports)
+    areas_payload = json.loads("""
+[
+  {
+    "AreaId": 1,
+    "CountryCode": "INT",
+    "Name": "World",
+    "Competitions": [
+      {
+        "CompetitionId": 21,
+        "AreaId": 1,
+        "AreaName": "World",
+        "Name": "FIFA World Cup",
+        "Gender": "Male",
+        "Type": "International",
+        "Format": "International Cup",
+        "Key": "FIFA",
+        "Seasons": [
+          {
+            "SeasonId": 50,
+            "CompetitionId": 21,
+            "Season": 2018,
+            "Name": "2018 Russia",
+            "CompetitionName": "FIFA World Cup",
+            "StartDate": "2018-06-14T00:00:00",
+            "EndDate": "2018-07-15T00:00:00",
+            "CurrentSeason": false,
+            "Rounds": [
+              {
+                "RoundId": 196,
+                "SeasonId": 50,
+                "Season": 2018,
+                "SeasonType": 1,
+                "Name": "Group Stage",
+                "Type": "Table",
+                "StartDate": "2018-06-14T00:00:00",
+                "EndDate": "2018-06-28T00:00:00",
+                "CurrentWeek": 3,
+                "CurrentRound": false,
+                "Games": [],
+                "Standings": [],
+                "TeamSeasons": [],
+                "PlayerSeasons": []
+              }
+            ]
+          },
+          {
+            "SeasonId": 56,
+            "CompetitionId": 21,
+            "Season": 2014,
+            "Name": "2014 Brazil",
+            "CompetitionName": "FIFA World Cup",
+            "StartDate": "2014-06-12T00:00:00",
+            "EndDate": "2014-07-13T00:00:00",
+            "CurrentSeason": false,
+            "Rounds": [
+              {
+                "RoundId": 325,
+                "SeasonId": 56,
+                "Season": 2014,
+                "SeasonType": 1,
+                "Name": "Group Stage",
+                "Type": "Table",
+                "StartDate": "2014-06-12T00:00:00",
+                "EndDate": "2014-06-26T00:00:00",
+                "CurrentWeek": 3,
+                "CurrentRound": false,
+                "Games": [],
+                "Standings": [],
+                "TeamSeasons": [],
+                "PlayerSeasons": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "CompetitionId": 25,
+        "AreaId": 1,
+        "AreaName": "World",
+        "Name": "FIFA Friendlies",
+        "Gender": "Male",
+        "Type": "International",
+        "Format": "International Cup",
+        "Key": "FIFAF",
+        "Seasons": [
+          {
+            "SeasonId": 59,
+            "CompetitionId": 25,
+            "Season": 2018,
+            "Name": "2018",
+            "CompetitionName": "FIFA Friendlies",
+            "StartDate": "2018-01-01T00:00:00",
+            "EndDate": "2018-12-31T00:00:00",
+            "CurrentSeason": false,
+            "Rounds": [
+              {
+                "RoundId": 237,
+                "SeasonId": 59,
+                "Season": 2018,
+                "SeasonType": 3,
+                "Name": "Regular Round",
+                "Type": "Cup",
+                "StartDate": "2018-01-01T00:00:00",
+                "EndDate": "2018-12-31T00:00:00",
+                "CurrentWeek": null,
+                "CurrentRound": false,
+                "Games": [],
+                "Standings": [],
+                "TeamSeasons": [],
+                "PlayerSeasons": []
+              },
+              {
+                "RoundId": 238,
+                "SeasonId": 59,
+                "Season": 2018,
+                "SeasonType": 3,
+                "Name": "February",
+                "Type": "Cup",
+                "StartDate": "2018-02-01T00:00:00",
+                "EndDate": "2018-02-28T00:00:00",
+                "CurrentWeek": null,
+                "CurrentRound": false,
+                "Games": [],
+                "Standings": [],
+                "TeamSeasons": [],
+                "PlayerSeasons": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "AreaId": 2,
+    "CountryCode": "ASI",
+    "Name": "Asia",
+    "Competitions": [
+    ]
+  }
+]
+""")
+    _get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[areas_payload],
+    )
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.hset.return_value = 1
+    sport.cache = mock_cache
+    await sport.load_areas(areas_payload)
+    assert mock_cache.hset.call_args_list == [
+        call("sport:wcs:v1:area:1", {"name": "World", "code": "INT"}),
+        call("sport:wcs:v1:area:2", {"name": "Asia", "code": "ASI"}),
+    ]
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_wcs_update_events(
@@ -1910,7 +2092,7 @@ async def test_wcs_update_events(
     """Test WCS event updates."""
     sport = WCS(settings=settings.providers.sports)
     teams_payload = wcs_teams_payload()
-    sport.load_teams_from_source(teams_payload)
+    await sport.async_load_teams_from_source(teams_payload)
     sport.season = "2025"  # set by update_teams normally
     sport.event_ttl = timedelta(weeks=2)
 
@@ -1961,10 +2143,10 @@ async def test_wcs_update_events(
     assert global_offset + 11111 in sport.events and global_offset + 22222 not in sport.events
     assert sport.events[global_offset + 11111].status == GameStatus.Final
     assert 2 == get_data.call_count
-    for call in get_data.call_args_list:
-        assert call.kwargs["url"] in [
-            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2025",
-            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/FIFA/2025-SEP-22",
+    for scall in get_data.call_args_list:
+        assert scall.kwargs["url"] in [
+            "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/fifa/2025",
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2025-SEP-22",
         ]
 
 
@@ -1984,6 +2166,69 @@ async def test_wcs_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert get_data.call_count == 1
 
     assert "/Teams/fifa" in get_data.call_args_list[0].kwargs["url"]
+
+
+# WCS Widget tests ===
+
+
+@pytest.mark.asyncio
+async def test_wcs_get_team(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """Test WCS team getting"""
+    sport = WCS(settings=settings.providers.sports)
+    mock_team = MagicMock(spec=Team)
+
+    sport.teams = {1: mock_team}
+
+    assert await sport.get_team(1) == mock_team
+
+
+@pytest.mark.asyncio
+async def test_team_cache_restore() -> None:
+    """Test team caching and restoration"""
+    sport = WCS(settings=settings.providers.sports)
+    teams = {
+        1: Team(
+            terms="",
+            fullname="Home",
+            name="Home",
+            key="HOM",
+            id=1,
+            aliases=["Home"],
+            colors=["white"],
+            updated=datetime.now(),
+            expiry=datetime.now() + timedelta(seconds=10),
+            locale=None,
+            country="ENG",
+        ),
+        2: Team(
+            terms="",
+            fullname="Away",
+            name="Away",
+            key="AWY",
+            id=2,
+            aliases=["Away"],
+            colors=["black"],
+            updated=datetime.now(),
+            expiry=datetime.now() + timedelta(seconds=10),
+            locale=None,
+            country="FRA",
+        ),
+    }
+    sport.teams = teams
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.get.return_value = b'["sport:wcs:v1:team:1", "sport:wcs:v1:team:2"]'
+    mock_cache.mget.return_value = [
+        b'{"terms": "", "fullname": "Home", "name": "Home", "key": "HOM", "id": 1, "locale": null, "aliases": ["Home"], "colors": ["white"], "updated": 1777935457.922995, "expiry": 1777935467.922997, "country": "ENG"}',
+        b'{"terms": "", "fullname": "Away", "name": "Away", "key": "AWY", "id": 2, "locale": null, "aliases": ["Away"], "colors": ["black"], "updated": 1777935457.923011, "expiry": 1777935467.923011, "country": "FRA"}',
+    ]
+
+    sport.cache = mock_cache
+    # for each add and the meta include.
+    await sport.cache_teams()
+    assert mock_cache.set.call_count == 3
+    result = await sport.get_all_teams()
+    assert result[1].country == "ENG"
+    assert result[2].country == "FRA"
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)

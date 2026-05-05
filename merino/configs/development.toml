@@ -34,7 +34,8 @@ source_gcp_project = "mozdata"
 # List of active sports to process.
 # (e.g. "NBA,NHL,EPL,UCL,etc")
 # See `jobs.sportsdata_jobs.common` for list of supported sports
-sports = "NBA,NHL,EPL,UCL"
+sports = ["NBA", "NHL", "EPL", "UCL", "WCS"]
+cache = "redis"
 api_key = "abc123"
 
 [development.providers.wikipedia]

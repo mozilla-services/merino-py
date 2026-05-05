@@ -22,6 +22,8 @@ from merino.providers.suggest.sports import (
     utc_time_from_now,
 )
 
+from merino.cache.redis import RedisAdapter
+from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -67,6 +69,8 @@ class Team(BaseModel):
     updated: datetime
     # Team Data expiration date:
     expiry: datetime
+    # Country / Area
+    country: str | None
 
     @classmethod
     def from_data(
@@ -75,6 +79,7 @@ class Team(BaseModel):
         term_filter: list[str],
         team_ttl: timedelta,
         normalized_terms: dict,
+        areas: dict[int, Any] | None = None,
     ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         # build the list of terms we want to search:
@@ -104,6 +109,10 @@ class Team(BaseModel):
             raise SportsDataError(
                 f"No {normalized_terms[SportTerms.TEAM_ID]} found for {fullname}"
             )
+        # WCS Find the country
+        country = None
+        if areas:
+            country = areas.get(team_data.get(normalized_terms.get("AreaId", "AreaId"), 9999))
         raw_key = team_data["Key"]
         return cls(
             terms=" ".join(terms),
@@ -137,11 +146,12 @@ class Team(BaseModel):
                     ],
                 )
             ),
+            country=country,
         )
 
     def minimal(self) -> dict[str, Any]:
         """Return the very minimal version of the team info used in Events"""
-        return dict(key=self.key, name=self.fullname, colors=self.colors)
+        return dict(key=self.key, name=self.fullname, colors=self.colors, id=self.id)
 
 
 class Event(BaseModel):
@@ -253,6 +263,7 @@ class Sport:
     # and ownership reasons.
     term_filter: list[str] = []
     cache_dir: str | None
+    cache: RedisAdapter | NoCacheAdapter
     # Each sport may use a different term for these values.
     # You should prefer to use the `Global*` version when possible, but not all sports
     # provide that value, nor do all returned data sets.
@@ -265,6 +276,7 @@ class Sport:
         base_url: str,
         name: str,
         cache_dir: str | None = None,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         api_key: str | None = None,
         event_ttl: timedelta | None = None,
         team_ttl: timedelta | None = None,
@@ -289,6 +301,7 @@ class Sport:
         self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
         self.term_filter = term_filter
         self.cache_dir = cache_dir
+        self.cache = cache
         self.normalized_terms = SportNormalizedTerms.copy()
 
     @abstractmethod
@@ -549,7 +562,7 @@ class Sport:
                 # but if there's an error, it's probably wise to ignore this.
                 logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
                 logger.debug(
-                    f"{LOGGING_TAG} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
+                    f"{LOGGING_TAG} {status} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
                 )
                 continue
             # Ignore any events that are outside of the event interest window.
