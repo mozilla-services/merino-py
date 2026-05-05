@@ -12,7 +12,7 @@ from aiodogstatsd import Client as StatsdClient
 from google.cloud.storage import Client, Bucket
 
 from merino.configs import settings
-from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
+from merino.curated_recommendations.ml_backends.gcs_ml_recs import DEFAULT_SURFACE_ID, GcsMLRecs
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 
@@ -41,7 +41,7 @@ def create_ml_recs(
     # Call initialize to start the cron job in the same event loop
     synced_gcs_blob.initialize()
 
-    return GcsMLRecs(synced_gcs_blob=synced_gcs_blob)
+    return GcsMLRecs(synced_gcs_blobs={DEFAULT_SURFACE_ID: synced_gcs_blob})
 
 
 def create_blob(bucket, data):
@@ -153,9 +153,9 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
 
-    assert gcs_engagement.is_valid()
+    assert gcs_engagement.is_valid(DEFAULT_SURFACE_ID)
 
-    rankings = gcs_engagement.get()  # global ranking
+    rankings = gcs_engagement.get(surface_id=DEFAULT_SURFACE_ID)  # global ranking
     assert rankings.granularity == "global"
     assert rankings.get_score_pair("") == (1, 1)
     assert rankings.get_score_pair("aa") == (3, 1)
@@ -183,7 +183,7 @@ async def test_gcs_ml_recs_old_data(gcs_storage_client, gcs_bucket, metrics_clie
     """Test that the backend fetches data from GCS and returns engagement data."""
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
-    assert not gcs_engagement.is_valid()
+    assert not gcs_engagement.is_valid(surface_id=DEFAULT_SURFACE_ID)
 
 
 @pytest.mark.asyncio

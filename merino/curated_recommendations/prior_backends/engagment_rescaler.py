@@ -23,7 +23,7 @@ PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 
 LOCAL_RERANK_WEGHT = (
-    30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
+    60.0 
 )
 
 FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 12000

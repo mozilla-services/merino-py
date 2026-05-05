@@ -843,7 +843,7 @@ async def get_sections(
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
     use_contexual_ranker = (
-        do_inferred_contextual and ml_backend is not None and ml_backend.is_valid()
+        do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
     )
     if use_contexual_ranker:
         is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
@@ -856,6 +856,7 @@ async def get_sections(
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
+            surface_id=surface_id,
             ml_backend=ml_backend,
             disable_time_zone_context=request.experimentBranch
             == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,

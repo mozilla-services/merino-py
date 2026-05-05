@@ -7,6 +7,7 @@ import logging
 import random
 
 from merino.configs import settings
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
     ScheduledSurfaceBackend,
     CorpusApiGraphConfig,
@@ -120,27 +121,39 @@ def init_ml_recommendations_backend(num_files=NUM_ML_RECS_BACKEND_FILES) -> MLRe
     Because there are so merino servers, we don't need to rotate files in a particular
     instance"""
 
-    blob_name = settings.ml_recommendations.gcs.blob_name
-    try:
-        synced_gcs_blob = SyncedGcsBlob(
-            storage_client=initialize_storage_client(
-                destination_gcp_project=settings.ml_recommendations.gcs.gcp_project
-            ),
-            metrics_client=get_metrics_client(),
-            metrics_namespace="recommendation.ml.contextual",
-            bucket_name=settings.ml_recommendations.gcs.bucket_name,
-            blob_name=blob_name,
-            max_size=settings.ml_recommendations.gcs.max_size,
-            cron_interval_seconds=settings.ml_recommendations.gcs.cron_interval_seconds,
-            cron_job_name="fetch_ml_contextual_recs",
-        )
-        synced_gcs_blob.initialize()
-        return GcsMLRecs(synced_gcs_blob=synced_gcs_blob)
-    except Exception as e:
-        logger.error(f"Failed to initialize GCS ML Recs Backend: {e}")
-        # Fall back to a empty recommendation set if GCS cannot be initialized.
+    synced_gcs_blobs: dict[SurfaceId, SyncedGcsBlob] = {}
+    surface_blob_names: dict[SurfaceId, str] = {
+        SurfaceId.NEW_TAB_EN_US: settings.ml_recommendations.gcs.blob_name,
+        SurfaceId.NEW_TAB_EN_CA: settings.ml_recommendations.gcs.blob_name_ca,
+    }
+    metrics_namespaces: dict[SurfaceId, str] = {
+        SurfaceId.NEW_TAB_EN_US: "recommendation.ml.contextual",
+        SurfaceId.NEW_TAB_EN_CA: "recommendation.ml.contextual_ca",
+    }
+    for surface_id, blob_name in surface_blob_names.items():
+        try:
+            synced_gcs_blob = SyncedGcsBlob(
+                storage_client=initialize_storage_client(
+                    destination_gcp_project=settings.ml_recommendations.gcs.gcp_project
+                ),
+                metrics_client=get_metrics_client(),
+                metrics_namespace=metrics_namespaces[surface_id],
+                bucket_name=settings.ml_recommendations.gcs.bucket_name,
+                blob_name=blob_name,
+                max_size=settings.ml_recommendations.gcs.max_size,
+                cron_interval_seconds=settings.ml_recommendations.gcs.cron_interval_seconds,
+                cron_job_name="fetch_ml_contextual_recs",
+            )
+            synced_gcs_blob.initialize()
+            synced_gcs_blobs[surface_id] = synced_gcs_blob
+        except Exception as e:
+            logger.error(f"Failed to initialize GCS ML Recs Backend for {surface_id}: {e}")
+
+    if not synced_gcs_blobs:
+        # Fall back to an empty recommendation set if no surface could be initialized.
         # This happens in contract tests or when the developer isn't logged in with gcloud auth.
         return EmptyMLRecs()
+    return GcsMLRecs(synced_gcs_blobs=synced_gcs_blobs)
 
 
 def init_ml_cohort_model_backend() -> CohortModelBackend:

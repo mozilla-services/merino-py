@@ -151,7 +151,11 @@ class MockMLRecommendationsBackend(MLRecsBackend):
         self.data["US_COHORT_8"] = cohort_rankings
 
     def get(
-        self, region: str | None = None, cohort: str | None = None, time_zone: str | None = None
+        self,
+        surface_id: SurfaceId,
+        region: str | None = None,
+        cohort: str | None = None,
+        time_zone: str | None = None,
     ) -> ContextualArticleRankings | None:
         """Return sample ML recommendations"""
         if cohort and region:
@@ -170,11 +174,11 @@ class MockMLRecommendationsBackend(MLRecsBackend):
                 return rankings
         return self.data.get("global", None)
 
-    def is_valid(self) -> bool:
+    def is_valid(self, surface_id: SurfaceId) -> bool:
         """Return whether the backend is valid."""
         return True
 
-    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+    def get_adjusted_impressions(self, corpus_item_id: str, surface_id: SurfaceId) -> int:
         """Return the impression count for a given corpus item id (adjusted for propensity)"""
         return 100000
 
