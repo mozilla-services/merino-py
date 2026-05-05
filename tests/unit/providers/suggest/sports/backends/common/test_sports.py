@@ -2183,7 +2183,7 @@ async def test_wcs_get_team(mock_client: AsyncClient, mocker: MockerFixture) -> 
 
 
 @pytest.mark.asyncio
-async def test_team_cache_restore() -> None:
+async def test_team_cache_restore(mock_client: AsyncClient) -> None:
     """Test team caching and restoration"""
     sport = WCS(settings=settings.providers.sports)
     teams = {
@@ -2226,7 +2226,7 @@ async def test_team_cache_restore() -> None:
     # for each add and the meta include.
     await sport.cache_teams()
     assert mock_cache.set.call_count == 3
-    result = await sport.get_all_teams()
+    result = await sport.get_all_teams(mock_client)
     assert result[1].country == "ENG"
     assert result[2].country == "FRA"
 

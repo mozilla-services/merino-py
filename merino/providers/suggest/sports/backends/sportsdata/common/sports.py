@@ -5,7 +5,7 @@ This contains the sport specific calls and data formats which are normalized.
 
 import asyncio
 import logging
-import json
+import orjson
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -655,6 +655,8 @@ class WCS(Sport):
     season: str | None = None
     cache_prefix: str = "sport:wcs:v1"  # Unique prefix for Redis
     _lock: asyncio.Lock
+    teams: dict[int, Team] = {}
+    refreshed: datetime = datetime.now(tz=timezone.utc)
 
     def __init__(
         self,
@@ -847,9 +849,10 @@ class WCS(Sport):
                 if area:
                     team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
                 self.teams[team.id] = team
-                # TODO: self.cache_teams() ? individual team cache write?
             except SportsDataError:
                 pass  # pragma: no cover "skip error"
+        self.refreshed = datetime.now(tz=timezone.utc)
+        await self.cache_teams()
         return self.teams
 
     async def update_teams(self, client: AsyncClient):
@@ -868,26 +871,24 @@ class WCS(Sport):
         async with self._lock:
             await self.async_load_teams_from_source(response)
 
-    def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
+    def team_as_serialized(self, team: Team) -> bytes:  # pragma: no cover "widget"
         """Serialize a team as a dictionary for the widget"""
         # TODO: Populate the eliminated field (from old team info?)
-        serialized = dict(
-            team.__dict__
-        )  # Because BaseModel is clever and helpful instead of dumb and useful.
+        serialized = team.model_dump()
         serialized["expiry"] = team.expiry.timestamp()
         serialized["updated"] = team.updated.timestamp()
-        return json.dumps(serialized)
+        return orjson.dumps(serialized)
 
-    def event_as_str(self, event: Event) -> str:  # pragma: no cover "widget"
+    def event_as_serialized(self, event: Event) -> bytes:  # pragma: no cover "widget"
         """Serialize an event as a dictionary for the widget"""
         # import pdb;pdb.set_trace()
         # TODO: add more team info?
-        serialized = dict(event.__dict__)
+        serialized = event.model_dump()
         # munge the dates.
         serialized["date"] = event.date.timestamp()
         serialized["expiry"] = event.expiry.timestamp()
         serialized["updated"] = event.updated.timestamp() if event.updated else None
-        return json.dumps(serialized)
+        return orjson.dumps(serialized)
 
     async def cache_teams(self) -> None:  # pragma: no cover "widget"
         """Write the team data to the redis cache for the widget"""
@@ -895,27 +896,37 @@ class WCS(Sport):
         ids = []
         for teamId, team in self.teams.items():
             id = f"{self.cache_prefix}:team:{teamId}"
-            await self.cache.set(id, self.team_as_str(team).encode())
+            await self.cache.set(id, self.team_as_serialized(team))
             ids.append(id)
         # for now, dump the list of team ids into a meta list so that we can save doing a scan later.
         # TODO: replace with vadd when available.
-        await self.cache.set(f"{self.cache_prefix}:meta:team_ids", json.dumps(ids).encode())
+        await self.cache.set(f"{self.cache_prefix}:meta:team_ids", orjson.dumps(ids))
 
-    async def get_all_teams(self) -> dict[int, Any]:
+    async def get_all_teams(self, client: AsyncClient) -> dict[int, Any]:
         """Return all the cached teams.
 
         For the `/teams` endpoint, return the `.values()` of the result.
         """
-        teams: dict[int, Any] = {}
-        team_ids = await self.cache.get(f"{self.cache_prefix}:meta:team_ids")
-        if team_ids:
-            team_ids = json.loads(team_ids)
-            str_teams = await self.cache.mget(team_ids)
-            if str_teams:
-                for bteam in str_teams:
-                    team = Team(**json.loads(bteam))
-                    teams[int(team.id)] = team
-        return teams
+        # If we don't have any team info, or the local cache is stale
+        if not self.teams or self.refreshed < datetime.now(tz=timezone.utc).replace(
+            hour=0, minute=0, second=0
+        ):
+            # Try getting from the redis cache (in case some other app already fetched the info)
+            team_ids = await self.cache.get(f"{self.cache_prefix}:meta:team_ids")
+            # We haven't fetched the data yet, so let's see if we can do it.
+            if not team_ids:
+                await self.update_teams(client)
+                return self.teams
+            # Ok, we have redis cached data, let's construct our local cache.
+            if team_ids:
+                team_ids = orjson.loads(team_ids)
+                str_teams = await self.cache.mget(team_ids)
+                if str_teams:
+                    for bteam in str_teams:
+                        team = Team(**orjson.loads(bteam))
+                        self.teams[int(team.id)] = team
+                self.refreshed = datetime.now(tz=timezone.utc)
+        return self.teams
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
@@ -956,8 +967,8 @@ class WCS(Sport):
         # TODO: Put these in their own function?
         for event_id, event in list(self.events.items()):
             # import pdb; pdb.set_trace()
-            event_dict = self.event_as_str(event)
-            await self.cache.set(f"{self.cache_prefix}:event:{event_id}", event_dict.encode())
+            serialized = self.event_as_serialized(event)
+            await self.cache.set(f"{self.cache_prefix}:event:{event_id}", serialized)
             # Add the event to the zorder for date lookups
             await self.cache.zadd(
                 f"{self.cache_prefix}:calendar",
