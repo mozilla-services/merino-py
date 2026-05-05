@@ -3,42 +3,73 @@
   "lookups": {
     "airline": {
       "6E": { "name": "IndiGo", "url": "logos/airline/airline_6e.png" },
-      "9E": { "name": "Endeavor Air", "url": "logos/airline/airline_9e.png" },
-      "A3": {
-        "name": "Aegean Airlines",
-        "url": "logos/airline/airline_a3.png"
+      "8M": {
+        "name": "Myanmar Airways International",
+        "url": "logos/airline/airline_8m.png"
       },
+      "9C": { "name": "Spring Airlines", "url": "logos/airline/airline_9c.png" },
+      "9E": { "name": "Endeavor Air", "url": "logos/airline/airline_9e.png" },
+      "9X": {
+        "name": "Southern Airways Express",
+        "url": "logos/airline/airline_9x.png"
+      },
+      "A3": { "name": "Aegean Airlines", "url": "logos/airline/airline_a3.png" },
       "AA": {
         "name": "American Airlines",
         "url": "logos/airline/airline_aa.png"
       },
       "AC": { "name": "Air Canada", "url": "logos/airline/airline_ac.png" },
+      "AD": {
+        "name": "Azul Brazilian Airlines",
+        "url": "logos/airline/airline_ad.png"
+      },
       "AF": { "name": "Air France", "url": "logos/airline/airline_af.png" },
+      "AI": { "name": "Air India", "url": "logos/airline/airline_ai.png" },
       "AK": { "name": "AirAsia", "url": "logos/airline/airline_ak.png" },
-      "AS": {
-        "name": "Alaska Airlines",
-        "url": "logos/airline/airline_as.png"
+      "AM": { "name": "Aeroméxico", "url": "logos/airline/airline_am.png" },
+      "AR": {
+        "name": "Aerolíneas Argentinas",
+        "url": "logos/airline/airline_ar.png"
       },
+      "AS": { "name": "Alaska Airlines", "url": "logos/airline/airline_as.png" },
+      "AT": { "name": "Royal Air Maroc", "url": "logos/airline/airline_at.png" },
+      "AV": { "name": "Avianca", "url": "logos/airline/airline_av.png" },
       "AY": { "name": "Finnair", "url": "logos/airline/airline_ay.png" },
-      "B6": {
-        "name": "JetBlue Airways",
-        "url": "logos/airline/airline_b6.png"
+      "AZ": { "name": "ITA Airways", "url": "logos/airline/airline_az.png" },
+      "B6": { "name": "JetBlue Airways", "url": "logos/airline/airline_b6.png" },
+      "BA": { "name": "British Airways", "url": "logos/airline/airline_ba.png" },
+      "BC": {
+        "name": "Skymark Airlines",
+        "url": "logos/airline/airline_bc.png"
       },
-      "BA": {
-        "name": "British Airways",
-        "url": "logos/airline/airline_ba.png"
+      "BG": {
+        "name": "Biman Bangladesh Airlines",
+        "url": "logos/airline/airline_bg.png"
+      },
+      "BI": {
+        "name": "Royal Brunei Airlines",
+        "url": "logos/airline/airline_bi.png"
       },
       "BR": { "name": "EVA Air", "url": "logos/airline/airline_br.png" },
+      "BS": {
+        "name": "US-Bangla Airlines",
+        "url": "logos/airline/airline_bs.png"
+      },
+      "BX": { "name": "Air Busan", "url": "logos/airline/airline_bx.png" },
       "CI": { "name": "China Airlines", "url": "logos/airline/airline_ci.png" },
+      "CM": { "name": "Copa Airlines", "url": "logos/airline/airline_cm.png" },
       "CX": { "name": "Cathay Pacific", "url": "logos/airline/airline_cx.png" },
       "CZ": {
         "name": "China Southern Airlines",
         "url": "logos/airline/airline_cz.png"
       },
-      "DL": {
-        "name": "Delta Air Lines",
-        "url": "logos/airline/airline_dl.png"
+      "DE": { "name": "Condor", "url": "logos/airline/airline_de.png" },
+      "DL": { "name": "Delta Air Lines", "url": "logos/airline/airline_dl.png" },
+      "DY": {
+        "name": "Norwegian Air Shuttle",
+        "url": "logos/airline/airline_dy.png"
       },
+      "EI": { "name": "Aer Lingus", "url": "logos/airline/airline_ei.png" },
       "EK": { "name": "Emirates", "url": "logos/airline/airline_ek.png" },
       "ET": {
         "name": "Ethiopian Airlines",
@@ -50,7 +81,14 @@
         "name": "Frontier Airlines",
         "url": "logos/airline/airline_f9.png"
       },
+      "FI": { "name": "Icelandair", "url": "logos/airline/airline_fi.png" },
       "FJ": { "name": "Fiji Airways", "url": "logos/airline/airline_fj.png" },
+      "FR": { "name": "Ryanair", "url": "logos/airline/airline_fr.png" },
+      "FZ": { "name": "flydubai", "url": "logos/airline/airline_fz.png" },
+      "G3": {
+        "name": "Gol Linhas Aéreas",
+        "url": "logos/airline/airline_g3.png"
+      },
       "G4": { "name": "Allegiant Air", "url": "logos/airline/airline_g4.png" },
       "GA": {
         "name": "Garuda Indonesia",
@@ -61,43 +99,69 @@
         "name": "Hawaiian Airlines",
         "url": "logos/airline/airline_ha.png"
       },
-      "HU": {
-        "name": "Hainan Airlines",
-        "url": "logos/airline/airline_hu.png"
-      },
+      "HD": { "name": "AirDo", "url": "logos/airline/airline_hd.png" },
+      "HP": { "name": "Amapola Flyg", "url": "logos/airline/airline_hp.png" },
+      "HU": { "name": "Hainan Airlines", "url": "logos/airline/airline_hu.png" },
       "IB": { "name": "Iberia", "url": "logos/airline/airline_ib.png" },
+      "IX": {
+        "name": "Air India Express",
+        "url": "logos/airline/airline_ix.png"
+      },
       "J2": {
         "name": "Azerbaijan Airlines",
         "url": "logos/airline/airline_j2.png"
       },
+      "JA": {
+        "name": "JetSmart Airlines",
+        "url": "logos/airline/airline_ja.png"
+      },
       "JL": { "name": "Japan Airlines", "url": "logos/airline/airline_jl.png" },
+      "JQ": { "name": "Jetstar Airways", "url": "logos/airline/airline_jq.png" },
+      "JT": { "name": "Lion Air", "url": "logos/airline/airline_jt.png" },
       "KE": { "name": "Korean Air", "url": "logos/airline/airline_ke.png" },
       "KL": {
         "name": "KLM Royal Dutch Airlines",
         "url": "logos/airline/airline_kl.png"
       },
+      "KP": { "name": "ASKY Airlines", "url": "logos/airline/airline_kp.png" },
+      "KQ": { "name": "Kenya Airways", "url": "logos/airline/airline_kq.png" },
+      "KU": { "name": "Kuwait Airways", "url": "logos/airline/airline_ku.png" },
       "LA": { "name": "LATAM Airlines", "url": "logos/airline/airline_la.png" },
       "LH": { "name": "Lufthansa", "url": "logos/airline/airline_lh.png" },
+      "LO": {
+        "name": "LOT Polish Airlines",
+        "url": "logos/airline/airline_lo.png"
+      },
       "LX": {
         "name": "Swiss International Air Lines",
         "url": "logos/airline/airline_lx.png"
       },
+      "LY": { "name": "El Al", "url": "logos/airline/airline_ly.png" },
+      "ME": {
+        "name": "Middle East Airlines",
+        "url": "logos/airline/airline_me.png"
+      },
+      "MF": { "name": "Xiamen Airlines", "url": "logos/airline/airline_mf.png" },
       "MH": {
         "name": "Malaysia Airlines",
         "url": "logos/airline/airline_mh.png"
       },
+      "MK": { "name": "Air Mauritius", "url": "logos/airline/airline_mk.png" },
+      "MQ": { "name": "Envoy Air", "url": "logos/airline/airline_mq.png" },
+      "MS": { "name": "EgyptAir", "url": "logos/airline/airline_ms.png" },
+      "MU": {
+        "name": "China Eastern Airlines",
+        "url": "logos/airline/airline_mu.png"
+      },
+      "MX": { "name": "Breeze Airways", "url": "logos/airline/airline_mx.png" },
       "NH": {
         "name": "All Nippon Airways",
         "url": "logos/airline/airline_nh.png"
       },
-      "NK": {
-        "name": "Spirit Airlines",
-        "url": "logos/airline/airline_nk.png"
-      },
-      "NZ": {
-        "name": "Air New Zealand",
-        "url": "logos/airline/airline_nz.png"
-      },
+      "NK": { "name": "Spirit Airlines", "url": "logos/airline/airline_nk.png" },
+      "NX": { "name": "Air Macau", "url": "logos/airline/airline_nx.png" },
+      "NZ": { "name": "Air New Zealand", "url": "logos/airline/airline_nz.png" },
+      "OA": { "name": "Olympic Air", "url": "logos/airline/airline_oa.png" },
       "OH": { "name": "PSA Airlines", "url": "logos/airline/airline_oh.png" },
       "OO": {
         "name": "SkyWest Airlines",
@@ -107,20 +171,56 @@
         "name": "Austrian Airlines",
         "url": "logos/airline/airline_os.png"
       },
-      "PD": {
-        "name": "Porter Airlines",
-        "url": "logos/airline/airline_pd.png"
+      "PC": {
+        "name": "Pegasus Airlines",
+        "url": "logos/airline/airline_pc.png"
       },
-      "PG": {
-        "name": "Bangkok Airways",
-        "url": "logos/airline/airline_pg.png"
+      "PD": { "name": "Porter Airlines", "url": "logos/airline/airline_pd.png" },
+      "PG": { "name": "Bangkok Airways", "url": "logos/airline/airline_pg.png" },
+      "PK": {
+        "name": "Pakistan International Airlines",
+        "url": "logos/airline/airline_pk.png"
       },
+      "PR": {
+        "name": "Philippine Airlines",
+        "url": "logos/airline/airline_pr.png"
+      },
+      "PX": { "name": "Air Niugini", "url": "logos/airline/airline_px.png" },
       "QF": { "name": "Qantas", "url": "logos/airline/airline_qf.png" },
       "QR": { "name": "Qatar Airways", "url": "logos/airline/airline_qr.png" },
+      "RC": {
+        "name": "Atlantic Airways",
+        "url": "logos/airline/airline_rc.png"
+      },
+      "RJ": { "name": "Royal Jordanian", "url": "logos/airline/airline_rj.png" },
+      "RO": { "name": "TAROM", "url": "logos/airline/airline_ro.png" },
+      "S4": {
+        "name": "SATA Azores Airlines",
+        "url": "logos/airline/airline_s4.png"
+      },
+      "SA": {
+        "name": "South African Airways",
+        "url": "logos/airline/airline_sa.png"
+      },
+      "SB": { "name": "Aircalin", "url": "logos/airline/airline_sb.png" },
+      "SC": {
+        "name": "Shandong Airlines",
+        "url": "logos/airline/airline_sc.png"
+      },
+      "SG": { "name": "SpiceJet", "url": "logos/airline/airline_sg.png" },
+      "SK": {
+        "name": "SAS Scandinavian Airlines",
+        "url": "logos/airline/airline_sk.png"
+      },
+      "SN": {
+        "name": "Brussels Airlines",
+        "url": "logos/airline/airline_sn.png"
+      },
       "SQ": {
         "name": "Singapore Airlines",
         "url": "logos/airline/airline_sq.png"
       },
+      "SU": { "name": "Aeroflot", "url": "logos/airline/airline_su.png" },
       "SV": { "name": "Saudia", "url": "logos/airline/airline_sv.png" },
       "SY": {
         "name": "Sun Country Airlines",
@@ -131,35 +231,57 @@
         "name": "Turkish Airlines",
         "url": "logos/airline/airline_tk.png"
       },
+      "TM": {
+        "name": "LAM Mozambique Airlines",
+        "url": "logos/airline/airline_tm.png"
+      },
       "TO": { "name": "Transavia", "url": "logos/airline/airline_to.png" },
+      "TP": {
+        "name": "TAP Air Portugal",
+        "url": "logos/airline/airline_tp.png"
+      },
       "TR": { "name": "Scoot", "url": "logos/airline/airline_tr.png" },
       "TS": { "name": "Air Transat", "url": "logos/airline/airline_ts.png" },
-      "UA": {
-        "name": "United Airlines",
-        "url": "logos/airline/airline_ua.png"
+      "TX": { "name": "Air Caraïbes", "url": "logos/airline/airline_tx.png" },
+      "U2": { "name": "easyJet", "url": "logos/airline/airline_u2.png" },
+      "UA": { "name": "United Airlines", "url": "logos/airline/airline_ua.png" },
+      "UL": {
+        "name": "SriLankan Airlines",
+        "url": "logos/airline/airline_ul.png"
       },
+      "UO": { "name": "HK Express", "url": "logos/airline/airline_uo.png" },
+      "UP": { "name": "Bahamasair", "url": "logos/airline/airline_up.png" },
+      "US": { "name": "US Airways", "url": "logos/airline/airline_us.png" },
+      "UX": { "name": "Air Europa", "url": "logos/airline/airline_ux.png" },
       "VA": {
         "name": "Virgin Australia",
         "url": "logos/airline/airline_va.png"
       },
-      "VS": {
-        "name": "Virgin Atlantic",
-        "url": "logos/airline/airline_vs.png"
+      "VB": { "name": "VivaAerobus", "url": "logos/airline/airline_vb.png" },
+      "VN": {
+        "name": "Vietnam Airlines",
+        "url": "logos/airline/airline_vn.png"
       },
+      "VS": { "name": "Virgin Atlantic", "url": "logos/airline/airline_vs.png" },
       "VY": {
         "name": "Vueling Airlines",
         "url": "logos/airline/airline_vy.png"
       },
+      "W5": { "name": "Mahan Air", "url": "logos/airline/airline_w5.png" },
       "WG": {
         "name": "Sunwing Airlines",
         "url": "logos/airline/airline_wg.png"
       },
+      "WK": { "name": "Edelweiss Air", "url": "logos/airline/airline_wk.png" },
       "WN": {
         "name": "Southwest Airlines",
         "url": "logos/airline/airline_wn.png"
       },
       "WS": { "name": "WestJet", "url": "logos/airline/airline_ws.png" },
-      "WY": { "name": "Oman Air", "url": "logos/airline/airline_wy.png" }
+      "WT": { "name": "Swoop", "url": "logos/airline/airline_wt.png" },
+      "WY": { "name": "Oman Air", "url": "logos/airline/airline_wy.png" },
+      "Y4": { "name": "Volaris", "url": "logos/airline/airline_y4.png" },
+      "YV": { "name": "Mesa Airlines", "url": "logos/airline/airline_yv.png" }
     },
     "nations": {
       "ALG": { "name": "Algeria", "url": "logos/nations/nations_dz.png" },
@@ -167,7 +289,10 @@
       "AUS": { "name": "Australia", "url": "logos/nations/nations_au.png" },
       "AUT": { "name": "Austria", "url": "logos/nations/nations_at.png" },
       "BEL": { "name": "Belgium", "url": "logos/nations/nations_be.png" },
-      "BIH": { "name": "Bosnia and Herzegovina", "url": "logos/nations/nations_ba.png" },
+      "BIH": {
+        "name": "Bosnia and Herzegovina",
+        "url": "logos/nations/nations_ba.png"
+      },
       "BRA": { "name": "Brazil", "url": "logos/nations/nations_br.png" },
       "CAN": { "name": "Canada", "url": "logos/nations/nations_ca.png" },
       "CDR": { "name": "DR Congo", "url": "logos/nations/nations_cd.png" },
@@ -232,10 +357,7 @@
       "NYM": { "name": "New York Mets", "url": "logos/mlb/mlb_nym.png" },
       "NYY": { "name": "New York Yankees", "url": "logos/mlb/mlb_nyy.png" },
       "ATH": { "name": "Athletics", "url": "logos/mlb/mlb_oak.png" },
-      "PHI": {
-        "name": "Philadelphia Phillies",
-        "url": "logos/mlb/mlb_phi.png"
-      },
+      "PHI": { "name": "Philadelphia Phillies", "url": "logos/mlb/mlb_phi.png" },
       "PIT": { "name": "Pittsburgh Pirates", "url": "logos/mlb/mlb_pit.png" },
       "SD": { "name": "San Diego Padres", "url": "logos/mlb/mlb_sdp.png" },
       "SEA": { "name": "Seattle Mariners", "url": "logos/mlb/mlb_sea.png" },
@@ -256,10 +378,7 @@
       "DAL": { "name": "Dallas Mavericks", "url": "logos/nba/nba_dal.png" },
       "DEN": { "name": "Denver Nuggets", "url": "logos/nba/nba_den.png" },
       "DET": { "name": "Detroit Pistons", "url": "logos/nba/nba_det.png" },
-      "GS": {
-        "name": "Golden State Warriors",
-        "url": "logos/nba/nba_gsw.png"
-      },
+      "GS": { "name": "Golden State Warriors", "url": "logos/nba/nba_gsw.png" },
       "HOU": { "name": "Houston Rockets", "url": "logos/nba/nba_hou.png" },
       "IND": { "name": "Indiana Pacers", "url": "logos/nba/nba_ind.png" },
       "LAC": { "name": "Los Angeles Clippers", "url": "logos/nba/nba_lac.png" },
@@ -273,10 +392,7 @@
       },
       "NO": { "name": "New Orleans Pelicans", "url": "logos/nba/nba_nop.png" },
       "NY": { "name": "New York Knicks", "url": "logos/nba/nba_nyk.png" },
-      "OKC": {
-        "name": "Oklahoma City Thunder",
-        "url": "logos/nba/nba_okc.png"
-      },
+      "OKC": { "name": "Oklahoma City Thunder", "url": "logos/nba/nba_okc.png" },
       "ORL": { "name": "Orlando Magic", "url": "logos/nba/nba_orl.png" },
       "PHI": { "name": "Philadelphia 76ers", "url": "logos/nba/nba_phi.png" },
       "PHO": { "name": "Phoenix Suns", "url": "logos/nba/nba_phx.png" },
@@ -329,10 +445,7 @@
       "BOS": { "name": "Boston Bruins", "url": "logos/nhl/nhl_bos.png" },
       "BUF": { "name": "Buffalo Sabres", "url": "logos/nhl/nhl_buf.png" },
       "CAR": { "name": "Carolina Hurricanes", "url": "logos/nhl/nhl_car.png" },
-      "CBJ": {
-        "name": "Columbus Blue Jackets",
-        "url": "logos/nhl/nhl_cbj.png"
-      },
+      "CBJ": { "name": "Columbus Blue Jackets", "url": "logos/nhl/nhl_cbj.png" },
       "CGY": { "name": "Calgary Flames", "url": "logos/nhl/nhl_cgy.png" },
       "CHI": { "name": "Chicago Blackhawks", "url": "logos/nhl/nhl_chi.png" },
       "COL": { "name": "Colorado Avalanche", "url": "logos/nhl/nhl_col.png" },
