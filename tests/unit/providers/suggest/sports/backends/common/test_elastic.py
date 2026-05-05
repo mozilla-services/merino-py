@@ -332,10 +332,10 @@ async def test_sports_search_event_hits(
                 "updated": "2025-09-22T12:00:00+00:00",
             },
             "next": {
-                "date": "2025-09-25T12:00:00+00:00",
-                "es_score": 2.0,
+                "date": "2025-09-24T12:00:00+00:00",
+                "es_score": 2.1,
                 "event_status": GameStatus.Scheduled,
-                "label": "delta",
+                "label": "epsilon",
                 "sport": "NFL",
                 "status": "Scheduled",
                 "touched": "None",
@@ -345,6 +345,77 @@ async def test_sports_search_event_hits(
     }
 
     assert result == expected_result
+
+
+@freezegun.freeze_time("2026-05-05T17:25:00Z")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("sport", ["MLB", "UCL"])
+async def test_sports_search_next_picks_soonest_scheduled(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    sport: str,
+):
+    """Regression for DISCO-4167.
+
+    With multiple scheduled fixtures in the index (today + later this week),
+    `next` must hold the soonest one. Hits arrive sorted `date: desc`, so a
+    naive comparator keeps the farthest-future game and shadows today's.
+    """
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    today = now + datetime.timedelta(hours=5)
+    tomorrow = now + datetime.timedelta(days=1)
+    next_week = now + datetime.timedelta(days=7)
+
+    hits = [
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": sport,
+                        "status": "Scheduled",
+                        "label": "next-week",
+                        "date": next_week.isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": sport,
+                        "status": "Scheduled",
+                        "label": "tomorrow",
+                        "date": tomorrow.isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": sport,
+                        "status": "Scheduled",
+                        "label": "today",
+                        "date": today.isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+    ]
+    es_client.search.return_value = {"hits": {"total": {"value": 3}, "hits": hits}}
+
+    result = await sport_data_store.search_events(q="game", language_code="en", mix_sports=False)
+
+    assert result[sport]["next"]["label"] == "today"
+    assert result[sport]["next"]["date"] == today.isoformat()
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")
