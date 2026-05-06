@@ -1,6 +1,6 @@
 # Adopt Monorepo for Merino
 
-* Status: proposed
+* Status: Accepted
 * Deciders: Merino devs
 * Date: 2026-05-01
 
@@ -8,7 +8,7 @@
 
 As Firefox Suggest and New Tab page continue to grow, new features and functionalities need to be built for Merino. In addition, there is a need in building new applications to work alongside with Merino to support the products. How can we find the optimal way to manage all those code artifacts? Shall we opt for monorepo or polyrepos?
 
-## Decision Drivers <!-- optional -->
+## Decision Drivers
 
 1. Developer experience.
 2. Operational complexity.
@@ -26,7 +26,13 @@ Propsed option:
 
 The monorepo approach allows Merino developers to manage related function units (e.g. libraries and application) in the same repo, which not only eases the cognitive burden for developers when working , but also simplifies code reuse and dependency management. Tools such as `uv` can be used to assist the monorepo management and mitigate the overhead with monorepo.
 
-## Pros and Cons of the Options <!-- optional -->
+The following can be adopted for Merino developers to mitigate various downsides with monorepo:
+
+- We can adopt a stricter "component" approach for code structuring and divisions. Workspace members (i.e. components) should have clear responsbilities and boundraries.
+- Naming and structure conventions can be used to accelerate testing and maintain the developer experience.
+- To mitigate the immaturity of the tooling on dependency management, we can establish dependency update guidelines for all workspace packages.
+
+## Pros and Cons of the Options
 
 ### Monorepo
 
@@ -36,14 +42,15 @@ Monorepo allows us to use a single git repo to home all the code artifacts, incl
 
 * Low cognitive load: Relevant code artifacts are co-located in the same repo.
 * Easy code reuse and sharing: Shared libraries and components can be used across the repo.
-* Simplified dependencies management: All repo memebers share the same dependencies.
+* Simplified dependencies management: All repo memebers share the same dependencies. Unused dependencies are easier to be identified and removed.
 * Better coding consistency: The same linting and styling rules will be enforced for all repo members.
-* Simpler change control: Breaking changes can be made in one repo within one PR.
+* Simpler change control: Smaller blast radius of code changes. Breaking changes can be made in one repo within one PR.
+* Simplified end-to-end testing: Related services can be run and tested within the same repo.
 
 #### Cons
 
 * More involved package management: Compared to a single package repo, a monorepo with multiple members will require more sophisticated tooling and settings across the board.
-* Workflow performance issues: As the repo grow, performance issues could emerge in local development (e.g. excessive testing time), Git operations, CI/CD (e.g. slow build and deploys).
+* Workflow performance issues: As the repo grows, performance issues could emerge in local development (e.g. excessive testing time), Git operations, CI/CD (e.g. slow build and deploys).
 * Extra effort in design and maintenance. Collective discipline and careful design are required to keep the workspace members well-structured and maintainable.
 * Tooling maturity. Certain features are still missing in `uv` on workspace management. For instance, it does not support [sharing dependencies across workspace members][1]. Will have to work around those with sub-optimal alternatives.
 
@@ -61,7 +68,7 @@ As opposed to monorepo, polyrepos use multiple repos to manage individual functi
 
 * High cognitive load, particularly with multiple highly contextual and inter-dependent repos.
 * The risk of "Dependency Hell": Each repo manages its own dependencies, extra effort is needed to avoid dependencies conflicts.
-* Duplication: Code and common tasks such as linting and CI/CD settings need to be written and configured for every repo.
+* Duplication: Code duplication and common tasks such as linting and CI/CD settings need to be written and configured for every repo.
 * Harder to maintain consistency: Each repo could develop its own conventions and bespoke workflows that are harmful for maintainability and cross-functional collaboration.
 
 ## Links <!-- optional -->
