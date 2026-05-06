@@ -163,7 +163,7 @@ class InferredLocalModel(BaseModel):
                 logger.error("Model DP incorrect length")
                 continue
             if key == TIME_ZONE_OFFSET_INFERRED_KEY:
-                # Indices map to time zone ids. Currently 0 is pacific, 1 mountain etc.
+                # Indices map to time zone ids. Currently 0 is pacific, 1 mountain etc for US, though CA may be simpler with 2 zones
                 tz_indices = self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
                 if len(tz_indices) > 0:
                     result[key] = tz_indices[-1]

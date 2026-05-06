@@ -28,9 +28,7 @@ class GcsMLRecs(MLRecsBackend):
         self._cache: dict[SurfaceId, dict[str, ContextualArticleRankings]] = {}
         self.synced_blobs: dict[SurfaceId, SyncedGcsBlob] = synced_gcs_blobs
         for surface_id, synced_blob in self.synced_blobs.items():
-            synced_blob.set_fetch_callback(
-                partial(self._fetch_callback, surface_id=surface_id)
-            )
+            synced_blob.set_fetch_callback(partial(self._fetch_callback, surface_id=surface_id))
         self.cache_time: dict[SurfaceId, datetime] = {}
         self.cohort_training_run_id: dict[SurfaceId, str | None] = {}
         self._impression_counts: dict[SurfaceId, dict[str, int]] = {}
