@@ -35,6 +35,8 @@ ENV PATH="$APP_HOME/.venv/bin:$PATH"
 # Create a build context that can be used for running merino jobs
 FROM app_base AS job_runner
 
+USER app
+
 # Set entrypoint to use uv
 ENTRYPOINT ["uv", "run", "--no-project", "python", "-m", "merino.jobs.cli"]
 
