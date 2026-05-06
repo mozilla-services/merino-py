@@ -67,7 +67,7 @@ wcs_monitor_config: "MonitorConfig" = {
     "schedule": {"type": "crontab", "value": "*/3 * * * *"},
     # If an expected check-in doesn't come in `checkin_margin`
     # minutes, it'll be considered missed
-    "checkin_margin": 2,
+    "checkin_margin": 1,
     # The check-in is allowed to run for `max_runtime` minutes
     # before it's considered failed
     "max_runtime": 3,
