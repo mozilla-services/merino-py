@@ -23,7 +23,10 @@ PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
 
 LOCAL_RERANK_WEGHT = (
-    30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
+    110.0  # Experiment weight settings 60-10 server-local boosting.
+          # Given high ctr item 0.005 and interest of 0.5 that would
+          # add an effective 0.08 boost that would be divided by the
+          # value specified here. (60.0 => 0.0013, 100 => 0.0008)
 )
 
 FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 12000
