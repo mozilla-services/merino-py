@@ -273,11 +273,14 @@ class Provider(BaseProvider):
                 for i, suggestion in enumerate(suggestions)
             ]
 
-            tags = {}
+            tags: dict[str, Any] = {}
             if suggestions:
                 # FIXME(nanj): this uses the first element as the subject as `suggestions`
                 # should always be a singleton list. Update it if that's false in the future.
                 tags["subject"] = suggestions[0].advertiser.lower()
+                tags["below_threshold"] = cast(ThompsonSampler, self.thompson).below_threshold(
+                    candidates[0]
+                )
 
             # If it's the only candidate with an attempted count less than the threshold, skip sampling.
             if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:

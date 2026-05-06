@@ -15,6 +15,20 @@ class ThompsonSampler:
     def __init__(self, config: ThompsonConfig) -> None:
         self.config = config
 
+    def below_threshold(self, candidate: ThompsonCandidate) -> bool:
+        """Check if the given candidate's engagement ratio is below that of the dummy candidate.
+
+        Params:
+            - `candidate`: a candidates of type `ThompsonCandidate`.
+        Returns:
+            A boolean. True if the candidate's engagement ratio is below the dummy's CTR,
+            otherwise false. When the dummy is unset, this always returns false.
+        """
+        dummy_ratio: float = (
+            self.config.dummy_candidate.ratio if self.config.dummy_candidate else 0
+        )
+        return candidate.metrics.ratio < dummy_ratio
+
     def sample(self, candidates: list[ThompsonCandidate]) -> ThompsonCandidate | None:
         """Apply Thompson sampling to a set of candidates.
 

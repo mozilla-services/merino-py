@@ -35,6 +35,12 @@ class EngagementMetrics(BaseModel):
         """Derive a property for not engaged activities adjusted to be no less than 1."""
         return max(self.attempted - self.engaged, 1)
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def ratio(self) -> float:
+        """Derive a property for the engagement ratio."""
+        return self.engaged / self.attempted
+
 
 class ThompsonConfig(BaseModel):
     """Model for Thompson sampling configuration."""
