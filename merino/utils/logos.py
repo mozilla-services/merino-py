@@ -66,7 +66,7 @@ def load_manifest() -> LogoManifest:
     return LogoManifest.model_validate(orjson.loads(manifest_path.read_bytes()))
 
 
-def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
+def get_logo_url(category: LogoCategory, key: str | None) -> Optional[HttpUrl]:
     """Logo lookup for suggest providers.
 
     The process for creating suggestions is currently manual,
@@ -79,6 +79,8 @@ def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
     `merino.providers.suggest.sports.backends.sportsdata.common.Team`
     model.
     """
+    if not key:
+        return None
     logo = load_manifest().get(category, key)
     if logo is None:
         normalized_key = key.upper()

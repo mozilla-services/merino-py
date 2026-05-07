@@ -1,6 +1,21 @@
 """World Cup Soccer match endpoint request and response models."""
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+import webcolors
+
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+from merino.utils.logos import get_logo_url, LogoCategory
+
+
+def as_hex_color(color_name: str) -> str:
+    """Convert the sportsdata color name to a hex value"""
+    return str(
+        webcolors.rgb_to_hex(
+            webcolors.html5_parse_legacy_color(color_name.replace(" ", "").lower())
+        )
+    )
 
 
 class TeamInfo(BaseModel):
@@ -13,6 +28,37 @@ class TeamInfo(BaseModel):
     colors: list[str] = Field(description="Branding colors, primary first.")
     icon_url: HttpUrl | None = Field(default=None, description="Team flag URL, if available.")
     eliminated: bool = Field(description="True once the team is out of the tournament.")
+
+    @classmethod
+    def from_Team(cls, team: Team):
+        """Convert a Team to the widget TeamInfo"""
+        colors = map(lambda color: as_hex_color(color), team.colors)
+        return cls(
+            key=team.key,
+            global_team_id=team.id,
+            name=team.name,
+            region=team.country,
+            colors=colors,
+            icon_url=get_logo_url(LogoCategory.Nations, team.key),
+            eliminated=team.eliminated,
+        )
+
+    @classmethod
+    def from_Team_dict(cls, team: dict[str, Any]):
+        """Build a TeamInfo from the minimized team dictionary stored in an Event record"""
+        colors: list[str] = list(map(lambda color: as_hex_color(color), team.get("colors", [])))
+        url = None
+        if team.get("key"):
+            url = get_logo_url(LogoCategory.Nations, team.get("key"))
+        return cls(
+            key=team.get("key"),
+            global_team_id=team.get("id"),
+            name=team.get("name"),
+            region=team.get("region"),
+            colors=colors,
+            icon_url=url,
+            eliminated=team.get("eliminated", False),
+        )
 
 
 class EventInfo(BaseModel):
