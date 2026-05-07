@@ -163,9 +163,13 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     assert rankings.get_score_pair("??") == (None, None)
 
     assert gcs_engagement.get_adjusted_impressions("aa", surface_id=SurfaceId.NEW_TAB_EN_US) == 1
-    assert gcs_engagement.get_adjusted_impressions("unknown", surface_id=SurfaceId.NEW_TAB_EN_US) == 0
+    assert (
+        gcs_engagement.get_adjusted_impressions("unknown", surface_id=SurfaceId.NEW_TAB_EN_US) == 0
+    )
 
-    rankings = gcs_engagement.get(surface_id=DEFAULT_SURFACE_ID, region="US", cohort="0", time_zone="1")
+    rankings = gcs_engagement.get(
+        surface_id=DEFAULT_SURFACE_ID, region="US", cohort="0", time_zone="1"
+    )
     assert rankings is not None
     assert rankings.granularity == "TZ_COHORT_TIME_ZONE"
 
@@ -174,7 +178,9 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     assert rankings.granularity == "TZ_COHORT"
 
     # Test that we fall back to country if cohort is missing.
-    rankings = gcs_engagement.get(surface_id=DEFAULT_SURFACE_ID, region="US", cohort=None, time_zone="1")
+    rankings = gcs_engagement.get(
+        surface_id=DEFAULT_SURFACE_ID, region="US", cohort=None, time_zone="1"
+    )
     assert rankings is not None
     assert rankings.granularity == "global"
 

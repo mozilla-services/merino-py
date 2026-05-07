@@ -851,7 +851,10 @@ async def get_sections(
             not is_inferred_time_zone_experiment_enabled
             and personal_interests
             and TIME_ZONE_OFFSET_INFERRED_KEY in personal_interests.scores
+            and surface_id == SurfaceId.NEW_TAB_EN_US
         ):
+            # Make sure we have not time zone in the US if we're not in the tz experiment
+            # For canada TZ is not a separate experiment.
             personal_interests.scores.pop(TIME_ZONE_OFFSET_INFERRED_KEY, None)
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,

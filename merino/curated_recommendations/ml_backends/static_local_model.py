@@ -217,15 +217,13 @@ class PrivacyOverridesForFivePercentExperimentUS(PrivacyOverrides):
         )  # Cap of 10 click events per day to reduce risk of outliers
         super().__init__(**data)
 
+
 class PrivacyOverridesForSmallPopulation(PrivacyOverrides):
     """Defines privacy overrides, so they can be applied automatically for Merino based experiments to reduce risk of privacy issues"""
 
     def __init__(self, **data) -> None:
-        data.setdefault(
-            "local_popular_today_rerank", False
-        ) # Turn of local reranking
+        data.setdefault("local_popular_today_rerank", False)  # Turn of local reranking
         super().__init__(**data)
-
 
 
 v3_limited_topics = [
@@ -380,7 +378,7 @@ class SuperInferredModel(LocalModelBackend):
             interest_vector={
                 **topic_features,
                 TIME_ZONE_OFFSET_INFERRED_KEY: self._get_time_zone(small_population),
-                **section_features
+                **section_features,
             },
             private_features=private_features,
         )
