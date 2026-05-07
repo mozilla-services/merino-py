@@ -5,9 +5,10 @@ response contains two completed (yesterday), two in-progress (today), and
 two upcoming (tomorrow) events.
 """
 
-import json
 from datetime import UTC, date, datetime, time, timedelta
+import json
 from pathlib import Path
+from typing import cast
 
 from pydantic import HttpUrl
 
@@ -58,22 +59,29 @@ _TEAMS: dict[str, TeamInfo] = {
 }
 
 
+def _load_team_colours() -> dict[str, list[str]]:
+    """Load team hex colours keyed by team Key from wcs_team_colours.json."""
+    path = Path(__file__).parent.parent.parent / "data" / "wcs_team_colours.json"
+    with path.open() as f:
+        # have to type cast here to satisfy the linter since json.load returns type any.
+        return cast(dict[str, list[str]], json.load(f))
+
+
+_TEAM_COLOURS: dict[str, list[str]] = _load_team_colours()
+
+
 # NOTE: This is building and providing static team data only to allow for UI devlepment.
 # Actual data from external APIs will be wired in follow up work.
 def _team_from_json(entry: dict) -> TeamInfo:
     """Build a TeamInfo from a wcs_teams.json entry."""
-    colors = [
-        color
-        for color in [entry.get("ClubColor1"), entry.get("ClubColor2"), entry.get("ClubColor3")]
-        if color
-    ]
+    key = entry["Key"]
     return TeamInfo(
-        key=entry["Key"],
+        key=key,
         global_team_id=entry["GlobalTeamId"],
         name=entry["Name"],
-        region=entry["Key"],
-        colors=colors,
-        icon_url=_icon(entry["Key"]),
+        region=key,
+        colors=_TEAM_COLOURS.get(key, []),
+        icon_url=_icon(key),
         eliminated=False,
     )
 
