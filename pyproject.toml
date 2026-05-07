@@ -49,6 +49,9 @@ torch = [
   { index = "pytorch-cpu" },
 ]
 
+[tool.uv.build-backend]
+module-name = "merino"
+module-root = ""
 
 [project.scripts]
 merino-jobs = "merino.jobs.cli:cli"
@@ -188,12 +191,7 @@ filterwarnings = [
   # Ignored due to gcloud.aio.storage relies on backoff
   "ignore:'asyncio\\.iscoroutinefunction' is deprecated:DeprecationWarning",
 ]
-[tool.hatch.build.targets.sdist]
-include = ["merino"]
-
-[tool.hatch.build.targets.wheel]
-include = ["merino"]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.11,<0.12"]
+build-backend = "uv_build"
