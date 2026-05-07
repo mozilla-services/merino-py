@@ -287,8 +287,11 @@ class Sport:
         # Set defaults for overrides
         # NOTE: This also handles a potential typo in the AirFlow environment variable name.
         # See https://mozilla-hub.atlassian.net/browse/DISCO-3802
-        self.api_key = api_key or settings.sportsdata.get(
-            "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
+        self.api_key = (
+            api_key
+            or settings.sportsdata.get("api_key")
+            or os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
+            or ""
         )
         logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or 'None'}")
         self.base_url = base_url
