@@ -154,7 +154,14 @@ class Team(BaseModel):
 
     def minimal(self) -> dict[str, Any]:
         """Return the very minimal version of the team info used in Events"""
-        return dict(key=self.key, name=self.fullname, colors=self.colors, id=self.id)
+        return dict(
+            key=self.key,
+            name=self.fullname,
+            colors=self.colors,
+            id=self.id,
+            region=self.country,
+            eliminated=self.eliminated,
+        )
 
 
 class Event(BaseModel):
@@ -184,6 +191,16 @@ class Event(BaseModel):
     expiry: datetime
     # UTC of last event update
     updated: datetime | None
+    # Final period of the game "Regular", "ExtraTime", "PenaltyShootout"
+    period: str | None = None
+    # Points scored in extra play
+    home_extra: int | None = None
+    away_extra: int | None = None
+    # Points scored in penalty play
+    home_penalty: int | None = None
+    away_penalty: int | None = None
+    # Play time (with additions)
+    clock: str | None = None
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
@@ -201,6 +218,7 @@ class Event(BaseModel):
             "status": str(self.status),
             "date": self.date.isoformat(),
             "expiry": self.expiry.isoformat(),
+            "period": self.period,
         }
         # This may be a quick_update, meaning these values could be blank
         # Do not destructively overwrite them!

@@ -8,7 +8,7 @@ from merino.cache.redis import RedisAdapter
 from merino.cache.none import NoCacheAdapter
 
 
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Team, Event
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import WCS
 from merino.providers.wcs.protocol import TeamInfo
 
@@ -58,21 +58,26 @@ class WcsProvider:
         current: list[EventInfo] = []
         next_: list[EventInfo] = []
 
-        # Sorting up-front means each bucket inherits ascending order without
-        # a per-bucket sort pass.
-        for event in sorted(build_events(target_date), key=lambda e: e.date):
-            event_date = _event_date(event)
-            if abs(event_date - target_date) > _WINDOW:
-                continue
-            if team_keys is not None and not _has_team(event, team_keys):
-                continue
-            if event_date < target_date:
-                previous.append(event)
-            elif event_date == target_date:
-                current.append(event)
-            else:
-                next_.append(event)
+        ## Sorting up-front means each bucket inherits ascending order without
+        ## a per-bucket sort pass.
+        #for event in sorted(build_events(target_date), key=lambda e: e.date):
+        #    event_date = _event_date(event)
+        #    if abs(event_date - target_date) > _WINDOW:
+        #        continue
+        #    if team_keys is not None and not _has_team(event, team_keys):
+        #        continue
+        #    if event_date < target_date:
+        #        previous.append(event)
+        #    elif event_date == target_date:
+        #        current.append(event)
+        #    else:
+        #        next_.append(event)
 
+        events:list[Event] = await self.sport.get_events_by_date(start=datetime, limit=limit)
+        for event in events:
+            if event.status.is_final():
+                previous.append(EventInfo.fromEvent(event))
+            if event.status.is_current()
         if limit is not None:
             previous, current, next_ = previous[-limit:], current[:limit], next_[:limit]
 
@@ -85,11 +90,12 @@ class WcsProvider:
         `live` bucket. `team_keys` restricts results to matches with that team
         on either side.
         """
-        matches = [
-            event
-            for event in sorted(build_events(datetime.now(UTC).date()), key=lambda e: e.date)
-            if event.status_type == "live" and (team_keys is None or _has_team(event, team_keys))
-        ]
+        # matches = [
+        #     event
+        #     for event in sorted(build_events(datetime.now(UTC).date()), key=lambda e: e.date)
+        #     if event.status_type == "live" and (team_keys is None or _has_team(event, team_keys))
+        # ]
+        matches = map(lambda e: EventInfo.from_Event(e), await self.sport.get_events_by_date())
         return LiveMatchesResponse(matches=matches)
 
     async def get_teams(self) -> TeamsResponse:

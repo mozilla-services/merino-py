@@ -6,7 +6,7 @@ This contains the sport specific calls and data formats which are normalized.
 import asyncio
 import logging
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, MAXYEAR, MINYEAR
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -965,17 +965,35 @@ class WCS(Sport):
         # This will need to fetch all events for a given team
         # TODO: we might be able to store this as a unique key "...:team_games:{team_key}": [global_event_id,...]
         # but that feels gross.
+
         raise NotImplementedError
 
     async def get_events_by_date(
-        self, start: datetime | None = None, end: datetime | None = None
-    ):  # pragma: no cover "widget"
+        self, start: datetime | None = None, end: datetime | None = None, limit: int|None = None
+    ) -> list[Event]:  # pragma: no cover "widget"
         """Get events by start,end"""
         # TODO: build
         # scan the ssort list for events that fall between the start (min) and end (max)
         # fetch those event info.
-
-        raise NotImplementedError
+        result: list[Event] = []
+        if not start:
+            start = datetime(year=MINYEAR, month=1, day=1)
+        if not end:
+            end = datetime(year=MAXYEAR, month=12, day=31)
+        event_list = await self.cache.zrange(
+            f"{self.cache_prefix}:calendar",
+            min=int(start.timestamp()),
+            max=int(end.timestamp()),
+            limit=limit
+            )
+        for event_key in event_list:
+            event_dict = await self.cache.get(event_key)
+            try:
+                result.append(Event(**event_dict))
+            except Exception as ex:
+                import pdb; pdb.set_trace()
+                logger.warning(f"{LOGGING_TAG} Could not re-instantiate event {event_key}: {ex}")
+        return result
 
 
 # THE FOLLOWING CLASSES ARE WIP:::

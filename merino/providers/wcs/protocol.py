@@ -1,9 +1,12 @@
 """World Cup Soccer match endpoint request and response models."""
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 import webcolors
 
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Team, Event
+from merino.utils.logos import get_logo_url, LogoCategory
 
 
 def as_hex_color(color_name: str) -> str:
@@ -13,11 +16,6 @@ def as_hex_color(color_name: str) -> str:
             webcolors.html5_parse_legacy_color(color_name.replace(" ", "").lower())
         )
     )
-
-
-def get_team_url(team_key: str) -> str:
-    """Return the team icon URL"""
-    return f"https://example.com?key={team_key}"
 
 
 class TeamInfo(BaseModel):
@@ -35,16 +33,28 @@ class TeamInfo(BaseModel):
     def from_Team(cls, team: Team):
         """Convert a Team to the widget TeamInfo"""
         colors = map(lambda color: as_hex_color(color), team.colors)
-        icon_url = get_team_url(team.key)
-
         return cls(
             key=team.key,
             global_team_id=team.id,
             name=team.name,
             region=team.country,
             colors=colors,
-            icon_url=icon_url,
+            icon_url=get_logo_url(LogoCategory.Nations, team.key),
             eliminated=team.eliminated,
+        )
+
+    @classmethod
+    def from_Team_dict(cls, team: dict[str, Any]):
+        """Build a TeamInfo from the minimized team dictionary stored in an Event record"""
+        colors: list[str] = list(map(lambda color: as_hex_color(color), team.get("colors", [])))
+        return cls(
+            key=team.get("key"),
+            global_team_id=team.get("id"),
+            name=team.get("name"),
+            region=team.get("region"),
+            colors=colors,
+            icon_url=get_logo_url(LogoCategory.Nations, team.get("key")),
+            eliminated=team.get("eliminated", False),
         )
 
 
@@ -68,6 +78,34 @@ class EventInfo(BaseModel):
     status_type: str = Field(description="Simplified status: 'past' | 'live' | 'scheduled'.")
     query: str | None = Field(default=None, description="Optional click-through query.")
     sport: str = Field(default="soccer", description="Sport identifier.")
+
+    @classmethod
+    def from_Event(cls, event: Event):
+        """Generate a widget event descriptor record from a suggest Event"""
+        home_team = TeamInfo.from_Team_dict(event.home_team)
+        away_team = TeamInfo.from_Team_dict(event.away_team)
+
+        cls(
+            date=event.date.isoformat(),
+            global_event_id=event.id,
+            home_team=home_team,
+            away_team=away_team,
+            period=event.period,
+            home_score=event.home_score,
+            away_score=event.away_score,
+            home_extra=event.home_extra,
+            away_extra=event.away_extra,
+            home_penalty=event.home_penalty,
+            away_penalty=event.away_penalty,
+            clock=event.clock,
+            updated=event.updated.isoformat(),
+            status=event.status.as_str(),
+            status_type=event.status.as_ui_status(),
+            # This should probably use the same construct as suggest, but I don't think we've
+            # resolved what it should be, so manually construct it here.
+            query=f"{event.sport.name} {event.away_team.get('region')} {event.away_team.name} vs {event.home_team.get('region')} {event.home_team.name} {event.date}",
+            sport=event.sport.name,
+        )
 
 
 class MatchesResponse(BaseModel):
