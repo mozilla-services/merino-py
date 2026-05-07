@@ -1,5 +1,6 @@
 """Entrypoint for the command line interface."""
 
+import logging
 import typer
 
 from merino.configs.app_configs.config_logging import configure_logging
@@ -60,7 +61,10 @@ cli.add_typer(amp_live_probe_cmd, no_args_is_help=True)
 def setup():
     """CLI Entrypoint"""
     configure_logging()
-    configure_sentry()
+    try:
+        configure_sentry()
+    except Exception:
+        logging.getLogger(__name__).exception("Error configuring Sentry")
 
 
 if __name__ == "__main__":
