@@ -713,7 +713,7 @@ def test_get_en_ca_returns_small_population_model(model_limited):
     assert Topic.SPORTS.value in iv
 
     assert Topic.ARTS.value not in result.model_data.private_features
-    assert Topic.ARTS.value in iv  # local sections ranking
+    assert Topic.ARTS.value not in iv  # local sections ranking is off
 
     # Time zone uses a single split-threshold and small-population p/q
     tz = iv[TIME_ZONE_OFFSET_INFERRED_KEY]
@@ -722,8 +722,9 @@ def test_get_en_ca_returns_small_population_model(model_limited):
     assert tz.diff_q == MODEL_Q_VALUE_SMALL_POPULATION
 
     # include_local_reranking=True -> section features present (excluding topics already in the model)
-    section_keys = set(iv.keys()) - set(small_population_topics) - {TIME_ZONE_OFFSET_INFERRED_KEY}
-    assert len(section_keys) > 0
+    # Enable this if local reranking is re-enabled
+    # section_keys = set(iv.keys()) - set(small_population_topics) - {TIME_ZONE_OFFSET_INFERRED_KEY}
+    # assert len(section_keys) > 0
 
     # private_features = topics + time zone (no sections)
     assert result.model_data.private_features == [
@@ -732,7 +733,8 @@ def test_get_en_ca_returns_small_population_model(model_limited):
     ]
 
     # Not a small_experiment, so no privacy overrides
-    assert result.privacy_overrides is None
+    assert result.privacy_overrides is not None
+    assert result.privacy_overrides.local_popular_today_rerank is False
     # We are using newer thresholding method with prior impressions
     assert result.model_data.ctr_prior_strength > 0
 

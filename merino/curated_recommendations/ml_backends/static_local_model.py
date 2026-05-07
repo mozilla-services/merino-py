@@ -217,6 +217,16 @@ class PrivacyOverridesForFivePercentExperimentUS(PrivacyOverrides):
         )  # Cap of 10 click events per day to reduce risk of outliers
         super().__init__(**data)
 
+class PrivacyOverridesForSmallPopulation(PrivacyOverrides):
+    """Defines privacy overrides, so they can be applied automatically for Merino based experiments to reduce risk of privacy issues"""
+
+    def __init__(self, **data) -> None:
+        data.setdefault(
+            "local_popular_today_rerank", False
+        ) # Turn of local reranking
+        super().__init__(**data)
+
+
 
 v3_limited_topics = [
     # Top clicked in most popular, though food was dropped for parenting
@@ -357,11 +367,12 @@ class SuperInferredModel(LocalModelBackend):
         else:
             topic_features = {a: self._get_topic(a, model_thresholds) for a in topics}
 
+        is_baysean_smoothing = small_population
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
-            rescale=True,
+            rescale=not is_baysean_smoothing,
             noise_scale=0.0,
-            ctr_prior_strength=100 if small_population else None,
+            ctr_prior_strength=100 if is_baysean_smoothing else None,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],
                 relative_weight=[1],
@@ -369,7 +380,7 @@ class SuperInferredModel(LocalModelBackend):
             interest_vector={
                 **topic_features,
                 TIME_ZONE_OFFSET_INFERRED_KEY: self._get_time_zone(small_population),
-                **section_features,
+                **section_features
             },
             private_features=private_features,
         )
@@ -377,6 +388,8 @@ class SuperInferredModel(LocalModelBackend):
         privacy_overrides: PrivacyOverrides | None = None
         if small_experiment:
             privacy_overrides = PrivacyOverridesForFivePercentExperimentUS()
+        if small_population:
+            privacy_overrides = PrivacyOverridesForSmallPopulation()
 
         return InferredLocalModel(
             model_id=model_id,
@@ -424,7 +437,7 @@ class SuperInferredModel(LocalModelBackend):
                 surface_id,
                 topics=small_population_topics,
                 small_population=True,
-                include_local_reranking=True,
+                include_local_reranking=False,
             )
         else:
             return self._build_local(SERVER_V3_MODEL_ID, surface_id, topics=v3_limited_topics)
