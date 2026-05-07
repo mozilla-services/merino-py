@@ -228,15 +228,6 @@ class PrivacyOverridesForSmallPopulation(PrivacyOverrides):
         super().__init__(**data)
 
 
-
-class PrivacyOverridesForSmallPopulation(PrivacyOverrides):
-    """Defines privacy overrides, so they can be applied automatically for Merino based experiments to reduce risk of privacy issues"""
-
-    def __init__(self, **data) -> None:
-        data.setdefault("local_popular_today_rerank", False)  # Turn of local reranking
-        super().__init__(**data)
-
-
 v3_limited_topics = [
     # Top clicked in most popular, though food was dropped for parenting
     Topic.SPORTS.value,
