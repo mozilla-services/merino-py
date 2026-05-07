@@ -5,14 +5,14 @@ response contains two completed (yesterday), two in-progress (today), and
 two upcoming (tomorrow) events.
 """
 
-from datetime import UTC, date, datetime, time, timedelta
 import json
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
-from typing import cast
 
 from pydantic import HttpUrl
 
 from merino.providers.wcs.protocol import EventInfo, TeamInfo
+from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
 
 # Stage's `image_gcs_v2.cdn_hostname` is unset, so `get_logo_url` produces
@@ -59,17 +59,6 @@ _TEAMS: dict[str, TeamInfo] = {
 }
 
 
-def _load_team_colours() -> dict[str, list[str]]:
-    """Load team hex colours keyed by team Key from wcs_team_colours.json."""
-    path = Path(__file__).parent.parent.parent / "data" / "wcs_team_colours.json"
-    with path.open() as f:
-        # have to type cast here to satisfy the linter since json.load returns type any.
-        return cast(dict[str, list[str]], json.load(f))
-
-
-_TEAM_COLOURS: dict[str, list[str]] = _load_team_colours()
-
-
 # NOTE: This is building and providing static team data only to allow for UI devlepment.
 # Actual data from external APIs will be wired in follow up work.
 def _team_from_json(entry: dict) -> TeamInfo:
@@ -80,7 +69,7 @@ def _team_from_json(entry: dict) -> TeamInfo:
         global_team_id=entry["GlobalTeamId"],
         name=entry["Name"],
         region=key,
-        colors=_TEAM_COLOURS.get(key, []),
+        colors=get_team_colours(key),
         icon_url=_icon(key),
         eliminated=False,
     )
