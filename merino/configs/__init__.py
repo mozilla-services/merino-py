@@ -84,6 +84,27 @@ _validators = [
         must_exist=True,
         env=["production", "staging", "development"],
     ),
+    Validator(
+        "lints_interest.enabled",
+        is_type_of=bool,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "lints_interest.gcs.max_size",
+        "lints_interest.gcs.cron_interval_seconds",
+        is_type_of=int,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "lints_interest.gcs.bucket_name",
+        "lints_interest.gcs.gcp_project",
+        "lints_interest.gcs.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
     Validator(

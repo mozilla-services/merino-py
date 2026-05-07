@@ -25,6 +25,10 @@ from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import
     EmptyCohortModel,
     GcsInterestCohortModel,
 )
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
+)
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -182,6 +186,47 @@ def init_ml_cohort_model_backend() -> CohortModelBackend:
         return EmptyCohortModel()
 
 
+def init_lints_interest_backend() -> LinTSInterestBackend | EmptyLinTSInterestBackend:
+    """Initialize the LinTS-interest backend.
+
+    Two layers of off-switch:
+      - The ``lints_interest.enabled`` config flag (kill switch). If false,
+        we skip GCS entirely and return an empty stub regardless of bucket
+        state.
+      - Failure to construct the ``SyncedGcsBlob`` (e.g. dev env without
+        gcloud auth) also falls back to the empty stub.
+
+    The empty stub returns ``False`` from ``is_valid()`` so the request flow
+    naturally falls through to the cohort or vanilla TS ranker.
+
+    US-only for the initial experiment. Adding ``NEW_TAB_EN_CA`` later is a
+    one-line wiring change here — the backend is already per-``SurfaceId``.
+    """
+    if not settings.lints_interest.enabled:
+        logger.info("LinTS interest backend disabled by config; using empty stub.")
+        return EmptyLinTSInterestBackend()
+
+    try:
+        synced_gcs_blob = SyncedGcsBlob(
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.lints_interest.gcs.gcp_project
+            ),
+            metrics_client=get_metrics_client(),
+            metrics_namespace="recommendation.ml.lints_interest",
+            bucket_name=settings.lints_interest.gcs.bucket_name,
+            blob_name=settings.lints_interest.gcs.blob_name,
+            max_size=settings.lints_interest.gcs.max_size,
+            cron_interval_seconds=settings.lints_interest.gcs.cron_interval_seconds,
+            cron_job_name="fetch_lints_interest_model",
+            is_bytes=True,
+        )
+        synced_gcs_blob.initialize()
+        return LinTSInterestBackend(synced_gcs_blobs={SurfaceId.NEW_TAB_EN_US: synced_gcs_blob})
+    except Exception as e:
+        logger.error(f"Failed to initialize LinTS interest backend: {e}")
+        return EmptyLinTSInterestBackend()
+
+
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -191,6 +236,7 @@ def init_provider() -> None:
     local_model_backend = init_local_model_backend()
     ml_recommendations_backend = init_ml_recommendations_backend()
     cohort_model_backend = init_ml_cohort_model_backend()
+    lints_interest_backend = init_lints_interest_backend()
 
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
@@ -214,6 +260,7 @@ def init_provider() -> None:
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
+        lints_interest_backend=lints_interest_backend,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 

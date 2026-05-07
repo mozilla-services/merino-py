@@ -168,6 +168,10 @@ finance_tickers_file = "tests/data/query_normalization/finance_tickers.json"
 bucket_name = "test-bucket"
 gcp_project = "test-project"
 
+[testing.lints_interest.gcs]
+bucket_name = "test-bucket-lints"
+gcp_project = "test-project"
+
 [testing.curated_recommendations.corpus_api]
 
 # Tests sleep for a shorter duration than defautl to make them execute more quickly.

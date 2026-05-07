@@ -145,3 +145,12 @@ gcp_project = "moz-fx-merino-prod-5de4"
 
 # GCS bucket that contains cohort model data
 bucket_name = "merino-ml-data-prod"
+
+# lints_interest.enabled stays false from default.toml and will
+# not load the linTS model by default
+[production.lints_interest.gcs]
+# GCP project name where the GCS bucket lives.
+gcp_project = "moz-fx-merino-prod-5de4"
+
+# GCS bucket that contains the LinTS-interest safetensors bundle.
+bucket_name = "merino-ml-data-prod"

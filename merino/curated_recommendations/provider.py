@@ -5,6 +5,10 @@ from typing import cast
 
 
 from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
+)
 from merino.curated_recommendations.ml_backends.protocol import (
     LOCAL_MODEL_MODEL_ID_KEY,
     CohortModelBackend,
@@ -65,6 +69,7 @@ class CuratedRecommendationsProvider:
         local_model_backend: LocalModelBackend,
         ml_recommendations_backend: MLRecsBackend,
         cohort_model_backend: CohortModelBackend,
+        lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
@@ -73,6 +78,7 @@ class CuratedRecommendationsProvider:
         self.local_model_backend = local_model_backend
         self.ml_recommendations_backend = ml_recommendations_backend
         self.cohort_model_backend = cohort_model_backend
+        self.lints_interest_backend = lints_interest_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -164,6 +170,7 @@ class CuratedRecommendationsProvider:
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
                 ml_backend=self.ml_recommendations_backend,
+                lints_interest_backend=self.lints_interest_backend,
                 region=derive_region(request.locale, request.region),
             )
         elif surface_id in (

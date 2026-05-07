@@ -27,8 +27,14 @@ from merino.curated_recommendations.ml_backends.protocol import (
 )
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+    CONTEXTUAL_RANKING_TREATMENT_INTEREST,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
+)
+from merino.curated_recommendations.rankers.interest_ranker import InterestRanker
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
@@ -378,6 +384,21 @@ def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> 
         request,
         ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
         CONTEXTUAL_RANKING_TREATMENT_TZ,
+    )
+
+
+def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the LinTS interest-vector ranking experiment is enabled.
+
+    Gates the third tier of the ranker chain in get_sections: when the user
+    is enrolled in the treatment branch and the LinTS backend is loaded, we
+    rank with InterestRanker; otherwise we fall through to the cohort
+    ContextualRanker (or vanilla ThompsonSamplingRanker).
+    """
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.INFERRED_INTEREST_RANKING_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_INTEREST,
     )
 
 
@@ -786,6 +807,7 @@ async def get_sections(
     ml_backend: MLRecsBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
+    lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
 ) -> dict[str, Section]:
@@ -850,10 +872,30 @@ async def get_sections(
     ranker: Ranker
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
+    # Three-tier ranker chain: interest → cohort → vanilla TS. Each step
+    # gates on its own preconditions so a missing/stale artifact at any tier
+    # degrades cleanly to the next. The interest tier does NOT require a
+    # cohort assignment (`do_inferred_contextual`) — it scores directly off
+    # the user's strength vector, so users with valid interest vectors but
+    # unassigned cohorts are still eligible for the experiment.
+    use_interest_ranker = (
+        is_inferred_interest_experiment(request)
+        and lints_interest_backend.is_valid(surface_id)
+        and personal_interests is not None
+        and bool(personal_interests.scores)
+    )
     use_contexual_ranker = (
         do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
     )
-    if use_contexual_ranker:
+    if use_interest_ranker:
+        logger.info("ranker_selected", extra={"ranker": "interest"})
+        ranker = InterestRanker(
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            surface_id=surface_id,
+            lints_backend=lints_interest_backend,
+        )
+    elif use_contexual_ranker:
         is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
         if (
             not is_inferred_time_zone_experiment_enabled
@@ -864,6 +906,7 @@ async def get_sections(
             # Make sure we have not time zone in the US if we're not in the tz experiment
             # For canada TZ is not a separate experiment.
             personal_interests.scores.pop(TIME_ZONE_OFFSET_INFERRED_KEY, None)
+        logger.info("ranker_selected", extra={"ranker": "cohort"})
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -873,6 +916,7 @@ async def get_sections(
             == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
         )
     else:
+        logger.info("ranker_selected", extra={"ranker": "vanilla_ts"})
         ranker = ThompsonSamplingRanker(
             engagement_backend=engagement_backend, prior_backend=prior_backend
         )

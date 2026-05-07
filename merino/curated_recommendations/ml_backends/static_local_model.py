@@ -35,6 +35,8 @@ LOCAL_AND_SERVER_V4_BRANCH_NAME = LOCAL_AND_SERVER_V3_BRANCH_NAME
 CONTEXTUAL_RANKING_TREATMENT_TZ = "contextual-ranking-content-tz"
 # Ranking based on country only
 CONTEXTUAL_RANKING_TREATMENT_COUNTRY = "contextual-ranking-content-country"
+# Ranking via the LinTS interest-vector model (per-request θ̃ sampling).
+CONTEXTUAL_RANKING_TREATMENT_INTEREST = "contextual-ranking-content-interest"
 
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
