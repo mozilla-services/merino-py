@@ -43,8 +43,8 @@ jobs:
       - name: Build custom ES image
         uses: docker/build-push-action@v7
         with:
-          context: dev/elasticsearch/
-          file: dev/elasticsearch/Dockerfile
+          context: dev/local_setup/elasticsearch/
+          file: dev/local_setup/elasticsearch/Dockerfile
           build-args: STACK_VERSION=8.18.1
           tags: merino-elasticsearch:local
           load: true # makes image available to testcontainers
