@@ -44,7 +44,7 @@ make docker-compose-down
 
 Merino uses several data stores, including ElasticSearch. When running locally, it is created and bootstrapped automatically via docker-compose, using a custom Dockerfile which installs additional plugins used in production. When running integration tests, the same custom Dockerfile is built and passed to testcontainers.
 
-When running locally, the bootstrap step creates indices and seeds a few documents for testing queries. See the `/dev/elasticsearch` directory at the root of the repository for more information on setup and seeding.
+When running locally, the bootstrap step creates indices and seeds a few documents for testing queries. See the `/dev/local_setup/elasticsearch` directory at the root of the repository for more information on setup and seeding.
 
 Example queries (return results from seeded data):
 
@@ -53,7 +53,7 @@ Example queries (return results from seeded data):
 
 It's important to remember that elastic search is a mapping based data storage system. This means that you need to specify the index declaration, as well as the index specification.
 
-The local declaration in `/dev/elasticsearch/indices` should be kept in sync with the terraform definition and/or code-declared indices (see examples in [wikipedia](https://github.com/mozilla-services/merino-py/blob/2472bd7f1a892f06763546144b6b84f21bdb5586/merino/jobs/wikipedia_indexer/settings/v1.py#L33) and [sports](https://github.com/mozilla-services/merino-py/blob/0835b214d93a134f596b85948eadedc2a157a311/merino/providers/suggest/sports/backends/sportsdata/common/elastic.py#L27)
+The local declaration in `/dev/local_setup/elasticsearch/indices` should be kept in sync with the terraform definition and/or code-declared indices (see examples in [wikipedia](https://github.com/mozilla-services/merino-py/blob/2472bd7f1a892f06763546144b6b84f21bdb5586/merino/jobs/wikipedia_indexer/settings/v1.py#L33) and [sports](https://github.com/mozilla-services/merino-py/blob/0835b214d93a134f596b85948eadedc2a157a311/merino/providers/suggest/sports/backends/sportsdata/common/elastic.py#L27)
 ), in order to best emulate the production environment.
 
 Remember, when running locally, you will have admin rights to your Elasticsearch instance. This will NOT be the case in production.

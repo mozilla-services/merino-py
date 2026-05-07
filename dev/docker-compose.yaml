@@ -33,7 +33,7 @@ services:
       - 4443:4443
     volumes:
       - ./local_data/gcs_emulator:/data
-      - ./gcs/:/data
+      - ./local_setup/gcs/:/data
     command: -port=4443 -public-host=localhost:4443 -scheme=http
 
   # Adapted from https://github.com/elastic/elasticsearch/blob/main/docs/reference/setup/install/docker/docker-compose.yml
@@ -41,7 +41,7 @@ services:
   # And using custom image to install plugins
   es01:
     build:
-      context: ./elasticsearch
+      context: ./local_setup/elasticsearch
       dockerfile: Dockerfile
       args:
         STACK_VERSION: ${STACK_VERSION}
@@ -98,9 +98,9 @@ services:
       es01:
         condition: service_healthy
     volumes:
-      - ./elasticsearch/setup.sh:/setup.sh:ro
-      - ./elasticsearch/indexes:/es-indexes:ro
-      - ./elasticsearch/seed:/es-seed:ro
+      - ./local_setup/elasticsearch/setup.sh:/setup.sh:ro
+      - ./local_setup/elasticsearch/indexes:/es-indexes:ro
+      - ./local_setup/elasticsearch/seed:/es-seed:ro
     entrypoint: ["sh", "/setup.sh"]
     restart: "no"
 
