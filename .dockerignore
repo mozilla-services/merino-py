@@ -23,6 +23,10 @@ mermaid.min.js
 profile.json
 workspace/
 dev/local_data/
+dev/local_setup/
+dev/.env
+dev/docker-compose.yaml
+
 local_data/
 
 # Ignore generated credentials from google-github-actions/auth
