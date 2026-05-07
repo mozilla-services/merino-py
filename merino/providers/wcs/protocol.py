@@ -47,13 +47,16 @@ class TeamInfo(BaseModel):
     def from_Team_dict(cls, team: dict[str, Any]):
         """Build a TeamInfo from the minimized team dictionary stored in an Event record"""
         colors: list[str] = list(map(lambda color: as_hex_color(color), team.get("colors", [])))
+        url = None
+        if team.get("key"):
+            url = get_logo_url(LogoCategory.Nations, team.get("key"))
         return cls(
             key=team.get("key"),
             global_team_id=team.get("id"),
             name=team.get("name"),
             region=team.get("region"),
             colors=colors,
-            icon_url=get_logo_url(LogoCategory.Nations, team.get("key")),
+            icon_url=url,
             eliminated=team.get("eliminated", False),
         )
 
@@ -84,6 +87,9 @@ class EventInfo(BaseModel):
         """Generate a widget event descriptor record from a suggest Event"""
         home_team = TeamInfo.from_Team_dict(event.home_team)
         away_team = TeamInfo.from_Team_dict(event.away_team)
+        updated = None
+        if event.updated:
+            updated = event.updated.isoformat()
 
         cls(
             date=event.date.isoformat(),
@@ -98,13 +104,13 @@ class EventInfo(BaseModel):
             home_penalty=event.home_penalty,
             away_penalty=event.away_penalty,
             clock=event.clock,
-            updated=event.updated.isoformat(),
+            updated=updated,
             status=event.status.as_str(),
             status_type=event.status.as_ui_status(),
             # This should probably use the same construct as suggest, but I don't think we've
             # resolved what it should be, so manually construct it here.
-            query=f"{event.sport.name} {event.away_team.get('region')} {event.away_team.name} vs {event.home_team.get('region')} {event.home_team.name} {event.date}",
-            sport=event.sport.name,
+            query=f"{event.sport} {event.away_team.get('region')} {event.away_team.get('name')} vs {event.home_team.get('region')} {event.home_team.get('name')} {event.date}",
+            sport=event.sport,
         )
 
 
