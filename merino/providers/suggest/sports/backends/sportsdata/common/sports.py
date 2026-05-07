@@ -6,8 +6,8 @@ This contains the sport specific calls and data formats which are normalized.
 import asyncio
 import logging
 import json
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import datetime, timedelta, timezone, MAXYEAR, MINYEAR
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 # We use this for each Sport subclass, so that there's some flexibility for what config
@@ -20,7 +20,7 @@ from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports import LOGGING_TAG
 from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends import get_data
-from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
+from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory, GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
     SportTerms,
@@ -657,6 +657,7 @@ class WCS(Sport):
 
     season: str | None = None
     cache_prefix: str = "sport:wcs:v1"  # Unique prefix for Redis
+    mock_data: bool = False
     _lock: asyncio.Lock
 
     def __init__(
@@ -680,6 +681,7 @@ class WCS(Sport):
             team_ttl=timedelta(weeks=sport_settings.get("team_ttl_weeks", 12)),
             event_ttl=timedelta(weeks=sport_settings.get("event_ttl_weeks.wcs", 12)),
         )
+        self.mock_data = sport_settings.mock_data or False
         self._lock = asyncio.Lock()
         self.cache = cache
         self.normalized_terms.update(
@@ -813,15 +815,7 @@ class WCS(Sport):
                 TODO: recreate the Team using the cached data.
                 data = json.loads(team_data)
                 TODO: Fill this out.
-                team = Team(  # type: ignore
-                    id=data.get("id"),
-                    fullname=data.get("name"),
-                    key=data.get("key"),
-                    locale=data.get("country"),
-                    aliases="",
-                    colors=data.get("colors"),
-                )
-                team.id = data.get("id")
+                team = Team(**data)
                 return team
             """
             return self.teams.get(id)
@@ -874,9 +868,7 @@ class WCS(Sport):
     def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
         """Serialize a team as a dictionary for the widget"""
         # TODO: Populate the eliminated field (from old team info?)
-        serialized = dict(
-            team.__dict__
-        )  # Because BaseModel is clever and helpful instead of dumb and useful.
+        serialized = team.model_dump()
         serialized["expiry"] = team.expiry.timestamp()
         serialized["updated"] = team.updated.timestamp()
         return json.dumps(serialized)
@@ -885,7 +877,7 @@ class WCS(Sport):
         """Serialize an event as a dictionary for the widget"""
         # import pdb;pdb.set_trace()
         # TODO: add more team info?
-        serialized = dict(event.__dict__)
+        serialized = event.model_dump()
         # munge the dates.
         serialized["date"] = event.date.timestamp()
         serialized["expiry"] = event.expiry.timestamp()
@@ -975,16 +967,145 @@ class WCS(Sport):
         # This will need to fetch all events for a given team
         # TODO: we might be able to store this as a unique key "...:team_games:{team_key}": [global_event_id,...]
         # but that feels gross.
+
         raise NotImplementedError
 
-    async def get_events_by_date(
+    async def mock_events_data(
         self, start: datetime | None = None, end: datetime | None = None
-    ):  # pragma: no cover "widget"
+    ) -> list[Event]:
+        """Return semi-viable mock game data for UI testing/building"""
+        result = []
+        # Pretend we're interested in England
+        COMMON_TEAM_ID = 90000858
+        # Opposition teams are Argentina, Brazil, Germany
+        OPPOSITION_TEAM_IDS = [90000859, 90000861, 90000947]
+        common_team: Team = cast(Team, await self.get_team(COMMON_TEAM_ID))
+        opposing_teams = []
+        for id in OPPOSITION_TEAM_IDS:
+            team = await self.get_team(id)
+            if team:
+                opposing_teams.append(team)
+        now = datetime.now(tz=timezone.utc)
+        today = now.replace(hour=14, minute=50)
+        yesterday = start or (today - timedelta(hours=24))
+        tomorrow = end or (today + timedelta(hours=24))
+        expiry = today + timedelta(days=60)
+
+        # in play event
+        current1 = Event(
+            sport=self.name,
+            id=86910,  # 86908 - 87010
+            terms=f"{common_team.terms} {opposing_teams[0].terms}",
+            date=(now - timedelta(minutes=50)).isoformat(),
+            original_date=today.isoformat(),
+            home_team=common_team.minimal(),
+            away_team=opposing_teams[0].minimal(),
+            home_score=0,
+            away_score=1,
+            home_extra=None,
+            away_extra=None,
+            home_penalty=None,
+            away_penalty=None,
+            period="2",
+            clock="50",
+            updated=datetime.now(tz=timezone.utc),
+            status=GameStatus.InProgress,
+            expiry=expiry,
+        )
+        prev1 = Event(
+            sport=self.name,
+            id=86908,  # 86908 - 87010
+            terms=f"{common_team.terms} {opposing_teams[1].terms}",
+            date=yesterday.isoformat(),
+            original_date=yesterday.isoformat(),
+            home_team=common_team.minimal(),
+            away_team=opposing_teams[1].minimal(),
+            home_score=0,
+            away_score=1,
+            home_extra=1,
+            away_extra=0,
+            home_penalty=0,
+            away_penalty=1,
+            period="Final",
+            clock="90+5",
+            updated=datetime.now(tz=timezone.utc),
+            status=GameStatus.Final,
+            expiry=expiry,
+        )
+        prev2 = Event(
+            sport=self.name,
+            id=86909,  # 86908 - 87010
+            terms=f"{common_team.terms} {opposing_teams[2].terms}",
+            date=yesterday.isoformat(),
+            original_date=yesterday.isoformat(),
+            home_team=opposing_teams[2].minimal(),
+            away_team=common_team.minimal(),
+            home_score=0,
+            away_score=1,
+            home_extra=0,
+            away_extra=0,
+            home_penalty=0,
+            away_penalty=0,
+            period="Final",
+            clock="90",
+            updated=datetime.now(tz=timezone.utc),
+            status=GameStatus.Final,
+            expiry=expiry,
+        )
+        next1 = Event(
+            sport=self.name,
+            id=86920,  # 86908 - 87010
+            terms=f"{common_team.terms} {opposing_teams[3].terms}",
+            date=tomorrow.isoformat(),
+            original_date=tomorrow.isoformat(),
+            home_team=opposing_teams[3].minimal(),
+            away_team=common_team.minimal(),
+            home_score=None,
+            away_score=None,
+            home_extra=None,
+            away_extra=None,
+            home_penalty=None,
+            away_penalty=None,
+            period=None,
+            clock=None,
+            updated=datetime.now(tz=timezone.utc),
+            status=GameStatus.Scheduled,
+            expiry=expiry,
+        )
+        result = [prev1, prev2, current1, next1]
+        return result
+
+    async def get_events_by_date(
+        self, start: datetime | None = None, end: datetime | None = None, limit: int | None = None
+    ) -> list[Event]:  # pragma: no cover "widget"
         """Get events by start,end"""
-        # TODO: build
+        if self.mock_data:
+            return await self.mock_events_data(start, end)
         # scan the ssort list for events that fall between the start (min) and end (max)
         # fetch those event info.
-        raise NotImplementedError
+        result: list[Event] = []
+        if not start:
+            start = datetime(year=MINYEAR, month=1, day=1)
+        if not end:
+            end = datetime(year=MAXYEAR, month=12, day=31)
+        event_list = await self.cache.zrange(
+            f"{self.cache_prefix}:calendar",
+            min=int(start.timestamp()),
+            max=int(end.timestamp()),
+            limit=limit,
+        )
+        for event_key in event_list:
+            data = await self.cache.get(event_key)
+            if data:
+                event_dict = json.loads(data)
+                try:
+                    result.append(Event(**event_dict))
+                except Exception as ex:
+                    # import pdb; pdb.set_trace()
+                    logger.warning(
+                        f"{LOGGING_TAG} Could not re-instantiate event {event_key}: {ex}"
+                    )
+        return result
 
 
 # THE FOLLOWING CLASSES ARE WIP:::

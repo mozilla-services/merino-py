@@ -3,7 +3,7 @@
 import logging
 from asyncio import Task
 from datetime import UTC, datetime
-from datetime import date as Date
+from datetime import datetime as Date
 from functools import partial
 from itertools import chain
 from typing import Annotated, Literal
@@ -700,9 +700,9 @@ async def get_wcs_matches(
     `previous` is older, `next` is newer. Each bucket is sorted ascending by
     event date. Returns fake-but-plausible data until the vendor backend lands.
     """
-    target_date = date or datetime.now(UTC).date()
+    target_date = date or datetime.now(UTC)
     team_keys = _parse_team_keys(teams)
-    return provider.get_matches(target_date, limit, team_keys)
+    return await provider.get_matches(target_date, limit, team_keys)
 
 
 @router.get(
@@ -723,7 +723,7 @@ async def get_wcs_live(
     Anchored to the current UTC date. Returns fake-but-plausible data until
     the vendor backend lands.
     """
-    return provider.get_live_matches(_parse_team_keys(teams))
+    return await provider.get_live_matches(_parse_team_keys(teams))
 
 
 @router.get(
