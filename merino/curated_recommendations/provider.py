@@ -110,7 +110,8 @@ class CuratedRecommendationsProvider:
         @return: A re-ranked list of curated recommendations
         """
         ranker = ThompsonSamplingRanker(
-            engagement_backend=self.engagement_backend, prior_backend=self.prior_backend
+            engagement_backend=self.engagement_backend,
+            prior_backend=self.prior_backend,
         )
         recommendations = ranker.rank_items(
             recommendations,
@@ -143,7 +144,7 @@ class CuratedRecommendationsProvider:
         sections_feeds = None
         general_feed: list[CuratedRecommendation] = []
         cohort_model_training_run_id = (
-            self.ml_recommendations_backend.get_cohort_training_run_id()
+            self.ml_recommendations_backend.get_cohort_training_run_id(surface_id)
             if self.ml_recommendations_backend
             else None
         )

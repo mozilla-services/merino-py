@@ -7,12 +7,13 @@ import logging
 import time
 from typing import Callable
 
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 import pytest
 from aiodogstatsd import Client as StatsdClient
 from google.cloud.storage import Client, Bucket
 
 from merino.configs import settings
-from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
+from merino.curated_recommendations.ml_backends.gcs_ml_recs import DEFAULT_SURFACE_ID, GcsMLRecs
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 
@@ -41,7 +42,7 @@ def create_ml_recs(
     # Call initialize to start the cron job in the same event loop
     synced_gcs_blob.initialize()
 
-    return GcsMLRecs(synced_gcs_blob=synced_gcs_blob)
+    return GcsMLRecs(synced_gcs_blobs={DEFAULT_SURFACE_ID: synced_gcs_blob})
 
 
 def create_blob(bucket, data):
@@ -144,7 +145,7 @@ async def test_gcs_engagement_returns_none_for_missing_keys_contextual(
 ):
     """Test that the backend returns None for keys not in the GCS blobs."""
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
-    assert gcs_engagement.get("missing_key") is None
+    assert gcs_engagement.get(surface_id=SurfaceId.NEW_TAB_DE_DE) is None
 
 
 @pytest.mark.asyncio
@@ -153,27 +154,33 @@ async def test_gcs_ml_recs_fetches_data(gcs_storage_client, gcs_bucket, metrics_
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
 
-    assert gcs_engagement.is_valid()
+    assert gcs_engagement.is_valid(DEFAULT_SURFACE_ID)
 
-    rankings = gcs_engagement.get()  # global ranking
+    rankings = gcs_engagement.get(surface_id=DEFAULT_SURFACE_ID)  # global ranking
     assert rankings.granularity == "global"
     assert rankings.get_score_pair("") == (1, 1)
     assert rankings.get_score_pair("aa") == (3, 1)
     assert rankings.get_score_pair("??") == (None, None)
 
-    assert gcs_engagement.get_adjusted_impressions("aa") == 1
-    assert gcs_engagement.get_adjusted_impressions("unknown") == 0
+    assert gcs_engagement.get_adjusted_impressions("aa", surface_id=SurfaceId.NEW_TAB_EN_US) == 1
+    assert (
+        gcs_engagement.get_adjusted_impressions("unknown", surface_id=SurfaceId.NEW_TAB_EN_US) == 0
+    )
 
-    rankings = gcs_engagement.get(region="US", cohort="0", time_zone="1")
+    rankings = gcs_engagement.get(
+        surface_id=DEFAULT_SURFACE_ID, region="US", cohort="0", time_zone="1"
+    )
     assert rankings is not None
     assert rankings.granularity == "TZ_COHORT_TIME_ZONE"
 
-    rankings = gcs_engagement.get(region="US", cohort="0")
+    rankings = gcs_engagement.get(surface_id=DEFAULT_SURFACE_ID, region="US", cohort="0")
     assert rankings is not None
     assert rankings.granularity == "TZ_COHORT"
 
     # Test that we fall back to country if cohort is missing.
-    rankings = gcs_engagement.get(region="US", cohort=None, time_zone="1")
+    rankings = gcs_engagement.get(
+        surface_id=DEFAULT_SURFACE_ID, region="US", cohort=None, time_zone="1"
+    )
     assert rankings is not None
     assert rankings.granularity == "global"
 
@@ -183,7 +190,7 @@ async def test_gcs_ml_recs_old_data(gcs_storage_client, gcs_bucket, metrics_clie
     """Test that the backend fetches data from GCS and returns engagement data."""
     gcs_engagement = create_ml_recs(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
-    assert not gcs_engagement.is_valid()
+    assert not gcs_engagement.is_valid(surface_id=DEFAULT_SURFACE_ID)
 
 
 @pytest.mark.asyncio

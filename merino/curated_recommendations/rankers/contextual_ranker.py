@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.ml_backends.protocol import (
     ContextualArticleRankings,
     MLRecsBackend,
@@ -61,12 +62,14 @@ class ContextualRanker(Ranker):
         self,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
+        surface_id: SurfaceId,
         region_weight: float = REGION_ENGAGEMENT_WEIGHT,
         ml_backend: MLRecsBackend | None = None,
         disable_time_zone_context: bool = False,
     ) -> None:
         super().__init__(engagement_backend, prior_backend, region_weight)
         assert ml_backend is not None
+        self.surface_id: SurfaceId = surface_id
         self.ml_backend: MLRecsBackend = ml_backend
         self.disable_time_zone_context = disable_time_zone_context
 
@@ -111,7 +114,7 @@ class ContextualRanker(Ranker):
                 time_zone = str(int(tz_raw))
 
         contextual_scores: ContextualArticleRankings | None
-        contextual_scores = self.ml_backend.get(region, cohort, time_zone)
+        contextual_scores = self.ml_backend.get(self.surface_id, region, cohort, time_zone)
         rng = np.random.default_rng()
         for rec in recs:
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
@@ -136,7 +139,9 @@ class ContextualRanker(Ranker):
                 # Contextual ranker known imprssions override the computed no_opens based on engagement
                 # which runs on a different interval. We will need to potentially rescale the ml_backend
                 # impresions before completely ignoring the no_opens from the legacy engagement backend.
-                no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
+                no_opens = self.ml_backend.get_adjusted_impressions(
+                    rec.corpusItemId, self.surface_id
+                )
                 beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
             score += boost_interest(rec)
             remaining_fresh_impressions = 0
