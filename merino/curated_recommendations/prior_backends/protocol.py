@@ -76,7 +76,9 @@ class EngagementRescaler(BaseModel):
         return alpha, beta
 
     def compute_estimated_fresh_per_cycle(self, prior: Prior) -> int:
-        """Compute the estimated number of impressions for fresh items in each telemetry update cycle,
-        based on the fixed estimate for top story tile impressions and normalized by hour.
+        """Compute the estimated number of impressions that a single top stories tile gets in a content refresh cycle
+        based on total impressions and normalized by hour.
+
+        This function should be subclassed
         """
-        return prior.total_impressions_per_day
+        return int(prior.total_impressions_per_day)

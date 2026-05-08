@@ -122,8 +122,6 @@ class ContextualRanker(Ranker):
                 mean, stdev = contextual_scores.get_score_pair(rec.corpusItemId)
 
             beta_value_for_fresh_check = non_rescaled_b_prior
-            print("beta value")
-            print(non_rescaled_b_prior)
             if mean is None or stdev is None:
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)

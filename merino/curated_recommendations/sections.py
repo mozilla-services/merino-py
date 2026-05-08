@@ -682,7 +682,7 @@ def get_top_story_list(
     extra_source_depth: int = 10,
     rescaler: EngagementRescaler | None = None,
     relax_constraints_for_personalization=False,
-    prior: Prior | None = None
+    prior: Prior | None = None,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
@@ -707,9 +707,16 @@ def get_top_story_list(
     fresh_story_for_fixed_position = None
 
     # Pick a fresh story at random for position
-    if rescaler and rescaler.fresh_items_top_stories_fixed_position is not None and prior is not None:
+    if (
+        rescaler
+        and rescaler.fresh_items_top_stories_fixed_position is not None
+        and prior is not None
+    ):
         fixed_fresh_item_position = rescaler.fresh_items_top_stories_fixed_position or 0
-        print(f"fresh per cycle estimate for {prior.region} ", rescaler.compute_estimated_fresh_per_cycle(prior))
+        print(
+            f"fresh per cycle estimate for {prior.region} ",
+            rescaler.compute_estimated_fresh_per_cycle(prior),
+        )
         fresh_story_for_fixed_position, rest_of_stories = pick_random_fresh_story(
             items, rescaler.compute_estimated_fresh_per_cycle(prior)
         )
@@ -896,7 +903,7 @@ async def get_sections(
         TOP_STORIES_SECTION_EXTRA_COUNT,
         rescaler=rescaler,
         relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
-        prior=prior
+        prior=prior,
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations

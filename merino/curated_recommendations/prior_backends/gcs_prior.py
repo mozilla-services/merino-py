@@ -53,7 +53,12 @@ class GcsPrior(PriorBackend):
 
         total_impressions_per_day = prior_stats.total_impressions_per_day
 
-        return Prior(region=prior_stats.region, alpha=alpha, beta=beta, total_impressions_per_day=total_impressions_per_day)
+        return Prior(
+            region=prior_stats.region,
+            alpha=alpha,
+            beta=beta,
+            total_impressions_per_day=total_impressions_per_day,
+        )
 
     def _fetch_callback(self, data: str) -> None:
         """Process the raw blob data and update the cache.
