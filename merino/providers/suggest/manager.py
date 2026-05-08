@@ -373,8 +373,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             cache = (
                 RedisAdapter(
                     *create_redis_clients(
-                        settings.redis.server,
-                        settings.redis.replica,
+                        settings.redis.wcs_server,
+                        settings.redis.wcs_replica,
                         settings.redis.max_connections,
                         settings.redis.socket_connect_timeout_sec,
                         settings.redis.socket_timeout_sec,

@@ -251,6 +251,12 @@ socket_connect_timeout_sec = 3
 # Timeout to interact with Redis in seconds
 socket_timeout_sec = 3
 
+# MERINO_REDIS__WCS_SERVER - URI to the WCS Redis primary endpoint.
+wcs_server = "redis://localhost:6379"
+
+# MERINO_REDIS__WCS_REPLICA - URI to the WCS Redis replica endpoint.
+wcs_replica = "redis://localhost:6379"
+
 [default.sentry]
 # MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
