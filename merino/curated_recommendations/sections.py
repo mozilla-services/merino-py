@@ -713,10 +713,6 @@ def get_top_story_list(
         and prior is not None
     ):
         fixed_fresh_item_position = rescaler.fresh_items_top_stories_fixed_position or 0
-        print(
-            f"fresh per cycle estimate for {prior.region} ",
-            rescaler.compute_estimated_fresh_per_cycle(prior),
-        )
         fresh_story_for_fixed_position, rest_of_stories = pick_random_fresh_story(
             items, rescaler.compute_estimated_fresh_per_cycle(prior)
         )
