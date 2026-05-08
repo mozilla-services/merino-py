@@ -141,8 +141,6 @@ class SportDataUpdater:
                     sport = UCL(settings)
                 case "MLB":
                     sport = MLB(settings)
-                case "WCS":
-                    sport = WCS(settings, cache=cache)
                 # case "EPL":
                 #    sport = EPL(settings)
                 case _:
