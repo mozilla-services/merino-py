@@ -46,7 +46,7 @@ class StubPriorBackend(PriorBackend):
     """Returns a fixed Prior."""
 
     def __init__(self, prior: Prior | None = None):
-        self._prior = prior or Prior(alpha=0.1, beta=99.9, average_ctr=0.001)
+        self._prior = prior or Prior(alpha=0.1, beta=99.9, total_impressions_per_day=10000.0)
 
     def get(self, region: str | None = None) -> Prior:
         """Return the stubbed prior."""
