@@ -89,7 +89,7 @@ class SportEventDetail(BaseModel):
             status=status.as_str(),
             status_type=str(status.as_ui_status()),
             touched=event.get("touched", "None"),
-            sport_category=SPORT_CATEGORY_MAP.get(event["sport"], SportCategory.Misc),
+            sport_category=SPORT_CATEGORY_MAP.get(event["sport"].upper(), SportCategory.Misc),
         )
 
 
