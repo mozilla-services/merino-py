@@ -430,6 +430,35 @@ def test_sport_event_detail_icon_none_for_unknown_sport() -> None:
     assert result.away_team.icon is None
 
 
+def test_sport_event_detail_icon_set_for_fifa_uses_nations_logos(
+    mocker: MockerFixture, make_manifest
+) -> None:
+    """FIFA events resolve to LogoCategory.Nations via SportLogoCategoryMap."""
+    mocker.patch(
+        "merino.utils.logos.load_manifest",
+        return_value=make_manifest(
+            (LogoCategory.Nations, "usa"),
+            (LogoCategory.Nations, "can"),
+        ),
+    )
+
+    event = {
+        "date": "2026-06-15T00:00:00+00:00",
+        "sport": "FIFA",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "USA", "name": "United States", "colors": ["B22234"]},
+        "away_team": {"key": "CAN", "name": "Canada", "colors": ["FF0000"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2026-06-15T00:00:00+00:00",
+    }
+    result = SportEventDetail.from_event_dict(event)
+
+    host = f"https://{settings.image_gcs_v2.cdn_hostname}"
+    assert str(result.home_team.icon) == f"{host}/logos/nations/nations_usa.png"
+    assert str(result.away_team.icon) == f"{host}/logos/nations/nations_can.png"
+
+
 def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
     """Icons are None when the team key is absent from the manifest."""
     event = {

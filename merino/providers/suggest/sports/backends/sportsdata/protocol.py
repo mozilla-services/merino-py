@@ -14,6 +14,18 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
 )
 from merino.utils.logos import get_logo_url, LogoCategory
 
+# Mapping of sport name from SportEventDetail
+# (e.g. "NFL", "NHL", "NBA", etc.) to the logo category
+# In order to onboard a new logo category (e.g. new sport)
+# You must update this mapping
+SportLogoCategoryMap: dict[str, LogoCategory] = {
+    "nfl": LogoCategory.NFL,
+    "nhl": LogoCategory.NHL,
+    "nba": LogoCategory.NBA,
+    "mlb": LogoCategory.MLB,
+    "fifa": LogoCategory.Nations,
+}
+
 
 class SportTeamDetail(BaseModel):
     """Data about the specific Sport team."""
@@ -52,7 +64,7 @@ class SportEventDetail(BaseModel):
         """
         status: GameStatus = event["event_status"]
         try:
-            category = LogoCategory(event["sport"].lower())
+            category = LogoCategory(SportLogoCategoryMap.get(event["sport"].lower(), "").lower())
         except ValueError:
             # No logos for this sport; leave icons as None
             category = None
