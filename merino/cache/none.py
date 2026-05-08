@@ -14,7 +14,7 @@ class NoCacheAdapter:  # pragma: no cover
         """Get data for multiple keys"""
         return None
 
-    async def delete(self, key: str) -> int | None:  # noqa: D102
+    async def delete(self, *keys: str) -> int | None:  # noqa: D102
         return None
 
     async def setnx(

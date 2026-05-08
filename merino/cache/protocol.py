@@ -28,6 +28,14 @@ class CacheAdapter(Protocol):
         """
         ...
 
+    async def delete(self, *keys: str) -> int | None:  # pragma: no cover
+        """Delete one or more keys from the cache.
+
+        Raises:
+            - `CacheAdapterError` for cache backend errors.
+        """
+        ...
+
     async def close(self) -> None:  # pragma: no cover
         """Close the adapter and release any underlying resources."""
         ...
