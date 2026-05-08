@@ -8,7 +8,7 @@ The `RedisAdapter` will be used as the primary way to communicate with Redis. Jo
 
 ### Meta Information
 
-key: **sport:wcs:meta**
+key: **sport:wcs:v1:meta**
 
 type: Hash
 
@@ -35,7 +35,7 @@ _See TeamInfo_
 
 A quicker lookup for game information than using elasticSearch
 
-key: **sport:wcs:calendar**
+key: **sport:wcs:v1:calendar**
 
 type: SortedSet
 
@@ -47,7 +47,7 @@ values:
 
 ### Event fast lookup
 
-key: **sport:wcs:event:{ _eventId_ }**
+key: **sport:wcs:v1:event:{ _eventId_ }**
 
 type: JSON serialized hash
 
