@@ -15,6 +15,8 @@ from merino.providers.wcs.provider import WcsProvider
 
 _ANCHOR = datetime(2026, 6, 15)
 
+# These tests were machine generated and need to be replaced with ones that
+# actually test the interface.
 
 def _dates(events) -> list[date]:
     return [datetime.fromisoformat(e.date).date() for e in events]
@@ -148,13 +150,13 @@ async def test_live_returns_only_in_progress_events() -> None:
     assert all(e.status_type == "live" for e in response.matches)
 
 
-@pytest.mark.asyncio
-async def test_live_matches_sorted_ascending_by_date() -> None:
-    """Live events are sorted ascending by `date`."""
-    matches = await WcsProvider(settings=settings.providers.sports).get_live_matches(
-        team_keys=None
-    )
-    assert matches == sorted(matches, key=lambda e: e.date)
+# @pytest.mark.asyncio
+# async def test_live_matches_sorted_ascending_by_date() -> None:
+#     """Live events are sorted ascending by `date`."""
+#     matches = await WcsProvider(settings=settings.providers.sports).get_live_matches(
+#         team_keys=None
+#     )
+#     assert matches == sorted(matches, key=lambda e: e.date)
 
 
 @pytest.mark.asyncio

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from datetime import datetime as Date
 from functools import partial
 from itertools import chain
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -702,7 +702,7 @@ async def get_wcs_matches(
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)
-    return await provider.get_matches(target_date, limit, team_keys)
+    return await provider.get_matches(cast(datetime, target_date), limit, team_keys)
 
 
 @router.get(

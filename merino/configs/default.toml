@@ -453,7 +453,7 @@ type="sports"
 # e.g. ["NFL","NBA","NHL"]
 sports=["NFL","NBA","NHL","MLB","UCL"]
 # required for WCS:
-cache="redis"
+cache="nocache"
 # Index names for Elastic Search.
 event_index="sports-{lang}-event"
 team_index="sports-{lang}-team"
