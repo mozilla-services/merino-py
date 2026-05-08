@@ -378,6 +378,23 @@ def test_sport_event_detail_category(sport: str, expected_category: SportCategor
     assert result.sport_category == expected_category
 
 
+def test_sport_event_detail_remap() -> None:  # WCS, Widget
+    """Test sport name mapping and fallback behavior"""
+    event: dict = {
+        "sport": "fifa",
+        "date": "2025-10-01T00:00:00+00:00",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
+        "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2025-10-01T00:00:00+00:00",
+    }
+
+    result = SportEventDetail.from_event_dict(event)
+    assert result.sport == "World Cup"
+
+
 def test_sport_event_detail_icon_set_when_team_in_manifest(
     mocker: MockerFixture, make_manifest
 ) -> None:

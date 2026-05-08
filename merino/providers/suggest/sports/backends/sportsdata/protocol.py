@@ -1,6 +1,6 @@
 """Protocol for sport suggestion backends."""
 
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from datetime import datetime
 from pydantic import HttpUrl
 
@@ -62,10 +62,12 @@ class SportEventDetail(BaseModel):
                 return None
             return get_logo_url(category, key)
 
+        sport_map = {"fifa": "World Cup"}
         home_team_key = event.get("home_team", {}).get("key")
         away_team_key = event.get("away_team", {}).get("key")
+        sport = sport_map.get(event["sport"].lower(), event["sport"])
         return cls(
-            sport=event["sport"],
+            sport=cast(str, sport),
             query=build_query(event),
             # The following essentially converts `Z$` to `+00:00`, which
             # keeps the output consistent with prior versions
