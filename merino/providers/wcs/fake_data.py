@@ -12,6 +12,7 @@ from pathlib import Path
 from pydantic import HttpUrl
 
 from merino.providers.wcs.protocol import EventInfo, TeamInfo
+from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
 
 # Stage's `image_gcs_v2.cdn_hostname` is unset, so `get_logo_url` produces
@@ -62,18 +63,14 @@ _TEAMS: dict[str, TeamInfo] = {
 # Actual data from external APIs will be wired in follow up work.
 def _team_from_json(entry: dict) -> TeamInfo:
     """Build a TeamInfo from a wcs_teams.json entry."""
-    colors = [
-        color
-        for color in [entry.get("ClubColor1"), entry.get("ClubColor2"), entry.get("ClubColor3")]
-        if color
-    ]
+    key = entry["Key"]
     return TeamInfo(
-        key=entry["Key"],
+        key=key,
         global_team_id=entry["GlobalTeamId"],
         name=entry["Name"],
-        region=entry["Key"],
-        colors=colors,
-        icon_url=_icon(entry["Key"]),
+        region=key,
+        colors=get_team_colours(key),
+        icon_url=_icon(key),
         eliminated=False,
     )
 

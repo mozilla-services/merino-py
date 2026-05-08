@@ -28,3 +28,8 @@ def test_teams_endpoint_returns_correct_list_of_teams(client: TestClient) -> Non
     keys = [team["key"] for team in body["teams"]]
     # assert all "key" keys are of format "ENG" / "FRA".
     assert all(len(k) == 3 and k.isupper() for k in keys)
+
+    # assert that france has 3 colours and strings start with a "#"
+    fra = next(t for t in body["teams"] if t["key"] == "FRA")
+    assert len(fra["colors"]) == 3
+    assert all(c.startswith("#") for c in fra["colors"])
