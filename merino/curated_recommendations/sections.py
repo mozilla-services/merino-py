@@ -27,7 +27,6 @@ from merino.curated_recommendations.ml_backends.protocol import (
 )
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
-    CONTEXTUAL_RANKING_TREATMENT_INTEREST,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
@@ -388,17 +387,23 @@ def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> 
 
 
 def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the LinTS interest-vector ranking experiment is enabled.
+    """Return True if the user is enrolled in the InterestRanker treatment.
 
-    Gates the third tier of the ranker chain in get_sections: when the user
-    is enrolled in the treatment branch and the LinTS backend is loaded, we
-    rank with InterestRanker; otherwise we fall through to the cohort
-    ContextualRanker (or vanilla ThompsonSamplingRanker).
+    Reuses the InferredTimeZone experiment's TZ branch (originally a TZ-cohort
+    treatment that underperformed) — this avoids a fresh-experiment enrollment
+    ramp and gets the InterestRanker to traffic faster. Users on this branch
+    get the LinTS InterestRanker; users on the COUNTRY branch (control) stay
+    on the existing cohort path with TZ context disabled.
+
+    Gates the first tier of the ranker chain in get_sections: when this fires
+    and the LinTS backend is loaded, we rank with InterestRanker; otherwise
+    we fall through to the cohort ContextualRanker (or vanilla
+    ThompsonSamplingRanker).
     """
     return is_enrolled_in_experiment(
         request,
-        ExperimentName.INFERRED_INTEREST_RANKING_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_INTEREST,
+        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_TZ,
     )
 
 

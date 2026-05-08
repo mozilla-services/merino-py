@@ -106,10 +106,12 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-release"
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
+    # The InferredTimeZone experiment's TZ branch is being repurposed to route
+    # to the LinTS InterestRanker (see is_inferred_interest_experiment in
+    # sections.py). The TZ-cohort treatment underperformed; reusing the existing
+    # enrollment for InterestRanker gets us to data faster than spinning up a
+    # dedicated experiment.
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
-    # LinTS interest-vector ranker — per-request θ̃ sampling on the model
-    # published by ml-services' ContextualLinTSInterestInferenceFlow.
-    INFERRED_INTEREST_RANKING_EXPERIMENT = "new-tab-stories-lints-interest-ranking"
 
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
