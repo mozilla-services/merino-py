@@ -67,20 +67,20 @@ def blob(gcs_bucket):
                 "average_ctr_top2_items": 0.05,
                 "average_ctr_top10_items": 0.05,
                 "impressions_per_item": 15000,
-                "total_impressions_per_day": 100_000_000
+                "total_impressions_per_day": 100_000_000,
             },
             {
                 "region": "CA",
                 "average_ctr_top2_items": 0.04,
                 "average_ctr_top10_items": 0.05,
                 "impressions_per_item": 10000,
-                "total_impressions_per_day": 10_000_000
+                "total_impressions_per_day": 10_000_000,
             },
             {
                 "average_ctr_top2_items": 0.03,
                 "average_ctr_top10_items": 0.05,
                 "impressions_per_item": 8000,
-                "total_impressions_per_day": 110_000_000
+                "total_impressions_per_day": 110_000_000,
             },
         ],
     )
@@ -110,9 +110,15 @@ async def test_gcs_prior_fetches_data(gcs_storage_client, gcs_bucket, metrics_cl
     gcs_prior = create_gcs_prior(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_prior_is_updated(gcs_prior)
 
-    assert gcs_prior.get("US") == Prior(region="US", alpha=37.5, beta=750.0, total_impressions_per_day=100_000_000)
-    assert gcs_prior.get("CA") == Prior(region="CA", alpha=20.0, beta=500.0, total_impressions_per_day=10_000_000)
-    assert gcs_prior.get() == Prior(region=None, alpha=12.0, beta=400.0, total_impressions_per_day=110_000_000)
+    assert gcs_prior.get("US") == Prior(
+        region="US", alpha=37.5, beta=750.0, total_impressions_per_day=100_000_000
+    )
+    assert gcs_prior.get("CA") == Prior(
+        region="CA", alpha=20.0, beta=500.0, total_impressions_per_day=10_000_000
+    )
+    assert gcs_prior.get() == Prior(
+        region=None, alpha=12.0, beta=400.0, total_impressions_per_day=110_000_000
+    )
 
 
 @pytest.mark.asyncio
