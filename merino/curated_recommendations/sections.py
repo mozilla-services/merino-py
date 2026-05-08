@@ -37,6 +37,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SchedulerHoldbackRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import (
+    Prior,
     PriorBackend,
     EngagementRescaler,
 )
@@ -426,14 +427,16 @@ def get_ranking_rescaler_for_branch(
         return DECrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_CA:
-        return CrawledContentRescaler()
+        if request.inferredInterests is None:
+            return CrawledContentRescaler()
+        else:
+            # Testing as part of the inferred personalization experiment
+            return CrawledContentPinnedFreshRescaler()
 
-    # While we preivously returned None for non-US, we know there are some section users
+    # While we previously returned None for non-US, we know there are some section users
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
 
-    # The pinned fresh content rescaler is only available for the US market right now.
-    # Some additional work would be needed to make it work for other markets.
     return CrawledContentPinnedFreshRescaler()
 
 
@@ -679,6 +682,7 @@ def get_top_story_list(
     extra_source_depth: int = 10,
     rescaler: EngagementRescaler | None = None,
     relax_constraints_for_personalization=False,
+    prior: Prior | None = None,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
@@ -703,10 +707,14 @@ def get_top_story_list(
     fresh_story_for_fixed_position = None
 
     # Pick a fresh story at random for position
-    if rescaler and rescaler.fresh_items_top_stories_fixed_position is not None:
+    if (
+        rescaler
+        and rescaler.fresh_items_top_stories_fixed_position is not None
+        and prior is not None
+    ):
         fixed_fresh_item_position = rescaler.fresh_items_top_stories_fixed_position or 0
         fresh_story_for_fixed_position, rest_of_stories = pick_random_fresh_story(
-            items, rescaler.compute_estimated_fresh_per_cycle()
+            items, rescaler.compute_estimated_fresh_per_cycle(prior)
         )
         items = rest_of_stories
 
@@ -843,7 +851,7 @@ async def get_sections(
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
     use_contexual_ranker = (
-        do_inferred_contextual and ml_backend is not None and ml_backend.is_valid()
+        do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
     )
     if use_contexual_ranker:
         is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
@@ -851,11 +859,15 @@ async def get_sections(
             not is_inferred_time_zone_experiment_enabled
             and personal_interests
             and TIME_ZONE_OFFSET_INFERRED_KEY in personal_interests.scores
+            and surface_id == SurfaceId.NEW_TAB_EN_US
         ):
+            # Make sure we have not time zone in the US if we're not in the tz experiment
+            # For canada TZ is not a separate experiment.
             personal_interests.scores.pop(TIME_ZONE_OFFSET_INFERRED_KEY, None)
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
+            surface_id=surface_id,
             ml_backend=ml_backend,
             disable_time_zone_context=request.experimentBranch
             == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
@@ -880,12 +892,14 @@ async def get_sections(
     if is_contextual_ads_experiment(request):
         popular_today_layout = layout_4_large
 
+    prior = prior_backend.get(region)
     top_stories = get_top_story_list(
         all_ranked_corpus_recommendations,
         top_stories_count,
         TOP_STORIES_SECTION_EXTRA_COUNT,
         rescaler=rescaler,
         relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
+        prior=prior,
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations

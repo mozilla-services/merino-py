@@ -140,7 +140,7 @@ class StubPriorBackend(PriorBackend):
     """Stub prior backend for testing."""
 
     def __init__(self, prior: Prior | None = None):
-        self._prior = prior or Prior(alpha=1, beta=10)
+        self._prior = prior or Prior(alpha=1, beta=10, total_impressions_per_day=10_000_000)
 
     def get(self, region: str | None = None) -> Prior:
         """Return stub prior."""

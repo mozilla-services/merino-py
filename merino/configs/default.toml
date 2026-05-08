@@ -251,6 +251,12 @@ socket_connect_timeout_sec = 3
 # Timeout to interact with Redis in seconds
 socket_timeout_sec = 3
 
+# MERINO_REDIS__WCS_SERVER - URI to the WCS Redis primary endpoint.
+wcs_server = "redis://localhost:6379"
+
+# MERINO_REDIS__WCS_REPLICA - URI to the WCS Redis replica endpoint.
+wcs_replica = "redis://localhost:6379"
+
 [default.sentry]
 # MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
@@ -364,15 +370,15 @@ data_source = "local"
 
 # MERINO_QUERY_NORMALIZATION__SPORTS_TEAMS_FILE
 # Local path to sports teams JSON (used when data_source = "local").
-sports_teams_file = "dev/query_normalization/sports_teams.json"
+sports_teams_file = "dev/local_setup/query_normalization/sports_teams.json"
 
 # MERINO_QUERY_NORMALIZATION__WORD_FREQ_FILE
 # Local path to word frequency CSV.
-word_freq_file = "dev/query_normalization/word_freq.csv"
+word_freq_file = "dev/local_setup/query_normalization/word_freq.csv"
 
 # MERINO_QUERY_NORMALIZATION__FINANCE_TICKERS_FILE
 # Local path to finance tickers JSON.
-finance_tickers_file = "dev/query_normalization/finance_tickers.json"
+finance_tickers_file = "dev/local_setup/query_normalization/finance_tickers.json"
 
 # MERINO_QUERY_NORMALIZATION__WORDSEGMENT_CACHE_SIZE
 # Max entries in the wordsegment LRU cache. Each entry is a token->segmentation
@@ -451,7 +457,7 @@ hourly_forecast_ttl_sec = 1800
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
 # e.g. ["NFL","NBA","NHL"]
-sports=["NFL","NBA","NHL","MLB","UCL", "WCS"]
+sports=["NFL","NBA","NHL","MLB","UCL","WCS"]
 # required for WCS:
 cache="redis"
 # Index names for Elastic Search.
@@ -1226,6 +1232,11 @@ max_size = 3_000_000
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
 # GCS path of the priors JSON file.
 blob_name = "contextual_ts/latest_stats.json"
+
+# MERINO__ML_RECOMMENDATIONS__CA__GCS__PRIOR__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name_ca = "contextual_ts/EN_CA/latest_stats.json"
+
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains updated prior data.

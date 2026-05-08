@@ -31,6 +31,15 @@ class TestThompsonSamplerSingleCandidate:
         candidate = make_candidate("a", engaged=5, attempted=10)
         assert sampler.sample([candidate]) is candidate
 
+    def test_below_threshold_without_dummy(self) -> None:
+        """Always return false if no dummy."""
+        sampler = ThompsonSampler(config=ThompsonConfig(random_seed=0))
+        candidate = make_candidate("a", engaged=5, attempted=10)
+        assert not sampler.below_threshold(candidate)
+
+        candidate = make_candidate("a", engaged=0, attempted=0)
+        assert not sampler.below_threshold(candidate)
+
     def test_single_candidate_dummy_always_wins(self) -> None:
         """A dummy with near-certain engagement beats a very poor candidate."""
         # dummy: engaged=1000, not_engaged=1 → beta sample ≈ 1.0
@@ -39,6 +48,13 @@ class TestThompsonSamplerSingleCandidate:
         sampler = ThompsonSampler(config=ThompsonConfig(dummy_candidate=dummy, random_seed=0))
         candidate = make_candidate("a", engaged=1, attempted=1000)
         assert sampler.sample([candidate]) is None
+
+    def test_below_threshold_with_dummy(self) -> None:
+        """Compare threshold with dummy."""
+        dummy = EngagementMetrics(engaged=1000, attempted=1001)
+        sampler = ThompsonSampler(config=ThompsonConfig(dummy_candidate=dummy, random_seed=0))
+        candidate = make_candidate("a", engaged=5, attempted=10)
+        assert sampler.below_threshold(candidate)
 
     def test_single_candidate_dummy_always_loses(self) -> None:
         """A very poor dummy never beats a near-certain candidate."""

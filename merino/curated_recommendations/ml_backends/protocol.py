@@ -7,6 +7,8 @@ import numpy as np
 from pydantic import BaseModel
 import logging
 
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+
 logger = logging.getLogger(__name__)
 
 
@@ -161,7 +163,7 @@ class InferredLocalModel(BaseModel):
                 logger.error("Model DP incorrect length")
                 continue
             if key == TIME_ZONE_OFFSET_INFERRED_KEY:
-                # Indices map to time zone ids. Currently 0 is pacific, 1 mountain etc.
+                # Indices map to time zone ids. Currently 0 is pacific, 1 mountain etc for US, though CA may be simpler with 2 zones
                 tz_indices = self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
                 if len(tz_indices) > 0:
                     result[key] = tz_indices[-1]
@@ -228,21 +230,25 @@ NUM_ML_RECS_BACKEND_FILES = 10
 class MLRecsBackend(Protocol):
     """Protocol for ML Recommendations saved in GCS"""
 
-    def is_valid(self) -> bool:
+    def is_valid(self, surface_id: SurfaceId) -> bool:
         """Return whether the backend is valid and ready to serve recommendations"""
         ...
 
     def get(
-        self, region: str | None = None, cohort: str | None = None, time_zone: str | None = None
+        self,
+        surface_id: SurfaceId,
+        region: str | None = None,
+        cohort: str | None = None,
+        time_zone: str | None = None,
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
         ...
 
-    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+    def get_adjusted_impressions(self, corpus_item_id: str, surface_id: SurfaceId) -> int:
         """Return the impression count for a given corpus item id (adjusted for propensity)"""
         ...
 
-    def get_cohort_training_run_id(self) -> str | None:
+    def get_cohort_training_run_id(self, surface_id: SurfaceId) -> str | None:
         """Return the training run ID for the cohort model used."""
         ...
 

@@ -1,6 +1,7 @@
 """Module dedicated to backends for Thompson sampling priors loaded from GCS."""
 
 from datetime import datetime
+from merino.curated_recommendations.ml_backends.static_local_model import SMALL_POPULATION_MODEL_ID
 import torch
 import tempfile
 from safetensors.torch import safe_open
@@ -18,6 +19,18 @@ logger = logging.getLogger(__name__)
 DEFAULT_TARGET_COHORTS = 10
 DO_EMPTY_COHORT_FOR_NO_CLICKS = True
 NO_CLICKS_COHORT_ID = "-1"
+
+SMALL_POPULATION_MAX_CHARS = 4
+SMALL_POPULATION_MODEL_COHORT_LOOKUP = {
+    "0101": "1",
+    "0110": "2",
+    "0100": "2",
+    "1001": "3",
+    "0001": "3",
+    "1010": "4",
+    "1000": "4",
+    "0010": "4",
+}
 
 
 class GcsInterestCohortModel(CohortModelBackend):
@@ -111,7 +124,14 @@ class GcsInterestCohortModel(CohortModelBackend):
     ) -> str | None:
         """Fetch the contextual ranking cohort based on interests string.
         Requires Model ID to match, and also checks training_run_id if provided.
+
+        We special case small country model because model is so simple
         """
+        if model_id == SMALL_POPULATION_MODEL_ID:
+            return SMALL_POPULATION_MODEL_COHORT_LOOKUP.get(
+                interests[:SMALL_POPULATION_MAX_CHARS], NO_CLICKS_COHORT_ID
+            )
+
         if self._model_id != model_id or self._model_id is None:
             return None
         if len(interests) != self._num_bits:

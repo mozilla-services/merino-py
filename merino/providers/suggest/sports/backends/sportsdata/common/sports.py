@@ -48,6 +48,7 @@ SPORT_CATEGORY_MAP: dict[str, SportCategory] = {
     "MLB": SportCategory.Baseball,
     # "EPL": SportCategory.Soccer,
     "WCS": SportCategory.Soccer,
+    "FIFA": SportCategory.Soccer,
 }
 
 # Global logger

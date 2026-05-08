@@ -1,6 +1,6 @@
 """Protocol for sport suggestion backends."""
 
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from datetime import datetime
 from pydantic import HttpUrl
 
@@ -13,6 +13,18 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     SPORT_CATEGORY_MAP,
 )
 from merino.utils.logos import get_logo_url, LogoCategory
+
+# Mapping of sport name from SportEventDetail
+# (e.g. "NFL", "NHL", "NBA", etc.) to the logo category
+# In order to onboard a new logo category (e.g. new sport)
+# You must update this mapping
+SportLogoCategoryMap: dict[str, LogoCategory] = {
+    "nfl": LogoCategory.NFL,
+    "nhl": LogoCategory.NHL,
+    "nba": LogoCategory.NBA,
+    "mlb": LogoCategory.MLB,
+    "fifa": LogoCategory.Nations,
+}
 
 
 class SportTeamDetail(BaseModel):
@@ -52,7 +64,7 @@ class SportEventDetail(BaseModel):
         """
         status: GameStatus = event["event_status"]
         try:
-            category = LogoCategory(event["sport"].lower())
+            category = LogoCategory(SportLogoCategoryMap.get(event["sport"].lower(), "").lower())
         except ValueError:
             # No logos for this sport; leave icons as None
             category = None
@@ -62,10 +74,12 @@ class SportEventDetail(BaseModel):
                 return None
             return get_logo_url(category, key)
 
+        sport_map = {"fifa": "World Cup"}
         home_team_key = event.get("home_team", {}).get("key")
         away_team_key = event.get("away_team", {}).get("key")
+        sport = sport_map.get(event["sport"].lower(), event["sport"])
         return cls(
-            sport=event["sport"],
+            sport=cast(str, sport),
             query=build_query(event),
             # The following essentially converts `Z$` to `+00:00`, which
             # keeps the output consistent with prior versions
@@ -87,7 +101,7 @@ class SportEventDetail(BaseModel):
             status=status.as_str(),
             status_type=str(status.as_ui_status()),
             touched=event.get("touched", "None"),
-            sport_category=SPORT_CATEGORY_MAP.get(event["sport"], SportCategory.Misc),
+            sport_category=SPORT_CATEGORY_MAP.get(event["sport"].upper(), SportCategory.Misc),
         )
 
 

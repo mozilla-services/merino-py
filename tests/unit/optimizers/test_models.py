@@ -53,6 +53,19 @@ class TestEngagementMetrics:
         assert m.engaged == 5
         assert m.attempted == 5
 
+    @pytest.mark.parametrize(
+        "engaged, attempted, ratio",
+        [
+            (0, 0, 1 / 1),  # 0 counters will be adjusted
+            (1, 5, 1 / 5),
+            (5, 5, 5 / 5),
+        ],
+    )
+    def test_ratio(self, engaged: int, attempted: int, ratio: float) -> None:
+        """Ratio should be calculated."""
+        m = EngagementMetrics(engaged=engaged, attempted=attempted)
+        assert m.ratio == pytest.approx(ratio)
+
 
 class TestThompsonConfig:
     """Tests for ThompsonConfig model."""

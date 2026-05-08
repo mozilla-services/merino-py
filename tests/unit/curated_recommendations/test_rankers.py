@@ -12,7 +12,7 @@ from freezegun import freeze_time
 from pydantic import HttpUrl
 
 from merino.curated_recommendations import EngagementBackend
-from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
 from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
@@ -347,7 +347,9 @@ class TestThompsonSampling:
         for rec in recs:
             rec.isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend(
             {
                 "fresh": (0, 4),  # impressions -> no_opens = 4
@@ -381,7 +383,9 @@ class TestThompsonSampling:
         for rec in recs:
             rec.isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend(
             {
                 "fresh1": (2, 4),
@@ -428,7 +432,9 @@ class TestThompsonSampling:
         )
         recs[0].isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({"fresh": (0, 4)})  # no_opens = 4
         rescaler = CrawledContentRescaler()  # fresh_items_limit_prior_threshold_multiplier = 1
 
@@ -455,7 +461,9 @@ class TestThompsonSampling:
         )
         recs[0].isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({"stale": (0, 12)})  # no_opens = 12
         rescaler = CrawledContentRescaler()
 
@@ -1309,21 +1317,25 @@ class StubMLRecsBackend:
         """Initialize with optional pre-set rankings."""
         self._rankings = rankings
 
-    def is_valid(self) -> bool:
+    def is_valid(self, surface_id: SurfaceId) -> bool:
         """Return True."""
         return True
 
     def get(
-        self, region: str | None = None, cohort: str | None = None, time_zone: str | None = None
+        self,
+        surface_id: SurfaceId,
+        region: str | None = None,
+        cohort: str | None = None,
+        time_zone: str | None = None,
     ) -> ContextualArticleRankings | None:
         """Return pre-configured rankings."""
         return self._rankings
 
-    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+    def get_adjusted_impressions(self, corpus_item_id: str, surface_id: SurfaceId) -> int:
         """Return 0 impressions."""
         return 0
 
-    def get_cohort_training_run_id(self) -> str | None:
+    def get_cohort_training_run_id(self, surface_id: SurfaceId) -> str | None:
         """Return None."""
         return None
 
@@ -1336,11 +1348,15 @@ class TestContextualRanker:
         any errors and must fall back to Thompson sampling for every recommendation.
         """
         recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         ml_backend = StubMLRecsBackend(rankings=None)
 
-        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranker = ContextualRanker(
+            engagement_backend, prior_backend, SurfaceId.NEW_TAB_EN_US, ml_backend=ml_backend
+        )
         ranked = ranker.rank_items(recs)
 
         assert len(ranked) == 2
@@ -1350,13 +1366,17 @@ class TestContextualRanker:
     def test_rank_items_falls_back_to_thompson_when_item_not_in_rankings(self):
         """When rankings exist but the item's corpusItemId is absent, fall back to Thompson sampling."""
         recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         # Rankings present but no data for the particular items.
         ml_backend = StubMLRecsBackend(
             rankings=ContextualArticleRankings(granularity="region", shards={})
         )
-        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranker = ContextualRanker(
+            engagement_backend, prior_backend, SurfaceId.NEW_TAB_EN_US, ml_backend=ml_backend
+        )
         ranked = ranker.rank_items(recs)
         assert len(ranked) == 2
         assert all(rec.ranking_data is not None for rec in ranked)
@@ -1365,7 +1385,9 @@ class TestContextualRanker:
     def test_rank_items_uses_ml_score_when_item_in_rankings(self, monkeypatch):
         """When rankings contain the item, the ML (normal-sampled) score is used."""
         recs = generate_recommendations(item_ids=["a"], time_sensitive_count=0)
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         ml_backend = StubMLRecsBackend(
             rankings=ContextualArticleRankings(
@@ -1373,7 +1395,9 @@ class TestContextualRanker:
                 shards={"a": {"mean": 0.8, "std": 0.0}},
             )
         )
-        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranker = ContextualRanker(
+            engagement_backend, prior_backend, SurfaceId.NEW_TAB_EN_US, ml_backend=ml_backend
+        )
         ranked = ranker.rank_items(recs)
 
         assert len(ranked) == 1
@@ -1387,7 +1411,9 @@ class TestContextualRanker:
             topics=[Topic.ARTS, Topic.TECHNOLOGY, Topic.SCIENCE],
             time_sensitive_count=0,
         )
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         A_RANK = 0.0020001
         ml_backend = StubMLRecsBackend(
@@ -1401,7 +1427,9 @@ class TestContextualRanker:
             )
         )
 
-        ranker = ContextualRanker(engagement_backend, prior_backend, ml_backend=ml_backend)
+        ranker = ContextualRanker(
+            engagement_backend, prior_backend, SurfaceId.NEW_TAB_EN_US, ml_backend=ml_backend
+        )
         ranked = ranker.rank_items(recs, personal_interests=None)
         assert len(ranked) == 3
         assert ranked[0].ranking_data is not None

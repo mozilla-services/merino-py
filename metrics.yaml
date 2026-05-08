@@ -248,6 +248,10 @@ suggest/adm:
       - name: subject
         description: |
           The identifier of the subject that has gone through Thompson sampling
+      - name: below_threshold
+        description: |
+          Whether the engagement ratio of the selected/suppressed candidate is below
+          that of the dummy candidate.
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []

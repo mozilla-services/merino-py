@@ -124,7 +124,7 @@ build-es-image:  ##  Build local Elasticsearch image with analysis-icu plugin
 	docker build \
 	    --build-arg STACK_VERSION=$(shell grep STACK_VERSION dev/.env | cut -d= -f2) \
 	    -t $(ES_IMAGE) \
-	    dev/elasticsearch/
+	    dev/local_setup/elasticsearch/
 
 .PHONY: integration-tests ## ryuk is a container that helps with clean up, need it disabled to run two test containers at once.
 integration-tests: $(INSTALL_STAMP)  ##  Run integration tests (CI: expects ES image pre-built)

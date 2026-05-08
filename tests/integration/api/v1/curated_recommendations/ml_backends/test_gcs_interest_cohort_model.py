@@ -6,6 +6,7 @@ import logging
 import time
 from typing import Callable
 
+from merino.curated_recommendations.ml_backends.static_local_model import SMALL_POPULATION_MODEL_ID
 import pytest
 from aiodogstatsd import Client as StatsdClient
 from google.cloud.storage import Client, Bucket
@@ -134,6 +135,37 @@ async def test_cohort_model_works(gcs_storage_client, gcs_bucket, metrics_client
         model_id="inferred-v3-model", interests="1000" * (model_provider._num_bits // 4)
     )
     assert result == NO_CLICKS_COHORT_ID
+
+
+@pytest.mark.asyncio
+async def test_small_population_model(
+    gcs_storage_client, gcs_bucket, metrics_client, blob
+) -> None:
+    """Test simple hard-coded small population model."""
+    model_provider = create_cohort_model(gcs_storage_client, gcs_bucket, metrics_client)
+    await wait_until_model_is_updated(model_provider)
+    assert (
+        model_provider.get_cohort_for_interests(model_id=SMALL_POPULATION_MODEL_ID, interests="")
+        is NO_CLICKS_COHORT_ID
+    )
+    assert (
+        model_provider.get_cohort_for_interests(
+            model_id=SMALL_POPULATION_MODEL_ID, interests="222"
+        )
+        is NO_CLICKS_COHORT_ID
+    )
+    assert (
+        model_provider.get_cohort_for_interests(
+            model_id=SMALL_POPULATION_MODEL_ID, interests="0101"
+        )
+        == "1"
+    )
+    assert (
+        model_provider.get_cohort_for_interests(
+            model_id=SMALL_POPULATION_MODEL_ID, interests="1010"
+        )
+        == "4"
+    )
 
 
 @pytest.mark.asyncio
