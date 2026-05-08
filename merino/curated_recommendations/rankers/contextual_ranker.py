@@ -136,7 +136,6 @@ class ContextualRanker(Ranker):
                 no_opens = self.ml_backend.get_adjusted_impressions(
                     rec.corpusItemId, self.surface_id
                 )
-                # beta_value_for_fresh_check = self.prior_backend.get(region) or
             score += boost_interest(rec)
             remaining_fresh_impressions = 0
             if fresh_items_limit_prior_threshold_multiplier > 0 and not rec.isTimeSensitive:
