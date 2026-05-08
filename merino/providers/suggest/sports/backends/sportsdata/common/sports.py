@@ -657,6 +657,7 @@ class WCS(Sport):
     ## and process data, or return results.
 
     season: str | None = None
+    fake_name: str = "World Cup"
     cache_prefix: str = "sport:wcs:v1"  # Unique prefix for Redis
     _lock: asyncio.Lock
     teams: dict[int, Team] = {}
@@ -888,6 +889,7 @@ class WCS(Sport):
         # import pdb;pdb.set_trace()
         # TODO: add more team info?
         serialized = event.model_dump()
+        serialized["sport"] = self.fake_name
         # munge the dates.
         serialized["date"] = event.date.timestamp()
         serialized["expiry"] = event.expiry.timestamp()
