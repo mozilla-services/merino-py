@@ -357,9 +357,10 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
         ("NBA", SportCategory.Basketball),
         ("UCL", SportCategory.Soccer),
         ("MLB", SportCategory.Baseball),
+        ("FIFA", SportCategory.Soccer),
         ("Warhammer40k", SportCategory.Misc),
     ],
-    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "miscellaneous"],
+    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "FIFA", "miscellaneous"],
 )
 def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
     """Test sport name mapping and fallback behavior"""
