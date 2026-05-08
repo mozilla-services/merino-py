@@ -32,12 +32,6 @@ from merino.curated_recommendations.rankers.utils import (
     renumber_sections,
 )
 
-# We are still learning how to compute how many impressions before we can trust the ranker score completely.
-# Because Contexual ranking is an experiment, the value is somewhat arbitrary because the impression counts
-# we're looking at are total impressions and we care about impressions with the inferred interests. When
-# contexual is rolled out we can use a dynamic computed value based on daily impressions.
-
-CONTEXUAL_AVG_BETA_VALUE = 12000
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +122,8 @@ class ContextualRanker(Ranker):
                 mean, stdev = contextual_scores.get_score_pair(rec.corpusItemId)
 
             beta_value_for_fresh_check = non_rescaled_b_prior
+            print("beta value")
+            print(non_rescaled_b_prior)
             if mean is None or stdev is None:
                 # Fall back to Thompson sampling if no ML score is found because no data has come in yet
                 alpha_val = opens + max(a_prior, 1e-18)
@@ -142,7 +138,7 @@ class ContextualRanker(Ranker):
                 no_opens = self.ml_backend.get_adjusted_impressions(
                     rec.corpusItemId, self.surface_id
                 )
-                beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
+                # beta_value_for_fresh_check = self.prior_backend.get(region) or
             score += boost_interest(rec)
             remaining_fresh_impressions = 0
             if fresh_items_limit_prior_threshold_multiplier > 0 and not rec.isTimeSensitive:

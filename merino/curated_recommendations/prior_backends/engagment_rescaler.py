@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler
+from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler, Prior
 from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
 
 from datetime import datetime, timezone
@@ -125,22 +125,24 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         data.setdefault(
             "fresh_items_top_stories_fixed_position", 4
         )  # Because there are 2 ads, typically 4 is position 6 (0 based)
-        data.setdefault(
-            "fresh_items_top_stories_fixed_est_imp_per_cycle", EST_TOP_STORY_TILE_IMP_PER_CYCLE
-        )
         data.setdefault("fresh_items_top_stories_max_percentage", 0.03)
         super().__init__(**data)
 
-    def compute_estimated_fresh_per_cycle(self) -> int:
-        """Compute the estimated number of impressions for fresh items in each telemetry update cycle,
-        based on the fixed estimate for top story tile impressions and normalized by hour.
+    def compute_estimated_fresh_per_cycle(self, prior: Prior) -> int:
+        """Compute the estimated number of impressions that a single top stories tile gets in a content refresh cycle
+        based on total impressions and normalized by hour.
         """
+        impressions_per_period = prior.total_impressions_per_day / 24. / 6. # Period every 10 minutes ~5 per hour
+        impressions_for_tile_for_period = impressions_per_period / 2. / 7. # Top stories about half of impressions. 1 in 7 tiles
         utc_hour = datetime.now(tz=timezone.utc).hour
         if utc_hour >= 0 and utc_hour < len(US_UTC_RELATIVE_IMPRESSIONS_NORM):
             scale = US_UTC_RELATIVE_IMPRESSIONS_NORM[utc_hour]
         else:
             scale = 1.0
-        return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
+        print(impressions_for_tile_for_period)
+        print("scaled")
+        print(impressions_for_tile_for_period * scale)
+        return round(impressions_for_tile_for_period * scale)
 
 
 IE_EXPERIMENT_TREATMENT_PERCENT = 0.10

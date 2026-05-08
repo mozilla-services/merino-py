@@ -18,6 +18,7 @@ class ConstantPrior(PriorBackend):
         return Prior(
             alpha=188,  # beta * P99 German NewTab CTR for 2023-03-28 to 2023-04-05 (1.5%)
             beta=12500,  # 0.5% of median German NewTab item impressions for 2023-03-28 to 2023-04-05
+            total_impressions_per_day=100_000_000
         )
 
     @property
