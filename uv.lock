@@ -6,6 +6,12 @@ resolution-markers = [
     "sys_platform == 'darwin'",
 ]
 
+[manifest]
+members = [
+    "merino",
+    "merino-common",
+]
+
 [[package]]
 name = "aiodogstatsd"
 version = "0.16.0.post0"
@@ -1272,7 +1278,7 @@ wheels = [
 ]
 
 [[package]]
-name = "merino-py"
+name = "merino"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -1291,6 +1297,7 @@ dependencies = [
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "kinto-http" },
+    { name = "merino-common" },
     { name = "mozilla-merino-ext" },
     { name = "orjson" },
     { name = "pillow" },
@@ -1360,6 +1367,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.0,<1" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "kinto-http", specifier = ">=11.9.0,<12" },
+    { name = "merino-common", editable = "merino-common" },
     { name = "mozilla-merino-ext", specifier = ">=0.2.0" },
     { name = "orjson", specifier = ">=3.11.0,<4" },
     { name = "pillow", specifier = ">=12.2.0,<13" },
@@ -1410,6 +1418,17 @@ load = [
     { name = "locust", specifier = ">=2.43.0,<3" },
     { name = "numpy", specifier = ">=2.0.0,<3" },
 ]
+
+[[package]]
+name = "merino-common"
+version = "0.1.0"
+source = { editable = "merino-common" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.13.0,<3" }]
 
 [[package]]
 name = "mozilla-merino-ext"

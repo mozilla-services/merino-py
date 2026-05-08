@@ -38,7 +38,7 @@ from merino.providers.suggest.top_picks.backends.top_picks import (
     TopPicksError,
 )
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
-from merino.utils.version import Version
+from merino_common.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
 from merino.curated_recommendations.protocol import (

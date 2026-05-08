@@ -9,7 +9,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from sentry_sdk.types import Event, Hint
 
 from merino.configs import settings
-from merino.utils.version import fetch_app_version_from_file
+from merino_common.utils.version import fetch_app_version_from_file
 
 logger = logging.getLogger(__name__)
 

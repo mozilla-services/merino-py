@@ -1,12 +1,9 @@
 """Versioning utility module"""
 
 import json
-import logging
 import pathlib
 
 from pydantic import BaseModel, ConfigDict, HttpUrl
-
-logger = logging.getLogger(__name__)
 
 
 class Version(BaseModel):

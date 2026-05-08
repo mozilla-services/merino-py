@@ -1,6 +1,6 @@
 
 [project]
-name = "merino-py"
+name = "merino"
 version = "0.1.0"
 description = "Service for Firefox Suggest at Mozilla"
 authors = [{ name = "Mozilla" }]
@@ -36,7 +36,10 @@ dependencies = [
     "safetensors>=0.7.0,<1",
     "feedparser>=6.0.12",
     "wordsegment>=1.3.1,<2",
-    "jsonschema>=4.26.0"
+    "jsonschema>=4.26.0",
+
+    # Internal dependencies
+    "merino-common",
 ]
 
 [[tool.uv.index]]
@@ -48,17 +51,21 @@ explicit = true
 torch = [
   { index = "pytorch-cpu" },
 ]
+merino-common = { workspace = true }
 
 [tool.uv.build-backend]
 module-name = "merino"
 module-root = ""
+
+[tool.uv.workspace]
+members = ["merino-common"]
 
 [project.scripts]
 merino-jobs = "merino.jobs.cli:cli"
 probe-images = "merino.jobs.utils.domain_tester:main"
 
 [tool.coverage.run]
-source = ["merino"]
+source = ["merino", "merino-common/merino_common"]
 branch = true
 relative_files = true
 omit = [
@@ -150,6 +157,8 @@ exclude_dirs = [
 
 [tool.mypy]
 python_version = "3.14"
+# To suppress the 'duplicate modules named "test"' warning
+explicit_package_bases = true
 plugins = ['pydantic.mypy']
 disallow_untyped_calls = true
 follow_imports = "normal"
@@ -167,7 +176,7 @@ warn_unreachable = true
 markers = [
   "restore_load_manifest: disable the mock_load_manifest autouse fixture and use the real file",
 ]
-testpaths = ["tests"]
+testpaths = ["tests", "merino-common/tests"]
 norecursedirs = [
   "tests/data/",
   "tests/utils/",

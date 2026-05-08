@@ -1367,10 +1367,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": ["tests/unit/utils/test_user_agent_parsing.py"],
         "indirect": [],
     },
-    "merino/utils/version.py": {
-        "direct": ["tests/unit/utils/test_version.py"],
-        "indirect": [],
-    },
     "merino/web/__init__.py": {
         "direct": [],
         "indirect": [],
