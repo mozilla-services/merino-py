@@ -2238,7 +2238,7 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
     teams = {
         1: Team(
             terms="",
-            fullname="Home",
+            fullname="Home Team",
             name="Home",
             key="HOM",
             id=1,
@@ -2251,7 +2251,7 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
         ),
         2: Team(
             terms="",
-            fullname="Away",
+            fullname="Away Team",
             name="Away",
             key="AWY",
             id=2,
@@ -2267,8 +2267,8 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
     mock_cache = MagicMock(spec=RedisAdapter)
     mock_cache.get.side_effect = [None, b'["sport:wcs:v1:team:1", "sport:wcs:v1:team:2"]']
     mock_cache.mget.return_value = [
-        b'{"terms": "", "fullname": "Home", "name": "Home", "key": "HOM", "id": 1, "locale": null, "aliases": ["Home"], "colors": ["white"], "updated": 1777935457.922995, "expiry": 1777935467.922997, "country": "ENG"}',
-        b'{"terms": "", "fullname": "Away", "name": "Away", "key": "AWY", "id": 2, "locale": null, "aliases": ["Away"], "colors": ["black"], "updated": 1777935457.923011, "expiry": 1777935467.923011, "country": "FRA"}',
+        b'{"terms": "", "fullname": "Home Team", "name": "Home", "key": "HOM", "id": 1, "locale": null, "aliases": ["Home"], "colors": ["white"], "updated": 1777935457.922995, "expiry": 1777935467.922997, "country": "ENG"}',
+        b'{"terms": "", "fullname": "Away Team", "name": "Away", "key": "AWY", "id": 2, "locale": null, "aliases": ["Away"], "colors": ["black"], "updated": 1777935457.923011, "expiry": 1777935467.923011, "country": "FRA"}',
     ]
 
     sport.cache = mock_cache
@@ -2278,6 +2278,9 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
     result = await sport.get_all_teams(mock_client)
     assert result[1].country == "ENG"
     assert result[2].country == "FRA"
+
+    ss = sport.team_minimal(teams[1])
+    assert ss.get("name") == "Home"
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
