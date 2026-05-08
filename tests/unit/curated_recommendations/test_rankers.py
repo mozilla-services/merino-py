@@ -347,7 +347,9 @@ class TestThompsonSampling:
         for rec in recs:
             rec.isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend(
             {
                 "fresh": (0, 4),  # impressions -> no_opens = 4
@@ -381,7 +383,9 @@ class TestThompsonSampling:
         for rec in recs:
             rec.isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend(
             {
                 "fresh1": (2, 4),
@@ -428,7 +432,9 @@ class TestThompsonSampling:
         )
         recs[0].isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({"fresh": (0, 4)})  # no_opens = 4
         rescaler = CrawledContentRescaler()  # fresh_items_limit_prior_threshold_multiplier = 1
 
@@ -455,7 +461,9 @@ class TestThompsonSampling:
         )
         recs[0].isTimeSensitive = False
 
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({"stale": (0, 12)})  # no_opens = 12
         rescaler = CrawledContentRescaler()
 
@@ -1340,7 +1348,9 @@ class TestContextualRanker:
         any errors and must fall back to Thompson sampling for every recommendation.
         """
         recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         ml_backend = StubMLRecsBackend(rankings=None)
 
@@ -1356,7 +1366,9 @@ class TestContextualRanker:
     def test_rank_items_falls_back_to_thompson_when_item_not_in_rankings(self):
         """When rankings exist but the item's corpusItemId is absent, fall back to Thompson sampling."""
         recs = generate_recommendations(item_ids=["a", "b"], time_sensitive_count=0)
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         # Rankings present but no data for the particular items.
         ml_backend = StubMLRecsBackend(
@@ -1373,7 +1385,9 @@ class TestContextualRanker:
     def test_rank_items_uses_ml_score_when_item_in_rankings(self, monkeypatch):
         """When rankings contain the item, the ML (normal-sampled) score is used."""
         recs = generate_recommendations(item_ids=["a"], time_sensitive_count=0)
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         ml_backend = StubMLRecsBackend(
             rankings=ContextualArticleRankings(
@@ -1397,7 +1411,9 @@ class TestContextualRanker:
             topics=[Topic.ARTS, Topic.TECHNOLOGY, Topic.SCIENCE],
             time_sensitive_count=0,
         )
-        prior_backend = StubPriorBackend(Prior(alpha=1, beta=10))
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
         engagement_backend = StubEngagementBackend({})
         A_RANK = 0.0020001
         ml_backend = StubMLRecsBackend(

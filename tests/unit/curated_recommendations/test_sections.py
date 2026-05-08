@@ -5,6 +5,7 @@ import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+from merino.curated_recommendations.prior_backends.protocol import Prior
 import pytest
 from pydantic import HttpUrl
 
@@ -1111,8 +1112,8 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
 
         Args:
             fresh_remaining_impressions: remaining_impressions for the fresh item.
-                Use a value > EST_TOP_STORY_TILE_IMP_PER_CYCLE * max_scale (~3.9M) to guarantee
-                the fresh item is always picked; use 0 to guarantee it is never picked.
+                Use a large value to guarantee the fresh item is always picked;
+                use 0 to guarantee it is never picked.
         """
         non_fresh = generate_recommendations(
             item_ids=["a", "b", "c", "d", "e", "f"],
@@ -1142,9 +1143,21 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
             extra_count=0,
             extra_source_depth=0,
             rescaler=CrawledContentPinnedFreshRescaler(),
+            prior=Prior(alpha=0, beta=0, total_impressions_per_day=100_000_000),
         )
-
         assert result[4].corpusItemId == "fresh"
+
+    def test_fresh_story_placed_at_fixed_position_missing_priors(self):
+        """Fresh story should not appear because we have no prior data"""
+        result = get_top_story_list(
+            self._make_items(),
+            top_count=5,
+            extra_count=0,
+            extra_source_depth=0,
+            rescaler=CrawledContentPinnedFreshRescaler(),
+            prior=None,
+        )
+        assert result[4].corpusItemId != "fresh"
 
     def test_list_length_unchanged_after_insertion(self):
         """Inserting at the fixed position should not change the total list length."""
@@ -1154,6 +1167,7 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
             extra_count=0,
             extra_source_depth=0,
             rescaler=CrawledContentPinnedFreshRescaler(),
+            prior=Prior(alpha=0, beta=0, total_impressions_per_day=100_000_000),
         )
 
         assert len(result) == 5
@@ -1166,6 +1180,7 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
             extra_count=0,
             extra_source_depth=0,
             rescaler=CrawledContentPinnedFreshRescaler(),
+            prior=Prior(alpha=0, beta=0, total_impressions_per_day=100_000_000),
         )
 
         assert [rec.receivedRank for rec in result] == list(range(len(result)))
@@ -1182,6 +1197,7 @@ class TestGetTopStoryListWithPinnedFreshRescaler:
             extra_count=0,
             extra_source_depth=0,
             rescaler=CrawledContentPinnedFreshRescaler(),
+            prior=Prior(alpha=0, beta=0, total_impressions_per_day=100_000_000),
         )
 
         assert len(result) == 5
