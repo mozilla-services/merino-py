@@ -904,7 +904,25 @@ class WCS(Sport):
             ids.append(id)
         # for now, dump the list of team ids into a meta list so that we can save doing a scan later.
         # TODO: replace with vadd when available.
-        await self.cache.set(f"{self.cache_prefix}:meta:team_ids", orjson.dumps(ids))
+        refresh_key = f"{self.cache_prefix}:meta:team_refresh"
+        last_update = await self.cache.get(refresh_key)
+        # add a lock check, otherwise everyone is going to try to update this at startup.
+        # We'll arbitrarily update this every 12 hours or so.
+        # TODO: Team cache TTL should probably be a setting
+        if not last_update or (
+            last_update
+            and datetime.fromtimestamp(int.from_bytes(last_update))
+            < datetime.now(tz=timezone.utc) - timedelta(hours=12)
+        ):
+            now = datetime.now(tz=timezone.utc)
+            ttl = timedelta(seconds=10)
+            mylock = int((now + ttl).timestamp())
+            if await self.cache.setnx(
+                f"{self.cache_prefix}:meta:team_lock", value=mylock.to_bytes(8), nx=True, ttl=ttl
+            ):
+                await self.cache.set(f"{self.cache_prefix}:meta:team_ids", orjson.dumps(ids))
+                await self.cache.set(refresh_key, int(now.timestamp()).to_bytes(8))
+                await self.cache.delete(f"{self.cache_prefix}:meta:team_lock")
 
     async def get_all_teams(self, client: AsyncClient) -> dict[int, Any]:
         """Return all the cached teams.

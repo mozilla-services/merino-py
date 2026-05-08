@@ -2265,7 +2265,7 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
     }
     sport.teams = teams
     mock_cache = MagicMock(spec=RedisAdapter)
-    mock_cache.get.return_value = b'["sport:wcs:v1:team:1", "sport:wcs:v1:team:2"]'
+    mock_cache.get.side_effect = [None, b'["sport:wcs:v1:team:1", "sport:wcs:v1:team:2"]']
     mock_cache.mget.return_value = [
         b'{"terms": "", "fullname": "Home", "name": "Home", "key": "HOM", "id": 1, "locale": null, "aliases": ["Home"], "colors": ["white"], "updated": 1777935457.922995, "expiry": 1777935467.922997, "country": "ENG"}',
         b'{"terms": "", "fullname": "Away", "name": "Away", "key": "AWY", "id": 2, "locale": null, "aliases": ["Away"], "colors": ["black"], "updated": 1777935457.923011, "expiry": 1777935467.923011, "country": "FRA"}',
@@ -2274,7 +2274,7 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
     sport.cache = mock_cache
     # for each add and the meta include.
     await sport.cache_teams()
-    assert mock_cache.set.call_count == 3
+    assert mock_cache.set.call_count == 4
     result = await sport.get_all_teams(mock_client)
     assert result[1].country == "ENG"
     assert result[2].country == "FRA"
