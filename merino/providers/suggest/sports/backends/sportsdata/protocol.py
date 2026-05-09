@@ -43,7 +43,7 @@ def build_query(event: dict[str, Any]) -> str:
     # catch pre-stored values
     if event.get("sport") == "fifa":
         event["sport"] = "World Cup"
-    return f"""{event.get("sport")} {event.get("away_team", {}).get("name", "")} vs {event.get("home_team", {}).get("name", "")} {date}"""
+    return f"""{event.get("sport")} {event.get("away_team", {}).get("name", "")} at {event.get("home_team", {}).get("name", "")} {date}"""
 
 
 class SportEventDetail(BaseModel):
