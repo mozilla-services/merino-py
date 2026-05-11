@@ -20,14 +20,14 @@ def test_returns_matches_envelope(client: TestClient) -> None:
     assert isinstance(body["matches"], list)
     assert body["matches"]
     assert {e["status_type"] for e in body["matches"]} == {
-        "awarded",
-        "canceled",
-        "interrupted",
         "live",
         "past",
-        "postponed",
         "scheduled",
+        "unknown",
     }
+    assert {"Awarded", "Canceled", "Postponed", "Suspended"}.issubset(
+        {event["status"] for event in body["matches"]}
+    )
 
 
 def test_matches_sorted_ascending_by_date(client: TestClient) -> None:

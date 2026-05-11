@@ -167,14 +167,14 @@ async def test_live_returns_expanded_fake_events() -> None:
     assert len(response.matches) == _LIVE_EVENT_COUNT
     assert Counter(e.status_type for e in response.matches) == Counter(
         {
-            "past": 4,
-            "live": 10,
-            "scheduled": 2,
-            "interrupted": 1,
-            "postponed": 1,
-            "canceled": 1,
-            "awarded": 1,
+            "past": 5,
+            "live": 11,
+            "scheduled": 3,
+            "unknown": 1,
         }
+    )
+    assert {"Awarded", "Canceled", "Postponed", "Suspended"}.issubset(
+        {event.status for event in response.matches}
     )
 
 

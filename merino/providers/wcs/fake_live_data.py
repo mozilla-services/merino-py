@@ -7,15 +7,7 @@ from typing import Literal
 from merino.providers.wcs.fake_data import get_all_teams
 from merino.providers.wcs.protocol import EventInfo, TeamInfo
 
-type StatusType = Literal[
-    "past",
-    "live",
-    "scheduled",
-    "interrupted",
-    "postponed",
-    "canceled",
-    "awarded",
-]
+type StatusType = Literal["past", "live", "scheduled", "unknown"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -264,7 +256,7 @@ _TEMPLATES: list[EventTemplate] = [
         hour=22,
         home_key="USA",
         away_key="ARG",
-        status_type="interrupted",
+        status_type="live",
         status="Suspended",
         home_score=1,
         away_score=0,
@@ -277,7 +269,7 @@ _TEMPLATES: list[EventTemplate] = [
         hour=12,
         home_key="ENG",
         away_key="GER",
-        status_type="postponed",
+        status_type="scheduled",
         status="Postponed",
     ),
     # Canceled match
@@ -286,7 +278,7 @@ _TEMPLATES: list[EventTemplate] = [
         hour=13,
         home_key="FRA",
         away_key="BRA",
-        status_type="canceled",
+        status_type="unknown",
         status="Canceled",
     ),
     # Awarded / forfeit match
@@ -295,7 +287,7 @@ _TEMPLATES: list[EventTemplate] = [
         hour=13,
         home_key="USA",
         away_key="ENG",
-        status_type="awarded",
+        status_type="past",
         status="Awarded",
         home_score=3,
         away_score=0,
