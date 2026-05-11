@@ -21,6 +21,13 @@ def _icon(key: str) -> HttpUrl | None:
     return HttpUrl(f"{_LOGO_HOST}/{entry.url}") if entry else None
 
 
+class TeamIcon(BaseModel):
+    """PNG and SVG flag URLs for a team."""
+
+    png: HttpUrl | None = Field(default=None, description="PNG flag URL.")
+    svg: HttpUrl | None = Field(default=None, description="SVG flag URL.")
+
+
 class TeamInfo(BaseModel):
     """A competing team."""
 
