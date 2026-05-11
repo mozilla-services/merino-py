@@ -19,7 +19,7 @@ import numpy as np
 from safetensors import safe_open
 from scipy.linalg.blas import stpsv
 
-from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
@@ -164,6 +164,18 @@ class LinTSInterestBackend:
             int(k): int(v_idx) for k, v_idx in json.loads(meta["topic_main_to_idx"]).items()
         }
         topic_names = json.loads(meta["topic_names"])
+
+        # Drift guard: the bundle's topic_names must match the strings that
+        # merino's `decode_dp_interests` uses as keys in the strength dict
+        valid_topic_values = {t.value for t in Topic}
+        unknown_topic_names = [n for n in topic_names if n not in valid_topic_values]
+        if unknown_topic_names:
+            logger.warning(
+                "LinTSInterestBackend: bundle topic_names contain entries not in "
+                "the Topic enum — strength lookup will silently zero for these. "
+                "Update ml-services' INTEREST_LOCALE_CONFIGS or merino's Topic enum. "
+                f"unknown={unknown_topic_names} all_topic_names={topic_names}"
+            )
 
         epoch_id = meta.get("epoch_id", "")
         try:

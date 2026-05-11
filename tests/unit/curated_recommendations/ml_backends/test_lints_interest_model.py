@@ -26,7 +26,7 @@ import pytest
 from safetensors.numpy import save
 from scipy.linalg import solve_triangular
 
-from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
     LinTSInterestBackend,
@@ -34,6 +34,20 @@ from merino.curated_recommendations.ml_backends.lints_interest_model import (
     SCHEMA_VERSION,
     VALIDITY_PERIOD_MINUTES,
 )
+
+# Default topic_names for synthetic bundles — match the `Topic.<…>.value` enum
+# strings the merino-side `decode_dp_interests` uses, so the backend's
+# drift-guard warning doesn't fire on every unrelated test. Mirrors the v3
+# `INTEREST_LOCALE_CONFIGS["EN_US"]["topic_names"]` in ml-services.
+DEFAULT_SYNTHETIC_TOPIC_NAMES = [
+    Topic.SPORTS.value,
+    Topic.ARTS.value,
+    Topic.POLITICS.value,
+    Topic.PARENTING.value,
+    Topic.FOOD.value,
+    Topic.TECHNOLOGY.value,
+    Topic.SCIENCE.value,
+]
 
 
 # -----------------------------------------------------------------------------
@@ -61,6 +75,7 @@ def _build_synthetic_bundle(
     corrupt_dim: bool = False,
     corrupt_dtype: bool = False,
     l_as_float16: bool = False,
+    topic_names: list[str] | None = None,
 ) -> tuple[bytes, dict]:
     """Assemble a v4 bundle from a tiny synthetic model and return (bytes, expected).
 
@@ -112,7 +127,9 @@ def _build_synthetic_bundle(
         "dim": str(d),
         "v": str(v_value),
         "n_topics": str(n_topics),
-        "topic_names": json.dumps([f"topic_{t}" for t in range(n_topics)]),
+        "topic_names": json.dumps(
+            topic_names if topic_names is not None else DEFAULT_SYNTHETIC_TOPIC_NAMES[:n_topics]
+        ),
         "thresholds": json.dumps([[0.25, 0.46, 0.8]] * n_topics),
         "bias_idx": str(bias_idx),
         "L_format": l_format,
@@ -220,6 +237,44 @@ def test_dtype_mismatch_keeps_state_unset() -> None:
     assert not backend.is_valid(SurfaceId.NEW_TAB_EN_US)
 
 
+def test_unknown_topic_names_emit_warning_but_still_load(caplog) -> None:
+    """A bundle whose ``topic_names`` contains entries not in the ``Topic`` enum
+    loads successfully (the warning is non-fatal) but logs a warning naming
+    the unknown topics — so a future ml-services rename can't silently disable
+    a topic at serving time.
+    """
+    blob, _ = _build_synthetic_bundle(
+        n_topics=3,
+        topic_names=["sports", "politics", "science"],  # "politics" + "science" not in Topic
+    )
+    backend = _make_backend()
+    import logging as _logging
+
+    with caplog.at_level(_logging.WARNING):
+        backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    assert backend.is_valid(SurfaceId.NEW_TAB_EN_US)
+    msgs = [r.message for r in caplog.records if r.levelno == _logging.WARNING]
+    assert any("politics" in m and "science" in m for m in msgs), msgs
+
+
+def test_valid_topic_names_emit_no_warning(caplog) -> None:
+    """A bundle whose ``topic_names`` are all valid ``Topic.value`` strings loads
+    without the drift-guard warning. Pins the warning's silence to the
+    no-drift case.
+    """
+    blob, _ = _build_synthetic_bundle()  # uses DEFAULT_SYNTHETIC_TOPIC_NAMES
+    backend = _make_backend()
+    import logging as _logging
+
+    with caplog.at_level(_logging.WARNING):
+        backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    assert backend.is_valid(SurfaceId.NEW_TAB_EN_US)
+    msgs = [r.message for r in caplog.records if r.levelno == _logging.WARNING]
+    assert not any("topic_names" in m for m in msgs), msgs
+
+
 def test_float16_l_lower_upconverts_on_load() -> None:
     """A bundle with float16 L_lower (the inference flow's storage format)
     loads cleanly — the loader upconverts to float32 before validation.
@@ -235,7 +290,7 @@ def test_float16_l_lower_upconverts_on_load() -> None:
     rng = np.random.default_rng(0)
     scores = backend.score_request(
         SurfaceId.NEW_TAB_EN_US,
-        strengths={f"topic_{t}": 0.5 for t in range(3)},
+        strengths={DEFAULT_SYNTHETIC_TOPIC_NAMES[t]: 0.5 for t in range(3)},
         candidate_item_ids=list(expected["item_to_idx"].keys())[:5],
         rng=rng,
     )
@@ -267,7 +322,7 @@ def test_score_matches_reference_implementation() -> None:
     backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
 
     items = list(expected["item_to_idx"].keys())
-    strengths = {f"topic_{t}": (0.5 if t < 3 else 0.0) for t in range(7)}
+    strengths = {DEFAULT_SYNTHETIC_TOPIC_NAMES[t]: (0.5 if t < 3 else 0.0) for t in range(7)}
 
     # Reference: reconstruct dense L, run solve_triangular with the SAME ε
     # the backend will draw, then score every item by the score formula in
@@ -289,7 +344,7 @@ def test_score_matches_reference_implementation() -> None:
         ref = float(theta_tilde[expected["bias_idx"]])
         ref += float(theta_tilde[expected["item_to_idx"][iid]])
         for t in range(7):
-            s = strengths[f"topic_{t}"]
+            s = strengths[DEFAULT_SYNTHETIC_TOPIC_NAMES[t]]
             if s == 0.0:
                 continue
             ref += s * float(theta_tilde[expected["topic_main_to_idx"][t]])
@@ -308,7 +363,7 @@ def test_unknown_item_gets_bias_plus_topic_main_only() -> None:
     backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
 
     # Use the same rng for both calls so the θ̃ draw is identical.
-    strengths = {f"topic_{t}": (0.5 if t < 3 else 0.0) for t in range(7)}
+    strengths = {DEFAULT_SYNTHETIC_TOPIC_NAMES[t]: (0.5 if t < 3 else 0.0) for t in range(7)}
     rng_known = np.random.default_rng(7)
     rng_unknown = np.random.default_rng(7)
 
@@ -326,7 +381,7 @@ def test_unknown_item_gets_bias_plus_topic_main_only() -> None:
     theta_tilde = theta_hat + np.float32(v_val) * z
     ref = float(theta_tilde[expected["bias_idx"]])
     for t in range(7):
-        s = strengths[f"topic_{t}"]
+        s = strengths[DEFAULT_SYNTHETIC_TOPIC_NAMES[t]]
         if s == 0.0:
             continue
         ref += s * float(theta_tilde[expected["topic_main_to_idx"][t]])
