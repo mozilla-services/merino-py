@@ -128,11 +128,21 @@ class LinTSInterestBackend:
                 L_packed = st.get_tensor("L_lower").copy()
                 theta_hat = st.get_tensor("theta_hat").copy()
 
+        # ml-services serializes L as float16 to halve disk/wire size; we
+        # upconvert to float32 here because scipy.linalg.blas.stpsv (used at
+        # score time) has no float16 variant. float32 L_packed is kept
+        # resident — the per-worker memory cost is the same as before the
+        # float16 storage change, but downloads and GCS storage halve.
+        # Validated in ml-services/bench_fp16_quick.py: top-K rankings are
+        # bit-identical between float32 and float16-round-tripped scores.
+        if L_packed.dtype == np.float16:
+            L_packed = L_packed.astype(np.float32)
         # Tensor sanity: catches truncation and silent dtype drift.
         if L_packed.dtype != np.float32 or theta_hat.dtype != np.float32:
             raise ValueError(
                 f"tensor dtype mismatch: L_lower={L_packed.dtype}, "
-                f"theta_hat={theta_hat.dtype}; expected float32"
+                f"theta_hat={theta_hat.dtype}; expected float32 "
+                "(or float16 for L_lower with on-load upconversion)"
             )
         expected_l_size = dim * (dim + 1) // 2
         if L_packed.shape != (expected_l_size,):

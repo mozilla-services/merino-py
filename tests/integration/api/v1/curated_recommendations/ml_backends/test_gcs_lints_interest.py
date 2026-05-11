@@ -1,10 +1,4 @@
-"""Integration tests for the LinTS-interest GCS backend.
-
-Mirrors the cohort backend's GCS load test: spins up a fake-GCS bucket,
-uploads a synthetic v4 safetensors bundle, initializes a real
-``SyncedGcsBlob`` against it, and verifies the backend ends up in a valid,
-fresh state with the expected per-surface dictionaries populated.
-"""
+"""Integration tests for the LinTS-interest GCS backend."""
 
 import asyncio
 import json
@@ -33,7 +27,7 @@ from merino.utils.synced_gcs_blob import SyncedGcsBlob
 # Bundle builder
 # -----------------------------------------------------------------------------
 def _pack_lower_lapack(L_dense: np.ndarray) -> np.ndarray:
-    """Dense lower-triangular → LAPACK column-major lower-packed (the v4 layout)."""
+    """Dense lower-triangular → LAPACK column-major lower-packed."""
     d = L_dense.shape[0]
     out = np.empty(d * (d + 1) // 2, dtype=L_dense.dtype)
     offset = 0
@@ -45,7 +39,7 @@ def _pack_lower_lapack(L_dense: np.ndarray) -> np.ndarray:
 
 
 def _build_synthetic_bundle(*, n_items: int = 5, n_topics: int = 7) -> bytes:
-    """Assemble a small but well-formed v4 bundle. Returns the safetensors bytes."""
+    """Assemble a small but well-formed. Returns the safetensors bytes."""
     rng = np.random.default_rng(0)
     bias_idx = 0
     topic_main_to_idx = {t: 1 + t for t in range(n_topics)}
@@ -96,7 +90,7 @@ def _build_synthetic_bundle(*, n_items: int = 5, n_topics: int = 7) -> bytes:
 @pytest.fixture(scope="function")
 def gcs_bucket(gcs_storage_client):
     """Create a fake-GCS bucket for the LinTS-interest blob."""
-    bucket = gcs_storage_client.create_bucket(settings.lints_interest.gcs.bucket_name)
+    bucket = gcs_storage_client.create_bucket(settings.contextual_interest.gcs.bucket_name)
     yield bucket
     bucket.delete(force=True)
 
@@ -108,10 +102,10 @@ def _create_backend(
     synced_gcs_blob = SyncedGcsBlob(
         storage_client=gcs_storage_client,
         bucket_name=gcs_bucket.name,
-        blob_name=settings.lints_interest.gcs.blob_name,
+        blob_name=settings.contextual_interest.gcs.blob_name,
         metrics_client=metrics_client,
         metrics_namespace="recommendation.ml.lints_interest",
-        max_size=settings.lints_interest.gcs.max_size,
+        max_size=settings.contextual_interest.gcs.max_size,
         cron_interval_seconds=0.01,
         cron_job_name="fetch_lints_interest_model",
         is_bytes=True,
@@ -122,7 +116,7 @@ def _create_backend(
 
 def _create_blob(bucket: Bucket, data: bytes):
     """Upload bytes as the lints_interest blob."""
-    blob = bucket.blob(settings.lints_interest.gcs.blob_name)
+    blob = bucket.blob(settings.contextual_interest.gcs.blob_name)
     blob.upload_from_string(data=data, content_type="application/octet-stream")
     return blob
 
@@ -144,14 +138,14 @@ async def wait_until_loaded(backend: LinTSInterestBackend) -> None:
 
 @pytest.fixture
 def good_blob(gcs_bucket):
-    """Upload a well-formed synthetic v4 bundle."""
+    """Upload a well-formed synthetic bundle."""
     return _create_blob(gcs_bucket, _build_synthetic_bundle())
 
 
 @pytest.fixture
 def large_blob(gcs_bucket):
-    """Upload a blob exceeding lints_interest.gcs.max_size."""
-    return _create_blob(gcs_bucket, b"a" * (settings.lints_interest.gcs.max_size + 1))
+    """Upload a blob exceeding contextual_interest.gcs.max_size."""
+    return _create_blob(gcs_bucket, b"a" * (settings.contextual_interest.gcs.max_size + 1))
 
 
 # -----------------------------------------------------------------------------
@@ -161,7 +155,7 @@ def large_blob(gcs_bucket):
 async def test_load_well_formed_bundle(
     gcs_storage_client, gcs_bucket, metrics_client, good_blob
 ) -> None:
-    """A v4 bundle in GCS gets fetched, parsed, and is_valid returns True."""
+    """A bundle in GCS gets fetched, parsed, and is_valid returns True."""
     backend = _create_backend(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_loaded(backend)
 

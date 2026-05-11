@@ -83,13 +83,13 @@ class InterestRanker(Ranker):
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
         )
 
-        # Without strengths there's nothing to personalize against; scoring
-        # would degenerate to bias-only for everyone. Fall through cleanly.
-        strengths_dict: dict[str, float] = {}
-        if personal_interests is not None:
-            for k, v in personal_interests.scores.items():
-                if isinstance(v, (int, float)):
-                    strengths_dict[k] = float(v)
+        # Per-topic user-strength values to pass to the model. Empty if the
+        # request had no inferredInterests — the backend then scores items
+        # via bias + item_main only (no per-(item, topic) lift), which is
+        # the right behavior when we have no user-side signal.
+        strengths_dict: dict[str, float] = (
+            dict(personal_interests.scores) if personal_interests is not None else {}
+        )
 
         # Single posterior draw → score the entire candidate list at once.
         # Items not known to the model still get a bias + topic_main score
@@ -110,11 +110,11 @@ class InterestRanker(Ranker):
                 rec, rescaler, region
             )
 
-            # Decide between LinTS score (item known to the model) and
-            # vanilla TS Beta sample (unknown item, or scoring failed
-            # entirely). Mirrors ContextualRanker's "no ML score → Beta"
-            # fallback, but the discriminator is item membership in the
-            # LinTS index rather than presence in a slate.
+            # Two conditions must hold to use the LinTS score:
+            #   (1) model_scores is not None — score_request didn't crash
+            #   (2) has_item(...) — checks if item can be scored by model
+            #   if absent, model would revert to bias-only for all
+            # reverts to vanilla TS if neither condition is met
             score: float
             if model_scores is not None and self.lints_backend.has_item(
                 self.surface_id, rec.corpusItemId
@@ -156,12 +156,7 @@ class InterestRanker(Ranker):
         top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
     ) -> dict[str, Section]:
-        """Rank sections by mean score of their top items.
-
-        Same algorithm ``ContextualRanker.rank_sections`` uses; reproduced
-        here so the LinTS path doesn't have to hold a reference to the
-        cohort ranker's instance.
-        """
+        """Rank sections by mean score of their top items."""
 
         def sample_score(sec: Section) -> float:
             fresh_retain_likelyhood = (

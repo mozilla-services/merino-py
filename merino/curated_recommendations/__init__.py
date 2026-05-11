@@ -202,21 +202,21 @@ def init_lints_interest_backend() -> LinTSInterestBackend | EmptyLinTSInterestBa
     US-only for the initial experiment. Adding ``NEW_TAB_EN_CA`` later is a
     one-line wiring change here — the backend is already per-``SurfaceId``.
     """
-    if not settings.lints_interest.enabled:
+    if not settings.contextual_interest.enabled:
         logger.info("LinTS interest backend disabled by config; using empty stub.")
         return EmptyLinTSInterestBackend()
 
     try:
         synced_gcs_blob = SyncedGcsBlob(
             storage_client=initialize_storage_client(
-                destination_gcp_project=settings.lints_interest.gcs.gcp_project
+                destination_gcp_project=settings.contextual_interest.gcs.gcp_project
             ),
             metrics_client=get_metrics_client(),
             metrics_namespace="recommendation.ml.lints_interest",
-            bucket_name=settings.lints_interest.gcs.bucket_name,
-            blob_name=settings.lints_interest.gcs.blob_name,
-            max_size=settings.lints_interest.gcs.max_size,
-            cron_interval_seconds=settings.lints_interest.gcs.cron_interval_seconds,
+            bucket_name=settings.contextual_interest.gcs.bucket_name,
+            blob_name=settings.contextual_interest.gcs.blob_name,
+            max_size=settings.contextual_interest.gcs.max_size,
+            cron_interval_seconds=settings.contextual_interest.gcs.cron_interval_seconds,
             cron_job_name="fetch_lints_interest_model",
             is_bytes=True,
         )

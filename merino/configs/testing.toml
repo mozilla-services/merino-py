@@ -168,8 +168,8 @@ finance_tickers_file = "tests/data/query_normalization/finance_tickers.json"
 bucket_name = "test-bucket"
 gcp_project = "test-project"
 
-[testing.lints_interest.gcs]
-bucket_name = "test-bucket-lints"
+[testing.contextual_interest.gcs]
+bucket_name = "test-bucket-contextual-interest"
 gcp_project = "test-project"
 
 [testing.curated_recommendations.corpus_api]

@@ -1263,30 +1263,31 @@ blob_name = "contextual_ts/cohort_model_v2.safetensors"
 cron_interval_seconds = 600
 
 
-[default.lints_interest]
-# MERINO__LINTS_INTEREST__ENABLED
+[default.contextual_interest]
+# MERINO__CONTEXTUAL_INTEREST__ENABLED
 # Disabled by default, enabled only in staging initially
 enabled = false
 
-[default.lints_interest.gcs]
-# MERINO__LINTS_INTEREST__GCS__GCP_PROJECT
+[default.contextual_interest.gcs]
+# MERINO__CONTEXTUAL_INTEREST__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
 gcp_project = ""
 
-# MERINO__LINTS_INTEREST__GCS__BUCKET_NAME
+# MERINO__CONTEXTUAL_INTEREST__GCS__BUCKET_NAME
 # GCS bucket that contains the LinTS-interest safetensors bundle.
 bucket_name = ""
 
-# MERINO__LINTS_INTEREST__GCS__BLOB_NAME
+# MERINO__CONTEXTUAL_INTEREST__GCS__BLOB_NAME
 # GCS path of the LinTS-interest model bundle.
 blob_name = "contextual_ts/lints_interest_model.safetensors"
 
-# MERINO__LINTS_INTEREST__GCS__MAX_SIZE
-# Maximum size in bytes of the bundle. Sized for max_dim=3000 packed L
-# (~18 MB raw safetensors) plus a small headroom margin.
-max_size = 20_000_000
+# MERINO__CONTEXTUAL_INTEREST__GCS__MAX_SIZE
+# Maximum size in bytes of the bundle. Sized for max_dim=2600 packed L
+# stored as float16 (~6.8 MB) plus theta_hat + metadata (~0.15 MB) with
+# ~1 MB headroom.
+max_size = 8_000_000
 
-# MERINO__LINTS_INTEREST__GCS__CRON_INTERVAL_SECONDS
+# MERINO__CONTEXTUAL_INTEREST__GCS__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains an
 # updated bundle. ml-services publishes every 10 min.
 cron_interval_seconds = 600

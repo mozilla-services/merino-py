@@ -309,39 +309,6 @@ def test_low_impression_items_marked_fresh_with_active_rescaler() -> None:
     assert by_id["stale_item"].ranking_data.is_fresh is False
 
 
-def test_non_numeric_strength_value_filtered() -> None:
-    """Non-numeric scores entries (e.g. a string) get dropped before reaching the backend.
-
-    Pydantic validation makes this branch hard to reach normally, but a
-    misconfigured upstream or a future schema drift could put a non-numeric
-    value in ``scores``. Using ``ProcessedInterests.model_construct`` here
-    bypasses validation to exercise the defensive path.
-    """
-    recs = generate_recommendations(item_ids=["A"], time_sensitive_count=0)
-    backend = FakeLinTSBackend(known_items={"A"}, item_scores={"A": 0.5})
-    ranker = _make_ranker(backend)
-
-    # Bypass pydantic validation so we can put a string in scores.
-    bad_scores: dict[str, float] = {
-        "sports": 0.46,
-        "_metadata_string": "ignore_me",  # type: ignore[dict-item]
-        "tech": 0.0,
-    }
-    personal = ProcessedInterests.model_construct(
-        scores=bad_scores,
-        normalized_scores={},
-        cohort=None,
-    )
-    ranker.rank_items(recs, personal_interests=personal)
-
-    assert backend.last_strengths is not None
-    # String entry must NOT be passed to the backend
-    assert "_metadata_string" not in backend.last_strengths
-    # Numeric entries pass through unchanged
-    assert backend.last_strengths["sports"] == pytest.approx(0.46)
-    assert backend.last_strengths["tech"] == pytest.approx(0.0)
-
-
 # -----------------------------------------------------------------------------
 # rank_sections — sections ordered by mean score of their top-N items.
 # -----------------------------------------------------------------------------

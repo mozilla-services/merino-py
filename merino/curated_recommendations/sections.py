@@ -877,12 +877,7 @@ async def get_sections(
     ranker: Ranker
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
-    # Three-tier ranker chain: interest → cohort → vanilla TS. Each step
-    # gates on its own preconditions so a missing/stale artifact at any tier
-    # degrades cleanly to the next. The interest tier does NOT require a
-    # cohort assignment (`do_inferred_contextual`) — it scores directly off
-    # the user's strength vector, so users with valid interest vectors but
-    # unassigned cohorts are still eligible for the experiment.
+    # use interest ranker if we have interests available
     use_interest_ranker = (
         is_inferred_interest_experiment(request)
         and lints_interest_backend.is_valid(surface_id)

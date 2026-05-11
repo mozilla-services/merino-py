@@ -60,6 +60,7 @@ def _build_synthetic_bundle(
     v_value: float = 0.005,
     corrupt_dim: bool = False,
     corrupt_dtype: bool = False,
+    l_as_float16: bool = False,
 ) -> tuple[bytes, dict]:
     """Assemble a v4 bundle from a tiny synthetic model and return (bytes, expected).
 
@@ -99,6 +100,10 @@ def _build_synthetic_bundle(
         L_packed = L_packed[:-1]
     if corrupt_dtype:
         L_packed = L_packed.astype(np.float64)
+    if l_as_float16:
+        # Mirrors the inference flow's storage cast — merino must upconvert
+        # to float32 on load (since BLAS stpsv has no float16 variant).
+        L_packed = L_packed.astype(np.float16)
 
     metadata: dict[str, str] = {
         "schema_version": schema_version,
@@ -213,6 +218,29 @@ def test_dtype_mismatch_keeps_state_unset() -> None:
     backend._fetch_callback(bad_blob, surface_id=SurfaceId.NEW_TAB_EN_US)
 
     assert not backend.is_valid(SurfaceId.NEW_TAB_EN_US)
+
+
+def test_float16_l_lower_upconverts_on_load() -> None:
+    """A bundle with float16 L_lower (the inference flow's storage format)
+    loads cleanly — the loader upconverts to float32 before validation.
+    """
+    blob, expected = _build_synthetic_bundle(l_as_float16=True)
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    assert backend.is_valid(SurfaceId.NEW_TAB_EN_US)
+    # After load, the in-memory L is float32 (BLAS stpsv requirement).
+    assert backend._L_packed[SurfaceId.NEW_TAB_EN_US].dtype == np.float32
+    # Sanity: a score request runs without raising.
+    rng = np.random.default_rng(0)
+    scores = backend.score_request(
+        SurfaceId.NEW_TAB_EN_US,
+        strengths={f"topic_{t}": 0.5 for t in range(3)},
+        candidate_item_ids=list(expected["item_to_idx"].keys())[:5],
+        rng=rng,
+    )
+    assert scores.shape == (5,)
+    assert np.all(np.isfinite(scores))
 
 
 def test_bad_bundle_does_not_clobber_existing_good_state() -> None:
