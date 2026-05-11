@@ -16,16 +16,13 @@ _LOGO_HOST = "https://storage.googleapis.com/merino-images-prod"
 
 
 def _icon(key: str) -> HttpUrl | None:
-    """Return the nations flag URL for `key`, if it exists in the logo manifest."""
+    """Return the nations flag URL for `key`, preferring SVG over PNG."""
     entry = load_manifest().get(LogoCategory.Nations, key)
-    return HttpUrl(f"{_LOGO_HOST}/{entry.url}") if entry else None
-
-
-class TeamIcon(BaseModel):
-    """PNG and SVG flag URLs for a team."""
-
-    png: HttpUrl | None = Field(default=None, description="PNG flag URL.")
-    svg: HttpUrl | None = Field(default=None, description="SVG flag URL.")
+    if not entry:
+        return None
+    if entry.svg:
+        return HttpUrl(f"{_LOGO_HOST}/{entry.svg}")
+    return HttpUrl(f"{_LOGO_HOST}/{entry.url}")
 
 
 class TeamInfo(BaseModel):
