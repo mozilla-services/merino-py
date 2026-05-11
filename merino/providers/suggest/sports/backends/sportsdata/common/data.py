@@ -71,6 +71,8 @@ class Team(BaseModel):
     expiry: datetime
     # Country / Area
     country: str | None
+    # has the team been eliminated?
+    eliminated: bool = False
 
     @classmethod
     def from_data(
@@ -147,11 +149,19 @@ class Team(BaseModel):
                 )
             ),
             country=country,
+            eliminated=team_data.get("eliminated", False),
         )
 
     def minimal(self) -> dict[str, Any]:
         """Return the very minimal version of the team info used in Events"""
-        return dict(key=self.key, name=self.fullname, colors=self.colors, id=self.id)
+        return dict(
+            key=self.key,
+            name=self.fullname,
+            colors=self.colors,
+            id=self.id,
+            region=self.country,
+            eliminated=self.eliminated,
+        )
 
 
 class Event(BaseModel):
@@ -208,6 +218,7 @@ class Event(BaseModel):
             "status": str(self.status),
             "date": self.date.isoformat(),
             "expiry": self.expiry.isoformat(),
+            "period": self.period,
         }
         optional_fields = (
             "period",

@@ -881,6 +881,7 @@ class WCS(Sport):
                     if federation_name and federation_name not in team.aliases:
                         team.aliases.append(federation_name)
                     team.fullname = team.name
+                team.eliminated = not team_data.get("Active", True)
                 if area:
                     team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
                 self.teams[team.id] = team
@@ -910,17 +911,9 @@ class WCS(Sport):
         """Serialize a team as a dictionary for the widget"""
         return team.model_dump_json().encode()
 
-    def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
-        """Serialize a team as a string for tests and log-friendly call sites."""
-        return self.team_as_serialized(team).decode()
-
     def event_as_serialized(self, event: Event) -> bytes:  # pragma: no cover "widget"
         """Serialize an event as a dictionary for the widget"""
         return event.model_dump_json().encode()
-
-    def event_as_str(self, event: Event) -> str:  # pragma: no cover "widget"
-        """Serialize an event as a string for tests and log-friendly call sites."""
-        return self.event_as_serialized(event).decode()
 
     async def cache_teams(self) -> None:  # pragma: no cover "widget"
         """Write the team data to the redis cache for the widget"""

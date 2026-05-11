@@ -2433,7 +2433,7 @@ async def test_team_cache_restore_skips_missing_and_invalid_entries() -> None:
     mock_cache = MagicMock(spec=RedisAdapter)
     mock_cache.get.return_value = b'["sport:wcs:v1:team:1", "sport:wcs:v1:team:2", "bad"]'
     mock_cache.mget.return_value = [
-        sport.team_as_str(team).encode(),
+        sport.team_as_serialized(team),
         None,
         b"{bad-json",
     ]
@@ -2685,7 +2685,7 @@ async def test_wcs_get_events_by_date_from_cache() -> None:
     )
     mock_cache = MagicMock(spec=RedisAdapter)
     mock_cache.zrange.return_value = [b"sport:wcs:v1:event:123"]
-    mock_cache.mget.return_value = [sport.event_as_str(event).encode()]
+    mock_cache.mget.return_value = [sport.event_as_serialized(event)]
     sport.cache = mock_cache
 
     start = now - timedelta(hours=1)
