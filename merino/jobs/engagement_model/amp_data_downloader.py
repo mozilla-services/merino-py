@@ -23,7 +23,7 @@ WHERE
  submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY) AND CURRENT_TIMESTAMP()
 AND query is not NULL
 GROUP BY 1, 2
-HAVING impressions > 500
+HAVING impressions >= 3000 and clicks <= 1000
 ORDER BY 1, 4 DESC
 """
 
