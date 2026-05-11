@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
 
 
@@ -43,7 +44,7 @@ class TeamInfo(BaseModel):
             global_team_id=int(team["id"]),
             name=str(team["name"]),
             region=str(team.get("region") or team.get("country") or key),
-            colors=[str(color) for color in team["colors"] if color],
+            colors=get_team_colours(key),
             icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
             eliminated=bool(team.get("eliminated", False)),
         )
