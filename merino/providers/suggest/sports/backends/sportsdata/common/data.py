@@ -499,8 +499,8 @@ class Sport:
                         "DateTimeUTC", event_description.get("DateTime")
                     ),
                     terms=f"{home_team.terms} {away_team.terms}",
-                    home_team=home_team.minimal(),
-                    away_team=away_team.minimal(),
+                    home_team=self.team_minimal(home_team),
+                    away_team=self.team_minimal(away_team),
                     home_score=home_score,
                     away_score=away_score,
                     status=status,
@@ -511,6 +511,10 @@ class Sport:
             self.events[event.id] = event
 
         return self.events
+
+    def team_minimal(self, team: Team) -> dict[str, Any]:
+        """Return the very minimal version of the team info used in Events"""
+        return dict(key=team.key, name=team.fullname, colors=team.colors, id=team.id)
 
     def load_schedules_from_source(
         self, data: list[dict[str, Any]], event_timezone: ZoneInfo = ZoneInfo("UTC")
@@ -609,8 +613,8 @@ class Sport:
                 original_date=event_description.get(
                     "DateTimeUTC", event_description.get("DateTime")
                 ),
-                home_team=home_team.minimal(),
-                away_team=away_team.minimal(),
+                home_team=self.team_minimal(home_team),
+                away_team=self.team_minimal(away_team),
                 home_score=home_score,
                 away_score=away_score,
                 status=GameStatus.parse(event_description["Status"]),

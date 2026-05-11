@@ -231,12 +231,6 @@ async def test_team():
     assert team.colors == ["FF0000", "FFFFFF"]
     assert "fire" in team.terms
     assert "chicago" in team.terms
-    assert team.minimal() == {
-        "key": "CHI",
-        "id": 694,
-        "name": "Chicago Fire Football Club",
-        "colors": ["FF0000", "FFFFFF"],
-    }
 
 
 @pytest.fixture(name="es_client")

@@ -821,6 +821,12 @@ class WCS(Sport):
             return None
         return await self.cache.hgetall(f"{self.cache_prefix}:area:{area_id}")
 
+    def team_minimal(self, team: Team) -> dict[str, Any]:
+        """Use the team name instead of the full name"""
+        team_data = super().team_minimal(team)
+        team_data["name"] = team.name
+        return team_data
+
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
         # This may become a high traffic function, so we should try to use
