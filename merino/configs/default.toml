@@ -685,7 +685,7 @@ enabled = false
 
 # MERINO_PROVIDERS__ADM__THOMPSON__MIN_ATTEMPTED_COUNT
 # Minimal attempted count eligible for Thompson sampling
-min_attempted_count = 500
+min_attempted_count = 3000
 
 # MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENABLED
 # Toggle to enable the dummy candidate for Thompson sampling
