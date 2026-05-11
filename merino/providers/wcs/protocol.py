@@ -66,7 +66,7 @@ class EventInfo(BaseModel):
     clock: str = Field(description="Elapsed minutes; extra time as '90+3'.")
     updated: int = Field(description="UTC unix timestamp of the last record update.")
     status: str = Field(description="Game status: 'Scheduled', 'In Progress', 'Final', etc.")
-    status_type: str = Field(description="Simplified status: 'past' | 'live' | 'scheduled'.")
+    status_type: str = Field(description="UI status bucket, e.g. 'past', 'live', 'scheduled'.")
     query: str | None = Field(default=None, description="Optional click-through query.")
     sport: str = Field(default="soccer", description="Sport identifier.")
 
@@ -113,7 +113,7 @@ class MatchesResponse(BaseModel):
 class LiveMatchesResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/live`.
 
-    Holds events with `status_type == "live"`, sorted by `date` ascending.
+    Holds mocked live-endpoint events, sorted by `date` ascending.
     """
 
     matches: list[EventInfo]
