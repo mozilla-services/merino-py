@@ -5,7 +5,7 @@ import os
 import freezegun
 import pytest
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from unittest.mock import patch, AsyncMock
 
@@ -35,7 +35,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
 from merino.providers.suggest.sports.backends.sportsdata.protocol import (
     SportEventDetail,
 )
-from merino.utils.logos import LogoCategory
+from merino.utils.logos import Logo, LogoCategory, LogoManifest
 
 
 VALID_TEST_RESPONSE: dict = {}
@@ -486,3 +486,42 @@ def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
 
     assert result.home_team.icon is None
     assert result.away_team.icon is None
+
+
+def test_sport_event_detail_fifa_icon_is_png_and_not_svg(
+    mocker: MockerFixture,
+) -> None:
+    """The suggest request should return PNG icon instead of SVG."""
+    manifest = LogoManifest(
+        generated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        lookups={
+            LogoCategory.Nations: {
+                "BRA": Logo(
+                    name="BRA",
+                    url="logos/nations/nations_br.png",
+                    svg="logos/nations/svg/BRA.svg",
+                ),
+                "ARG": Logo(
+                    name="ARG",
+                    url="logos/nations/nations_ar.png",
+                    svg="logos/nations/svg/ARG.svg",
+                ),
+            }
+        },
+    )
+    mocker.patch("merino.utils.logos.load_manifest", return_value=manifest)
+
+    event = {
+        "date": "2026-06-15T00:00:00+00:00",
+        "sport": "FIFA",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "BRA", "name": "Brazil", "colors": ["#FFD600"]},
+        "away_team": {"key": "ARG", "name": "Argentina", "colors": ["#74ACDF"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2026-06-15T00:00:00+00:00",
+    }
+    result = SportEventDetail.from_event_dict(event)
+
+    assert str(result.home_team.icon).endswith("/logos/nations/nations_br.png")
+    assert str(result.away_team.icon).endswith("/logos/nations/nations_ar.png")

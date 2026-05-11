@@ -33,3 +33,14 @@ def test_teams_endpoint_returns_correct_list_of_teams(client: TestClient) -> Non
     fra = next(t for t in body["teams"] if t["key"] == "FRA")
     assert len(fra["colors"]) == 3
     assert all(c.startswith("#") for c in fra["colors"])
+
+
+def test_team_icons_are_svg_from_prod_logo_bucket(client: TestClient) -> None:
+    """All team flags serve SVG from the hardcoded production GCS bucket."""
+    body = client.get(_PATH).json()
+
+    icons = [team["icon_url"] for team in body["teams"] if team["icon_url"] is not None]
+
+    assert icons
+    expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
+    assert all(icon.startswith(expected_prefix) for icon in icons)
