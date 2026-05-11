@@ -4,17 +4,19 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from importlib.resources import files
+from unittest.mock import MagicMock, call
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 import freezegun
 import pytest
-from unittest.mock import MagicMock, call
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.cache.redis import RedisAdapter
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport, Team
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Sport, Team
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
     SportsDataWarning,
@@ -1137,6 +1139,42 @@ def wcs_teams_payload() -> list[dict]:
     ]
 
 
+WCS_STATIC_TEAM_IDS = {
+    "SWE": 90000001,
+    "TUN": 90000002,
+}
+
+
+def wcs_static_teams_payload(keys: set[str]) -> list[dict[str, Any]]:
+    """Return WCS team rows with IDs normalized to the checked-in event samples."""
+    data = json.loads((files("merino.data") / "wcs_teams.json").read_text())
+    teams = []
+    for team in data:
+        if team["Key"] not in keys:
+            continue
+        team = dict(team)
+        if team["Key"] in WCS_STATIC_TEAM_IDS:
+            team["GlobalTeamId"] = WCS_STATIC_TEAM_IDS[team["Key"]]
+        teams.append(team)
+    return teams
+
+
+def wcs_static_schedule_payload() -> list[dict[str, Any]]:
+    """Return a captured /SchedulesBasic slice with compact team IDs."""
+    return cast(
+        list[dict[str, Any]],
+        json.loads((files("merino.data") / "wcs_schedule.json").read_text()),
+    )
+
+
+def wcs_static_games_by_date_payload() -> list[dict[str, Any]]:
+    """Return a captured /GamesByDate slice with compact team IDs."""
+    return cast(
+        list[dict[str, Any]],
+        json.loads((files("merino.data") / "wcs_games_by_date.json").read_text()),
+    )
+
+
 def wcs_schedule_payload() -> list[dict]:
     """Return WCS sample schedule data"""
     # https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2026?key=...
@@ -2171,6 +2209,10 @@ async def test_wcs_update_events(
             "Day": within,
             "DateTime": within,
             "Status": "Final",
+            "Period": "PenaltyShootout",
+            "ClockDisplay": "120",
+            "HomeTeamScorePenalty": 5,
+            "AwayTeamScorePenalty": 4,
         }
     )
     scores_payload[1].update(
@@ -2189,14 +2231,72 @@ async def test_wcs_update_events(
 
     global_offset = 90000000
     await sport.update_events(client=mock_client)
+    event = sport.events[global_offset + 11111]
     assert global_offset + 11111 in sport.events and global_offset + 22222 not in sport.events
-    assert sport.events[global_offset + 11111].status == GameStatus.Final
+    assert event.status == GameStatus.Final
+    assert event.period == "PenaltyShootout"
+    assert event.clock == "120"
+    assert event.home_penalty == 5
+    assert event.away_penalty == 4
     assert 2 == get_data.call_count
     for scall in get_data.call_args_list:
         assert scall.kwargs["url"] in [
             "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/fifa/2025",
             "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2025-SEP-22",
         ]
+
+
+@pytest.mark.asyncio
+async def test_wcs_national_teams_use_country_name_for_event_display() -> None:
+    """WCS team full names are federation names, not widget display names."""
+    sport = WCS(settings=settings.providers.sports)
+
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+
+    team = sport.teams[90000001]
+    assert team.name == "England"
+    assert team.fullname == "England"
+    assert "The Football Association" in team.aliases
+    assert team.minimal()["name"] == "England"
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected_shape() -> None:
+    """Validate captured FIFA payloads from /SchedulesBasic and /GamesByDate.
+
+    Drives the WCS load path with real SportsData rows so subtle key-name drift
+    (e.g. `GlobalGameId` vs `GlobalGameID`) surfaces here rather than in prod.
+    """
+    sport = WCS(settings=settings.providers.sports)
+    sport.event_ttl = timedelta(weeks=8)
+    await sport.async_load_teams_from_source(wcs_static_teams_payload({"SWE", "TUN"}))
+
+    sport.load_schedules_from_source(wcs_static_schedule_payload(), event_timezone=ZoneInfo("UTC"))
+
+    # Of the captured rows only SWE vs TUN has both teams loaded; placeholder
+    # rows (SeasonType=3 with null team ids) and partial-team games (e.g. SWE
+    # vs NLD) are dropped by the load filter.
+    assert set(sport.events) == {90086918}
+    event = sport.events[90086918]
+    assert event.away_team["key"] == "TUN"
+    assert event.away_team["name"] == "Tunisia"
+    assert event.home_team["key"] == "SWE"
+    assert event.home_team["name"] == "Sweden"
+    assert event.date == datetime(2026, 6, 15, 2, 0, tzinfo=timezone.utc)
+    assert event.period is None
+
+    sport.load_scores_from_source(
+        wcs_static_games_by_date_payload(), event_timezone=ZoneInfo("UTC")
+    )
+
+    event = sport.events[90086918]
+    assert event.status == GameStatus.Scheduled
+    assert event.period == "Regular"
+    assert event.clock is None
+    assert event.home_score is None
+    assert event.away_score is None
+    assert event.updated == datetime(2026, 4, 29, 14, 26, 26, tzinfo=timezone.utc)
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
@@ -2278,6 +2378,347 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
     result = await sport.get_all_teams(mock_client)
     assert result[1].country == "ENG"
     assert result[2].country == "FRA"
+
+
+@pytest.mark.asyncio
+async def test_wcs_cache_teams_accepts_cached_refresh_timestamp() -> None:
+    """A cached refresh timestamp is compared as a timezone-aware datetime."""
+    sport = WCS(settings=settings.providers.sports)
+    now = datetime.now(tz=timezone.utc)
+    sport.teams = {
+        1: Team(
+            terms="",
+            fullname="Home",
+            name="Home",
+            key="HOM",
+            id=1,
+            aliases=["Home"],
+            colors=["white"],
+            updated=now,
+            expiry=now + timedelta(seconds=10),
+            locale=None,
+            country="ENG",
+        ),
+    }
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.get.return_value = int((now - timedelta(hours=13)).timestamp()).to_bytes(8)
+    sport.cache = mock_cache
+
+    await sport.cache_teams()
+
+    mock_cache.setnx.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_team_cache_restore_skips_missing_and_invalid_entries() -> None:
+    """A partial or corrupt team cache does not fail the whole WCS teams response."""
+    sport = WCS(settings=settings.providers.sports)
+    now = datetime.now(tz=timezone.utc)
+    team = Team(
+        terms="",
+        fullname="Home",
+        name="Home",
+        key="HOM",
+        id=1,
+        aliases=["Home"],
+        colors=["white"],
+        updated=now,
+        expiry=now + timedelta(seconds=10),
+        locale=None,
+        country="ENG",
+    )
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.get.return_value = b'["sport:wcs:v1:team:1", "sport:wcs:v1:team:2", "bad"]'
+    mock_cache.mget.return_value = [
+        sport.team_as_str(team).encode(),
+        None,
+        b"{bad-json",
+    ]
+    sport.cache = mock_cache
+
+    result = await sport.get_all_teams()
+
+    assert list(result) == [1]
+    assert result[1].country == "ENG"
+
+
+@pytest.mark.asyncio
+async def test_wcs_cache_events() -> None:
+    """Test WCS event caching writes event JSON and calendar entries."""
+    sport = WCS(settings=settings.providers.sports)
+    now = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
+    event = Event(
+        sport="fifa",
+        id=123,
+        terms="home away",
+        date=now,
+        original_date=now.isoformat(),
+        home_team={"key": "HOM", "id": 1, "name": "Home", "colors": []},
+        away_team={"key": "AWY", "id": 2, "name": "Away", "colors": []},
+        home_score=2,
+        away_score=1,
+        status=GameStatus.Final,
+        expiry=now + timedelta(days=90),
+        updated=now,
+        period="Regular",
+        clock="90",
+    )
+    sport.events = {event.id: event}
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = []
+    sport.cache = mock_cache
+
+    await sport.cache_events()
+
+    mock_cache.set.assert_called_once()
+    assert mock_cache.set.call_args.args[0] == "sport:wcs:v1:event:123"
+    assert mock_cache.set.call_args.kwargs["ttl"] == sport.event_ttl
+    mock_cache.zadd.assert_called_once_with(
+        "sport:wcs:v1:calendar",
+        {"sport:wcs:v1:event:123": int(now.timestamp())},
+    )
+
+
+@pytest.mark.asyncio
+async def test_wcs_cache_events_updates_calendar_when_event_moves_earlier() -> None:
+    """WCS event calendar scores are updated even when SportsData moves kickoff earlier."""
+    sport = WCS(settings=settings.providers.sports)
+    original = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
+    moved_earlier = original - timedelta(hours=2)
+    event = Event(
+        sport="fifa",
+        id=123,
+        terms="home away",
+        date=original,
+        original_date=original.isoformat(),
+        home_team={"key": "HOM", "id": 1, "name": "Home", "colors": []},
+        away_team={"key": "AWY", "id": 2, "name": "Away", "colors": []},
+        home_score=2,
+        away_score=1,
+        status=GameStatus.Scheduled,
+        expiry=original + timedelta(days=90),
+        updated=original,
+    )
+    sport.events = {event.id: event}
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = []
+    sport.cache = mock_cache
+
+    await sport.cache_events()
+    event.date = moved_earlier
+    await sport.cache_events()
+
+    assert mock_cache.zadd.call_args_list[0].args == (
+        "sport:wcs:v1:calendar",
+        {"sport:wcs:v1:event:123": int(original.timestamp())},
+    )
+    assert mock_cache.zadd.call_args_list[1].args == (
+        "sport:wcs:v1:calendar",
+        {"sport:wcs:v1:event:123": int(moved_earlier.timestamp())},
+    )
+    assert all("gt" not in call.kwargs for call in mock_cache.zadd.call_args_list)
+
+
+@pytest.mark.asyncio
+async def test_wcs_cache_events_prunes_removed_events_from_calendar() -> None:
+    """WCS cache refresh removes events that are no longer present in source data."""
+    sport = WCS(settings=settings.providers.sports)
+    now = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
+    event = Event(
+        sport="fifa",
+        id=123,
+        terms="home away",
+        date=now,
+        original_date=now.isoformat(),
+        home_team={"key": "HOM", "id": 1, "name": "Home", "colors": []},
+        away_team={"key": "AWY", "id": 2, "name": "Away", "colors": []},
+        home_score=2,
+        away_score=1,
+        status=GameStatus.Scheduled,
+        expiry=now + timedelta(days=90),
+        updated=now,
+    )
+    sport.events = {event.id: event}
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = [
+        b"sport:wcs:v1:event:123",
+        b"sport:wcs:v1:event:999",
+        b"sport:wcs:v1:event:888",
+    ]
+    sport.cache = mock_cache
+
+    await sport.cache_events()
+
+    mock_cache.zrange.assert_called_once_with(
+        "sport:wcs:v1:calendar",
+        min=0,
+        max=-1,
+        byScore=False,
+    )
+    mock_cache.delete.assert_called_once_with("sport:wcs:v1:event:999", "sport:wcs:v1:event:888")
+    mock_cache.zrem.assert_called_once_with(
+        "sport:wcs:v1:calendar",
+        "sport:wcs:v1:event:999",
+        "sport:wcs:v1:event:888",
+    )
+
+
+@pytest.mark.asyncio
+async def test_wcs_cache_events_refuses_to_prune_from_empty_refresh() -> None:
+    """WCS cache refresh does not wipe the calendar from an empty active event set."""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = [b"sport:wcs:v1:event:999"]
+    sport.cache = mock_cache
+
+    await sport.cache_events()
+
+    mock_cache.delete.assert_not_called()
+    mock_cache.zrem.assert_not_called()
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_prunes_previously_cached_events_removed_from_source(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """WCS schedule refresh replaces in-memory events before pruning stale Redis entries."""
+    sport = WCS(settings=settings.providers.sports)
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+    stale_date = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
+    stale_event = Event(
+        sport="fifa",
+        id=999,
+        terms="stale",
+        date=stale_date,
+        original_date=stale_date.isoformat(),
+        home_team={"key": "HOM", "id": 1, "name": "Home", "colors": []},
+        away_team={"key": "AWY", "id": 2, "name": "Away", "colors": []},
+        home_score=None,
+        away_score=None,
+        status=GameStatus.Scheduled,
+        expiry=stale_date + timedelta(days=90),
+        updated=stale_date,
+    )
+    sport.events = {stale_event.id: stale_event}
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = [b"sport:wcs:v1:event:999"]
+    sport.cache = mock_cache
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        new_callable=mocker.AsyncMock,
+        return_value=wcs_schedule_payload(),
+    )
+
+    await sport.update_events(client=mock_client)
+
+    assert set(sport.events) == {90011111, 90022222}
+    mock_cache.delete.assert_called_once_with("sport:wcs:v1:event:999")
+    mock_cache.zrem.assert_called_once_with("sport:wcs:v1:calendar", "sport:wcs:v1:event:999")
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_empty_schedule_preserves_existing_cache(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """WCS schedule refresh skips cache writes when SportsData returns no schedule rows."""
+    sport = WCS(settings=settings.providers.sports)
+    stale_date = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
+    stale_event = Event(
+        sport="fifa",
+        id=999,
+        terms="stale",
+        date=stale_date,
+        original_date=stale_date.isoformat(),
+        home_team={"key": "HOM", "id": 1, "name": "Home", "colors": []},
+        away_team={"key": "AWY", "id": 2, "name": "Away", "colors": []},
+        home_score=None,
+        away_score=None,
+        status=GameStatus.Scheduled,
+        expiry=stale_date + timedelta(days=90),
+        updated=stale_date,
+    )
+    sport.events = {stale_event.id: stale_event}
+    mock_cache = MagicMock(spec=RedisAdapter)
+    sport.cache = mock_cache
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        new_callable=mocker.AsyncMock,
+        return_value=[],
+    )
+
+    await sport.update_events(client=mock_client)
+
+    assert sport.events == {stale_event.id: stale_event}
+    mock_cache.set.assert_not_called()
+    mock_cache.zadd.assert_not_called()
+    mock_cache.delete.assert_not_called()
+    mock_cache.zrem.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_wcs_get_events_by_date_from_cache() -> None:
+    """Test WCS event restoration from cached event keys."""
+    sport = WCS(settings=settings.providers.sports)
+    now = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
+    event = Event(
+        sport="fifa",
+        id=123,
+        terms="home away",
+        date=now,
+        original_date=now.isoformat(),
+        home_team={"key": "HOM", "id": 1, "name": "Home", "colors": []},
+        away_team={"key": "AWY", "id": 2, "name": "Away", "colors": []},
+        home_score=2,
+        away_score=1,
+        status=GameStatus.Final,
+        expiry=now + timedelta(days=90),
+        updated=now,
+        period="Regular",
+        clock="90",
+    )
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = [b"sport:wcs:v1:event:123"]
+    mock_cache.mget.return_value = [sport.event_as_str(event).encode()]
+    sport.cache = mock_cache
+
+    start = now - timedelta(hours=1)
+    end = now + timedelta(hours=1)
+    result = await sport.get_events_by_date(start=start, end=end)
+
+    assert len(result) == 1
+    assert result[0].id == event.id
+    assert result[0].period == "Regular"
+    assert result[0].clock == "90"
+    mock_cache.zrange.assert_called_once_with(
+        "sport:wcs:v1:calendar",
+        min=int(start.timestamp()),
+        max=int(end.timestamp()),
+    )
+    mock_cache.mget.assert_called_once_with([b"sport:wcs:v1:event:123"])
+
+
+@pytest.mark.asyncio
+async def test_wcs_get_events_by_date_treats_naive_bounds_as_utc() -> None:
+    """Naive datetime bounds are treated as UTC before querying the calendar."""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = []
+    sport.cache = mock_cache
+
+    start = datetime(2026, 6, 15, 11)
+    end = datetime(2026, 6, 15, 13)
+    result = await sport.get_events_by_date(start=start, end=end)
+
+    assert result == []
+    mock_cache.zrange.assert_called_once_with(
+        "sport:wcs:v1:calendar",
+        min=int(start.replace(tzinfo=timezone.utc).timestamp()),
+        max=int(end.replace(tzinfo=timezone.utc).timestamp()),
+    )
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)

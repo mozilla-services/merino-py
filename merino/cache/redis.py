@@ -92,16 +92,18 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to mget `{repr(keys)}` with error: `{exc}`") from exc
 
-    async def delete(self, key: str) -> int:
-        """Delete the value associated with the key from Redis.
+    async def delete(self, *keys: str) -> int:
+        """Delete the values associated with the keys from Redis.
 
         Raises:
             - `CacheAdapterError` if Redis returns an error.
         """
         try:
-            return await self.primary.delete(key)
+            return await self.primary.delete(*keys)
         except RedisError as exc:
-            raise CacheAdapterError(f"Failed to delete `{repr(key)}` with error: `{exc}`") from exc
+            raise CacheAdapterError(
+                f"Failed to delete `{repr(keys)}` with error: `{exc}`"
+            ) from exc
 
     # define a setnx() function because we should not modify `set`. Doing so would touch too
     # much code for this PR.

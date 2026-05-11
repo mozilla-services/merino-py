@@ -11,7 +11,7 @@ _PATH = "/api/v1/wcs/live"
 
 
 def test_returns_matches_envelope(client: TestClient) -> None:
-    """Response is `{"matches": [...]}` with a list of in-progress events."""
+    """Response is `{"matches": [...]}` with the mocked live-endpoint events."""
     response = client.get(_PATH)
     assert response.status_code == 200
 
@@ -19,7 +19,15 @@ def test_returns_matches_envelope(client: TestClient) -> None:
     assert set(body.keys()) == {"matches"}
     assert isinstance(body["matches"], list)
     assert body["matches"]
-    assert all(e["status_type"] == "live" for e in body["matches"])
+    assert {e["status_type"] for e in body["matches"]} == {
+        "live",
+        "past",
+        "scheduled",
+        "unknown",
+    }
+    assert {"Awarded", "Canceled", "Postponed", "Suspended"}.issubset(
+        {event["status"] for event in body["matches"]}
+    )
 
 
 def test_matches_sorted_ascending_by_date(client: TestClient) -> None:
