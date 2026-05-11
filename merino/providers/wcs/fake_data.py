@@ -32,7 +32,7 @@ def _team_from_json(entry: dict[str, Any]) -> TeamInfo:
         region=key,
         colors=get_team_colours(key),
         icon_url=_icon(key),
-        eliminated=False,
+        eliminated=entry.get("eliminated", False),
     )
 
 
