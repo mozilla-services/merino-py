@@ -1068,8 +1068,7 @@ class WCS(Sport):
         # The schedule refresh is authoritative: any Redis event key missing from
         # this run points to a match removed or no longer returned by SportsData.
         indexed_event_key_strings = [
-            raw_event_key.decode("utf-8", errors="replace")
-            for raw_event_key in indexed_event_keys
+            raw_event_key.decode("utf-8", errors="replace") for raw_event_key in indexed_event_keys
         ]
         stale_event_keys = [
             event_key
