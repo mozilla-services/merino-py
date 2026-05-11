@@ -85,7 +85,7 @@ class WcsProvider:
         return MatchesResponse(previous=previous, current=current, next_=next_)
 
     async def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
-        """Return fake events currently in progress, sorted ascending by `date`.
+        """Return fake live-endpoint events, sorted ascending by `date`.
 
         `team_keys` restricts results to matches with that team on either side.
         """

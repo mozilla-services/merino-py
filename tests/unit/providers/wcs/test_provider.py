@@ -4,6 +4,7 @@
 
 """Unit tests for the WCS matches provider."""
 
+from collections import Counter
 from datetime import date, datetime
 from typing import Any
 
@@ -12,9 +13,12 @@ import pytest
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
 from merino.providers import wcs as wcs_module
+from merino.providers.wcs.fake_live_data import build_live_events
 from merino.providers.wcs.provider import WcsProvider
 from merino.providers.wcs.protocol import LiveMatchesResponse, TeamInfo, TeamsResponse
 from tests.wcs.factories import ANCHOR, build_provider
+
+_LIVE_EVENT_COUNT = len(build_live_events(ANCHOR))
 
 
 def test_cache_uses_wcs_redis_settings(mocker) -> None:
@@ -156,12 +160,22 @@ async def test_live_extra_time_match_shows_clock_in_extra_play() -> None:
 
 
 @pytest.mark.asyncio
-async def test_live_returns_only_in_progress_events() -> None:
-    """`get_live_matches` returns the two fake live events."""
+async def test_live_returns_expanded_fake_events() -> None:
+    """`get_live_matches` returns the expanded fake live-endpoint event set."""
     response = await build_provider(events=[]).get_live_matches(team_keys=None)
 
-    assert len(response.matches) == 2
-    assert all(e.status_type == "live" for e in response.matches)
+    assert len(response.matches) == _LIVE_EVENT_COUNT
+    assert Counter(e.status_type for e in response.matches) == Counter(
+        {
+            "past": 4,
+            "live": 10,
+            "scheduled": 2,
+            "interrupted": 1,
+            "postponed": 1,
+            "canceled": 1,
+            "awarded": 1,
+        }
+    )
 
 
 @pytest.mark.asyncio
@@ -217,7 +231,7 @@ async def test_empty_cache_returns_empty_payloads() -> None:
         "current": [],
         "next": [],
     }
-    assert len((await provider.get_live_matches(team_keys=None)).matches) == 2
+    assert len((await provider.get_live_matches(team_keys=None)).matches) == _LIVE_EVENT_COUNT
     assert len(provider.get_teams().teams) == 48
 
 
@@ -235,6 +249,6 @@ async def test_cache_error_returns_empty_payloads(mocker) -> None:
         "current": [],
         "next": [],
     }
-    assert len((await provider.get_live_matches(team_keys=None)).matches) == 2
+    assert len((await provider.get_live_matches(team_keys=None)).matches) == _LIVE_EVENT_COUNT
     assert len(provider.get_teams().teams) == 48
     metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "matches"})
