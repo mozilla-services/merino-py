@@ -933,7 +933,7 @@ class WCS(Sport):
         # TODO: Team cache TTL should probably be a setting
         if not last_update or (
             last_update
-            and datetime.fromtimestamp(int.from_bytes(last_update))
+            and datetime.fromtimestamp(int.from_bytes(last_update), tz=timezone.utc)
             < datetime.now(tz=timezone.utc) - timedelta(hours=12)
         ):
             now = datetime.now(tz=timezone.utc)

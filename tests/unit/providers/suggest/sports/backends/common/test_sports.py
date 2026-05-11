@@ -2381,6 +2381,35 @@ async def test_team_cache_restore(mock_client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_wcs_cache_teams_accepts_cached_refresh_timestamp() -> None:
+    """A cached refresh timestamp is compared as a timezone-aware datetime."""
+    sport = WCS(settings=settings.providers.sports)
+    now = datetime.now(tz=timezone.utc)
+    sport.teams = {
+        1: Team(
+            terms="",
+            fullname="Home",
+            name="Home",
+            key="HOM",
+            id=1,
+            aliases=["Home"],
+            colors=["white"],
+            updated=now,
+            expiry=now + timedelta(seconds=10),
+            locale=None,
+            country="ENG",
+        ),
+    }
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.get.return_value = int((now - timedelta(hours=13)).timestamp()).to_bytes(8)
+    sport.cache = mock_cache
+
+    await sport.cache_teams()
+
+    mock_cache.setnx.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_team_cache_restore_skips_missing_and_invalid_entries() -> None:
     """A partial or corrupt team cache does not fail the whole WCS teams response."""
     sport = WCS(settings=settings.providers.sports)
