@@ -136,6 +136,16 @@ async def test_public_sport_identifier_is_soccer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_match_team_colors_are_normalized_to_hex() -> None:
+    """Cached event team color names are replaced with WCS hex colors."""
+    response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
+    event = next(event for event in response.previous if event.home_team.key == "BRA")
+
+    assert event.home_team.colors == ["#009C3B", "#FFDF00", "#002776"]
+    assert event.away_team.colors == ["#74ACDF", "#FFFFFF", "#F6B40E"]
+
+
+@pytest.mark.asyncio
 async def test_extra_and_penalty_populated_on_one_finalized_match() -> None:
     """Exactly one finalized match exposes extra-time and penalty-shootout values."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
