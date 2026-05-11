@@ -167,7 +167,6 @@ class SportDataUpdater:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
-        await self.store.build_indexes()
 
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
@@ -197,8 +196,6 @@ class SportDataUpdater:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
-        # Drop the prior indexes: Note, this may lose older games.
-        await self.store.build_indexes(clear=True)
 
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
@@ -208,7 +205,10 @@ class SportDataUpdater:
         await self.store.shutdown()
 
     async def initialize(self) -> None:
-        """Initialize the ElasticSearch data store"""
+        """Initialize the ElasticSearch data store
+        Intended for local or test bootstrapping;
+        Indices should be managed by terraform in deployed environments.
+        """
         await self.store.startup()
         await self.store.build_indexes(clear=True)
 
@@ -330,7 +330,10 @@ else:
 
 @cli.command("initialize")
 def initialize():  # pragma: no cover
-    """Build the indexes and initialize the ES tables"""
+    """Build the indexes and initialize the ES tables
+    For local and test use only; indices are managed by
+    terraform in deployed environments.
+    """
     if provider:
         asyncio.run(provider.initialize())
     else:

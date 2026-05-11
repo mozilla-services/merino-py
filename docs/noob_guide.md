@@ -64,6 +64,10 @@ The indexes that your jobs will have WRITE access to are defined in the elastics
 These are defined in the `elasticstack_elasticsearch_security_api_key` resources. Names can describe patterns, e.g. `enwiki-*` or `sports-*`.
 You are encourged to use an index name format similar to `{platform}-{language}-{index_name}` when possible since it will make identifying the columns easier.
 
+#### Local Overrides
+
+You can use the Merino jobs cli to override the default elasticsearch bootstrapping, which only sets up a subset of production indices. This is useful e.g. for debugging or testing jobs locally. To do this, first call the "initialize" method, which will drop and recreate indices defined in code. As noted above, these code-based index definitions are subject to drift from the deployed terraform source of truth, and should be kept in sync.
+
 <a name="types">
 
 # Types of Merino Services
