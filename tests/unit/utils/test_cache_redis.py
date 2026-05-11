@@ -38,6 +38,27 @@ async def test_adapter_in_standalone_mode(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.asyncio
+async def test_delete_accepts_multiple_keys(mocker: MockerFixture) -> None:
+    """RedisAdapter.delete delegates all variadic keys to Redis."""
+    adapter = RedisAdapter(
+        *create_redis_clients(
+            primary="redis://localhost:6379",
+            replica="redis://localhost:6379",
+            max_connections=1,
+            socket_connect_timeout=1,
+            socket_timeout=1,
+            db=0,
+        )
+    )
+    mredis = MagicMock(spec=Redis)
+    mredis.delete = mocker.AsyncMock(return_value=2)
+    adapter.primary = mredis
+
+    assert await adapter.delete("a", "b") == 2
+    mredis.delete.assert_awaited_once_with("a", "b")
+
+
+@pytest.mark.asyncio
 async def test_adapter_functions(mocker: MockerFixture) -> None:
     """Test gauntlet of Redis functions (mostly for coverage)"""
     adapter: RedisAdapter = RedisAdapter(

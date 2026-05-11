@@ -1,6 +1,23 @@
 """World Cup Soccer match endpoint request and response models."""
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.utils.logos import LogoCategory, load_manifest
+
+
+# Stage does not always provide a CDN host override for the nations logo bucket.
+# Pin WCS flag URLs to the production image bucket so stage and prod render the
+# same assets.
+_LOGO_HOST = "https://storage.googleapis.com/merino-images-prod"
+
+
+def _icon(key: str) -> HttpUrl | None:
+    """Return the nations flag URL for `key`, if it exists in the logo manifest."""
+    entry = load_manifest().get(LogoCategory.Nations, key)
+    return HttpUrl(f"{_LOGO_HOST}/{entry.url}") if entry else None
 
 
 class TeamInfo(BaseModel):
@@ -12,7 +29,24 @@ class TeamInfo(BaseModel):
     region: str = Field(description="ISO3 region designation; may differ from `name`.")
     colors: list[str] = Field(description="Branding colors, primary first.")
     icon_url: HttpUrl | None = Field(default=None, description="Team flag URL, if available.")
-    eliminated: bool = Field(description="True once the team is out of the tournament.")
+    eliminated: bool = Field(
+        default=False, description="True once the team is out of the tournament."
+    )
+
+    @classmethod
+    def from_event_team(cls, team: dict[str, Any]) -> "TeamInfo":
+        """Build widget team info from the compact team dict stored on events."""
+        key = str(team["key"])
+        raw_icon_url = team.get("icon_url")
+        return cls(
+            key=key,
+            global_team_id=int(team["id"]),
+            name=str(team["name"]),
+            region=str(team.get("region") or team.get("country") or key),
+            colors=[str(color) for color in team["colors"] if color],
+            icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
+            eliminated=bool(team.get("eliminated", False)),
+        )
 
 
 class EventInfo(BaseModel):
@@ -35,6 +69,31 @@ class EventInfo(BaseModel):
     status_type: str = Field(description="Simplified status: 'past' | 'live' | 'scheduled'.")
     query: str | None = Field(default=None, description="Optional click-through query.")
     sport: str = Field(default="soccer", description="Sport identifier.")
+
+    @classmethod
+    def from_event(cls, event: Event) -> "EventInfo":
+        """Build widget event info from a cached SportsData event."""
+        home_team = TeamInfo.from_event_team(event.home_team)
+        away_team = TeamInfo.from_event_team(event.away_team)
+        updated = event.updated or event.date
+        return cls(
+            date=event.date.isoformat(),
+            global_event_id=event.id,
+            home_team=home_team,
+            away_team=away_team,
+            period=event.period or "",
+            home_score=event.home_score,
+            away_score=event.away_score,
+            home_extra=event.home_extra,
+            away_extra=event.away_extra,
+            home_penalty=event.home_penalty,
+            away_penalty=event.away_penalty,
+            clock=event.clock or "",
+            updated=int(updated.timestamp()),
+            status=event.status.as_str(),
+            status_type=event.status.as_ui_status(),
+            query=f"{home_team.name} vs {away_team.name}",
+        )
 
 
 class MatchesResponse(BaseModel):

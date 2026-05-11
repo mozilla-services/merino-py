@@ -7,13 +7,14 @@ import asyncio
 import logging
 import orjson
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 # We use this for each Sport subclass, so that there's some flexibility for what config
 # values are used and passed.
 from dynaconf.base import LazySettings
 from httpx import AsyncClient
+from pydantic import ValidationError
 
 from merino.cache.redis import RedisAdapter
 from merino.cache.none import NoCacheAdapter
@@ -53,6 +54,13 @@ SPORT_CATEGORY_MAP: dict[str, SportCategory] = {
 
 # Global logger
 logger = logging.getLogger(__name__)
+
+# Open-ended timestamp bounds for the WCS calendar index. The calendar is a
+# Redis sorted set keyed by Unix timestamps, so these signed 64-bit sentinels
+# comfortably bracket all possible events while keeping RedisAdapter.zrange's
+# integer contract unchanged.
+ZSET_MIN_TIMESTAMP = -(2**63)
+ZSET_MAX_TIMESTAMP = 2**63 - 1
 
 
 class NFL(Sport):
@@ -700,6 +708,18 @@ class WCS(Sport):
             }
         )
 
+    def event_details(self, event_description: dict[str, Any]) -> dict[str, Any]:
+        """Return soccer score details used by the WCS widget."""
+        clock = event_description.get("ClockDisplay") or event_description.get("Clock")
+        return {
+            "period": event_description.get("Period"),
+            "home_extra": event_description.get("HomeTeamScoreExtraTime"),
+            "away_extra": event_description.get("AwayTeamScoreExtraTime"),
+            "home_penalty": event_description.get("HomeTeamScorePenalty"),
+            "away_penalty": event_description.get("AwayTeamScorePenalty"),
+            "clock": str(clock) if clock is not None else None,
+        }
+
     # Note: this is covered by `test_wcs_init_cache` but I believe that the heavy use of Mocks
     # prevents coverage from detecting that the lines are accessed. Adding "no cover" to get
     # coverage numbers under control. (it's temporary anyway, we're dropping it with the WCS widget.)
@@ -850,6 +870,11 @@ class WCS(Sport):
                     team_ttl=self.team_ttl,
                     normalized_terms=self.normalized_terms,
                 )
+                if team_data.get("Type") == "National":
+                    federation_name = team_data.get("FullName")
+                    if federation_name and federation_name not in team.aliases:
+                        team.aliases.append(federation_name)
+                    team.fullname = team.name
                 if area:
                     team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
                 self.teams[team.id] = team
@@ -877,22 +902,19 @@ class WCS(Sport):
 
     def team_as_serialized(self, team: Team) -> bytes:  # pragma: no cover "widget"
         """Serialize a team as a dictionary for the widget"""
-        # TODO: Populate the eliminated field (from old team info?)
-        serialized = team.model_dump()
-        serialized["expiry"] = team.expiry.timestamp()
-        serialized["updated"] = team.updated.timestamp()
-        return orjson.dumps(serialized)
+        return team.model_dump_json().encode()
+
+    def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
+        """Serialize a team as a string for tests and log-friendly call sites."""
+        return self.team_as_serialized(team).decode()
 
     def event_as_serialized(self, event: Event) -> bytes:  # pragma: no cover "widget"
         """Serialize an event as a dictionary for the widget"""
-        # import pdb;pdb.set_trace()
-        # TODO: add more team info?
-        serialized = event.model_dump()
-        # munge the dates.
-        serialized["date"] = event.date.timestamp()
-        serialized["expiry"] = event.expiry.timestamp()
-        serialized["updated"] = event.updated.timestamp() if event.updated else None
-        return orjson.dumps(serialized)
+        return event.model_dump_json().encode()
+
+    def event_as_str(self, event: Event) -> str:  # pragma: no cover "widget"
+        """Serialize an event as a string for tests and log-friendly call sites."""
+        return self.event_as_serialized(event).decode()
 
     async def cache_teams(self) -> None:  # pragma: no cover "widget"
         """Write the team data to the redis cache for the widget"""
@@ -924,7 +946,7 @@ class WCS(Sport):
                 await self.cache.set(refresh_key, int(now.timestamp()).to_bytes(8))
                 await self.cache.delete(f"{self.cache_prefix}:meta:team_lock")
 
-    async def get_all_teams(self, client: AsyncClient) -> dict[int, Any]:
+    async def get_all_teams(self, client: AsyncClient | None = None) -> dict[int, Team]:
         """Return all the cached teams.
 
         For the `/teams` endpoint, return the `.values()` of the result.
@@ -937,17 +959,36 @@ class WCS(Sport):
             team_ids = await self.cache.get(f"{self.cache_prefix}:meta:team_ids")
             # We haven't fetched the data yet, so let's see if we can do it.
             if not team_ids:
+                if client is None:
+                    return {}
                 await self.update_teams(client)
                 return self.teams
             # Ok, we have redis cached data, let's construct our local cache.
-            if team_ids:
-                team_ids = orjson.loads(team_ids)
-                str_teams = await self.cache.mget(team_ids)
-                if str_teams:
-                    for bteam in str_teams:
-                        team = Team(**orjson.loads(bteam))
-                        self.teams[int(team.id)] = team
-                self.refreshed = datetime.now(tz=timezone.utc)
+            try:
+                team_keys = orjson.loads(team_ids)
+            except (orjson.JSONDecodeError, TypeError) as ex:
+                logger.warning("%s Could not load cached WCS team ID list: %s", LOGGING_TAG, ex)
+                return {}
+            str_teams = await self.cache.mget(team_keys)
+            teams: dict[int, Team] = {}
+            if str_teams:
+                for team_key, bteam in zip(team_keys, str_teams, strict=False):
+                    if not bteam:
+                        logger.warning("%s Missing cached WCS team %s", LOGGING_TAG, team_key)
+                        continue
+                    try:
+                        team = Team.model_validate_json(bteam)
+                    except (ValidationError, TypeError) as ex:
+                        logger.warning(
+                            "%s Could not load cached WCS team %s: %s",
+                            LOGGING_TAG,
+                            team_key,
+                            ex,
+                        )
+                        continue
+                    teams[int(team.id)] = team
+            self.teams = teams
+            self.refreshed = datetime.now(tz=timezone.utc)
         return self.teams
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
@@ -963,6 +1004,11 @@ class WCS(Sport):
             cache_dir=self.cache_dir,
             args={"key": self.api_key},
         )
+        if not response:
+            logger.warning(f"{LOGGING_TAG} No WCS schedules returned; skipping event cache update")
+            return
+        # Treat each WCS schedule refresh as authoritative so removed events are pruned.
+        self.events = {}
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list = []
         # update scores based on events:
@@ -984,19 +1030,56 @@ class WCS(Sport):
                 )
                 date_list.append(day)
 
-        # Widget: Store events to Redis
-        # Go through one more time to catch any stray events.
-        # TODO: Put these in their own function?
+        await self.cache_events()
+
+    async def cache_events(self) -> None:
+        """Write event data to Redis and index events by kickoff time."""
+        calendar_key = f"{self.cache_prefix}:calendar"
+        active_event_keys: set[str] = set()
         for event_id, event in list(self.events.items()):
-            # import pdb; pdb.set_trace()
             serialized = self.event_as_serialized(event)
-            await self.cache.set(f"{self.cache_prefix}:event:{event_id}", serialized)
-            # Add the event to the zorder for date lookups
+            event_key = f"{self.cache_prefix}:event:{event_id}"
+            active_event_keys.add(event_key)
+            # Store the full payload separately from the sorted calendar index;
+            # zadd overwrites the timestamp score when SportsData moves kickoff.
+            await self.cache.set(event_key, serialized, ttl=self.event_ttl)
             await self.cache.zadd(
-                f"{self.cache_prefix}:calendar",
-                {f"{self.cache_prefix}:event:{event_id}": int(event.date.timestamp())},
-                gt=True,
+                calendar_key,
+                {event_key: int(event.date.timestamp())},
             )
+        await self.prune_stale_events(active_event_keys)
+
+    async def prune_stale_events(self, active_event_keys: set[str]) -> None:
+        """Remove cached event entries that no longer exist in the latest source data."""
+        calendar_key = f"{self.cache_prefix}:calendar"
+        indexed_event_keys = cast(
+            list[bytes],
+            await self.cache.zrange(
+                calendar_key,
+                min=0,
+                max=-1,
+                byScore=False,
+            ),
+        )
+        if indexed_event_keys and not active_event_keys:
+            logger.warning(f"{LOGGING_TAG} Refusing to prune WCS events from an empty refresh")
+            return
+
+        # The schedule refresh is authoritative: any Redis event key missing from
+        # this run points to a match removed or no longer returned by SportsData.
+        indexed_event_key_strings = [
+            raw_event_key.decode("utf-8", errors="replace")
+            for raw_event_key in indexed_event_keys
+        ]
+        stale_event_keys = [
+            event_key
+            for event_key in indexed_event_key_strings
+            if event_key not in active_event_keys
+        ]
+        if not stale_event_keys:
+            return
+        await self.cache.delete(*stale_event_keys)
+        await self.cache.zrem(calendar_key, *stale_event_keys)
 
     async def get_events_by_team(  # pragma: no cover "widget"
         self, team_key: str, start: datetime | None = None, end: datetime | None = None
@@ -1009,12 +1092,45 @@ class WCS(Sport):
 
     async def get_events_by_date(
         self, start: datetime | None = None, end: datetime | None = None
-    ):  # pragma: no cover "widget"
-        """Get events by start,end"""
-        # TODO: build
-        # scan the ssort list for events that fall between the start (min) and end (max)
-        # fetch those event info.
-        raise NotImplementedError
+    ) -> list[Event]:
+        """Get cached events whose kickoff timestamps fall between `start` and `end`."""
+        if start is not None and start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end is not None and end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        # The widget normally supplies a date window; an open-ended call still only
+        # reads the small WCS tournament calendar, so zscan is unnecessary here.
+        min_timestamp = int(start.timestamp()) if start else ZSET_MIN_TIMESTAMP
+        max_timestamp = int(end.timestamp()) if end else ZSET_MAX_TIMESTAMP
+        event_keys = cast(
+            list[bytes],
+            await self.cache.zrange(
+                f"{self.cache_prefix}:calendar",
+                min=min_timestamp,
+                max=max_timestamp,
+            ),
+        )
+        if not event_keys:
+            return []
+
+        cached_events = await self.cache.mget(event_keys) or []
+
+        # Redis returns only event keys from the calendar; hydrate the payloads in
+        # one mget and keep the same ordering as the sorted-set response.
+        result: list[Event] = []
+        for event_key, raw_event in zip(event_keys, cached_events, strict=False):
+            if not raw_event:
+                # The event payload can expire before the next authoritative refresh;
+                # prune_stale_events clears the orphaned calendar entry on that refresh.
+                continue
+            event_key_str = event_key.decode("utf-8", errors="replace")
+            try:
+                result.append(Event.model_validate_json(raw_event))
+            except (ValidationError, TypeError) as ex:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not load cached WCS event {event_key_str}: {ex}"
+                )
+        return result
 
 
 # THE FOLLOWING CLASSES ARE WIP:::
