@@ -181,6 +181,16 @@ class Event(BaseModel):
     expiry: datetime
     # UTC of last event update
     updated: datetime | None
+    # Final period of the game: "Regular", "ExtraTime", "PenaltyShootout", etc.
+    period: str | None = None
+    # Points scored in extra play
+    home_extra: int | None = None
+    away_extra: int | None = None
+    # Points scored in penalty play
+    home_penalty: int | None = None
+    away_penalty: int | None = None
+    # Play time, with additions when provided by the feed.
+    clock: str | None = None
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
@@ -199,6 +209,18 @@ class Event(BaseModel):
             "date": self.date.isoformat(),
             "expiry": self.expiry.isoformat(),
         }
+        optional_fields = (
+            "period",
+            "home_extra",
+            "away_extra",
+            "home_penalty",
+            "away_penalty",
+            "clock",
+        )
+        for field_name in optional_fields:
+            value = getattr(self, field_name)
+            if value is not None:
+                result[field_name] = value
         # This may be a quick_update, meaning these values could be blank
         # Do not destructively overwrite them!
         if self.terms:
@@ -410,6 +432,13 @@ class Sport:
                 event.away_score = event_description.get(
                     self.normalized_terms[SportTerms.AWAY_TEAM_SCORE]
                 )
+                event.status = status
+                event.updated = self.updated_at(event_description, event_timezone)
+                for field, value in self.event_details(event_description).items():
+                    # Skip Nones so a partial payload (e.g. pre-kickoff Clock) does not
+                    # clobber a value the schedule load already populated.
+                    if value is not None:
+                        setattr(event, field, value)
             else:
                 # Some Sports may not pull Schedules first
                 home_id = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_ID])
@@ -426,7 +455,8 @@ class Sport:
                     self.normalized_terms[SportTerms.AWAY_TEAM_SCORE]
                 )
                 if not home_id or not away_id:
-                    logger.warning(
+                    log = logger.debug if home_id is None and away_id is None else logger.warning
+                    log(
                         f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
                     )
                     continue
@@ -460,12 +490,7 @@ class Sport:
                 # Ignore any events that are outside of the event interest window.
                 if not start_window <= date <= end_window:
                     continue
-                updated = None
-                # All "Updated" fields are always in ET.
-                if event_description.get("Updated"):
-                    updated = datetime.fromisoformat(event_description["Updated"]).replace(
-                        tzinfo=event_timezone
-                    )
+                updated = self.updated_at(event_description, event_timezone)
                 event = Event(
                     sport=self.name,
                     id=game_id,
@@ -481,6 +506,7 @@ class Sport:
                     status=status,
                     expiry=utc_time_from_now(self.event_ttl),
                     updated=updated,
+                    **self.event_details(event_description),
                 )
             self.events[event.id] = event
 
@@ -540,7 +566,8 @@ class Sport:
             home_score = event_description.get(self.normalized_terms[SportTerms.HOME_TEAM_SCORE])
             away_score = event_description.get(self.normalized_terms[SportTerms.AWAY_TEAM_SCORE])
             if not home_id or not away_id:
-                logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
+                log = logger.debug if home_id is None and away_id is None else logger.warning
+                log(f"{LOGGING_TAG} Could not find team for event: {event_description}")
                 continue
             home_team = self.teams.get(home_id)
             away_team = self.teams.get(away_id)
@@ -576,13 +603,7 @@ class Sport:
             if not start_window <= date <= end_window:
                 continue
             terms = f"{home_team.terms} {away_team.terms}"
-            # All "Updated" fields are always in ET.
-            updated = None
-            # The following code is exercised in unit tests, but is not included in coverage for some reason.
-            if event_description.get("Updated"):  # pragma: no cover
-                updated = datetime.fromisoformat(event_description["Updated"]).replace(
-                    tzinfo=event_timezone
-                )
+            updated = self.updated_at(event_description, event_timezone)
 
             event = Event(
                 sport=self.name,
@@ -599,6 +620,29 @@ class Sport:
                 status=GameStatus.parse(event_description["Status"]),
                 expiry=utc_time_from_now(self.event_ttl),
                 updated=updated,
+                **self.event_details(event_description),
             )
             self.events[event.id] = event
         return self.events
+
+    def updated_at(
+        self, event_description: dict[str, Any], event_timezone: ZoneInfo
+    ) -> datetime | None:
+        """Return the event update timestamp, preferring the UTC field when available."""
+        if event_description.get("UpdatedUtc"):
+            return datetime.fromisoformat(event_description["UpdatedUtc"]).replace(
+                tzinfo=timezone.utc
+            )
+        if event_description.get("Updated"):
+            return datetime.fromisoformat(event_description["Updated"]).replace(
+                tzinfo=event_timezone
+            )
+        return None
+
+    def event_details(self, event_description: dict[str, Any]) -> dict[str, Any]:
+        """Return optional fields to merge into an `Event`.
+
+        Most sports only need the common score fields. Subclasses can override this
+        when a feed exposes widget-specific details, such as WCS clock and penalty data.
+        """
+        return {}

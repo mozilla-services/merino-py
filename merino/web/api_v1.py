@@ -698,17 +698,17 @@ async def get_wcs_matches(
 
     The window is `+/- 7 days` around `date`. `current` holds matches on `date`,
     `previous` is older, `next` is newer. Each bucket is sorted ascending by
-    event date. Returns fake-but-plausible data until the vendor backend lands.
+    event date.
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)
-    return provider.get_matches(target_date, limit, team_keys)
+    return await provider.get_matches(target_date, limit, team_keys)
 
 
 @router.get(
     "/wcs/live",
     tags=["wcs"],
-    summary="World Cup Soccer matches currently in progress",
+    summary="Mocked World Cup Soccer events for the live endpoint",
     response_model=LiveMatchesResponse,
 )
 async def get_wcs_live(
@@ -718,12 +718,11 @@ async def get_wcs_live(
     ] = None,
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> LiveMatchesResponse:
-    """Return matches with `status_type == "live"`, sorted ascending by date.
+    """Return mocked live-endpoint events, sorted ascending by date.
 
-    Anchored to the current UTC date. Returns fake-but-plausible data until
-    the vendor backend lands.
+    Anchored to fake test data until real live data lands.
     """
-    return provider.get_live_matches(_parse_team_keys(teams))
+    return await provider.get_live_matches(_parse_team_keys(teams))
 
 
 @router.get(

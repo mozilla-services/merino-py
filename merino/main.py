@@ -15,7 +15,7 @@ from merino import curated_recommendations, governance
 from merino.providers import rss
 from merino.configs.app_configs.config_logging import configure_logging
 from merino.configs.app_configs.config_sentry import configure_sentry
-from merino.providers import games, manifest, suggest
+from merino.providers import games, manifest, suggest, wcs
 from merino.utils.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging as mw_logging, metrics, user_agent
 from merino.web import api_v1, dockerflow
@@ -53,10 +53,12 @@ async def lifespan(app: FastAPI):
     await rss.init_providers()
     curated_recommendations.init_provider()
     await games.init_providers()
+    await wcs.init_provider()
     governance.start()
     yield
     governance.shutdown()
     # Shut down providers and clean up.
+    await wcs.shutdown_provider()
     await rss.shutdown_providers()
     await suggest.shutdown_providers()
     await get_metrics_client().close()
