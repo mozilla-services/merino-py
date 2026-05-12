@@ -5,10 +5,19 @@
 """Unit tests for the logos provider module."""
 
 import logging
+from datetime import datetime, timezone
 
 import pytest
 
-from merino.utils.logos import get_logo_url, load_manifest, LogoCategory, LogoManifest
+from merino.utils.logos import (
+    get_logo_url,
+    get_nations_svg_logo_url,
+    load_manifest,
+    Logo,
+    LogoCategory,
+    LogoManifest,
+    PROD_IMAGE_BUCKET_ROOT_URL,
+)
 from tests.types import FilterCaplogFixture
 from merino.configs import settings
 
@@ -29,6 +38,29 @@ def test_get_logo_url_exists(category: LogoCategory, key: str) -> None:
     result = get_logo_url(category, key)
 
     assert str(result) == f"{host}/logos/airline/airline_aa.png"
+
+
+def test_get_nations_svg_logo_url_prefers_svg(mocker) -> None:
+    """Returns the WCS SVG path from the production image bucket."""
+    mocker.patch(
+        "merino.utils.logos.load_manifest",
+        return_value=LogoManifest(
+            generated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            lookups={
+                LogoCategory.Nations: {
+                    "BRA": Logo(
+                        name="BRA",
+                        url="logos/nations/nations_br.png",
+                        svg="logos/nations/svg/BRA.svg",
+                    )
+                }
+            },
+        ),
+    )
+
+    result = get_nations_svg_logo_url("bra")
+
+    assert str(result) == f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/svg/BRA.svg"
 
 
 def test_get_logo_url_not_found(

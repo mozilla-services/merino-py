@@ -12,7 +12,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     SPORT_CATEGORY_MAP,
 )
-from merino.utils.logos import get_logo_url, LogoCategory
+from merino.utils.logos import get_logo_url, get_nations_svg_logo_url, LogoCategory
 
 # Mapping of sport name from SportEventDetail
 # (e.g. "NFL", "NHL", "NBA", etc.) to the logo category
@@ -75,6 +75,8 @@ class SportEventDetail(BaseModel):
         def _get_logo_closure(key: Optional[str]) -> Optional[HttpUrl]:
             if category is None or key is None:
                 return None
+            if category == LogoCategory.Nations:
+                return get_nations_svg_logo_url(key)
             return get_logo_url(category, key)
 
         sport_map = {"fifa": "World Cup"}
