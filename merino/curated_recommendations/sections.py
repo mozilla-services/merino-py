@@ -29,6 +29,11 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
+)
+from merino.curated_recommendations.rankers.interest_ranker import InterestRanker
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
@@ -384,6 +389,27 @@ def should_show_popular_today_with_daily_briefing(
 
 def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the contextual ranking time zone experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_TZ,
+    )
+
+
+def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the user is enrolled in the InterestRanker treatment.
+
+    Reuses the InferredTimeZone experiment's TZ branch (originally a TZ-cohort
+    treatment that underperformed) — this avoids a fresh-experiment enrollment
+    ramp and gets the InterestRanker to traffic faster. Users on this branch
+    get the LinTS InterestRanker; users on the COUNTRY branch (control) stay
+    on the existing cohort path with TZ context disabled.
+
+    Gates the first tier of the ranker chain in get_sections: when this fires
+    and the LinTS backend is loaded, we rank with InterestRanker; otherwise
+    we fall through to the cohort ContextualRanker (or vanilla
+    ThompsonSamplingRanker).
+    """
     return is_enrolled_in_experiment(
         request,
         ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
@@ -809,6 +835,7 @@ async def get_sections(
     ml_backend: MLRecsBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
+    lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
 ) -> dict[str, Section]:
@@ -874,10 +901,24 @@ async def get_sections(
     ranker: Ranker
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
+    # use interest ranker if we have interests available
+    use_interest_ranker = (
+        is_inferred_interest_experiment(request)
+        and lints_interest_backend.is_valid(surface_id)
+        and personal_interests is not None
+        and bool(personal_interests.scores)
+    )
     use_contexual_ranker = (
         do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
     )
-    if use_contexual_ranker:
+    if use_interest_ranker:
+        ranker = InterestRanker(
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            surface_id=surface_id,
+            lints_backend=lints_interest_backend,
+        )
+    elif use_contexual_ranker:
         is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
         if (
             not is_inferred_time_zone_experiment_enabled

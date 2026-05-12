@@ -84,6 +84,27 @@ _validators = [
         must_exist=True,
         env=["production", "staging", "development"],
     ),
+    Validator(
+        "contextual_interest.enabled",
+        is_type_of=bool,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "contextual_interest.gcs.max_size",
+        "contextual_interest.gcs.cron_interval_seconds",
+        is_type_of=int,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "contextual_interest.gcs.bucket_name",
+        "contextual_interest.gcs.gcp_project",
+        "contextual_interest.gcs.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
     Validator(

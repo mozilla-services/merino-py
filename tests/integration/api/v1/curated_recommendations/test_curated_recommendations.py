@@ -28,6 +28,9 @@ from merino.curated_recommendations import (
     LocalModelBackend,
     MLRecsBackend,
 )
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+)
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
@@ -407,6 +410,7 @@ def provider(
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
+        lints_interest_backend=EmptyLinTSInterestBackend(),
     )
 
 
@@ -2829,6 +2833,7 @@ def test_uk_sections_with_gb_backend_data(
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
+        lints_interest_backend=EmptyLinTSInterestBackend(),
     )
 
     # Override the provider dependency for this test
