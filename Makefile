@@ -39,7 +39,7 @@ NAV_OPTS ?=
 install: $(INSTALL_STAMP)  ##  Install dependencies with uv
 $(INSTALL_STAMP): pyproject.toml uv.lock
 	@if [ -z $(UV) ]; then echo "uv could not be found."; exit 2; fi
-	$(UV) sync --all-groups
+	$(UV) sync --all-groups --all-packages
 	touch $(INSTALL_STAMP)
 
 .PHONY: ruff-lint

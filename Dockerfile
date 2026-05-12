@@ -22,7 +22,7 @@ COPY . $APP_HOME
 # Install maxmind db and app dependencies. Clean up build tools after
 RUN apt-get update && \
     apt-get install --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev libmaxminddb0 libmaxminddb-dev && \
-    uv sync --frozen --no-cache --no-dev --no-group load && \
+    uv sync --frozen --no-cache --no-dev --no-group load --all-packages && \
     apt-get remove --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev && \
     apt-get -q --yes autoremove && \
     apt-get clean && \
