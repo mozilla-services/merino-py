@@ -24,3 +24,36 @@ def test_event_info_from_event_builds_world_cup_query() -> None:
 
     expected_date = e.date.strftime("%d %B %Y")
     assert info.query == f"World Cup 2026 Brazil vs Argentina {expected_date}"
+
+
+def test_event_info_from_event_includes_stage() -> None:
+    """Ensure stage is propagated from cache to response"""
+    e = event(
+        event_id=2,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Scheduled,
+        stage="Round of 32",
+    )
+
+    info = EventInfo.from_event(e)
+    assert info.stage == "Round of 32"
+
+
+def test_event_info_from_event_stage_defaults_to_none() -> None:
+    """An event with no cached stage serializes stage=None on the widget payload.
+    This shouldn't happen with real data.
+    """
+    e = event(
+        event_id=3,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Scheduled,
+    )
+
+    info = EventInfo.from_event(e)
+    assert info.stage is None

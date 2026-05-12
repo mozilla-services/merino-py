@@ -191,6 +191,8 @@ class Event(BaseModel):
     away_penalty: int | None = None
     # Play time, with additions when provided by the feed.
     clock: str | None = None
+    # Optional stage, e.g. "Group", "Round of 32"
+    stage: str | None = None
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
