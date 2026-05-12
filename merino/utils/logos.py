@@ -4,9 +4,10 @@ import logging
 from datetime import datetime
 from enum import StrEnum
 from functools import cache
-from typing import Final, Optional
+from typing import Optional
 import orjson
 from importlib.resources import files
+from urllib.parse import urljoin
 
 import sentry_sdk
 from pydantic import BaseModel, HttpUrl
@@ -21,7 +22,6 @@ metrics_client = get_metrics_client()
 _cdn_host_name: str = settings.image_gcs_v2.cdn_hostname
 _protocol = "http" if "localhost" in _cdn_host_name else "https"
 CDN_ROOT_URL: str = f"{_protocol}://{_cdn_host_name}"
-PROD_IMAGE_BUCKET_ROOT_URL: Final[str] = "https://storage.googleapis.com/merino-images-prod"
 
 # Tracks which (category, key) misses have already been reported to Sentry in
 # this process, so sustained miss traffic on the same entry doesn't burn event
@@ -67,18 +67,7 @@ def load_manifest() -> LogoManifest:
     return LogoManifest.model_validate(orjson.loads(manifest_path.read_bytes()))
 
 
-def _join_logo_url(root_url: str, logo_path: str) -> HttpUrl:
-    """Build a public logo URL from a root URL and manifest-relative path."""
-    return HttpUrl(f"{root_url.rstrip('/')}/{logo_path.lstrip('/')}")
-
-
-def get_logo_url(
-    category: LogoCategory,
-    key: str,
-    *,
-    prefer_svg: bool = False,
-    root_url: str = CDN_ROOT_URL,
-) -> Optional[HttpUrl]:
+def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
     """Logo lookup for suggest providers.
 
     The process for creating suggestions is currently manual,
@@ -119,15 +108,4 @@ def get_logo_url(
                 ),
             )
         return None
-    logo_path = logo.svg if prefer_svg and logo.svg else logo.url
-    return _join_logo_url(root_url, logo_path)
-
-
-def get_nations_svg_logo_url(key: str) -> Optional[HttpUrl]:
-    """Return a nation flag URL from the production image bucket, preferring SVG assets."""
-    return get_logo_url(
-        LogoCategory.Nations,
-        key,
-        prefer_svg=True,
-        root_url=PROD_IMAGE_BUCKET_ROOT_URL,
-    )
+    return HttpUrl(urljoin(CDN_ROOT_URL, logo.url))

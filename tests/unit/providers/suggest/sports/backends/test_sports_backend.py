@@ -35,7 +35,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
 from merino.providers.suggest.sports.backends.sportsdata.protocol import (
     SportEventDetail,
 )
-from merino.utils.logos import Logo, LogoCategory, LogoManifest, PROD_IMAGE_BUCKET_ROOT_URL
+from merino.utils.logos import Logo, LogoCategory, LogoManifest
 
 
 VALID_TEST_RESPONSE: dict = {}
@@ -465,12 +465,9 @@ def test_sport_event_detail_icon_set_for_fifa_uses_nations_logos(
     }
     result = SportEventDetail.from_event_dict(event)
 
-    assert str(result.home_team.icon) == (
-        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/nations_usa.png"
-    )
-    assert str(result.away_team.icon) == (
-        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/nations_can.png"
-    )
+    host = f"https://{settings.image_gcs_v2.cdn_hostname}"
+    assert str(result.home_team.icon) == f"{host}/logos/nations/nations_usa.png"
+    assert str(result.away_team.icon) == f"{host}/logos/nations/nations_can.png"
 
 
 def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
@@ -491,10 +488,10 @@ def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
     assert result.away_team.icon is None
 
 
-def test_sport_event_detail_fifa_icon_uses_wcs_svg_path(
+def test_sport_event_detail_fifa_icon_is_png_and_not_svg(
     mocker: MockerFixture,
 ) -> None:
-    """The suggest request should return the WCS nations SVG icon."""
+    """The suggest request should return PNG icon instead of SVG."""
     manifest = LogoManifest(
         generated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
         lookups={
@@ -526,9 +523,5 @@ def test_sport_event_detail_fifa_icon_uses_wcs_svg_path(
     }
     result = SportEventDetail.from_event_dict(event)
 
-    assert str(result.home_team.icon) == (
-        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/svg/BRA.svg"
-    )
-    assert str(result.away_team.icon) == (
-        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/svg/ARG.svg"
-    )
+    assert str(result.home_team.icon).endswith("/logos/nations/nations_br.png")
+    assert str(result.away_team.icon).endswith("/logos/nations/nations_ar.png")
