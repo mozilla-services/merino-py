@@ -13,8 +13,6 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
-from merino.configs.app_configs.config_logging import configure_logging
-from merino.configs.app_configs.config_sentry import configure_sentry
 from merino.runtime import (
     RuntimeFeature,
     RuntimeMode,
@@ -22,6 +20,9 @@ from merino.runtime import (
     get_runtime_mode,
     mode_enables,
 )
+from merino.configs import settings
+from merino_common.app_configs.config_logging import configure_logging
+from merino_common.app_configs.config_sentry import configure_sentry
 from merino.utils.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging as mw_logging, metrics, user_agent
 from merino.web import dockerflow
@@ -84,8 +85,18 @@ def create_lifespan(mode: RuntimeMode | str):
     async def runtime_lifespan(app: FastAPI):
         cleanup_callbacks: list[CleanupCallback] = []
         try:
-            configure_logging()
-            configure_sentry()
+            configure_logging(
+                log_format=settings.logging.format,
+                level=settings.logging.level,
+                can_propagate=settings.logging.can_propagate,
+                current_env=settings.current_env,
+            )
+            configure_sentry(
+                mode=settings.sentry.mode,
+                dsn=settings.sentry.dsn,
+                env=settings.sentry.env,
+                traces_sample_rate=settings.sentry.traces_sample_rate,
+            )
             await configure_metrics()
             cleanup_callbacks.append(_close_metrics_client)
 

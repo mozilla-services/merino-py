@@ -6,23 +6,33 @@ from logging.config import dictConfig
 
 from dockerflow import logging as dockerflow_logging
 
-from merino.configs import settings
 
+def configure_logging(
+    log_format: str,
+    level: str,
+    can_propagate: bool,
+    current_env: str,
+) -> None:
+    """Configure logging with MozLog.
 
-def configure_logging() -> None:
-    """Configure logging with MozLog."""
-    match settings.logging.format:
+    Args:
+        log_format: Either "mozlog" or "pretty".
+        level: Standard logging level name ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL").
+        can_propagate: Whether the merino loggers should propagate to the root logger.
+        current_env: The active Dynaconf environment name (e.g. "development", "testing", "stage",
+            "production"). Used to enforce that production runs with "mozlog".
+    """
+    match log_format:
         case "mozlog":
             handler = ["console-mozlog"]
         case "pretty":
             handler = ["console-pretty"]
         case _:
             raise ValueError(
-                f"Invalid log format: {settings.logging.format}."
-                f" Should either be 'mozlog' or 'pretty'."
+                f"Invalid log format: {log_format}. Should either be 'mozlog' or 'pretty'."
             )
 
-    if settings.current_env.lower() == "production" and handler != ["console-mozlog"]:
+    if current_env.lower() == "production" and handler != ["console-mozlog"]:
         raise ValueError("Log format must be 'mozlog' in production")
 
     dictConfig(
@@ -39,13 +49,13 @@ def configure_logging() -> None:
             },
             "handlers": {
                 "console-mozlog": {
-                    "level": settings.logging.level,
+                    "level": level,
                     "class": "logging.StreamHandler",
                     "formatter": "json",
                     "stream": sys.stdout,
                 },
                 "console-pretty": {
-                    "level": settings.logging.level,
+                    "level": level,
                     "class": "rich.logging.RichHandler",
                     "formatter": "json",
                 },
@@ -59,13 +69,13 @@ def configure_logging() -> None:
             "loggers": {
                 "merino": {
                     "handlers": handler,
-                    "level": settings.logging.level,
-                    "propagate": settings.logging.can_propagate,
+                    "level": level,
+                    "propagate": can_propagate,
                 },
                 "web.suggest.request": {
                     "handlers": handler,
-                    "level": settings.logging.level,
-                    "propagate": settings.logging.can_propagate,
+                    "level": level,
+                    "propagate": can_propagate,
                 },
                 "uvicorn.error": {
                     "handlers": ["uvicorn-error-handler"],

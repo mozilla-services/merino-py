@@ -8,7 +8,7 @@ import typing
 
 from sentry_sdk.types import Event
 
-from merino.configs.app_configs.config_sentry import (
+from merino_common.app_configs.config_sentry import (
     REDACTED_TEXT,
     strip_sensitive_data,
 )

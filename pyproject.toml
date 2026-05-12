@@ -55,6 +55,7 @@ merino-common = { workspace = true }
 
 [tool.uv.build-backend]
 module-name = "merino"
+# Opt for the flat structure "merino" over "src/merino"
 module-root = ""
 
 [tool.uv.workspace]

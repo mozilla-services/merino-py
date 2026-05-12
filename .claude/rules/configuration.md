@@ -5,7 +5,7 @@ paths:
 
 # Configuration System
 
-Dynaconf loads TOML files from `merino/configs/app_configs/` based on `MERINO_ENV`:
+Dynaconf loads TOML files from `merino/configs/` based on `MERINO_ENV`:
 
 - `default.toml` (40KB, all settings with defaults)
 - `development.toml` (pretty logging, DEBUG, 600s timeout, test API keys)

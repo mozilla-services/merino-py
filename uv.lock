@@ -1424,11 +1424,17 @@ name = "merino-common"
 version = "0.1.0"
 source = { editable = "merino-common" }
 dependencies = [
+    { name = "dockerflow" },
     { name = "pydantic" },
+    { name = "sentry-sdk", extra = ["fastapi"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.13.0,<3" }]
+requires-dist = [
+    { name = "dockerflow", specifier = ">=2026.3.4,<2027" },
+    { name = "pydantic", specifier = ">=2.13.0,<3" },
+    { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.13.0,<3" },
+]
 
 [[package]]
 name = "mozilla-merino-ext"
