@@ -442,27 +442,14 @@ def test_sport_event_detail_icon_none_for_unknown_sport() -> None:
 
 
 def test_sport_event_detail_icon_set_for_fifa_uses_nations_logos(
-    mocker: MockerFixture,
+    mocker: MockerFixture, make_manifest
 ) -> None:
     """FIFA events resolve to LogoCategory.Nations via SportLogoCategoryMap."""
     mocker.patch(
         "merino.utils.logos.load_manifest",
-        return_value=LogoManifest(
-            generated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-            lookups={
-                LogoCategory.Nations: {
-                    "USA": Logo(
-                        name="USA",
-                        url="logos/nations/nations_usa.png",
-                        svg="logos/nations/svg/USA.svg",
-                    ),
-                    "CAN": Logo(
-                        name="CAN",
-                        url="logos/nations/nations_can.png",
-                        svg="logos/nations/svg/CAN.svg",
-                    ),
-                }
-            },
+        return_value=make_manifest(
+            (LogoCategory.Nations, "usa"),
+            (LogoCategory.Nations, "can"),
         ),
     )
 
@@ -479,10 +466,10 @@ def test_sport_event_detail_icon_set_for_fifa_uses_nations_logos(
     result = SportEventDetail.from_event_dict(event)
 
     assert str(result.home_team.icon) == (
-        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/svg/USA.svg"
+        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/nations_usa.png"
     )
     assert str(result.away_team.icon) == (
-        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/svg/CAN.svg"
+        f"{PROD_IMAGE_BUCKET_ROOT_URL}/logos/nations/nations_can.png"
     )
 
 
