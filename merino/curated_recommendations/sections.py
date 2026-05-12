@@ -888,7 +888,6 @@ async def get_sections(
         do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
     )
     if use_interest_ranker:
-        logger.info("ranker_selected", extra={"ranker": "interest"})
         ranker = InterestRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -906,7 +905,6 @@ async def get_sections(
             # Make sure we have not time zone in the US if we're not in the tz experiment
             # For canada TZ is not a separate experiment.
             personal_interests.scores.pop(TIME_ZONE_OFFSET_INFERRED_KEY, None)
-        logger.info("ranker_selected", extra={"ranker": "cohort"})
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
@@ -916,7 +914,6 @@ async def get_sections(
             == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
         )
     else:
-        logger.info("ranker_selected", extra={"ranker": "vanilla_ts"})
         ranker = ThompsonSamplingRanker(
             engagement_backend=engagement_backend, prior_backend=prior_backend
         )
