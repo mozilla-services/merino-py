@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
 
@@ -97,7 +98,7 @@ class EventInfo(BaseModel):
             updated=int(updated.timestamp()),
             status=event.status.as_str(),
             status_type=event.status.as_ui_status(),
-            query=f"{home_team.name} vs {away_team.name}",
+            query=build_query(event.model_dump(mode="json")),
         )
 
 
