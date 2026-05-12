@@ -36,6 +36,7 @@ from merino.curated_recommendations.protocol import (
     ITEM_SUBTOPIC_FLAG,
     Section,
     SectionConfiguration,
+    EditorialSectionsBranch,
     ExperimentName,
     DailyBriefingBranch,
     CuratedRecommendation,
@@ -49,6 +50,7 @@ from merino.curated_recommendations.sections import (
     exclude_recommendations_from_blocked_sections,
     is_subtopics_experiment,
     is_daily_briefing_experiment,
+    should_exclude_editorial_sections,
     should_show_popular_today_with_daily_briefing,
     update_received_feed_rank,
     get_sections_with_enough_items,
@@ -414,6 +416,38 @@ class TestDailyBriefingExperiment:
         """Test that should_show_popular_today_with_daily_briefing returns True only for briefing-with-popular."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert should_show_popular_today_with_daily_briefing(req) is expected
+
+
+class TestEditorialSectionsExperiment:
+    """Tests covering should_exclude_editorial_sections (HNT-2182)."""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            # Treatment branch hides editorial sections.
+            (
+                ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
+                EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
+                True,
+            ),
+            # Forced-enrollment (optin-) variant also activates the treatment.
+            (
+                f"optin-{ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value}",
+                EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
+                True,
+            ),
+            # Control branch keeps editorial sections.
+            (ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value, "control", False),
+            # Unrelated experiment does nothing.
+            ("other-experiment", "treatment", False),
+            # No experiment does nothing.
+            (None, None, False),
+        ],
+    )
+    def test_should_exclude_editorial_sections(self, name, branch, expected):
+        """Editorial sections are only excluded on the no-editorial-sections branch."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
+        assert should_exclude_editorial_sections(req) is expected
 
 
 class TestFilterSectionsByExperiment:
@@ -1789,6 +1823,41 @@ class TestGetCorpusSections:
 
         # Should include both ML and MANUAL sections
         assert set(sections.keys()) == {"sports", "custom-section-1", "custom-section-2"}
+
+    @pytest.mark.asyncio
+    async def test_exclude_editorial_sections_drops_manual_only(
+        self, sections_backend_with_manual_sections
+    ):
+        """When exclude_editorial_sections is True, only MANUAL sections are removed."""
+        _, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_manual_sections,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=0,
+            exclude_editorial_sections=True,
+        )
+
+        # Only the ML legacy-topic section ("sports") remains.
+        assert set(sections.keys()) == {"sports"}
+
+    @pytest.mark.asyncio
+    async def test_exclude_editorial_sections_preserves_daily_briefing(
+        self, sections_backend_with_daily_briefing
+    ):
+        """Daily briefing is split out before filtering and must survive the editorial filter."""
+        raw_briefing, sections = await get_corpus_sections(
+            sections_backend=sections_backend_with_daily_briefing,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            min_feed_rank=1,
+            include_subtopics=True,
+            exclude_editorial_sections=True,
+        )
+
+        # Daily briefing is still returned raw (it bypasses the filter pipeline).
+        assert raw_briefing is not None
+        assert raw_briefing.externalId == DAILY_BRIEFING_SECTION_KEY
+        # ML sections (sports, headlines) remain.
+        assert "sports" in sections
+        assert HEADLINES_SECTION_KEY in sections
 
     @pytest.mark.asyncio
     async def test_resolves_5050_pair_before_mapping(
