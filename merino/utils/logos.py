@@ -46,6 +46,7 @@ class Logo(BaseModel):
 
     name: str
     url: str
+    svg: str | None = None
 
 
 class LogoManifest(BaseModel):

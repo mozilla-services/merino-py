@@ -50,3 +50,18 @@ def test_unknown_team_returns_empty_list(client: TestClient) -> None:
     response = client.get(_PATH, params={"teams": "ZZZ"})
     assert response.status_code == 200
     assert response.json() == {"matches": []}
+
+
+def test_team_icons_are_svg(client: TestClient) -> None:
+    """Live match team flags serve SVG from the production GCS bucket."""
+    matches = client.get(_PATH).json()["matches"]
+
+    assert matches
+
+    # pull out all home & away team icons
+    icons = [
+        team["icon_url"] for match in matches for team in (match["home_team"], match["away_team"])
+    ]
+
+    expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
+    assert all(icon.startswith(expected_prefix) for icon in icons)
