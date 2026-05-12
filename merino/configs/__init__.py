@@ -5,7 +5,15 @@ from functools import partial, update_wrapper
 from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
+_RUNTIME_MODE_VALUES = ["ALL", "REGULAR", "WIDGET"]
+
 _validators = [
+    Validator(
+        "runtime.mode",
+        is_type_of=str,
+        is_in=_RUNTIME_MODE_VALUES,
+        default="ALL",
+    ),
     Validator(
         "runtime.disabled_providers",
         is_type_of=list,

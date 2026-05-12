@@ -1,14 +1,14 @@
 """Initialize all Providers."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from timeit import default_timer as timer
 
-from merino.utils import metrics
-from merino.configs import settings
 from merino.providers.suggest.base import BaseProvider
 from merino.providers.suggest.manager import load_providers
-from merino.utils.query_processing.normalization import init_pipeline
+from merino.utils import metrics
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
@@ -21,6 +21,9 @@ async def init_providers() -> None:
 
     This should only be called once at the startup of application.
     """
+    from merino.configs import settings
+    from merino.utils.query_processing.normalization import init_pipeline
+
     start = timer()
     # register providers
     providers.update(load_providers(disabled_providers_list=settings.runtime.disabled_providers))
