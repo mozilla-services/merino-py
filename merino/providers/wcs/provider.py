@@ -8,6 +8,8 @@ from aiodogstatsd import Client
 
 from merino.exceptions import CacheAdapterError
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import WCS
+from merino.providers.wcs.protocol import TeamInfo
 from merino.providers.wcs.fake_data import get_all_teams
 from merino.providers.wcs.fake_live_data import build_live_events
 from merino.providers.wcs.protocol import (
@@ -36,7 +38,7 @@ class WcsSport(Protocol):
 class WcsProvider:
     """Serves match data for the World Cup Soccer endpoint."""
 
-    def __init__(self, sport: WcsSport, metrics_client: Client | None = None) -> None:
+    def __init__(self, sport: WCS, metrics_client: Client | None = None) -> None:
         """Create a WCS provider backed by the shared WCS sport cache."""
         self.sport = sport
         self.metrics_client = metrics_client or get_metrics_client()
@@ -96,9 +98,13 @@ class WcsProvider:
         ]
         return LiveMatchesResponse(matches=matches)
 
-    def get_teams(self) -> TeamsResponse:
+    async def get_teams(self) -> TeamsResponse:
         """Return all teams participating in the tournament."""
-        return TeamsResponse(teams=get_all_teams())
+        response = []
+        teams = await self.sport.get_all_teams()
+        for team in teams.values():
+            response.append(TeamInfo.from_team(team))
+        return TeamsResponse(teams=response)
 
     def _record_cache_error(self, endpoint: str, ex: CacheAdapterError) -> None:
         """Log and count cache read failures by endpoint."""

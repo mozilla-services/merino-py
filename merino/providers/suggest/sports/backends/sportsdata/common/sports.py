@@ -869,7 +869,7 @@ class WCS(Sport):
         for team_data in data:
             try:
                 area = await self.get_country(team_data.get("AreaId"))
-                # TODO: get `eliminated` field from ??
+                # TODO: get `eliminated` field from ?? (team_data["Active"]?)
                 team = Team.from_data(
                     team_data=team_data,
                     term_filter=self.term_filter,

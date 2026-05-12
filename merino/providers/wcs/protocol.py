@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
@@ -38,6 +38,20 @@ class TeamInfo(BaseModel):
     eliminated: bool = Field(
         default=False, description="True once the team is out of the tournament."
     )
+
+    @classmethod
+    def from_team(cls, team:Team) -> "TeamInfo":
+        """Build a widget team from the full team record"""
+        return cls(
+            key = team.key,
+            global_team_id = team.id,
+            name = team.name,
+            region = team.country or "",
+            colors = team.colors,
+            icon_url = _icon(team.key),
+            # TODO: overwrite with team elimination status.
+            eliminated = False,
+        )
 
     @classmethod
     def from_event_team(cls, team: dict[str, Any]) -> "TeamInfo":

@@ -1,10 +1,10 @@
 """Shared WCS provider fixtures."""
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta, timezone
 from typing import Any
 
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.wcs.provider import WcsProvider
 
 ANCHOR = date(2026, 6, 15)
@@ -21,8 +21,9 @@ KNOWN_TEAMS = [
 class StubWcsSport:
     """Small WCS sport stand-in that behaves like the Redis-backed sport."""
 
-    def __init__(self, events: list[Event]) -> None:
+    def __init__(self, events: list[Event], teams: list[Team]) -> None:
         self.events = events
+        self.teams = teams
 
     async def get_events_by_date(
         self, start: datetime | None = None, end: datetime | None = None
@@ -86,7 +87,6 @@ def event(
         clock=clock,
     )
 
-
 def build_events() -> list[Event]:
     """Build the deterministic event set used by WCS provider tests."""
     bra, arg, ger, fra, eng, usa = [
@@ -139,14 +139,39 @@ def build_events() -> list[Event]:
         event(1007, 8, 19, fra, usa, GameStatus.Scheduled),
     ]
 
+def build_teams() -> list[Team]:
+    """Build dummy teams for testing"""
+    teams = []
+    iter = 900000
+    now = datetime.now(tz=timezone.utc)
+    for (key, name) in KNOWN_TEAMS:
+        teams.append(Team(
+            name=name,
+            aliases=[name],
+            terms=name,
+            fullname=name,
+            key=key,
+            locale=name,
+            id=iter,
+            colors=[],
+            updated=now,
+            expiry=now+timedelta(hours=1),
+            country=name,
+        ))
+        iter = iter+1
+    return teams
+
+
 
 def build_provider(
     events: list[Event] | None = None,
+    teams: list[Team] | None = None,
     metrics_client: Any | None = None,
 ) -> WcsProvider:
     """Build a WCS provider backed by deterministic stub data."""
     stub_events = build_events() if events is None else events
+    stub_teams = build_teams() if teams is None else teams
     return WcsProvider(
-        sport=StubWcsSport(stub_events),
+        sport=WCS(stub_events, stub_teams),
         metrics_client=metrics_client,
     )

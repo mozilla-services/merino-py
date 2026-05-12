@@ -735,7 +735,7 @@ async def get_wcs_teams(
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> TeamsResponse:
     """Return all teams participating in the World Cup."""
-    return provider.get_teams()
+    return await provider.get_teams()
 
 
 def _parse_team_keys(teams: str | None) -> frozenset[str] | None:
