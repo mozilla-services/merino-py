@@ -2157,6 +2157,12 @@ async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -
     "Name": "Asia",
     "Competitions": [
     ]
+  },
+  {
+    "AreaId": 196,
+    "CountryCode": "TUR",
+    "Name": "Türkiye",
+    "Competitions": []
   }
 ]
 """)
@@ -2169,8 +2175,16 @@ async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -
     sport.cache = mock_cache
     await sport.load_areas(areas_payload)
     assert mock_cache.hset.call_args_list == [
-        call("sport:wcs:v1:area:1", {"name": "World", "code": "INT"}),
-        call("sport:wcs:v1:area:2", {"name": "Asia", "code": "ASI"}),
+        call(
+            "sport:wcs:v1:area:1", {"name": "World", "code": "INT", "aliases": None, "group": None}
+        ),
+        call(
+            "sport:wcs:v1:area:2", {"name": "Asia", "code": "ASI", "aliases": None, "group": None}
+        ),
+        call(
+            "sport:wcs:v1:area:196",
+            {"name": "Türkiye", "code": "TUR", "aliases": "turkey", "group": "Group D"},
+        ),
     ]
 
 
@@ -2436,6 +2450,25 @@ async def test_wcs_national_teams_use_country_name_for_event_display() -> None:
     assert team.fullname == "England"
     assert "The Football Association" in team.aliases
     assert team.minimal()["name"] == "England"
+
+
+@pytest.mark.asyncio
+async def test_wcs_national_teams_include_alias_name_for_event_display() -> None:
+    """WCS team full names are federation names, not widget display names."""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    # return an area record without the alias set to replicate older cached data.
+    mock_cache.hgetall.return_value = {b"name": "Türkiye".encode(), b"code": b"TUR"}
+    sport.cache = mock_cache
+    source = wcs_teams_payload()
+    source[0]["Key"] = "TUR"
+    source[0]["Name"] = "Türkiye"
+
+    await sport.async_load_teams_from_source(source)
+
+    team = sport.teams[90000001]
+    assert team.name == "Türkiye"
+    assert "turkey" in team.terms
 
 
 @freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
