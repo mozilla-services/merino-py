@@ -34,6 +34,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
 )
 from merino.providers.suggest.sports.backends.sportsdata.protocol import (
     SportEventDetail,
+    build_query,
 )
 from merino.utils.logos import Logo, LogoCategory, LogoManifest
 
@@ -388,6 +389,32 @@ def test_sport_event_detail_remap() -> None:  # WCS, Widget
 
     result = SportEventDetail.from_event_dict(event)
     assert result.sport == "World Cup"
+    assert result.query == "World Cup 2026 Away Team at Home Team 01 October 2025"
+
+
+def test_build_query() -> None:
+    """build_query produces a 'sport away at home date' string."""
+    event: dict = {
+        "sport": "NFL",
+        "date": "2025-10-01T00:00:00+00:00",
+        "home_team": {"name": "Home Team"},
+        "away_team": {"name": "Away Team"},
+    }
+
+    assert build_query(event) == "NFL Away Team at Home Team 01 October 2025"
+
+
+def test_build_query_world_cup() -> None:
+    """build_query uses World Cup 2026 prefix for games"""
+    event: dict = {
+        "sport": "fifa",
+        "date": "2025-10-01T00:00:00+00:00",
+        "home_team": {"name": "Home Team"},
+        "away_team": {"name": "Away Team"},
+    }
+
+    assert build_query(event) == "World Cup 2026 Away Team at Home Team 01 October 2025"
+    assert event["sport"] == "World Cup"
 
 
 def test_sport_event_detail_icon_set_when_team_in_manifest(

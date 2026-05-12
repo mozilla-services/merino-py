@@ -39,11 +39,14 @@ class SportTeamDetail(BaseModel):
 
 def build_query(event: dict[str, Any]) -> str:
     """Build the search query from the event information"""
-    date = datetime.fromisoformat(event["date"]).strftime("%d %b %Y")
+    date = datetime.fromisoformat(event["date"]).strftime("%d %B %Y")
     # catch pre-stored values
     if event.get("sport") == "fifa":
         event["sport"] = "World Cup"
-    return f"""{event.get("sport")} {event.get("away_team", {}).get("name", "")} at {event.get("home_team", {}).get("name", "")} {date}"""
+        sport_query_name = "World Cup 2026"
+    else:
+        sport_query_name = event.get("sport", "")
+    return f"""{sport_query_name} {event.get("away_team", {}).get("name", "")} at {event.get("home_team", {}).get("name", "")} {date}"""
 
 
 class SportEventDetail(BaseModel):
