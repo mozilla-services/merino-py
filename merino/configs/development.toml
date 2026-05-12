@@ -82,3 +82,7 @@ gcs_bucket = "merino-images-local"
 # MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
 # CDN hostname used for public URLs of stored images
 cdn_hostname = "localhost:4443"
+
+[development.contextual_interest]
+# disabled by default so we don't fetch artifacts locally
+enabled = false

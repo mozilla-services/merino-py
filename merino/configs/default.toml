@@ -1265,8 +1265,8 @@ cron_interval_seconds = 600
 
 [default.contextual_interest]
 # MERINO__CONTEXTUAL_INTEREST__ENABLED
-# Disabled by default, enabled only in staging initially
-enabled = false
+# Enables the granular interest ranker for new tab recs
+enabled = true
 
 [default.contextual_interest.gcs]
 # MERINO__CONTEXTUAL_INTEREST__GCS__GCP_PROJECT
