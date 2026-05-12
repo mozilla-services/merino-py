@@ -389,7 +389,7 @@ def test_sport_event_detail_remap() -> None:  # WCS, Widget
 
     result = SportEventDetail.from_event_dict(event)
     assert result.sport == "World Cup"
-    assert result.query == "World Cup 2026 Away Team vs Home Team 01 October 2025"
+    assert result.query == "World Cup 2026 Home Team vs Away Team 01 October 2025"
 
 
 def test_build_query() -> None:
@@ -401,7 +401,7 @@ def test_build_query() -> None:
         "away_team": {"name": "Away Team"},
     }
 
-    assert build_query(event) == "NFL Away Team vs Home Team 01 October 2025"
+    assert build_query(event) == "NFL Home Team vs Away Team 01 October 2025"
 
 
 def test_build_query_world_cup() -> None:
@@ -413,7 +413,7 @@ def test_build_query_world_cup() -> None:
         "away_team": {"name": "Away Team"},
     }
 
-    assert build_query(event) == "World Cup 2026 Away Team vs Home Team 01 October 2025"
+    assert build_query(event) == "World Cup 2026 Home Team vs Away Team 01 October 2025"
     assert event["sport"] == "World Cup"
 
 

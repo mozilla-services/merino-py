@@ -46,7 +46,7 @@ def build_query(event: dict[str, Any]) -> str:
         sport_query_name = "World Cup 2026"
     else:
         sport_query_name = event.get("sport", "")
-    return f"""{sport_query_name} {event.get("away_team", {}).get("name", "")} vs {event.get("home_team", {}).get("name", "")} {date}"""
+    return f"""{sport_query_name} {event.get("home_team", {}).get("name", "")} vs {event.get("away_team", {}).get("name", "")} {date}"""
 
 
 class SportEventDetail(BaseModel):

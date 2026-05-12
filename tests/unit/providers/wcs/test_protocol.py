@@ -23,4 +23,4 @@ def test_event_info_from_event_builds_world_cup_query() -> None:
     info = EventInfo.from_event(e)
 
     expected_date = e.date.strftime("%d %B %Y")
-    assert info.query == f"World Cup 2026 Argentina vs Brazil {expected_date}"
+    assert info.query == f"World Cup 2026 Brazil vs Argentina {expected_date}"
