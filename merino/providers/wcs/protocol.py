@@ -71,6 +71,10 @@ class EventInfo(BaseModel):
     away_penalty: int | None
     clock: str = Field(description="Elapsed minutes; extra time as '90+3'.")
     updated: int = Field(description="UTC unix timestamp of the last record update.")
+    stage: str | None = Field(
+        default=None,
+        description="Tournament stage, e.g. 'Group Stage', 'Round of 32', 'Final'.",
+    )
     status: str = Field(description="Game status: 'Scheduled', 'In Progress', 'Final', etc.")
     status_type: str = Field(description="UI status bucket, e.g. 'past', 'live', 'scheduled'.")
     query: str | None = Field(default=None, description="Optional click-through query.")
@@ -96,6 +100,7 @@ class EventInfo(BaseModel):
             away_penalty=event.away_penalty,
             clock=event.clock or "",
             updated=int(updated.timestamp()),
+            stage=event.stage,
             status=event.status.as_str(),
             status_type=event.status.as_ui_status(),
             query=build_query(event.model_dump(mode="json")),

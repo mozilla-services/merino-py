@@ -10,6 +10,7 @@ from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 import freezegun
+import orjson
 import pytest
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
@@ -2170,6 +2171,173 @@ async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -
     ]
 
 
+def wcs_competitions_payload() -> list[dict]:
+    """Return a trimmed SportsData Competitions response with relevant (World Cup) and irrelevant
+    competition and seasons.
+    """
+    return [
+        {
+            "Key": "FIFA",
+            "Seasons": [
+                {
+                    "Season": 2026,
+                    "Rounds": [
+                        {"RoundId": 1615, "Name": "Group Stage"},
+                        {"RoundId": 1616, "Name": "Round of 32"},
+                    ],
+                },
+                {
+                    "Season": 2018,
+                    "Rounds": [{"RoundId": 196, "Name": "Group Stage"}],
+                },
+            ],
+        },
+        {
+            "Key": "FAFFY",
+            "Seasons": [
+                {
+                    "Season": 2026,
+                    "Rounds": [{"RoundId": 999, "Name": "Sudden Death"}],
+                }
+            ],
+        },
+    ]
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_load_rounds(mock_client: AsyncClient, mocker: MockerFixture) -> None:
+    """load_rounds populates self.rounds and caches it for the current world cup."""
+    sport = WCS(settings=settings.providers.sports)
+    competitions = wcs_competitions_payload()
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[competitions],
+    )
+    mock_cache = MagicMock(spec=RedisAdapter)
+    sport.cache = mock_cache
+
+    await sport.load_rounds(mock_client)
+
+    assert sport.rounds == {1615: "Group Stage", 1616: "Round of 32"}
+    mock_cache.set.assert_called_once_with(
+        "sport:wcs:v1:rounds",
+        orjson.dumps({1615: "Group Stage", 1616: "Round of 32"}, option=orjson.OPT_NON_STR_KEYS),
+    )
+
+
+@freezegun.freeze_time("2030-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_load_rounds_no_matching_season(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """When no season matches, self.rounds stays empty and an empty mapping is cached."""
+    sport = WCS(settings=settings.providers.sports)
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[wcs_competitions_payload()],
+    )
+    mock_cache = MagicMock(spec=RedisAdapter)
+    sport.cache = mock_cache
+
+    await sport.load_rounds(mock_client)
+
+    assert sport.rounds == {}
+    mock_cache.set.assert_called_once_with(
+        "sport:wcs:v1:rounds", orjson.dumps({}, option=orjson.OPT_NON_STR_KEYS)
+    )
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_load_rounds_no_matching_competition(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """Empty/non-matching /Competitions response yields an empty rounds map."""
+    sport = WCS(settings=settings.providers.sports)
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[[{"Key": "OTHER", "Seasons": []}]],
+    )
+    mock_cache = MagicMock(spec=RedisAdapter)
+    sport.cache = mock_cache
+
+    await sport.load_rounds(mock_client)
+
+    assert sport.rounds == {}
+    mock_cache.set.assert_called_once_with(
+        "sport:wcs:v1:rounds", orjson.dumps({}, option=orjson.OPT_NON_STR_KEYS)
+    )
+
+
+def test_wcs_event_details_includes_stage_from_rounds() -> None:
+    """event_details resolves the schedule's RoundId to a stage name via self.rounds."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.rounds = {1615: "Group Stage", 1616: "Round of 32"}
+
+    details = sport.event_details({"RoundId": 1616, "Period": "Regular"})
+
+    assert details["stage"] == "Round of 32"
+
+
+def test_wcs_event_details_unknown_round_id_returns_none_stage() -> None:
+    """A RoundId not in the cached mapping resolves to stage=None."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.rounds = {1615: "Group Stage"}
+
+    details = sport.event_details({"RoundId": 9999})
+
+    assert details["stage"] is None
+
+
+def test_wcs_event_details_missing_round_id_returns_none_stage() -> None:
+    """Schedule rows without a RoundId resolve to stage=None."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.rounds = {1615: "Group Stage"}
+
+    details = sport.event_details({})
+
+    assert details["stage"] is None
+
+
+def test_wcs_event_details_no_rounds_returns_none_stage() -> None:
+    """If rounds can't be loaded or aren't found (default to empty dict)
+    stage returns none.
+    """
+    sport = WCS(settings=settings.providers.sports)
+    sport.rounds = {}
+
+    details = sport.event_details({})
+
+    assert details["stage"] is None
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_loads_rounds_when_empty(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """Ensure that lazily loaded rounds are fetched if they aren't
+    already loaded during update_events
+    """
+    sport = WCS(settings=settings.providers.sports)
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+    sport.event_ttl = timedelta(weeks=8)
+
+    competitions = wcs_competitions_payload()
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[competitions, wcs_schedule_payload(), wcs_score_payload()],
+    )
+    mock_cache = MagicMock(spec=RedisAdapter)
+    sport.cache = mock_cache
+
+    await sport.update_events(client=mock_client)
+
+    assert sport.rounds == {1615: "Group Stage", 1616: "Round of 32"}
+    assert sport.events[90011111].stage == "Group Stage"
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_wcs_update_events(
@@ -2182,6 +2350,8 @@ async def test_wcs_update_events(
     await sport.async_load_teams_from_source(teams_payload)
     sport.season = "2025"  # set by update_teams normally
     sport.event_ttl = timedelta(weeks=2)
+    # Preload rounds to avoid mocking external call
+    sport.rounds = {1615: "Group Stage"}
 
     schedules_payload = wcs_schedule_payload()
     scores_payload = wcs_score_payload()
@@ -2605,6 +2775,8 @@ async def test_wcs_update_events_prunes_previously_cached_events_removed_from_so
         updated=stale_date,
     )
     sport.events = {stale_event.id: stale_event}
+    # Preload rounds to avoid mocking external call
+    sport.rounds = {1615: "Group Stage"}
     mock_cache = MagicMock(spec=RedisAdapter)
     mock_cache.zrange.return_value = [b"sport:wcs:v1:event:999"]
     sport.cache = mock_cache
@@ -2645,6 +2817,8 @@ async def test_wcs_update_events_empty_schedule_preserves_existing_cache(
         updated=stale_date,
     )
     sport.events = {stale_event.id: stale_event}
+    # Preload rounds to avoid mocking external call
+    sport.rounds = {1615: "Group Stage"}
     mock_cache = MagicMock(spec=RedisAdapter)
     sport.cache = mock_cache
     mocker.patch(

@@ -668,6 +668,7 @@ class WCS(Sport):
     cache_prefix: str = "sport:wcs:v1"  # Unique prefix for Redis
     _lock: asyncio.Lock
     teams: dict[int, Team] = {}
+    rounds: dict[int, str] = {}
     refreshed: datetime = datetime.now(tz=timezone.utc)
 
     def __init__(
@@ -711,6 +712,7 @@ class WCS(Sport):
     def event_details(self, event_description: dict[str, Any]) -> dict[str, Any]:
         """Return soccer score details used by the WCS widget."""
         clock = event_description.get("ClockDisplay") or event_description.get("Clock")
+        round_id = event_description.get("RoundId")
         return {
             "period": event_description.get("Period"),
             "home_extra": event_description.get("HomeTeamScoreExtraTime"),
@@ -718,6 +720,7 @@ class WCS(Sport):
             "home_penalty": event_description.get("HomeTeamScorePenalty"),
             "away_penalty": event_description.get("AwayTeamScorePenalty"),
             "clock": str(clock) if clock is not None else None,
+            "stage": self.rounds.get(round_id) if round_id is not None else None,
         }
 
     # Note: this is covered by `test_wcs_init_cache` but I believe that the heavy use of Mocks
@@ -761,6 +764,7 @@ class WCS(Sport):
                 # We got the lock, we can initialize things.
                 # to initial stuff.
                 await self.load_areas(client)
+                await self.load_rounds(client)
                 await self.update_teams(client)
                 await self.cache_teams()
                 complete = int(datetime.now(tz=timezone.utc).timestamp())
@@ -810,6 +814,65 @@ class WCS(Sport):
             }
             # cache this for later, we're gonna need them for teams.
             await self.cache.hset(f"{self.cache_prefix}:area:{area['AreaId']}", country_data)
+
+    async def load_rounds(self, client) -> None:
+        """Fetch and load the round info to the cache
+        This is specifically to resolve the stage. We expect
+        this data to stay static throughout the tournament.
+        """
+        # Sample Response
+        """
+        [{
+            "CompetitionId": 21,
+            ...
+            "Key": "FIFA",
+            "Seasons": [
+                {
+                    "SeasonId": 368,
+                    "CompetitionId": 21,
+                    "Season": 2026,
+                     ...
+                    "Rounds": [
+                        {
+                            "RoundId": 1615,
+                            "SeasonId": 368,
+                            "Season": 2026,
+                            "SeasonType": 1,
+                            "Name": "Group Stage",
+                           ...
+                        },
+        """
+        await self.get_season(client=client)
+        logging.info(f"{LOGGING_TAG} Pre Loading Rounds")
+        url = f"{self.base_url}/Competitions"
+        response = await get_data(
+            client=client,
+            url=url,
+            ttl=timedelta(weeks=25),
+            cache_dir=self.cache_dir,
+            args={"key": self.api_key},
+        )
+        self.rounds = {}
+        for competition in response:
+            match competition:
+                case {"Key": key, "Seasons": seasons} if key == self.name.upper():
+                    for season_data in seasons:
+                        match season_data:
+                            case {"Season": season, "Rounds": rounds} if (
+                                str(season) == self.season
+                            ):
+                                # Note: There should only be one match, which is
+                                # why we can set the rounds variable rather than
+                                # reduce/update dict
+                                self.rounds = {
+                                    int(r["RoundId"]): r["Name"]
+                                    for r in rounds
+                                    if r.get("RoundId") is not None and r.get("Name")
+                                }
+        await self.cache.set(
+            f"{self.cache_prefix}:rounds",
+            orjson.dumps(self.rounds, option=orjson.OPT_NON_STR_KEYS),
+        )
 
     async def get_season(self, client: AsyncClient) -> None:
         """Get the current season (which is just the current year)"""
@@ -1000,6 +1063,11 @@ class WCS(Sport):
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
+        # Stage names are joined by Event.RoundId onto self.rounds
+        # Rounds are lazy loaded, so ensure we got them (otherwise
+        # stage will always default to None)
+        if not self.rounds:
+            await self.load_rounds(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
         local_timezone = ZoneInfo("UTC")

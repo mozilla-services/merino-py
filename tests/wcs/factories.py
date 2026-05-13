@@ -62,6 +62,7 @@ def event(
     away_penalty: int | None = None,
     period: str | None = None,
     clock: str | None = None,
+    stage: str | None = None,
 ) -> Event:
     """Build a cached event model."""
     event_date = datetime.combine(ANCHOR + timedelta(days=day_offset), time(hour, tzinfo=UTC))
@@ -84,6 +85,7 @@ def event(
         home_penalty=home_penalty,
         away_penalty=away_penalty,
         clock=clock,
+        stage=stage,
     )
 
 
