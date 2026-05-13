@@ -28,6 +28,12 @@ suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
 
 
 [default.runtime]
+# MERINO_RUNTIME__MODE
+# Boot-time feature profile.
+# Allowed values: ALL, REGULAR, WIDGET.
+# Use REGULAR for the main Suggest API, WIDGET for the WCS widget API, and ALL for both.
+mode = "ALL"
+
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
 # A float timeout (in seconds) for all queries issued in "web/api_v1.py".
 # Indicates the maximum waiting period for queries issued within handler of the `suggest` endpoint.
