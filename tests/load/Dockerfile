@@ -14,6 +14,11 @@ WORKDIR /app
 # Copy over app dependencies
 COPY ./pyproject.toml ./uv.lock ./
 
+# Copy application files (this needs to be done prior to `uv sync` below)
+COPY ./dev ./dev
+COPY ./merino ./merino
+COPY ./merino-common ./merino-common
+
 # Add gcc since there are no wheels for some packages for arm64/aarch64
 # (g++/make for gevent on pypy)
 RUN apt-get update && \
@@ -33,9 +38,6 @@ ENV PATH="${PYTHON_VENV}/bin:${PATH}"
 RUN useradd --create-home locust
 WORKDIR /home/locust
 
-# Copy application files
-COPY ./dev ./dev
-COPY ./merino ./merino
 COPY ./tests/load/common ./tests/load/common
 COPY ./tests/load/data ./tests/load/data
 COPY ./tests/load/locustfiles ./tests/load/locustfiles
