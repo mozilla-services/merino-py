@@ -34,6 +34,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
 )
 from merino.providers.suggest.sports.backends.sportsdata.protocol import (
     SportEventDetail,
+    SportSummary,
     build_query,
 )
 from merino.utils.logos import Logo, LogoCategory, LogoManifest
@@ -396,7 +397,7 @@ def test_build_query() -> None:
     """build_query produces a 'sport away vs home date' string."""
     event: dict = {
         "sport": "NFL",
-        "date": "2025-10-01T00:00:00+00:00",
+        "date": "2025-10-01T16:00:00+00:00",
         "home_team": {"name": "Home Team"},
         "away_team": {"name": "Away Team"},
     }
@@ -404,17 +405,70 @@ def test_build_query() -> None:
     assert build_query(event) == "NFL Home Team vs Away Team 01 October 2025"
 
 
+def test_build_query_uses_league_local_date() -> None:
+    """build_query uses the SportsData league-local date for final US sports."""
+    event: dict = {
+        "sport": "MLB",
+        "event_status": GameStatus.Final,
+        "date": "2026-05-13T02:10:00+00:00",
+        "home_team": {"name": "Los Angeles Dodgers"},
+        "away_team": {"name": "San Francisco Giants"},
+    }
+
+    assert build_query(event) == "MLB Los Angeles Dodgers vs San Francisco Giants 12 May 2026"
+
+
+def test_build_query_keeps_scheduled_date_utc() -> None:
+    """build_query keeps the existing UTC date behavior for scheduled events."""
+    event: dict = {
+        "sport": "NFL",
+        "event_status": GameStatus.Scheduled,
+        "date": "2025-10-27T00:10:00+00:00",
+        "home_team": {"name": "Fake Home"},
+        "away_team": {"name": "Fake Away"},
+    }
+
+    assert build_query(event) == "NFL Fake Home vs Fake Away 27 October 2025"
+
+
+def test_sport_summary_current_suppresses_previous_and_keeps_next() -> None:
+    """SportSummary returns current and next events when both are available."""
+
+    def event(status: GameStatus, date: str) -> dict[str, Any]:
+        return {
+            "sport": "TEST",
+            "event_status": status,
+            "date": date,
+            "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
+            "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
+            "home_score": None,
+            "away_score": None,
+            "touched": "2026-05-13T00:00:00+00:00",
+        }
+
+    summary = SportSummary.from_events(
+        "all",
+        {
+            "previous": event(GameStatus.Final, "2026-05-12T02:10:00+00:00"),
+            "current": event(GameStatus.InProgress, "2026-05-13T02:10:00+00:00"),
+            "next": event(GameStatus.Scheduled, "2026-05-14T02:10:00+00:00"),
+        },
+    )
+
+    assert [value.status_type for value in summary.values] == ["live", "scheduled"]
+
+
 def test_build_query_world_cup() -> None:
     """build_query uses World Cup 2026 prefix for games"""
     event: dict = {
         "sport": "fifa",
-        "date": "2025-10-01T00:00:00+00:00",
+        "date": "2026-06-15T02:00:00+00:00",
         "home_team": {"name": "Home Team"},
         "away_team": {"name": "Away Team"},
     }
 
-    assert build_query(event) == "World Cup 2026 Home Team vs Away Team 01 October 2025"
-    assert event["sport"] == "World Cup"
+    assert build_query(event) == "World Cup 2026 Home Team vs Away Team 15 June 2026"
+    assert event["sport"] == "fifa"
 
 
 def test_sport_event_detail_icon_set_when_team_in_manifest(

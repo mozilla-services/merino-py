@@ -511,6 +511,81 @@ async def test_sports_search_event_hits_no_current(
     assert result == expected_result
 
 
+@freezegun.freeze_time("2026-05-13T13:30:00Z")
+@pytest.mark.asyncio
+async def test_sports_search_previous_uses_game_date_over_late_update(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+) -> None:
+    """The previous result should be the latest game, not an older late-updated game."""
+    hits = [
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "MLB",
+                        "id": 77908,
+                        "status": "Final",
+                        "label": "may-12-game",
+                        "date": "2026-05-13T02:10:00+00:00",
+                        "updated": "2026-05-13T11:31:32+00:00",
+                        "home_score": 2,
+                        "away_score": 6,
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "MLB",
+                        "id": 77896,
+                        "status": "Final",
+                        "label": "may-11-game",
+                        "date": "2026-05-12T02:10:00+00:00",
+                        "updated": "2026-05-13T11:58:54+00:00",
+                        "home_score": 3,
+                        "away_score": 9,
+                    }
+                )
+            },
+        },
+    ]
+    es_client.search.return_value = {"hits": {"total": {"value": 2}, "hits": hits}}
+
+    result = await sport_data_store.search_events(
+        q="los angeles",
+        language_code="en",
+        mix_sports=True,
+    )
+
+    assert result["all"]["previous"]["label"] == "may-12-game"
+    assert result["all"]["previous"]["home_score"] == 2
+    assert result["all"]["previous"]["away_score"] == 6
+
+
+def test_choose_previous_ignores_final_when_current_exists() -> None:
+    """Final events should not be selected when a current game already exists."""
+    selected_events = {
+        "current": {
+            "date": "2026-05-13T02:10:00+00:00",
+            "updated": "2026-05-13T11:31:32+00:00",
+        }
+    }
+    final_event = {
+        "date": "2026-05-13T01:10:00+00:00",
+        "updated": "2026-05-13T11:58:54+00:00",
+    }
+
+    SportsDataStore.choose_previous_event(selected_events, final_event)
+
+    assert "previous" not in selected_events
+    assert selected_events["current"]["date"] == "2026-05-13T02:10:00+00:00"
+
+
 @pytest.mark.asyncio
 async def test_search_event_bad_hit_data(
     sport_data_store: SportsDataStore,

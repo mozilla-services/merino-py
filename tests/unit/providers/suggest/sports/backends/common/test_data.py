@@ -1,6 +1,6 @@
 """Unit Test for Sports Data models."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import freezegun
@@ -12,6 +12,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Team,
     Sport,
     SportNormalizedTerms,
+    SportsDataEventRow,
+    SPORTSDATA_US_EASTERN,
+    sportsdata_day_slug,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
@@ -274,6 +277,127 @@ def test_load_schedules_from_source_filters_and_populates(
         [mod_event], event_timezone=ZoneInfo("America/New_York")
     )
     assert len(mod_events) == 0
+
+
+def test_sportsdata_event_rows_keep_mlb_kickoff_and_freshness_separate() -> None:
+    """Late ET MLB games keep UTC kickoffs and independent source freshness."""
+    sport = MLB(settings=settings.providers.sports, name="", base_url="")
+    may_11_row = SportsDataEventRow.from_event_description(
+        {
+            "AwayTeamRuns": 9,
+            "HomeTeamRuns": 3,
+            "GameID": 77896,
+            "Status": "Final",
+            "DateTime": "2026-05-11T22:10:00",
+            "DateTimeUTC": "2026-05-12T02:10:00",
+            "AwayTeam": "SF",
+            "HomeTeam": "LAD",
+            "AwayTeamID": 15,
+            "HomeTeamID": 1,
+            "Updated": "2026-05-13T07:58:54",
+        },
+        normalized_terms=sport.normalized_terms,
+        event_timezone=SPORTSDATA_US_EASTERN,
+    )
+    may_12_row = SportsDataEventRow.from_event_description(
+        {
+            "AwayTeamRuns": 6,
+            "HomeTeamRuns": 2,
+            "GameID": 77908,
+            "Status": "Final",
+            "DateTime": "2026-05-12T22:10:00",
+            "DateTimeUTC": "2026-05-13T02:10:00",
+            "AwayTeam": "SF",
+            "HomeTeam": "LAD",
+            "AwayTeamID": 15,
+            "HomeTeamID": 1,
+            "Updated": "2026-05-13T07:31:32",
+        },
+        normalized_terms=sport.normalized_terms,
+        event_timezone=SPORTSDATA_US_EASTERN,
+    )
+
+    assert may_11_row.kickoff == datetime(2026, 5, 12, 2, 10, tzinfo=timezone.utc)
+    assert sportsdata_day_slug(may_11_row.kickoff, SPORTSDATA_US_EASTERN) == "2026-MAY-11"
+    assert may_11_row.away_score == 9
+    assert may_11_row.home_score == 3
+    assert may_11_row.updated == datetime(2026, 5, 13, 11, 58, 54, tzinfo=timezone.utc)
+
+    assert may_12_row.kickoff == datetime(2026, 5, 13, 2, 10, tzinfo=timezone.utc)
+    assert sportsdata_day_slug(may_12_row.kickoff, SPORTSDATA_US_EASTERN) == "2026-MAY-12"
+    assert may_12_row.away_score == 6
+    assert may_12_row.home_score == 2
+    assert may_12_row.updated == datetime(2026, 5, 13, 11, 31, 32, tzinfo=timezone.utc)
+
+    assert may_11_row.updated > may_12_row.updated
+    assert may_11_row.kickoff < may_12_row.kickoff
+
+
+def test_sportsdata_event_row_allows_missing_updated_time() -> None:
+    """SportsData rows may omit source freshness timestamps."""
+    sport = MLB(settings=settings.providers.sports, name="", base_url="")
+    row = SportsDataEventRow.from_event_description(
+        {
+            "AwayTeamRuns": 6,
+            "HomeTeamRuns": 2,
+            "GameID": 77908,
+            "Status": "Final",
+            "DateTime": "2026-05-12T22:10:00",
+            "DateTimeUTC": "2026-05-13T02:10:00",
+            "AwayTeam": "SF",
+            "HomeTeam": "LAD",
+            "AwayTeamID": 15,
+            "HomeTeamID": 1,
+        },
+        normalized_terms=sport.normalized_terms,
+        event_timezone=SPORTSDATA_US_EASTERN,
+    )
+
+    assert row.updated is None
+
+
+def test_event_row_from_source_logs_invalid_event_for_missing_game_id(caplog) -> None:
+    """Rows without SportsData game IDs are invalid events, not date failures."""
+    caplog.set_level("INFO")
+    sport = MLB(settings=settings.providers.sports, name="", base_url="")
+
+    row = sport.event_row_from_source(
+        {
+            "Status": "Final",
+            "DateTimeUTC": "2026-05-13T02:10:00",
+            "AwayTeam": "SF",
+            "HomeTeam": "LAD",
+            "AwayTeamID": 15,
+            "HomeTeamID": 1,
+        },
+        event_timezone=SPORTSDATA_US_EASTERN,
+    )
+
+    assert row is None
+    assert "sports.error.invalid_event" in caplog.text
+    assert "sports.error.no_date" not in caplog.text
+
+
+def test_event_row_from_source_logs_no_date_for_missing_kickoff(caplog) -> None:
+    """Rows without a usable kickoff timestamp remain date failures."""
+    caplog.set_level("INFO")
+    sport = MLB(settings=settings.providers.sports, name="", base_url="")
+
+    row = sport.event_row_from_source(
+        {
+            "GameID": 77908,
+            "Status": "Final",
+            "AwayTeam": "SF",
+            "HomeTeam": "LAD",
+            "AwayTeamID": 15,
+            "HomeTeamID": 1,
+        },
+        event_timezone=SPORTSDATA_US_EASTERN,
+    )
+
+    assert row is None
+    assert "sports.error.no_date" in caplog.text
+    assert "sports.error.invalid_event" not in caplog.text
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
