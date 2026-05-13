@@ -56,7 +56,7 @@ FIXED_VALUE_Q = 0.0
 # Very high threshold to ensure that the 0 index is always returned
 VERY_HIGH_THRESHOLD = 1000.0
 
-# Number of average impressions to blend in for interest calculation. 
+# Number of average impressions to blend in for interest calculation.
 BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS = 100
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
