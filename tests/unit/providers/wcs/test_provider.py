@@ -115,7 +115,8 @@ async def test_response_is_deterministic_for_same_anchor() -> None:
 @pytest.mark.asyncio
 async def test_six_records_two_per_status_type() -> None:
     """The stub set has at least two past, two live, and two scheduled matches
-    assuming a window >= 7 days."""
+    assuming a window >= 7 days.
+    """
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
 
     assert len(response.previous) >= 2
