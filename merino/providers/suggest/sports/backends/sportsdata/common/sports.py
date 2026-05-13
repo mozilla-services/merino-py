@@ -822,7 +822,7 @@ class WCS(Sport):
         """
         # Sample Response
         """
-        {
+        [{
             "CompetitionId": 21,
             ...
             "Key": "FIFA",
@@ -852,21 +852,23 @@ class WCS(Sport):
             cache_dir=self.cache_dir,
             args={"key": self.api_key},
         )
-        competition = next(
-            (c for c in response if c.get("Key") == self.name.upper()),
-            None,
-        )
-        seasons: list[dict] = (competition or {}).get("Seasons") or []
-        season_data = next(
-            (s for s in seasons if str(s.get("Season")) == self.season),
-            None,
-        )
-        rounds: list[dict] = (season_data or {}).get("Rounds") or []
-        self.rounds = {
-            int(r["RoundId"]): r["Name"]
-            for r in rounds
-            if r.get("RoundId") is not None and r.get("Name")
-        }
+        self.rounds = {}
+        for competition in response:
+            match competition:
+                case {"Key": key, "Seasons": seasons} if key == self.name.upper():
+                    for season_data in seasons:
+                        match season_data:
+                            case {"Season": season, "Rounds": rounds} if (
+                                str(season) == self.season
+                            ):
+                                # Note: There should only be one match, which is
+                                # why we can set the rounds variable rather than
+                                # reduce/update dict
+                                self.rounds = {
+                                    int(r["RoundId"]): r["Name"]
+                                    for r in rounds
+                                    if r.get("RoundId") is not None and r.get("Name")
+                                }
         await self.cache.set(
             f"{self.cache_prefix}:rounds",
             orjson.dumps(self.rounds, option=orjson.OPT_NON_STR_KEYS),
