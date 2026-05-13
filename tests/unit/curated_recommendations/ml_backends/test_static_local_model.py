@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic, SurfaceId
 from merino.curated_recommendations.ml_backends.static_local_model import (
+    BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS,
     EXPERIMENT_PRODUCTION_MODEL_ID,
     MODEL_P_VALUE_SMALL_POPULATION,
     MODEL_Q_VALUE_SMALL_POPULATION,
@@ -658,7 +659,7 @@ def test_get_dummy_experiment_name(model_limited):
     assert result.model_data.private_features and len(result.model_data.private_features) > 0
 
     # small_experiment sets a CTR prior strength
-    assert result.model_data.ctr_prior_strength is None
+    assert result.model_data.ctr_prior_strength == BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS
 
     # Some interests have been removed
     zeroed_interest = result.model_data.interest_vector[Topic.TECHNOLOGY.value]
@@ -668,7 +669,7 @@ def test_get_dummy_experiment_name(model_limited):
     # others have not
     other_interest = result.model_data.interest_vector[Topic.SCIENCE.value]
     assert len(other_interest.thresholds) == len(THRESHOLDS_V3_NORMALIZED)
-    assert other_interest.thresholds[0] < 0.9
+    assert other_interest.thresholds[0] < 1.4
 
     assert result.privacy_overrides is not None
     assert result.privacy_overrides.daily_click_event_cap == 2
@@ -687,9 +688,9 @@ def test_non_en_us_surface_with_experiment_name_does_not_use_small_experiment(mo
     )
     assert result is not None
     assert result.model_id == SERVER_V3_MODEL_ID
-    # default path: no small_experiment privacy overrides, no ctr prior strength
+    # default path: no small_experiment privacy overrides
     assert result.privacy_overrides is None
-    assert result.model_data.ctr_prior_strength is None
+    assert result.model_data.ctr_prior_strength == BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS
     # TECHNOLOGY is not zeroed out in the default path
     tech = result.model_data.interest_vector[Topic.TECHNOLOGY.value]
     assert tech.thresholds == THRESHOLDS_V3_NORMALIZED

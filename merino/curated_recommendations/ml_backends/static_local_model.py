@@ -56,8 +56,8 @@ FIXED_VALUE_Q = 0.0
 # Very high threshold to ensure that the 0 index is always returned
 VERY_HIGH_THRESHOLD = 1000.0
 
-# Number of average impressions to blend in for interest calculation
-BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS = 150
+# Number of average impressions to blend in for interest calculation. 
+BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS = 100
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -371,12 +371,14 @@ class SuperInferredModel(LocalModelBackend):
         else:
             topic_features = {a: self._get_topic(a, model_thresholds) for a in topics}
 
-        is_baysean_smoothing = True # We're transitioning to use baysean smoothing for all models
+        is_baysean_smoothing = True  # We're transitioning to use baysean smoothing for all models
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=True,
             noise_scale=0.0,
-            ctr_prior_strength=BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS if is_baysean_smoothing else None,
+            ctr_prior_strength=BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS
+            if is_baysean_smoothing
+            else None,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],
                 relative_weight=[1],
