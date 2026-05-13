@@ -1034,7 +1034,9 @@ async def get_sections(
         ranker,
         personal_interests,
         engagement_rescaler=rescaler,
-        do_section_personalization_reranking=not use_contexual_ranker,  # Contextual ranker already re-ranks all sections
+        do_section_personalization_reranking=not (
+            use_contexual_ranker or use_interest_ranker
+        ),  # Contextual + Interest rankers already re-rank sections implicitly
         include_daily_briefing_section=include_daily_briefing_section,
     )
 
