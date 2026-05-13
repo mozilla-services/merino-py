@@ -220,6 +220,12 @@ class Event(BaseModel):
     clock: str | None = None
     # Optional stage, e.g. "Group", "Round of 32"
     stage: str | None = None
+    # Tournament metadata used by WCS widget team state.
+    round_id: int | None = None
+    season_type: int | None = None
+    group: str | None = None
+    winner: str | None = None
+    is_closed: bool | None = None
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
@@ -245,6 +251,12 @@ class Event(BaseModel):
             "home_penalty",
             "away_penalty",
             "clock",
+            "stage",
+            "round_id",
+            "season_type",
+            "group",
+            "winner",
+            "is_closed",
         )
         for field_name in optional_fields:
             value = getattr(self, field_name)

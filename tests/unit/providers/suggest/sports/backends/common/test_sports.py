@@ -23,6 +23,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataWarning,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
+from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
+    eliminated_team_keys_cache_key,
+)
 import merino.providers.suggest.sports.backends.sportsdata.common.sports as sports_module
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
@@ -2408,6 +2411,11 @@ async def test_wcs_update_events(
     assert event.clock == "120"
     assert event.home_penalty == 5
     assert event.away_penalty == 4
+    assert event.round_id == 1708
+    assert event.season_type == 3
+    assert event.group == "Group A"
+    assert event.winner == "HomeTeam"
+    assert event.is_closed is True
     assert 2 == get_data.call_count
     for scall in get_data.call_args_list:
         assert scall.kwargs["url"] in [
@@ -2455,6 +2463,10 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     assert event.home_team["name"] == "Sweden"
     assert event.date == datetime(2026, 6, 15, 2, 0, tzinfo=timezone.utc)
     assert event.period is None
+    assert event.round_id == 1615
+    assert event.season_type == 1
+    assert event.group == "Group F"
+    assert event.is_closed is False
 
     sport.load_scores_from_source(
         wcs_static_games_by_date_payload(), event_timezone=ZoneInfo("UTC")
@@ -2466,6 +2478,11 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     assert event.clock is None
     assert event.home_score is None
     assert event.away_score is None
+    assert event.round_id == 1615
+    assert event.season_type == 1
+    assert event.group == "Group F"
+    assert event.winner is None
+    assert event.is_closed is False
     assert event.updated == datetime(2026, 4, 29, 14, 26, 26, tzinfo=timezone.utc)
 
 
@@ -2617,7 +2634,7 @@ async def test_team_cache_restore_skips_missing_and_invalid_entries() -> None:
 
 @pytest.mark.asyncio
 async def test_wcs_cache_events() -> None:
-    """Test WCS event caching writes event JSON and calendar entries."""
+    """Test WCS event caching writes event JSON, calendar entries, and eliminated metadata."""
     sport = WCS(settings=settings.providers.sports)
     now = datetime(2026, 6, 15, 12, tzinfo=timezone.utc)
     event = Event(
@@ -2635,6 +2652,10 @@ async def test_wcs_cache_events() -> None:
         updated=now,
         period="Regular",
         clock="90",
+        round_id=1617,
+        season_type=3,
+        winner="HomeTeam",
+        is_closed=True,
     )
     sport.events = {event.id: event}
     mock_cache = MagicMock(spec=RedisAdapter)
@@ -2643,13 +2664,57 @@ async def test_wcs_cache_events() -> None:
 
     await sport.cache_events()
 
-    mock_cache.set.assert_called_once()
-    assert mock_cache.set.call_args.args[0] == "sport:wcs:v1:event:123"
-    assert mock_cache.set.call_args.kwargs["ttl"] == sport.event_ttl
+    mock_cache.set.assert_any_call(
+        "sport:wcs:v1:event:123",
+        sport.event_as_serialized(event),
+        ttl=sport.event_ttl,
+    )
+    mock_cache.set.assert_any_call(
+        eliminated_team_keys_cache_key(sport.cache_prefix),
+        b'["AWY"]',
+    )
     mock_cache.zadd.assert_called_once_with(
         "sport:wcs:v1:calendar",
         {"sport:wcs:v1:event:123": int(now.timestamp())},
     )
+
+
+@pytest.mark.asyncio
+async def test_wcs_cache_events_does_not_replace_eliminated_metadata_on_empty_refresh() -> None:
+    """An empty non-authoritative refresh leaves cached eliminated-team metadata alone."""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.zrange.return_value = [b"sport:wcs:v1:event:999"]
+    sport.cache = mock_cache
+
+    await sport.cache_events()
+
+    mock_cache.set.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_wcs_get_eliminated_team_keys_from_cache() -> None:
+    """WCS eliminated team metadata is restored from one Redis key."""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.get.return_value = b'["AWY","HOM"]'
+    sport.cache = mock_cache
+
+    result = await sport.get_eliminated_team_keys()
+
+    assert result == {"AWY", "HOM"}
+    mock_cache.get.assert_called_once_with(eliminated_team_keys_cache_key(sport.cache_prefix))
+
+
+@pytest.mark.asyncio
+async def test_wcs_get_eliminated_team_keys_bad_cache_fails_open() -> None:
+    """Malformed eliminated-team metadata does not fail the teams endpoint."""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.get.return_value = b"{bad-json"
+    sport.cache = mock_cache
+
+    assert await sport.get_eliminated_team_keys() == set()
 
 
 @pytest.mark.asyncio

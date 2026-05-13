@@ -30,6 +30,12 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     SPORTSDATA_UTC,
     sportsdata_day_slug,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
+    eliminated_team_keys,
+    eliminated_team_keys_cache_key,
+    parse_eliminated_team_keys,
+    serialize_eliminated_team_keys,
+)
 
 FORCE_IMPORT = ""
 
@@ -717,6 +723,11 @@ class WCS(Sport):
             "away_penalty": event_description.get("AwayTeamScorePenalty"),
             "clock": str(clock) if clock is not None else None,
             "stage": self.rounds.get(round_id) if round_id is not None else None,
+            "round_id": round_id,
+            "season_type": event_description.get("SeasonType"),
+            "group": event_description.get("Group"),
+            "winner": event_description.get("Winner"),
+            "is_closed": event_description.get("IsClosed"),
         }
 
     # Note: this is covered by `test_wcs_init_cache` but I believe that the heavy use of Mocks
@@ -928,7 +939,6 @@ class WCS(Sport):
         for team_data in data:
             try:
                 area = await self.get_country(team_data.get("AreaId"))
-                # TODO: get `eliminated` field from ??
                 team = Team.from_data(
                     team_data=team_data,
                     term_filter=self.term_filter,
@@ -1117,9 +1127,29 @@ class WCS(Sport):
                 calendar_key,
                 {event_key: int(event.date.timestamp())},
             )
-        await self.prune_stale_events(active_event_keys)
+        refresh_is_authoritative = await self.prune_stale_events(active_event_keys)
+        if refresh_is_authoritative:
+            await self.cache_eliminated_team_keys()
 
-    async def prune_stale_events(self, active_event_keys: set[str]) -> None:
+    async def cache_eliminated_team_keys(self) -> None:
+        """Write eliminated team keys computed from the latest event refresh."""
+        await self.cache.set(
+            eliminated_team_keys_cache_key(self.cache_prefix),
+            serialize_eliminated_team_keys(eliminated_team_keys(self.events.values())),
+        )
+
+    async def get_eliminated_team_keys(self) -> set[str]:
+        """Return cached WCS eliminated team keys."""
+        raw_keys = await self.cache.get(eliminated_team_keys_cache_key(self.cache_prefix))
+        try:
+            return parse_eliminated_team_keys(raw_keys)
+        except (orjson.JSONDecodeError, TypeError, ValueError) as ex:
+            logger.warning(
+                "%s Could not load cached WCS eliminated team keys: %s", LOGGING_TAG, ex
+            )
+            return set()
+
+    async def prune_stale_events(self, active_event_keys: set[str]) -> bool:
         """Remove cached event entries that no longer exist in the latest source data."""
         calendar_key = f"{self.cache_prefix}:calendar"
         indexed_event_keys = cast(
@@ -1133,7 +1163,7 @@ class WCS(Sport):
         )
         if indexed_event_keys and not active_event_keys:
             logger.warning(f"{LOGGING_TAG} Refusing to prune WCS events from an empty refresh")
-            return
+            return False
 
         # The schedule refresh is authoritative: any Redis event key missing from
         # this run points to a match removed or no longer returned by SportsData.
@@ -1146,9 +1176,10 @@ class WCS(Sport):
             if event_key not in active_event_keys
         ]
         if not stale_event_keys:
-            return
+            return True
         await self.cache.delete(*stale_event_keys)
         await self.cache.zrem(calendar_key, *stale_event_keys)
+        return True
 
     async def get_events_by_team(  # pragma: no cover "widget"
         self, team_key: str, start: datetime | None = None, end: datetime | None = None
