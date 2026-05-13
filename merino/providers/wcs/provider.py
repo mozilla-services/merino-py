@@ -18,7 +18,7 @@ from merino.providers.wcs.protocol import (
 )
 from merino.utils.metrics import get_metrics_client
 
-_WINDOW = timedelta(days=7)
+_WINDOW = timedelta(days=10)
 _CACHE_ERROR_METRIC = "wcs.cache_error"
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class WcsProvider:
         limit: int | None,
         team_keys: frozenset[str] | None,
     ) -> MatchesResponse:
-        """Return matches in the +/- 7 day window around `target_date`.
+        """Return matches in a +/- _WINDOW day window around `target_date`.
 
         Events are bucketed into `previous`, `current`, and `next` relative to
         `target_date` and sorted ascending by event date. `limit` keeps the

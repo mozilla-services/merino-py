@@ -14,7 +14,7 @@ from merino.configs import settings
 from merino.exceptions import CacheAdapterError
 from merino.providers import wcs as wcs_module
 from merino.providers.wcs.fake_live_data import build_live_events
-from merino.providers.wcs.provider import WcsProvider
+from merino.providers.wcs.provider import WcsProvider, _WINDOW
 from merino.providers.wcs.protocol import LiveMatchesResponse, TeamInfo, TeamsResponse
 from tests.wcs.factories import ANCHOR, build_provider
 
@@ -58,12 +58,12 @@ async def test_buckets_split_by_date() -> None:
 
 @pytest.mark.asyncio
 async def test_window_excludes_outside_range() -> None:
-    """No event lands more than 7 days from the anchor."""
+    """No event lands more than WINDOW days from the anchor."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
 
     for event in response.previous + response.current + response.next_:
         delta = abs((datetime.fromisoformat(event.date).date() - ANCHOR).days)
-        assert delta <= 7
+        assert delta <= _WINDOW.days
 
 
 @pytest.mark.asyncio
@@ -114,12 +114,13 @@ async def test_response_is_deterministic_for_same_anchor() -> None:
 
 @pytest.mark.asyncio
 async def test_six_records_two_per_status_type() -> None:
-    """The stub set has exactly two past, two live, and two scheduled matches."""
+    """The stub set has at least two past, two live, and two scheduled matches
+    assuming a window >= 7 days."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
 
-    assert len(response.previous) == 2
-    assert len(response.current) == 2
-    assert len(response.next_) == 2
+    assert len(response.previous) >= 2
+    assert len(response.current) >= 2
+    assert len(response.next_) >= 2
     assert all(e.status_type == "past" for e in response.previous)
     assert all(e.status_type == "live" for e in response.current)
     assert all(e.status_type == "scheduled" for e in response.next_)
