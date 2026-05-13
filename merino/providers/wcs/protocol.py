@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
 
@@ -16,9 +17,13 @@ _LOGO_HOST = "https://storage.googleapis.com/merino-images-prod"
 
 
 def _icon(key: str) -> HttpUrl | None:
-    """Return the nations flag URL for `key`, if it exists in the logo manifest."""
+    """Return the nations flag URL for `key`, preferring SVG over PNG."""
     entry = load_manifest().get(LogoCategory.Nations, key)
-    return HttpUrl(f"{_LOGO_HOST}/{entry.url}") if entry else None
+    if not entry:
+        return None
+    if entry.svg:
+        return HttpUrl(f"{_LOGO_HOST}/{entry.svg}")
+    return HttpUrl(f"{_LOGO_HOST}/{entry.url}")
 
 
 class TeamInfo(BaseModel):
@@ -93,7 +98,7 @@ class EventInfo(BaseModel):
             updated=int(updated.timestamp()),
             status=event.status.as_str(),
             status_type=event.status.as_ui_status(),
-            query=f"{home_team.name} vs {away_team.name}",
+            query=build_query(event.model_dump(mode="json")),
         )
 
 

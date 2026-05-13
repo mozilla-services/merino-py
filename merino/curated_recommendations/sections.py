@@ -29,6 +29,11 @@ from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
+)
+from merino.curated_recommendations.rankers.interest_ranker import InterestRanker
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
@@ -48,6 +53,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     Section,
     SectionConfiguration,
+    EditorialSectionsBranch,
     ExperimentName,
     DailyBriefingBranch,
     ProcessedInterests,
@@ -234,6 +240,7 @@ async def get_corpus_sections(
     surface_id: SurfaceId,
     min_feed_rank: int,
     include_subtopics: bool = False,
+    exclude_editorial_sections: bool = False,
 ) -> tuple[CorpusSection | None, dict[str, Section]]:
     """Fetch curated sections.
 
@@ -242,6 +249,7 @@ async def get_corpus_sections(
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
         include_subtopics: Whether to include subtopic sections.
+        exclude_editorial_sections: Whether to drop manually curated sections.
 
     Returns:
         A tuple of the raw daily-briefing CorpusSection (if present,
@@ -263,6 +271,13 @@ async def get_corpus_sections(
         remaining_raw,
         include_subtopics,
     )
+
+    if exclude_editorial_sections:
+        filtered_corpus_sections = {
+            sid: cs
+            for sid, cs in filtered_corpus_sections.items()
+            if cs.createSource != CreateSource.MANUAL
+        }
 
     # Process the sections using the shared logic
     corpus_sections = _process_corpus_sections(
@@ -381,6 +396,27 @@ def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> 
     )
 
 
+def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the user is enrolled in the InterestRanker treatment.
+
+    Reuses the InferredTimeZone experiment's TZ branch (originally a TZ-cohort
+    treatment that underperformed) — this avoids a fresh-experiment enrollment
+    ramp and gets the InterestRanker to traffic faster. Users on this branch
+    get the LinTS InterestRanker; users on the COUNTRY branch (control) stay
+    on the existing cohort path with TZ context disabled.
+
+    Gates the first tier of the ranker chain in get_sections: when this fires
+    and the LinTS backend is loaded, we rank with InterestRanker; otherwise
+    we fall through to the cohort ContextualRanker (or vanilla
+    ThompsonSamplingRanker).
+    """
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_TZ,
+    )
+
+
 def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if subtopics should be included based on experiments.
 
@@ -402,6 +438,19 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     """Return True if custom sections should be included based on experiments."""
     return is_enrolled_in_experiment(
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
+    )
+
+
+def should_exclude_editorial_sections(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if editorial (manually curated) sections must be hidden (HNT-2182).
+
+    True only for the `no-editorial-sections` branch of the editorial sections experiment.
+    Popular Today and ML sections are unaffected.
+    """
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
+        EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
     )
 
 
@@ -786,6 +835,7 @@ async def get_sections(
     ml_backend: MLRecsBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
+    lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
 ) -> dict[str, Section]:
@@ -812,6 +862,7 @@ async def get_sections(
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=include_subtopics,
+        exclude_editorial_sections=should_exclude_editorial_sections(request),
     )
 
     # Determine if we should include daily briefing based on experiment
@@ -850,10 +901,24 @@ async def get_sections(
     ranker: Ranker
 
     do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
+    # use interest ranker if we have interests available
+    use_interest_ranker = (
+        is_inferred_interest_experiment(request)
+        and lints_interest_backend.is_valid(surface_id)
+        and personal_interests is not None
+        and bool(personal_interests.scores)
+    )
     use_contexual_ranker = (
         do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
     )
-    if use_contexual_ranker:
+    if use_interest_ranker:
+        ranker = InterestRanker(
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            surface_id=surface_id,
+            lints_backend=lints_interest_backend,
+        )
+    elif use_contexual_ranker:
         is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
         if (
             not is_inferred_time_zone_experiment_enabled
@@ -969,7 +1034,9 @@ async def get_sections(
         ranker,
         personal_interests,
         engagement_rescaler=rescaler,
-        do_section_personalization_reranking=not use_contexual_ranker,  # Contextual ranker already re-ranks all sections
+        do_section_personalization_reranking=not (
+            use_contexual_ranker or use_interest_ranker
+        ),  # Contextual + Interest rankers already re-rank sections implicitly
         include_daily_briefing_section=include_daily_briefing_section,
     )
 

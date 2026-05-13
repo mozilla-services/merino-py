@@ -5,7 +5,15 @@ from functools import partial, update_wrapper
 from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
+_RUNTIME_MODE_VALUES = ["ALL", "REGULAR", "WIDGET"]
+
 _validators = [
+    Validator(
+        "runtime.mode",
+        is_type_of=str,
+        is_in=_RUNTIME_MODE_VALUES,
+        default="ALL",
+    ),
     Validator(
         "runtime.disabled_providers",
         is_type_of=list,
@@ -80,6 +88,27 @@ _validators = [
         "interest_cohort_model.gcs.bucket_name",
         "interest_cohort_model.gcs.gcp_project",
         "interest_cohort_model.gcs.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "contextual_interest.enabled",
+        is_type_of=bool,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "contextual_interest.gcs.max_size",
+        "contextual_interest.gcs.cron_interval_seconds",
+        is_type_of=int,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "contextual_interest.gcs.bucket_name",
+        "contextual_interest.gcs.gcp_project",
+        "contextual_interest.gcs.blob_name",
         is_type_of=str,
         must_exist=True,
         env=["production", "staging", "development"],

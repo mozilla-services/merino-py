@@ -107,6 +107,8 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
+    # Experiment to measure the impact of editorial sections by hiding them in the treatment branch
+    EDITORIAL_SECTIONS_EXPERIMENT = "editorial-sections-experiment"
 
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
@@ -122,6 +124,13 @@ class DailyBriefingBranch(str, Enum):
     BRIEFING_WITH_POPULAR = "briefing-with-popular"
     # Show Daily Briefing (headlines) section WITHOUT Popular Today section
     BRIEFING_WITHOUT_POPULAR = "briefing-without-popular"
+
+
+class EditorialSectionsBranch(str, Enum):
+    """Treatment branches for the Editorial Sections experiment (HNT-2182)."""
+
+    # Remove editorial (manually curated) sections; keep ML sections + Popular Today.
+    NO_EDITORIAL_SECTIONS = "no-editorial-sections"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max

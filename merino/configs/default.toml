@@ -28,6 +28,12 @@ suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
 
 
 [default.runtime]
+# MERINO_RUNTIME__MODE
+# Boot-time feature profile.
+# Allowed values: ALL, REGULAR, WIDGET.
+# Use REGULAR for the main Suggest API, WIDGET for the WCS widget API, and ALL for both.
+mode = "ALL"
+
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
 # A float timeout (in seconds) for all queries issued in "web/api_v1.py".
 # Indicates the maximum waiting period for queries issued within handler of the `suggest` endpoint.
@@ -1262,6 +1268,35 @@ blob_name = "contextual_ts/cohort_model_v2.safetensors"
 # Interval in seconds at which the cron job checks if GCS contains updated model.
 cron_interval_seconds = 600
 
+
+[default.contextual_interest]
+# MERINO__CONTEXTUAL_INTEREST__ENABLED
+# Enables the granular interest ranker for new tab recs
+enabled = true
+
+[default.contextual_interest.gcs]
+# MERINO__CONTEXTUAL_INTEREST__GCS__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = ""
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__BUCKET_NAME
+# GCS bucket that contains the LinTS-interest safetensors bundle.
+bucket_name = ""
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__BLOB_NAME
+# GCS path of the LinTS-interest model bundle.
+blob_name = "contextual_ts/lints_interest_model.safetensors"
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__MAX_SIZE
+# Maximum size in bytes of the bundle. Sized for max_dim=2600 packed L
+# stored as float16 (~6.8 MB) plus theta_hat + metadata (~0.15 MB) with
+# ~1 MB headroom.
+max_size = 8_000_000
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains an
+# updated bundle. ml-services publishes every 10 min.
+cron_interval_seconds = 600
 
 
 [default.curated_recommendations.corpus_api]
