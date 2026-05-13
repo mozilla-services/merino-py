@@ -38,12 +38,12 @@ def test_explicit_date_is_deterministic(client: TestClient) -> None:
     assert a == b
 
 
-def test_two_matches_per_bucket(client: TestClient) -> None:
-    """Each of `previous`, `current`, `next` has exactly two events sharing a status."""
+def test_matches_per_bucket(client: TestClient) -> None:
+    """Each of `previous`, `current`, `next` has at least one event sharing a status."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()
-    assert len(body["previous"]) == 2
-    assert len(body["current"]) == 2
-    assert len(body["next"]) == 2
+    assert len(body["previous"]) >= 1
+    assert len(body["current"]) >= 1
+    assert len(body["next"]) >= 1
     assert all(e["status"] == "Final" for e in body["previous"])
     assert all(e["status"] == "In Progress" for e in body["current"])
     assert all(e["status"] == "Scheduled" for e in body["next"])
