@@ -4,13 +4,22 @@ from datetime import UTC, datetime
 from datetime import date as Date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, Header
 
+from merino.configs import settings
+from merino.middleware import ScopeKey
+from merino.middleware.geolocation import Location
 from merino.providers.wcs import get_provider as get_wcs_provider
 from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse, TeamsResponse
 from merino.providers.wcs.provider import WcsProvider
+from merino.providers.wcs.watch_links import resolve_watch_links
+from merino.utils.query_processing.geo_params import (
+    get_accepted_languages,
+)
 
 router = APIRouter()
+
+HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 
 
 @router.get(
@@ -21,6 +30,7 @@ router = APIRouter()
     response_model_by_alias=True,
 )
 async def get_wcs_matches(
+    request: Request,
     date: Annotated[
         Date | None, Query(description="RFC date YYYY-MM-DD; defaults to today UTC.")
     ] = None,
@@ -29,6 +39,7 @@ async def get_wcs_matches(
         str | None,
         Query(description="Comma-separated 3-letter team keys, e.g. 'BRA,ARG'."),
     ] = None,
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> MatchesResponse:
     """Return matches grouped into `previous`, `current`, and `next`.
@@ -39,8 +50,17 @@ async def get_wcs_matches(
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)
+<<<<<<< HEAD
     matches: MatchesResponse = await provider.get_matches(target_date, limit, team_keys)
     return matches
+=======
+
+    geolocation: Location | None = request.scope.get(ScopeKey.GEOLOCATION)
+    languages = get_accepted_languages(accept_language)
+    watch_links = resolve_watch_links(geolocation, languages)
+
+    return await provider.get_matches(target_date, limit, team_keys, watch_links)
+>>>>>>> 19b894bc ([DISCO-4178] Add regional watch links for wcs matches)
 
 
 @router.get(
