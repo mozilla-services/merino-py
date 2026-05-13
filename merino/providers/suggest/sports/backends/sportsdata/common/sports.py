@@ -684,7 +684,7 @@ class WCS(Sport):
     """
     country_alias = {
         "TUR": "turkey",
-        "CIV": "ivory coast",
+        "CIV": "ivory coast cote divoire",
         "CUW": "curacao",
     }
     country_group = {
