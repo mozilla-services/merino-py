@@ -2175,15 +2175,11 @@ async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -
     sport.cache = mock_cache
     await sport.load_areas(areas_payload)
     assert mock_cache.hset.call_args_list == [
-        call(
-            "sport:wcs:v1:area:1", {"name": "World", "code": "INT", "aliases": None, "group": None}
-        ),
-        call(
-            "sport:wcs:v1:area:2", {"name": "Asia", "code": "ASI", "aliases": None, "group": None}
-        ),
+        call("sport:wcs:v1:area:1", {"name": "World", "code": "INT"}),
+        call("sport:wcs:v1:area:2", {"name": "Asia", "code": "ASI"}),
         call(
             "sport:wcs:v1:area:196",
-            {"name": "Türkiye", "code": "TUR", "aliases": "turkey", "group": "Group D"},
+            {"name": "Türkiye", "code": "TUR", "aliases": "turkey"},
         ),
     ]
 
@@ -2469,6 +2465,30 @@ async def test_wcs_national_teams_include_alias_name_for_event_display() -> None
     team = sport.teams[90000001]
     assert team.name == "Türkiye"
     assert "turkey" in team.terms
+
+
+@pytest.mark.asyncio
+async def test_wcs_curacao_alias_added_despite_area_pointing_at_korea() -> None:
+    """SportsData ships Curaçao with Key=KOR and Korea's AreaId.
+
+    _TEAM_KEY_OVERRIDES remaps the team key to CUW, but the area-based alias
+    lookup sees code=KOR (no alias). Verify the team.key fallback still
+    appends 'curacao' to the search terms and corrects team.country.
+    """
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.hgetall.return_value = {b"name": b"Korea Republic", b"code": b"KOR"}
+    sport.cache = mock_cache
+    source = wcs_teams_payload()
+    source[0]["Key"] = "KOR"
+    source[0]["Name"] = "Curaçao"
+
+    await sport.async_load_teams_from_source(source)
+
+    team = sport.teams[90000001]
+    assert team.key == "CUW"
+    assert team.country == "CUW"
+    assert "curacao" in team.terms
 
 
 @freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)

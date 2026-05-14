@@ -687,70 +687,6 @@ class WCS(Sport):
         "CIV": "ivory coast cote divoire",
         "CUW": "curacao",
     }
-    country_group = {
-        "ALG": "Group J",
-        "ARG": "Group J",
-        "AUS": "Group D",
-        "AUT": "Group J",
-        "BEL": "Group G",
-        "BIH": "Group B",
-        "BRA": "Group C",
-        "CAN": "Group B",
-        "CDR": "Group K",
-        "CHE": "Group B",
-        "CHL": None,
-        "CIV": "Group E",
-        "CMR": None,
-        "COL": "Group K",
-        "CRI": None,
-        "CUW": "Group E",
-        "CVI": "Group H",
-        "CZE": "Group A",
-        "DEN": None,
-        "ECU": "Group E",
-        "EGY": "Group G",
-        "ENG": "Group L",
-        "ESP": "Group H",
-        "FRA": "Group I",
-        "GER": "Group E",
-        "GHA": "Group L",
-        "GRC": None,
-        "HAI": "Group C",
-        "HND": None,
-        "HRV": "Group L",
-        "IRN": "Group G",
-        "IRQ": "Group I",
-        "ISL": None,
-        "ITA": None,
-        "JOR": "Group J",
-        "JPN": "Group F",
-        "KOR": "Group A",
-        "KSA": "Group H",
-        "MAR": "Group C",
-        "MEX": "Group A",
-        "NGA": None,
-        "NLD": "Group F",
-        "NOR": "Group I",
-        "NZL": "Group G",
-        "PAN": "Group L",
-        "PAR": "Group D",
-        "PER": None,
-        "POL": None,
-        "PRT": "Group K",
-        "QAT": "Group B",
-        "RSA": "Group A",
-        "RUS": None,
-        "SCO": "Group C",
-        "SEN": "Group I",
-        "SER": None,
-        "SWE": "Group F",
-        "TUN": "Group F",
-        "TUR": "Group D",
-        "URY": "Group H",
-        "USA": "Group D",
-        "UZB": "Group K",
-        "WAL": None,
-    }
 
     def __init__(
         self,
@@ -894,11 +830,12 @@ class WCS(Sport):
         logging.info(f"{LOGGING_TAG} Pre Loading Countries")
         for area in response:
             # build the reverse index to get the country code and id.
+            aliases = self.country_alias.get(area["CountryCode"])
             country_data = {
                 "name": area["Name"],
                 "code": area["CountryCode"],
-                "aliases": self.country_alias.get(area["CountryCode"]),
-                "group": self.country_group.get(area["CountryCode"]),
+                # HSET null values causes errors in Redis
+                **({"aliases": aliases} if aliases else {})
             }
             # cache this for later, we're gonna need them for teams.
             await self.cache.hset(f"{self.cache_prefix}:area:{area['AreaId']}", country_data)
@@ -982,15 +919,12 @@ class WCS(Sport):
             code = cached[b"code"].decode()
             if code in self.country_alias:
                 cached[b"aliases"] = self.country_alias[code].encode()
-            if code in self.country_group:
-                cached[b"group"] = cast(str, self.country_group[code]).encode()
         return cached
 
     def team_minimal(self, team: Team) -> dict[str, Any]:
         """Use the team name instead of the full name"""
         team_data = super().team_minimal(team)
         team_data["name"] = team.name
-        team_data["group"] = self.country_group.get(team.key.upper())
         return team_data
 
     async def get_team(self, id: int) -> Team | None:
@@ -1048,9 +982,14 @@ class WCS(Sport):
                     team.fullname = team.name
                 if area:
                     team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
-                    if b"aliases" in area:
-                        aliases = area[b"aliases"].decode()
-                        team.terms = f"{team.terms} {aliases}"
+                # team.key is the authoritative ISO3 code after _TEAM_KEY_OVERRIDES;
+                # prefer for join key over AreaId. Since some teams (e.g. Curaçao)
+                # are returned with an AreaId that maps to ANOTher country's area
+                # (South Korea, in Curaçao's case 🤦)
+                alias = self.country_alias.get(team.key)
+                if alias:
+                    team.terms = f"{team.terms} {alias}"
+                    team.country = team.key
                 self.teams[team.id] = team
             except SportsDataError:
                 pass  # pragma: no cover "skip error"
@@ -1077,9 +1016,6 @@ class WCS(Sport):
     def team_as_serialized(self, team: Team) -> bytes:  # pragma: no cover "widget"
         """Serialize a team as a dictionary for the widget"""
         model = team.model_dump(mode="json")
-        # Duct-tape the group into the data.
-        if "group" not in model:
-            model["group"] = self.country_group.get(team.key.upper())
         return json.dumps(model).encode()
 
     def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
