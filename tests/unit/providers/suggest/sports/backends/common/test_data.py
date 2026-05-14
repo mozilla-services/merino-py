@@ -288,6 +288,7 @@ def test_sportsdata_event_rows_keep_mlb_kickoff_and_freshness_separate() -> None
             "HomeTeamRuns": 3,
             "GameID": 77896,
             "Status": "Final",
+            "Day": "2026-05-11T00:00:00",
             "DateTime": "2026-05-11T22:10:00",
             "DateTimeUTC": "2026-05-12T02:10:00",
             "AwayTeam": "SF",
@@ -305,6 +306,7 @@ def test_sportsdata_event_rows_keep_mlb_kickoff_and_freshness_separate() -> None
             "HomeTeamRuns": 2,
             "GameID": 77908,
             "Status": "Final",
+            "Day": "2026-05-12T00:00:00",
             "DateTime": "2026-05-12T22:10:00",
             "DateTimeUTC": "2026-05-13T02:10:00",
             "AwayTeam": "SF",
@@ -319,12 +321,14 @@ def test_sportsdata_event_rows_keep_mlb_kickoff_and_freshness_separate() -> None
 
     assert may_11_row.kickoff == datetime(2026, 5, 12, 2, 10, tzinfo=timezone.utc)
     assert sportsdata_day_slug(may_11_row.kickoff, SPORTSDATA_US_EASTERN) == "2026-MAY-11"
+    assert may_11_row.original_date == "2026-05-11T00:00:00"
     assert may_11_row.away_score == 9
     assert may_11_row.home_score == 3
     assert may_11_row.updated == datetime(2026, 5, 13, 11, 58, 54, tzinfo=timezone.utc)
 
     assert may_12_row.kickoff == datetime(2026, 5, 13, 2, 10, tzinfo=timezone.utc)
     assert sportsdata_day_slug(may_12_row.kickoff, SPORTSDATA_US_EASTERN) == "2026-MAY-12"
+    assert may_12_row.original_date == "2026-05-12T00:00:00"
     assert may_12_row.away_score == 6
     assert may_12_row.home_score == 2
     assert may_12_row.updated == datetime(2026, 5, 13, 11, 31, 32, tzinfo=timezone.utc)

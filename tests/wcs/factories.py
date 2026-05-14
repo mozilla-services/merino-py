@@ -63,6 +63,7 @@ def event(
     period: str | None = None,
     clock: str | None = None,
     stage: str | None = None,
+    original_date: str | None = None,
 ) -> Event:
     """Build a cached event model."""
     event_date = datetime.combine(ANCHOR + timedelta(days=day_offset), time(hour, tzinfo=UTC))
@@ -71,7 +72,7 @@ def event(
         id=event_id,
         terms=f"{home[1].lower()} {away[1].lower()}",
         date=event_date,
-        original_date=event_date.isoformat(),
+        original_date=original_date or event_date.isoformat(),
         home_team=team_dict(*home),
         away_team=team_dict(*away),
         home_score=home_score,

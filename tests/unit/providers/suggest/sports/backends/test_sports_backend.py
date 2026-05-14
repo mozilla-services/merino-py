@@ -412,6 +412,7 @@ def test_build_query_uses_league_local_date() -> None:
         "sport": "MLB",
         "event_status": GameStatus.Final,
         "date": "2026-05-13T02:10:00+00:00",
+        "original_date": "2026-05-12T00:00:00",
         "home_team": {"name": "Los Angeles Dodgers"},
         "away_team": {"name": "San Francisco Giants"},
     }
@@ -419,17 +420,31 @@ def test_build_query_uses_league_local_date() -> None:
     assert build_query(event) == "MLB Los Angeles Dodgers vs San Francisco Giants 12 May 2026"
 
 
-def test_build_query_keeps_scheduled_date_utc() -> None:
-    """build_query keeps the existing UTC date behavior for scheduled events."""
+def test_build_query_uses_source_day_for_scheduled_us_sports() -> None:
+    """build_query uses the SportsData source day for scheduled US sports."""
     event: dict = {
         "sport": "NFL",
         "event_status": GameStatus.Scheduled,
         "date": "2025-10-27T00:10:00+00:00",
+        "original_date": "2025-10-26T00:00:00",
         "home_team": {"name": "Fake Home"},
         "away_team": {"name": "Fake Away"},
     }
 
-    assert build_query(event) == "NFL Fake Home vs Fake Away 27 October 2025"
+    assert build_query(event) == "NFL Fake Home vs Fake Away 26 October 2025"
+
+
+def test_build_query_uses_source_day_for_scheduled_world_cup() -> None:
+    """build_query uses the SportsData source day for WCS click-through queries."""
+    event: dict = {
+        "sport": "fifa",
+        "date": "2026-06-16T02:00:00+00:00",
+        "original_date": "2026-06-15T00:00:00",
+        "home_team": {"name": "IR Iran"},
+        "away_team": {"name": "New Zealand"},
+    }
+
+    assert build_query(event) == "World Cup 2026 IR Iran vs New Zealand 15 June 2026"
 
 
 def test_sport_summary_current_suppresses_previous_and_keeps_next() -> None:

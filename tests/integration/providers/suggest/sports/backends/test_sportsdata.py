@@ -113,7 +113,7 @@ def fixture_nfl() -> NFL:
         id=1,
         terms="fakehome fakeaway",
         date=FROZEN_TIME + timedelta(seconds=600),
-        original_date="2025-10-27",
+        original_date="2025-10-26",
         home_team=home,
         away_team=away,
         home_score=None,
@@ -151,7 +151,7 @@ async def test_sportsdata_na_query(sportsdata: SportsDataBackend, sports_league:
             SportEventDetail(
                 sport="NFL",
                 sport_category=SportCategory.Football,
-                query="NFL Fake Home vs Fake Away 27 October 2025",
+                query="NFL Fake Home vs Fake Away 26 October 2025",
                 date="2025-10-27T00:10:00+00:00",
                 home_team=SportTeamDetail(
                     key="HOM", name="Fake Home", colors=["000000", "FFFFFF"], score=None
