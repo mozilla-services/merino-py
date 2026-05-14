@@ -349,12 +349,15 @@ class SportsDataEventRow:
         event_description: dict[str, Any], event_timezone: ZoneInfo
     ) -> tuple[datetime, str | None]:
         """Return the event kickoff, preferring SportsData's UTC field."""
+        source_day = event_description.get("Day")
         if event_description.get("DateTimeUTC"):
             raw_utc_date = event_description["DateTimeUTC"]
-            return _parse_sportsdata_datetime(raw_utc_date, SPORTSDATA_UTC), raw_utc_date
+            return _parse_sportsdata_datetime(
+                raw_utc_date, SPORTSDATA_UTC
+            ), source_day or raw_utc_date
         if event_description.get("DateTime"):
             raw_date = event_description["DateTime"]
-            return _parse_sportsdata_datetime(raw_date, event_timezone), raw_date
+            return _parse_sportsdata_datetime(raw_date, event_timezone), source_day or raw_date
         raise TypeError("SportsData event has no DateTimeUTC or DateTime")
 
     @staticmethod

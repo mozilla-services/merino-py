@@ -1,7 +1,7 @@
 """Protocol for sport suggestion backends."""
 
 from typing import Any, Optional, cast
-from datetime import datetime, timezone, tzinfo
+from datetime import datetime, tzinfo
 from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseModel
@@ -42,12 +42,13 @@ class SportTeamDetail(BaseModel):
 
 def build_query(event: dict[str, Any]) -> str:
     """Build the search query from the event information"""
-    event_date = datetime.fromisoformat(event["date"])
-    query_timezone: tzinfo = timezone.utc
-    event_status = event.get("event_status")
-    if not isinstance(event_status, GameStatus) or not event_status.is_scheduled():
-        query_timezone = sportsdata_timezone_for_sport(event.get("sport", ""))
-    date = event_date.astimezone(query_timezone).strftime("%d %B %Y")
+    source_day = event.get("original_date")
+    if source_day:
+        date = datetime.fromisoformat(source_day).strftime("%d %B %Y")
+    else:
+        event_date = datetime.fromisoformat(event["date"])
+        query_timezone: tzinfo = sportsdata_timezone_for_sport(event.get("sport", ""))
+        date = event_date.astimezone(query_timezone).strftime("%d %B %Y")
     # catch pre-stored values
     if event.get("sport", "").lower() == "fifa":
         sport_query_name = "World Cup 2026"
