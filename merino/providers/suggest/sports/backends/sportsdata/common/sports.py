@@ -8,7 +8,6 @@ import logging
 import orjson
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
-from zoneinfo import ZoneInfo
 
 # We use this for each Sport subclass, so that there's some flexibility for what config
 # values are used and passed.
@@ -27,6 +26,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     SportTerms,
     Team,
     Event,
+    SPORTSDATA_US_EASTERN,
+    SPORTSDATA_UTC,
+    sportsdata_day_slug,
 )
 
 FORCE_IMPORT = ""
@@ -175,7 +177,7 @@ class NFL(Sport):
         """Update the events for this sport in the elastic search database"""
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
-        local_timezone = ZoneInfo("America/New_York")
+        local_timezone = SPORTSDATA_US_EASTERN
         # get this week and next week
         if self.week is None:
             logger.debug(f"{LOGGING_TAG} No events (No week)")
@@ -285,7 +287,7 @@ class NHL(Sport):
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.season}"
-        local_timezone = ZoneInfo("America/New_York")
+        local_timezone = SPORTSDATA_US_EASTERN
         response = await get_data(
             client=client,
             url=url,
@@ -294,11 +296,9 @@ class NHL(Sport):
             args={"key": self.api_key},
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
-        date_list = []
+        date_list: set[str] = set()
         for _id, event in list(self.events.items()):
-            # sportsdata.io keys date-by-day endpoints on the league's local game day,
-            # not UTC. event.date is UTC, so a 10pm-ET game lives on the prior day's URL.
-            day = event.date.astimezone(local_timezone).strftime("%Y-%b-%d").upper()
+            day = sportsdata_day_slug(event.date, local_timezone)
             if not event.status.is_scheduled() and day not in date_list:
                 url = f"{self.base_url}/GamesByDate/{day}"
                 response = await get_data(
@@ -309,7 +309,7 @@ class NHL(Sport):
                     args={"key": self.api_key},
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
-            date_list.append(day)
+            date_list.add(day)
 
 
 class NBA(Sport):
@@ -395,7 +395,7 @@ class NBA(Sport):
                 f"{LOGGING_TAG} Skipping out of season {self.name}"
             )  # pragma: no cover "informational"
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
-        local_timezone = ZoneInfo("America/New_York")
+        local_timezone = SPORTSDATA_US_EASTERN
         url = f"{self.base_url}/SchedulesBasic/{self.season}"
         response = await get_data(
             client=client,
@@ -405,13 +405,11 @@ class NBA(Sport):
             args={"key": self.api_key},
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
-        date_list = []
+        date_list: set[str] = set()
         # update scores based on events:
         # Events may cross multiple days, so we should update those scores.
         for _id, event in list(self.events.items()):
-            # sportsdata.io keys date-by-day endpoints on the league's local game day,
-            # not UTC. event.date is UTC, so a 10pm-ET game lives on the prior day's URL.
-            day = event.date.astimezone(local_timezone).strftime("%Y-%b-%d").upper()
+            day = sportsdata_day_slug(event.date, local_timezone)
             if not event.status.is_scheduled() and day not in date_list:
                 url = f"{self.base_url}/ScoresBasic/{day}"
                 response = await get_data(
@@ -422,7 +420,7 @@ class NBA(Sport):
                     args={"key": self.api_key},
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
-                date_list.append(day)
+                date_list.add(day)
 
 
 class UCL(Sport):
@@ -518,7 +516,7 @@ class UCL(Sport):
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
-        local_timezone = ZoneInfo("UTC")
+        local_timezone = SPORTSDATA_UTC
         response = await get_data(
             client=client,
             url=url,
@@ -527,11 +525,11 @@ class UCL(Sport):
             args={"key": self.api_key},
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
-        date_list = []
+        date_list: set[str] = set()
         # update scores based on events:
         # Events may cross multiple days, so we should update those scores.
         for _id, event in list(self.events.items()):
-            day = event.date.strftime("%Y-%b-%d").upper()
+            day = sportsdata_day_slug(event.date, local_timezone)
             if not event.status.is_scheduled() and day not in date_list:
                 url = f"{self.base_url}/ScoresBasic/{self.name}/{day}"
                 response = await get_data(
@@ -542,7 +540,7 @@ class UCL(Sport):
                     args={"key": self.api_key},
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
-                date_list.append(day)
+                date_list.add(day)
 
 
 class MLB(Sport):
@@ -626,7 +624,7 @@ class MLB(Sport):
 
     async def update_events(self, client: AsyncClient):
         """Fetch the list of events for the sport. (5 min interval)"""
-        local_timezone = ZoneInfo("America/New_York")
+        local_timezone = SPORTSDATA_US_EASTERN
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.season}"
         response = await get_data(
@@ -637,13 +635,11 @@ class MLB(Sport):
             args={"key": self.api_key},
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
-        date_list = []
+        date_list: set[str] = set()
         # update scores based on events
         # Events may cross multiple days, so we should update those scores.
         for _id, event in list(self.events.items()):
-            # sportsdata.io keys date-by-day endpoints on the league's local game day,
-            # not UTC. event.date is UTC, so a 10pm-ET game lives on the prior day's URL.
-            day = event.date.astimezone(local_timezone).strftime("%Y-%b-%d").upper()
+            day = sportsdata_day_slug(event.date, local_timezone)
             if not event.status.is_scheduled() and day not in date_list:
                 url = f"{self.base_url}/ScoresBasic/{day}"
                 response = await get_data(
@@ -654,7 +650,7 @@ class MLB(Sport):
                     args={"key": self.api_key},
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
-                date_list.append(day)
+                date_list.add(day)
 
 
 class WCS(Sport):
@@ -1070,7 +1066,7 @@ class WCS(Sport):
             await self.load_rounds(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
-        local_timezone = ZoneInfo("UTC")
+        local_timezone = SPORTSDATA_UTC
         response = await get_data(
             client=client,
             url=url,
@@ -1084,11 +1080,11 @@ class WCS(Sport):
         # Treat each WCS schedule refresh as authoritative so removed events are pruned.
         self.events = {}
         self.load_schedules_from_source(response, event_timezone=local_timezone)
-        date_list = []
+        date_list: set[str] = set()
         # update scores based on events:
         # Events may cross multiple days, so we should update those scores.
         for _id, event in list(self.events.items()):
-            day = event.date.strftime("%Y-%b-%d").upper()
+            day = sportsdata_day_slug(event.date, local_timezone)
             if not event.status.is_scheduled() and day not in date_list:
                 url = f"{self.base_url}/GamesByDate/{self.name}/{day}"
                 response = await get_data(
@@ -1102,7 +1098,7 @@ class WCS(Sport):
                     response,
                     event_timezone=local_timezone,
                 )
-                date_list.append(day)
+                date_list.add(day)
 
         await self.cache_events()
 

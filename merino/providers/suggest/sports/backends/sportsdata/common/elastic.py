@@ -603,6 +603,74 @@ class SportsDataStore(ElasticDataStore):
                 return False
         return True
 
+    @staticmethod
+    def event_datetime(event: dict[str, Any], field: str, fallback: str = "date") -> datetime:
+        """Return an event datetime field, falling back to kickoff when absent."""
+        return datetime.fromisoformat(event.get(field) or event[fallback])
+
+    @classmethod
+    def choose_previous_event(
+        cls, selected_events: dict[str, dict[str, Any]], event: dict[str, Any]
+    ) -> None:
+        """Keep the latest final game by kickoff, using updated only as a tie-breaker."""
+        if "current" in selected_events:
+            return
+        if "previous" not in selected_events:
+            selected_events["previous"] = event
+            return
+
+        previous_event = selected_events["previous"]
+        previous_date = cls.event_datetime(previous_event, "date")
+        event_date = cls.event_datetime(event, "date")
+        previous_updated = cls.event_datetime(previous_event, "updated")
+        event_updated = cls.event_datetime(event, "updated")
+        if previous_date < event_date or (
+            previous_date == event_date and previous_updated < event_updated
+        ):
+            selected_events["previous"] = event
+
+    @classmethod
+    def choose_current_event(
+        cls, selected_events: dict[str, dict[str, Any]], event: dict[str, Any]
+    ) -> None:
+        """Keep the most recently updated in-progress game."""
+        selected_events.pop("previous", None)
+        if "current" not in selected_events:
+            selected_events["current"] = event
+            return
+
+        if cls.event_datetime(selected_events["current"], "updated") < cls.event_datetime(
+            event, "updated"
+        ):
+            selected_events["current"] = event
+
+    @classmethod
+    def choose_next_event(
+        cls, selected_events: dict[str, dict[str, Any]], event: dict[str, Any]
+    ) -> None:
+        """Keep the soonest scheduled game by kickoff."""
+        if "next" not in selected_events:
+            selected_events["next"] = event
+            return
+
+        if cls.event_datetime(selected_events["next"], "date") > cls.event_datetime(event, "date"):
+            selected_events["next"] = event
+
+    @classmethod
+    def choose_result_event(
+        cls,
+        selected_events: dict[str, dict[str, Any]],
+        event: dict[str, Any],
+        status: GameStatus,
+    ) -> None:
+        """Apply previous/current/next selection rules to a candidate event."""
+        if status.is_final():
+            cls.choose_previous_event(selected_events, event)
+        elif status.is_scheduled():
+            cls.choose_next_event(selected_events, event)
+        elif status.is_in_progress():
+            cls.choose_current_event(selected_events, event)
+
     async def search_events(
         self, q: str, language_code: str, mix_sports: bool = False
     ) -> dict[str, dict]:
@@ -653,9 +721,9 @@ class SportsDataStore(ElasticDataStore):
             raise BackendError(f"Elasticsearch error for {index_id}") from ex
         logger.debug(f"{LOGGING_TAG} found {res} for `{q}`")
         if res.get("hits", {}).get("total", {}).get("value", 0) > 0:
-            # filter sport for prev, current, next
+            # Select one previous/current/next event for each sport bucket.
             try:
-                filter: dict[str, dict] = {}
+                selected_events_by_sport: dict[str, dict[str, dict[str, Any]]] = {}
                 for doc in res["hits"]["hits"]:
                     # We previously stored events as strings. Handle the potential transition.
                     if isinstance(doc["_source"]["event"], str):
@@ -668,13 +736,8 @@ class SportsDataStore(ElasticDataStore):
                     if not event["date"]:
                         logger.info(f"{LOGGING_TAG}Event has no date, skipping")
                         continue
-                    event_date = datetime.fromisoformat(event["date"])
-                    if mix_sports:
-                        sport = "all"
-                    else:
-                        sport = event["sport"]
-                    if sport not in filter:
-                        filter[sport] = {}
+                    sport = "all" if mix_sports else event["sport"]
+                    selected_events = selected_events_by_sport.setdefault(sport, {})
 
                     # This may be a bit confusing.
                     # There are four "status" fields.
@@ -684,57 +747,10 @@ class SportsDataStore(ElasticDataStore):
                     # `status_type` (reported externally) is the simplified type requested by the UI team.
                     status = GameStatus.parse(event["status"])
                     event["event_status"] = status
-                    # Because we may be collecting "all" sports, we want to find the most recently
-                    # concluded game and the next scheduled game. As for current, we just grab the last
-                    # "inprogress" game that is reported.
-                    if status.is_final():
-                        if "previous" not in filter[sport] and "current" not in filter[sport]:
-                            filter[sport]["previous"] = event
-                            continue
-                        # get the most recently "finalized" game
-                        # This uses the "updated" time, which will be after the prior event's start time,
-                        # but could also potentially overlap with the current event's start time (for mixed
-                        # sport results). There is a risk that a much earlier game is updated long after the
-                        # the events closure or the next event's closure (e.g. there is a contested score
-                        # that is adjusted), but this should be an anomalous event.
-                        # Note, in spite of what test coverage says, this is being exercised by
-                        # `test_sports_search_event_hits` & `test_sports_search_event_hits_no_current`,
-                        if filter.get(sport, {}).get(  # pragma: no cover
-                            "previous", {}
-                        ).get("updated") and (
-                            datetime.fromisoformat(filter[sport]["previous"]["updated"])
-                            < datetime.fromisoformat(event.get("updated", event_date))
-                        ):
-                            # if "unittest" in sys.modules.keys():
-                            #    print("\n👀👀 LOOK AT ME! RUNNING IN UNIT TESTS! 👀👀")
-                            filter[sport]["previous"] = event
-                            continue
-                    # If only show the next upcoming game.
-                    if status.is_scheduled():
-                        # if there is no "next" game, or if the "next" game is later than this one,
-                        # display the most immediate upcoming event.
-                        if "next" not in filter[sport]:
-                            filter[sport]["next"] = event
-                            continue
-                        # Keep the soonest scheduled game. Hits arrive sorted by date desc,
-                        # so without this comparator the farthest-future game wins and
-                        # today's game is shadowed by next week's. (DISCO-4167)
-                        if datetime.fromisoformat(filter[sport]["next"]["date"]) > event_date:
-                            filter[sport]["next"] = event
-                    if status.is_in_progress():
-                        # remove the previous game info because we have a current one.
-                        if "previous" in filter[sport]:
-                            del filter[sport]["previous"]
-                        if "current" not in filter[sport]:
-                            filter[sport]["current"] = event
-                            continue
-                        if datetime.fromisoformat(
-                            filter[sport]["current"]["updated"]
-                        ) < datetime.fromisoformat(event["updated"]):
-                            filter[sport]["current"] = event
+                    self.choose_result_event(selected_events, event, status)
             except Exception as ex:
                 logger.error(f"{LOGGING_TAG} search_event: Unexpected error {ex}")
-            return filter
+            return selected_events_by_sport
         else:
             return {}
 
