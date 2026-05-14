@@ -1140,9 +1140,9 @@ feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=pot
 # The type of this provider, should be `particle`.
 type = "particle"
 
-# MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED_BY_DEFAULT
-# Whether or not this provider is enabled by default.
-enabled_by_default = false
+# MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED
+# Whether or not this provider is enabled.
+enabled = false
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_TTL
 # The amount of time in seconds for the max-age Cache-control header.
@@ -1165,9 +1165,30 @@ url_path_manifest = "/runtime-manifest.v1.json"
 # Used to validate manifest JSON.
 manifest_schema_version = 1
 
+# MERINO_GAMES_PROVIDERS__PARTICLE__MANFIEST_SCHEMA_FILE_PATH
+# The path to the Particle schema validator file.
+# Used to validate the schema retrieved from the Particle endpoint.
+manifest_schema_file_path = "merino/data/providers/games/particle/runtime-manifest.v1.schema.json"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__MANIFEST_FILE_NAME
+# The name of the manifest file that we store in GCS.
+# Used to store and retrieve the manifest from GCS.
+manifest_gcs_file_name = "runtime-manifest.v1.json"
+
 # MERINO_GAMES_PROVIDERS__PARTICLE__CONNECT_TIMEOUT_SEC
 # Timeout in seconds for establishing a connection to Particle endpoint.
 connect_timeout_sec = 3.0
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__CRON_INTERVAL_SEC
+# The cron tick interval to try to get Particle data from the remote endpoint.
+# This is the error retry interval, and should be less than the
+# resync_interval_sec value below to allow for retries.
+cron_interval_sec = 600 # ten minutes
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__RESYNC_INTERVAL_SEC
+# Time between re-syncs of Particle game data, in seconds.
+# Particle updates their files daily.
+resync_interval_sec = 86400 # one day
 
 
 [default.curated_recommendations.gcs]
