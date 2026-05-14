@@ -28,7 +28,6 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     DECrawledContentRescaler,
-    IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
 from merino.curated_recommendations.protocol import (
@@ -473,23 +472,7 @@ class TestFilterSectionsByExperiment:
             (None, None, "IE", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
             (None, None, "UK", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
             (None, None, "ZZ", SurfaceId.NEW_TAB_EN_GB, CrawledContentRescaler),
-            # IE with sections branch gets IECrawledContentRescaler
-            (
-                "sections-in-ie",
-                "sections",
-                "IE",
-                SurfaceId.NEW_TAB_EN_IE,
-                IECrawledContentRescaler,
-            ),
-            # IE with wrong branch falls through to CrawledContentRescaler
-            (
-                "sections-in-ie",
-                "control",
-                "IE",
-                SurfaceId.NEW_TAB_EN_IE,
-                CrawledContentRescaler,
-            ),
-            # IE surface without experiment falls through to CrawledContentRescaler
+            # IE surface gets CrawledContentRescaler (no experiment gating)
             (None, None, "IE", SurfaceId.NEW_TAB_EN_IE, CrawledContentRescaler),
             # CA surface gets CrawledContentRescaler (no experiment gating)
             (None, None, "CA", SurfaceId.NEW_TAB_EN_CA, CrawledContentRescaler),
