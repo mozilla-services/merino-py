@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
@@ -35,9 +35,31 @@ class TeamInfo(BaseModel):
     region: str = Field(description="ISO3 region designation; may differ from `name`.")
     colors: list[str] = Field(description="Branding colors, primary first.")
     icon_url: HttpUrl | None = Field(default=None, description="Team flag URL, if available.")
+    group: str | None = Field(default=None, description="World Cup group name, if applicable.")
     eliminated: bool = Field(
         default=False, description="True once the team is out of the tournament."
     )
+
+    @classmethod
+    def from_team(
+        cls,
+        team: Team,
+        *,
+        group: str | None = None,
+        eliminated: bool = False,
+        region: str | None = None,
+    ) -> "TeamInfo":
+        """Build widget team info from a cached SportsData team."""
+        return cls(
+            key=team.key,
+            global_team_id=team.id,
+            name=team.name,
+            region=region or team.country or team.key,
+            colors=get_team_colours(team.key),
+            icon_url=_icon(team.key),
+            group=group,
+            eliminated=eliminated,
+        )
 
     @classmethod
     def from_event_team(cls, team: dict[str, Any]) -> "TeamInfo":
@@ -51,6 +73,7 @@ class TeamInfo(BaseModel):
             region=str(team.get("region") or team.get("country") or key),
             colors=get_team_colours(key),
             icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
+            group=team.get("group"),
             eliminated=bool(team.get("eliminated", False)),
         )
 

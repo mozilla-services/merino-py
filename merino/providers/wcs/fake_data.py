@@ -18,6 +18,7 @@ def _team_from_json(entry: dict[str, Any]) -> TeamInfo:
         region=key,
         colors=get_team_colours(key),
         icon_url=_icon(key),
+        group=str(entry["Group"]),
         eliminated=False,
     )
 
@@ -30,8 +31,14 @@ def _load_all_teams() -> list[TeamInfo]:
 
 
 _ALL_TEAMS: list[TeamInfo] = _load_all_teams()
+_TEAMS_BY_KEY: dict[str, TeamInfo] = {team.key: team for team in _ALL_TEAMS}
 
 
 def get_all_teams() -> list[TeamInfo]:
     """Return all tournament teams from the static teams list."""
     return _ALL_TEAMS
+
+
+def get_teams_by_key() -> dict[str, TeamInfo]:
+    """Return tournament team metadata keyed by WCS team key."""
+    return _TEAMS_BY_KEY

@@ -7,13 +7,14 @@ from typing import Protocol
 from aiodogstatsd import Client
 
 from merino.exceptions import CacheAdapterError
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
+from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.wcs.fake_data import get_all_teams
 from merino.providers.wcs.fake_live_data import build_live_events
 from merino.providers.wcs.protocol import (
     EventInfo,
     LiveMatchesResponse,
     MatchesResponse,
+    TeamInfo,
     TeamsResponse,
 )
 from merino.utils.metrics import get_metrics_client
@@ -30,6 +31,14 @@ class WcsSport(Protocol):
         self, start: datetime | None = None, end: datetime | None = None
     ) -> list[Event]:
         """Return cached events within an optional inclusive datetime range."""
+        ...
+
+    async def get_all_teams(self) -> dict[int, Team]:
+        """Return all cached teams."""
+        ...
+
+    async def get_eliminated_team_keys(self) -> set[str]:
+        """Return cached eliminated team keys."""
         ...
 
 
@@ -96,9 +105,41 @@ class WcsProvider:
         ]
         return LiveMatchesResponse(matches=matches)
 
-    def get_teams(self) -> TeamsResponse:
-        """Return all teams participating in the tournament."""
-        return TeamsResponse(teams=get_all_teams())
+    async def get_teams(self) -> TeamsResponse:
+        """Return cache-backed teams participating in the tournament."""
+        try:
+            teams = await self.sport.get_all_teams()
+        except CacheAdapterError as ex:
+            self._record_cache_error("teams", ex)
+            return TeamsResponse(teams=[])
+
+        cached_by_key = {team.key: team for team in teams.values()}
+        if not cached_by_key:
+            return TeamsResponse(teams=[])
+
+        eliminated_keys = await self._get_eliminated_team_keys()
+        response: list[TeamInfo] = []
+        for roster_team in get_all_teams():
+            cached_team = cached_by_key.get(roster_team.key)
+            if cached_team is None:
+                continue
+            response.append(
+                TeamInfo.from_team(
+                    cached_team,
+                    group=roster_team.group,
+                    eliminated=cached_team.key in eliminated_keys,
+                    region=cached_team.country or roster_team.region,
+                )
+            )
+        return TeamsResponse(teams=response)
+
+    async def _get_eliminated_team_keys(self) -> set[str]:
+        """Return team keys that no longer have a tournament path."""
+        try:
+            return await self.sport.get_eliminated_team_keys()
+        except CacheAdapterError as ex:
+            self._record_cache_error("teams", ex)
+            return set()
 
     def _record_cache_error(self, endpoint: str, ex: CacheAdapterError) -> None:
         """Log and count cache read failures by endpoint."""

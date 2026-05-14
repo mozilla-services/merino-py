@@ -21,7 +21,16 @@ def test_teams_endpoint_returns_correct_list_of_teams(client: TestClient) -> Non
     assert len(body["teams"]) == 48
 
     # assert all of the teams have the required keys.
-    required_keys = {"key", "global_team_id", "name", "region", "colors", "eliminated", "icon_url"}
+    required_keys = {
+        "key",
+        "global_team_id",
+        "name",
+        "region",
+        "colors",
+        "icon_url",
+        "group",
+        "eliminated",
+    }
     for team in body["teams"]:
         assert required_keys == set(team.keys())
 
@@ -33,6 +42,7 @@ def test_teams_endpoint_returns_correct_list_of_teams(client: TestClient) -> Non
     fra = next(t for t in body["teams"] if t["key"] == "FRA")
     assert len(fra["colors"]) == 3
     assert all(c.startswith("#") for c in fra["colors"])
+    assert fra["group"] == "Group I"
 
 
 def test_team_icons_are_svg_from_prod_logo_bucket(client: TestClient) -> None:
