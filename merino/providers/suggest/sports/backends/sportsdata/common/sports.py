@@ -835,7 +835,7 @@ class WCS(Sport):
                 "name": area["Name"],
                 "code": area["CountryCode"],
                 # HSET null values causes errors in Redis
-                **({"aliases": aliases} if aliases else {})
+                **({"aliases": aliases} if aliases else {}),
             }
             # cache this for later, we're gonna need them for teams.
             await self.cache.hset(f"{self.cache_prefix}:area:{area['AreaId']}", country_data)
