@@ -233,3 +233,37 @@ def test_strip_sensitive_data() -> None:
     assert stack_frames[4]["vars"]["suggest"] == REDACTED_TEXT
 
     assert stack_frames[5]["vars"]["body"] == REDACTED_TEXT
+
+
+def test_strip_sensitive_data_redacts_sportsdata_auth_locals() -> None:
+    """Test SportsData auth values are redacted from captured stack frame locals."""
+    event: Event = {
+        "exception": {
+            "values": [
+                {
+                    "stacktrace": {
+                        "frames": [
+                            {
+                                "vars": {
+                                    "args": {
+                                        "key": "sports-query-secret",
+                                        "league": "nfl",
+                                    },
+                                    "headers": {
+                                        "Ocp-Apim-Subscription-Key": "sports-header-secret",
+                                    },
+                                },
+                            }
+                        ]
+                    }
+                },
+            ]
+        }
+    }
+
+    sanitized_event = typing.cast(Event, strip_sensitive_data(event, mock_sentry_hint))
+
+    frame_vars = sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"]
+    assert frame_vars["args"]["key"] == REDACTED_TEXT
+    assert frame_vars["args"]["league"] == "nfl"
+    assert frame_vars["headers"]["Ocp-Apim-Subscription-Key"] == REDACTED_TEXT

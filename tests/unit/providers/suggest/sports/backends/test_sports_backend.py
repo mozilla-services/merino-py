@@ -27,7 +27,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common import (
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Team,
     SportTerms,
+    SPORTSDATA_API_KEY_HEADER,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
     SportsDataStore,
@@ -96,6 +98,33 @@ async def test_get_data_with_no_cache_dir():
             )
             mock_client.get.assert_called_with("http://example.org", params={"key": "abc123"})
             mock_json.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_data_sends_headers():
+    """Test for `get_data` with request headers."""
+    api_key = "sports-secret"
+    mock_response = httpx.Response(
+        status_code=403,
+        request=httpx.Request("GET", "http://example.org"),
+    )
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    with pytest.raises(SportsDataError) as exc_info:
+        await get_data(
+            client=mock_client,
+            url="http://example.org",
+            headers={SPORTSDATA_API_KEY_HEADER: api_key},
+        )
+
+    mock_client.get.assert_awaited_once_with(
+        "http://example.org",
+        params=None,
+        headers={SPORTSDATA_API_KEY_HEADER: api_key},
+    )
+    assert api_key not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
 
 
 @pytest.mark.asyncio

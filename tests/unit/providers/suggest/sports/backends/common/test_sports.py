@@ -1077,7 +1077,7 @@ def soccer_score_payload() -> list[dict]:
 
 def wcs_teams_payload() -> list[dict]:
     """Return WCS sample team data"""
-    # https://api.sportsdata.io/v4/soccer/scores/json/Teams/FIFA?key=
+    # https://api.sportsdata.io/v4/soccer/scores/json/Teams/FIFA
     # return soccer_teams_payload()
     return [
         {
@@ -1181,7 +1181,7 @@ def wcs_static_games_by_date_payload() -> list[dict[str, Any]]:
 
 def wcs_schedule_payload() -> list[dict]:
     """Return WCS sample schedule data"""
-    # https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2026?key=...
+    # https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/FIFA/2026
     return [
         {
             "GameId": 11111,
@@ -1484,7 +1484,11 @@ async def test_nfl_update_teams(mock_client: AsyncClient, mocker: MockerFixture)
     assert t1.name == "Cardinals"
     assert get_data.call_count == 2
     assert "/Timeframes/current" in get_data.call_args_list[0].kwargs["url"]
+    assert "args" not in get_data.call_args_list[0].kwargs
+    assert get_data.call_args_list[0].kwargs["headers"] == nfl.api_headers()
     assert "/Teams" in get_data.call_args_list[1].kwargs["url"]
+    assert "args" not in get_data.call_args_list[1].kwargs
+    assert get_data.call_args_list[1].kwargs["headers"] == nfl.api_headers()
 
 
 @pytest.mark.asyncio

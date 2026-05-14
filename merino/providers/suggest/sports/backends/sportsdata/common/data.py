@@ -46,6 +46,7 @@ logger = logging.getLogger(__name__)
 SPORTSDATA_UTC = ZoneInfo("UTC")
 SPORTSDATA_US_EASTERN = ZoneInfo("America/New_York")
 SPORTSDATA_LEAGUE_NA_SPORTS = {"MLB", "NBA", "NHL", "NFL"}
+SPORTSDATA_API_KEY_HEADER = "Ocp-Apim-Subscription-Key"
 
 
 def sportsdata_timezone_for_sport(sport: str) -> ZoneInfo:
@@ -434,7 +435,7 @@ class Sport:
             or os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
             or ""
         )
-        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or 'None'}")
+        logger.info(f"{LOGGING_TAG} SportsData API key configured: {bool(self.api_key)}")
         self.base_url = base_url
         self.name = name
         self.teams = {}
@@ -447,6 +448,10 @@ class Sport:
         self.cache_dir = cache_dir
         self.cache = cache
         self.normalized_terms = SportNormalizedTerms.copy()
+
+    def api_headers(self) -> dict[str, str]:
+        """Return SportsData auth headers."""
+        return {SPORTSDATA_API_KEY_HEADER: self.api_key}
 
     @abstractmethod
     async def get_team(self, id: int) -> Team | None:

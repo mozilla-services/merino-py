@@ -123,7 +123,7 @@ class NFL(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         """
         # Sample response:
@@ -174,7 +174,7 @@ class NFL(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
@@ -195,7 +195,7 @@ class NFL(Sport):
                 url=url,
                 ttl=timedelta(minutes=5),
                 cache_dir=self.cache_dir,
-                args={"key": self.api_key},
+                headers=self.api_headers(),
             )
 
             self.load_scores_from_source(
@@ -253,7 +253,7 @@ class NHL(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         """
         {
@@ -282,7 +282,7 @@ class NHL(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         # NOTE:
         # Sportsdata lists the Superbowl teams as "AFC" vs "NFC".
@@ -299,7 +299,7 @@ class NHL(Sport):
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list: set[str] = set()
@@ -312,7 +312,7 @@ class NHL(Sport):
                     url=url,
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
-                    args={"key": self.api_key},
+                    headers=self.api_headers(),
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
             date_list.add(day)
@@ -362,7 +362,7 @@ class NBA(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         """
         {
@@ -388,7 +388,7 @@ class NBA(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
@@ -408,7 +408,7 @@ class NBA(Sport):
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list: set[str] = set()
@@ -423,7 +423,7 @@ class NBA(Sport):
                     url=url,
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
-                    args={"key": self.api_key},
+                    headers=self.api_headers(),
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
                 date_list.add(day)
@@ -512,7 +512,7 @@ class UCL(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
@@ -528,7 +528,7 @@ class UCL(Sport):
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list: set[str] = set()
@@ -543,7 +543,7 @@ class UCL(Sport):
                     url=url,
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
-                    args={"key": self.api_key},
+                    headers=self.api_headers(),
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
                 date_list.add(day)
@@ -591,7 +591,7 @@ class MLB(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         """
         {
@@ -617,7 +617,7 @@ class MLB(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
@@ -638,7 +638,7 @@ class MLB(Sport):
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         self.load_schedules_from_source(response, event_timezone=local_timezone)
         date_list: set[str] = set()
@@ -653,7 +653,7 @@ class MLB(Sport):
                     url=url,
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
-                    args={"key": self.api_key},
+                    headers=self.api_headers(),
                 )
                 self.load_scores_from_source(response, event_timezone=local_timezone)
                 date_list.add(day)
@@ -793,7 +793,7 @@ class WCS(Sport):
             url=url,
             ttl=timedelta(weeks=25),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         # Sample Response:
         """
@@ -857,7 +857,7 @@ class WCS(Sport):
             url=url,
             ttl=timedelta(weeks=25),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         self.rounds = {}
         for competition in response:
@@ -970,7 +970,7 @@ class WCS(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         async with self._lock:
             await self.async_load_teams_from_source(response)
@@ -1082,7 +1082,7 @@ class WCS(Sport):
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
-            args={"key": self.api_key},
+            headers=self.api_headers(),
         )
         if not response:
             logger.warning(f"{LOGGING_TAG} No WCS schedules returned; skipping event cache update")
@@ -1102,7 +1102,7 @@ class WCS(Sport):
                     url=url,
                     ttl=timedelta(minutes=5),
                     cache_dir=self.cache_dir,
-                    args={"key": self.api_key},
+                    headers=self.api_headers(),
                 )
                 self.load_scores_from_source(
                     response,
