@@ -17,7 +17,6 @@ from merino.curated_recommendations.legacy.protocol import (
     CuratedRecommendationsLegacyFx114Request,
     CuratedRecommendationsLegacyFx114Response,
 )
-from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.legacy.sections_adapter import (
     get_legacy_recommendations_from_sections,
 )
@@ -25,6 +24,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
 )
 from merino.curated_recommendations.utils import (
+    ROLLED_OUT_SECTION_SURFACES,
     get_recommendation_surface_id,
     derive_region,
 )
@@ -97,13 +97,8 @@ class LegacyCuratedRecommendationsProvider:
         """Fetch base recommendations from sections backend (US/GB) or scheduler (other)."""
         surface_id = get_recommendation_surface_id(locale, region)
 
-        if surface_id in (
-            SurfaceId.NEW_TAB_EN_US,
-            SurfaceId.NEW_TAB_EN_GB,
-            SurfaceId.NEW_TAB_EN_CA,
-            SurfaceId.NEW_TAB_EN_IE,
-        ):
-            # US/GB/CA/IE: fetch from sections backend instead of scheduler
+        if surface_id in ROLLED_OUT_SECTION_SURFACES:
+            # Rolled-out section surfaces: fetch from sections backend instead of scheduler
             rescaler = CrawledContentRescaler()
             return await get_legacy_recommendations_from_sections(
                 sections_backend=curated_corpus_provider.sections_backend,
