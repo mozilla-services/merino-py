@@ -264,16 +264,3 @@ class CohortModelBackend(Protocol):
     ) -> str | None:
         """Fetch the contextual ranking cohort based on interests string."""
         ...
-
-
-class SpindleServiceBackend(Protocol):
-    """Protocol for Spindle Serive"""
-
-    def get_cohort_for_interests(
-        self,
-        interests: str,
-        model_id: str,
-        training_run_id: str | None = None,
-    ) -> str | None:
-        """Fetch the contextual ranking cohort based on interests string."""
-        ...
