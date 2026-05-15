@@ -75,3 +75,37 @@ def test_event_info_from_event_stage_defaults_to_none() -> None:
 
     info = EventInfo.from_event(e)
     assert info.stage is None
+
+
+def test_event_info_from_event_propagates_group_to_both_teams() -> None:
+    e = event(
+        event_id=5,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Scheduled,
+        group="Group A",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team.group == "Group A"
+    assert info.away_team.group == "Group A"
+
+
+def test_event_info_from_event_group_defaults_to_none() -> None:
+    """Events without a cached group (e.g. knockout matches) emit `None`."""
+    e = event(
+        event_id=6,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Scheduled,
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team.group is None
+    assert info.away_team.group is None
