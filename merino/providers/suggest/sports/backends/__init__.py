@@ -20,6 +20,7 @@ async def get_data(
     ttl: timedelta | None = None,
     cache_dir: str | None = None,
     args: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> Any:
     """Fetch data from the provider. This may pull from the local cache or from the remote site depending on the
     `ttl` for the local cache.
@@ -54,11 +55,14 @@ async def get_data(
                 pass
     logger.debug(f"{LOGGING_TAG} fetching data from {url}")
     try:
-        response = await client.get(url, params=args)
+        request_args: dict[str, Any] = {"params": args}
+        if headers:
+            request_args["headers"] = headers
+        response = await client.get(url, **request_args)
         response.raise_for_status()
         response = response.json()
-    except HTTPError as exc:
-        raise SportsDataError(f"Could not fetch data from provider for {url}") from exc
+    except HTTPError:
+        raise SportsDataError(f"Could not fetch data from provider for {url}") from None
     if cache_file:
         logger.debug(f"{LOGGING_TAG}💾 Writing cache for {url}")
         try:

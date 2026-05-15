@@ -73,4 +73,18 @@ def strip_sensitive_data(event: Event, hint: Hint) -> Event | None:
                     if "suggest-on-title" in json.dumps(value):
                         entry["vars"][key] = REDACTED_TEXT
 
+    event_exception_values = event.get("exception", {}).get("values", [])
+    if len(event_exception_values):
+        for entry in event_exception_values[0].get("stacktrace", {}).get("frames", []):
+            vars = entry.get("vars", {})
+            args = vars.get("args")
+            if isinstance(args, dict) and "key" in args:
+                args["key"] = REDACTED_TEXT
+
+            headers = vars.get("headers")
+            if isinstance(headers, dict):
+                for header in headers:
+                    if str(header).lower() == "ocp-apim-subscription-key":
+                        headers[header] = REDACTED_TEXT
+
     return event
