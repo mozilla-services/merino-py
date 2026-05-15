@@ -177,8 +177,9 @@ class CuratedRecommendationsProvider:
             SurfaceId.NEW_TAB_EN_US,
             SurfaceId.NEW_TAB_EN_GB,
             SurfaceId.NEW_TAB_EN_CA,
+            SurfaceId.NEW_TAB_EN_IE,
         ):
-            # US/GB/CA non-sections: fetch from sections backend instead of scheduler
+            # US/GB/CA/IE non-sections: fetch from sections backend instead of scheduler
             rescaler: EngagementRescaler | None = None
             rescaler = CrawledContentRescaler()
             general_feed = await get_legacy_recommendations_from_sections(

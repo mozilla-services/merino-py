@@ -101,8 +101,9 @@ class LegacyCuratedRecommendationsProvider:
             SurfaceId.NEW_TAB_EN_US,
             SurfaceId.NEW_TAB_EN_GB,
             SurfaceId.NEW_TAB_EN_CA,
+            SurfaceId.NEW_TAB_EN_IE,
         ):
-            # US/GB/CA: fetch from sections backend instead of scheduler
+            # US/GB/CA/IE: fetch from sections backend instead of scheduler
             rescaler = CrawledContentRescaler()
             return await get_legacy_recommendations_from_sections(
                 sections_backend=curated_corpus_provider.sections_backend,
