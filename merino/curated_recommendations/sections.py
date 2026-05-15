@@ -81,7 +81,6 @@ HEADLINES_SECTION_KEY = "headlines"
 DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
-IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
 MAX_SECTIONS_PER_RESPONSE = 20
 
 # Number of articles to use when ranking the section. We choose 4 because there are typically only

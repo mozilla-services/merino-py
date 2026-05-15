@@ -1404,6 +1404,38 @@ class TestContextualRanker:
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.score == pytest.approx(0.8)
 
+    def test_rank_items_uses_ml_score_when_item_in_rankings_with_cohort(self, monkeypatch):
+        """When rankings contain the item, the ML (normal-sampled) score is used."""
+        recs = generate_recommendations(item_ids=["a"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(
+                granularity="region",
+                shards={"a": {"mean": 0.8, "std": 0.0}},
+            )
+        )
+        cohort_interests = ProcessedInterests(scores={}, cohort="1")
+        no_cohort_interests = ProcessedInterests(scores={}, cohort=None)
+
+        ranker = ContextualRanker(
+            engagement_backend, prior_backend, SurfaceId.NEW_TAB_EN_US, ml_backend=ml_backend
+        )
+
+        # Test that there is no crash with/without cohorts.
+        # StubMLRecsBackend is 'dumb' and could be upgrade to return
+        ranked = ranker.rank_items(recs, personal_interests=cohort_interests, region="US")
+        assert len(ranked) == 1
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.score == pytest.approx(0.8)
+
+        ranked = ranker.rank_items(recs, personal_interests=no_cohort_interests, region="US")
+        assert len(ranked) == 1
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.score == pytest.approx(0.8)
+
     def test_boosts_inferred_item_score(self, monkeypatch):
         """When rankings contain the item, the ML (normal-sampled) score is used."""
         recs = generate_recommendations(

@@ -69,7 +69,6 @@ from merino.curated_recommendations.protocol import (
     Locale,
     CoarseOS,
 )
-from merino.curated_recommendations.sections import IS_COHORT_FEATURE_DISABLED
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
@@ -1805,67 +1804,6 @@ class TestSections:
             if tech_stuff_id in sections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
-    def test_sections_contextual_ranking_result_for_timezone(
-        self,
-        ml_recommendations_backend,
-        engagement_backend,
-        sections_backend,
-        cohort_model_backend,
-        client: TestClient,
-    ):
-        """Test end to end content ranking based on timezone utc_offset. Note that engagement_backend is required
-        because the ml_recommendations_backend relies on it to find fresh items, which are limited
-        """
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
-                "utc_offset": 16,
-                "region": "US",
-            },
-        )
-
-        data = response.json()
-        # Check if the response is valid
-        assert response.status_code == 200
-
-        feeds = data["feeds"]
-        sections = {name: section for name, section in feeds.items() if section is not None}
-
-        # top_stories_section should always be present
-        assert "top_stories_section" in sections
-        assert sections["top_stories_section"]["recommendations"][0][
-            "corpusItemId"
-        ] == ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
-
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "en-US",
-                "feeds": ["sections"],
-                "experimentName": ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-                "experimentBranch": CONTEXTUAL_RANKING_TREATMENT_TZ,
-                "utc_offset": 0,
-                "region": "US",
-            },
-        )
-        data = response.json()
-        # Check if the response is valid
-        assert response.status_code == 200
-
-        feeds = data["feeds"]
-        sections = {name: section for name, section in feeds.items() if section is not None}
-
-        # top_stories_section should always be present
-        assert "top_stories_section" in sections
-        # Confirm that we have different content for different timezone
-        assert sections["top_stories_section"]["recommendations"][0][
-            "corpusItemId"
-        ] != ml_recommendations_backend.get_most_popular_content_id_by_timezone(16)
-
     def test_sections_inferred_contextual_ranking_result_for_cohort(
         self,
         ml_recommendations_backend,
@@ -1899,14 +1837,9 @@ class TestSections:
         # top_stories_section should always be present
         assert "top_stories_section" in sections
 
-        if IS_COHORT_FEATURE_DISABLED:
-            assert sections["top_stories_section"]["recommendations"][0][
-                "corpusItemId"
-            ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
-        else:
-            assert sections["top_stories_section"]["recommendations"][0][
-                "corpusItemId"
-            ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
 
         response = client.post(
             "/api/v1/curated-recommendations",

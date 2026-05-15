@@ -43,7 +43,6 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
-    IS_COHORT_FEATURE_DISABLED,
     adjust_ads_in_sections,
     dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
@@ -568,33 +567,6 @@ class TestFilterSectionsByExperiment:
         assert "custom-section-1" in result
         assert "health" in result
         assert "nfl" in result
-
-
-class TestIsInferredContextualRankingExperiment:
-    """Tests covering is_inferred_contextual_ranking function"""
-
-    def test_inferred_contextual_ranking(self):
-        """Test that inferred contextual ranking is correctly identified."""
-        from merino.curated_recommendations.sections import is_inferred_contextual_ranking
-        from merino.curated_recommendations.protocol import ProcessedInterests
-
-        # Test case where personal_interests is None
-        assert not is_inferred_contextual_ranking(None)
-
-        # Test case where cohort is None
-        pi_no_cohort = ProcessedInterests(cohort=None, numerical_value=5)
-        assert not is_inferred_contextual_ranking(pi_no_cohort)
-
-        # Test case where numerical_value mod selector is not zero
-        pi_not_selected = ProcessedInterests(cohort="test", numerical_value=3)  # 3 % 4 != 0
-        not is_inferred_contextual_ranking(pi_not_selected)
-
-        # Test case where all conditions are met
-        pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0
-        if IS_COHORT_FEATURE_DISABLED:
-            assert not is_inferred_contextual_ranking(pi_selected)
-        else:
-            assert is_inferred_contextual_ranking(pi_selected)
 
 
 class TestUpdateReceivedFeedRank:
