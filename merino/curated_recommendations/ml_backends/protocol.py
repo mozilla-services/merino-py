@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Protocol, cast
 
 import numpy as np
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 import logging
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, SurfaceId
@@ -265,26 +265,30 @@ class CohortModelBackend(Protocol):
         """Fetch the contextual ranking cohort based on interests string."""
         ...
 
-class SimilarStoriesProtocol:
-    def neighbors(self, a) -> list[str]:
-        """ Returns similar stories for similar corpus item id"""
+class SimilarStoriesProtocol(Protocol):
+    """Protocol for a lookup of similar (near-duplicate) stories keyed by corpus item id."""
+
+    def neighbors(self, corpus_item_id: str) -> list[str]:
+        """Return the list of corpus item ids that are near-duplicates of `corpus_item_id`."""
+        ...
 
 
 class SpindleBackendProtocol(Protocol):
-    """Protocol for connecting to the Content-ML Spindle service.
-    """
+    """Protocol for connecting to the Content-ML Spindle service."""
 
-    def update_duplicate_item_info(items: list[CorpusItem], surface: SurfaceId, threshold: float=0.85):
-        """ Make best effort to find duplicate stories based on embeddings and store in backend"""
+    async def refresh_duplicate_item_info(
+        self,
+        items: list[CorpusItem],
+        surface: SurfaceId,
+        threshold: float = 0.85,
+    ) -> None:
+        """Make a best effort to find duplicate stories based on embeddings and store in backend."""
         ...
 
-    def get_similar_stories_text(surface: SurfaceId) -> SimilarStoriesProtocol | None:
-        """ Get similar stories for a given story based on text """
+    def get_similar_stories_text(self, surface: SurfaceId) -> SimilarStoriesProtocol | None:
+        """Get similar-story lookup for `surface` based on text embeddings."""
         ...
 
-    def get_similar_stories_image(surface: SurfaceId) -> SimilarStoriesProtocol | None:
-        """ Get similar stories for a given story based on image similarity """
+    def get_similar_stories_image(self, surface: SurfaceId) -> SimilarStoriesProtocol | None:
+        """Get similar-story lookup for `surface` based on image embeddings."""
         ...
-
-
-

@@ -71,7 +71,7 @@ class SectionsBackend(SectionsProtocol):
         graph_config: CorpusApiGraphConfig,
         metrics_client: aiodogstatsd.Client,
         manifest_provider: ManifestProvider,
-        spindle_backend: SpindleBackendProtocol | None
+        spindle_backend: SpindleBackendProtocol | None = None,
     ) -> None:
         """Initialize the SectionsCorpusBackend."""
         self.http_client = http_client
@@ -191,14 +191,15 @@ class SectionsBackend(SectionsProtocol):
 
         sections_list = base_sections
 
+        # Kick off a background refresh of Spindle's similarity caches so the
+        # next request for this surface can use up-to-date near-duplicate info.
         if self.spindle_backend is not None:
-            try:
-                self.spindle_backend.get_similar_stories_text(surface_id)
-            except Exception as e:
-                logger.error("Error getting similar stories with spindle service", e)
-            try:
-                self.spindle_backend.get_similar_stories_image(surface_id)
-            except Exception as e:
-                logger.error("Error getting similar stories with spindle service", e)
+            all_items = [item for s in sections_list for item in s.sectionItems]
+            if all_items:
+                task = asyncio.create_task(
+                    self.spindle_backend.refresh_duplicate_item_info(all_items, surface_id)
+                )
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
 
         return sections_list

@@ -1,5 +1,6 @@
 """Tests covering merino/curated_recommendations/corpus_backends/sections_backend.py"""
 
+import asyncio
 import copy
 from unittest.mock import AsyncMock
 
@@ -9,6 +10,7 @@ from httpx import AsyncClient, Response
 from merino.curated_recommendations import SectionsBackend
 from merino.curated_recommendations.corpus_backends.protocol import CreateSource, SurfaceId
 from merino.curated_recommendations.corpus_backends.utils import CorpusApiGraphConfig
+from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
 from merino.utils.metrics import get_metrics_client
 
 
@@ -168,3 +170,51 @@ async def test_fetch_links_experiment_variant_to_base_section(
     assert government_sections[0].experimentVariant == 0
     assert government_sections[0].alternateSection is not None
     assert government_sections[0].alternateSection.experimentVariant == 5050
+
+
+class _StubSpindle(SpindleBackendProtocol):
+    """Records refresh calls; getters return None."""
+
+    def __init__(self):
+        """Initialize with empty call log."""
+        self.calls: list[tuple[int, SurfaceId]] = []
+
+    async def refresh_duplicate_item_info(self, items, surface, threshold=0.85):
+        """Record the call."""
+        self.calls.append((len(items), surface))
+
+    def get_similar_stories_text(self, surface):
+        """No cache; tests only need refresh-call records."""
+        return None
+
+    def get_similar_stories_image(self, surface):
+        """No cache."""
+        return None
+
+
+@pytest.mark.asyncio
+async def test_fetch_schedules_spindle_refresh(
+    sections_response_data, fixture_request_data, manifest_provider
+):
+    """Sections fetch should fire a background spindle refresh containing all items."""
+    http_client = AsyncMock(spec=AsyncClient)
+    http_client.post.return_value = Response(
+        status_code=200,
+        json=sections_response_data,
+        request=fixture_request_data,
+    )
+    spindle = _StubSpindle()
+    backend = SectionsBackend(
+        http_client=http_client,
+        graph_config=CorpusApiGraphConfig(),
+        metrics_client=get_metrics_client(),
+        manifest_provider=manifest_provider,
+        spindle_backend=spindle,
+    )
+
+    sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+    # Let the background task run.
+    await asyncio.sleep(0)
+
+    expected_count = sum(len(s.sectionItems) for s in sections)
+    assert spindle.calls == [(expected_count, SurfaceId.NEW_TAB_EN_US)]

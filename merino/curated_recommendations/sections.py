@@ -24,6 +24,7 @@ from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.ml_backends.protocol import (
     TIME_ZONE_OFFSET_INFERRED_KEY,
     MLRecsBackend,
+    SpindleBackendProtocol,
 )
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
@@ -729,7 +730,8 @@ def get_top_story_list(
     rescaler: EngagementRescaler | None = None,
     relax_constraints_for_personalization=False,
     prior: Prior | None = None,
-    spindle_backend: SpindleBackendProtocol = None
+    spindle_backend: SpindleBackendProtocol | None = None,
+    surface_id: SurfaceId | None = None,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
@@ -774,7 +776,15 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
-    balancer = TopStoriesArticleBalancer(round(top_count * constraint_scale))
+    similar_stories_info = None
+    if spindle_backend is not None and surface_id is not None:
+        # Prefer text similarity (more reliable today); fall back to image.
+        similar_stories_info = spindle_backend.get_similar_stories_text(
+            surface_id
+        ) or spindle_backend.get_similar_stories_image(surface_id)
+    balancer = TopStoriesArticleBalancer(
+        round(top_count * constraint_scale), similar_stories_info=similar_stories_info
+    )
     topic_limited_stories, remaining_stories = balancer.add_stories(
         items_throttled_fresh, top_count
     )
@@ -836,6 +846,7 @@ async def get_sections(
     lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
+    spindle_backend: SpindleBackendProtocol | None = None,
 ) -> dict[str, Section]:
     """Build, rank, and layout recommendation sections for a "sections" experiment.
 
@@ -963,6 +974,8 @@ async def get_sections(
         rescaler=rescaler,
         relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
         prior=prior,
+        spindle_backend=spindle_backend,
+        surface_id=surface_id,
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations
