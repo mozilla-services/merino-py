@@ -93,10 +93,10 @@ dummy_engaged_count = 1
 dummy_attempted_count = 1000
 
 # MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
-check_client_variants = false
+check_client_variants = true
 
 # MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
-dry_run = true
+dry_run = false
 
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
