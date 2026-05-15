@@ -6,6 +6,7 @@ This contains the sport specific calls and data formats which are normalized.
 import asyncio
 import logging
 import orjson
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 
@@ -672,6 +673,20 @@ class WCS(Sport):
     teams: dict[int, Team] = {}
     rounds: dict[int, str] = {}
     refreshed: datetime = datetime.now(tz=timezone.utc)
+    """Americanized Static country aliases indexed by ISO3 code
+
+    These aliases will be stored by Elastic Search and used as part of the match string for countries.
+    As such, you should avoid using common stop words ("of", "the", "and", etc) and use more unique elements.
+    Elastic search will do some spelling corrections and partial match fixes, so alternate spellings should not
+    be needed.
+
+    See https://www.iban.com/country-codes
+    """
+    country_alias = {
+        "TUR": "turkey",
+        "CIV": "ivory coast cote divoire",
+        "CUW": "curacao",
+    }
 
     def __init__(
         self,
@@ -815,9 +830,12 @@ class WCS(Sport):
         logging.info(f"{LOGGING_TAG} Pre Loading Countries")
         for area in response:
             # build the reverse index to get the country code and id.
+            aliases = self.country_alias.get(area["CountryCode"])
             country_data = {
                 "name": area["Name"],
                 "code": area["CountryCode"],
+                # HSET null values causes errors in Redis
+                **({"aliases": aliases} if aliases else {}),
             }
             # cache this for later, we're gonna need them for teams.
             await self.cache.hset(f"{self.cache_prefix}:area:{area['AreaId']}", country_data)
@@ -886,10 +904,22 @@ class WCS(Sport):
         self.season = str(datetime.now(tz=timezone.utc).year)
 
     async def get_country(self, area_id: int | None) -> dict[bytes, bytes] | None:
-        """Return cached country info for this ID"""
+        """Return cached country info for this ID
+
+        This returns a dict of:
+        - name: Official Name
+        - code: ISO3 Country code
+        - aliases: Optional aliases or alternate spellings
+
+        """
         if not area_id:
             return None
-        return await self.cache.hgetall(f"{self.cache_prefix}:area:{area_id}")
+        cached = await self.cache.hgetall(f"{self.cache_prefix}:area:{area_id}")
+        if cached:
+            code = cached[b"code"].decode()
+            if code in self.country_alias:
+                cached[b"aliases"] = self.country_alias[code].encode()
+        return cached
 
     def team_minimal(self, team: Team) -> dict[str, Any]:
         """Use the team name instead of the full name"""
@@ -952,6 +982,14 @@ class WCS(Sport):
                     team.fullname = team.name
                 if area:
                     team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
+                # team.key is the authoritative ISO3 code after _TEAM_KEY_OVERRIDES;
+                # prefer for join key over AreaId. Since some teams (e.g. Curaçao)
+                # are returned with an AreaId that maps to ANOTher country's area
+                # (South Korea, in Curaçao's case 🤦)
+                alias = self.country_alias.get(team.key)
+                if alias:
+                    team.terms = f"{team.terms} {alias}"
+                    team.country = team.key
                 self.teams[team.id] = team
             except SportsDataError:
                 pass  # pragma: no cover "skip error"
@@ -977,7 +1015,8 @@ class WCS(Sport):
 
     def team_as_serialized(self, team: Team) -> bytes:  # pragma: no cover "widget"
         """Serialize a team as a dictionary for the widget"""
-        return team.model_dump_json().encode()
+        model = team.model_dump(mode="json")
+        return json.dumps(model).encode()
 
     def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
         """Serialize a team as a string for tests and log-friendly call sites."""

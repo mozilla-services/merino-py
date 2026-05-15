@@ -142,6 +142,8 @@ class Team(BaseModel):
         if areas:
             country = areas.get(team_data.get(normalized_terms.get("AreaId", "AreaId"), 9999))
         raw_key = team_data["Key"]
+        if country and country.get("aliases"):
+            terms.add(country.get("aliases"))
         return cls(
             terms=" ".join(terms),
             key=_TEAM_KEY_OVERRIDES.get((raw_key, name), raw_key),
