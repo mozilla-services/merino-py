@@ -2243,50 +2243,6 @@ async def test_wcs_load_rounds(mock_client: AsyncClient, mocker: MockerFixture) 
     )
 
 
-@freezegun.freeze_time("2030-06-10T00:00:00", tz_offset=0)
-@pytest.mark.asyncio
-async def test_wcs_load_rounds_no_matching_season(
-    mock_client: AsyncClient, mocker: MockerFixture
-) -> None:
-    """When no season matches, self.rounds stays empty and an empty mapping is cached."""
-    sport = WCS(settings=settings.providers.sports)
-    mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
-        side_effect=[wcs_competitions_payload()],
-    )
-    mock_cache = MagicMock(spec=RedisAdapter)
-    sport.cache = mock_cache
-
-    await sport.load_rounds(mock_client)
-
-    assert sport.rounds == {}
-    mock_cache.set.assert_called_once_with(
-        "sport:wcs:v1:rounds", orjson.dumps({}, option=orjson.OPT_NON_STR_KEYS)
-    )
-
-
-@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
-@pytest.mark.asyncio
-async def test_wcs_load_rounds_no_matching_competition(
-    mock_client: AsyncClient, mocker: MockerFixture
-) -> None:
-    """Empty/non-matching /Competitions response yields an empty rounds map."""
-    sport = WCS(settings=settings.providers.sports)
-    mocker.patch(
-        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
-        side_effect=[[{"Key": "OTHER", "Seasons": []}]],
-    )
-    mock_cache = MagicMock(spec=RedisAdapter)
-    sport.cache = mock_cache
-
-    await sport.load_rounds(mock_client)
-
-    assert sport.rounds == {}
-    mock_cache.set.assert_called_once_with(
-        "sport:wcs:v1:rounds", orjson.dumps({}, option=orjson.OPT_NON_STR_KEYS)
-    )
-
-
 def test_wcs_event_details_includes_stage_from_rounds() -> None:
     """event_details resolves the schedule's RoundId to a stage name via self.rounds."""
     sport = WCS(settings=settings.providers.sports)

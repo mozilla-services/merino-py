@@ -877,7 +877,6 @@ class WCS(Sport):
             cache_dir=self.cache_dir,
             headers=self.api_headers(),
         )
-        self.rounds = {}
         for competition in response:
             match competition:
                 case {"Key": key, "Seasons": seasons} if key == self.name.upper():
@@ -894,10 +893,12 @@ class WCS(Sport):
                                     for r in rounds
                                     if r.get("RoundId") is not None and r.get("Name")
                                 }
-        await self.cache.set(
-            f"{self.cache_prefix}:rounds",
-            orjson.dumps(self.rounds, option=orjson.OPT_NON_STR_KEYS),
-        )
+                                await self.cache.set(
+                                    f"{self.cache_prefix}:rounds",
+                                    orjson.dumps(self.rounds, option=orjson.OPT_NON_STR_KEYS),
+                                )
+
+                                return
 
     async def get_season(self, client: AsyncClient) -> None:
         """Get the current season (which is just the current year)"""
@@ -994,7 +995,6 @@ class WCS(Sport):
             except SportsDataError:
                 pass  # pragma: no cover "skip error"
         self.refreshed = datetime.now(tz=timezone.utc)
-        await self.cache_teams()
         return self.teams
 
     async def update_teams(self, client: AsyncClient):
