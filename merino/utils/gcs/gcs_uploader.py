@@ -106,10 +106,14 @@ class GcsUploader(BaseContentUploader):
         else:
             return str(blob.public_url)
 
-    def get_file_by_name(self, blob_name: str, blob_generation: int) -> Blob | None:
-        """Return blob from GCS if we have a new generation"""
-        bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+    def get_file_by_name(self, blob_name: str, blob_generation: int = 0) -> Blob | None:
+        """Return blob from GCS. If blob_generation is passed (and is not 0), only returns the blob if the current generation does not match the passed version."""
         if blob_name:
+            bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+            # if blob_generation is 0, a blob will only be returned if there is a live version
+            # https://docs.cloud.google.com/python/docs/reference/storage/latest/generation_metageneration#using-ifgenerationnotmatch
             most_recent = bucket.get_blob(blob_name, if_generation_not_match=blob_generation)
+
             return most_recent
+
         return None
