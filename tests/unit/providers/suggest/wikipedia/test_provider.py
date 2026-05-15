@@ -40,7 +40,7 @@ def fixture_wikipedia(expected_block_list: set[str]) -> Provider:
         title_block_list=expected_block_list,
         query_timeout_sec=0.2,
         engagement_gcs_bucket="test-engagement-bucket",
-        engagement_blob_name="suggest-merino-exports/engagement/latest.json",
+        engagement_blob_name="suggest-merino-exports/engagement/keyword/latest.json",
         engagement_resync_interval_sec=3600,
         cron_interval_sec=60,
     )

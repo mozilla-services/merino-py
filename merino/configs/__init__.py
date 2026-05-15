@@ -1,9 +1,19 @@
 """Configuration for merino-py"""
 
+from functools import partial, update_wrapper
+
 from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
+_RUNTIME_MODE_VALUES = ["ALL", "REGULAR", "WIDGET"]
+
 _validators = [
+    Validator(
+        "runtime.mode",
+        is_type_of=str,
+        is_in=_RUNTIME_MODE_VALUES,
+        default="ALL",
+    ),
     Validator(
         "runtime.disabled_providers",
         is_type_of=list,
@@ -82,6 +92,27 @@ _validators = [
         must_exist=True,
         env=["production", "staging", "development"],
     ),
+    Validator(
+        "contextual_interest.enabled",
+        is_type_of=bool,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "contextual_interest.gcs.max_size",
+        "contextual_interest.gcs.cron_interval_seconds",
+        is_type_of=int,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "contextual_interest.gcs.bucket_name",
+        "contextual_interest.gcs.gcp_project",
+        "contextual_interest.gcs.blob_name",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
     Validator(
@@ -131,7 +162,9 @@ _validators = [
     # TODO: Break these out into a generic "elastic search" set?
     Validator("providers.sports.es.dsn", is_type_of=str, required=True),
     Validator("providers.sports.es.api_key", is_type_of=str, required=True),
-    Validator("providers.sports.es.request_timeout_ms", is_type_of=int, gte=1, required=True),
+    Validator(
+        "providers.sports.es.request_timeout_sec", is_type_of=float, gte=0, lte=5.0, required=True
+    ),
     Validator("providers.top_picks.enabled_by_default", is_type_of=bool),
     Validator("providers.top_picks.score", is_type_of=float, gte=0, lte=1),
     Validator("providers.top_picks.query_char_limit", is_type_of=int, gte=1),
@@ -160,7 +193,13 @@ _validators = [
     Validator("providers.wikipedia.es_index", is_type_of=str),
     Validator("providers.wikipedia.es_max_suggestions", is_type_of=int, gte=1),
     Validator("providers.wikipedia.es_password", is_type_of=str),
-    Validator("providers.wikipedia.es_request_timeout_ms", is_type_of=int, gte=1),
+    Validator(
+        "providers.wikipedia.es_request_timeout_sec",
+        is_type_of=float,
+        gte=0,
+        lte=5.0,
+        required=True,
+    ),
     Validator("providers.wikipedia.es_user", is_type_of=str),
     Validator("providers.wikipedia.score", gte=0, lte=1),
     Validator("providers.wikipedia.type", is_type_of=str, must_exist=True),
@@ -222,3 +261,44 @@ settings = Dynaconf(
     env_switcher="MERINO_ENV",
     validators=_validators,
 )
+
+
+def validate_request_timeouts(value, provider_timeout_key):
+    """Validate that the provider-level query timeout is greater than or equal to
+    the backend-level timeout.
+    """
+    provider_timeout = settings.get(provider_timeout_key)
+    return provider_timeout >= value
+
+
+# Inter-configuration validations.
+settings.validators.register(
+    Validator(
+        "providers.wikipedia.es_request_timeout_sec",
+        condition=update_wrapper(
+            partial(
+                validate_request_timeouts,
+                provider_timeout_key="providers.wikipedia.query_timeout_sec",
+            ),
+            validate_request_timeouts,
+        ),
+        messages={
+            "condition": "Elasticsearch request timeout: {name}, must be less than or equal to the provider-level requeset timeout."
+        },
+    ),
+    Validator(
+        "providers.sports.es.request_timeout_sec",
+        condition=update_wrapper(
+            partial(
+                validate_request_timeouts,
+                provider_timeout_key="providers.sports.query_timeout_sec",
+            ),
+            validate_request_timeouts,
+        ),
+        messages={
+            "condition": "Elasticsearch request timeout: {name}, must be less than or equal to the provider-level requeset timeout."
+        },
+    ),
+)
+
+settings.validators.validate()

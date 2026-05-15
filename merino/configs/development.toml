@@ -34,5 +34,55 @@ source_gcp_project = "mozdata"
 # List of active sports to process.
 # (e.g. "NBA,NHL,EPL,UCL,etc")
 # See `jobs.sportsdata_jobs.common` for list of supported sports
-sports = "NBA,NHL,EPL,UCL"
+sports = ["NBA", "NHL", "EPL", "UCL", "WCS"]
+cache = "redis"
 api_key = "abc123"
+
+[development.providers.wikipedia]
+backend = "elasticsearch"
+es_url = "http://localhost:9200"
+# Unused, just needs to be non-empty
+es_api_key = "local"
+
+[development.providers.sports]
+enabled_by_default = true
+
+[development.providers.sports.es]
+dsn = "http://localhost:9200"
+# Unused, just needs to be non-empty
+api_key = "local"
+request_timeout_ms = 10000
+
+[development.gcs]
+# To enable overriding the GCS endpoint
+# Leave empty to use the default Google Cloud Storage api
+# MERINO_GCS__ENDPOINT_URL
+endpoint_url = "http://localhost:4443"
+
+[development.image_gcs]
+# MERINO_IMAGE_GCS__GCS_PROJECT
+# Staging project
+gcs_project = ""
+
+# MERINO_IMAGE_GCS__GCS_BUCKET
+gcs_bucket = ""
+
+# MERINO_IMAGE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = false
+
+[development.image_gcs_v2]
+# MERINO_IMAGE_GCS_V2__GCS_PROJECT
+gcs_project = ""
+
+# MERINO_IMAGE_GCS_V2__GCS_BUCKET
+gcs_bucket = "merino-images-local"
+
+# MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
+# CDN hostname used for public URLs of stored images
+cdn_hostname = "localhost:4443"
+
+[development.contextual_interest]
+# disabled in dev so we don't fetch artifacts locally
+enabled = false

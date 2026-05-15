@@ -7,16 +7,20 @@ import hashlib
 from typing import Any
 
 from datetime import datetime, timedelta
-from httpx import AsyncClient
+from httpx import AsyncClient, HTTPError
 
 from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 
 
+# TODO: convert this to use `sport.cache`; obsolete the `cache_dir` arg
 async def get_data(
     client: AsyncClient,
     url: str,
     ttl: timedelta | None = None,
     cache_dir: str | None = None,
+    args: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> Any:
     """Fetch data from the provider. This may pull from the local cache or from the remote site depending on the
     `ttl` for the local cache.
@@ -50,9 +54,15 @@ async def get_data(
                 # possible read on a closed file.
                 pass
     logger.debug(f"{LOGGING_TAG} fetching data from {url}")
-    response = await client.get(url)
-    response.raise_for_status()
-    response = response.json()
+    try:
+        request_args: dict[str, Any] = {"params": args}
+        if headers:
+            request_args["headers"] = headers
+        response = await client.get(url, **request_args)
+        response.raise_for_status()
+        response = response.json()
+    except HTTPError:
+        raise SportsDataError(f"Could not fetch data from provider for {url}") from None
     if cache_file:
         logger.debug(f"{LOGGING_TAG}💾 Writing cache for {url}")
         try:

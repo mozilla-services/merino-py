@@ -7,17 +7,25 @@
 import json
 
 import pytest
+from pydantic import ValidationError
 from pytest_mock import MockerFixture
 
-from merino.utils.gcs.engagement.filemanager import EngagementData, EngagementFilemanager
+from merino.providers.suggest.adm.backends.protocol import KeywordEntry, KeywordMetrics
+from merino.utils.gcs.engagement.filemanager import (
+    EngagementData,
+    EngagementFilemanager,
+)
 
 GCS_BUCKET = "test-bucket"
-BLOB_NAME = "suggest-merino-exports/engagement/latest.json"
+BLOB_NAME = "suggest-merino-exports/engagement/keyword/latest.json"
 
 SAMPLE_ENGAGEMENT_JSON = json.dumps(
     {
         "amp": {
-            "amazon": {"advertiser": "amazon", "impressions": 202640, "clicks": 2568},
+            "mozilla/firefox": {
+                "live": {"impressions": 3333, "clicks": 88},
+                "historical": {"impressions": 6666, "clicks": 333},
+            },
         },
         "wiki_aggregated": {"impressions": 2935973, "clicks": 2325},
         "amp_aggregated": {"impressions": 463225, "clicks": 5878},
@@ -33,7 +41,7 @@ def fixture_filemanager() -> EngagementFilemanager:
 
 @pytest.fixture(name="mock_blob")
 def fixture_mock_blob(mocker: MockerFixture):
-    """Return a mock gcloud.aio.storage Blob."""
+    """Return a mock gcloud.aio.storage Blob with engagement data."""
     blob = mocker.AsyncMock()
     blob.download = mocker.AsyncMock(return_value=SAMPLE_ENGAGEMENT_JSON.encode())
     return blob
@@ -41,7 +49,7 @@ def fixture_mock_blob(mocker: MockerFixture):
 
 @pytest.fixture(name="mock_bucket")
 def fixture_mock_bucket(mocker: MockerFixture, mock_blob):
-    """Return a mock gcloud.aio.storage Bucket."""
+    """Return a mock gcloud.aio.storage Bucket for engagement data."""
     bucket = mocker.AsyncMock()
     bucket.get_blob = mocker.AsyncMock(return_value=mock_blob)
     return bucket
@@ -53,7 +61,7 @@ def test_get_bucket_lazily_creates_client_and_bucket(
     mock_bucket,
 ) -> None:
     """Test that get_bucket() creates the GCS client and Bucket on first call."""
-    mock_storage_cls = mocker.patch("merino.utils.gcs.engagement.filemanager.Storage")
+    mock_storage_cls = mocker.patch("merino.utils.gcs.engagement.filemanager.get_storage_client")
     mocker.patch("merino.utils.gcs.engagement.filemanager.Bucket", return_value=mock_bucket)
 
     assert filemanager.gcs_client is None
@@ -98,7 +106,14 @@ async def test_get_file_success(
     mock_blob.download.assert_called_once()
     assert result is not None
     assert isinstance(result, EngagementData)
-    assert result.amp["amazon"]["clicks"] == 2568
+    assert isinstance(result.amp["mozilla/firefox"], KeywordEntry)
+    assert isinstance(result.amp["mozilla/firefox"].live, KeywordMetrics)
+    assert result.amp["mozilla/firefox"].live is not None
+    assert result.amp["mozilla/firefox"].live.impressions == 3333
+    assert result.amp["mozilla/firefox"].live.clicks == 88
+    assert result.amp["mozilla/firefox"].historical is not None
+    assert result.amp["mozilla/firefox"].historical.impressions == 6666
+    assert result.amp["mozilla/firefox"].historical.clicks == 333
     assert result.amp_aggregated["impressions"] == 463225
     assert result.wiki_aggregated["clicks"] == 2325
 
@@ -138,3 +153,9 @@ async def test_get_file_gcs_exception(
 
     assert result is None
     assert any("GCS timeout" in r.message for r in caplog.records)
+
+
+def test_keyword_entry_requires_at_least_one_metrics_window() -> None:
+    """Test that KeywordEntry raises if both live and historical are absent."""
+    with pytest.raises(ValidationError):
+        KeywordEntry()

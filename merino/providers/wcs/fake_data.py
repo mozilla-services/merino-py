@@ -1,0 +1,44 @@
+"""Static team data for the WCS teams endpoint."""
+
+import json
+from pathlib import Path
+from typing import Any
+
+from merino.providers.wcs.protocol import TeamInfo, _icon
+from merino.providers.wcs.utils import get_team_colours
+
+
+def _team_from_json(entry: dict[str, Any]) -> TeamInfo:
+    """Build a TeamInfo from a wcs_teams.json entry."""
+    key = str(entry["Key"])
+    return TeamInfo(
+        key=key,
+        global_team_id=int(entry["GlobalTeamId"]),
+        name=str(entry["Name"]),
+        region=key,
+        colors=get_team_colours(key),
+        icon_url=_icon(key),
+        group=str(entry["Group"]),
+        eliminated=False,
+    )
+
+
+def _load_all_teams() -> list[TeamInfo]:
+    """Load all teams from the static wcs_teams.json file."""
+    path = Path(__file__).parent.parent.parent / "data" / "wcs_teams.json"
+    with path.open() as f:
+        return [_team_from_json(entry) for entry in json.load(f)]
+
+
+_ALL_TEAMS: list[TeamInfo] = _load_all_teams()
+_TEAMS_BY_KEY: dict[str, TeamInfo] = {team.key: team for team in _ALL_TEAMS}
+
+
+def get_all_teams() -> list[TeamInfo]:
+    """Return all tournament teams from the static teams list."""
+    return _ALL_TEAMS
+
+
+def get_teams_by_key() -> dict[str, TeamInfo]:
+    """Return tournament team metadata keyed by WCS team key."""
+    return _TEAMS_BY_KEY

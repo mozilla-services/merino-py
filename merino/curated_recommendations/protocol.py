@@ -106,7 +106,9 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-release"
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
-    CONTEXTUAL_RANKING_CONTENT_EXPERIMENT = "content-contextual-ranking"
+    INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
+    # Experiment to measure the impact of editorial sections by hiding them in the treatment branch
+    EDITORIAL_SECTIONS_EXPERIMENT = "editorial-sections-experiment"
 
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
@@ -122,6 +124,13 @@ class DailyBriefingBranch(str, Enum):
     BRIEFING_WITH_POPULAR = "briefing-with-popular"
     # Show Daily Briefing (headlines) section WITHOUT Popular Today section
     BRIEFING_WITHOUT_POPULAR = "briefing-without-popular"
+
+
+class EditorialSectionsBranch(str, Enum):
+    """Treatment branches for the Editorial Sections experiment (HNT-2182)."""
+
+    # Remove editorial (manually curated) sections; keep ML sections + Popular Today.
+    NO_EDITORIAL_SECTIONS = "no-editorial-sections"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
@@ -154,7 +163,7 @@ class InferredInterests(RootModel[dict[str, float | str | list[str]]]):
 class ProcessedInterests(BaseModel):
     """Internal representation of interests after processing/decoding"""
 
-    minimum_value_count_for_normalization: int = 3
+    minimum_value_count_for_normalization: int = 2
     model_id: str | None = None
     scores: dict[str, float] = Field(default_factory=dict)
     normalized_scores: dict[str, float] = Field(default_factory=dict)
@@ -263,7 +272,7 @@ class CuratedRecommendation(CorpusItem):
 
     __typename: TypeName = TypeName.RECOMMENDATION
 
-    experiment_flags: Annotated[set[str] | None, Field(default_factory=set, exclude=True)] = None
+    experiment_flags: Annotated[set[str] | None, Field(default_factory=set, exclude=True)]
     ranking_data: Annotated[RankingData | None, Field(exclude=True)] = None
     tileId: Annotated[int | None, Field(strict=True, ge=MIN_TILE_ID, le=MAX_TILE_ID)] = None
     receivedRank: int

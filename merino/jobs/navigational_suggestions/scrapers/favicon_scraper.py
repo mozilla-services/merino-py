@@ -46,7 +46,7 @@ class FaviconScraper:
                 try:
                     json_data = response.json()
                     result = json_data.get("icons", [])
-                except (AttributeError, ValueError):
+                except AttributeError, ValueError:
                     logger.debug(f"Failed to parse manifest JSON from {manifest_url}")
         except Exception as e:
             logger.debug(f"Exception getting manifest from {manifest_url}: {e}")

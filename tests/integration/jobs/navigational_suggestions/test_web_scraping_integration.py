@@ -211,9 +211,9 @@ class TestValidatorsIntegration:
 
         for title, fallback, expected_result in test_cases:
             result = get_title_or_fallback(title, fallback)
-            assert (
-                result == expected_result
-            ), f"Title fallback failed for '{title}' with fallback '{fallback}'"
+            assert result == expected_result, (
+                f"Title fallback failed for '{title}' with fallback '{fallback}'"
+            )
 
 
 class TestUtilsIntegration:
@@ -254,9 +254,9 @@ class TestUtilsIntegration:
 
         for base_url, relative_url, expected_result in test_cases:
             result = join_url(base_url, relative_url)
-            assert (
-                result == expected_result
-            ), f"URL joining failed for base='{base_url}', relative='{relative_url}'"
+            assert result == expected_result, (
+                f"URL joining failed for base='{base_url}', relative='{relative_url}'"
+            )
 
     def test_favicon_url_processing(self):
         """Test favicon URL processing and validation."""

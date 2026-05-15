@@ -80,6 +80,11 @@ log inspection interfaces.
 
 ## Metrics
 
+> [!NOTE]
+> Metric documentation has been moved to [metrics.yaml](../metrics.yaml).
+> Please use that to document all the new metrics. This section now serves as
+> the legacy metrics document only.
+
 > A note on timers: Statsd timers are measured in milliseconds, and are reported
 > as integers (at least in Cadence). Milliseconds are often not precise enough
 > for the tasks we want to measure in Merino. Instead, we use generic histograms

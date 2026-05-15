@@ -26,6 +26,9 @@ PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
 # Whether to log `web.suggest.request`
 LOG_SUGGEST_REQUEST: bool = settings.logging.log_suggest_request
 
+# Excluded providers for logging
+EXCLUDED_PROVIDERS: frozenset[str] = frozenset(settings.logging.excluded_providers)
+
 
 class LoggingMiddleware:
     """An ASGI middleware for logging."""
@@ -48,7 +51,8 @@ class LoggingMiddleware:
                 if (
                     LOG_SUGGEST_REQUEST
                     and PATTERN.match(request.url.path)
-                    and request.query_params.get("providers", "").strip().lower() != "accuweather"
+                    and request.query_params.get("providers", "").strip().lower()
+                    not in EXCLUDED_PROVIDERS
                     and request.scope.get(ScopeKey.PII_DETECTION) == PIIType.NON_PII
                 ):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(

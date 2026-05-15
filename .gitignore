@@ -104,6 +104,8 @@ celerybeat.pid
 
 # Environments
 .env
+# Safe local dev env vars
+!dev/.env
 .venv
 env/
 venv/

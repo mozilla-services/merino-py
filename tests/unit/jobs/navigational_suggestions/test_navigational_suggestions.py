@@ -125,8 +125,8 @@ def testconstruct_top_picks_with_serp_categories():
         "merino.jobs.navigational_suggestions.processing.manifest_builder.get_serp_categories"
     ) as mock_get_serp:
         # Setup mock to return different categories for different URLs
-        mock_get_serp.side_effect = (
-            lambda url: [18] if "example" in url else [0]
+        mock_get_serp.side_effect = lambda url: (
+            [18] if "example" in url else [0]
         )  # Tech=18, Inconclusive=0
 
         domain_data = [

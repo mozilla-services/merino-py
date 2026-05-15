@@ -7,6 +7,8 @@ import numpy as np
 from pydantic import BaseModel
 import logging
 
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,6 +54,7 @@ class ModelData(BaseModel):
     model_type: ModelType
     # Whether to rescale the values based on 1 max value
     rescale: bool
+    ctr_prior_strength: float | None = None
     day_time_weighting: DayTimeWeightingConfig
     # Output key, and inputs for how fields affect it
     interest_vector: dict[str, InterestVectorConfig]
@@ -159,18 +162,25 @@ class InferredLocalModel(BaseModel):
             if idx >= len(dp_values):
                 logger.error("Model DP incorrect length")
                 continue
-            decoded_values: list[float] = [
-                interpret_index(a)
-                for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
-            ]
-            if len(decoded_values) == 1:
-                # For n thresholds there are n+1 dimensions in the dp string
-                # This is because the 0 index means the values is less than the 0 threshold
-                result[key] = decoded_values[0]
-            if len(decoded_values) == 2:
-                # When there are two 1 values there is a high likelyhood that one of them
-                # is correct, so we average just in case
-                result[key] = 0.5 * (decoded_values[0] + decoded_values[1])
+            if key == TIME_ZONE_OFFSET_INFERRED_KEY:
+                # Indices map to time zone ids. Currently 0 is pacific, 1 mountain etc for US, though CA may be simpler with 2 zones
+                tz_indices = self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
+                if len(tz_indices) > 0:
+                    result[key] = tz_indices[-1]
+                    # If right-most set do last one as more people are on the east coast
+            else:
+                decoded_values: list[float] = [
+                    interpret_index(a)
+                    for a in self.get_unary_encoded_index(dp_values[idx], support_two=support_two)
+                ]
+                if len(decoded_values) == 1:
+                    # For n thresholds there are n+1 dimensions in the dp string
+                    # This is because the 0 index means the values is less than the 0 threshold
+                    result[key] = decoded_values[0]
+                if len(decoded_values) == 2:
+                    # When there are two 1 values there is a high likelyhood that one of them
+                    # is correct, so we average just in case
+                    result[key] = 0.5 * (decoded_values[0] + decoded_values[1])
         return result
 
 
@@ -220,27 +230,44 @@ NUM_ML_RECS_BACKEND_FILES = 10
 class MLRecsBackend(Protocol):
     """Protocol for ML Recommendations saved in GCS"""
 
-    def is_valid(self) -> bool:
+    def is_valid(self, surface_id: SurfaceId) -> bool:
         """Return whether the backend is valid and ready to serve recommendations"""
         ...
 
     def get(
-        self, region: str | None = None, utcOffset: str | None = None, cohort: str | None = None
+        self,
+        surface_id: SurfaceId,
+        region: str | None = None,
+        cohort: str | None = None,
+        time_zone: str | None = None,
     ) -> ContextualArticleRankings | None:
         """Fetch the recommendations based on region and utc offset"""
         ...
 
-    def get_adjusted_impressions(self, corpus_item_id: str) -> int:
+    def get_adjusted_impressions(self, corpus_item_id: str, surface_id: SurfaceId) -> int:
         """Return the impression count for a given corpus item id (adjusted for propensity)"""
         ...
 
-    def get_cohort_training_run_id(self) -> str | None:
+    def get_cohort_training_run_id(self, surface_id: SurfaceId) -> str | None:
         """Return the training run ID for the cohort model used."""
         ...
 
 
 class CohortModelBackend(Protocol):
     """Protocol for Cohort Model that maps interest vectors to cohorts"""
+
+    def get_cohort_for_interests(
+        self,
+        interests: str,
+        model_id: str,
+        training_run_id: str | None = None,
+    ) -> str | None:
+        """Fetch the contextual ranking cohort based on interests string."""
+        ...
+
+
+class SpindleServiceBackend(Protocol):
+    """Protocol for Spindle Serive"""
 
     def get_cohort_for_interests(
         self,

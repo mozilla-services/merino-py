@@ -37,15 +37,17 @@ def upload_engagement_data() -> None:  # pragma: no cover
         amp_data_downloader = AMPDownloader(gcs_bq_project)
         wiki_data_downloader = WikiDownloader(gcs_bq_project)
 
-        amp_data: list[dict[str, Any]] = amp_data_downloader.download_data()
+        amp_historical: list[dict[str, Any]] = amp_data_downloader.download_historical_data()
+        amp_historical = amp_data_downloader.apply_click_adjustment(amp_historical)
+        amp_live: list[dict[str, Any]] = []
         wiki_data: dict[str, int] = wiki_data_downloader.download_data()
 
-        transformed_amp_data = {row["advertiser"]: row for row in amp_data}
+        transformed_amp_data = amp_data_downloader.transform_data(
+            historical=amp_historical,
+            live=amp_live,
+        )
 
-        amp_aggregated = {
-            "impressions": sum(int(row["impressions"]) for row in amp_data),
-            "clicks": sum(int(row["clicks"]) for row in amp_data),
-        }
+        amp_aggregated_data = amp_data_downloader.aggregate_data(transformed_amp_data)
 
         payload = {
             "amp": transformed_amp_data,
@@ -53,14 +55,14 @@ def upload_engagement_data() -> None:  # pragma: no cover
                 "impressions": int(wiki_data["impressions"]),
                 "clicks": int(wiki_data["clicks"]),
             },
-            "amp_aggregated": amp_aggregated,
+            "amp_aggregated": amp_aggregated_data,
         }
 
         content = json.dumps(payload, indent=2)
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        destination_name = f"suggest-merino-exports/engagement/{timestamp}.json"
-        latest_name = "suggest-merino-exports/engagement/latest.json"
+        destination_name = f"suggest-merino-exports/engagement/keyword/{timestamp}.json"
+        latest_name = "suggest-merino-exports/engagement/keyword/latest.json"
 
         uploader = GcsUploader(
             destination_gcp_project=gcs_storage_project,
@@ -82,7 +84,7 @@ def upload_engagement_data() -> None:  # pragma: no cover
             forced_upload=True,
         )
 
-        logger.info("Uploaded engagement data")
+        logger.info("Uploaded keyword engagement data")
 
     except Exception as ex:
         logger.error(

@@ -5,6 +5,10 @@ from typing import cast
 
 
 from merino.curated_recommendations import LocalModelBackend, MLRecsBackend
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
+)
 from merino.curated_recommendations.ml_backends.protocol import (
     LOCAL_MODEL_MODEL_ID_KEY,
     CohortModelBackend,
@@ -39,6 +43,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
+    ROLLED_OUT_SECTION_SURFACES,
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
     derive_region,
@@ -65,6 +70,7 @@ class CuratedRecommendationsProvider:
         local_model_backend: LocalModelBackend,
         ml_recommendations_backend: MLRecsBackend,
         cohort_model_backend: CohortModelBackend,
+        lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
@@ -73,6 +79,7 @@ class CuratedRecommendationsProvider:
         self.local_model_backend = local_model_backend
         self.ml_recommendations_backend = ml_recommendations_backend
         self.cohort_model_backend = cohort_model_backend
+        self.lints_interest_backend = lints_interest_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -110,7 +117,8 @@ class CuratedRecommendationsProvider:
         @return: A re-ranked list of curated recommendations
         """
         ranker = ThompsonSamplingRanker(
-            engagement_backend=self.engagement_backend, prior_backend=self.prior_backend
+            engagement_backend=self.engagement_backend,
+            prior_backend=self.prior_backend,
         )
         recommendations = ranker.rank_items(
             recommendations,
@@ -143,7 +151,7 @@ class CuratedRecommendationsProvider:
         sections_feeds = None
         general_feed: list[CuratedRecommendation] = []
         cohort_model_training_run_id = (
-            self.ml_recommendations_backend.get_cohort_training_run_id()
+            self.ml_recommendations_backend.get_cohort_training_run_id(surface_id)
             if self.ml_recommendations_backend
             else None
         )
@@ -163,14 +171,11 @@ class CuratedRecommendationsProvider:
                 prior_backend=self.prior_backend,
                 sections_backend=self.sections_backend,
                 ml_backend=self.ml_recommendations_backend,
+                lints_interest_backend=self.lints_interest_backend,
                 region=derive_region(request.locale, request.region),
             )
-        elif surface_id in (
-            SurfaceId.NEW_TAB_EN_US,
-            SurfaceId.NEW_TAB_EN_GB,
-            SurfaceId.NEW_TAB_EN_CA,
-        ):
-            # US/GB/CA non-sections: fetch from sections backend instead of scheduler
+        elif surface_id in ROLLED_OUT_SECTION_SURFACES:
+            # Rolled-out section surfaces: fetch from sections backend instead of scheduler
             rescaler: EngagementRescaler | None = None
             rescaler = CrawledContentRescaler()
             general_feed = await get_legacy_recommendations_from_sections(

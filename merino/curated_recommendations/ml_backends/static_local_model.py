@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
 from merino.curated_recommendations.ml_backends.protocol import (
     InferredLocalModel,
     LocalModelBackend,
@@ -31,18 +31,22 @@ LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1_MODEL_ID
 LOCAL_AND_SERVER_V3_BRANCH_NAME = "personalized-stories"
 LOCAL_AND_SERVER_V4_BRANCH_NAME = LOCAL_AND_SERVER_V3_BRANCH_NAME
 
-# Ranking based on normalized time zone offset and country
+# InferredTimeZone experiment branches. Note: the TZ branch is currently
+# being repurposed to route requests to the LinTS InterestRanker (the original
+# TZ-context treatment underperformed; reusing its enrollment for the
+# InterestRanker rollout). See is_inferred_interest_experiment in sections.py.
 CONTEXTUAL_RANKING_TREATMENT_TZ = "contextual-ranking-content-tz"
-# Ranking based on country only
+# Ranking based on country only — the control branch (current production behavior).
 CONTEXTUAL_RANKING_TREATMENT_COUNTRY = "contextual-ranking-content-country"
 
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
 CTR_SECTION_MODEL_ID = "ctr_model_section_1"
+SMALL_POPULATION_MODEL_ID = "inferred-small-v1"
 
-SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID}
+SUPPORTED_LIVE_MODELS = {SERVER_V3_MODEL_ID, SMALL_POPULATION_MODEL_ID}
 
 DEFAULT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID
-EXPERIMENT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID + "_exp"
+EXPERIMENT_PRODUCTION_MODEL_ID = SERVER_V3_MODEL_ID  # Because we just have a few features zeroed out, we can use the same model id
 
 # These cause interest vector to have no randomization and should only be used
 # when thresholds force a constant ouput
@@ -51,6 +55,9 @@ FIXED_VALUE_Q = 0.0
 
 # Very high threshold to ensure that the 0 index is always returned
 VERY_HIGH_THRESHOLD = 1000.0
+
+# Number of average impressions to blend in for interest calculation.
+BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS = 100
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
@@ -177,22 +184,27 @@ class FakeLocalModelSections(LocalModelBackend):
 
 
 # See calculation https://colab.research.google.com/drive/1GlEr2TScikP8YLKpAL1sGTawnimD1IyV#scrollTo=KawDDJnjBwIM
-# Section March 2026 rollout
+# Section March 2026 rollout. This also rougly applies to experiments with the same p/q but 5 interests
 MODEL_P_VALUE = 0.92
 MODEL_Q_VALUE = 0.0288
 
+MODEL_P_VALUE_SMALL_POPULATION = 0.9686
+MODEL_Q_VALUE_SMALL_POPULATION = 0.0314
 
 OFF_THRESH_VALUE = 100
 
-THRESHOLDS_V3_NORMALIZED = [0.25, 0.46, 0.8]
+THRESHOLDS_V3_NORMALIZED = [1.1, 1.4, 1.7]
 THRESHOLDS_V3_NON_NORMALIZED = [0.002, 0.008, 0.017]
 THRESHOLDS_V3_NON_NORMALIZED_ALL_TOPICS = [0.0001, 0.002, 0.004]
+
+THRESHOLDS_SMALL_POPULATION = [1.4]
 
 SUBTOPIC_TOPIC_BLEND_RATIO = 0.15
 
 TIME_ZONE_OFFSET_INFERRED_KEY = "timeZoneOffset"
 
 CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_EXPERIMENT = 14700000
+CLICK_RANDOMIZATION_EPSILON_MICRO_FOR_SMALL_COUNTRY = 9780000
 
 SPECIAL_ALL_TOPIC_KEYWOWRD = "all"
 
@@ -212,6 +224,41 @@ class PrivacyOverridesForFivePercentExperimentUS(PrivacyOverrides):
         super().__init__(**data)
 
 
+class PrivacyOverridesForSmallPopulation(PrivacyOverrides):
+    """Defines privacy overrides, so they can be applied automatically for Merino based experiments to reduce risk of privacy issues"""
+
+    def __init__(self, **data) -> None:
+        data.setdefault("local_popular_today_rerank", False)  # Turn of local reranking
+        super().__init__(**data)
+
+
+v3_limited_topics = [
+    # Top clicked in most popular, though food was dropped for parenting
+    Topic.SPORTS.value,
+    Topic.ARTS.value,
+    Topic.POLITICS.value,
+    Topic.PARENTING.value,
+    Topic.FOOD.value,
+    Topic.TECHNOLOGY.value,
+    Topic.SCIENCE.value,
+    # Time zone is added for 8th private feature
+]
+
+small_population_topics = [
+    Topic.SPORTS.value,
+    Topic.SCIENCE.value,
+    # Time zone is added for last feature
+]
+
+# These are the only features supported in a small experiment (in addition to time zone)
+v3_small_experiment_topics = {
+    Topic.SPORTS.value,
+    Topic.SCIENCE.value,
+    Topic.POLITICS.value,
+    Topic.ARTS.value,
+}
+
+
 # Creates a limited model based on topics. Topics features are stored with a t_
 # in telemetry.
 class SuperInferredModel(LocalModelBackend):
@@ -223,27 +270,6 @@ class SuperInferredModel(LocalModelBackend):
      Based on data analysis these were the most impactful topics from personalization when limited to 5
      The last dimension is a combination of other topics.
     """
-
-    v3_limited_topics = [
-        # Top clicked in most popular, though food was dropped for parenting
-        Topic.SPORTS.value,
-        Topic.ARTS.value,
-        Topic.POLITICS.value,
-        Topic.PARENTING.value,
-        Topic.FOOD.value,
-        Topic.TECHNOLOGY.value,
-        Topic.SCIENCE.value,
-        # Time zone is added for 8th private feature
-    ]
-
-    # These are the only features supported in a small experiment (in addition to time zone)
-    v3_small_experiment_topics = {
-        Topic.SPORTS.value,
-        Topic.PARENTING.value,
-        Topic.SCIENCE.value,
-    }
-
-    limited_topics_set = set(v3_limited_topics)
 
     @staticmethod
     def _get_topic(
@@ -278,19 +304,27 @@ class SuperInferredModel(LocalModelBackend):
         )
 
     @staticmethod
-    def _get_time_zone() -> InterestVectorConfig:
+    def _get_time_zone(small_population=False) -> InterestVectorConfig:
         """Time zone key has special functionality in Firefox, but we must specifiy threshols here
         based on UTC offset +24 (positive values). These thresholds support the 4 continental US zones
         """
         now: datetime = datetime.now(ZoneInfo("America/Los_Angeles"))
         offset: timedelta = now.utcoffset() or timedelta(0)
         pacific_bucket: float = (offset.total_seconds() / 3600) % 24
-        return InterestVectorConfig(
-            features={},
-            thresholds=[pacific_bucket + 0.1, pacific_bucket + 1.1, pacific_bucket + 2.1],
-            diff_p=MODEL_P_VALUE,
-            diff_q=MODEL_Q_VALUE,
-        )
+        if small_population:
+            return InterestVectorConfig(
+                features={},
+                thresholds=[pacific_bucket + 1.1],  # split west from east
+                diff_p=MODEL_P_VALUE_SMALL_POPULATION,
+                diff_q=MODEL_Q_VALUE_SMALL_POPULATION,
+            )
+        else:
+            return InterestVectorConfig(
+                features={},
+                thresholds=[pacific_bucket + 0.1, pacific_bucket + 1.1, pacific_bucket + 2.1],
+                diff_p=MODEL_P_VALUE,
+                diff_q=MODEL_Q_VALUE,
+            )
 
     @staticmethod
     def _get_section(section_name: str, thresholds: list[float]) -> InterestVectorConfig:
@@ -303,54 +337,66 @@ class SuperInferredModel(LocalModelBackend):
         )
 
     def _build_local(
-        self, model_id, surface_id, small_experiment=False, include_local_reranking=False
+        self,
+        model_id,
+        surface_id,
+        topics: list[str],
+        small_experiment=False,
+        small_population=False,
+        include_local_reranking=False,
     ) -> InferredLocalModel | None:
-        model_thresholds = THRESHOLDS_V3_NORMALIZED
+        model_thresholds = (
+            THRESHOLDS_SMALL_POPULATION if small_population else THRESHOLDS_V3_NORMALIZED
+        )
         private_features: list[str] | None = None
-
         section_features = (
             {
                 a: self._get_section(a, model_thresholds)
                 for a in BASE_SECTIONS_FOR_LOCAL_MODEL
-                if a not in self.limited_topics_set
+                if a not in topics
             }
             if include_local_reranking
             else {}
         )
 
-        private_features = self.v3_limited_topics + [TIME_ZONE_OFFSET_INFERRED_KEY]
+        private_features = topics + [TIME_ZONE_OFFSET_INFERRED_KEY]
 
         if small_experiment:
             topic_features = {
                 a: self._get_topic(
-                    a, model_thresholds, disable_feature=a not in self.v3_small_experiment_topics
+                    a, model_thresholds, disable_feature=a not in v3_small_experiment_topics
                 )
-                for a in self.v3_limited_topics
+                for a in topics
             }
         else:
-            topic_features = {
-                a: self._get_topic(a, model_thresholds) for a in self.v3_limited_topics
-            }
+            topic_features = {a: self._get_topic(a, model_thresholds) for a in topics}
 
+        is_baysean_smoothing = True  # We're transitioning to use baysean smoothing for all models
         model_data: ModelData = ModelData(
             model_type=ModelType.CTR,
             rescale=True,
             noise_scale=0.0,
+            ctr_prior_strength=BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS
+            if is_baysean_smoothing
+            else None,
             day_time_weighting=DayTimeWeightingConfig(
                 days=[30],
                 relative_weight=[1],
             ),
             interest_vector={
                 **topic_features,
-                TIME_ZONE_OFFSET_INFERRED_KEY: self._get_time_zone(),
+                TIME_ZONE_OFFSET_INFERRED_KEY: self._get_time_zone(small_population),
                 **section_features,
             },
             private_features=private_features,
         )
         # No privacy overrides until this is implemented in Merino
-        privacy_overrides: PrivacyOverrides | None = (
-            PrivacyOverridesForFivePercentExperimentUS() if small_experiment else None
-        )
+        privacy_overrides: PrivacyOverrides | None = None
+        if small_experiment:
+            privacy_overrides = PrivacyOverridesForFivePercentExperimentUS()
+        if small_population:
+            privacy_overrides = PrivacyOverridesForSmallPopulation()
+
         return InferredLocalModel(
             model_id=model_id,
             surface_id=surface_id,
@@ -384,16 +430,20 @@ class SuperInferredModel(LocalModelBackend):
 
         if model_id is None:  ## this is the "get" call for building the model sent in the response
             ## switch on experiment name, not using util because we have string name instead of request object
-            if (
-                experiment_name is None  # Default
-                or experiment_name == INFERRED_LOCAL_EXPERIMENT_NAME_V4
-                or experiment_name == f"optin-{INFERRED_LOCAL_EXPERIMENT_NAME_V4}"
-            ):
-                # We don't have to check for branch here as control won't call inferred code
-                return self._build_local(SERVER_V3_MODEL_ID, surface_id)
-            else:
+            if surface_id == SurfaceId.NEW_TAB_EN_US.value and experiment_name is not None:
                 return self._build_local(
-                    EXPERIMENT_PRODUCTION_MODEL_ID, surface_id, small_experiment=True
+                    EXPERIMENT_PRODUCTION_MODEL_ID,
+                    surface_id,
+                    topics=v3_limited_topics,
+                    small_experiment=True,
                 )
-        # Normally we would pick the model based on model_id here, but we are supporting only one right now
-        return self._build_local(SERVER_V3_MODEL_ID, surface_id)
+        if surface_id == SurfaceId.NEW_TAB_EN_CA.value:
+            return self._build_local(
+                SMALL_POPULATION_MODEL_ID,
+                surface_id,
+                topics=small_population_topics,
+                small_population=True,
+                include_local_reranking=False,
+            )
+        else:
+            return self._build_local(SERVER_V3_MODEL_ID, surface_id, topics=v3_limited_topics)

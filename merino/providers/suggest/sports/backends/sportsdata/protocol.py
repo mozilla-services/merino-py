@@ -1,26 +1,60 @@
 """Protocol for sport suggestion backends."""
 
-from typing import Any
-from datetime import datetime
+from typing import Any, Optional, cast
+from datetime import datetime, tzinfo
+from pydantic import HttpUrl
 
 from merino.providers.suggest.base import BaseModel
-from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
-from merino.providers.suggest.sports.backends.sportsdata.common.sports import SPORT_CATEGORY_MAP
+from merino.providers.suggest.sports.backends.sportsdata.common import (
+    GameStatus,
+    SportCategory,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+    sportsdata_timezone_for_sport,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
+    SPORT_CATEGORY_MAP,
+)
+from merino.utils.logos import get_logo_url, LogoCategory
+
+# Mapping of sport name from SportEventDetail
+# (e.g. "NFL", "NHL", "NBA", etc.) to the logo category
+# In order to onboard a new logo category (e.g. new sport)
+# You must update this mapping
+SportLogoCategoryMap: dict[str, LogoCategory] = {
+    "nfl": LogoCategory.NFL,
+    "nhl": LogoCategory.NHL,
+    "nba": LogoCategory.NBA,
+    "mlb": LogoCategory.MLB,
+    "fifa": LogoCategory.Nations,
+}
 
 
 class SportTeamDetail(BaseModel):
     """Data about the specific Sport team."""
 
-    key: str  # Sport unique abbreviated identifier (e.g. "SFG", "DAL", etc)
+    key: str  # Sport unique abbreviated identifier (e.g. "SF", "DAL", etc)
     name: str  # Full name of the team
     colors: list[str]  # list of hex colors from primary to quaternary
     score: int | None  # Current score (if available)
+    icon: HttpUrl | None = None  # Team icon (if available)
 
 
 def build_query(event: dict[str, Any]) -> str:
     """Build the search query from the event information"""
-    date = datetime.fromisoformat(event["date"]).strftime("%d %b %Y")
-    return f"""{event.get("sport")} {event.get("away_team",{}).get("name","")} at {event.get("home_team", {}).get("name", "")} {date}"""
+    source_day = event.get("original_date")
+    if source_day:
+        date = datetime.fromisoformat(source_day).strftime("%d %B %Y")
+    else:
+        event_date = datetime.fromisoformat(event["date"])
+        query_timezone: tzinfo = sportsdata_timezone_for_sport(event.get("sport", ""))
+        date = event_date.astimezone(query_timezone).strftime("%d %B %Y")
+    # catch pre-stored values
+    if event.get("sport", "").lower() == "fifa":
+        sport_query_name = "World Cup 2026"
+    else:
+        sport_query_name = event.get("sport", "")
+    return f"""{sport_query_name} {event.get("home_team", {}).get("name", "")} vs {event.get("away_team", {}).get("name", "")} {date}"""
 
 
 class SportEventDetail(BaseModel):
@@ -43,28 +77,45 @@ class SportEventDetail(BaseModel):
         This presumes that it's reading a json loaded sport Event that was returned by elastic search.
         """
         status: GameStatus = event["event_status"]
+        try:
+            category = LogoCategory(SportLogoCategoryMap.get(event["sport"].lower(), "").lower())
+        except ValueError:
+            # No logos for this sport; leave icons as None
+            category = None
+
+        def _get_logo_closure(key: Optional[str]) -> Optional[HttpUrl]:
+            if category is None or key is None:
+                return None
+            return get_logo_url(category, key)
+
+        sport_map = {"fifa": "World Cup"}
+        home_team_key = event.get("home_team", {}).get("key")
+        away_team_key = event.get("away_team", {}).get("key")
+        sport = sport_map.get(event["sport"].lower(), event["sport"])
         return cls(
-            sport=event["sport"],
+            sport=cast(str, sport),
             query=build_query(event),
             # The following essentially converts `Z$` to `+00:00`, which
             # keeps the output consistent with prior versions
             date=datetime.fromisoformat(event["date"]).isoformat(),
             home_team=SportTeamDetail(
-                key=event.get("home_team", {}).get("key"),
+                key=home_team_key,
                 name=event.get("home_team", {}).get("name"),
                 colors=event.get("home_team", {}).get("colors"),
                 score=event.get("home_score"),
+                icon=_get_logo_closure(home_team_key),
             ),
             away_team=SportTeamDetail(
-                key=event.get("away_team", {}).get("key"),
+                key=away_team_key,
                 name=event.get("away_team", {}).get("name"),
                 colors=event.get("away_team", {}).get("colors"),
                 score=event.get("away_score"),
+                icon=_get_logo_closure(away_team_key),
             ),
             status=status.as_str(),
             status_type=str(status.as_ui_status()),
             touched=event.get("touched", "None"),
-            sport_category=SPORT_CATEGORY_MAP.get(event["sport"], SportCategory.Misc),
+            sport_category=SPORT_CATEGORY_MAP.get(event["sport"].upper(), SportCategory.Misc),
         )
 
 

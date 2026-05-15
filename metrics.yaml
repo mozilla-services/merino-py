@@ -245,6 +245,13 @@ suggest/adm:
       - name: outcome
         description: |
           The sampling outcome (selected, suppressed, skipped)
+      - name: subject
+        description: |
+          The identifier of the subject that has gone through Thompson sampling
+      - name: below_threshold
+        description: |
+          Whether the engagement ratio of the selected/suppressed candidate is below
+          that of the dummy candidate.
     scope: |
       The "api/v1/suggest" API endpoint.
     alert_policy: []
@@ -269,12 +276,89 @@ suggest/mars:
       The ADM provider MARS backend data sync.
     alert_policy: []
 
+  mars_fetch_response_size_bytes:
+    description: |
+      A gauge tracking the raw HTTP response body size in bytes from the MARS
+      suggest/data endpoint. Useful for monitoring payload growth, especially
+      when testing large responses (e.g. segmented caching validation).
+    type: gauge
+    labels:
+      - name: country
+        description: |
+          The country code for the fetched segment
+      - name: form_factor
+        description: |
+          The form factor for the fetched segment
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
   mars_data_staleness_seconds:
     description: |
       A gauge tracking the time in seconds since the last successful data fetch
       from MARS. Can be used to alert if data becomes stale.
     type: gauge
     labels: []
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.keyword_index_size:
+    description: |
+      A gauge tracking the number of keywords in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.suggestions_count:
+    description: |
+      A gauge tracking the number of suggestions in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.icons_count:
+    description: |
+      A gauge tracking the number of icons in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.advertisers_count:
+    description: |
+      A gauge tracking the number of advertisers in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
+    scope: |
+      The ADM provider MARS backend data sync.
+    alert_policy: []
+
+  amp.index.url_templates_count:
+    description: |
+      A gauge tracking the number of URL templates in the AMP index after a successful build.
+    type: gauge
+    labels:
+      - name: index
+        description: |
+          The index identifier (country/form-factor segment)
     scope: |
       The ADM provider MARS backend data sync.
     alert_policy: []
@@ -323,6 +407,189 @@ suggest/flightaware:
     labels: []
     scope: |
       The "api/v1/suggest" API endpoint
+    alert_policy: []
+
+suggest/normalization:
+  normalization_experiment_provider_match:
+    description: |
+      Tracks whether a normalized query produced a suggestion for a given
+      provider. Emitted once per provider per request for treatment users
+      in the query normalization experiment. Used to monitor how often
+      normalization fires and whether it leads to new provider matches.
+    type: counter
+    labels:
+      - name: provider
+        description: |
+          The provider being checked (e.g. "sports", "polygon")
+      - name: matched
+        description: |
+          Whether the provider returned a suggestion ("True" or "False")
+      - name: query_changed
+        description: |
+          Whether the normalization pipeline changed the query ("True" or "False")
+    scope: |
+      The "api/v1/suggest" API endpoint, treatment branch only.
+    alert_policy: []
+
+  normalization_experiment_timing:
+    description: |
+      Time taken by the normalization pipeline to process a query, in
+      milliseconds. Only emitted for treatment users when the pipeline
+      is active.
+    type: timing
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint, treatment branch only.
+    alert_policy: []
+
+providers/manifest:
+  manifest.lookup:
+    description: |
+      A counter incremented when a manifest-backed provider performs a key lookup.
+      The result label indicates whether the lookup found a match or not.
+    type: counter
+    labels:
+      - name: name
+        description: |
+          An identifier for the manifest namespace, e.g. "logos.airline",
+          "logos.nba".
+      - name: key
+        description: |
+          The specific key that was looked up, normalized to the manifest's
+          uppercase storage form (e.g. IATA code "AA", sports team key "GSW").
+          Only emitted on miss events so dashboards can show which entries
+          are missing without loading cardinality on the hot path.
+      - name: result
+        description: |
+          The outcome of the lookup (e.g. "miss" when the requested key
+          does not exist in the manifest).
+    scope: |
+      Any provider that uses the shared manifest metrics namespace.
+    alert_policy: []
+
+utils/synced_gcs_blob_v2:
+  gcs.sync.data.not_ready:
+    description: |
+      A counter incremented when synced GCS blob data is accessed before it is available.
+    type: counter
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.update.timing:
+    description: |
+      A timer covering the count and latency of GCS blob update task executions.
+    type: timing
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.valid:
+    description: |
+      A gauge indicating whether the most recently fetched GCS blob data is valid (1) or invalid (0).
+    type: gauge
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.fetch.response:
+    description: |
+      A counter for GCS blob fetch responses, labeled by HTTP status code.
+    type: counter
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+      - name: status
+        description: |
+          The HTTP status code returned by the GCS fetch (e.g., 200, 404).
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.size:
+    description: |
+      A gauge tracking the size in bytes of the fetched GCS blob.
+    type: gauge
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+  gcs.sync.last_updated:
+    description: |
+      A gauge tracking the time in seconds since the GCS blob was last successfully updated.
+      Can be used to alert if data becomes stale.
+    type: gauge
+    labels:
+      - name: bucket
+        description: |
+          The GCS bucket name.
+      - name: blob
+        description: |
+          The full path to the GCS blob.
+    scope: |
+      Any component using SyncedGcsBlobV2.
+    alert_policy: []
+
+search/elasticsearch:
+  es.search.count:
+    description: |
+      A counter for all Elasticsearch search attempts, incremented before the
+      request is issued. Use alongside es.search.error to derive a success rate.
+    type: counter
+    labels:
+      - name: index
+        description: |
+          The Elasticsearch index that was searched.
+    scope: |
+      Any provider backed by Elasticsearch (Wikipedia, Sports).
+    alert_policy: []
+
+  es.search.error:
+    description: |
+      A counter for failed Elasticsearch search requests.
+    type: counter
+    labels:
+      - name: index
+        description: |
+          The Elasticsearch index that was searched.
+      - name: status
+        description: |
+          The HTTP status code returned by Elasticsearch, or "unknown" for
+          non-HTTP errors (e.g. connection errors, timeouts).
+    scope: |
+      Any provider backed by Elasticsearch (Wikipedia, Sports).
     alert_policy: []
 
 weather/hourly_forecasts:

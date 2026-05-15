@@ -125,9 +125,9 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("en-CA", "GB", SurfaceId.NEW_TAB_EN_GB),
             ("en-GB", "GB", SurfaceId.NEW_TAB_EN_GB),
             ("en-US", "GB", SurfaceId.NEW_TAB_EN_GB),
-            ("en-CA", "IE", SurfaceId.NEW_TAB_EN_GB),
-            ("en-GB", "IE", SurfaceId.NEW_TAB_EN_GB),
-            ("en-US", "IE", SurfaceId.NEW_TAB_EN_GB),
+            ("en-CA", "IE", SurfaceId.NEW_TAB_EN_IE),
+            ("en-GB", "IE", SurfaceId.NEW_TAB_EN_IE),
+            ("en-US", "IE", SurfaceId.NEW_TAB_EN_IE),
             ("fr", "FR", SurfaceId.NEW_TAB_FR_FR),
             ("it", "IT", SurfaceId.NEW_TAB_IT_IT),
             ("es", "ES", SurfaceId.NEW_TAB_ES_ES),
@@ -141,7 +141,7 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("en", "CA", SurfaceId.NEW_TAB_EN_CA),
             ("en", "US", SurfaceId.NEW_TAB_EN_US),
             ("en", "GB", SurfaceId.NEW_TAB_EN_GB),
-            ("en", "IE", SurfaceId.NEW_TAB_EN_GB),
+            ("en", "IE", SurfaceId.NEW_TAB_EN_IE),
             ("en", "IN", SurfaceId.NEW_TAB_EN_INTL),
             # The locale language primarily determines the market, even if it's not the most common language in the region.
             ("de", "US", SurfaceId.NEW_TAB_DE_DE),
@@ -152,15 +152,15 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             # Extract region from locale, if it is not explicitly provided.
             ("en-US", None, SurfaceId.NEW_TAB_EN_US),
             ("en-GB", None, SurfaceId.NEW_TAB_EN_GB),
-            ("en-IE", None, SurfaceId.NEW_TAB_EN_GB),
+            ("en-IE", None, SurfaceId.NEW_TAB_EN_IE),
             # locale can vary in case.
             ("eN-US", None, SurfaceId.NEW_TAB_EN_US),
             ("En-GB", None, SurfaceId.NEW_TAB_EN_GB),
-            ("EN-ie", None, SurfaceId.NEW_TAB_EN_GB),
+            ("EN-ie", None, SurfaceId.NEW_TAB_EN_IE),
             ("en-cA", None, SurfaceId.NEW_TAB_EN_CA),
             # region can vary in case.
             ("en", "gB", SurfaceId.NEW_TAB_EN_GB),
-            ("en", "Ie", SurfaceId.NEW_TAB_EN_GB),
+            ("en", "Ie", SurfaceId.NEW_TAB_EN_IE),
             ("en", "in", SurfaceId.NEW_TAB_EN_INTL),
             # Default to international NewTab when region is unknown.
             ("en", "XX", SurfaceId.NEW_TAB_EN_US),
@@ -168,7 +168,7 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("xx", "US", SurfaceId.NEW_TAB_EN_US),
             ("xx", "CA", SurfaceId.NEW_TAB_EN_CA),
             ("xx", "GB", SurfaceId.NEW_TAB_EN_GB),
-            ("xx", "IE", SurfaceId.NEW_TAB_EN_GB),
+            ("xx", "IE", SurfaceId.NEW_TAB_EN_IE),
             ("xx", "YY", SurfaceId.NEW_TAB_EN_US),
         ],
     )
@@ -179,97 +179,6 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
         ensure correct surface id is returned based on passed locale & region
         """
         assert get_recommendation_surface_id(locale, region) == recommendation_surface_id
-
-
-class TestGetRecommendationSurfaceIdWithExperiment:
-    """Unit tests for experiment-gated surface ID routing (IE)."""
-
-    @pytest.mark.parametrize(
-        "locale,region,exp_name,exp_branch,feeds,expected",
-        [
-            # --- IE experiment: sections-in-ie ---
-            # Treatment branch
-            (
-                Locale.EN_GB,
-                "IE",
-                "sections-in-ie",
-                "sections",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_IE,
-            ),
-            # Optin prefix
-            (
-                Locale.EN_GB,
-                "IE",
-                "optin-sections-in-ie",
-                "sections",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_IE,
-            ),
-            # Control branch falls back
-            (
-                Locale.EN_GB,
-                "IE",
-                "sections-in-ie",
-                "control",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_GB,
-            ),
-            # No sections feed falls back
-            (
-                Locale.EN_GB,
-                "IE",
-                "sections-in-ie",
-                "sections",
-                ["general"],
-                SurfaceId.NEW_TAB_EN_GB,
-            ),
-            # None feeds falls back
-            (Locale.EN_GB, "IE", "sections-in-ie", "sections", None, SurfaceId.NEW_TAB_EN_GB),
-            # Base en locale with IE region
-            (Locale.EN, "IE", "sections-in-ie", "sections", ["sections"], SurfaceId.NEW_TAB_EN_IE),
-            # GB region unaffected
-            (
-                Locale.EN_GB,
-                "GB",
-                "sections-in-ie",
-                "sections",
-                ["sections"],
-                SurfaceId.NEW_TAB_EN_GB,
-            ),
-        ],
-        ids=[
-            "ie-treatment",
-            "ie-optin",
-            "ie-control-fallback",
-            "ie-no-sections-feed",
-            "ie-none-feeds",
-            "ie-en-locale",
-            "ie-gb-unaffected",
-        ],
-    )
-    def test_experiment_gated_surface_id(
-        self, locale, region, exp_name, exp_branch, feeds, expected
-    ):
-        """Test that experiment-gated routing returns the correct surface ID."""
-        req = SimpleNamespace(
-            experimentName=exp_name,
-            experimentBranch=exp_branch,
-            feeds=feeds,
-        )
-        assert get_recommendation_surface_id(locale, region, request=req) == expected
-
-    @pytest.mark.parametrize(
-        "locale,region,expected",
-        [
-            (Locale.EN_CA, "CA", SurfaceId.NEW_TAB_EN_CA),
-            (Locale.EN_GB, "IE", SurfaceId.NEW_TAB_EN_GB),
-        ],
-        ids=["ca-no-request", "ie-no-request"],
-    )
-    def test_no_request_returns_fallback(self, locale, region, expected):
-        """Test that None request returns the expected surface."""
-        assert get_recommendation_surface_id(locale, region, request=None) == expected
 
 
 class TestIsEnrolledInExperiment:

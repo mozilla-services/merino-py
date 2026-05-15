@@ -15,4 +15,5 @@ _Put an `x` in the boxes that apply_
 - [ ] The PR title starts with the JIRA issue reference, format example `[DISCO-####]`, and has the same title (if applicable)
 - [ ] `[load test: (abort|skip|warn)]` keywords are applied to the last commit message (if applicable)
 - [ ] [Documentation](https://github.com/mozilla-services/merino-py/tree/main/docs) has been updated (if applicable)
+- [ ] [Metric documentation](https://github.com/mozilla-services/merino-py/tree/main/metrics.yaml) has been updated (if applicable)
 - [ ] [Functional and performance test](https://github.com/mozilla-services/merino-py/blob/main/docs/dev/testing.md) coverage has been expanded and maintained (if applicable)

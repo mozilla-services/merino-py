@@ -4,13 +4,17 @@ import logging
 import string
 from typing import Any, Final
 from urllib.parse import quote
+from aiodogstatsd import Client as StatsDClient
+from elasticsearch import ApiError
 
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.search.async_elastic import AsyncElasticSearchAdapter
+from merino.utils.metrics import ES_SEARCH_METRIC_NAME
+
 
 SUGGEST_ID: Final[str] = "suggest-on-title"
-TIMEOUT_MS: Final[str] = f"{settings.providers.wikipedia.es_request_timeout_ms}ms"
+REQUEST_TIMEOUT_SEC: Final[float] = settings.providers.wikipedia.es_request_timeout_sec
 MAX_SUGGESTIONS: Final[int] = settings.providers.wikipedia.es_max_suggestions
 
 
@@ -51,11 +55,17 @@ class ElasticBackend:
 
     elasticsearch: AsyncElasticSearchAdapter
 
-    def __init__(self, *, api_key: str, url: str) -> None:
+    def __init__(self, *, api_key: str, url: str, metrics_client: StatsDClient) -> None:
         """Initialize the ElasticBackend.
         Raises a ValueError if URL is incorrectly formatted.
+
+        The client is configured to not retry failures. This is due in part to
+        Merino's low latency requirements, and also to avoid undue load
+        (e.g. retrying on 429), since searching via suggest is performed
+        on each keystroke.
         """
-        self.elasticsearch = AsyncElasticSearchAdapter(url=url, api_key=api_key)
+        self.elasticsearch = AsyncElasticSearchAdapter(url=url, api_key=api_key, max_retries=0)
+        self._metrics_client = metrics_client
         logging.info("Initialized Elasticsearch with URL")
 
     async def shutdown(self) -> None:
@@ -76,14 +86,27 @@ class ElasticBackend:
             }
         }
 
+        # Add this if wikipedia gets more than one index; for now it's covered by the provider
+        # search count
+        # self._metrics_client.increment(f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": index_id})
         try:
             res = await self.elasticsearch.search(
                 index=index_id,
                 suggest=suggest,
-                timeout=TIMEOUT_MS,
+                timeout=REQUEST_TIMEOUT_SEC,
                 source_includes=["title"],
             )
+        except ApiError as e:
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error", tags={"index": index_id, "status": e.meta.status}
+            )
+            raise BackendError(
+                f"Failed to search from Elasticsearch for {language_code}: {e}"
+            ) from e
         except Exception as e:
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error", tags={"index": index_id, "status": "unknown"}
+            )
             raise BackendError(
                 f"Failed to search from Elasticsearch for {language_code}: {e}"
             ) from e

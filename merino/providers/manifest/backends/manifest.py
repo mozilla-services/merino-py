@@ -3,11 +3,8 @@
 import logging
 
 from merino.configs import settings
-from merino.providers.manifest.backends.filemanager import (
-    GetManifestResultCode,
-    ManifestRemoteFilemanager,
-)
-from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.manifest.backends.filemanager import ManifestRemoteFilemanager
+from merino.providers.manifest.backends.protocol import ManifestFetchResult
 
 logger = logging.getLogger(__name__)
 
@@ -21,17 +18,11 @@ class ManifestBackend:
         """Initialize the Manifest backend."""
         pass
 
-    async def fetch(self) -> tuple[GetManifestResultCode, ManifestData | None]:
-        """Fetch the manifest data from GCS asynchronously.
-        Returns:
-            (SUCCESS, ManifestData): If new data is fetched from GCS.
-            (FAIL, None): If there's an error with fetching or parsing.
-        """
+    async def fetch(self) -> ManifestFetchResult:
+        """Fetch the manifest data from GCS asynchronously."""
         return await self.fetch_manifest_data()
 
-    async def fetch_manifest_data(
-        self,
-    ) -> tuple[GetManifestResultCode, ManifestData | None]:
+    async def fetch_manifest_data(self) -> ManifestFetchResult:
         """Fetch manifest data from GCS through the remote filemanager."""
         remote_filemanager = ManifestRemoteFilemanager(
             gcs_bucket_path=settings.image_gcs.gcs_bucket,

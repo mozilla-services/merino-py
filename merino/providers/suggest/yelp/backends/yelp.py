@@ -176,7 +176,7 @@ class YelpBackend(YelpBackendProtocol):
                 "image_url": YELP_ICON_URL,
             }
 
-        except (KeyError, IndexError):
+        except KeyError, IndexError:
             logger.warning(f"Yelp business response json has incorrect shape: {response}")
             return None
 
@@ -204,7 +204,7 @@ class YelpBackend(YelpBackendProtocol):
             if start_time == time(0) and end_time == time(0):
                 return True
             return start_time <= time_now <= end_time
-        except (KeyError, IndexError):
+        except KeyError, IndexError:
             logger.warning(f"Yelp business hours has incorrect shape: {business_hours}")
             return False
 
@@ -219,7 +219,7 @@ class YelpBackend(YelpBackendProtocol):
             start = today_hours["start"]
             end = today_hours["end"]
             return {**response, "business_hours": {"start": start, "end": end}}
-        except (KeyError, IndexError):
+        except KeyError, IndexError:
             logger.warning(f"Yelp business hours has incorrect shape: {response}")
             return None
 

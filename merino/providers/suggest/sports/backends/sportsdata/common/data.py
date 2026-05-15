@@ -6,7 +6,9 @@ import logging
 import os
 
 from abc import abstractmethod
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from enum import StrEnum
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -21,10 +23,52 @@ from merino.providers.suggest.sports import (
     utc_time_from_now,
 )
 
+from merino.cache.redis import RedisAdapter
+from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
+
+
+# sportsdata.io's international-soccer feed returns the same "KOR" key for
+# both Korea Republic and Curaçao, collapsing them into a single entry
+# downstream (logo lookup, team caches, event dedup). Disambiguate by team
+# name and remap Curaçao to its ISO 3166-1 alpha-3 code. Drop this entry
+# when sportsdata fixes upstream.
+_TEAM_KEY_OVERRIDES: dict[tuple[str, str], str] = {
+    ("KOR", "Curaçao"): "CUW",
+}
+
+# Global Logger
+logger = logging.getLogger(__name__)
+
+SPORTSDATA_UTC = ZoneInfo("UTC")
+SPORTSDATA_US_EASTERN = ZoneInfo("America/New_York")
+SPORTSDATA_LEAGUE_NA_SPORTS = {"MLB", "NBA", "NHL", "NFL"}
+SPORTSDATA_API_KEY_HEADER = "Ocp-Apim-Subscription-Key"
+
+
+def sportsdata_timezone_for_sport(sport: str) -> ZoneInfo:
+    """Return the timezone SportsData uses for a sport's day-based endpoints."""
+    if sport.upper() in SPORTSDATA_LEAGUE_NA_SPORTS:
+        return SPORTSDATA_US_EASTERN
+    return SPORTSDATA_UTC
+
+
+def sportsdata_day_slug(kickoff: datetime, event_timezone: ZoneInfo) -> str:
+    """Return the date path segment SportsData expects for a kickoff."""
+    if kickoff.tzinfo is None:
+        kickoff = kickoff.replace(tzinfo=timezone.utc)
+    return kickoff.astimezone(event_timezone).strftime("%Y-%b-%d").upper()
+
+
+def _parse_sportsdata_datetime(value: Any, source_timezone: ZoneInfo) -> datetime:
+    """Parse a SportsData timestamp and normalize it to UTC."""
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=source_timezone)
+    return parsed.astimezone(timezone.utc)
 
 
 class Team(BaseModel):
@@ -53,11 +97,19 @@ class Team(BaseModel):
     updated: datetime
     # Team Data expiration date:
     expiry: datetime
+    # Country / Area
+    country: str | None
 
     @classmethod
-    def from_data(cls, team_data: dict[str, Any], term_filter: list[str], team_ttl: timedelta):
+    def from_data(
+        cls,
+        team_data: dict[str, Any],
+        term_filter: list[str],
+        team_ttl: timedelta,
+        normalized_terms: dict,
+        areas: dict[int, Any] | None = None,
+    ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
-        logger = logging.getLogger(__name__)
         # build the list of terms we want to search:
         terms = set()
         for item in [
@@ -77,15 +129,24 @@ class Team(BaseModel):
                         terms.add(lword)
         locale = " ".join([team_data.get("City") or "", team_data.get("AreaName") or ""]).strip()
         name = team_data["Name"]
-        fullname = team_data.get("FullName") or f"{locale} {team_data["Name"]}"
+        fullname = team_data.get("FullName") or f"{locale} {team_data['Name']}"
         logger.debug(f"{LOGGING_TAG} - Team: {fullname}")
-        team_id = team_data.get("GlobalTeamID", team_data.get("GlobalTeamId"))
+        team_id = team_data.get(normalized_terms[SportTerms.TEAM_ID])
         if not team_id:
             logger.warning(f"{LOGGING_TAG}: No id found for team {team_data}")
-            raise SportsDataError(f"No GlobalTeamID found for {fullname}")
+            raise SportsDataError(
+                f"No {normalized_terms[SportTerms.TEAM_ID]} found for {fullname}"
+            )
+        # WCS Find the country
+        country = None
+        if areas:
+            country = areas.get(team_data.get(normalized_terms.get("AreaId", "AreaId"), 9999))
+        raw_key = team_data["Key"]
+        if country and country.get("aliases"):
+            terms.add(country.get("aliases"))
         return cls(
             terms=" ".join(terms),
-            key=team_data["Key"],
+            key=_TEAM_KEY_OVERRIDES.get((raw_key, name), raw_key),
             id=team_id,
             fullname=fullname,
             name=name,
@@ -108,19 +169,19 @@ class Team(BaseModel):
                 filter(
                     lambda x: x is not None,
                     [
-                        # Some Teams use "ClubColor#"
-                        team_data.get("PrimaryColor", team_data.get("ClubColor1")),
-                        team_data.get("SecondaryColor", team_data.get("ClubColor2")),
-                        team_data.get("TertiaryColor", team_data.get("ClubColor3")),
-                        team_data.get("QuaternaryColor", team_data.get("ClubColor4")),
+                        team_data.get(normalized_terms[SportTerms.COLOR1]),
+                        team_data.get(normalized_terms[SportTerms.COLOR2]),
+                        team_data.get(normalized_terms[SportTerms.COLOR3]),
+                        team_data.get(normalized_terms[SportTerms.COLOR4]),
                     ],
                 )
             ),
+            country=country,
         )
 
     def minimal(self) -> dict[str, Any]:
         """Return the very minimal version of the team info used in Events"""
-        return dict(key=self.key, name=self.fullname, colors=self.colors)
+        return dict(key=self.key, name=self.fullname, colors=self.colors, id=self.id)
 
 
 class Event(BaseModel):
@@ -150,10 +211,28 @@ class Event(BaseModel):
     expiry: datetime
     # UTC of last event update
     updated: datetime | None
+    # Final period of the game: "Regular", "ExtraTime", "PenaltyShootout", etc.
+    period: str | None = None
+    # Points scored in extra play
+    home_extra: int | None = None
+    away_extra: int | None = None
+    # Points scored in penalty play
+    home_penalty: int | None = None
+    away_penalty: int | None = None
+    # Play time, with additions when provided by the feed.
+    clock: str | None = None
+    # Optional stage, e.g. "Group", "Round of 32"
+    stage: str | None = None
+    # Tournament metadata used by WCS widget team state.
+    round_id: int | None = None
+    season_type: int | None = None
+    group: str | None = None
+    winner: str | None = None
+    is_closed: bool | None = None
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
-        return f"{self.sport}:{self.home_team["key"]}:{self.away_team["key"]}".lower()
+        return f"{self.sport}:{self.home_team['key']}:{self.away_team['key']}".lower()
 
     def serialize(self) -> dict[str, Any]:
         """Condition Event for JSON serialization. This converts dates from datetime and
@@ -168,6 +247,24 @@ class Event(BaseModel):
             "date": self.date.isoformat(),
             "expiry": self.expiry.isoformat(),
         }
+        optional_fields = (
+            "period",
+            "home_extra",
+            "away_extra",
+            "home_penalty",
+            "away_penalty",
+            "clock",
+            "stage",
+            "round_id",
+            "season_type",
+            "group",
+            "winner",
+            "is_closed",
+        )
+        for field_name in optional_fields:
+            value = getattr(self, field_name)
+            if value is not None:
+                result[field_name] = value
         # This may be a quick_update, meaning these values could be blank
         # Do not destructively overwrite them!
         if self.terms:
@@ -182,6 +279,117 @@ class Event(BaseModel):
         if self.updated:
             result["updated"] = self.updated.isoformat()
         return result
+
+
+class SportTerms(StrEnum):
+    """Define enums for normalized field names"""
+
+    GAME_ID = "GameID"
+    AWAY_TEAM_ID = "AwayTeamID"
+    AWAY_TEAM_KEY = "AwayTeamKey"
+    AWAY_TEAM_SCORE = "AwayTeamScore"
+    HOME_TEAM_ID = "HomeTeamID"
+    HOME_TEAM_KEY = "HomeTeamKey"
+    HOME_TEAM_SCORE = "HomeTeamScore"
+    TEAM_ID = "TeamID"
+    COLOR1 = "PrimaryColor"
+    COLOR2 = "SecondaryColor"
+    COLOR3 = "TertiaryColor"
+    COLOR4 = "QuaternaryColor"
+
+
+SportNormalizedTerms: dict[SportTerms, str] = {
+    SportTerms.GAME_ID: "GameID",  # This value _MUST_ match between the Schedule and Sport if both are used.
+    SportTerms.AWAY_TEAM_ID: "AwayTeamID",
+    SportTerms.AWAY_TEAM_KEY: "AwayTeam",
+    SportTerms.AWAY_TEAM_SCORE: "AwayTeamScore",
+    SportTerms.HOME_TEAM_ID: "HomeTeamID",
+    SportTerms.HOME_TEAM_KEY: "HomeTeam",
+    SportTerms.HOME_TEAM_SCORE: "HomeTeamScore",
+    SportTerms.TEAM_ID: "TeamID",
+    SportTerms.COLOR1: "PrimaryColor",
+    SportTerms.COLOR2: "SecondaryColor",
+    SportTerms.COLOR3: "TertiaryColor",
+    SportTerms.COLOR4: "QuaternaryColor",
+}
+
+
+@dataclass(frozen=True)
+class SportsDataEventRow:
+    """Normalized fields from a SportsData schedule or score row."""
+
+    game_id: int
+    status: GameStatus
+    home_team_id: int | None
+    away_team_id: int | None
+    home_team_key: str | None
+    away_team_key: str | None
+    home_score: int | None
+    away_score: int | None
+    kickoff: datetime
+    original_date: str | None
+    updated: datetime | None
+    raw: dict[str, Any]
+
+    @classmethod
+    def from_event_description(
+        cls,
+        event_description: dict[str, Any],
+        normalized_terms: dict[SportTerms, str],
+        event_timezone: ZoneInfo,
+    ) -> "SportsDataEventRow":
+        """Normalize shared SportsData schedule and score fields."""
+        game_id = event_description.get(normalized_terms[SportTerms.GAME_ID])
+        if game_id is None:
+            raise SportsDataError(f"No game id found for event: {event_description}")
+
+        kickoff, original_date = cls._kickoff_at(event_description, event_timezone)
+        return cls(
+            game_id=game_id,
+            status=GameStatus.parse(event_description["Status"]),
+            home_team_id=event_description.get(normalized_terms[SportTerms.HOME_TEAM_ID]),
+            away_team_id=event_description.get(normalized_terms[SportTerms.AWAY_TEAM_ID]),
+            home_team_key=event_description.get(normalized_terms[SportTerms.HOME_TEAM_KEY]),
+            away_team_key=event_description.get(normalized_terms[SportTerms.AWAY_TEAM_KEY]),
+            home_score=event_description.get(normalized_terms[SportTerms.HOME_TEAM_SCORE]),
+            away_score=event_description.get(normalized_terms[SportTerms.AWAY_TEAM_SCORE]),
+            kickoff=kickoff,
+            original_date=original_date,
+            updated=cls._updated_at(event_description, event_timezone),
+            raw=event_description,
+        )
+
+    @staticmethod
+    def _kickoff_at(
+        event_description: dict[str, Any], event_timezone: ZoneInfo
+    ) -> tuple[datetime, str | None]:
+        """Return the event kickoff, preferring SportsData's UTC field."""
+        source_day = event_description.get("Day")
+        if event_description.get("DateTimeUTC"):
+            raw_utc_date = event_description["DateTimeUTC"]
+            return _parse_sportsdata_datetime(
+                raw_utc_date, SPORTSDATA_UTC
+            ), source_day or raw_utc_date
+        if event_description.get("DateTime"):
+            raw_date = event_description["DateTime"]
+            return _parse_sportsdata_datetime(raw_date, event_timezone), source_day or raw_date
+        raise TypeError("SportsData event has no DateTimeUTC or DateTime")
+
+    @staticmethod
+    def _updated_at(
+        event_description: dict[str, Any], event_timezone: ZoneInfo
+    ) -> datetime | None:
+        """Return the SportsData row update timestamp as UTC."""
+        raw_updated_utc = event_description.get("UpdatedUtc") or event_description.get(
+            "UpdatedUTC"
+        )
+        if raw_updated_utc:
+            return _parse_sportsdata_datetime(raw_updated_utc, SPORTSDATA_UTC)
+
+        raw_updated = event_description.get("Updated") or event_description.get("LastUpdated")
+        if raw_updated:
+            return _parse_sportsdata_datetime(raw_updated, event_timezone)
+        return None
 
 
 class Sport:
@@ -199,6 +407,12 @@ class Sport:
     # and ownership reasons.
     term_filter: list[str] = []
     cache_dir: str | None
+    cache: RedisAdapter | NoCacheAdapter
+    # Each sport may use a different term for these values.
+    # You should prefer to use the `Global*` version when possible, but not all sports
+    # provide that value, nor do all returned data sets.
+    # This array is used by both Schedule and Score lookups.
+    normalized_terms: dict = {}
 
     def __init__(
         self,
@@ -206,21 +420,24 @@ class Sport:
         base_url: str,
         name: str,
         cache_dir: str | None = None,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         api_key: str | None = None,
         event_ttl: timedelta | None = None,
         team_ttl: timedelta | None = None,
         term_filter: list[str] = [],
         **kwargs,
     ):
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} In sport")
         # Set defaults for overrides
         # NOTE: This also handles a potential typo in the AirFlow environment variable name.
         # See https://mozilla-hub.atlassian.net/browse/DISCO-3802
-        self.api_key = api_key or settings.sportsdata.get(
-            "api_key", os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
+        self.api_key = (
+            api_key
+            or settings.sportsdata.get("api_key")
+            or os.environ.get("MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY")
+            or ""
         )
-        logger.info(f"{LOGGING_TAG} SportsData API Key: {self.api_key[:4] or "None"}")
+        logger.info(f"{LOGGING_TAG} SportsData API key configured: {bool(self.api_key)}")
         self.base_url = base_url
         self.name = name
         self.teams = {}
@@ -231,6 +448,12 @@ class Sport:
         self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
         self.term_filter = term_filter
         self.cache_dir = cache_dir
+        self.cache = cache
+        self.normalized_terms = SportNormalizedTerms.copy()
+
+    def api_headers(self) -> dict[str, str]:
+        """Return SportsData auth headers."""
+        return {SPORTSDATA_API_KEY_HEADER: self.api_key}
 
     @abstractmethod
     async def get_team(self, id: int) -> Team | None:
@@ -245,7 +468,7 @@ class Sport:
         """Update team information and store in common storage (usually called nightly)"""
 
     @abstractmethod
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Fetch the list of current and upcoming events for this sport"""
 
     def load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
@@ -263,6 +486,7 @@ class Sport:
                     team_data=team_data,
                     term_filter=self.term_filter,
                     team_ttl=self.team_ttl,
+                    normalized_terms=self.normalized_terms,
                 )
                 self.teams[team.id] = team
             except SportsDataError:
@@ -273,239 +497,147 @@ class Sport:
         self,
         data: list[dict[str, Any]],
         event_timezone: ZoneInfo = ZoneInfo("UTC"),
-        allow_no_teams: bool = False,  # Allow no team information, useful for `quick updates`
     ) -> dict[int, "Event"]:
-        """Scan the list of Event scores for any event within the 'current' window.
-
-        This presumes that we are receiving data that complies with the SportsData.io
-        `ScoreBasic` data dictionary (See https://sportsdata.io/developers/data-dictionary/nfl#scorebasic)
-
-        If we ever have a different data provider, this will need to be moved to the
-        SportData provider class.
-
-        """
-        logger = logging.getLogger(__name__)
-        if not self.events:
-            self.events = {}
-        """
-        [
-            {'Quarter': None,
-             'TimeRemaining': None,
-             'QuarterDescription': '',
-             'GameEndDateTime': None,
-             'AwayScore': None,
-             'HomeScore': None,
-             'GameID': 19047,
-             'GlobalGameID': 19047,
-             'ScoreID': 19047,
-             'GameKey': '202510428',
-             'Season': 2025,
-             'SeasonType': 1,
-             'Status': 'Scheduled',
-             'Canceled': False,
-             'Date': '2025-09-28T09:30:00',
-             'Day': '2025-09-28T00:00:00',
-             'DateTime': '2025-09-28T09:30:00',
-             'DateTimeUTC': '2025-09-28T13:30:00',
-             'AwayTeam': 'MIN',
-             'HomeTeam': 'PIT',
-             'GlobalAwayTeamID': 20,
-             'GlobalHomeTeamID': 28,
-             'AwayTeamID': 20,
-             'HomeTeamID': 28,
-             'StadiumID': 90,
-             'Closed': False,
-             'LastUpdated': '2025-09-24T12:03:59',
-             'IsClosed': False,
-             'Week': 4},
-             ...
-             ]
-        """
-        start_window = datetime.now(tz=timezone.utc) - self.event_ttl
-        end_window = datetime.now(tz=timezone.utc) + self.event_ttl
+        """Scan score rows and update or create events in the interest window."""
         for event_description in data:
-            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
-                "GlobalHomeTeamId"
-            )
-            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
-                "GlobalAwayTeamId"
-            )
-            home_name = event_description.get("HomeTeam") or event_description.get(
-                "HomeTeamKey", "UNDEFINED_HOME"
-            )
-            away_name = event_description.get("AwayTeam") or event_description.get(
-                "AwayTeamKey", "UNDEFINED_AWAY"
-            )
-            if not home_id or not away_id:
+            row = self.event_row_from_source(event_description, event_timezone)
+            if row is None or self.skip_event_row(row):
+                continue
+
+            if row.game_id in self.events:
+                event = self.events[row.game_id]
+                self.apply_score_update(event, row)
+            else:
+                # Some Sports may not pull Schedules first
                 logger.warning(
-                    f"{LOGGING_TAG} Could not find team id for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
+                    f"{LOGGING_TAG} Adding game...{row.away_team_key} at {row.home_team_key} :: {row.status}"
                 )
-                continue
-            home_team = self.teams.get(home_id)
-            away_team = self.teams.get(away_id)
-            if not home_team or not away_team:
-                logger.warning(
-                    f"{LOGGING_TAG} Could not find team info for '{home_name}' vs '{away_name}' for {self.name}: {event_description}"
-                )
-                continue
-            try:
-                if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                        tzinfo=timezone.utc
-                    )
-                else:
-                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
-                        tzinfo=event_timezone
-                    )
-            # There have been incidents where an event returns "None" as a date value.
-            # We should ignore that event, and allow processing to continue, but note
-            # the error in case we need to escalate the problem.
-            except TypeError:
-                # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
-                # but if there's an error, it's probably wise to ignore this.
-                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
-                continue
-            # Ignore any events that are outside of the event interest window.
-            if not start_window <= date <= end_window:
-                continue
-            updated = None
-            # All "Updated" fields are always in ET.
-            if event_description.get("Updated"):
-                updated = datetime.fromisoformat(event_description["Updated"]).replace(
-                    tzinfo=event_timezone
-                )
-            event = Event(
-                sport=self.name,
-                id=event_description["GlobalGameID"],
-                terms=f"{home_team.terms} {away_team.terms}",
-                date=date,
-                original_date=event_description.get(
-                    "DateTimeUTC", event_description.get("DateTime")
-                ),
-                home_team=home_team.minimal(),
-                away_team=away_team.minimal(),
-                home_score=event_description.get("HomeTeamScore")
-                or event_description.get("HomeScore"),
-                away_score=event_description.get("AwayTeamScore")
-                or event_description.get("AwayScore"),
-                status=GameStatus.parse(event_description["Status"]),
-                expiry=utc_time_from_now(self.event_ttl),
-                updated=updated,
-            )
-            self.events[event.id] = event
+                new_event = self.event_from_row(row)
+                if new_event is not None:
+                    self.events[new_event.id] = new_event
+
         return self.events
+
+    def team_minimal(self, team: Team) -> dict[str, Any]:
+        """Return the very minimal version of the team info used in Events"""
+        return dict(key=team.key, name=team.fullname, colors=team.colors, id=team.id)
 
     def load_schedules_from_source(
         self, data: list[dict[str, Any]], event_timezone: ZoneInfo = ZoneInfo("UTC")
     ) -> dict[int, "Event"]:
-        """Scan the list of Scheduled events, storing any in the current interest window.
-        (Note: this is very similar to `load_scores_from_source` with some minor
-        differences in the source data.)
+        """Scan schedule rows and store events in the interest window."""
+        for event_description in data:
+            row = self.event_row_from_source(event_description, event_timezone)
+            if row is None or self.skip_event_row(row):
+                continue
 
-        This presumes that we are receiving data that complies with the SportsData.io
-        `ScheduleBasic` Data dictionary (See https://sportsdata.io/developers/data-dictionary/nhl#schedulebasic)
+            event = self.event_from_row(row)
+            if event is not None:
+                self.events[event.id] = event
+        return self.events
 
-        """
-        # Sample raw event
-        """
-        [
-            {"GameID":23869,
-             "Season":2026,
-             "SeasonType":2,
-             "Status":"Final",
-             "Day":"2025-09-21T00:00:00",
-             "DateTime":"2025-09-21T21:30:00",
-             "Updated":"2025-09-29T04:10:57",
-             "IsClosed":true,
-             "AwayTeam":"UTA",
-             "HomeTeam":"COL",
-             "StadiumID":9,
-             "AwayTeamScore":2,
-             "HomeTeamScore":3,
-             "GlobalGameID":30023869,
-             "GlobalAwayTeamID":30000041,
-             "GlobalHomeTeamID":30000019,
-             "GameEndDateTime":"2025-09-22T00:10:17",
-             "NeutralVenue":false,
-             "DateTimeUTC":"2025-09-22T01:30:00",
-             "AwayTeamID":41,
-             "HomeTeamID":19,
-             "SeriesInfo":null
-             },
-             ...
-             ]
-        ]"""
-        logger = logging.getLogger(__name__)
+    def event_row_from_source(
+        self, event_description: dict[str, Any], event_timezone: ZoneInfo
+    ) -> SportsDataEventRow | None:
+        """Return a normalized event row or skip invalid SportsData input."""
+        try:
+            return SportsDataEventRow.from_event_description(
+                event_description=event_description,
+                normalized_terms=self.normalized_terms,
+                event_timezone=event_timezone,
+            )
+        except SportsDataError as ex:
+            self._log_invalid_event_row("sports.error.invalid_event", ex)
+        except (TypeError, ValueError) as ex:
+            self._log_invalid_event_row("sports.error.no_date", ex)
+        except KeyError as ex:
+            self._log_invalid_event_row("sports.error.invalid_event", ex)
+        return None
+
+    def _log_invalid_event_row(self, metric: str, error: BaseException) -> None:
+        """Log a skipped SportsData row with the closest known reason."""
+        logger.info(f"""{LOGGING_TAG}📈 {metric} ["sport" = "{self.name}"]""")
+        logger.debug(f"{LOGGING_TAG} {self.name} invalid event row skipped: {error}")
+
+    def skip_event_row(self, row: SportsDataEventRow) -> bool:
+        """Return whether an event row should not be considered for ingestion."""
+        return row.status in [GameStatus.NotNecessary, GameStatus.Canceled]
+
+    def event_from_row(self, row: SportsDataEventRow) -> Event | None:
+        """Create an Event from a normalized row when teams and dates are usable."""
+        if not self.row_in_event_window(row):
+            return None
+
+        teams = self.teams_for_row(row)
+        if teams is None:
+            return None
+        home_team, away_team = teams
+
+        return Event(
+            sport=self.name,
+            id=row.game_id,
+            terms=f"{home_team.terms} {away_team.terms}",
+            date=row.kickoff,
+            original_date=row.original_date,
+            home_team=self.team_minimal(home_team),
+            away_team=self.team_minimal(away_team),
+            home_score=row.home_score,
+            away_score=row.away_score,
+            status=row.status,
+            expiry=utc_time_from_now(self.event_ttl),
+            updated=row.updated,
+            **self.event_details(row.raw),
+        )
+
+    def row_in_event_window(self, row: SportsDataEventRow) -> bool:
+        """Return whether a row kickoff falls inside this sport's interest window."""
         start_window = datetime.now(tz=timezone.utc) - self.event_ttl
         end_window = datetime.now(tz=timezone.utc) + self.event_ttl
-        for event_description in data:
-            # US sports use "(Away|Home)Team", Soccer uses "(Away|Home)TeamKey"
-            home_id = event_description.get("GlobalHomeTeamID") or event_description.get(
-                "GlobalHomeTeamId"
-            )
-            away_id = event_description.get("GlobalAwayTeamID") or event_description.get(
-                "GlobalAwayTeamId"
-            )
-            if not home_id or not away_id:
-                logger.warning(f"{LOGGING_TAG} Could not find team for event: {event_description}")
-                continue
-            home_team = self.teams.get(home_id)
-            away_team = self.teams.get(away_id)
-            if not home_team or not away_team:
-                logger.warning(
-                    f"{LOGGING_TAG} Could not find team info for event: {event_description}"
-                )
-                continue
-            game_id = event_description.get("GlobalGameID") or event_description["GameId"]
-            status = GameStatus.parse(event_description["Status"])
-            # Ignore cancelled games.
-            if status == GameStatus.Canceled:
-                # Cancelled games have no UTC time stamp, so we can't know how recent they were.
-                continue
-            try:
-                if "DateTimeUTC" in event_description:
-                    date = datetime.fromisoformat(event_description["DateTimeUTC"]).replace(
-                        tzinfo=timezone.utc
-                    )
-                else:
-                    date = datetime.fromisoformat(event_description["DateTime"]).replace(
-                        tzinfo=event_timezone
-                    )
-            except TypeError as ex:
-                # It's possible to salvage this game by examining the other fields like "Day" or "Updated",
-                # but if there's an error, it's probably wise to ignore this.
-                logger.info(f"""{LOGGING_TAG}📈 sports.error.no_date ["sport" = "{self.name}"]""")
-                logger.debug(
-                    f"{LOGGING_TAG} {self.name} Event {game_id} between {home_team.key} and {away_team.key} has no time, skipping [{ex}]"
-                )
-                continue
-            # Ignore any events that are outside of the event interest window.
-            if not start_window <= date <= end_window:
-                continue
-            terms = f"{home_team.terms} {away_team.terms}"
-            # All "Updated" fields are always in ET.
-            updated = None
-            # The following code is exercised in unit tests, but is not included in coverage for some reason.
-            if event_description.get("Updated"):  # pragma: no cover
-                updated = datetime.fromisoformat(event_description["Updated"]).replace(
-                    tzinfo=event_timezone
-                )
+        return start_window <= row.kickoff <= end_window
 
-            event = Event(
-                sport=self.name,
-                id=game_id,
-                terms=terms,
-                date=date,
-                original_date=event_description.get(
-                    "DateTimeUTC", event_description.get("DateTime")
-                ),
-                home_team=home_team.minimal(),
-                away_team=away_team.minimal(),
-                home_score=event_description["HomeTeamScore"],
-                away_score=event_description["AwayTeamScore"],
-                status=GameStatus.parse(event_description["Status"]),
-                expiry=utc_time_from_now(self.event_ttl),
-                updated=updated,
+    def teams_for_row(self, row: SportsDataEventRow) -> tuple[Team, Team] | None:
+        """Return the home and away teams for a normalized SportsData row."""
+        if not row.home_team_id or not row.away_team_id:
+            log = (
+                logger.debug
+                if row.home_team_id is None and row.away_team_id is None
+                else logger.warning
             )
-            self.events[event.id] = event
-        return self.events
+            log(
+                f"{LOGGING_TAG} Could not find team id for '{row.home_team_key}' vs '{row.away_team_key}' for {self.name}: {row.raw}"
+            )
+            return None
+
+        home_team = self.teams.get(row.home_team_id)
+        away_team = self.teams.get(row.away_team_id)
+        if not home_team or not away_team:
+            logger.warning(
+                f"{LOGGING_TAG} Could not find team info for '{row.home_team_key}' vs '{row.away_team_key}' for {self.name}: {row.raw}"
+            )
+            return None
+        return home_team, away_team
+
+    def apply_score_update(self, event: Event, row: SportsDataEventRow) -> None:
+        """Apply score fields and source freshness from a normalized score row."""
+        event.home_score = row.home_score
+        event.away_score = row.away_score
+        event.status = row.status
+        event.updated = row.updated
+        for field, value in self.event_details(row.raw).items():
+            # Skip Nones so partial score payloads do not clobber schedule details.
+            if value is not None:
+                setattr(event, field, value)
+
+    def updated_at(
+        self, event_description: dict[str, Any], event_timezone: ZoneInfo
+    ) -> datetime | None:
+        """Return the event update timestamp, preferring the UTC field when available."""
+        return SportsDataEventRow._updated_at(event_description, event_timezone)
+
+    def event_details(self, event_description: dict[str, Any]) -> dict[str, Any]:
+        """Return optional fields to merge into an `Event`.
+
+        Most sports only need the common score fields. Subclasses can override this
+        when a feed exposes widget-specific details, such as WCS clock and penalty data.
+        """
+        return {}

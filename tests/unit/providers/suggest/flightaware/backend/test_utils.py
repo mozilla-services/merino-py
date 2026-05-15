@@ -255,6 +255,24 @@ def test_build_flight_summary_valid(flight_with_codeshare):
     assert summary.airline.code == "UA"
     assert summary.airline.name == "United Airlines"
     assert summary.airline.color == "#005DAA"
+    assert summary.airline.icon is None
+
+
+def test_build_flight_summary_with_icon(flight_with_codeshare, mocker, make_manifest):
+    """Airline icon is set from the manifest when a logo URL is found."""
+    from merino.configs import settings
+    from merino.utils.logos import LogoCategory
+
+    mocker.patch(
+        "merino.utils.logos.load_manifest",
+        return_value=make_manifest((LogoCategory.Airline, "ua")),
+    )
+
+    summary = build_flight_summary(flight_with_codeshare, normalized_query="UA123")
+
+    assert summary is not None
+    host = f"https://{settings.image_gcs_v2.cdn_hostname}"
+    assert str(summary.airline.icon) == f"{host}/logos/airline/airline_ua.png"
 
 
 def test_build_flight_summary_with_codeshare(flight_with_codeshare):
@@ -933,6 +951,10 @@ def test_get_airline_details(
             "merino.providers.suggest.flightaware.backends.utils.AIRLINE_CODE_TO_NAME_MAPPING",
             mock_code_to_name,
         ),
+        patch(
+            "merino.providers.suggest.flightaware.backends.utils.get_logo_url",
+            return_value=None,
+        ),
     ):
         result = get_airline_details(flight_number)
 
@@ -1011,9 +1033,9 @@ def test_derive_ttl_for_summaries(
 
         ttl = derive_ttl_for_summaries([summary])
 
-    assert (
-        expected_range[0] <= ttl <= expected_range[1]
-    ), f"Status {status}: expected TTL in {expected_range}, got {ttl} for {description}"
+    assert expected_range[0] <= ttl <= expected_range[1], (
+        f"Status {status}: expected TTL in {expected_range}, got {ttl} for {description}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -1099,9 +1121,9 @@ def test_compute_enroute_progress(
 
         progress, time_left = compute_enroute_progress(summary)
 
-    assert (
-        progress == expected_progress
-    ), f"Failed: {description} — expected {expected_progress}, got {progress}"
-    assert (
-        time_left == expected_time_left
-    ), f"Failed: {description} — expected {expected_time_left}, got {time_left}"
+    assert progress == expected_progress, (
+        f"Failed: {description} — expected {expected_progress}, got {progress}"
+    )
+    assert time_left == expected_time_left, (
+        f"Failed: {description} — expected {expected_time_left}, got {time_left}"
+    )

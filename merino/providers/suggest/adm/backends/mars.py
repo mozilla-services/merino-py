@@ -84,6 +84,13 @@ class MarsBackend:
         self.etags = {}
         self.last_new_data_at = 0.0
 
+    def _emit_index_metrics(self, idx_id: str, index_label: str) -> None:
+        """Emit gauge metrics for the amp index after a successful build."""
+        stats = self.suggestion_content.index_manager.stats(idx_id)
+        tags = {"index": index_label}
+        for key, value in stats.items():
+            self.metrics_client.gauge(f"amp.index.{key}", value=value, tags=tags)
+
     def get_segment(self, form_factor_str: str) -> SegmentType:
         """Compose segment from a form factor string.
 
@@ -110,11 +117,13 @@ class MarsBackend:
 
         # Build the list of segments.
         segments: list[tuple[str, SegmentType, str, str]] = []
+        segment_labels: dict[SegmentType, str] = {}
         for country in countries:
             for form_factor in form_factors:
                 segment = self.get_segment(form_factor)
                 idx_id = f"{country}/{segment}"
                 segments.append((country, segment, form_factor, idx_id))
+                segment_labels[segment] = form_factor
 
         # Fetch suggestion data for all segments concurrently.
         mars_suggestions: defaultdict[str, dict[SegmentType, str]] = await self.get_suggestions(
@@ -133,6 +142,8 @@ class MarsBackend:
                     icons_in_use = icons_in_use.union(
                         self.suggestion_content.index_manager.list_icons(idx_id)
                     )
+                    index_label = f"{country}/{segment_labels.get(segment, str(segment))}"
+                    self._emit_index_metrics(idx_id, index_label)
                 except Exception as e:
                     logger.warning(
                         f"Unable to build index or get icons for {idx_id}",
@@ -163,13 +174,6 @@ class MarsBackend:
                 icons[icon_id] = original_url
 
         self.suggestion_content.icons.update(icons)
-
-        if self.last_new_data_at > 0:
-            staleness = time.time() - self.last_new_data_at
-            self.metrics_client.gauge(
-                "mars.data.staleness_seconds",
-                value=staleness,
-            )
 
         return self.suggestion_content
 
@@ -242,9 +246,10 @@ class MarsBackend:
 
         url = urljoin(self.base_url, self.suggestion_url_path)
         try:
+            params = {"_test_padding": "true"} if settings.mars.send_test_padding else {}
             response = await self.http_client.get(
                 url,
-                params={"country": country, "form_factor": form_factor},
+                params={"country": country, "form_factor": form_factor, **params},
                 headers=headers,
             )
 
@@ -255,6 +260,12 @@ class MarsBackend:
                 return None
 
             response.raise_for_status()
+
+            self.metrics_client.gauge(
+                "mars.fetch.response_size_bytes",
+                value=len(response.content),
+                tags=tags,
+            )
 
             etag = response.headers.get("ETag")
             if etag:
@@ -275,7 +286,7 @@ class MarsBackend:
             suggestions_list = data["suggestions"]
             if not suggestions_list:
                 logger.warning(
-                    "MARS returned empty suggestions for " f"{country}/{form_factor}",
+                    f"MARS returned empty suggestions for {country}/{form_factor}",
                 )
                 self.metrics_client.increment(
                     "mars.fetch", tags={**tags, "status": "empty_response"}

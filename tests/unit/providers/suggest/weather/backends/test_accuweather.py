@@ -946,14 +946,12 @@ def fixture_accuweather_cached_data_misses() -> list[Optional[bytes]]:
 
 
 @pytest.fixture(name="accuweather_parsed_data_misses")
-def fixture_accuweather_parsed_data_misses() -> (
-    tuple[
-        Optional[AccuweatherLocation],
-        Optional[CurrentConditions],
-        Optional[Forecast],
-        Optional[int],
-    ]
-):
+def fixture_accuweather_parsed_data_misses() -> tuple[
+    Optional[AccuweatherLocation],
+    Optional[CurrentConditions],
+    Optional[Forecast],
+    Optional[int],
+]:
     """Return the partial parsed AccuWeather quartet for a cache hit."""
     return (None, None, None, None)
 
@@ -1035,7 +1033,7 @@ async def test_get_weather_report(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
             ),
         ),
         Response(
@@ -1044,9 +1042,7 @@ async def test_get_weather_report(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
-                ),
+                url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
             ),
         ),
     ]
@@ -1098,7 +1094,7 @@ async def test_get_weather_report_without_region(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
             ),
         ),
         Response(
@@ -1107,9 +1103,7 @@ async def test_get_weather_report_without_region(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
-                ),
+                url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
             ),
         ),
     ]
@@ -1191,7 +1185,7 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
             ),
         ),
         Response(
@@ -1200,9 +1194,7 @@ async def test_get_weather_report_with_fallback_city_endpoint_returns_none(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
-                ),
+                url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
             ),
         ),
     ]
@@ -1288,7 +1280,7 @@ async def test_get_weather_report_with_location_key(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
             ),
         ),
         Response(
@@ -1297,9 +1289,7 @@ async def test_get_weather_report_with_location_key(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
-                ),
+                url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
             ),
         ),
     ]
@@ -1418,7 +1408,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=b"[]",
             request=Request(
                 method="GET",
-                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
             ),
         ),
         Response(
@@ -1427,9 +1417,7 @@ async def test_get_weather_report_failed_current_conditions_query(
             content=accuweather_forecast_response_fahrenheit,
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
-                ),
+                url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
             ),
         ),
     ]
@@ -1562,7 +1550,7 @@ async def test_get_weather_report_failed_forecast_query(
             content=accuweather_current_conditions_response,
             request=Request(
                 method="GET",
-                url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+                url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
             ),
         ),
         Response(
@@ -1571,9 +1559,7 @@ async def test_get_weather_report_failed_forecast_query(
             content=b"{}",
             request=Request(
                 method="GET",
-                url=(
-                    "http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"
-                ),
+                url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
             ),
         ),
     ]
@@ -1855,7 +1841,7 @@ async def test_get_current_conditions(
         content=accuweather_current_conditions_response,
         request=Request(
             method="GET",
-            url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+            url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
         ),
     )
 
@@ -1883,7 +1869,7 @@ async def test_get_current_conditions_no_current_conditions_returned(
         content=b"[]",
         request=Request(
             method="GET",
-            url=("http://www.accuweather.com/currentconditions/v1/39376.json?" "apikey=test"),
+            url=("http://www.accuweather.com/currentconditions/v1/39376.json?apikey=test"),
         ),
     )
 
@@ -1920,7 +1906,7 @@ async def test_get_current_conditions_error(
         ),
         request=Request(
             method="GET",
-            url=("http://www.accuweather.com/currentconditions/v1/INVALID.json?" "apikey=test"),
+            url=("http://www.accuweather.com/currentconditions/v1/INVALID.json?apikey=test"),
         ),
     )
 
@@ -1987,7 +1973,7 @@ async def test_get_forecast(
         content=content,
         request=Request(
             method="GET",
-            url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"),
+            url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
         ),
     )
 
@@ -2013,7 +1999,7 @@ async def test_get_forecast_no_forecast_returned(
         content=b"{}",
         request=Request(
             method="GET",
-            url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?" "apikey=test"),
+            url=("http://www.accuweather.com/forecasts/v1/daily/1day/39376.json?apikey=test"),
         ),
     )
 
@@ -2043,7 +2029,7 @@ async def test_get_forecast_error(accuweather: AccuweatherBackend, language: str
         ),
         request=Request(
             method="GET",
-            url=("http://www.accuweather.com/forecasts/v1/daily/1day/INVALID.json?" "apikey=test"),
+            url=("http://www.accuweather.com/forecasts/v1/daily/1day/INVALID.json?apikey=test"),
         ),
     )
 
@@ -2507,8 +2493,7 @@ async def test_get_location_completion_raises_accuweather_error_on_catching_gene
         )
 
     expected_error_message = (
-        "Unexpected error occurred when requesting location completion "
-        "from Accuweather: SSLError"
+        "Unexpected error occurred when requesting location completion from Accuweather: SSLError"
     )
 
     assert expected_error_message == str(accuweather_error.value)

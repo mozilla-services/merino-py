@@ -18,6 +18,8 @@ from merino.providers.suggest.flightaware.backends.protocol import (
     FlightStatus,
     FlightSummary,
 )
+from merino.utils.logos import get_logo_url, LogoCategory
+
 from merino.configs import settings
 
 logger = logging.getLogger(__name__)
@@ -93,7 +95,7 @@ def parse_timestamp(
         if timezone:
             return dt.astimezone(ZoneInfo(timezone))
         return dt
-    except (ValueError, ZoneInfoNotFoundError):
+    except ValueError, ZoneInfoNotFoundError:
         return None
 
 
@@ -232,7 +234,7 @@ def build_flight_summary(flight: dict, normalized_query: str) -> FlightSummary |
             url=url,
         )
 
-    except (KeyError, IndexError, TypeError):
+    except KeyError, IndexError, TypeError:
         logger.warning(f"Flightaware response json has incorrect shape: {flight}")
         return None
     except Exception as e:
@@ -363,11 +365,16 @@ def get_airline_details(flight_number: str) -> AirlineDetails:
     name = name.title() if name else None
     color = airline_data.get("color")
 
+    if code:
+        icon = get_logo_url(LogoCategory.Airline, code)
+    else:
+        icon = None
+
     return AirlineDetails(
         code=code,
         name=name,
         color=color,
-        icon=None,
+        icon=icon,
     )
 
 

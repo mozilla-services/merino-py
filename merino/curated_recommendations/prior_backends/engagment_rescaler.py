@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler
+from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler, Prior
 from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
 
 from datetime import datetime, timezone
@@ -21,19 +21,16 @@ BLOCKED_FROM_MOST_POPULAR_SCALER = 5.0
 PESSIMISTIC_PRIOR_ALPHA_SCALE = 0.4
 PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC = 0.35
 
+TILE_6_PERCENTAGE_OF_DAILY_IMPRESSIONS = (
+    0.1  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
+)
 
 LOCAL_RERANK_WEGHT = (
-    30.0  # Gives items a slight boost. Ave ctr 0.002, and this number is multipled, then
+    80.0  # Experiment weight settings 60-10 server-local boosting.
+    # Given high ctr item 0.005 and interest of 0.5 that would
+    # add an effective 0.083 (.5/6) boost that would be divided by the
+    # value specified here. (60.0 => 0.0013, 100 => 0.0008)
 )
-
-FIXED_ITEM_TARGET_ARTICLE_IMPRESSIONS = 12000
-
-EST_DAILY_IMPRESSIONS_TOP_STORY_TILE = (
-    21_000_000  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
-)
-EST_TOP_STORY_TILE_IMP_PER_CYCLE = (
-    EST_DAILY_IMPRESSIONS_TOP_STORY_TILE // 24 // 7
-)  # Assuming 7 ETL data cycles per hour. We actually have a1round 6 but estimating as higher boosts the rate of fresh items
 
 # Normalized relative impresions per hour. Generated via https://sql.telemetry.mozilla.org/queries/115220
 US_UTC_RELATIVE_IMPRESSIONS_NORM = [
@@ -122,41 +119,26 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         data.setdefault(
             "fresh_items_top_stories_fixed_position", 4
         )  # Because there are 2 ads, typically 4 is position 6 (0 based)
-        data.setdefault(
-            "fresh_items_top_stories_fixed_est_imp_per_cycle", EST_TOP_STORY_TILE_IMP_PER_CYCLE
-        )
         data.setdefault("fresh_items_top_stories_max_percentage", 0.03)
         super().__init__(**data)
 
-    def compute_estimated_fresh_per_cycle(self) -> int:
-        """Compute the estimated number of impressions for fresh items in each telemetry update cycle,
-        based on the fixed estimate for top story tile impressions and normalized by hour.
+    def compute_estimated_fresh_per_cycle(self, prior: Prior) -> int:
+        """Compute the estimated number of impressions that a single top stories tile gets in a content refresh cycle
+        based on total impressions and normalized by hour. This is used to tell how often to blast/vs throttle
+        fresh stories.
         """
+        impressions_per_period = (
+            prior.total_impressions_per_day / 24.0 / 6.0
+        )  # Period every 10 minutes ~5 per hour
+        impressions_for_tile_for_period = (
+            impressions_per_period * TILE_6_PERCENTAGE_OF_DAILY_IMPRESSIONS
+        )
         utc_hour = datetime.now(tz=timezone.utc).hour
         if utc_hour >= 0 and utc_hour < len(US_UTC_RELATIVE_IMPRESSIONS_NORM):
             scale = US_UTC_RELATIVE_IMPRESSIONS_NORM[utc_hour]
         else:
             scale = 1.0
-        return round(self.fresh_items_top_stories_fixed_est_imp_per_cycle * scale)
-
-
-IE_EXPERIMENT_TREATMENT_PERCENT = 0.10
-
-
-class IECrawledContentRescaler(CrawledContentRescaler):
-    """Rescaler for IE experiment — scales engagement up by 1/0.10 = 10x
-    to compensate for only 10% of IE traffic generating engagement data.
-    """
-
-    def __init__(self, **data: Any):
-        super().__init__(**data)
-
-    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
-        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
-        treatment percentage to compensate for small experiment size.
-        """
-        opens, no_opens = super().rescale(rec, opens, no_opens)
-        return opens / IE_EXPERIMENT_TREATMENT_PERCENT, no_opens / IE_EXPERIMENT_TREATMENT_PERCENT
+        return round(impressions_for_tile_for_period * scale)
 
 
 DE_EXPERIMENT_TREATMENT_PERCENT = 0.10

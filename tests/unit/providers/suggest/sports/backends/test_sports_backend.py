@@ -5,7 +5,7 @@ import os
 import freezegun
 import pytest
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from unittest.mock import patch, AsyncMock
 
@@ -13,20 +13,33 @@ import httpx
 
 from unittest.mock import MagicMock
 from pytest_mock import MockerFixture
-from typing import cast
+from typing import Any, cast
 
 from merino.configs import settings
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
-from merino.providers.suggest.sports.backends.sportsdata.common.data import Team
+from merino.providers.suggest.sports.backends.sportsdata.common import (
+    GameStatus,
+    SportCategory,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.data import (
+    Team,
+    SportTerms,
+    SPORTSDATA_API_KEY_HEADER,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     ElasticCredentials,
     SportsDataStore,
 )
-from merino.providers.suggest.sports.backends.sportsdata.protocol import SportEventDetail
+from merino.providers.suggest.sports.backends.sportsdata.protocol import (
+    SportEventDetail,
+    SportSummary,
+    build_query,
+)
+from merino.utils.logos import Logo, LogoCategory, LogoManifest
 
 
 VALID_TEST_RESPONSE: dict = {}
@@ -48,9 +61,10 @@ async def test_get_data():
                 url="http://example.org",
                 ttl=ttl,
                 cache_dir="/tmp",  # nosec
+                args={"key": "abc123"},
             )
             # was the URL called?
-            mock_client.get.assert_called_with("http://example.org")
+            mock_client.get.assert_called_with("http://example.org", params={"key": "abc123"})
             # see if it tried to write the file to the cache dir...
             assert (
                 mock_json.call_args_list[0].args[1].buffer.name
@@ -80,12 +94,37 @@ async def test_get_data_with_no_cache_dir():
     ) as mock_client:
         with patch.object(json, "dump") as mock_json:
             await get_data(
-                client=mock_client,
-                url="http://example.org",
-                ttl=ttl,
+                client=mock_client, url="http://example.org", ttl=ttl, args={"key": "abc123"}
             )
-            mock_client.get.assert_called_with("http://example.org")
+            mock_client.get.assert_called_with("http://example.org", params={"key": "abc123"})
             mock_json.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_data_sends_headers():
+    """Test for `get_data` with request headers."""
+    api_key = "sports-secret"
+    mock_response = httpx.Response(
+        status_code=403,
+        request=httpx.Request("GET", "http://example.org"),
+    )
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    with pytest.raises(SportsDataError) as exc_info:
+        await get_data(
+            client=mock_client,
+            url="http://example.org",
+            headers={SPORTSDATA_API_KEY_HEADER: api_key},
+        )
+
+    mock_client.get.assert_awaited_once_with(
+        "http://example.org",
+        params=None,
+        headers={SPORTSDATA_API_KEY_HEADER: api_key},
+    )
+    assert api_key not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
 
 
 @pytest.mark.asyncio
@@ -107,9 +146,10 @@ async def test_get_data_handles_permission_error():
                 url="http://example.org",
                 ttl=ttl,
                 cache_dir="/tmp",  # nosec
+                args={"key": "12345"},
             )
             # Permission Error file not read, request need to be made
-            mock_client.get.assert_called_with("http://example.org")
+            mock_client.get.assert_called_with("http://example.org", params={"key": "12345"})
 
 
 @pytest.mark.asyncio
@@ -204,17 +244,24 @@ async def test_team():
         "GlobalTeamId": 90000694,
     }
     ttl = timedelta(seconds=300)
-    team = Team.from_data(team_data=team_data, term_filter=["La", "The", "fc"], team_ttl=ttl)
+    team = Team.from_data(
+        team_data=team_data,
+        term_filter=["La", "The", "fc"],
+        team_ttl=ttl,
+        # Semi-hack unless you want to instantiate a version of UCL
+        normalized_terms={
+            SportTerms.TEAM_ID: "TeamId",
+            SportTerms.COLOR1: "ClubColor1",
+            SportTerms.COLOR2: "ClubColor2",
+            SportTerms.COLOR3: "ClubColor3",
+            SportTerms.COLOR4: "ClubColor4",
+        },
+    )
     assert team.key == "CHI"
     assert team.locale == "Chicago United States"
     assert team.colors == ["FF0000", "FFFFFF"]
     assert "fire" in team.terms
     assert "chicago" in team.terms
-    assert team.minimal() == {
-        "key": "CHI",
-        "name": "Chicago Fire Football Club",
-        "colors": ["FF0000", "FFFFFF"],
-    }
 
 
 @pytest.fixture(name="es_client")
@@ -235,7 +282,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture(name="sport_data_store")
-def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
+def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDataStore:
     """Test Sport Data Store instance"""
     creds = ElasticCredentials(
         dsn="http://es.test:9200",
@@ -246,6 +293,7 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events-test"},
+        metrics_client=statsd_mock,
     )
     s.client = es_client
     return s
@@ -334,9 +382,11 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
         ("NBA", SportCategory.Basketball),
         ("UCL", SportCategory.Soccer),
         ("MLB", SportCategory.Baseball),
+        ("WCS", SportCategory.Soccer),
+        ("WORLD CUP", SportCategory.Soccer),
         ("Warhammer40k", SportCategory.Misc),
     ],
-    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "miscellaneous"],
+    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "WCS", "WORLD CUP", "miscellaneous"],
 )
 def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
     """Test sport name mapping and fallback behavior"""
@@ -353,3 +403,251 @@ def test_sport_event_detail_category(sport: str, expected_category: SportCategor
     event = {**base_event, "sport": sport}
     result = SportEventDetail.from_event_dict(event)
     assert result.sport_category == expected_category
+
+
+def test_sport_event_detail_remap() -> None:  # WCS, Widget
+    """Test sport name mapping and fallback behavior"""
+    event: dict = {
+        "sport": "fifa",
+        "date": "2025-10-01T00:00:00+00:00",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
+        "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2025-10-01T00:00:00+00:00",
+    }
+
+    result = SportEventDetail.from_event_dict(event)
+    assert result.sport == "World Cup"
+    assert result.query == "World Cup 2026 Home Team vs Away Team 01 October 2025"
+
+
+def test_build_query() -> None:
+    """build_query produces a 'sport away vs home date' string."""
+    event: dict = {
+        "sport": "NFL",
+        "date": "2025-10-01T16:00:00+00:00",
+        "home_team": {"name": "Home Team"},
+        "away_team": {"name": "Away Team"},
+    }
+
+    assert build_query(event) == "NFL Home Team vs Away Team 01 October 2025"
+
+
+def test_build_query_uses_league_local_date() -> None:
+    """build_query uses the SportsData league-local date for final US sports."""
+    event: dict = {
+        "sport": "MLB",
+        "event_status": GameStatus.Final,
+        "date": "2026-05-13T02:10:00+00:00",
+        "original_date": "2026-05-12T00:00:00",
+        "home_team": {"name": "Los Angeles Dodgers"},
+        "away_team": {"name": "San Francisco Giants"},
+    }
+
+    assert build_query(event) == "MLB Los Angeles Dodgers vs San Francisco Giants 12 May 2026"
+
+
+def test_build_query_uses_source_day_for_scheduled_us_sports() -> None:
+    """build_query uses the SportsData source day for scheduled US sports."""
+    event: dict = {
+        "sport": "NFL",
+        "event_status": GameStatus.Scheduled,
+        "date": "2025-10-27T00:10:00+00:00",
+        "original_date": "2025-10-26T00:00:00",
+        "home_team": {"name": "Fake Home"},
+        "away_team": {"name": "Fake Away"},
+    }
+
+    assert build_query(event) == "NFL Fake Home vs Fake Away 26 October 2025"
+
+
+def test_build_query_uses_source_day_for_scheduled_world_cup() -> None:
+    """build_query uses the SportsData source day for WCS click-through queries."""
+    event: dict = {
+        "sport": "fifa",
+        "date": "2026-06-16T02:00:00+00:00",
+        "original_date": "2026-06-15T00:00:00",
+        "home_team": {"name": "IR Iran"},
+        "away_team": {"name": "New Zealand"},
+    }
+
+    assert build_query(event) == "World Cup 2026 IR Iran vs New Zealand 15 June 2026"
+
+
+def test_sport_summary_current_suppresses_previous_and_keeps_next() -> None:
+    """SportSummary returns current and next events when both are available."""
+
+    def event(status: GameStatus, date: str) -> dict[str, Any]:
+        return {
+            "sport": "TEST",
+            "event_status": status,
+            "date": date,
+            "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
+            "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
+            "home_score": None,
+            "away_score": None,
+            "touched": "2026-05-13T00:00:00+00:00",
+        }
+
+    summary = SportSummary.from_events(
+        "all",
+        {
+            "previous": event(GameStatus.Final, "2026-05-12T02:10:00+00:00"),
+            "current": event(GameStatus.InProgress, "2026-05-13T02:10:00+00:00"),
+            "next": event(GameStatus.Scheduled, "2026-05-14T02:10:00+00:00"),
+        },
+    )
+
+    assert [value.status_type for value in summary.values] == ["live", "scheduled"]
+
+
+def test_build_query_world_cup() -> None:
+    """build_query uses World Cup 2026 prefix for games"""
+    event: dict = {
+        "sport": "fifa",
+        "date": "2026-06-15T02:00:00+00:00",
+        "home_team": {"name": "Home Team"},
+        "away_team": {"name": "Away Team"},
+    }
+
+    assert build_query(event) == "World Cup 2026 Home Team vs Away Team 15 June 2026"
+    assert event["sport"] == "fifa"
+
+
+def test_sport_event_detail_icon_set_when_team_in_manifest(
+    mocker: MockerFixture, make_manifest
+) -> None:
+    """Icons are populated from the manifest when the sport and team key are found."""
+    mocker.patch(
+        "merino.utils.logos.load_manifest",
+        return_value=make_manifest(
+            (LogoCategory.NHL, "phi"),
+            (LogoCategory.NHL, "wpg"),
+        ),
+    )
+
+    event = {
+        "date": "2025-10-01T00:00:00+00:00",
+        "sport": "NHL",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {
+            "key": "PHI",
+            "name": "Philadelphia Flyers",
+            "colors": ["D24303"],
+        },
+        "away_team": {"key": "WPG", "name": "Winnipeg Jets", "colors": ["041E42"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2025-10-01T00:00:00+00:00",
+    }
+    result = SportEventDetail.from_event_dict(event)
+
+    host = f"https://{settings.image_gcs_v2.cdn_hostname}"
+    assert str(result.home_team.icon) == f"{host}/logos/nhl/nhl_phi.png"
+    assert str(result.away_team.icon) == f"{host}/logos/nhl/nhl_wpg.png"
+
+
+def test_sport_event_detail_icon_none_for_unknown_sport() -> None:
+    """Icons are None when the sport has no corresponding LogoCategory."""
+    event = {
+        "date": "2025-10-01T00:00:00+00:00",
+        "sport": "TEST",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
+        "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2025-10-01T00:00:00+00:00",
+    }
+    result = SportEventDetail.from_event_dict(event)
+
+    assert result.home_team.icon is None
+    assert result.away_team.icon is None
+
+
+def test_sport_event_detail_icon_set_for_fifa_uses_nations_logos(
+    mocker: MockerFixture, make_manifest
+) -> None:
+    """FIFA events resolve to LogoCategory.Nations via SportLogoCategoryMap."""
+    mocker.patch(
+        "merino.utils.logos.load_manifest",
+        return_value=make_manifest(
+            (LogoCategory.Nations, "usa"),
+            (LogoCategory.Nations, "can"),
+        ),
+    )
+
+    event = {
+        "date": "2026-06-15T00:00:00+00:00",
+        "sport": "FIFA",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "USA", "name": "United States", "colors": ["B22234"]},
+        "away_team": {"key": "CAN", "name": "Canada", "colors": ["FF0000"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2026-06-15T00:00:00+00:00",
+    }
+    result = SportEventDetail.from_event_dict(event)
+
+    host = f"https://{settings.image_gcs_v2.cdn_hostname}"
+    assert str(result.home_team.icon) == f"{host}/logos/nations/nations_usa.png"
+    assert str(result.away_team.icon) == f"{host}/logos/nations/nations_can.png"
+
+
+def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
+    """Icons are None when the team key is absent from the manifest."""
+    event = {
+        "date": "2025-10-01T00:00:00+00:00",
+        "sport": "NHL",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "ZZZ", "name": "Unknown Team", "colors": ["000000"]},
+        "away_team": {"key": "YYY", "name": "Other Team", "colors": ["FFFFFF"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2025-10-01T00:00:00+00:00",
+    }
+    result = SportEventDetail.from_event_dict(event)
+
+    assert result.home_team.icon is None
+    assert result.away_team.icon is None
+
+
+def test_sport_event_detail_fifa_icon_is_png_and_not_svg(
+    mocker: MockerFixture,
+) -> None:
+    """The suggest request should return PNG icon instead of SVG."""
+    manifest = LogoManifest(
+        generated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        lookups={
+            LogoCategory.Nations: {
+                "BRA": Logo(
+                    name="BRA",
+                    url="logos/nations/nations_br.png",
+                    svg="logos/nations/svg/BRA.svg",
+                ),
+                "ARG": Logo(
+                    name="ARG",
+                    url="logos/nations/nations_ar.png",
+                    svg="logos/nations/svg/ARG.svg",
+                ),
+            }
+        },
+    )
+    mocker.patch("merino.utils.logos.load_manifest", return_value=manifest)
+
+    event = {
+        "date": "2026-06-15T00:00:00+00:00",
+        "sport": "FIFA",
+        "event_status": GameStatus.Scheduled,
+        "home_team": {"key": "BRA", "name": "Brazil", "colors": ["#FFD600"]},
+        "away_team": {"key": "ARG", "name": "Argentina", "colors": ["#74ACDF"]},
+        "home_score": None,
+        "away_score": None,
+        "touched": "2026-06-15T00:00:00+00:00",
+    }
+    result = SportEventDetail.from_event_dict(event)
+
+    assert str(result.home_team.icon).endswith("/logos/nations/nations_br.png")
+    assert str(result.away_team.icon).endswith("/logos/nations/nations_ar.png")

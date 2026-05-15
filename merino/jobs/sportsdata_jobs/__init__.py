@@ -20,6 +20,7 @@ hardcoded in the calling function for now, but is based on the file creation tim
 """
 
 import asyncio
+import copy
 import logging
 import typer
 import sys
@@ -27,11 +28,18 @@ from time import time
 from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
 from dynaconf.base import LazySettings
-from typing import cast
+from typing import TYPE_CHECKING
+from sentry_sdk.crons import monitor
+
+if TYPE_CHECKING:
+    from sentry_sdk._types import MonitorConfig
 
 from aiodogstatsd import Client
 
 from merino.configs import settings
+from merino.cache.redis import RedisAdapter, create_redis_clients
+from merino.cache.none import NoCacheAdapter
+
 from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
@@ -46,11 +54,30 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NBA,
     NHL,
     MLB,
-    # UCL,
-    # MLB,
+    UCL,
+    WCS,
     # EPL,
 )
 from merino.utils.http_client import create_http_client
+from merino.utils.metrics import get_metrics_client
+
+
+# Sentry monitor config for WCS cron jobs
+wcs_monitor_config: "MonitorConfig" = {
+    "schedule": {"type": "crontab", "value": "*/3 * * * *"},
+    # If an expected check-in doesn't come in `checkin_margin`
+    # minutes, it'll be considered missed
+    "checkin_margin": 1,
+    # The check-in is allowed to run for `max_runtime` minutes
+    # before it's considered failed
+    "max_runtime": 3,
+    # It'll take `failure_issue_threshold` consecutive failed
+    # check-ins to create an issue
+    "failure_issue_threshold": 2,
+    # It'll take `recovery_threshold` OK check-ins to resolve
+    # an issue
+    "recovery_threshold": 3,
+}
 
 
 class Options:
@@ -78,6 +105,7 @@ class SportDataUpdater:
     connect_timeout: int
     read_timeout: int
     client: AsyncClient
+    cache: RedisAdapter | NoCacheAdapter
 
     # Copy of the general configuration
     # settings: LazySettings
@@ -88,6 +116,7 @@ class SportDataUpdater:
         store: SportsDataStore,
         connect_timeout: int = 1,
         read_timeout: int = 1,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         *args,
         **kwargs,
     ) -> None:
@@ -108,10 +137,12 @@ class SportDataUpdater:
                     sport = NBA(settings)
                 case "NHL":
                     sport = NHL(settings)
-                # case "UCL":
-                #    sport = UCL(settings)
+                case "UCL":
+                    sport = UCL(settings)
                 case "MLB":
                     sport = MLB(settings)
+                case "WCS":
+                    sport = WCS(settings, cache=cache)
                 # case "EPL":
                 #    sport = EPL(settings)
                 case _:
@@ -120,6 +151,7 @@ class SportDataUpdater:
             sports[sport_name] = sport
         self.sports = sports
         self.store = store
+        self.cache = cache
         self.connect_timeout = connect_timeout
         self.read_timeout = read_timeout
         self.client = create_http_client(
@@ -135,7 +167,6 @@ class SportDataUpdater:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
-        await self.store.build_indexes()
 
         for sport in self.sports.values():
             # Update the team information, this will try to use a query cache with a lifespan of 4 hours
@@ -165,8 +196,6 @@ class SportDataUpdater:
         logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Initializing database")
         await self.store.startup()
-        # Drop the prior indexes: Note, this may lose older games.
-        await self.store.build_indexes(clear=True)
 
         # Fetch the meta data for the sport, this includes if the sport is "active"
         # as well as any upcoming events for the sport.
@@ -176,7 +205,10 @@ class SportDataUpdater:
         await self.store.shutdown()
 
     async def initialize(self) -> None:
-        """Initialize the ElasticSearch data store"""
+        """Initialize the ElasticSearch data store
+        Intended for local or test bootstrapping;
+        Indices should be managed by terraform in deployed environments.
+        """
         await self.store.startup()
         await self.store.build_indexes(clear=True)
 
@@ -198,7 +230,7 @@ class SportDataUpdater:
             last_update = datetime.now(tz=timezone.utc) - timedelta(seconds=UPDATE_PERIOD_SECS)
         for sport in self.sports.values():
             start = time()
-            await sport.update_events(client=self.client, allow_no_teams=True)
+            await sport.update_events(client=self.client)
             logger.info(
                 f"""{LOGGING_TAG} sports.time.quick_update.event ["sport": {sport.name}] = {time() - start}"""
             )
@@ -216,6 +248,34 @@ class SportDataUpdater:
         await self.store.startup()
         await self.update_data()
         await self.store.shutdown()
+
+    async def update_widget(self) -> None:
+        """Fetch widget based info and store into the cache"""
+        # we only deal with WCS for now.
+        sport = self.sports.get("WCS")
+        if sport is None:
+            return
+        await self.store.startup()
+        await sport.init_cache(client=self.client, force=True)  # type: ignore
+        if not sport.teams:
+            await sport.update_teams(client=self.client)
+        await sport.cache_teams()  # type: ignore
+
+    async def update_and_cache_wcs(self) -> None:
+        """Update Elasticsearch data and refresh the widget cache."""
+        sport = self.sports.get("WCS")
+        if sport is None:
+            return
+        with monitor(monitor_slug="wcs-etl", monitor_config=wcs_monitor_config):
+            # TODO: Ensure errors bubble up to caller or are otherwise elevated
+            # so we can track success/fail here
+            await self.store.startup()
+            # NOTE: Widget data must be done first, otherwise there may
+            # be missing data like no terms aliases, due to mutable internal
+            # state which depends on ordering of calls in the WCS class
+            await self.update_widget()
+            await self.update_data()
+            await self.store.shutdown()
 
 
 logger = logging.getLogger(__name__)
@@ -242,10 +302,25 @@ if elastic_credentials.validate():
             platform=platform,
             languages=[lang for lang in sports_settings.get("languages", ["en"])],
             index_map={"event": event_map},
+            metrics_client=get_metrics_client(),
+        )
+        cache = (
+            RedisAdapter(
+                *create_redis_clients(
+                    settings.redis.wcs_server,
+                    settings.redis.wcs_replica,
+                    settings.redis.max_connections,
+                    settings.redis.socket_connect_timeout_sec,
+                    settings.redis.socket_timeout_sec,
+                )
+            )
+            if sports_settings.get("cache") == "redis"
+            else NoCacheAdapter()
         )
         provider = SportDataUpdater(
             settings=sports_settings,
             store=store,
+            cache=cache,
             connect_timeout=sports_settings.get("connect_timeout"),
             read_timeout=sports_settings.get("read_timeout"),
         )
@@ -258,7 +333,10 @@ else:
 
 @cli.command("initialize")
 def initialize():  # pragma: no cover
-    """Build the indexes and initialize the ES tables"""
+    """Build the indexes and initialize the ES tables
+    For local and test use only; indices are managed by
+    terraform in deployed environments.
+    """
     if provider:
         asyncio.run(provider.initialize())
     else:
@@ -279,6 +357,33 @@ def update():  # pragma: no cover
     """Perform the frequently required tasks (Approx once every 5 min)"""
     if provider:
         asyncio.run(provider.update_data())
+    else:
+        logger.error("Sports provider unavailable.")
+
+
+@cli.command("update-widget")
+def update_widget():
+    """Update widget based info"""
+    if provider:
+        asyncio.run(provider.update_widget())
+    else:
+        logger.error("Sports provider unavailable.")
+
+
+@cli.command("update-and-cache-wcs")
+def update_and_cache_wcs():
+    """Update Elasticsearch data and refresh the widget cache for WCS (only)."""
+    if store and cache:
+        wcs_only_settings = copy.copy(sports_settings)
+        wcs_only_settings.sports = ["WCS"]
+        wcs_provider = SportDataUpdater(
+            settings=wcs_only_settings,
+            store=store,
+            cache=cache,
+            connect_timeout=sports_settings.get("connect_timeout"),
+            read_timeout=sports_settings.get("read_timeout"),
+        )
+        asyncio.run(wcs_provider.update_and_cache_wcs())
     else:
         logger.error("Sports provider unavailable.")
 

@@ -24,6 +24,7 @@ def _mock_async_client() -> MagicMock:
       - client.indices.create/refresh/delete (async)
     """
     client = MagicMock(name="AsyncElasticsearchClient")
+    client.options = MagicMock(name="options", return_value=client)
     client.search = AsyncMock(name="search")
     client.delete_by_query = AsyncMock(name="delete_by_query")
     client.close = AsyncMock(name="close")
@@ -90,7 +91,7 @@ async def test_search_delegates_to_client_search(
         index="my-index",
         body={"query": {"match_all": {}}},
         suggest={"s": {"prefix": "a"}},
-        timeout="1000ms",
+        timeout=1.0,
         source_includes=["title"],
     )
 
@@ -99,7 +100,6 @@ async def test_search_delegates_to_client_search(
         index="my-index",
         body={"query": {"match_all": {}}},
         suggest={"s": {"prefix": "a"}},
-        timeout="1000ms",
         source_includes=["title"],
     )
 

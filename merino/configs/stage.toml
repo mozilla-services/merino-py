@@ -32,13 +32,27 @@ gcs_bucket = "merino-images-stagepy"
 # Set to `true` in production and `false` in staging or development.
 gcs_enabled = false
 
-
 [stage.image_gcs_v2]
 # MERINO_IMAGE_GCS_V2__GCS_PROJECT
 gcs_project = "moz-fx-merino-nonprod-ee93"
 
 # MERINO_IMAGE_GCS_V2__GCS_BUCKET
 gcs_bucket = "merino-images-stagepy"
+
+# MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
+# Stage temporarily points at the prod CDN because the stage image bucket
+# isn't populated with the WCS logo assets yet. Revisit once `merino-images-stagepy`
+# carries the same content as prod.
+cdn_hostname = "prod-images.merino.prod.webservices.mozgcp.net"
+
+[stage.games_particle.gcs]
+# MERINO_GAMES_PARTICLE_GCS__GCS_PROJECT (GCP V2)
+gcs_project = "moz-fx-merino-nonprod-db57"
+
+# MERINO_GAMES_PARTICLE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = false
 
 [stage.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
@@ -69,6 +83,17 @@ gcp_project = "moz-fx-merino-nonprod-db57"
 # GCS bucket that contains cohort model data
 bucket_name = "merino-ml-data-stage"
 
+[stage.contextual_interest]
+# Enabled in staging for testing
+enabled = true
+
+[stage.contextual_interest.gcs]
+# GCP project name where the GCS bucket lives.
+gcp_project = "moz-fx-merino-nonprod-db57"
+
+# GCS bucket that contains the LinTS-interest safetensors bundle.
+bucket_name = "merino-ml-data-stage"
+
 [stage.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = "merino-airflow-data-stage"
@@ -91,3 +116,15 @@ dummy_engaged_count = 5
 
 # MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
 dummy_attempted_count = 1000
+
+[stage.query_normalization]
+enabled = true
+data_source = "remote"
+gcs_bucket = "merino-ml-data-stage"
+
+[stage.mars]
+# MERINO_MARS__BASE_URL
+base_url = "https://ads.allizom.org/v1/suggest/"
+
+# MERINO_MARS__SEND_TEST_PADDING
+send_test_padding = true

@@ -1,8 +1,10 @@
 """Entrypoint for the command line interface."""
 
+import logging
 import typer
 
 from merino.configs.app_configs.config_logging import configure_logging
+from merino.configs.app_configs.config_sentry import configure_sentry
 from merino.jobs.amo_rs_uploader import amo_rs_uploader_cmd
 from merino.jobs.csv_rs_uploader import csv_rs_uploader_cmd
 from merino.jobs.geonames_uploader import geonames_uploader_cmd
@@ -14,6 +16,7 @@ from merino.jobs.polygon import cli as polygon_ingestion_cmd
 from merino.jobs.flightaware import cli as flightaware_fetch_schedules_cmd
 from merino.jobs.sportsdata_jobs import cli as sportsdata_cmd
 from merino.jobs.engagement_model import cli as engagement_data_cmd
+from merino.jobs.engagement_model.amp_live_probe import cli as amp_live_probe_cmd
 
 # Include your new jobs module here.
 
@@ -50,11 +53,18 @@ cli.add_typer(sportsdata_cmd, no_args_is_help=True)
 # Add the engagement data fetch subcommand
 cli.add_typer(engagement_data_cmd, no_args_is_help=True)
 
+# Add the AMP live dataset access probe subcommand
+cli.add_typer(amp_live_probe_cmd, no_args_is_help=True)
+
 
 @cli.callback()
 def setup():
     """CLI Entrypoint"""
     configure_logging()
+    try:
+        configure_sentry()
+    except Exception:
+        logging.getLogger(__name__).exception("Error configuring Sentry")
 
 
 if __name__ == "__main__":

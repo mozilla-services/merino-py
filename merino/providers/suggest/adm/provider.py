@@ -14,8 +14,13 @@ from pydantic import HttpUrl
 from merino.configs import settings
 from merino.optimizers.models import EngagementMetrics, ThompsonCandidate
 from merino.optimizers.thompson import ThompsonSampler
-from merino.providers.suggest.adm.backends.protocol import EngagementData, FormFactor
-from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
+from merino.providers.suggest.adm.backends.protocol import (
+    EngagementData,
+    FormFactor,
+)
+from merino.utils.gcs.engagement.filemanager import (
+    EngagementFilemanager,
+)
 from merino.utils import cron
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.suggest.base import (
@@ -51,6 +56,8 @@ FORM_FACTORS_FALLBACK_MAPPING = {
 FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
 CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
+TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
+ENGAGEMENT_GUIDED_SUGGESTIONS: str = "engagement_guided_suggestions"
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -91,11 +98,12 @@ class Provider(BaseProvider):
     min_attempted_count: int
     should_check_client_variants: bool
     thompson: ThompsonSampler | None = None
+    engagement_resync_interval_sec: float
     engagement_data: EngagementData
     filemanager: EngagementFilemanager
-    engagement_resync_interval_sec: float
     last_engagement_fetch_at: float
     engagement_cron_task: asyncio.Task
+    staleness_cron_task: asyncio.Task
 
     def __init__(
         self,
@@ -106,8 +114,8 @@ class Provider(BaseProvider):
         resync_interval_sec: float,
         cron_interval_sec: float,
         engagement_gcs_bucket: str,
-        engagement_blob_name: str,
         engagement_resync_interval_sec: float,
+        engagement_blob_name: str,
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
@@ -125,8 +133,8 @@ class Provider(BaseProvider):
         self._enabled_by_default = enabled_by_default
         self.min_attempted_count = min_attempted_count
         self.thompson = thompson
-        self.engagement_data = EngagementData(amp={}, amp_aggregated={})
         self.engagement_resync_interval_sec = engagement_resync_interval_sec
+        self.engagement_data = EngagementData(amp={}, amp_aggregated={})
         self.last_engagement_fetch_at = 0
         self.filemanager = EngagementFilemanager(
             gcs_bucket_path=engagement_gcs_bucket,
@@ -169,6 +177,28 @@ class Provider(BaseProvider):
         )
         self.engagement_cron_task = asyncio.create_task(engagement_cron_job())
 
+        staleness_cron_job = cron.Job(
+            name="mars_staleness_metric",
+            interval=self.cron_interval_sec,
+            condition=self._should_emit_staleness,
+            task=self._emit_staleness,
+        )
+        self.staleness_cron_task = asyncio.create_task(staleness_cron_job())
+
+    def _should_emit_staleness(self) -> bool:
+        """Check if the backend tracks data staleness."""
+        return getattr(self.backend, "last_new_data_at", 0) > 0
+
+    async def _emit_staleness(self) -> None:
+        """Emit the data staleness gauge for the MARS backend."""
+        last_new_data_at: float = getattr(self.backend, "last_new_data_at", 0)
+        if last_new_data_at > 0:
+            staleness = time.time() - last_new_data_at
+            self.metrics_client.gauge(
+                "mars.data.staleness_seconds",
+                value=staleness,
+            )
+
     def _should_fetch(self) -> bool:
         """Check if it should fetch data from Remote Settings."""
         return (time.time() - self.last_fetch_at) >= self.resync_interval_sec
@@ -208,13 +238,19 @@ class Provider(BaseProvider):
         """Convert a query string to lowercase and remove leading spaces."""
         return query.lstrip().lower()
 
-    def _fetch_engagement_metrics(self, suggestion: PyAmpResult) -> EngagementMetrics:
+    def _fetch_engagement_metrics(self, suggestion: PyAmpResult, query: str) -> EngagementMetrics:
         """Fetch engagement metrics for an AMP suggestion."""
         advertiser = suggestion.advertiser.lower()
         engaged, attempted = 1, 1
-        if self.engagement_data and (metrics := self.engagement_data.amp.get(advertiser)):
-            attempted = int(metrics.get("impressions", attempted))
-            engaged = int(metrics.get("clicks", engaged))
+
+        keyword_key = f"{advertiser}/{query}"
+        if entry := self.engagement_data.amp.get(keyword_key):
+            kw_metrics = entry.live or entry.historical
+            if kw_metrics:
+                return EngagementMetrics(
+                    engaged=kw_metrics.clicks, attempted=kw_metrics.impressions
+                )
+
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
     def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
@@ -224,45 +260,54 @@ class Provider(BaseProvider):
         if not self.engagement_data.amp:
             return False
         if self.should_check_client_variants:
-            return any(cv in CLIENT_VARIANTS_ALLOW_LIST for cv in client_variants)
+            return ENGAGEMENT_GUIDED_SUGGESTIONS in client_variants
         return True
 
     def _select(
-        self, suggestions: list[PyAmpResult], client_variants: list[str]
+        self, suggestions: list[PyAmpResult], client_variants: list[str], query: str
     ) -> PyAmpResult | None:
-        """Select a suggestion from the candidate collection.
-
-        Params:
-          - `suggestions`: A list of candidates `PyAmpResult`
-        Returns:
-            Either a winner `PyAmpResult` or None if the optimizer (e.g. Thompson sampler)
-            determines so. Return the first candidate when the optimizer is disabled.
-        """
-        if self._is_thompson_eligible(client_variants):
+        def _sampling() -> PyAmpResult | None:
+            """Thompson sampling helper function."""
             candidates = [
-                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion))
+                ThompsonCandidate(id=i, metrics=self._fetch_engagement_metrics(suggestion, query))
                 for i, suggestion in enumerate(suggestions)
             ]
+
+            tags = {}
+            if suggestions:
+                # FIXME(nanj): this uses the first element as the subject as `suggestions`
+                # should always be a singleton list. Update it if that's false in the future.
+                tags["subject"] = suggestions[0].advertiser.lower()
+                tags["below_threshold"] = (
+                    "true"
+                    if cast(ThompsonSampler, self.thompson).below_threshold(candidates[0])
+                    else "false"
+                )
 
             # If it's the only candidate with an attempted count less than the threshold, skip sampling.
             if len(candidates) == 1 and candidates[0].metrics.attempted < self.min_attempted_count:
                 self.metrics_client.increment(
-                    "providers.adm.thompson.select", tags={"outcome": "skipped"}
+                    "providers.adm.thompson.select", tags={"outcome": "skipped", **tags}
                 )
                 return suggestions[0]
 
             winner = cast(ThompsonSampler, self.thompson).sample(candidates)
             if winner:
                 self.metrics_client.increment(
-                    "providers.adm.thompson.select", tags={"outcome": "selected"}
+                    "providers.adm.thompson.select", tags={"outcome": "selected", **tags}
                 )
                 winner_idx: int = winner.id
                 return suggestions[winner_idx]
             else:
                 self.metrics_client.increment(
-                    "providers.adm.thompson.select", tags={"outcome": "suppressed"}
+                    "providers.adm.thompson.select", tags={"outcome": "suppressed", **tags}
                 )
                 return None
+
+        if self._is_thompson_eligible(client_variants):
+            winner = _sampling()
+            if not TS_DRY_RUN:
+                return winner
 
         return suggestions[0] if suggestions else None
 
@@ -282,7 +327,7 @@ class Provider(BaseProvider):
         if (
             self.suggestion_content.index_manager.has(idx_id)
             and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
-            and (res := self._select(suggestions, client_variants))
+            and (res := self._select(suggestions, client_variants, q))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 

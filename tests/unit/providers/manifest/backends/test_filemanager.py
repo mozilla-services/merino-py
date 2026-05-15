@@ -17,14 +17,16 @@ from merino.providers.manifest.backends.protocol import GetManifestResultCode, M
 async def test_get_file_async(
     fixture_filemanager, caplog: pytest.LogCaptureFixture, filter_caplog: FilterCaplogFixture
 ):
-    """Test that the async get_file method returns manifest data."""
-    get_file_result_code, result = await fixture_filemanager.get_file()
+    """Test that the async get_file method returns manifest data and ETag."""
+    result = await fixture_filemanager.get_file()
 
-    assert get_file_result_code is GetManifestResultCode.SUCCESS
-    assert isinstance(result, ManifestData)
-    assert result.domains
-    assert len(result.domains) == 5
-    assert result.domains[0].domain == "google"
+    assert result.code is GetManifestResultCode.SUCCESS
+    assert isinstance(result.data, ManifestData)
+    assert result.data.domains
+    assert len(result.data.domains) == 5
+    assert result.data.domains[0].domain == "google"
+    # blob.generation comes from the conftest fixture
+    assert result.etag == "42"
 
     # assert correct success log is emitted
     with caplog.at_level(logging.INFO):
@@ -43,6 +45,7 @@ async def test_get_file_json_decode_error(
     mock_blob = AsyncMock()
     # returns a non json value
     mock_blob.download.return_value = b"invalid json"
+    mock_blob.generation = 1
 
     mock_bucket = AsyncMock()
     mock_bucket.get_blob.return_value = mock_blob
@@ -54,9 +57,10 @@ async def test_get_file_json_decode_error(
     filemanager.gcs_client = mock_storage
     filemanager.bucket = mock_bucket
 
-    get_file_result_code, result = await filemanager.get_file()
-    assert get_file_result_code is GetManifestResultCode.FAIL
-    assert result is None
+    result = await filemanager.get_file()
+    assert result.code is GetManifestResultCode.FAIL
+    assert result.data is None
+    assert result.etag is None
 
     # assert correct error log is emitted
     with caplog.at_level(logging.ERROR):
@@ -75,6 +79,7 @@ async def test_get_file_validation_error(
     mock_blob = AsyncMock()
     # returns invalid field
     mock_blob.download.return_value = orjson.dumps({"invalid_field": "data"})
+    mock_blob.generation = 1
 
     mock_bucket = AsyncMock()
     mock_bucket.get_blob.return_value = mock_blob
@@ -86,10 +91,11 @@ async def test_get_file_validation_error(
     filemanager.gcs_client = mock_storage
     filemanager.bucket = mock_bucket
 
-    get_file_result_code, result = await filemanager.get_file()
+    result = await filemanager.get_file()
 
-    assert get_file_result_code is GetManifestResultCode.FAIL
-    assert result is None
+    assert result.code is GetManifestResultCode.FAIL
+    assert result.data is None
+    assert result.etag is None
 
     # assert correct error log is emitted
     with caplog.at_level(logging.ERROR):
@@ -116,10 +122,11 @@ async def test_get_file_exception(
     filemanager.gcs_client = mock_storage
     filemanager.bucket = mock_bucket
 
-    get_file_result_code, result = await filemanager.get_file()
+    result = await filemanager.get_file()
 
-    assert get_file_result_code is GetManifestResultCode.FAIL
-    assert result is None
+    assert result.code is GetManifestResultCode.FAIL
+    assert result.data is None
+    assert result.etag is None
 
     # assert correct error log is emitted
     with caplog.at_level(logging.ERROR):

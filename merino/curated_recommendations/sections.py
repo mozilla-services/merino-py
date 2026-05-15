@@ -21,19 +21,26 @@ from merino.curated_recommendations.layouts import (
     layout_7_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
-from merino.curated_recommendations.ml_backends.protocol import MLRecsBackend
+from merino.curated_recommendations.ml_backends.protocol import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+    MLRecsBackend,
+)
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
+)
+from merino.curated_recommendations.rankers.interest_ranker import InterestRanker
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
     DECrawledContentRescaler,
-    IECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import (
+    Prior,
     PriorBackend,
     EngagementRescaler,
 )
@@ -44,6 +51,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     Section,
     SectionConfiguration,
+    EditorialSectionsBranch,
     ExperimentName,
     DailyBriefingBranch,
     ProcessedInterests,
@@ -201,11 +209,36 @@ def _process_corpus_sections(
     return sections
 
 
+def resolve_5050(
+    original_section: CorpusSection, alternate_section: CorpusSection
+) -> CorpusSection:
+    """Choose between the base and alternate section with 50/50 odds."""
+    return random.sample([original_section, alternate_section], 1)[0]
+
+
+def resolve_section_experiment(section: CorpusSection) -> CorpusSection:
+    """Resolve a canonical section and its alternate slate to the winning section."""
+    alternate_section = section.alternateSection
+    if alternate_section is None:
+        return section
+
+    if alternate_section.experimentVariant == 5050:
+        return resolve_5050(section, alternate_section)
+
+    return section
+
+
+def dedupe_experiment_sections(sections: list[CorpusSection]) -> list[CorpusSection]:
+    """Resolve each canonical section to either its original or alternate slate."""
+    return [resolve_section_experiment(section) for section in sections]
+
+
 async def get_corpus_sections(
     sections_backend: SectionsProtocol,
     surface_id: SurfaceId,
     min_feed_rank: int,
     include_subtopics: bool = False,
+    exclude_editorial_sections: bool = False,
 ) -> tuple[CorpusSection | None, dict[str, Section]]:
     """Fetch curated sections.
 
@@ -214,6 +247,7 @@ async def get_corpus_sections(
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
         include_subtopics: Whether to include subtopic sections.
+        exclude_editorial_sections: Whether to drop manually curated sections.
 
     Returns:
         A tuple of the raw daily-briefing CorpusSection (if present,
@@ -224,6 +258,9 @@ async def get_corpus_sections(
     # Get raw corpus sections
     raw_corpus_sections = await sections_backend.fetch(surface_id)
 
+    # Dedupe on sections by ID
+    raw_corpus_sections = dedupe_experiment_sections(raw_corpus_sections)
+
     # Split daily-briefing section before filtering (experiment-only gate)
     raw_daily_briefing, remaining_raw = split_daily_briefing_section(raw_corpus_sections)
 
@@ -232,6 +269,13 @@ async def get_corpus_sections(
         remaining_raw,
         include_subtopics,
     )
+
+    if exclude_editorial_sections:
+        filtered_corpus_sections = {
+            sid: cs
+            for sid, cs in filtered_corpus_sections.items()
+            if cs.createSource != CreateSource.MANUAL
+        }
 
     # Process the sections using the shared logic
     corpus_sections = _process_corpus_sections(
@@ -309,13 +353,6 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
     )
 
 
-def is_inferred_contextual_ranking(personal_interests: ProcessedInterests | None) -> bool:
-    """Return True if inferred contextual ranking should be applied."""
-    if IS_COHORT_FEATURE_DISABLED:
-        return False
-    return personal_interests is not None and personal_interests.cohort is not None
-
-
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled (either branch)."""
     experiment_name = ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
@@ -338,6 +375,36 @@ def should_show_popular_today_with_daily_briefing(
         request,
         ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
         DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
+    )
+
+
+def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the contextual ranking time zone experiment is enabled."""
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_TZ,
+    )
+
+
+def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if the user is enrolled in the InterestRanker treatment.
+
+    Reuses the InferredTimeZone experiment's TZ branch (originally a TZ-cohort
+    treatment that underperformed) — this avoids a fresh-experiment enrollment
+    ramp and gets the InterestRanker to traffic faster. Users on this branch
+    get the LinTS InterestRanker; users on the COUNTRY branch (control) stay
+    on the existing cohort path with TZ context disabled.
+
+    Gates the first tier of the ranker chain in get_sections: when this fires
+    and the LinTS backend is loaded, we rank with InterestRanker; otherwise
+    we fall through to the cohort ContextualRanker (or vanilla
+    ThompsonSamplingRanker).
+    """
+    return is_enrolled_in_experiment(
+        request,
+        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
+        CONTEXTUAL_RANKING_TREATMENT_TZ,
     )
 
 
@@ -365,16 +432,16 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     )
 
 
-def is_contextual_ranking_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the contextual ranking experiment is enabled."""
+def should_exclude_editorial_sections(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if editorial (manually curated) sections must be hidden (HNT-2182).
+
+    True only for the `no-editorial-sections` branch of the editorial sections experiment.
+    Popular Today and ML sections are unaffected.
+    """
     return is_enrolled_in_experiment(
         request,
-        ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_TZ,
-    ) or is_enrolled_in_experiment(
-        request,
-        ExperimentName.CONTEXTUAL_RANKING_CONTENT_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
+        ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
+        EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
     )
 
 
@@ -389,10 +456,8 @@ def get_ranking_rescaler_for_branch(
     if surface_id == SurfaceId.NEW_TAB_EN_GB:
         return CrawledContentRescaler()
 
-    if surface_id == SurfaceId.NEW_TAB_EN_IE and is_enrolled_in_experiment(
-        request, "sections-in-ie", "sections"
-    ):
-        return IECrawledContentRescaler()
+    if surface_id == SurfaceId.NEW_TAB_EN_IE:
+        return CrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_DE_DE and is_enrolled_in_experiment(
         request, "sections-in-germany", "sections"
@@ -400,14 +465,16 @@ def get_ranking_rescaler_for_branch(
         return DECrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_CA:
-        return CrawledContentRescaler()
+        if request.inferredInterests is None:
+            return CrawledContentRescaler()
+        else:
+            # Testing as part of the inferred personalization experiment
+            return CrawledContentPinnedFreshRescaler()
 
-    # While we preivously returned None for non-US, we know there are some section users
+    # While we previously returned None for non-US, we know there are some section users
     # who may not be in the US. This rescaler is required for all markets where data is getting
     # added throughout the day.
 
-    # The pinned fresh content rescaler is only available for the US market right now.
-    # Some additional work would be needed to make it work for other markets.
     return CrawledContentPinnedFreshRescaler()
 
 
@@ -614,9 +681,11 @@ def pick_random_fresh_story(
     """
     fresh_items = list(
         filter(
-            lambda a: a.ranking_data
-            and a.ranking_data.is_fresh
-            and not a.is_story_blocked_for_top_stories(),
+            lambda a: (
+                a.ranking_data
+                and a.ranking_data.is_fresh
+                and not a.is_story_blocked_for_top_stories()
+            ),
             items,
         )
     )
@@ -651,6 +720,7 @@ def get_top_story_list(
     extra_source_depth: int = 10,
     rescaler: EngagementRescaler | None = None,
     relax_constraints_for_personalization=False,
+    prior: Prior | None = None,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
@@ -675,10 +745,14 @@ def get_top_story_list(
     fresh_story_for_fixed_position = None
 
     # Pick a fresh story at random for position
-    if rescaler and rescaler.fresh_items_top_stories_fixed_position is not None:
+    if (
+        rescaler
+        and rescaler.fresh_items_top_stories_fixed_position is not None
+        and prior is not None
+    ):
         fixed_fresh_item_position = rescaler.fresh_items_top_stories_fixed_position or 0
         fresh_story_for_fixed_position, rest_of_stories = pick_random_fresh_story(
-            items, rescaler.compute_estimated_fresh_per_cycle()
+            items, rescaler.compute_estimated_fresh_per_cycle(prior)
         )
         items = rest_of_stories
 
@@ -750,6 +824,7 @@ async def get_sections(
     ml_backend: MLRecsBackend,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
+    lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
 ) -> dict[str, Section]:
@@ -776,6 +851,7 @@ async def get_sections(
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=include_subtopics,
+        exclude_editorial_sections=should_exclude_editorial_sections(request),
     )
 
     # Determine if we should include daily briefing based on experiment
@@ -813,15 +889,47 @@ async def get_sections(
         ]
     ranker: Ranker
 
+    # The current Canada experiment doesn't have the isMerinoExperiment flag set so we can only check
+    # if there is an interest vector. Contexual ranking shows some advantages of thompson sampling (such as pre
+    # ranking certain topics higher, so it has advantages even when there is no interest vector returned)
     use_contexual_ranker = (
-        (surface_id == SurfaceId.NEW_TAB_EN_US or is_contextual_ranking_experiment(request))
+        (
+            surface_id == SurfaceId.NEW_TAB_EN_US
+            or (surface_id == SurfaceId.NEW_TAB_EN_CA and personal_interests is not None)
+        )
         and ml_backend is not None
-        and ml_backend.is_valid()
+        and ml_backend.is_valid(surface_id)
     )
-    if use_contexual_ranker:
+    # use interest ranker if we have interests available
+    use_interest_ranker = (
+        is_inferred_interest_experiment(request)
+        and lints_interest_backend.is_valid(surface_id)
+        and personal_interests is not None
+        and bool(personal_interests.scores)
+    )
+    # Interest ranker is experimental so gets priority over contexual ranker
+    if use_interest_ranker:
+        ranker = InterestRanker(
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            surface_id=surface_id,
+            lints_backend=lints_interest_backend,
+        )
+    elif use_contexual_ranker:
+        is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
+        if (
+            not is_inferred_time_zone_experiment_enabled
+            and personal_interests
+            and TIME_ZONE_OFFSET_INFERRED_KEY in personal_interests.scores
+            and surface_id == SurfaceId.NEW_TAB_EN_US
+        ):
+            # Make sure we have not time zone in the US if we're not in the tz experiment
+            # For canada TZ is not a separate experiment.
+            personal_interests.scores.pop(TIME_ZONE_OFFSET_INFERRED_KEY, None)
         ranker = ContextualRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
+            surface_id=surface_id,
             ml_backend=ml_backend,
         )
     else:
@@ -835,7 +943,6 @@ async def get_sections(
         region=region,
         rescaler=rescaler,
         personal_interests=personal_interests,
-        utcOffset=request.utcOffset,
     )
     # 8. Split top stories from the globally ranked recommendations
     # Use 2-row layout as default for Popular Today
@@ -845,12 +952,14 @@ async def get_sections(
     if is_contextual_ads_experiment(request):
         popular_today_layout = layout_4_large
 
+    prior = prior_backend.get(region)
     top_stories = get_top_story_list(
         all_ranked_corpus_recommendations,
         top_stories_count,
         TOP_STORIES_SECTION_EXTRA_COUNT,
         rescaler=rescaler,
         relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
+        prior=prior,
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations
@@ -920,7 +1029,9 @@ async def get_sections(
         ranker,
         personal_interests,
         engagement_rescaler=rescaler,
-        do_section_personalization_reranking=not use_contexual_ranker,  # Contextual ranker already re-ranks all sections
+        do_section_personalization_reranking=not (
+            use_contexual_ranker or use_interest_ranker
+        ),  # Contextual + Interest rankers already re-rank sections implicitly
         include_daily_briefing_section=include_daily_briefing_section,
     )
 

@@ -6,7 +6,10 @@
 
 from unittest.mock import patch
 import pytest
-from merino.providers.manifest.backends.protocol import GetManifestResultCode
+from merino.providers.manifest.backends.protocol import (
+    GetManifestResultCode,
+    ManifestFetchResult,
+)
 from merino.providers.manifest.backends.manifest import ManifestBackend
 
 
@@ -20,13 +23,14 @@ async def test_fetch_manifest_data(backend: ManifestBackend, fixture_filemanager
         "merino.providers.manifest.backends.manifest.ManifestRemoteFilemanager",
         return_value=fixture_filemanager,
     ):
-        get_file_result_code, result = await backend.fetch_manifest_data()
+        result = await backend.fetch_manifest_data()
 
-        assert get_file_result_code is GetManifestResultCode.SUCCESS
-        assert result is not None
-        assert result.domains is not None
-        assert len(result.domains) == 5
-        assert result.domains[1].domain == "microsoft"
+        assert result.code is GetManifestResultCode.SUCCESS
+        assert result.data is not None
+        assert result.data.domains is not None
+        assert len(result.data.domains) == 5
+        assert result.data.domains[1].domain == "microsoft"
+        assert result.etag == "42"
 
 
 @pytest.mark.asyncio
@@ -39,12 +43,13 @@ async def test_fetch_manifest_data_fail(backend: ManifestBackend, fixture_filema
         with patch.object(
             fixture_filemanager,
             "get_file",
-            return_value=(GetManifestResultCode.FAIL, None),
+            return_value=ManifestFetchResult(code=GetManifestResultCode.FAIL, data=None),
         ) as mock_get_file:
-            get_file_result_code, result = await backend.fetch_manifest_data()
+            result = await backend.fetch_manifest_data()
 
-            assert get_file_result_code is GetManifestResultCode.FAIL
-            assert result is None
+            assert result.code is GetManifestResultCode.FAIL
+            assert result.data is None
+            assert result.etag is None
 
             mock_get_file.assert_called_once()
 
@@ -56,10 +61,11 @@ async def test_fetch(backend: ManifestBackend, fixture_filemanager) -> None:
         "merino.providers.manifest.backends.manifest.ManifestRemoteFilemanager",
         return_value=fixture_filemanager,
     ):
-        get_file_result_code, result = await backend.fetch()
+        result = await backend.fetch()
 
-        assert get_file_result_code is GetManifestResultCode.SUCCESS
-        assert result is not None
-        assert result.domains is not None
-        assert len(result.domains) == 5
-        assert result.domains[2].domain == "facebook"
+        assert result.code is GetManifestResultCode.SUCCESS
+        assert result.data is not None
+        assert result.data.domains is not None
+        assert len(result.data.domains) == 5
+        assert result.data.domains[2].domain == "facebook"
+        assert result.etag == "42"

@@ -22,7 +22,7 @@ Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexe
 ## Critical Gotchas
 
 - **MERINO_ENV=testing** must be set when running tests. Without it, development config loads and tests break. All Makefile test targets set this automatically.
-- **Python 3.13 only**. Pinned in `.python-version`.
+- **Python 3.14 only**. Pinned in `.python-version`.
 - **Line length is 99**, not 88 or 120.
 - **Warnings are errors** in tests (`filterwarnings = ["error"]`). Any warning from code or deps fails the test.
 - **95% code coverage** required. New code without tests fails CI.

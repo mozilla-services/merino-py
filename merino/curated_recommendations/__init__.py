@@ -7,6 +7,7 @@ import logging
 import random
 
 from merino.configs import settings
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
     ScheduledSurfaceBackend,
     CorpusApiGraphConfig,
@@ -23,6 +24,10 @@ from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
 from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import (
     EmptyCohortModel,
     GcsInterestCohortModel,
+)
+from merino.curated_recommendations.ml_backends.lints_interest_model import (
+    EmptyLinTSInterestBackend,
+    LinTSInterestBackend,
 )
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
@@ -120,27 +125,39 @@ def init_ml_recommendations_backend(num_files=NUM_ML_RECS_BACKEND_FILES) -> MLRe
     Because there are so merino servers, we don't need to rotate files in a particular
     instance"""
 
-    blob_name = settings.ml_recommendations.gcs.blob_name
-    try:
-        synced_gcs_blob = SyncedGcsBlob(
-            storage_client=initialize_storage_client(
-                destination_gcp_project=settings.ml_recommendations.gcs.gcp_project
-            ),
-            metrics_client=get_metrics_client(),
-            metrics_namespace="recommendation.ml.contextual",
-            bucket_name=settings.ml_recommendations.gcs.bucket_name,
-            blob_name=blob_name,
-            max_size=settings.ml_recommendations.gcs.max_size,
-            cron_interval_seconds=settings.ml_recommendations.gcs.cron_interval_seconds,
-            cron_job_name="fetch_ml_contextual_recs",
-        )
-        synced_gcs_blob.initialize()
-        return GcsMLRecs(synced_gcs_blob=synced_gcs_blob)
-    except Exception as e:
-        logger.error(f"Failed to initialize GCS ML Recs Backend: {e}")
-        # Fall back to a empty recommendation set if GCS cannot be initialized.
+    synced_gcs_blobs: dict[SurfaceId, SyncedGcsBlob] = {}
+    surface_blob_names: dict[SurfaceId, str] = {
+        SurfaceId.NEW_TAB_EN_US: settings.ml_recommendations.gcs.blob_name,
+        SurfaceId.NEW_TAB_EN_CA: settings.ml_recommendations.gcs.blob_name_ca,
+    }
+    metrics_namespaces: dict[SurfaceId, str] = {
+        SurfaceId.NEW_TAB_EN_US: "recommendation.ml.contextual",
+        SurfaceId.NEW_TAB_EN_CA: "recommendation.ml.contextual_ca",
+    }
+    for surface_id, blob_name in surface_blob_names.items():
+        try:
+            synced_gcs_blob = SyncedGcsBlob(
+                storage_client=initialize_storage_client(
+                    destination_gcp_project=settings.ml_recommendations.gcs.gcp_project
+                ),
+                metrics_client=get_metrics_client(),
+                metrics_namespace=metrics_namespaces[surface_id],
+                bucket_name=settings.ml_recommendations.gcs.bucket_name,
+                blob_name=blob_name,
+                max_size=settings.ml_recommendations.gcs.max_size,
+                cron_interval_seconds=settings.ml_recommendations.gcs.cron_interval_seconds,
+                cron_job_name="fetch_ml_contextual_recs",
+            )
+            synced_gcs_blob.initialize()
+            synced_gcs_blobs[surface_id] = synced_gcs_blob
+        except Exception as e:
+            logger.error(f"Failed to initialize GCS ML Recs Backend for {surface_id}: {e}")
+
+    if not synced_gcs_blobs:
+        # Fall back to an empty recommendation set if no surface could be initialized.
         # This happens in contract tests or when the developer isn't logged in with gcloud auth.
         return EmptyMLRecs()
+    return GcsMLRecs(synced_gcs_blobs=synced_gcs_blobs)
 
 
 def init_ml_cohort_model_backend() -> CohortModelBackend:
@@ -169,6 +186,47 @@ def init_ml_cohort_model_backend() -> CohortModelBackend:
         return EmptyCohortModel()
 
 
+def init_lints_interest_backend() -> LinTSInterestBackend | EmptyLinTSInterestBackend:
+    """Initialize the LinTS-interest backend.
+
+    Two layers of off-switch:
+      - The ``lints_interest.enabled`` config flag (kill switch). If false,
+        we skip GCS entirely and return an empty stub regardless of bucket
+        state.
+      - Failure to construct the ``SyncedGcsBlob`` (e.g. dev env without
+        gcloud auth) also falls back to the empty stub.
+
+    The empty stub returns ``False`` from ``is_valid()`` so the request flow
+    naturally falls through to the cohort or vanilla TS ranker.
+
+    US-only for the initial experiment. Adding ``NEW_TAB_EN_CA`` later is a
+    one-line wiring change here — the backend is already per-``SurfaceId``.
+    """
+    if not settings.contextual_interest.enabled:
+        logger.info("LinTS interest backend disabled by config; using empty stub.")
+        return EmptyLinTSInterestBackend()
+
+    try:
+        synced_gcs_blob = SyncedGcsBlob(
+            storage_client=initialize_storage_client(
+                destination_gcp_project=settings.contextual_interest.gcs.gcp_project
+            ),
+            metrics_client=get_metrics_client(),
+            metrics_namespace="recommendation.ml.lints_interest",
+            bucket_name=settings.contextual_interest.gcs.bucket_name,
+            blob_name=settings.contextual_interest.gcs.blob_name,
+            max_size=settings.contextual_interest.gcs.max_size,
+            cron_interval_seconds=settings.contextual_interest.gcs.cron_interval_seconds,
+            cron_job_name="fetch_lints_interest_model",
+            is_bytes=True,
+        )
+        synced_gcs_blob.initialize()
+        return LinTSInterestBackend(synced_gcs_blobs={SurfaceId.NEW_TAB_EN_US: synced_gcs_blob})
+    except Exception as e:
+        logger.error(f"Failed to initialize LinTS interest backend: {e}")
+        return EmptyLinTSInterestBackend()
+
+
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -178,6 +236,7 @@ def init_provider() -> None:
     local_model_backend = init_local_model_backend()
     ml_recommendations_backend = init_ml_recommendations_backend()
     cohort_model_backend = init_ml_cohort_model_backend()
+    lints_interest_backend = init_lints_interest_backend()
 
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
@@ -201,6 +260,7 @@ def init_provider() -> None:
         local_model_backend=local_model_backend,
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
+        lints_interest_backend=lints_interest_backend,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 

@@ -8,6 +8,7 @@ import logging
 import aiodogstatsd
 from pydantic import HttpUrl
 
+from merino.governance.circuitbreakers import SportsCircuitBreaker
 from merino.providers.suggest.base import (
     BaseProvider,
     BaseSuggestion,
@@ -80,6 +81,7 @@ class SportsDataProvider(BaseProvider):
             logger.error(f"{LOGGING_TAG} Could not start sports backend: {ex}")
             self.backend = None
 
+    @SportsCircuitBreaker(name="sports")
     async def query(self, sreq: SuggestionRequest) -> list[BaseSuggestion]:
         """Query elastic search with the provided user terms and return relevant sport event information."""
         logger = logging.getLogger(__name__)

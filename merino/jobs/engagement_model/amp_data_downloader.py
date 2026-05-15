@@ -12,19 +12,34 @@ logger = logging.getLogger(__name__)
 class EngagementDataDownloader:
     """Download engagement data for AMP"""
 
-    QUERY = """
+    KEYWORD_QUERY_HISTORICAL = """
 SELECT
-  metrics.string.quick_suggest_advertiser AS advertiser,
-  COUNT(*) AS impressions,
-  COUNTIF(metrics.boolean.quick_suggest_is_clicked) AS clicks
-FROM `moz-fx-data-shared-prod.firefox_desktop_live.quick_suggest_v1`
-WHERE submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY) AND CURRENT_TIMESTAMP()
-AND client_info.app_channel = "release"
-AND metrics.boolean.quick_suggest_improve_suggest_experience
-AND metrics.string.quick_suggest_request_id IS NOT NULL
-AND metrics.string.quick_suggest_ping_type = "quicksuggest-impression"
-GROUP BY 1
-ORDER BY 1, 3 DESC, 2 DESC
+ LOWER(advertiser) AS advertiser,
+ LOWER(query) AS query,
+ COUNTIF(is_clicked) AS clicks,
+ COUNT(*) AS impressions
+FROM `moz-fx-data-shared-prod.search_terms_derived.suggest_impression_sanitized_v3`
+WHERE
+ submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 14 DAY) AND CURRENT_TIMESTAMP()
+AND query is not NULL
+GROUP BY 1, 2
+HAVING impressions >= 3000 AND clicks <= 1000
+ORDER BY 1, 4 DESC
+"""
+
+    KEYWORD_QUERY_LIVE = """
+SELECT
+ LOWER(advertiser) AS advertiser,
+ LOWER(query) AS query,
+ COUNTIF(is_clicked) AS clicks,
+ COUNT(*) AS impressions
+FROM `moz-fx-data-shared-prod.search_terms_derived.suggest_impression_sanitized_v3`
+WHERE
+ submission_timestamp BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR) AND CURRENT_TIMESTAMP()
+AND query is not NULL
+GROUP BY 1, 2
+HAVING impressions > 200
+ORDER BY 1, 4 DESC
 """
 
     client: Client
@@ -32,26 +47,30 @@ ORDER BY 1, 3 DESC, 2 DESC
     def __init__(self, source_gcp_project: str) -> None:
         self.client = Client(source_gcp_project)
 
-    def download_data(self) -> list[dict[str, Any]]:
-        """Execute the AMP engagement query and return aggregated engagement data.
+    def _fetch_rows(self, query: str, label: str) -> list[dict[str, Any]]:
+        """Execute a BigQuery query and return parsed rows.
+
+        Args:
+            query: The SQL query to execute.
+            label: A short label (e.g. "historical", "live") used in log messages.
 
         Returns:
             list[dict[str, Any]]: A list of engagement records containing
-            advertiser, impressions, and clicks.
+            advertiser, query, impressions, and clicks.
 
         Raises:
             RuntimeError: If the BigQuery query fails.
         """
         try:
-            query_job = self.client.query(self.QUERY)
+            query_job = self.client.query(query)
             results = query_job.result()
-
         except GoogleAPIError as e:
             logger.error(
-                "BigQuery query failed while downloading AMP engagement data",
+                "BigQuery query failed while downloading %s AMP engagement data",
+                label,
                 exc_info=True,
             )
-            raise RuntimeError("Failed to fetch AMP engagement data from BigQuery") from e
+            raise RuntimeError(f"Failed to fetch {label} AMP engagement data from BigQuery") from e
 
         engagement_data: list[dict[str, Any]] = []
 
@@ -60,15 +79,73 @@ ORDER BY 1, 3 DESC, 2 DESC
                 engagement_data.append(
                     {
                         "advertiser": row["advertiser"],
+                        "query": row["query"],
                         "impressions": int(row["impressions"]),
                         "clicks": int(row["clicks"]),
                     }
                 )
             except KeyError:
-                logger.warning("Unexpected row format in BigQuery results: %s", row)
+                logger.warning("Unexpected row format in BigQuery results (%s): %s", label, row)
                 continue
 
         if not engagement_data:
-            logger.warning("AMP engagement query returned no rows")
+            logger.warning("%s AMP engagement query returned no rows", label)
 
         return engagement_data
+
+    def download_historical_data(self) -> list[dict[str, Any]]:
+        """Execute the historical AMP engagement query."""
+        return self._fetch_rows(self.KEYWORD_QUERY_HISTORICAL, "historical")
+
+    def download_live_data(self) -> list[dict[str, Any]]:
+        """Execute the live AMP engagement query."""
+        return self._fetch_rows(self.KEYWORD_QUERY_LIVE, "live")
+
+    @staticmethod
+    def transform_data(
+        historical: list[dict[str, Any]],
+        live: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Merge historical and live keyword-level AMP data into an advertiser/query-keyed dict.
+
+        Both datasets are optional per advertiser/query pair — a key may have only
+        historical, only live, or both.
+        """
+        result: dict[str, Any] = {}
+
+        for row in historical:
+            key = f"{row['advertiser']}/{row['query']}"
+            if key not in result:
+                result[key] = {}
+            result[key]["historical"] = {
+                "impressions": row["impressions"],
+                "clicks": row["clicks"],
+            }
+
+        for row in live:
+            key = f"{row['advertiser']}/{row['query']}"
+            if key not in result:
+                result[key] = {}
+            result[key]["live"] = {
+                "impressions": row["impressions"],
+                "clicks": row["clicks"],
+            }
+
+        return result
+
+    @staticmethod
+    def apply_click_adjustment(data: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Add 3 to the click count for each row where impressions >= 3.
+        This adjustment is based on the 95% confidence interval when observing 0 event
+        for a rare random variable (which follows a Poisson Distribution).
+        """
+        return [
+            {**row, "clicks": row["clicks"] + 3} if row["impressions"] >= 3 else row
+            for row in data
+        ]
+
+    @staticmethod
+    def aggregate_data(_transformed: dict[str, Any]) -> dict[str, int]:
+        """Aggregate impressions and clicks from keyword-level AMP data."""
+        # Not currently consumed — returning zeros until a use case is defined.
+        return {"impressions": 0, "clicks": 0}

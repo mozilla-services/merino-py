@@ -13,7 +13,11 @@ from aiodogstatsd import Client as AioDogstatsdClient
 
 from merino.providers.manifest import Provider
 from merino.providers.manifest.backends.manifest import ManifestBackend
-from merino.providers.manifest.backends.protocol import GetManifestResultCode, ManifestData
+from merino.providers.manifest.backends.protocol import (
+    GetManifestResultCode,
+    ManifestData,
+    ManifestFetchResult,
+)
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from contextlib import nullcontext
 from merino.main import app
@@ -90,7 +94,11 @@ def mock_manifest_backend(mock_manifest):
     """Mock ManifestBackend that returns our test data."""
     backend = ManifestBackend()
     backend.fetch = AsyncMock(
-        return_value=(GetManifestResultCode.SUCCESS, ManifestData(**mock_manifest))
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS,
+            data=ManifestData(**mock_manifest),
+            etag="test-generation",
+        )
     )
     return backend
 

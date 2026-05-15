@@ -1,7 +1,7 @@
 """Protocol for the Manifest provider backend."""
 
 from enum import Enum
-from typing import Protocol
+from typing import NamedTuple, Protocol
 
 from pydantic import BaseModel, HttpUrl
 from merino.exceptions import BackendError
@@ -39,13 +39,27 @@ class ManifestData(BaseModel):
     partners: list[dict[str, str]]
 
 
+class ManifestFetchResult(NamedTuple):
+    """Result of fetching the manifest from its backing store.
+
+    The ``etag`` field carries the stringified GCS ``blob.generation`` on a
+    successful fetch. It is surfaced to the HTTP layer so the ``/manifest``
+    endpoint can answer conditional ``If-None-Match`` requests with a
+    ``304 Not Modified`` instead of the full body. It is ``None`` on any
+    failure path and for backends that do not provide a validator.
+    """
+
+    code: GetManifestResultCode
+    data: ManifestData | None
+    etag: str | None = None
+
+
 class ManifestBackend(Protocol):
     """Protocol for the Manifest backend that the provider depends on."""
 
-    async def fetch(self) -> tuple[GetManifestResultCode, ManifestData | None]:
-        """Fetch the manifest from storage and return it as a tuple.
-        Returns:
-            A tuple of (GetManifestResultCode, dict or None)
+    async def fetch(self) -> ManifestFetchResult:
+        """Fetch the manifest from storage.
+
         Raises:
             ManifestBackendError: If the manifest is unavailable or there is an error reading it.
         """

@@ -85,7 +85,7 @@ async def test_get_file_validation_error(mocker):
 async def test_get_bucket_memoization(mocker):
     """Test that get_bucket returns the same bucket instance on multiple calls (memoized)."""
     mock_storage = mocker.patch(
-        "merino.providers.suggest.finance.backends.polygon.filemanager.Storage"
+        "merino.providers.suggest.finance.backends.polygon.filemanager.get_storage_client"
     )
     mock_bucket_instance = mocker.MagicMock()
     mock_storage.return_value = mocker.MagicMock()
@@ -123,13 +123,13 @@ async def test_get_file_uses_get_bucket(mocker):
 
 @pytest.mark.asyncio
 async def test_get_bucket_initializes_client_and_bucket(mocker):
-    """Test that get_bucket initializes gcs_client and bucket if unset."""
+    """Test that get_bucket initializes bucket if unset."""
     # create mock instances
     mock_storage_instance = mocker.MagicMock(name="MockStorageInstance")
     mock_bucket_instance = mocker.MagicMock(name="MockBucketInstance")
 
     mock_storage_class = mocker.patch(
-        "merino.providers.suggest.finance.backends.polygon.filemanager.Storage",
+        "merino.providers.suggest.finance.backends.polygon.filemanager.get_storage_client",
         return_value=mock_storage_instance,
     )
     mock_bucket_class = mocker.patch(

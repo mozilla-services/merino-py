@@ -5,21 +5,37 @@ This contains the sport specific calls and data formats which are normalized.
 
 import asyncio
 import logging
+import orjson
+import json
 from datetime import datetime, timedelta, timezone
-from typing import Any
-from zoneinfo import ZoneInfo
+from typing import Any, cast
 
 # We use this for each Sport subclass, so that there's some flexibility for what config
 # values are used and passed.
 from dynaconf.base import LazySettings
 from httpx import AsyncClient
+from pydantic import ValidationError
 
+from merino.cache.redis import RedisAdapter
+from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
+    SportTerms,
     Team,
+    Event,
+    SPORTSDATA_US_EASTERN,
+    SPORTSDATA_UTC,
+    sportsdata_day_slug,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
+    eliminated_team_keys,
+    eliminated_team_keys_cache_key,
+    parse_eliminated_team_keys,
+    serialize_eliminated_team_keys,
 )
 
 FORCE_IMPORT = ""
@@ -40,8 +56,20 @@ SPORT_CATEGORY_MAP: dict[str, SportCategory] = {
     "NBA": SportCategory.Basketball,
     "UCL": SportCategory.Soccer,
     "MLB": SportCategory.Baseball,
-    "EPL": SportCategory.Soccer,
+    # "EPL": SportCategory.Soccer,
+    "WCS": SportCategory.Soccer,
+    "WORLD CUP": SportCategory.Soccer,
 }
+
+# Global logger
+logger = logging.getLogger(__name__)
+
+# Open-ended timestamp bounds for the WCS calendar index. The calendar is a
+# Redis sorted set keyed by Unix timestamps, so these signed 64-bit sentinels
+# comfortably bracket all possible events while keeping RedisAdapter.zrange's
+# integer contract unchanged.
+ZSET_MIN_TIMESTAMP = -(2**63)
+ZSET_MAX_TIMESTAMP = 2**63 - 1
 
 
 class NFL(Sport):
@@ -67,6 +95,16 @@ class NFL(Sport):
             lock=asyncio.Lock(),
         )
         self._lock = asyncio.Lock()
+        self.normalized_terms.update(
+            {
+                SportTerms.GAME_ID: "GlobalGameID",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamID",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamID",
+                SportTerms.HOME_TEAM_SCORE: "HomeScore",
+                SportTerms.AWAY_TEAM_SCORE: "AwayScore",
+                SportTerms.TEAM_ID: "GlobalTeamID",
+            }
+        )
 
     async def get_team(self, id: int) -> Team | None:
         """Attempt to find the team information in a thread-locking manner."""
@@ -78,15 +116,15 @@ class NFL(Sport):
         """Get the current season"""
         # see: https://sportsdata.io/developers/api-documentation/nfl#timeframesepl
         if self.season is not None:
-            return self
-        logger = logging.getLogger(__name__)
+            return
         logger.debug(f"{LOGGING_TAG} Getting timeframe for {self.name} ")
-        url = f"{self.base_url}/Timeframes/current?key={self.api_key}"
+        url = f"{self.base_url}/Timeframes/current"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         """
         # Sample response:
@@ -131,40 +169,40 @@ class NFL(Sport):
         """NFL requires a nightly "Timeframe" lookup."""
         await self.get_season(client=client)
         # Now get the team information:
-        url = f"{self.base_url}/Teams?key={self.api_key}"
+        url = f"{self.base_url}/Teams"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
-        return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update the events for this sport in the elastic search database"""
-        logger = logging.getLogger(__name__)
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting Events for {self.name}")
-        local_timezone = ZoneInfo("America/New_York")
+        local_timezone = SPORTSDATA_US_EASTERN
         # get this week and next week
         if self.week is None:
             logger.debug(f"{LOGGING_TAG} No events (No week)")
             return
         for week in [int(self.week), int(self.week) + 1]:
-            url = f"{self.base_url}/ScoresBasic/{self.season}/{week}?key={self.api_key}"
+            url = f"{self.base_url}/ScoresBasic/{self.season}/{week}"
             response = await get_data(
                 client=client,
                 url=url,
                 ttl=timedelta(minutes=5),
                 cache_dir=self.cache_dir,
+                headers=self.api_headers(),
             )
 
             self.load_scores_from_source(
-                response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
+                response,
+                event_timezone=local_timezone,
             )
-        return self
 
 
 class NHL(Sport):
@@ -189,6 +227,16 @@ class NHL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.normalized_terms = self.normalized_terms.copy()
+        # GlobalTeam* not available for scores, use TeamID
+        self.normalized_terms.update(
+            {
+                SportTerms.GAME_ID: "GameID",
+                SportTerms.AWAY_TEAM_ID: "AwayTeamID",
+                SportTerms.HOME_TEAM_ID: "HomeTeamID",
+                SportTerms.TEAM_ID: "TeamID",
+            }
+        )
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch team information using local locking"""
@@ -198,15 +246,15 @@ class NHL(Sport):
     async def get_season(self, client: AsyncClient):
         """Get the current season"""
         if self.season is not None:
-            return self
-        logger = logging.getLogger(__name__)
+            return
         logger.debug(f"{LOGGING_TAG} Getting {self.name} season ")
-        url = f"{self.base_url}/CurrentSeason?key={self.api_key}"
+        url = f"{self.base_url}/CurrentSeason"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         """
         {
@@ -221,45 +269,54 @@ class NHL(Sport):
         }
         """
         self.season = response.get("ApiSeason")
-        return self
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         if self.season is None:
             logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
-            return self
+            return
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
-        url = f"{self.base_url}/teams?key={self.api_key}"
+        url = f"{self.base_url}/teams"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         # NOTE:
         # Sportsdata lists the Superbowl teams as "AFC" vs "NFC".
         self.load_teams_from_source(response)
-        return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
-        url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
-        local_timezone = ZoneInfo("America/New_York")
+        url = f"{self.base_url}/SchedulesBasic/{self.season}"
+        local_timezone = SPORTSDATA_US_EASTERN
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
-        )
-        return self
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list: set[str] = set()
+        for _id, event in list(self.events.items()):
+            day = sportsdata_day_slug(event.date, local_timezone)
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/GamesByDate/{day}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                    headers=self.api_headers(),
+                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
+            date_list.add(day)
 
 
 class NBA(Sport):
@@ -281,6 +338,14 @@ class NBA(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.normalized_terms.update(
+            {
+                SportTerms.GAME_ID: "GlobalGameID",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamID",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamID",
+                SportTerms.TEAM_ID: "GlobalTeamID",
+            }
+        )
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
@@ -290,15 +355,15 @@ class NBA(Sport):
     async def get_season(self, client: AsyncClient):
         """Get the current season"""
         if self.season:
-            return self
-        logger = logging.getLogger(__name__)
+            return
         logger.debug(f"{LOGGING_TAG} Getting {self.name} season ")
-        url = f"{self.base_url}/CurrentSeason?key={self.api_key}"
+        url = f"{self.base_url}/CurrentSeason"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         """
         {
@@ -313,43 +378,56 @@ class NBA(Sport):
         }
         """
         self.season = response.get("ApiSeason")
-        return self
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
-        url = f"{self.base_url}/teams?key={self.api_key}"
+        url = f"{self.base_url}/teams"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
-        return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         if self.season is None:
-            logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
+            logger.info(
+                f"{LOGGING_TAG} Skipping out of season {self.name}"
+            )  # pragma: no cover "informational"
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
-        local_timezone = ZoneInfo("America/New_York")
-        url = f"{self.base_url}/SchedulesBasic/{self.season}?key={self.api_key}"
+        local_timezone = SPORTSDATA_US_EASTERN
+        url = f"{self.base_url}/SchedulesBasic/{self.season}"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
-        )
-        return self
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list: set[str] = set()
+        # update scores based on events:
+        # Events may cross multiple days, so we should update those scores.
+        for _id, event in list(self.events.items()):
+            day = sportsdata_day_slug(event.date, local_timezone)
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/ScoresBasic/{day}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                    headers=self.api_headers(),
+                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
+                date_list.add(day)
 
 
 class UCL(Sport):
@@ -371,11 +449,20 @@ class UCL(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        self.normalized_terms.update(
+            {
+                SportTerms.GAME_ID: "GlobalGameId",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamId",
+                SportTerms.AWAY_TEAM_KEY: "AwayTeamKey",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamId",
+                SportTerms.HOME_TEAM_KEY: "HomeTeamKey",
+                SportTerms.TEAM_ID: "GlobalTeamId",
+            }
+        )
 
     async def get_season(self, client: AsyncClient):
         """Get the current season (which is just the current year)"""
         self.season = str(datetime.now(tz=timezone.utc).year)
-        return self
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
@@ -384,10 +471,9 @@ class UCL(Sport):
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
-        logger = logging.getLogger(__name__)
         await self.get_season(client=client)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
-        url = f"{self.base_url}/Teams/{self.name.lower()}?key={self.api_key}"
+        url = f"{self.base_url}/Teams/{self.name.lower()}"
         """
         [{
             "TeamId": 509,
@@ -427,28 +513,41 @@ class UCL(Sport):
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
-        return self
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Update schedules and game scores for this sport"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
-        url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}?key={self.api_key}"
-        local_timezone = ZoneInfo("UTC")
+        url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
+        local_timezone = SPORTSDATA_UTC
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
-        )
-        return self
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list: set[str] = set()
+        # update scores based on events:
+        # Events may cross multiple days, so we should update those scores.
+        for _id, event in list(self.events.items()):
+            day = sportsdata_day_slug(event.date, local_timezone)
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/ScoresBasic/{self.name}/{day}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                    headers=self.api_headers(),
+                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
+                date_list.add(day)
 
 
 class MLB(Sport):
@@ -472,19 +571,28 @@ class MLB(Sport):
             team_ttl=timedelta(weeks=4),
         )
         self._lock = asyncio.Lock()
+        # GlobalTeamID not in schedule
+        self.normalized_terms.update(
+            {
+                SportTerms.GAME_ID: "GameID",
+                SportTerms.AWAY_TEAM_SCORE: "AwayTeamRuns",
+                SportTerms.HOME_TEAM_SCORE: "HomeTeamRuns",
+                SportTerms.TEAM_ID: "TeamID",
+            }
+        )
 
     async def get_season(self, client: AsyncClient):
         """Get the current season"""
         if self.season is not None:
-            return self
-        logger = logging.getLogger(__name__)
+            return  # pragma: no cover
         logger.debug(f"{LOGGING_TAG} Getting {self.name} season")
-        url = f"{self.base_url}/CurrentSeason?key={self.api_key}"
+        url = f"{self.base_url}/CurrentSeason"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         """
         {
@@ -496,26 +604,24 @@ class MLB(Sport):
         }
         """
         self.season = response.get("ApiSeason")
-        return self
 
     async def update_teams(self, client: AsyncClient):
         """Fetch active team information"""
         await self.get_season(client=client)
-        logger = logging.getLogger(__name__)
-        if self.season is None:
+        if self.season is None:  # pragma: no cover
             logger.info(f"{LOGGING_TAG} Skipping out of season {self.name}")
-            return self
+            return
         logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
-        url = f"{self.base_url}/teams?key={self.api_key}"
+        url = f"{self.base_url}/teams"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(hours=4),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
         async with self._lock:
             self.load_teams_from_source(response)
-        return self
 
     async def get_team(self, id: int) -> Team | None:
         """Attempt to find the team information in a thread-locking manner."""
@@ -523,60 +629,647 @@ class MLB(Sport):
             team = self.teams.get(id)
         return team
 
-    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+    async def update_events(self, client: AsyncClient):
         """Fetch the list of events for the sport. (5 min interval)"""
-        local_timezone = ZoneInfo("America/New_York")
-        date = datetime.now(tz=local_timezone).strftime("%Y-%b-%d").upper()
-        url = f"{self.base_url}/ScoresBasic/{date}?key={self.api_key}"
-        """
-        [
-            {
-                "AwayTeamRuns": 0,
-                "HomeTeamRuns": 0,
-                "AwayTeamHits": 2,
-                "HomeTeamHits": 5,
-                "AwayTeamErrors": 0,
-                "HomeTeamErrors": 0,
-                "Attendance": null,
-                "GlobalGameID": 10076415,
-                "GlobalAwayTeamID": 10000012,
-                "GlobalHomeTeamID": 10000032,
-                "NeutralVenue": false,
-                "Inning": 4,
-                "InningHalf": "B",
-                "GameID": 76415,
-                "Season": 2025,
-                "SeasonType": 1,
-                "Status": "InProgress",
-                "Day": "2025-09-04T00:00:00",
-                "DateTime": "2025-09-04T16:10:00",
-                "AwayTeam": "PHI",
-                "HomeTeam": "MIL",
-                "AwayTeamID": 12,
-                "HomeTeamID": 32,
-                "RescheduledGameID": null,
-                "StadiumID": 92,
-                "IsClosed": false,
-                "Updated": "2025-09-04T17:19:20",
-                "GameEndDateTime": null,
-                "DateTimeUTC": "2025-09-04T20:10:00",
-                "RescheduledFromGameID": null,
-                "SuspensionResumeDay": null,
-                "SuspensionResumeDateTime": null,
-                "SeriesInfo": null
-            },
-        ...]
-        """
+        local_timezone = SPORTSDATA_US_EASTERN
+        logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
+        url = f"{self.base_url}/SchedulesBasic/{self.season}"
         response = await get_data(
             client=client,
             url=url,
             ttl=timedelta(minutes=5),
             cache_dir=self.cache_dir,
+            headers=self.api_headers(),
         )
-        self.load_scores_from_source(
-            response, event_timezone=local_timezone, allow_no_teams=allow_no_teams
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list: set[str] = set()
+        # update scores based on events
+        # Events may cross multiple days, so we should update those scores.
+        for _id, event in list(self.events.items()):
+            day = sportsdata_day_slug(event.date, local_timezone)
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/ScoresBasic/{day}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                    headers=self.api_headers(),
+                )
+                self.load_scores_from_source(response, event_timezone=local_timezone)
+                date_list.add(day)
+
+
+class WCS(Sport):
+    """Soccer: World Cup support"""
+
+    ## Right, this class is the general handler for all things World Cup. Ideally, all the other
+    ## jobs, interfaces, and what-not call into this class in order to get things running, fetch
+    ## and process data, or return results.
+
+    season: str | None = None
+    cache_prefix: str = "sport:wcs:v1"  # Unique prefix for Redis
+    _lock: asyncio.Lock
+    teams: dict[int, Team] = {}
+    rounds: dict[int, str] = {}
+    refreshed: datetime = datetime.now(tz=timezone.utc)
+    """Americanized Static country aliases indexed by ISO3 code
+
+    These aliases will be stored by Elastic Search and used as part of the match string for countries.
+    As such, you should avoid using common stop words ("of", "the", "and", etc) and use more unique elements.
+    Elastic search will do some spelling corrections and partial match fixes, so alternate spellings should not
+    be needed.
+
+    See https://www.iban.com/country-codes
+    """
+    country_alias = {
+        "TUR": "turkey",
+        "CIV": "ivory coast cote divoire",
+        "CUW": "curacao",
+    }
+
+    def __init__(
+        self,
+        settings: LazySettings,
+        *args,
+        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
+        **kwargs,
+    ):
+        # name = self.__class__.__name__
+        name = "fifa"
+        # sport specific settings TODO: copy this to other sports.
+        sport_settings = settings.sportsdata.get(self.__class__.__name__, {})
+        super().__init__(
+            settings=settings,
+            name=name,
+            base_url=sport_settings.get(
+                "base_url", "https://api.sportsdata.io/v4/soccer/scores/json"
+            ),
+            cache_dir=settings.sportsdata.get("cache_dir"),
+            team_ttl=timedelta(weeks=sport_settings.get("team_ttl_weeks", 12)),
+            event_ttl=timedelta(weeks=sport_settings.get("event_ttl_weeks.wcs", 12)),
         )
-        return self
+        self._lock = asyncio.Lock()
+        self.cache = cache
+        self.normalized_terms.update(
+            {
+                SportTerms.GAME_ID: "GlobalGameId",
+                SportTerms.AWAY_TEAM_ID: "GlobalAwayTeamId",
+                SportTerms.AWAY_TEAM_KEY: "AwayTeamKey",
+                SportTerms.HOME_TEAM_ID: "GlobalHomeTeamId",
+                SportTerms.HOME_TEAM_KEY: "HomeTeamKey",
+                SportTerms.TEAM_ID: "GlobalTeamId",
+                SportTerms.COLOR1: "ClubColor1",
+                SportTerms.COLOR2: "ClubColor2",
+                SportTerms.COLOR3: "ClubColor3",
+                SportTerms.COLOR4: "ClubColor4",
+            }
+        )
+
+    def event_details(self, event_description: dict[str, Any]) -> dict[str, Any]:
+        """Return soccer score details used by the WCS widget."""
+        clock = event_description.get("ClockDisplay") or event_description.get("Clock")
+        round_id = event_description.get("RoundId")
+        return {
+            "period": event_description.get("Period"),
+            "home_extra": event_description.get("HomeTeamScoreExtraTime"),
+            "away_extra": event_description.get("AwayTeamScoreExtraTime"),
+            "home_penalty": event_description.get("HomeTeamScorePenalty"),
+            "away_penalty": event_description.get("AwayTeamScorePenalty"),
+            "clock": str(clock) if clock is not None else None,
+            "stage": self.rounds.get(round_id) if round_id is not None else None,
+            "round_id": round_id,
+            "season_type": event_description.get("SeasonType"),
+            "group": event_description.get("Group"),
+            "winner": event_description.get("Winner"),
+            "is_closed": event_description.get("IsClosed"),
+        }
+
+    # Note: this is covered by `test_wcs_init_cache` but I believe that the heavy use of Mocks
+    # prevents coverage from detecting that the lines are accessed. Adding "no cover" to get
+    # coverage numbers under control. (it's temporary anyway, we're dropping it with the WCS widget.)
+    async def init_cache(  # pragma: no cover "widget"
+        self, client: AsyncClient, force: bool = False
+    ):  # pragma: no cover "widget/mocks"
+        """Initialize the Redis cache, if needed
+
+        There are some bits of data that are long lived. In our case, each team
+        and event has a `RegionId` that maps to the Areas returned by `../Areas` endpoint.
+        The Area result contains a LOT of information, but we really only care about
+        the country code, because that's how we will identify a given team.
+
+        There's a STRONG temptation to use the `team.key` since that also appears to map
+        to the country code, but SportsData may not be consistent about that (see the
+        fact that they used the same key code for two different countries).
+
+        """
+        meta_key = f"{self.cache_prefix}:meta"
+        last_update = int.from_bytes(
+            await self.cache.get(f"{meta_key}:updated") or int(0).to_bytes()
+        )
+
+        # Has it been over a year since we last updated the meta info?
+        lock_period = 365
+        if not force and last_update:  # pragma: no cache "widget"
+            if last_update > int(
+                (datetime.now(tz=timezone.utc) - timedelta(days=lock_period)).timestamp()
+            ):
+                return
+        now = datetime.now(tz=timezone.utc)
+        mylock = int((now + timedelta(seconds=30)).timestamp())
+        # if we can get the lock, initialize the data.
+        if await self.cache.setnx(
+            f"{meta_key}:lock", value=mylock.to_bytes(8), nx=True, ttl=timedelta(seconds=30)
+        ):
+            try:
+                logging.info(f"{LOGGING_TAG} Initializing Cache")
+                # We got the lock, we can initialize things.
+                # to initial stuff.
+                await self.load_areas(client)
+                await self.load_rounds(client)
+                await self.update_teams(client)
+                await self.cache_teams()
+                complete = int(datetime.now(tz=timezone.utc).timestamp())
+                logging.info(f"{LOGGING_TAG} Marking db initialized as of {complete}")
+                # We're done, carry on...
+                await self.cache.set(f"{meta_key}:updated", complete.to_bytes(8))
+            finally:
+                await self.cache.delete(f"{meta_key}:lock")
+
+    async def load_areas(self, client) -> None:
+        """Fetch and load the countries to the cache"""
+        # Fetch the area info, specifically the country code.
+        # Each event and team has an `AreaId` which we will use to map
+        # to the individual country. This should not change, so we only need
+        # to update once, and maybe once per year.
+        url = f"{self.base_url}/Areas"
+        response = await get_data(
+            client=client,
+            url=url,
+            ttl=timedelta(weeks=25),
+            cache_dir=self.cache_dir,
+            headers=self.api_headers(),
+        )
+        # Sample Response:
+        """
+        [
+            {
+                "AreaId": 1,
+                "CountryCode": "INT",
+                "Name": "World",
+                "Competitions": [...]
+            },
+            {
+                "AreaId": 2,
+                "CountryCode": "ASI",
+                "Name": "Asia",
+                "Competitions": [...]
+            }
+        ]
+        """
+        logging.info(f"{LOGGING_TAG} Pre Loading Countries")
+        for area in response:
+            # build the reverse index to get the country code and id.
+            aliases = self.country_alias.get(area["CountryCode"])
+            country_data = {
+                "name": area["Name"],
+                "code": area["CountryCode"],
+                # HSET null values causes errors in Redis
+                **({"aliases": aliases} if aliases else {}),
+            }
+            # cache this for later, we're gonna need them for teams.
+            await self.cache.hset(f"{self.cache_prefix}:area:{area['AreaId']}", country_data)
+
+    async def load_rounds(self, client) -> None:
+        """Fetch and load the round info to the cache
+        This is specifically to resolve the stage. We expect
+        this data to stay static throughout the tournament.
+        """
+        # Sample Response
+        """
+        [{
+            "CompetitionId": 21,
+            ...
+            "Key": "FIFA",
+            "Seasons": [
+                {
+                    "SeasonId": 368,
+                    "CompetitionId": 21,
+                    "Season": 2026,
+                     ...
+                    "Rounds": [
+                        {
+                            "RoundId": 1615,
+                            "SeasonId": 368,
+                            "Season": 2026,
+                            "SeasonType": 1,
+                            "Name": "Group Stage",
+                           ...
+                        },
+        """
+        await self.get_season(client=client)
+        logging.info(f"{LOGGING_TAG} Pre Loading Rounds")
+        url = f"{self.base_url}/Competitions"
+        response = await get_data(
+            client=client,
+            url=url,
+            ttl=timedelta(weeks=25),
+            cache_dir=self.cache_dir,
+            headers=self.api_headers(),
+        )
+        for competition in response:
+            match competition:
+                case {"Key": key, "Seasons": seasons} if key == self.name.upper():
+                    for season_data in seasons:
+                        match season_data:
+                            case {"Season": season, "Rounds": rounds} if (
+                                str(season) == self.season
+                            ):
+                                # Note: There should only be one match, which is
+                                # why we can set the rounds variable rather than
+                                # reduce/update dict
+                                self.rounds = {
+                                    int(r["RoundId"]): r["Name"]
+                                    for r in rounds
+                                    if r.get("RoundId") is not None and r.get("Name")
+                                }
+                                await self.cache.set(
+                                    f"{self.cache_prefix}:rounds",
+                                    orjson.dumps(self.rounds, option=orjson.OPT_NON_STR_KEYS),
+                                )
+
+                                return
+
+    async def get_season(self, client: AsyncClient) -> None:
+        """Get the current season (which is just the current year)"""
+        self.season = str(datetime.now(tz=timezone.utc).year)
+
+    async def get_country(self, area_id: int | None) -> dict[bytes, bytes] | None:
+        """Return cached country info for this ID
+
+        This returns a dict of:
+        - name: Official Name
+        - code: ISO3 Country code
+        - aliases: Optional aliases or alternate spellings
+
+        """
+        if not area_id:
+            return None
+        cached = await self.cache.hgetall(f"{self.cache_prefix}:area:{area_id}")
+        if cached:
+            code = cached[b"code"].decode()
+            if code in self.country_alias:
+                cached[b"aliases"] = self.country_alias[code].encode()
+        return cached
+
+    def team_minimal(self, team: Team) -> dict[str, Any]:
+        """Use the team name instead of the full name"""
+        team_data = super().team_minimal(team)
+        team_data["name"] = team.name
+        return team_data
+
+    async def get_team(self, id: int) -> Team | None:
+        """Fetch a team from the thread locked source"""
+        # This may become a high traffic function, so we should try to use
+        # a cached value if at all possible.
+        # Normally, this is only used by the ingestion job, which pre-loads
+        # the teams whenever it's updating events and scores. For the widget,
+        # though, this may be needed more often.
+        async with self._lock:
+            # import pdb;pdb.set_trace()
+            """
+            team_data = await self.cache.get(f"{self.cache_prefix}:team:{id}")
+            if False:  # team_data:
+                TODO: recreate the Team using the cached data.
+                data = json.loads(team_data)
+                TODO: Fill this out.
+                team = Team(  # type: ignore
+                    id=data.get("id"),
+                    fullname=data.get("name"),
+                    key=data.get("key"),
+                    locale=data.get("country"),
+                    aliases="",
+                    colors=data.get("colors"),
+                )
+                team.id = data.get("id")
+                return team
+            """
+            return self.teams.get(id)
+
+    async def async_load_teams_from_source(self, data: list[dict[str, Any]]) -> dict[int, Team]:
+        """Create the Team entries from the data source
+
+        This presumes that we are receiving data that complies with the SportsData.io
+        `Team` data dictionary (See https://sportsdata.io/developers/data-dictionary/nfl#team)
+
+        If we ever have a different data provider, this will need to be moved to the
+        SportData provider class.
+        """
+        # this is a specialized version of the normal `load_teams_from_source`.
+        # This should try to
+        for team_data in data:
+            try:
+                area = await self.get_country(team_data.get("AreaId"))
+                team = Team.from_data(
+                    team_data=team_data,
+                    term_filter=self.term_filter,
+                    team_ttl=self.team_ttl,
+                    normalized_terms=self.normalized_terms,
+                )
+                if team_data.get("Type") == "National":
+                    federation_name = team_data.get("FullName")
+                    if federation_name and federation_name not in team.aliases:
+                        team.aliases.append(federation_name)
+                    team.fullname = team.name
+                if area:
+                    team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
+                # team.key is the authoritative ISO3 code after _TEAM_KEY_OVERRIDES;
+                # prefer for join key over AreaId. Since some teams (e.g. Curaçao)
+                # are returned with an AreaId that maps to ANOTher country's area
+                # (South Korea, in Curaçao's case 🤦)
+                alias = self.country_alias.get(team.key)
+                if alias:
+                    team.terms = f"{team.terms} {alias}"
+                    team.country = team.key
+                self.teams[team.id] = team
+            except SportsDataError:
+                pass  # pragma: no cover "skip error"
+        self.refreshed = datetime.now(tz=timezone.utc)
+        return self.teams
+
+    async def update_teams(self, client: AsyncClient):
+        """Fetch active team information"""
+        await self.get_season(client=client)
+        logger.debug(f"{LOGGING_TAG} Getting {self.name} teams ")
+        url = f"{self.base_url}/Teams/{self.name.lower()}"
+
+        response = await get_data(
+            client=client,
+            url=url,
+            ttl=timedelta(hours=4),
+            cache_dir=self.cache_dir,
+            headers=self.api_headers(),
+        )
+        async with self._lock:
+            await self.async_load_teams_from_source(response)
+
+    def team_as_serialized(self, team: Team) -> bytes:  # pragma: no cover "widget"
+        """Serialize a team as a dictionary for the widget"""
+        model = team.model_dump(mode="json")
+        return json.dumps(model).encode()
+
+    def team_as_str(self, team: Team) -> str:  # pragma: no cover "widget"
+        """Serialize a team as a string for tests and log-friendly call sites."""
+        return self.team_as_serialized(team).decode()
+
+    def event_as_serialized(self, event: Event) -> bytes:  # pragma: no cover "widget"
+        """Serialize an event as a dictionary for the widget"""
+        return event.model_dump_json().encode()
+
+    def event_as_str(self, event: Event) -> str:  # pragma: no cover "widget"
+        """Serialize an event as a string for tests and log-friendly call sites."""
+        return self.event_as_serialized(event).decode()
+
+    async def cache_teams(self) -> None:  # pragma: no cover "widget"
+        """Write the team data to the redis cache for the widget"""
+        # Widget: Store teams to Redis
+        ids = []
+        for teamId, team in self.teams.items():
+            id = f"{self.cache_prefix}:team:{teamId}"
+            await self.cache.set(id, self.team_as_serialized(team))
+            ids.append(id)
+        # for now, dump the list of team ids into a meta list so that we can save doing a scan later.
+        # TODO: replace with vadd when available.
+        refresh_key = f"{self.cache_prefix}:meta:team_refresh"
+        last_update = await self.cache.get(refresh_key)
+        # add a lock check, otherwise everyone is going to try to update this at startup.
+        # We'll arbitrarily update this every 12 hours or so.
+        # TODO: Team cache TTL should probably be a setting
+        if not last_update or (
+            last_update
+            and datetime.fromtimestamp(int.from_bytes(last_update), tz=timezone.utc)
+            < datetime.now(tz=timezone.utc) - timedelta(hours=12)
+        ):
+            now = datetime.now(tz=timezone.utc)
+            ttl = timedelta(seconds=10)
+            mylock = int((now + ttl).timestamp())
+            if await self.cache.setnx(
+                f"{self.cache_prefix}:meta:team_lock", value=mylock.to_bytes(8), nx=True, ttl=ttl
+            ):
+                await self.cache.set(f"{self.cache_prefix}:meta:team_ids", orjson.dumps(ids))
+                await self.cache.set(refresh_key, int(now.timestamp()).to_bytes(8))
+                await self.cache.delete(f"{self.cache_prefix}:meta:team_lock")
+
+    async def get_all_teams(self, client: AsyncClient | None = None) -> dict[int, Team]:
+        """Return all the cached teams.
+
+        For the `/teams` endpoint, return the `.values()` of the result.
+        """
+        # If we don't have any team info, or the local cache is stale
+        if not self.teams or self.refreshed < datetime.now(tz=timezone.utc).replace(
+            hour=0, minute=0, second=0
+        ):
+            # Try getting from the redis cache (in case some other app already fetched the info)
+            team_ids = await self.cache.get(f"{self.cache_prefix}:meta:team_ids")
+            # We haven't fetched the data yet, so let's see if we can do it.
+            if not team_ids:
+                if client is None:
+                    return {}
+                await self.update_teams(client)
+                return self.teams
+            # Ok, we have redis cached data, let's construct our local cache.
+            try:
+                team_keys = orjson.loads(team_ids)
+            except (orjson.JSONDecodeError, TypeError) as ex:
+                logger.warning("%s Could not load cached WCS team ID list: %s", LOGGING_TAG, ex)
+                return {}
+            str_teams = await self.cache.mget(team_keys)
+            teams: dict[int, Team] = {}
+            if str_teams:
+                for team_key, bteam in zip(team_keys, str_teams, strict=False):
+                    if not bteam:
+                        logger.warning("%s Missing cached WCS team %s", LOGGING_TAG, team_key)
+                        continue
+                    try:
+                        team = Team.model_validate_json(bteam)
+                    except (ValidationError, TypeError) as ex:
+                        logger.warning(
+                            "%s Could not load cached WCS team %s: %s",
+                            LOGGING_TAG,
+                            team_key,
+                            ex,
+                        )
+                        continue
+                    teams[int(team.id)] = team
+            self.teams = teams
+            self.refreshed = datetime.now(tz=timezone.utc)
+        return self.teams
+
+    async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
+        """Update schedules and game scores for this sport"""
+        await self.get_season(client=client)
+        # Stage names are joined by Event.RoundId onto self.rounds
+        # Rounds are lazy loaded, so ensure we got them (otherwise
+        # stage will always default to None)
+        if not self.rounds:
+            await self.load_rounds(client=client)
+        logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
+        url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
+        local_timezone = SPORTSDATA_UTC
+        response = await get_data(
+            client=client,
+            url=url,
+            ttl=timedelta(minutes=5),
+            cache_dir=self.cache_dir,
+            headers=self.api_headers(),
+        )
+        if not response:
+            logger.warning(f"{LOGGING_TAG} No WCS schedules returned; skipping event cache update")
+            return
+        # Treat each WCS schedule refresh as authoritative so removed events are pruned.
+        self.events = {}
+        self.load_schedules_from_source(response, event_timezone=local_timezone)
+        date_list: set[str] = set()
+        # update scores based on events:
+        # Events may cross multiple days, so we should update those scores.
+        for _id, event in list(self.events.items()):
+            day = sportsdata_day_slug(event.date, local_timezone)
+            if not event.status.is_scheduled() and day not in date_list:
+                url = f"{self.base_url}/GamesByDate/{self.name}/{day}"
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=timedelta(minutes=5),
+                    cache_dir=self.cache_dir,
+                    headers=self.api_headers(),
+                )
+                self.load_scores_from_source(
+                    response,
+                    event_timezone=local_timezone,
+                )
+                date_list.add(day)
+
+        await self.cache_events()
+
+    async def cache_events(self) -> None:
+        """Write event data to Redis and index events by kickoff time."""
+        calendar_key = f"{self.cache_prefix}:calendar"
+        active_event_keys: set[str] = set()
+        for event_id, event in list(self.events.items()):
+            serialized = self.event_as_serialized(event)
+            event_key = f"{self.cache_prefix}:event:{event_id}"
+            active_event_keys.add(event_key)
+            # Store the full payload separately from the sorted calendar index;
+            # zadd overwrites the timestamp score when SportsData moves kickoff.
+            await self.cache.set(event_key, serialized, ttl=self.event_ttl)
+            await self.cache.zadd(
+                calendar_key,
+                {event_key: int(event.date.timestamp())},
+            )
+        refresh_is_authoritative = await self.prune_stale_events(active_event_keys)
+        if refresh_is_authoritative:
+            await self.cache_eliminated_team_keys()
+
+    async def cache_eliminated_team_keys(self) -> None:
+        """Write eliminated team keys computed from the latest event refresh."""
+        await self.cache.set(
+            eliminated_team_keys_cache_key(self.cache_prefix),
+            serialize_eliminated_team_keys(eliminated_team_keys(self.events.values())),
+        )
+
+    async def get_eliminated_team_keys(self) -> set[str]:
+        """Return cached WCS eliminated team keys."""
+        raw_keys = await self.cache.get(eliminated_team_keys_cache_key(self.cache_prefix))
+        try:
+            return parse_eliminated_team_keys(raw_keys)
+        except (orjson.JSONDecodeError, TypeError, ValueError) as ex:
+            logger.warning(
+                "%s Could not load cached WCS eliminated team keys: %s", LOGGING_TAG, ex
+            )
+            return set()
+
+    async def prune_stale_events(self, active_event_keys: set[str]) -> bool:
+        """Remove cached event entries that no longer exist in the latest source data."""
+        calendar_key = f"{self.cache_prefix}:calendar"
+        indexed_event_keys = cast(
+            list[bytes],
+            await self.cache.zrange(
+                calendar_key,
+                min=0,
+                max=-1,
+                byScore=False,
+            ),
+        )
+        if indexed_event_keys and not active_event_keys:
+            logger.warning(f"{LOGGING_TAG} Refusing to prune WCS events from an empty refresh")
+            return False
+
+        # The schedule refresh is authoritative: any Redis event key missing from
+        # this run points to a match removed or no longer returned by SportsData.
+        indexed_event_key_strings = [
+            raw_event_key.decode("utf-8", errors="replace") for raw_event_key in indexed_event_keys
+        ]
+        stale_event_keys = [
+            event_key
+            for event_key in indexed_event_key_strings
+            if event_key not in active_event_keys
+        ]
+        if not stale_event_keys:
+            return True
+        await self.cache.delete(*stale_event_keys)
+        await self.cache.zrem(calendar_key, *stale_event_keys)
+        return True
+
+    async def get_events_by_team(  # pragma: no cover "widget"
+        self, team_key: str, start: datetime | None = None, end: datetime | None = None
+    ) -> list[Event]:
+        """Scan the cache looking for data that matches"""
+        # This will need to fetch all events for a given team
+        # TODO: we might be able to store this as a unique key "...:team_games:{team_key}": [global_event_id,...]
+        # but that feels gross.
+        raise NotImplementedError
+
+    async def get_events_by_date(
+        self, start: datetime | None = None, end: datetime | None = None
+    ) -> list[Event]:
+        """Get cached events whose kickoff timestamps fall between `start` and `end`."""
+        if start is not None and start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end is not None and end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        # The widget normally supplies a date window; an open-ended call still only
+        # reads the small WCS tournament calendar, so zscan is unnecessary here.
+        min_timestamp = int(start.timestamp()) if start else ZSET_MIN_TIMESTAMP
+        max_timestamp = int(end.timestamp()) if end else ZSET_MAX_TIMESTAMP
+        event_keys = cast(
+            list[bytes],
+            await self.cache.zrange(
+                f"{self.cache_prefix}:calendar",
+                min=min_timestamp,
+                max=max_timestamp,
+            ),
+        )
+        if not event_keys:
+            return []
+
+        cached_events = await self.cache.mget(event_keys) or []
+
+        # Redis returns only event keys from the calendar; hydrate the payloads in
+        # one mget and keep the same ordering as the sorted-set response.
+        result: list[Event] = []
+        for event_key, raw_event in zip(event_keys, cached_events, strict=False):
+            if not raw_event:
+                # The event payload can expire before the next authoritative refresh;
+                # prune_stale_events clears the orphaned calendar entry on that refresh.
+                continue
+            event_key_str = event_key.decode("utf-8", errors="replace")
+            try:
+                result.append(Event.model_validate_json(raw_event))
+            except (ValidationError, TypeError) as ex:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not load cached WCS event {event_key_str}: {ex}"
+                )
+        return result
 
 
 # THE FOLLOWING CLASSES ARE WIP:::
@@ -612,7 +1305,7 @@ class MLB(Sport):
 #        """
 #
 #        """
-#        standings_url = f"{self.base_url}/Standings/{self.name.lower()}?key={self.api_key}"
+#        standings_url = f"{self.base_url}/Standings/{self.name.lower()}"
 #        response = await self.client.get(standings_url)
 #        response.raise_for_status()
 #        raw_data = response.json()

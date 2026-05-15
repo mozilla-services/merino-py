@@ -3,6 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
+from merino.curated_recommendations.ml_backends.protocol import TIME_ZONE_OFFSET_INFERRED_KEY
 from merino.curated_recommendations.protocol import (
     Layout,
     ResponsiveLayout,
@@ -220,6 +221,20 @@ class TestProcessedInterests:
         normalized = interests.normalized_scores
         assert "sports" in normalized
         assert normalized["sports"] < 3.0  # Because of normalization
+
+    def test_compute_with_time_zone(self):
+        """Test that compute_norm does not normalize the time zone."""
+        interests = ProcessedInterests(
+            scores={"sports": 3.0, "technology": 5.0, TIME_ZONE_OFFSET_INFERRED_KEY: 1.0},
+            expected_keys={"sports", "technology", TIME_ZONE_OFFSET_INFERRED_KEY},
+        )
+        normalized = interests.normalized_scores
+        assert "sports" in normalized
+        assert normalized["sports"] < 3.0  # Because of normalization
+        assert (
+            TIME_ZONE_OFFSET_INFERRED_KEY not in normalized
+        )  # Time zone should not be normalized
+        assert TIME_ZONE_OFFSET_INFERRED_KEY in interests.scores
 
     def test_pre_normalized_data(self):
         """Test that when skip_normalization is True, normalized_scores matches input scores."""

@@ -1,8 +1,8 @@
 """Algorithms for ranking curated recommendations."""
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
 import numpy as np
 
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.ml_backends.protocol import (
     ContextualArticleRankings,
     MLRecsBackend,
@@ -10,6 +10,9 @@ from merino.curated_recommendations.ml_backends.protocol import (
 import logging
 
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
+from merino.curated_recommendations.ml_backends.static_local_model import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+)
 from merino.curated_recommendations.prior_backends.protocol import (
     PriorBackend,
     EngagementRescaler,
@@ -29,19 +32,17 @@ from merino.curated_recommendations.rankers.utils import (
     renumber_sections,
 )
 
-# We are still learning how to compute how many impressions before we can trust the ranker score completely.
-# Because Contexual ranking is an experiment, the value is somewhat arbitrary because the impression counts
-# we're looking at are total impressions and we care about impressions with the inferred interests. When
-# contexual is rolled out we can use a dynamic computed value based on daily impressions.
-
-CONTEXUAL_AVG_BETA_VALUE = 12000
 
 logger = logging.getLogger(__name__)
 
 # These topics are in the current interest vector but not being used to determine the
 # cohort selection.
 CONTEXUAL_INFERRED_PER_TOPIC_WEIGHTING = {
-    Topic.TECHNOLOGY: 1.0,
+    #    Example interst boost:
+    #    Topic.PERSONAL_FINANCE: 1.0,
+    #    Currently our cohort based contextual ranker is handling the boosting so
+    #    we don't currently need manual score boosts.
+    "example_unused_topic": 1.0,
 }
 
 CONTEXUAL_INFERRED_SINGLE_TOPIC_BOOST_WEIGHT = 0.0001
@@ -55,12 +56,14 @@ class ContextualRanker(Ranker):
         self,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
+        surface_id: SurfaceId,
         region_weight: float = REGION_ENGAGEMENT_WEIGHT,
         ml_backend: MLRecsBackend | None = None,
         disable_time_zone_context: bool = False,
     ) -> None:
         super().__init__(engagement_backend, prior_backend, region_weight)
         assert ml_backend is not None
+        self.surface_id: SurfaceId = surface_id
         self.ml_backend: MLRecsBackend = ml_backend
         self.disable_time_zone_context = disable_time_zone_context
 
@@ -69,11 +72,10 @@ class ContextualRanker(Ranker):
         recs: list[CuratedRecommendation],
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
-        utcOffset: int | None = None,
         region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Pull out scores that were previously computed from the contextual ranker
-        data artifact. We need to look up the items in the ml backend using region and utcOffset.
+        data artifact. We need to look up the items in the ml backend using region.
         """
 
         def boost_interest(rec: CuratedRecommendation) -> float:
@@ -95,14 +97,18 @@ class ContextualRanker(Ranker):
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
         )
 
-        cohort = None
+        cohort: str | None = None
+        time_zone: str | None = None
         if personal_interests is not None:
             cohort = personal_interests.cohort
-        if self.disable_time_zone_context:
-            utcOffset = None
+            tz_raw: float | None = personal_interests.scores.get(
+                TIME_ZONE_OFFSET_INFERRED_KEY, None
+            )
+            if tz_raw is not None and not self.disable_time_zone_context:
+                time_zone = str(int(tz_raw))
 
         contextual_scores: ContextualArticleRankings | None
-        contextual_scores = self.ml_backend.get(region, str(utcOffset), cohort)
+        contextual_scores = self.ml_backend.get(self.surface_id, region, cohort, time_zone)
         rng = np.random.default_rng()
         for rec in recs:
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
@@ -127,8 +133,9 @@ class ContextualRanker(Ranker):
                 # Contextual ranker known imprssions override the computed no_opens based on engagement
                 # which runs on a different interval. We will need to potentially rescale the ml_backend
                 # impresions before completely ignoring the no_opens from the legacy engagement backend.
-                no_opens = self.ml_backend.get_adjusted_impressions(rec.corpusItemId)
-                beta_value_for_fresh_check = CONTEXUAL_AVG_BETA_VALUE
+                no_opens = self.ml_backend.get_adjusted_impressions(
+                    rec.corpusItemId, self.surface_id
+                )
             score += boost_interest(rec)
             remaining_fresh_impressions = 0
             if fresh_items_limit_prior_threshold_multiplier > 0 and not rec.isTimeSensitive:

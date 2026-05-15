@@ -5,8 +5,10 @@ import logging
 
 # import sys
 from abc import abstractmethod, ABC
+from aiodogstatsd import Client as StatsDClient
 from datetime import datetime, timezone
 from typing import Any, Final
+
 
 from dynaconf import LazySettings
 from elasticsearch import (
@@ -15,6 +17,7 @@ from elasticsearch import (
     NotFoundError,
     ConflictError,
     helpers,
+    ApiError,
 )
 
 from merino.configs import settings
@@ -29,6 +32,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
 )
+from merino.utils.metrics import ES_SEARCH_METRIC_NAME
+
 
 # from merino.jobs.wikipedia_indexer.settings.v1 import EN_INDEX_SETTINGS
 
@@ -135,30 +140,9 @@ EN_INDEX_SETTINGS: dict = {
 }
 
 
-def get_index_settings(dsn: str | None = None) -> dict[str, Any]:
-    """Local installs of ElasticSearch don't support some filters. Strip those only if needed"""
-    provided_dsn = dsn or ""
-    effective_dsn = (dsn or settings.providers.sports.es.dsn or "").lower()
-    if not provided_dsn or "localhost" in effective_dsn or "127.0.0.1" in effective_dsn:
-        return {
-            "number_of_replicas": "0",
-            "refresh_interval": "-1",
-            "number_of_shards": "1",
-            "analysis": {
-                "analyzer": {
-                    "plain_en": {"type": "standard"},
-                    "plain_search_en": {"type": "standard"},
-                    "stop_analyzer_en": {"type": "standard"},
-                    "stop_analyzer_search_en": {"type": "standard"},
-                }
-            },
-        }
-    return EN_INDEX_SETTINGS
-
-
 SUGGEST_ID: Final[str] = "suggest-on-title"
 MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
-TIMEOUT_MS: Final[str] = f"{settings.providers.sports.es.request_timeout_ms}ms"
+REQUEST_TIMEOUT_SEC: Final[float] = settings.providers.sports.es.request_timeout_sec
 
 
 class ElasticCredentials:
@@ -195,7 +179,7 @@ class ElasticCredentials:
             # Try to get the data from the settings
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.dsn {settings.providers.sports.es.dsn[:10] or 'None'}"  # type: ignore
                 )
                 self.dsn = settings.providers.sports.es.dsn  # type: ignore
             except AttributeError:
@@ -203,7 +187,7 @@ class ElasticCredentials:
                 pass
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.sports.es.api_key {settings.providers.sports.es.api_key[:4] or 'None'}"  # type: ignore
                 )
                 self.api_key = settings.providers.sports.es.api_key  # type: ignore
             except AttributeError:
@@ -213,7 +197,7 @@ class ElasticCredentials:
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_url {settings.providers.wikipedia.es_url[:10] or 'None'}"  # type: ignore
                 )
                 self.dsn = settings.providers.wikipedia.es_url  # type: ignore
             except AttributeError:
@@ -222,7 +206,7 @@ class ElasticCredentials:
         if not self.dsn:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_url {settings.jobs.wikipedia_indexer.es_url[:10] or 'None'}"  # type: ignore
                 )
                 self.dsn = settings.jobs.wikipedia_indexer.es_url  # type: ignore
             except AttributeError:
@@ -231,7 +215,7 @@ class ElasticCredentials:
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.providers.wikipedia.es_api_key {settings.providers.wikipedia.es_api_key[:4] or 'None'}"  # type: ignore
                 )
                 self.api_key = settings.providers.wikipedia.es_api_key  # type: ignore
             except AttributeError:
@@ -240,7 +224,7 @@ class ElasticCredentials:
         if not self.api_key:
             try:
                 logger.info(
-                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or "None"}"  # type: ignore
+                    f"{LOGGING_TAG} trying settings.jobs.wikipedia_indexer.es_api_key {settings.jobs.wikipedia_indexer.es_api_key[:4] or 'None'}"  # type: ignore
                 )
                 self.api_key = settings.jobs.wikipedia_indexer.es_api_key  # type: ignore
             except AttributeError:
@@ -309,7 +293,7 @@ class ElasticDataStore(ABC):
         may complain.
         """
         logging.getLogger(__name__).info(f"{LOGGING_TAG} closing...")
-        if self.client:
+        if self.client:  # pragma: no cover  "test called, but Mock prevents coverage detection"
             await self.client.close()
 
     @abstractmethod
@@ -378,6 +362,7 @@ class SportsDataStore(ElasticDataStore):
         platform: str,
         index_map: dict[str, str],
         meta_map: str = META_INDEX,
+        metrics_client: StatsDClient,
         **kwargs,
     ) -> None:
         """Initialize a connection to ElasticSearch"""
@@ -387,8 +372,8 @@ class SportsDataStore(ElasticDataStore):
         # build the index based on the platform.
         self.index_map = index_map
         self.meta_map = meta_map
-        dsn = credentials.dsn or settings.providers.sports.es.dsn
-        self.index_settings = {lang: get_index_settings(dsn=dsn) for lang in languages}
+        self.index_settings = {lang: EN_INDEX_SETTINGS for lang in languages}
+        self._metrics_client = metrics_client
         logging.getLogger(__name__).info(
             f"{LOGGING_TAG} Initialized Elastic search at {credentials.dsn}"
         )
@@ -410,9 +395,15 @@ class SportsDataStore(ElasticDataStore):
     async def query_meta(self, key: str) -> None | str:
         """Get value from meta table"""
         if not self.client:
-            return None
+            return None  # pragma: no cover
         try:
-            res = await self.client.search(
+            # Do not retry due to strict latency requirements,
+            # and to avoid overloading cluster (suggest triggers search
+            # on every keystroke with matching intent word)
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": self.meta_map}
+            )
+            res = await self.client.options(max_retries=0).search(
                 index=self.meta_map,
                 query={"term": {"_id": key.lower()}},
                 # query={"term": {"key": key.lower()}},
@@ -424,14 +415,25 @@ class SportsDataStore(ElasticDataStore):
             if not len(hits):
                 return None
             return hits[0]["_source"].get("meta_value") or None
+        except ApiError as ex:
+            logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error",
+                tags={"index": self.meta_map, "status": ex.meta.status},
+            )
+            return None
         except Exception as ex:
             logging.getLogger(__name__).error(f"{LOGGING_TAG} meta query failed: {ex}")
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error",
+                tags={"index": self.meta_map, "status": "unknown"},
+            )
             return None
 
     async def store_meta(self, key: str, value: str):
         """Store value into meta table"""
         if not self.client:
-            return
+            return  # pragma: no cover
         try:
             try:
                 await self.client.create(
@@ -454,11 +456,11 @@ class SportsDataStore(ElasticDataStore):
     async def del_meta(self, key) -> None:
         """Remove data from the meta table"""
         if not self.client:
-            return
+            return  # pragma: no cover
         try:
             await self.client.delete(index=self.meta_map, id=key.lower())
             await self.client.indices.refresh(index=self.meta_map)
-        except Exception as ex:
+        except Exception as ex:  # pragma: no cover
             logging.getLogger(__name__).error(f"{LOGGING_TAG} Error: delete meta {key} {ex}")
 
     async def build_meta(self) -> None:
@@ -467,7 +469,7 @@ class SportsDataStore(ElasticDataStore):
         """
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return  # pragma: no cover
         try:
             # await self.client.indices.delete(index=self.meta_map)
             await self.client.indices.create(
@@ -502,7 +504,7 @@ class SportsDataStore(ElasticDataStore):
         """
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return  # pragma: no cover
         # Build the meta index
         try:
             if clear:
@@ -539,7 +541,9 @@ class SportsDataStore(ElasticDataStore):
                             f"{LOGGING_TAG} {index.format(lang=language_code)} already exists, skipping"
                         )
                         continue
-                    raise SportsDataError(f"Could not create {index}") from ex
+                    raise SportsDataError(
+                        f"Could not create {index}"
+                    ) from ex  # pragma: no cover "Mock prevents coverage"
 
     def build_event_mappings(self, language_code: str) -> dict[str, Any]:
         """Construct the event mappings to be used by Elastic search.
@@ -582,17 +586,15 @@ class SportsDataStore(ElasticDataStore):
         utc_now = expiry or datetime.now(tz=timezone.utc)
         logger = logging.getLogger(__name__)
         if not self.client:
-            return False
+            return False  # pragma: no cover
         for index_pattern in self.index_map.values():
             index = index_pattern.format(lang=language_code)
             query = {"range": {"expiry": {"lte": utc_now}}}
             try:
                 start = datetime.now()
-                res = await self.client.delete_by_query(
-                    index=index, query=query, timeout=TIMEOUT_MS
-                )
+                res = await self.client.delete_by_query(index=index, query=query)
                 logger.info(
-                    f"{LOGGING_TAG}⏱ sports.time.prune [{res.get("deleted")} records] in [{(datetime.now()-start).microseconds}μs]"
+                    f"{LOGGING_TAG}⏱ sports.time.prune [{res.get('deleted')} records] in [{(datetime.now() - start).microseconds}μs]"
                 )
             except ConflictError:
                 # The ConflictError returns a string that is not quite JSON, so we can't
@@ -600,6 +602,74 @@ class SportsDataStore(ElasticDataStore):
                 logger.warning(f"{LOGGING_TAG} Encountered conflict error, ignoring for now")
                 return False
         return True
+
+    @staticmethod
+    def event_datetime(event: dict[str, Any], field: str, fallback: str = "date") -> datetime:
+        """Return an event datetime field, falling back to kickoff when absent."""
+        return datetime.fromisoformat(event.get(field) or event[fallback])
+
+    @classmethod
+    def choose_previous_event(
+        cls, selected_events: dict[str, dict[str, Any]], event: dict[str, Any]
+    ) -> None:
+        """Keep the latest final game by kickoff, using updated only as a tie-breaker."""
+        if "current" in selected_events:
+            return
+        if "previous" not in selected_events:
+            selected_events["previous"] = event
+            return
+
+        previous_event = selected_events["previous"]
+        previous_date = cls.event_datetime(previous_event, "date")
+        event_date = cls.event_datetime(event, "date")
+        previous_updated = cls.event_datetime(previous_event, "updated")
+        event_updated = cls.event_datetime(event, "updated")
+        if previous_date < event_date or (
+            previous_date == event_date and previous_updated < event_updated
+        ):
+            selected_events["previous"] = event
+
+    @classmethod
+    def choose_current_event(
+        cls, selected_events: dict[str, dict[str, Any]], event: dict[str, Any]
+    ) -> None:
+        """Keep the most recently updated in-progress game."""
+        selected_events.pop("previous", None)
+        if "current" not in selected_events:
+            selected_events["current"] = event
+            return
+
+        if cls.event_datetime(selected_events["current"], "updated") < cls.event_datetime(
+            event, "updated"
+        ):
+            selected_events["current"] = event
+
+    @classmethod
+    def choose_next_event(
+        cls, selected_events: dict[str, dict[str, Any]], event: dict[str, Any]
+    ) -> None:
+        """Keep the soonest scheduled game by kickoff."""
+        if "next" not in selected_events:
+            selected_events["next"] = event
+            return
+
+        if cls.event_datetime(selected_events["next"], "date") > cls.event_datetime(event, "date"):
+            selected_events["next"] = event
+
+    @classmethod
+    def choose_result_event(
+        cls,
+        selected_events: dict[str, dict[str, Any]],
+        event: dict[str, Any],
+        status: GameStatus,
+    ) -> None:
+        """Apply previous/current/next selection rules to a candidate event."""
+        if status.is_final():
+            cls.choose_previous_event(selected_events, event)
+        elif status.is_scheduled():
+            cls.choose_next_event(selected_events, event)
+        elif status.is_in_progress():
+            cls.choose_current_event(selected_events, event)
 
     async def search_events(
         self, q: str, language_code: str, mix_sports: bool = False
@@ -609,7 +679,7 @@ class SportsDataStore(ElasticDataStore):
         utc_now = datetime.now(tz=timezone.utc)
         logger = logging.getLogger(__name__)
         if not self.client:
-            return {}
+            return {}  # pragma: no cover
 
         if mix_sports:
             logger.debug(f"{LOGGING_TAG} Mixing sports...")
@@ -622,41 +692,52 @@ class SportsDataStore(ElasticDataStore):
             }
 
             logger.debug(f"{LOGGING_TAG} Searching {index_id} for `{q}`")
-
-            res = await self.client.search(
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": index_id}
+            )
+            # Do not retry due to strict latency requirements, and to avoid overloading
+            # cluster (searched via suggest on every keystroke when query contains
+            # matching intent word)
+            res = await self.client.options(
+                request_timeout=REQUEST_TIMEOUT_SEC, max_retries=0
+            ).search(
                 index=index_id,
                 query=query,
                 sort=[{"date": "desc"}, {"updated": "desc"}],
-                timeout=TIMEOUT_MS,
                 # The list of fields to return from Elasticsearch
                 source_includes=["event", "touched"],
             )
+        except ApiError as e:
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error", tags={"index": index_id, "status": e.meta.status}
+            )
+            raise BackendError(
+                f"Failed to search from Elasticsearch for {language_code}: {e}"
+            ) from e
         except Exception as ex:
+            self._metrics_client.increment(
+                f"{ES_SEARCH_METRIC_NAME}.error", tags={"index": index_id, "status": "unknown"}
+            )
             raise BackendError(f"Elasticsearch error for {index_id}") from ex
         logger.debug(f"{LOGGING_TAG} found {res} for `{q}`")
         if res.get("hits", {}).get("total", {}).get("value", 0) > 0:
-            # filter sport for prev, current, next
+            # Select one previous/current/next event for each sport bucket.
             try:
-                filter: dict[str, dict] = {}
+                selected_events_by_sport: dict[str, dict[str, dict[str, Any]]] = {}
                 for doc in res["hits"]["hits"]:
                     # We previously stored events as strings. Handle the potential transition.
                     if isinstance(doc["_source"]["event"], str):
                         event = json.loads(doc["_source"]["event"])
                     else:
-                        event = doc["_source"]["event"]
+                        event = doc["_source"]["event"]  # pragma: no cover "obsolete handler"
                     # Add the elastic search score as a baseline score for the return result.
                     event["es_score"] = doc.get("_score", 0)
                     event["touched"] = doc["_source"].get("touched", "None")
                     if not event["date"]:
                         logger.info(f"{LOGGING_TAG}Event has no date, skipping")
                         continue
-                    event_date = datetime.fromisoformat(event["date"])
-                    if mix_sports:
-                        sport = "all"
-                    else:
-                        sport = event["sport"]
-                    if sport not in filter:
-                        filter[sport] = {}
+                    sport = "all" if mix_sports else event["sport"]
+                    selected_events = selected_events_by_sport.setdefault(sport, {})
 
                     # This may be a bit confusing.
                     # There are four "status" fields.
@@ -666,55 +747,10 @@ class SportsDataStore(ElasticDataStore):
                     # `status_type` (reported externally) is the simplified type requested by the UI team.
                     status = GameStatus.parse(event["status"])
                     event["event_status"] = status
-                    # Because we may be collecting "all" sports, we want to find the most recently
-                    # concluded game and the next scheduled game. As for current, we just grab the last
-                    # "inprogress" game that is reported.
-                    if status.is_final():
-                        if "previous" not in filter[sport] and "current" not in filter[sport]:
-                            filter[sport]["previous"] = event
-                            continue
-                        # get the most recently "finalized" game
-                        # This uses the "updated" time, which will be after the prior event's start time,
-                        # but could also potentially overlap with the current event's start time (for mixed
-                        # sport results). There is a risk that a much earlier game is updated long after the
-                        # the events closure or the next event's closure (e.g. there is a contested score
-                        # that is adjusted), but this should be an anomalous event.
-                        # Note, in spite of what test coverage says, this is being exercised by
-                        # `test_sports_search_event_hits` & `test_sports_search_event_hits_no_current`,
-                        if filter.get(sport, {}).get(  # pragma: no cover
-                            "previous", {}
-                        ).get("updated") and (
-                            datetime.fromisoformat(filter[sport]["previous"]["updated"])
-                            < datetime.fromisoformat(event.get("updated", event_date))
-                        ):
-                            # if "unittest" in sys.modules.keys():
-                            #    print("\n👀👀 LOOK AT ME! RUNNING IN UNIT TESTS! 👀👀")
-                            filter[sport]["previous"] = event
-                            continue
-                    # If only show the next upcoming game.
-                    if status.is_scheduled():
-                        # if there is no "next" game, or if the "next" game is later than this one,
-                        # display the most immediate upcoming event.
-                        if "next" not in filter[sport]:
-                            filter[sport]["next"] = event
-                            continue
-                        # get the most recent "next" game
-                        if datetime.fromisoformat(filter[sport]["next"]["date"]) < event_date:
-                            filter[sport]["next"] = event
-                    if status.is_in_progress():
-                        # remove the previous game info because we have a current one.
-                        if "previous" in filter[sport]:
-                            del filter[sport]["previous"]
-                        if "current" not in filter[sport]:
-                            filter[sport]["current"] = event
-                            continue
-                        if datetime.fromisoformat(
-                            filter[sport]["current"]["updated"]
-                        ) < datetime.fromisoformat(event["updated"]):
-                            filter[sport]["current"] = event
+                    self.choose_result_event(selected_events, event, status)
             except Exception as ex:
                 logger.error(f"{LOGGING_TAG} search_event: Unexpected error {ex}")
-            return filter
+            return selected_events_by_sport
         else:
             return {}
 
@@ -727,7 +763,7 @@ class SportsDataStore(ElasticDataStore):
         """Update existing events (used to change status and scores)"""
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return  # pragma: no cover
         index = (self.index_map["event"]).format(lang=language_code)
         for event in sport.events.values():
             if event.updated and event.updated > last_update:
@@ -744,7 +780,9 @@ class SportsDataStore(ElasticDataStore):
                         },
                     )
                 except NotFoundError:
-                    logger.warning(f"{LOGGING_TAG} 🤷 Unknown event: {event.id}, skipping")
+                    logger.warning(
+                        f"{LOGGING_TAG} 🤷 Unknown event: {event.id}, skipping"
+                    )  # pragma: no cover
                 except Exception as ex:
                     logger.error(f"{LOGGING_TAG} {ex}")
 
@@ -757,13 +795,13 @@ class SportsDataStore(ElasticDataStore):
         actions = []
         logger = logging.getLogger(__name__)
         if not self.client:
-            return
+            return  # pragma: no cover
 
         index = (self.index_map["event"]).format(lang=language_code)
 
         # Write the fields to Elasticsearch.
         # The `_source` _MUST_ match the previously specified `mapping`
-        if not sport.events:
+        if not sport.events:  # pragma: no cover
             logger.info(f"{LOGGING_TAG} No events")
             return
         for event in sport.events.values():
@@ -785,8 +823,10 @@ class SportsDataStore(ElasticDataStore):
                 },
             }
             actions.append(action)
-            if event.status.is_in_progress():
-                logger.info(f"{LOGGING_TAG} ## Live Game: {event.terms}")
+            if event.status.is_in_progress():  # pragma: no cover "Informational"
+                logger.info(
+                    f"{LOGGING_TAG} ## Live Game: {event.terms} {event.away_score} : {event.home_score}"
+                )
         # Bulk-write collected actions
         try:
             start = datetime.now()
@@ -794,16 +834,16 @@ class SportsDataStore(ElasticDataStore):
             logger.info(
                 f"{LOGGING_TAG}⏱ sports.time.load.events [{sport.name}] in [{(datetime.now() - start).microseconds}μs]"
             )
-        except Exception as ex:
+        except Exception as ex:  # pragma: no cover
             raise SportsDataError(
                 f"Could not load data into elasticSearch for {sport.name}:{index} [{ex}]"
             ) from ex
         start = datetime.now()
         try:
             await self.store_meta("last_update", datetime.now(tz=timezone.utc).isoformat())
-        except Exception as ex:
+        except Exception as ex:  # pragma: no cover
             logger.error(f"{LOGGING_TAG} could not update meta data: {ex}")
         await self.client.indices.refresh(index=index)
         logger.info(
-            f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now()-start).microseconds}μs]"
+            f"{LOGGING_TAG}⏱ sports.time.load.refresh_indexes in [{(datetime.now() - start).microseconds}μs]"
         )

@@ -8,11 +8,11 @@ import aiodogstatsd
 import tldextract
 from pydantic import HttpUrl, ValidationError
 
-from merino.providers.manifest.backends.filemanager import GetManifestResultCode
 from merino.utils import cron
 from merino.utils.metrics import get_metrics_client
 
 from merino.providers.manifest.backends.protocol import (
+    GetManifestResultCode,
     ManifestBackend,
     ManifestBackendError,
     ManifestData,
@@ -33,6 +33,7 @@ class Provider:
     last_fetch_at: float
     name: str
     metrics_client: aiodogstatsd.Client
+    _etag: str | None
 
     def __init__(
         self,
@@ -50,6 +51,7 @@ class Provider:
         self.domain_lookup_table = {}
         self.data_fetched_event = asyncio.Event()
         self.metrics_client = get_metrics_client()
+        self._etag = None
 
         super().__init__()
 
@@ -71,14 +73,15 @@ class Provider:
         Does not set manifest_data if non-success code passed with None.
         """
         try:
-            result_code, data = await self.backend.fetch()
+            result = await self.backend.fetch()
 
-            match GetManifestResultCode(result_code):
-                case GetManifestResultCode.SUCCESS if data is not None:
-                    self.manifest_data = data
+            match result.code:
+                case GetManifestResultCode.SUCCESS if result.data is not None:
+                    self.manifest_data = result.data
+                    self._etag = result.etag
                     self.domain_lookup_table = {
                         self._extract_full_domain(str(domain.url)): idx
-                        for idx, domain in enumerate(data.domains)
+                        for idx, domain in enumerate(result.data.domains)
                     }
                     self.last_fetch_at = time.time()
 
@@ -98,6 +101,15 @@ class Provider:
     def get_manifest_data(self) -> ManifestData | None:
         """Return manifest data"""
         return self.manifest_data
+
+    def get_etag(self) -> str | None:
+        """Return the current manifest's HTTP ETag, or None if not loaded.
+
+        The returned value is already quoted so HTTP handlers can emit it as-is
+        in the ``ETag`` response header and compare it verbatim against an
+        ``If-None-Match`` request header.
+        """
+        return f'"{self._etag}"' if self._etag else None
 
     def get_icon_url(self, url: str | HttpUrl) -> HttpUrl | None:
         """Get icon URL for a URL.

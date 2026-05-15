@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 MetricTags = Mapping[str, float | int | str]
 
 INTENT_WORD_COUNT_METRIC_NAME = "intent_word_count"
+# Metric for elasticsearch searches (counts, errors)
+ES_SEARCH_METRIC_NAME = "es.search"
 
 
 @cache

@@ -8,25 +8,27 @@ from merino.jobs.engagement_model import upload_engagement_data
 
 def test_upload_engagement_data_success() -> None:
     """Test engagement data is fetched, transformed, and uploaded to GCS."""
-    amp_data = [
-        {
-            "advertiser": "mozilla",
-            "impressions": 100,
-            "clicks": 5,
-        },
-        {
-            "advertiser": "firefox",
-            "impressions": 200,
-            "clicks": 10,
-        },
+    amp_keyword_historical = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 100, "clicks": 5},
+        {"advertiser": "firefox", "query": "browser", "impressions": 200, "clicks": 10},
     ]
-    wiki_data = {
-        "impressions": 300,
-        "clicks": 20,
+    amp_keyword_historical_adjusted = [
+        {"advertiser": "mozilla", "query": "firefox", "impressions": 100, "clicks": 8},
+        {"advertiser": "firefox", "query": "browser", "impressions": 200, "clicks": 13},
+    ]
+    wiki_data = {"impressions": 300, "clicks": 20}
+
+    transformed_amp_data = {
+        "mozilla/firefox": {"historical": {"impressions": 100, "clicks": 8}},
+        "firefox/browser": {"historical": {"impressions": 200, "clicks": 13}},
     }
+    aggregated_amp_data = {"impressions": 0, "clicks": 0}
 
     mock_amp_downloader = MagicMock()
-    mock_amp_downloader.download_data.return_value = amp_data
+    mock_amp_downloader.download_historical_data.return_value = amp_keyword_historical
+    mock_amp_downloader.apply_click_adjustment.return_value = amp_keyword_historical_adjusted
+    mock_amp_downloader.transform_data.return_value = transformed_amp_data
+    mock_amp_downloader.aggregate_data.return_value = aggregated_amp_data
 
     mock_wiki_downloader = MagicMock()
     mock_wiki_downloader.download_data.return_value = wiki_data
@@ -67,54 +69,47 @@ def test_upload_engagement_data_success() -> None:
         destination_cdn_hostname="",
     )
 
-    expected_payload = {
-        "amp": {
-            "mozilla": {
-                "advertiser": "mozilla",
-                "impressions": 100,
-                "clicks": 5,
-            },
-            "firefox": {
-                "advertiser": "firefox",
-                "impressions": 200,
-                "clicks": 10,
-            },
-        },
-        "wiki_aggregated": {
-            "impressions": 300,
-            "clicks": 20,
-        },
-        "amp_aggregated": {
-            "impressions": 300,
-            "clicks": 15,
-        },
+    mock_amp_downloader.download_historical_data.assert_called_once()
+    mock_amp_downloader.download_live_data.assert_not_called()
+    mock_amp_downloader.apply_click_adjustment.assert_called_once_with(amp_keyword_historical)
+    mock_amp_downloader.transform_data.assert_called_once_with(
+        historical=amp_keyword_historical_adjusted,
+        live=[],
+    )
+    mock_amp_downloader.aggregate_data.assert_called_once_with(transformed_amp_data)
+    mock_wiki_downloader.download_data.assert_called_once()
+
+    expected_keyword_payload = {
+        "amp": transformed_amp_data,
+        "wiki_aggregated": {"impressions": 300, "clicks": 20},
+        "amp_aggregated": aggregated_amp_data,
     }
-    expected_content = json.dumps(expected_payload, indent=2)
+    expected_keyword_content = json.dumps(expected_keyword_payload, indent=2)
 
     assert mock_uploader.upload_content.call_count == 2
     mock_uploader.upload_content.assert_any_call(
-        content=expected_content,
-        destination_name="suggest-merino-exports/engagement/20260316120000.json",
+        content=expected_keyword_content,
+        destination_name="suggest-merino-exports/engagement/keyword/20260316120000.json",
         content_type="application/json",
         forced_upload=True,
     )
     mock_uploader.upload_content.assert_any_call(
-        content=expected_content,
-        destination_name="suggest-merino-exports/engagement/latest.json",
+        content=expected_keyword_content,
+        destination_name="suggest-merino-exports/engagement/keyword/latest.json",
         content_type="application/json",
         forced_upload=True,
     )
 
 
-def test_upload_engagement_data_logs_error_on_failure() -> None:
-    """Test engagement pipeline errors are logged."""
+def test_upload_engagement_data_logs_error_on_keyword_download_failure() -> None:
+    """Test engagement pipeline errors are logged when keyword download fails."""
     mock_settings = MagicMock()
     mock_settings.engagement.gcs_bq_project = "test-bq-project"
     mock_settings.engagement.gcs_storage_bucket = "test-bucket"
     mock_settings.engagement.gcs_storage_project = "test-storage-project"
 
     mock_amp_downloader = MagicMock()
-    mock_amp_downloader.download_data.side_effect = RuntimeError("BigQuery failed")
+    mock_amp_downloader.download_historical_data.side_effect = RuntimeError("BigQuery failed")
 
     mock_wiki_downloader = MagicMock()
 

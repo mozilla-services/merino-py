@@ -12,6 +12,7 @@ from merino.providers.manifest.backends.protocol import (
     GetManifestResultCode,
     ManifestBackendError,
     ManifestData,
+    ManifestFetchResult,
 )
 from merino.providers.manifest.provider import Provider
 from merino.providers.manifest.backends.manifest import ManifestBackend
@@ -27,16 +28,19 @@ async def test_initialize(
     """Test initialization of manifest provider"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
 
-        result_code, _ = await backend.fetch()
+        result = await backend.fetch()
 
-        assert result_code is GetManifestResultCode.SUCCESS
+        assert result.code is GetManifestResultCode.SUCCESS
         assert manifest_provider.manifest_data == manifest_data
         assert manifest_provider.last_fetch_at > 0
+        assert manifest_provider.get_etag() == '"42"'
 
 
 @pytest.mark.asyncio
@@ -46,7 +50,9 @@ async def test_get_manifest_data(
     """Test get_manifest_data method returns manifest data"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -64,7 +70,9 @@ async def test_should_fetch_true(
     """Test should_fetch method returns true based on the resync interval"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         # difference between last fetch and current time is 100000 (greater than 86400)
         with patch(
@@ -86,7 +94,9 @@ async def test_should_fetch_false(
     """Test should_fetch method returns false based on the resync interval"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         with patch(
             "merino.providers.manifest.provider.time.time",
@@ -107,7 +117,9 @@ async def test_fetch_data_success(
     """Test fetch_data method sets manifest data on SUCCESS"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.SUCCESS, manifest_data),
+        return_value=ManifestFetchResult(
+            code=GetManifestResultCode.SUCCESS, data=manifest_data, etag="42"
+        ),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)
@@ -123,7 +135,7 @@ async def test_fetch_data_fail(manifest_provider: Provider, cleanup) -> None:
     """Test fetch_data method does not set manifest data when a failure occurs"""
     with patch(
         "merino.providers.manifest.backends.manifest.ManifestBackend.fetch",
-        return_value=(GetManifestResultCode.FAIL, None),
+        return_value=ManifestFetchResult(code=GetManifestResultCode.FAIL, data=None),
     ):
         await manifest_provider.initialize()
         await cleanup(manifest_provider)

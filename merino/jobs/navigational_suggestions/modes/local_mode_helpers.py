@@ -157,5 +157,5 @@ class LocalDomainDataProvider:
             )
 
         logger.info(f"Generated {len(domains)} local test domains")
-        logger.info(f"Sample range: 0 to {max_index-1}")
+        logger.info(f"Sample range: 0 to {max_index - 1}")
         return domains

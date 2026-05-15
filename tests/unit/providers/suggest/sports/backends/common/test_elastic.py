@@ -3,7 +3,7 @@
 import datetime
 import json
 import logging
-from typing import cast, Any
+from typing import Any, cast
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock
 
@@ -11,7 +11,7 @@ import freezegun
 import pytest
 
 from dynaconf import LazySettings
-from elasticsearch import BadRequestError, ConflictError
+from elasticsearch import ApiError, BadRequestError, ConflictError
 from elastic_transport import ApiResponseMeta, HttpHeaders, NodeConfig
 from pytest_mock import MockerFixture
 
@@ -23,7 +23,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     ElasticCredentials,
-    get_index_settings,
     META_INDEX,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
@@ -36,6 +35,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import NF
 def fixture_es_client(mocker: MockerFixture) -> MagicMock:
     """Test ElasticSearch client instance."""
     client = mocker.MagicMock()
+    client.options = MagicMock(name="options", return_value=client)
     client.close = mocker.AsyncMock()
 
     indices = mocker.MagicMock()
@@ -51,7 +51,7 @@ def fixture_es_client(mocker: MockerFixture) -> MagicMock:
 
 
 @pytest.fixture(name="sport_data_store")
-def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
+def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDataStore:
     """Test Sport Data Store instance."""
     creds = ElasticCredentials(dsn="http://es.test:9200", api_key="test-key")
     s = SportsDataStore(
@@ -59,6 +59,7 @@ def fixture_sport_data_store(es_client: MagicMock) -> SportsDataStore:
         languages=["en"],
         platform="test",
         index_map={"event": "sports-en-events"},
+        metrics_client=statsd_mock,
     )
     s.client = es_client
     return s
@@ -300,6 +301,20 @@ async def test_sports_search_event_hits(
                 )
             },
         },
+        {
+            "_score": 3.1,  # No date (skipped) game
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "status": "NotNecessary",
+                        "label": "psi",
+                        "date": None,
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
     ]
     es_client.search.return_value = {"hits": {"total": {"value": 1}, "hits": hits}}
 
@@ -317,10 +332,10 @@ async def test_sports_search_event_hits(
                 "updated": "2025-09-22T12:00:00+00:00",
             },
             "next": {
-                "date": "2025-09-25T12:00:00+00:00",
-                "es_score": 2.0,
+                "date": "2025-09-24T12:00:00+00:00",
+                "es_score": 2.1,
                 "event_status": GameStatus.Scheduled,
-                "label": "delta",
+                "label": "epsilon",
                 "sport": "NFL",
                 "status": "Scheduled",
                 "touched": "None",
@@ -330,6 +345,77 @@ async def test_sports_search_event_hits(
     }
 
     assert result == expected_result
+
+
+@freezegun.freeze_time("2026-05-05T17:25:00Z")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("sport", ["MLB", "UCL"])
+async def test_sports_search_next_picks_soonest_scheduled(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    sport: str,
+):
+    """Regression for DISCO-4167.
+
+    With multiple scheduled fixtures in the index (today + later this week),
+    `next` must hold the soonest one. Hits arrive sorted `date: desc`, so a
+    naive comparator keeps the farthest-future game and shadows today's.
+    """
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    today = now + datetime.timedelta(hours=5)
+    tomorrow = now + datetime.timedelta(days=1)
+    next_week = now + datetime.timedelta(days=7)
+
+    hits = [
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": sport,
+                        "status": "Scheduled",
+                        "label": "next-week",
+                        "date": next_week.isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": sport,
+                        "status": "Scheduled",
+                        "label": "tomorrow",
+                        "date": tomorrow.isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": sport,
+                        "status": "Scheduled",
+                        "label": "today",
+                        "date": today.isoformat(),
+                        "updated": now.isoformat(),
+                    }
+                )
+            },
+        },
+    ]
+    es_client.search.return_value = {"hits": {"total": {"value": 3}, "hits": hits}}
+
+    result = await sport_data_store.search_events(q="game", language_code="en", mix_sports=False)
+
+    assert result[sport]["next"]["label"] == "today"
+    assert result[sport]["next"]["date"] == today.isoformat()
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")
@@ -389,9 +475,7 @@ async def test_sports_search_event_hits_no_current(
                     {
                         "sport": "NFL",
                         "status": "Scheduled",
-                        "epsilon" "date": (
-                            now + datetime.timedelta(seconds=2 * 86400)
-                        ).isoformat(),
+                        "epsilondate": (now + datetime.timedelta(seconds=2 * 86400)).isoformat(),
                     }
                 )
             },
@@ -427,6 +511,81 @@ async def test_sports_search_event_hits_no_current(
     assert result == expected_result
 
 
+@freezegun.freeze_time("2026-05-13T13:30:00Z")
+@pytest.mark.asyncio
+async def test_sports_search_previous_uses_game_date_over_late_update(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+) -> None:
+    """The previous result should be the latest game, not an older late-updated game."""
+    hits = [
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "MLB",
+                        "id": 77908,
+                        "status": "Final",
+                        "label": "may-12-game",
+                        "date": "2026-05-13T02:10:00+00:00",
+                        "updated": "2026-05-13T11:31:32+00:00",
+                        "home_score": 2,
+                        "away_score": 6,
+                    }
+                )
+            },
+        },
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "MLB",
+                        "id": 77896,
+                        "status": "Final",
+                        "label": "may-11-game",
+                        "date": "2026-05-12T02:10:00+00:00",
+                        "updated": "2026-05-13T11:58:54+00:00",
+                        "home_score": 3,
+                        "away_score": 9,
+                    }
+                )
+            },
+        },
+    ]
+    es_client.search.return_value = {"hits": {"total": {"value": 2}, "hits": hits}}
+
+    result = await sport_data_store.search_events(
+        q="los angeles",
+        language_code="en",
+        mix_sports=True,
+    )
+
+    assert result["all"]["previous"]["label"] == "may-12-game"
+    assert result["all"]["previous"]["home_score"] == 2
+    assert result["all"]["previous"]["away_score"] == 6
+
+
+def test_choose_previous_ignores_final_when_current_exists() -> None:
+    """Final events should not be selected when a current game already exists."""
+    selected_events = {
+        "current": {
+            "date": "2026-05-13T02:10:00+00:00",
+            "updated": "2026-05-13T11:31:32+00:00",
+        }
+    }
+    final_event = {
+        "date": "2026-05-13T01:10:00+00:00",
+        "updated": "2026-05-13T11:58:54+00:00",
+    }
+
+    SportsDataStore.choose_previous_event(selected_events, final_event)
+
+    assert "previous" not in selected_events
+    assert selected_events["current"]["date"] == "2026-05-13T02:10:00+00:00"
+
+
 @pytest.mark.asyncio
 async def test_search_event_bad_hit_data(
     sport_data_store: SportsDataStore,
@@ -448,20 +607,129 @@ async def test_search_event_raise_exception(
         await sport_data_store.search_events(q="oops", language_code="en", mix_sports=False)
 
 
+@freezegun.freeze_time("2025-09-22T12:00:00Z")
 @pytest.mark.asyncio
-async def test_get_index_settings():
-    """Test that the settings are stripped if we're running local elastic search"""
-    settings = get_index_settings(dsn="normal")
-    assert "lowercase" in settings["analysis"]["filter"]
-    assert "accentfolding" in settings["analysis"]["filter"]
-    assert "accentfolding" in settings["analysis"]["analyzer"]["stop_analyzer_en"]["filter"]
-    assert "accentfolding" in settings["analysis"]["analyzer"]["stop_analyzer_search_en"]["filter"]
+async def test_search_events_count_metric_on_success(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a successful search increments the count metric."""
+    es_client.search.return_value = {"hits": {"total": {"value": 0}, "hits": []}}
 
-    settings = get_index_settings(dsn="localhost")
-    # Local settings fall back to a simple analyzer config without custom filters.
-    assert "filter" not in settings.get("analysis", {})
-    assert settings["analysis"]["analyzer"]["plain_en"]["type"] == "standard"
-    assert settings["analysis"]["analyzer"]["plain_search_en"]["type"] == "standard"
+    await sport_data_store.search_events(q="game", language_code="en")
+
+    statsd_mock.increment.assert_called_once_with(
+        "es.search.count", tags={"index": "sports-en-events"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_events_error_metric_on_api_error(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that an ApiError increments both the count and error metrics."""
+    api_error = ApiError(
+        message="service unavailable",
+        meta=ApiResponseMeta(
+            status=503,
+            http_version="",
+            headers=HttpHeaders(),
+            duration=0.0,
+            node=NodeConfig(scheme="", host="", port=0),
+        ),
+        body={},
+    )
+    es_client.search.side_effect = api_error
+
+    with pytest.raises(BackendError):
+        await sport_data_store.search_events(q="game", language_code="en")
+
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": "sports-en-events"})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": "sports-en-events", "status": 503}
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_events_error_metric_on_exception(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a generic exception increments both the count and error metrics."""
+    es_client.search.side_effect = Exception("connection reset")
+
+    with pytest.raises(BackendError):
+        await sport_data_store.search_events(q="game", language_code="en")
+
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": "sports-en-events"})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": "sports-en-events", "status": "unknown"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_meta_count_metric_on_success(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a successful query_meta increments the count metric."""
+    es_client.search.return_value = {"hits": {"hits": []}}
+
+    await sport_data_store.query_meta("last_update")
+
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": META_INDEX})
+
+
+@pytest.mark.asyncio
+async def test_query_meta_error_metric_on_api_error(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that an ApiError in query_meta increments both count and error metrics."""
+    api_error = ApiError(
+        message="service unavailable",
+        meta=ApiResponseMeta(
+            status=503,
+            http_version="",
+            headers=HttpHeaders(),
+            duration=0.0,
+            node=NodeConfig(scheme="", host="", port=0),
+        ),
+        body={},
+    )
+    es_client.search.side_effect = api_error
+
+    result = await sport_data_store.query_meta("last_update")
+
+    assert result is None
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": META_INDEX})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": META_INDEX, "status": 503}
+    )
+
+
+@pytest.mark.asyncio
+async def test_query_meta_error_metric_on_exception(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+    statsd_mock: Any,
+):
+    """Test that a generic exception in query_meta increments both count and error metrics."""
+    es_client.search.side_effect = Exception("connection reset")
+
+    result = await sport_data_store.query_meta("last_update")
+
+    assert result is None
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": META_INDEX})
+    statsd_mock.increment.assert_any_call(
+        "es.search.error", tags={"index": META_INDEX, "status": "unknown"}
+    )
 
 
 @pytest.mark.asyncio
@@ -534,14 +802,26 @@ async def test_startup(sport_data_store: SportsDataStore, es_client: AsyncMock):
 
 
 @pytest.mark.asyncio
-async def test_bad_creds():
+async def test_bad_creds(statsd_mock: Any):
     """Test failure if credentials are not present"""
     creds = ElasticCredentials(dsn="", api_key="")
-    store = SportsDataStore(credentials=creds, languages=["en"], platform="sports", index_map={})
+    store = SportsDataStore(
+        credentials=creds,
+        languages=["en"],
+        platform="sports",
+        index_map={},
+        metrics_client=statsd_mock,
+    )
     with pytest.raises(SportsDataError):
         await store.startup()
     creds = ElasticCredentials(dsn="bogus", api_key="")
-    store = SportsDataStore(credentials=creds, languages=["en"], platform="sports", index_map={})
+    store = SportsDataStore(
+        credentials=creds,
+        languages=["en"],
+        platform="sports",
+        index_map={},
+        metrics_client=statsd_mock,
+    )
     with pytest.raises(SportsDataError):
         await store.startup()
 

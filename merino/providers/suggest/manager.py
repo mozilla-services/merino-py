@@ -207,8 +207,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 min_attempted_count=settings.providers.adm.thompson.min_attempted_count,
                 thompson=thompson,
                 engagement_gcs_bucket=settings.engagement.gcs_storage_bucket,
-                engagement_blob_name=settings.engagement.blob_name,
                 engagement_resync_interval_sec=setting.engagement_resync_interval_sec,
+                engagement_blob_name=settings.engagement.blob_name,
                 should_check_client_variants=settings.providers.adm.thompson.check_client_variants,
             )
         case ProviderType.GEOLOCATION:
@@ -235,6 +235,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                         ElasticBackend(
                             api_key=setting.es_api_key,
                             url=setting.es_url,
+                            metrics_client=get_metrics_client(),
                         )
                     )
                     if setting.backend == "elasticsearch"
@@ -368,6 +369,21 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
             ]
             # Use wikipedia as a backup for the Elasticsearch credentials.
             # TODO, use a central Elasticsearch credential set.
+
+            cache = (
+                RedisAdapter(
+                    *create_redis_clients(
+                        settings.redis.wcs_server,
+                        settings.redis.wcs_replica,
+                        settings.redis.max_connections,
+                        settings.redis.socket_connect_timeout_sec,
+                        settings.redis.socket_timeout_sec,
+                    )
+                )
+                if setting.get("cache") == "redis"
+                else NoCacheAdapter()
+            )
+
             credentials = ElasticCredentials(settings=settings)
 
             name = setting.get("platform", setting.type)
@@ -379,10 +395,12 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 platform=platform,
                 languages=[lang for lang in setting.get("languages", ["en"])],
                 index_map={"event": event_map},
+                metrics_client=get_metrics_client(),
             )
             return SportsDataProvider(
                 backend=SportsDataBackend(
                     store=store,
+                    cache=cache,
                     settings=setting,
                     max_suggestions=setting.max_suggestions,
                     mix_sports=setting.get("mix_sports", True),

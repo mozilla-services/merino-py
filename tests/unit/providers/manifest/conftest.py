@@ -41,6 +41,7 @@ async def fixture_filemanager_blob(blob_json):
     blob = AsyncMock()
     blob.download.return_value = blob_json
     blob.size = 1234
+    blob.generation = 42
     return blob
 
 

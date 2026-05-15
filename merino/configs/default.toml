@@ -28,6 +28,12 @@ suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
 
 
 [default.runtime]
+# MERINO_RUNTIME__MODE
+# Boot-time feature profile.
+# Allowed values: ALL, REGULAR, WIDGET.
+# Use REGULAR for the main Suggest API, WIDGET for the WCS widget API, and ALL for both.
+mode = "ALL"
+
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
 # A float timeout (in seconds) for all queries issued in "web/api_v1.py".
 # Indicates the maximum waiting period for queries issued within handler of the `suggest` endpoint.
@@ -81,6 +87,10 @@ can_propagate = false
 # Boolean to toggle the `web.suggest.request` logging.
 log_suggest_request = true
 
+# MERINO_LOGGING__EXCLUDED_PROVIDERS
+# Excluded providers for query logging
+excluded_providers = ["accuweather", "geolocation"]
+
 [default.governance]
 # MERINO_GOVERNANCE__CRON_INTERVAL_SEC
 # The interval of the background cron job for Merino governance.
@@ -105,7 +115,7 @@ client_variant_character_max = 100
 
 # MERINO_WEB__API__V1__CLIENT_VARIANT_ALLOW_LIST
 # list of client variants the merino will be aware about
-client_variant_allow_list = ["engagement_guided_suggestions"]
+client_variant_allow_list = ["engagement_guided_suggestions", "query_norm_treatment"]
 
 # MERINO_WEB__API__V1__HEADER_CHARACTER_MAX
 # A non-negative integer that limits the string character length of a given header string,
@@ -213,6 +223,10 @@ connect_timeout_sec = 5.0
 # Timeout in seconds for a request to the MARS API.
 request_timeout_sec = 10.0
 
+# MERINO_MARS__SEND_TEST_PADDING
+# Toggle to send the `_test_padding=true` query param for `suggest/data`
+send_test_padding = false
+
 # MERINO_MARS__COUNTRIES
 # Countries to fetch suggestions for from the MARS API.
 countries = ["US"]
@@ -243,6 +257,12 @@ socket_connect_timeout_sec = 3
 # Timeout to interact with Redis in seconds
 socket_timeout_sec = 3
 
+# MERINO_REDIS__WCS_SERVER - URI to the WCS Redis primary endpoint.
+wcs_server = "redis://localhost:6379"
+
+# MERINO_REDIS__WCS_REPLICA - URI to the WCS Redis replica endpoint.
+wcs_replica = "redis://localhost:6379"
+
 [default.sentry]
 # MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
@@ -267,6 +287,12 @@ env = "dev"
 # If `sentry.mode` is set to `disabled`, no Sentry integration will be activated.
 # If set to `debug`, the DSN will be set to a testing value recommended by Sentry,
 # and extra output will be included in the logs.
+
+[default.gcs]
+# To enable overriding the GCS endpoint
+# Leave empty to use the default Google Cloud Storage api
+# MERINO_GCS__ENDPOINT_URL
+endpoint_url = ""
 
 [default.image_gcs_v2]
 # MERINO_IMAGE_GCS_V2__GCS_PROJECT
@@ -299,6 +325,24 @@ cdn_hostname = ""
 # Set to `true` in production and `false` in staging or development.
 gcs_enabled = true
 
+[default.games_particle_gcs]
+# MERINO_GAMES_PARTICLE_GCS__GCS_PROJECT
+# GCS project name that contains domain data
+gcs_project = ""
+
+# MERINO_GAMES_PARTICLE__GCS_BUCKET
+# GCS bucket that contains domain data files
+gcs_bucket = ""
+
+# MERINO_GAMES_PARTICLE__CDN_HOSTNAME
+# CDN hostname used for public URL
+cdn_hostname = ""
+
+# MERINO_GAMES_PARTICLE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = true
+
 [default.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = ""
@@ -311,7 +355,7 @@ gcs_storage_project = ""
 
 # MERINO_ENGAGEMENT__BLOB_NAME
 # Path within the GCS bucket to the engagement data blob.
-blob_name = "suggest-merino-exports/engagement/latest.json"
+blob_name = "suggest-merino-exports/engagement/keyword/latest.json"
 
 [default.icon]
 # Subdirectory within bucket for favicons
@@ -320,6 +364,41 @@ favicons_root = "favicons"
 max_size = 16777216 # 16MB
 # HTTP timeout for favicon downloads (in seconds)
 http_timeout = 5
+
+[default.query_normalization]
+# MERINO_QUERY_NORMALIZATION__ENABLED
+# Whether to build the normalization pipeline at startup.
+enabled = true
+
+# MERINO_QUERY_NORMALIZATION__DATA_SOURCE
+# "local" for dev/testing, "remote" for stage/prod (GCS).
+data_source = "local"
+
+# MERINO_QUERY_NORMALIZATION__SPORTS_TEAMS_FILE
+# Local path to sports teams JSON (used when data_source = "local").
+sports_teams_file = "dev/local_setup/query_normalization/sports_teams.json"
+
+# MERINO_QUERY_NORMALIZATION__WORD_FREQ_FILE
+# Local path to word frequency CSV.
+word_freq_file = "dev/local_setup/query_normalization/word_freq.csv"
+
+# MERINO_QUERY_NORMALIZATION__FINANCE_TICKERS_FILE
+# Local path to finance tickers JSON.
+finance_tickers_file = "dev/local_setup/query_normalization/finance_tickers.json"
+
+# MERINO_QUERY_NORMALIZATION__WORDSEGMENT_CACHE_SIZE
+# Max entries in the wordsegment LRU cache. Each entry is a token->segmentation
+# mapping (~200 bytes). 1000 entries ≈ 0.2 MB.
+wordsegment_cache_size = 1000
+
+# MERINO_QUERY_NORMALIZATION__PROVIDERS
+# List of provider names that receive normalized queries.
+# Other providers get the raw query even for treatment users.
+providers = ["sports", "polygon"]
+
+# MERINO_QUERY_NORMALIZATION__GCS_BUCKET
+# GCS bucket for remote data files (used when data_source = "remote").
+gcs_bucket = ""
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
@@ -384,7 +463,9 @@ hourly_forecast_ttl_sec = 1800
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
 # e.g. ["NFL","NBA","NHL"]
-sports=["NFL","NBA","NHL","MLB"]
+sports=["NFL","NBA","NHL","MLB","UCL","WCS"]
+# required for WCS:
+cache="redis"
 # Index names for Elastic Search.
 event_index="sports-{lang}-event"
 team_index="sports-{lang}-team"
@@ -395,6 +476,12 @@ enabled_by_default = true
 query_timeout_sec = 0.3
 # Temporary value to enable data pre-load "kickstart"
 kickstart = true
+# MERINO_PROVIDERS__SPORTS__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+# MERINO_PROVIDERS__SPORTS__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
 
 [default.providers.sports.es]
 # MERINO_PROVIDERS__SPORTS__ES__DSN
@@ -405,8 +492,11 @@ dsn=""
 # Using the "basic" key, which allows using locally served
 # versions of elasticsearch
 api_key=""
-# Timeout for an Elastic Search response in milliseconds.
-request_timeout_ms = 300
+
+# MERINO_PROVDERS__SPORTS__ES__REQUEST_TIMEOUT_SEC
+# Timeout for an Elastic Search response in seconds (floating point).
+# Note that this timeout should not be greater than `providers.sports.query_timeout_sec`.
+request_timeout_sec = 0.25
 
 [default.providers.sports.sportsdata]
 # MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
@@ -572,7 +662,7 @@ enabled_by_default = true
 
 # MERINO_PROVIDERS__ADM__BACKEND
 # The backend of the provider. Either "remote-settings", "mars", or "test".
-backend = "remote-settings"
+backend = "mars"
 
 # MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC
 # The interval of the RemoteSettings cron job (in seconds)
@@ -601,7 +691,7 @@ enabled = false
 
 # MERINO_PROVIDERS__ADM__THOMPSON__MIN_ATTEMPTED_COUNT
 # Minimal attempted count eligible for Thompson sampling
-min_attempted_count = 500
+min_attempted_count = 3000
 
 # MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ENABLED
 # Toggle to enable the dummy candidate for Thompson sampling
@@ -618,6 +708,10 @@ dummy_attempted_count = 1000
 # MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
 # Whether to check `client_variants` for Thompson sampling
 check_client_variants = true
+
+# MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
+# Toggle to determine whether to return fallback suggestion or thompson selected suggestion
+dry_run = true
 
 [default.amo.dynamic]
 # MERINO_AMO__DYNAMIC__API_URL
@@ -732,6 +826,14 @@ enabled_by_default = true
 # The backend of the provider. Either "elasticsearch" or "test".
 backend = "elasticsearch"
 
+# MERINO_PROVIDERS__WIKIPEDIA__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_PROVIDERS__WIKIPEDIA__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
 # MERINO_PROVIDERS__WIKIPEDIA__ES_URL
 # The URL of the Elasticsearch cluster that we want to connect to.
 es_url = "http://localhost:9200"
@@ -766,9 +868,10 @@ pl_es_index = "plwiki-v1"
 # The maximum suggestions for each search request to Elasticsearch.
 es_max_suggestions = 1
 
-# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_MS
-# The timeout in milliseconds for each search request to Elasticsearch.
-es_request_timeout_ms = 5000
+# MERINO_PROVIDERS__WIKIPEDIA__ES_REQUEST_TIMEOUT_SEC
+# The timeout in seconds (floating point) for each search request to Elasticsearch.
+# Note that this timeout should not be greater than `providers.wikipedia.query_timeout_sec`.
+es_request_timeout_sec = 0.25
 
 # MERINO_PROVIDERS__WIKIPEDIA__QUERY_TIMEOUT_SEC
 # The timeout in seconds for each query request to the provider.
@@ -1011,6 +1114,62 @@ ident_url_path = "flights/{ident}?ident_type=designator&start={start}&end={end}&
 # The url to the live FlightAware landing page.
 landing_page_url = "https://www.flightaware.com/live/flight/{ident}"
 
+[default.rss_providers.wikimedia_potd]
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__TYPE
+# The type of this provider, should be `wikimedia_potd`.
+type = "wikimedia_potd"
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__ENABLED_BY_DEFAULT
+# Whether or not this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to Wikimedia RSS endpoint.
+connect_timeout_sec = 3.0
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__QUERY_TIMEOUT_SEC
+# A float (in seconds) indicating the maximum waiting period when querying for POTD data.
+query_timeout_sec = 1.0
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
+# URL for the Wikimedia Picture of the Day RSS feed.
+feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
+
+[default.games_providers.particle]
+# MERINO_GAMES_PROVIDERS__PARTICLE__TYPE
+# The type of this provider, should be `particle`.
+type = "particle"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED_BY_DEFAULT
+# Whether or not this provider is enabled by default.
+enabled_by_default = false
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_TTL
+# The amount of time in seconds for the max-age Cache-control header.
+cache_ttl = 86400 # one day
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__GAME_URL
+# The URL pointing to the game hosted in GCP (GCS)
+game_url = "https://prod-games-particle.merino.prod.webservices.mozgcp.net/index.html"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__URL_ROOT
+# The root URL for Particle data.
+url_root = "https://crossword-widget.vercel.app"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__URL_PATH_MANIFEST
+# The URL path to the Particle manifest JSON file.
+url_path_manifest = "/runtime-manifest.v1.json"
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__MANIFEST_SCHEMA_VERSION
+# The expected schema version to be present in the manifest JSON.
+# Used to validate manifest JSON.
+manifest_schema_version = 1
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to Particle endpoint.
+connect_timeout_sec = 3.0
+
+
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains Airflow data for Merino
@@ -1074,11 +1233,16 @@ bucket_name = ""
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__MAX_SIZE
 # The maximum size in bytes of the contextual ranking scores file. If exceeded, an error will be logged.
-max_size = 2_000_000
+max_size = 3_000_000
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__BLOB_PREFIX
 # GCS path of the priors JSON file.
 blob_name = "contextual_ts/latest_stats.json"
+
+# MERINO__ML_RECOMMENDATIONS__CA__GCS__PRIOR__BLOB_PREFIX
+# GCS path of the priors JSON file.
+blob_name_ca = "contextual_ts/EN_CA/latest_stats.json"
+
 
 # MERINO__ML_RECOMMENDATIONS__GCS__PRIOR__CRON_INTERVAL_SECONDS
 # Interval in seconds at which the cron job checks if GCS contains updated prior data.
@@ -1104,6 +1268,35 @@ blob_name = "contextual_ts/cohort_model_v2.safetensors"
 # Interval in seconds at which the cron job checks if GCS contains updated model.
 cron_interval_seconds = 600
 
+
+[default.contextual_interest]
+# MERINO__CONTEXTUAL_INTEREST__ENABLED
+# Enables the granular interest ranker for new tab recs
+enabled = true
+
+[default.contextual_interest.gcs]
+# MERINO__CONTEXTUAL_INTEREST__GCS__GCP_PROJECT
+# GCP project name where the GCS bucket lives.
+gcp_project = ""
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__BUCKET_NAME
+# GCS bucket that contains the LinTS-interest safetensors bundle.
+bucket_name = ""
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__BLOB_NAME
+# GCS path of the LinTS-interest model bundle.
+blob_name = "contextual_ts/lints_interest_model.safetensors"
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__MAX_SIZE
+# Maximum size in bytes of the bundle. Sized for max_dim=2600 packed L
+# stored as float16 (~6.8 MB) plus theta_hat + metadata (~0.15 MB) with
+# ~1 MB headroom.
+max_size = 8_000_000
+
+# MERINO__CONTEXTUAL_INTEREST__GCS__CRON_INTERVAL_SECONDS
+# Interval in seconds at which the cron job checks if GCS contains an
+# updated bundle. ml-services publishes every 10 min.
+cron_interval_seconds = 600
 
 
 [default.curated_recommendations.corpus_api]
