@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sentry_sdk
 
 from json import JSONDecodeError
 from typing import Any
@@ -33,13 +34,23 @@ class ParticleLocalFileManager:
                 manifest_schema: dict = json.load(f)
                 return manifest_schema
         except OSError as os_error:
-            raise ParticleFileManagerError(
-                f"Cannot open file '{self.static_manifest_schema_file_path}"
-            ) from os_error
+            error_msg = f"Cannot open file '{self.static_manifest_schema_file_path}"
+
+            sentry_sdk.capture_message(
+                error_msg,
+                level="error",
+            )
+
+            raise ParticleFileManagerError(error_msg) from os_error
         except JSONDecodeError as json_error:
-            raise ParticleFileManagerError(
-                f"Cannot decode JSON file '{self.static_manifest_schema_file_path}"
-            ) from json_error
+            error_msg = f"Cannot decode JSON file '{self.static_manifest_schema_file_path}"
+
+            sentry_sdk.capture_message(
+                error_msg,
+                level="error",
+            )
+
+            raise ParticleFileManagerError(error_msg) from json_error
 
 
 class ParticleRemoteFileManager:
@@ -77,5 +88,13 @@ class ParticleRemoteFileManager:
 
             return None
         except Exception as e:
-            logger.error(f"Error with getting remote Particle manifest file. {e}")
+            error_msg = f"Error retrieving remote Particle manifest file. {e}"
+
+            logger.error(error_msg)
+
+            sentry_sdk.capture_message(
+                error_msg,
+                level="error",
+            )
+
             return None
