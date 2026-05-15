@@ -62,8 +62,18 @@ class TeamInfo(BaseModel):
         )
 
     @classmethod
-    def from_event_team(cls, team: dict[str, Any]) -> "TeamInfo":
-        """Build widget team info from the compact team dict stored on events."""
+    def from_event_team(
+        cls,
+        team: dict[str, Any],
+        *,
+        group: str | None = None,
+    ) -> "TeamInfo":
+        """Build widget team info from the compact team dict stored on events.
+
+        The `group` argument is plumbed in from the parent event because the
+        compact team dict does not carry a group of its own; the World Cup
+        group is a per-event attribute.
+        """
         key = str(team["key"])
         raw_icon_url = team.get("icon_url")
         return cls(
@@ -73,7 +83,7 @@ class TeamInfo(BaseModel):
             region=str(team.get("region") or team.get("country") or key),
             colors=get_team_colours(key),
             icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
-            group=team.get("group"),
+            group=group,
             eliminated=bool(team.get("eliminated", False)),
         )
 
@@ -106,8 +116,8 @@ class EventInfo(BaseModel):
     @classmethod
     def from_event(cls, event: Event) -> "EventInfo":
         """Build widget event info from a cached SportsData event."""
-        home_team = TeamInfo.from_event_team(event.home_team)
-        away_team = TeamInfo.from_event_team(event.away_team)
+        home_team = TeamInfo.from_event_team(event.home_team, group=event.group)
+        away_team = TeamInfo.from_event_team(event.away_team, group=event.group)
         updated = event.updated or event.date
         return cls(
             date=event.date.isoformat(),
