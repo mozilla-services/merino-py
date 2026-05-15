@@ -6,6 +6,7 @@ import math
 from typing import Callable, Collection
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.ml_backends.protocol import SimilarStoriesProtocol, SpindleBackendProtocol
 from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
 
 
@@ -28,7 +29,7 @@ class ArticleBalancerConfig:
 class ArticleBalancer:
     """Balance articles by multiple criteria."""
 
-    def __init__(self, expected_num_articles: int, config: ArticleBalancerConfig) -> None:
+    def __init__(self, expected_num_articles: int, config: ArticleBalancerConfig, similar_stories_info: SimilarStoriesProtocol | None) -> None:
         """Initialize limits for target number of articles."""
         self.config = config
         self.article_list: list[CuratedRecommendation] = []
@@ -37,6 +38,8 @@ class ArticleBalancer:
         self.evergreen_topics = set(config.evergreen_topics)
         self.subtopic_checker = config.subtopic_checker
         self.set_limits_for_expected_articles(expected_num_articles)
+        self.do_not_add_similarity_set: set[str] = {}
+        self.similar_stories_info = similar_stories_info
 
     def set_limits_for_expected_articles(self, expected_num_articles: int):
         """Update limits for expected number of articles."""
@@ -104,11 +107,16 @@ class ArticleBalancer:
 
     def add_story(self, rec: CuratedRecommendation) -> bool:
         """Add story if it meets requirements. Return true if story added."""
+        if self.do_not_add_similarity_set and rec.corpusItemId in self.do_not_add_similarity_set:
+            return False
         provisional_stats = self.feature_counts.copy()
         self._update_stats(provisional_stats, rec)
         if self._does_meet_spec(provisional_stats):
             self.article_list.append(rec)
             self.feature_counts = provisional_stats
+            if self.similar_stories_info is not None:
+                self.do_not_add_similarity_set.add(self.similar_stories_info.neighbors(rec.corpusItemId))
+                # We don't need to add our own id, because we know stories aren't duplicated
             return True
         return False
 
@@ -151,7 +159,7 @@ EVERGREEN_TOPICS = {
 class TopStoriesArticleBalancer(ArticleBalancer):
     """Balancer configured for top stories."""
 
-    def __init__(self, expected_num_articles: int) -> None:
+    def __init__(self, expected_num_articles: int, similar_stories_info: SimilarStoriesProtocol | None = None) -> None:
         super().__init__(
             expected_num_articles=expected_num_articles,
             config=ArticleBalancerConfig(
@@ -166,4 +174,5 @@ class TopStoriesArticleBalancer(ArticleBalancer):
                 min_subtopic_limit=1,
                 blocked_topics_multiplier=3,
             ),
+            similar_stories_info=similar_stories_info
         )

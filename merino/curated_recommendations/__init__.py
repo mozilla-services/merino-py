@@ -19,6 +19,7 @@ from merino.curated_recommendations.engagement_backends.fake_engagement import F
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
+from merino.curated_recommendations.ml_backends.spindle_backend import SpindleBackend
 from merino.curated_recommendations.ml_backends.static_local_model import SuperInferredModel
 from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
 from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import (
@@ -238,6 +239,9 @@ def init_provider() -> None:
     cohort_model_backend = init_ml_cohort_model_backend()
     lints_interest_backend = init_lints_interest_backend()
 
+    spindle_backend = SpindleBackend(base_url=settings.spindle.api.base_url, request_timeout=settings.spindle.api.request_timeout,
+                                  metrics_client=get_metrics_client())
+
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
@@ -250,6 +254,7 @@ def init_provider() -> None:
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=get_manifest_provider(),
+        spindle_backend = spindle_backend
     )
 
     _provider = CuratedRecommendationsProvider(

@@ -729,6 +729,7 @@ def get_top_story_list(
     rescaler: EngagementRescaler | None = None,
     relax_constraints_for_personalization=False,
     prior: Prior | None = None,
+    spindle_backend: SpindleBackendProtocol = None
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.

@@ -4,10 +4,10 @@ from enum import Enum
 from typing import Protocol, cast
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import logging
 
-from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
+from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, SurfaceId
 
 logger = logging.getLogger(__name__)
 
@@ -264,3 +264,27 @@ class CohortModelBackend(Protocol):
     ) -> str | None:
         """Fetch the contextual ranking cohort based on interests string."""
         ...
+
+class SimilarStoriesProtocol:
+    def neighbors(self, a) -> list[str]:
+        """ Returns similar stories for similar corpus item id"""
+
+
+class SpindleBackendProtocol(Protocol):
+    """Protocol for connecting to the Content-ML Spindle service.
+    """
+
+    def update_duplicate_item_info(items: list[CorpusItem], surface: SurfaceId, threshold: float=0.85):
+        """ Make best effort to find duplicate stories based on embeddings and store in backend"""
+        ...
+
+    def get_similar_stories_text(surface: SurfaceId) -> SimilarStoriesProtocol | None:
+        """ Get similar stories for a given story based on text """
+        ...
+
+    def get_similar_stories_image(surface: SurfaceId) -> SimilarStoriesProtocol | None:
+        """ Get similar stories for a given story based on image similarity """
+        ...
+
+
+

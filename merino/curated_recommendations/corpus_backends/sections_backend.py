@@ -30,6 +30,7 @@ from merino.curated_recommendations.corpus_backends.utils import (
     CorpusGraphQLError,
     CorpusApiGraphConfig,
 )
+from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
 from merino.providers.manifest import Provider as ManifestProvider
 
 logger = logging.getLogger(__name__)
@@ -70,12 +71,14 @@ class SectionsBackend(SectionsProtocol):
         graph_config: CorpusApiGraphConfig,
         metrics_client: aiodogstatsd.Client,
         manifest_provider: ManifestProvider,
+        spindle_backend: SpindleBackendProtocol | None
     ) -> None:
         """Initialize the SectionsCorpusBackend."""
         self.http_client = http_client
         self.graph_config = graph_config
         self.metrics_client = metrics_client
         self.manifest_provider = manifest_provider
+        self.spindle_backend = spindle_backend
         self._cache = {}
         self._background_tasks = set()
 
@@ -187,5 +190,15 @@ class SectionsBackend(SectionsProtocol):
                 base.alternateSection = section
 
         sections_list = base_sections
+
+        if self.spindle_backend is not None:
+            try:
+                self.spindle_backend.get_similar_stories_text(surface_id)
+            except Exception as e:
+                logger.error("Error getting similar stories with spindle service", e)
+            try:
+                self.spindle_backend.get_similar_stories_image(surface_id)
+            except Exception as e:
+                logger.error("Error getting similar stories with spindle service", e)
 
         return sections_list
