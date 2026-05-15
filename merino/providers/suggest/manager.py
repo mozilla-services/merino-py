@@ -424,7 +424,12 @@ def load_providers(disabled_providers_list: list[str]) -> dict[str, BaseProvider
     """
     providers: dict[str, BaseProvider] = {}
     for provider_id, setting in settings.providers.items():
-        # Do not initialize provider if disabled in config.
+        # Skip sibling subsystems that share the settings.providers namespace
+        # but are not suggest providers (e.g. wcs). The contract is that a
+        # suggest provider entry exposes a `type` field; anything else here
+        # belongs to another subsystem (WCS, etc.) and initializes itself.
+        if "type" not in setting:
+            continue
         if provider_id.lower() not in disabled_providers_list:
             providers[provider_id] = _create_provider(provider_id, setting)
     return providers

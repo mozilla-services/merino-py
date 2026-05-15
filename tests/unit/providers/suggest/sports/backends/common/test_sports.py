@@ -2394,6 +2394,85 @@ async def test_wcs_update_events(
         ]
 
 
+@pytest.mark.parametrize(
+    (
+        "schedule_overrides",
+        "score_overrides",
+        "expected_games_by_date_url",
+        "expected_status",
+    ),
+    [
+        pytest.param(
+            {},
+            {
+                "Status": "InProgress",
+                "Period": "1",
+                "ClockDisplay": "16",
+                "HomeTeamScore": 1,
+                "AwayTeamScore": 0,
+                "UpdatedUtc": "2026-06-11T19:16:00",
+            },
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2026-JUN-11",
+            GameStatus.InProgress,
+            id="scheduled-active-window",
+        ),
+        pytest.param(
+            {
+                "DateTime": "2026-06-20T19:00:00",
+                "Day": "2026-06-20T00:00:00",
+                "Status": "Final",
+                "HomeTeamScore": 2,
+                "AwayTeamScore": 1,
+                "UpdatedUtc": "2026-06-20T21:00:00",
+            },
+            {},
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2026-JUN-20",
+            GameStatus.Final,
+            id="non-scheduled-outside-active-window",
+        ),
+    ],
+)
+@freezegun.freeze_time("2026-06-11T12:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_fetches_games_by_date_for_live_relevant_days(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+    schedule_overrides: dict[str, Any],
+    score_overrides: dict[str, Any],
+    expected_games_by_date_url: str,
+    expected_status: GameStatus,
+) -> None:
+    """Refresh active-window days and any day already reported non-scheduled."""
+    sport = WCS(settings=settings.providers.sports)
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+    sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1615: "Group Stage"}
+
+    schedule_row = {**wcs_schedule_payload()[0], **schedule_overrides}
+    schedules_payload = [schedule_row]
+    scores_payload = [{**schedule_row, **score_overrides}]
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[schedules_payload, scores_payload],
+    )
+
+    await sport.update_events(client=mock_client)
+
+    event = sport.events[90011111]
+    assert event.status == expected_status
+    assert [call.kwargs["url"] for call in get_data.call_args_list] == [
+        "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/fifa/2026",
+        expected_games_by_date_url,
+    ]
+    assert get_data.call_args_list[1].kwargs["ttl"] == timedelta(minutes=2)
+
+    if expected_status == GameStatus.InProgress:
+        assert event.period == "1"
+        assert event.clock == "16"
+        assert event.home_score == 1
+        assert event.away_score == 0
+
+
 @pytest.mark.asyncio
 async def test_wcs_national_teams_use_country_name_for_event_display() -> None:
     """WCS team full names are federation names, not widget display names."""

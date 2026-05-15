@@ -86,7 +86,7 @@ class TeamInfo(BaseModel):
             region=str(team.get("region") or team.get("country") or key),
             colors=get_team_colours(key),
             icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
-            group=group,
+            group=team.get("group") or group,
             eliminated=bool(team.get("eliminated", False)),
         )
 
@@ -185,7 +185,7 @@ class MatchesResponse(BaseModel):
 class LiveMatchesResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/live`.
 
-    Holds mocked live-endpoint events, sorted by `date` ascending.
+    Holds currently live events, sorted by `date` ascending.
     """
 
     matches: list[EventInfo]

@@ -20,6 +20,8 @@ from merino.providers.wcs.protocol import (
 from merino.utils.metrics import get_metrics_client
 
 _WINDOW = timedelta(days=10)
+_LIVE_MATCH_LOOKBACK = timedelta(hours=6)
+_LIVE_MATCH_LOOKAHEAD = timedelta(hours=2)
 _CACHE_ERROR_METRIC = "wcs.cache_error"
 logger = logging.getLogger(__name__)
 
@@ -45,10 +47,16 @@ class WcsSport(Protocol):
 class WcsProvider:
     """Serves match data for the World Cup Soccer endpoint."""
 
-    def __init__(self, sport: WcsSport, metrics_client: Client | None = None) -> None:
+    def __init__(
+        self,
+        sport: WcsSport,
+        metrics_client: Client | None = None,
+        live_data_enabled: bool = False,
+    ) -> None:
         """Create a WCS provider backed by the shared WCS sport cache."""
         self.sport = sport
         self.metrics_client = metrics_client or get_metrics_client()
+        self.live_data_enabled = live_data_enabled
 
     async def get_matches(
         self,
@@ -94,16 +102,37 @@ class WcsProvider:
         return MatchesResponse(previous=previous, current=current, next_=next_)
 
     async def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
-        """Return fake live-endpoint events, sorted ascending by `date`.
+        """Return live-endpoint events, sorted ascending by `date`.
 
+        The Redis-backed path is gated so we can switch it on via an ENV
         `team_keys` restricts results to matches with that team on either side.
         """
-        matches = [
-            event
-            for event in sorted(build_live_events(datetime.now(UTC).date()), key=lambda e: e.date)
-            if team_keys is None or _has_team(event, team_keys)
-        ]
-        return LiveMatchesResponse(matches=matches)
+        if not self.live_data_enabled:
+            matches = [
+                event
+                for event in build_live_events(datetime.now(UTC).date())
+                if team_keys is None or _has_team(event, team_keys)
+            ]
+            return LiveMatchesResponse(matches=matches)
+
+        now = datetime.now(UTC)
+        window_start = now - _LIVE_MATCH_LOOKBACK
+        window_end = now + _LIVE_MATCH_LOOKAHEAD
+        try:
+            events = await self.sport.get_events_by_date(start=window_start, end=window_end)
+        except CacheAdapterError as ex:
+            self._record_cache_error("live", ex)
+            return LiveMatchesResponse(matches=[])
+
+        live_events: list[EventInfo] = []
+        for event in sorted(events, key=lambda e: e.date):
+            if not event.status.is_in_progress():
+                continue
+            event_info = EventInfo.from_event(event)
+            if team_keys is not None and not _has_team(event_info, team_keys):
+                continue
+            live_events.append(event_info)
+        return LiveMatchesResponse(matches=live_events)
 
     async def get_teams(self) -> TeamsResponse:
         """Return cache-backed teams participating in the tournament."""

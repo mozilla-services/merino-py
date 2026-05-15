@@ -516,6 +516,12 @@ cache_dir="/tmp"
 # base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
 # base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
 
+[default.providers.wcs]
+# MERINO_PROVIDERS__WCS__LIVE_DATA_ENABLED
+# Keep the /wcs/live mock response by default. DISCO-4231 can flip this to
+# serve Redis-backed in-progress matches after launch approval.
+live_data_enabled = false
+
 
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
