@@ -3,8 +3,6 @@
 from datetime import UTC, date, datetime, time, timedelta
 import logging
 from typing import Protocol
-from pydantic import HttpUrl
-
 from aiodogstatsd import Client
 import sentry_sdk
 
@@ -69,7 +67,6 @@ class WcsProvider:
         target_date: date,
         limit: int | None,
         team_keys: frozenset[str] | None,
-        watch_links: list[HttpUrl] | None = None,
     ) -> MatchesResponse:
         """Return matches in a +/- _WINDOW day window around `target_date`.
 
@@ -92,7 +89,7 @@ class WcsProvider:
             raise
 
         for event in sorted(events, key=lambda e: e.date):
-            event_info = EventInfo.from_event(event, watch_links=watch_links)
+            event_info = EventInfo.from_event(event)
             event_date = _event_date(event)
             if _matches_team_filter(event_info, team_keys):
                 if event_date < target_day:

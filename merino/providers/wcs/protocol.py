@@ -121,13 +121,9 @@ class EventInfo(BaseModel):
     status_type: str = Field(description="UI status bucket, e.g. 'past', 'live', 'scheduled'.")
     query: str | None = Field(default=None, description="Optional click-through query.")
     sport: str = Field(default="soccer", description="Sport identifier.")
-    watch_links: list[HttpUrl] = Field(
-        default_factory=list,
-        description="Watch links for this match, filtered to the request locale.",
-    )
 
     @classmethod
-    def from_event(cls, event: Event, watch_links: list[HttpUrl] | None = None) -> "EventInfo":
+    def from_event(cls, event: Event) -> "EventInfo":
         """Build widget event info from a cached SportsData event."""
         home_team = (
             None
@@ -158,7 +154,6 @@ class EventInfo(BaseModel):
             status=event.status.as_str(),
             status_type=event.status.as_ui_status(),
             query=build_query(event.model_dump(mode="json")),
-            watch_links=watch_links or [],
         )
 
 
@@ -189,3 +184,33 @@ class TeamsResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/teams`."""
 
     teams: list[TeamInfo]
+
+
+class YourRegionEntry(BaseModel):
+    """A streaming service available in the user's region."""
+
+    product_name: str
+    entitlement: str = Field(description="Human-readable entitlement label, e.g. 'Free Trial'.")
+    url: HttpUrl
+
+
+class OtherRegionStream(BaseModel):
+    """A streaming service entry for another region."""
+
+    product_name: str
+    entitlement: str = Field(description="Human-readable entitlement label, e.g. 'Free Trial'.")
+    url: HttpUrl
+
+
+class OtherRegionEntry(BaseModel):
+    """Streaming services grouped by a region other than the user's."""
+
+    country_code: str = Field(description="Display country code, e.g. 'UK', 'GER'.")
+    streams: list[OtherRegionStream]
+
+
+class WatchLinksResponse(BaseModel):
+    """Response payload for `GET /api/v1/wcs/watch-links`."""
+
+    your_region: list[YourRegionEntry]
+    other_regions: list[OtherRegionEntry]

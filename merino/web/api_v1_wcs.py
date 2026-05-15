@@ -10,9 +10,17 @@ from merino.configs import settings
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.providers.wcs import get_provider as get_wcs_provider
-from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse, TeamsResponse
+from merino.providers.wcs.protocol import (
+    LiveMatchesResponse,
+    MatchesResponse,
+    OtherRegionEntry,
+    OtherRegionStream,
+    TeamsResponse,
+    WatchLinksResponse,
+    YourRegionEntry,
+)
 from merino.providers.wcs.provider import WcsProvider
-from merino.providers.wcs.watch_links import resolve_watch_links
+from merino.providers.wcs.watch_links import resolve_other_regions, resolve_watch_links
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
 )
@@ -30,7 +38,6 @@ HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
     response_model_by_alias=True,
 )
 async def get_wcs_matches(
-    request: Request,
     date: Annotated[
         Date | None, Query(description="RFC date YYYY-MM-DD; defaults to today UTC.")
     ] = None,
@@ -39,7 +46,6 @@ async def get_wcs_matches(
         str | None,
         Query(description="Comma-separated 3-letter team keys, e.g. 'BRA,ARG'."),
     ] = None,
-    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> MatchesResponse:
     """Return matches grouped into `previous`, `current`, and `next`.
@@ -50,17 +56,8 @@ async def get_wcs_matches(
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)
-<<<<<<< HEAD
     matches: MatchesResponse = await provider.get_matches(target_date, limit, team_keys)
     return matches
-=======
-
-    geolocation: Location | None = request.scope.get(ScopeKey.GEOLOCATION)
-    languages = get_accepted_languages(accept_language)
-    watch_links = resolve_watch_links(geolocation, languages)
-
-    return await provider.get_matches(target_date, limit, team_keys, watch_links)
->>>>>>> 19b894bc ([DISCO-4178] Add regional watch links for wcs matches)
 
 
 @router.get(
@@ -79,6 +76,38 @@ async def get_wcs_live(
     """Return in-progress matches sorted ascending by date."""
     live_matches: LiveMatchesResponse = await provider.get_live_matches(_parse_team_keys(teams))
     return live_matches
+
+
+@router.get(
+    "/wcs/watch-links",
+    tags=["wcs"],
+    summary="Watch links for World Cup Soccer matches, resolved for the request locale",
+    response_model=WatchLinksResponse,
+)
+async def get_wcs_watch_links(
+    request: Request,
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
+) -> WatchLinksResponse:
+    """Return locale-resolved watch links for WCS matches."""
+    geolocation: Location | None = request.scope.get(ScopeKey.GEOLOCATION)
+    languages = get_accepted_languages(accept_language)
+    your_region = [
+        YourRegionEntry(product_name=e.product_name, entitlement=e.entitlement, url=e.url)
+        for e in resolve_watch_links(geolocation, languages)
+    ]
+    other_regions = [
+        OtherRegionEntry(
+            country_code=display_code,
+            streams=[
+                OtherRegionStream(
+                    product_name=e.product_name, entitlement=e.entitlement, url=e.url
+                )
+                for e in streams
+            ],
+        )
+        for display_code, streams in resolve_other_regions(geolocation, languages)
+    ]
+    return WatchLinksResponse(your_region=your_region, other_regions=other_regions)
 
 
 @router.get(
