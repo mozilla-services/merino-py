@@ -652,8 +652,13 @@ class TestLegacyEndpoints:
             assert item["receivedRank"] == i
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-    @pytest.mark.parametrize("region", ["GB", "IE"])
-    def test_en_gb_non_sections_request(self, region: str, client: TestClient):
+    @pytest.mark.parametrize(
+        "region,expected_surface",
+        [("GB", SurfaceId.NEW_TAB_EN_GB), ("IE", SurfaceId.NEW_TAB_EN_IE)],
+    )
+    def test_en_gb_non_sections_request(
+        self, region: str, expected_surface: SurfaceId, client: TestClient
+    ):
         """Test en-GB non-sections request via main endpoint (backward-compatible path).
 
         GB/IE clients without feeds=["sections"] use get_legacy_recommendations_from_sections.
@@ -665,7 +670,7 @@ class TestLegacyEndpoints:
         data = response.json()
 
         assert response.status_code == 200
-        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB
+        assert data["surfaceId"] == expected_surface
 
         # Non-sections request returns data in data[], not feeds
         corpus_items = data["data"]
@@ -2775,10 +2780,13 @@ class TestSections:
             )
 
     @pytest.mark.parametrize(
-        "region",
-        ["GB", "IE"],
+        "region,expected_surface",
+        [
+            ("GB", SurfaceId.NEW_TAB_EN_GB.value),
+            ("IE", SurfaceId.NEW_TAB_EN_IE.value),
+        ],
     )
-    def test_uk_sections_enabled(self, region, client: TestClient):
+    def test_uk_sections_enabled(self, region, expected_surface, client: TestClient):
         """Test that UK/IE users with feeds=['sections'] get sections."""
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2791,7 +2799,7 @@ class TestSections:
         data = response.json()
 
         assert response.status_code == 200
-        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_GB.value
+        assert data["surfaceId"] == expected_surface
 
         # Should have feeds with sections
         assert data["feeds"] is not None

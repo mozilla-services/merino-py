@@ -6,6 +6,18 @@ import time
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.protocol import CuratedRecommendationsRequest, Locale
 
+# Surfaces where sections have rolled out at 100%. Non-sections requests for these
+# surfaces are served from the sections backend (via the legacy adapter) instead of
+# the scheduled-surface backend.
+ROLLED_OUT_SECTION_SURFACES: frozenset[SurfaceId] = frozenset(
+    {
+        SurfaceId.NEW_TAB_EN_US,
+        SurfaceId.NEW_TAB_EN_GB,
+        SurfaceId.NEW_TAB_EN_CA,
+        SurfaceId.NEW_TAB_EN_IE,
+    }
+)
+
 
 def get_recommendation_surface_id(
     locale: Locale,
@@ -41,19 +53,7 @@ def get_recommendation_surface_id(
         if derived_region == "CA":
             return SurfaceId.NEW_TAB_EN_CA
         elif derived_region == "IE":
-            # Ireland routing: Map to NEW_TAB_EN_IE only if:
-            # 1. Request includes 'sections' in feeds
-            # 2. User is in 'sections' branch of 'sections-in-ie' experiment
-            # Otherwise, default to NEW_TAB_EN_GB
-            if (
-                request is not None
-                and request.feeds is not None
-                and "sections" in request.feeds
-                and is_enrolled_in_experiment(request, "sections-in-ie", "sections")
-            ):
-                return SurfaceId.NEW_TAB_EN_IE
-            else:
-                return SurfaceId.NEW_TAB_EN_GB
+            return SurfaceId.NEW_TAB_EN_IE
         elif derived_region is None or derived_region == "US":
             return SurfaceId.NEW_TAB_EN_US
         elif derived_region == "GB":

@@ -43,6 +43,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
+    ROLLED_OUT_SECTION_SURFACES,
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
     derive_region,
@@ -173,12 +174,8 @@ class CuratedRecommendationsProvider:
                 lints_interest_backend=self.lints_interest_backend,
                 region=derive_region(request.locale, request.region),
             )
-        elif surface_id in (
-            SurfaceId.NEW_TAB_EN_US,
-            SurfaceId.NEW_TAB_EN_GB,
-            SurfaceId.NEW_TAB_EN_CA,
-        ):
-            # US/GB/CA non-sections: fetch from sections backend instead of scheduler
+        elif surface_id in ROLLED_OUT_SECTION_SURFACES:
+            # Rolled-out section surfaces: fetch from sections backend instead of scheduler
             rescaler: EngagementRescaler | None = None
             rescaler = CrawledContentRescaler()
             general_feed = await get_legacy_recommendations_from_sections(
