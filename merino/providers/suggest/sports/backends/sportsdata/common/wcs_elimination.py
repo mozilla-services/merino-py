@@ -10,6 +10,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 
 _FIRST_KNOCKOUT_ADVANCER_COUNT = 32
 _ELIMINATED_TEAM_KEYS_META_KEY = "meta:eliminated_team_keys"
+_PLACEHOLDER_TEAM_KEYS = {"TBD"}
 
 
 def eliminated_team_keys_cache_key(cache_prefix: str) -> str:
@@ -101,14 +102,14 @@ def _active_path_team_keys(events: list[Event]) -> set[str]:
 
 
 def _event_team_keys(event: Event) -> set[str]:
-    """Return non-empty team keys from an event."""
+    """Return real, non-empty team keys from an event."""
     return {
         key
         for key in (
             event.home_team.get("key"),
             event.away_team.get("key"),
         )
-        if isinstance(key, str) and key
+        if isinstance(key, str) and key and key not in _PLACEHOLDER_TEAM_KEYS
     }
 
 

@@ -44,6 +44,30 @@ def test_event_info_from_event_uses_source_day_for_world_cup_query() -> None:
     assert info.query == "World Cup 2026 IR Iran vs New Zealand 15 June 2026"
 
 
+def test_event_info_from_event_builds_tbd_world_cup_query() -> None:
+    """Placeholder teams stay non-null and produce the expected click query."""
+    e = event(
+        event_id=5,
+        day_offset=20,
+        hour=20,
+        home=("TBD", "TBD", 0),
+        away=("TBD", "TBD", 0),
+        status=GameStatus.Scheduled,
+        original_date="2026-07-05T00:00:00",
+        stage="Quarterfinals",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team.name == "TBD"
+    assert info.home_team.global_team_id == 0
+    assert info.home_team.icon_url is None
+    assert info.away_team.name == "TBD"
+    assert info.away_team.global_team_id == 0
+    assert info.away_team.icon_url is None
+    assert info.query == "World Cup 2026 TBD vs TBD 05 July 2026"
+
+
 def test_event_info_from_event_includes_stage() -> None:
     """Ensure stage is propagated from cache to response"""
     e = event(

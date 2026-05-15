@@ -18,7 +18,7 @@ from pydantic import ValidationError
 
 from merino.cache.redis import RedisAdapter
 from merino.cache.none import NoCacheAdapter
-from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports import LOGGING_TAG, utc_time_from_now
 from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
@@ -27,6 +27,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     SportTerms,
     Team,
     Event,
+    SportsDataEventRow,
     SPORTSDATA_US_EASTERN,
     SPORTSDATA_UTC,
     sportsdata_day_slug,
@@ -39,6 +40,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination 
 )
 
 FORCE_IMPORT = ""
+_TBD_TEAM_KEY = "TBD"
+_SEASON_TYPE_POSTSEASON = 3
 
 # When creating a new sport class, add its entry to SPORT_CATEGORY_MAP below.
 # The key must match the class name, as that is what is stored in the `Event.sport` field.
@@ -936,6 +939,72 @@ class WCS(Sport):
         team_data = super().team_minimal(team)
         team_data["name"] = team.name
         return team_data
+
+    def event_from_row(self, row: SportsDataEventRow) -> Event | None:
+        """Create a WCS event, preserving knockout placeholders with TBD teams."""
+        if self._is_knockout_placeholder_row(row):
+            return self._knockout_placeholder_event_from_row(row)
+        return super().event_from_row(row)
+
+    def _is_knockout_placeholder_row(self, row: SportsDataEventRow) -> bool:
+        """Return True when a knockout row has at least one unassigned team."""
+        return (
+            row.raw.get("SeasonType") == _SEASON_TYPE_POSTSEASON
+            and row.raw.get("Group") is None
+            and (row.home_team_id is None or row.away_team_id is None)
+        )
+
+    def _knockout_placeholder_event_from_row(self, row: SportsDataEventRow) -> Event | None:
+        """Create an Event for knockout rows whose teams are not fully known yet."""
+        if not self.row_in_event_window(row):
+            return None
+
+        home_side = self._event_team_or_tbd_for_row(row, row.home_team_id)
+        away_side = self._event_team_or_tbd_for_row(row, row.away_team_id)
+        if home_side is None or away_side is None:
+            return None
+        home_team, home_terms = home_side
+        away_team, away_terms = away_side
+
+        return Event(
+            sport=self.name,
+            id=row.game_id,
+            terms=" ".join(term for term in (home_terms, away_terms) if term).strip(),
+            date=row.kickoff,
+            original_date=row.original_date,
+            home_team=home_team,
+            away_team=away_team,
+            home_score=row.home_score,
+            away_score=row.away_score,
+            status=row.status,
+            expiry=utc_time_from_now(self.event_ttl),
+            updated=row.updated,
+            **self.event_details(row.raw),
+        )
+
+    def _event_team_or_tbd_for_row(
+        self, row: SportsDataEventRow, team_id: int | None
+    ) -> tuple[dict[str, Any], str] | None:
+        """Return compact team data and search terms for one placeholder row side."""
+        if team_id is None:
+            return self._tbd_team_minimal(), _TBD_TEAM_KEY.lower()
+
+        team = self.teams.get(team_id)
+        if team is None:
+            logger.warning(
+                "%s Could not find team info for '%s' vs '%s' for %s: %s",
+                LOGGING_TAG,
+                row.home_team_key,
+                row.away_team_key,
+                self.name,
+                row.raw,
+            )
+            return None
+        return self.team_minimal(team), team.terms
+
+    def _tbd_team_minimal(self) -> dict[str, Any]:
+        """Return the compact event-team shape for an unassigned WCS side."""
+        return {"key": _TBD_TEAM_KEY, "name": _TBD_TEAM_KEY, "colors": [], "id": 0}
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""

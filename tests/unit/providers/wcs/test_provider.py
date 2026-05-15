@@ -5,7 +5,7 @@
 """Unit tests for the WCS matches provider."""
 
 from collections import Counter
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -136,6 +136,40 @@ async def test_public_sport_identifier_is_soccer() -> None:
 
     assert events
     assert {event.sport for event in events} == {"soccer"}
+
+
+@pytest.mark.asyncio
+async def test_matches_include_tbd_placeholder_teams() -> None:
+    """The matches endpoint can return scheduled bracket placeholders."""
+    placeholder = build_event(
+        90086997,
+        20,
+        20,
+        ("TBD", "TBD", 0),
+        ("TBD", "TBD", 0),
+        GameStatus.Scheduled,
+        original_date="2026-07-05T00:00:00",
+        stage="Quarterfinals",
+        round_id=1617,
+        season_type=3,
+    )
+
+    response = await build_provider(events=[placeholder]).get_matches(
+        ANCHOR + timedelta(days=20),
+        limit=None,
+        team_keys=None,
+    )
+
+    assert len(response.current) == 1
+    event = response.current[0]
+    assert event.home_team.name == "TBD"
+    assert event.home_team.global_team_id == 0
+    assert event.home_team.icon_url is None
+    assert event.away_team.name == "TBD"
+    assert event.away_team.global_team_id == 0
+    assert event.away_team.icon_url is None
+    assert event.stage == "Quarterfinals"
+    assert event.query == "World Cup 2026 TBD vs TBD 05 July 2026"
 
 
 @pytest.mark.asyncio
