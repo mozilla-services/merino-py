@@ -78,6 +78,7 @@ def test_event_info_from_event_stage_defaults_to_none() -> None:
 
 
 def test_event_info_from_event_propagates_group_to_both_teams() -> None:
+    """The event-level group surfaces on both team info entries."""
     e = event(
         event_id=5,
         day_offset=0,
