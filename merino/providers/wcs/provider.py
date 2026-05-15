@@ -177,22 +177,25 @@ class WcsProvider:
         self, geolocation: Location | None, accepted_languages: list[str]
     ) -> WatchLinksResponse:
         """Return locale-resolved watch links for WCS matches."""
+        # streams available in the user's own country and language
         your_region = [
-            YourRegionEntry(product_name=e.product_name, entitlement=e.entitlement, url=e.url)
-            for e in resolve_watch_links(geolocation, accepted_languages)
-        ]
-        other_regions = [
-            OtherRegionEntry(
-                country_code=display_code,
-                streams=[
-                    OtherRegionStream(
-                        product_name=e.product_name, entitlement=e.entitlement, url=e.url
-                    )
-                    for e in streams
-                ],
+            YourRegionEntry(
+                product_name=link.product_name, entitlement=link.entitlement, url=link.url
             )
-            for display_code, streams in resolve_other_regions(geolocation, accepted_languages)
+            for link in resolve_watch_links(geolocation, accepted_languages)
         ]
+
+        # streams grouped by other countries, lang-match first then alphabetical
+        other_regions = []
+        for display_code, links in resolve_other_regions(geolocation, accepted_languages):
+            streams = [
+                OtherRegionStream(
+                    product_name=link.product_name, entitlement=link.entitlement, url=link.url
+                )
+                for link in links
+            ]
+            other_regions.append(OtherRegionEntry(country_code=display_code, streams=streams))
+
         return WatchLinksResponse(your_region=your_region, other_regions=other_regions)
 
     async def _get_eliminated_team_keys(self) -> set[str]:
