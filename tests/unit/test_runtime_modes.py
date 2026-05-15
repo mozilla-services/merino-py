@@ -201,7 +201,7 @@ print(
         "/api/v1/wcs/live",
         "/api/v1/wcs/matches",
         "/api/v1/wcs/teams",
-        "/api/v1/wcs/watch-links"
+        "/api/v1/wcs/watch-links",
     ]
 
 

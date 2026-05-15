@@ -13,14 +13,10 @@ from merino.providers.wcs import get_provider as get_wcs_provider
 from merino.providers.wcs.protocol import (
     LiveMatchesResponse,
     MatchesResponse,
-    OtherRegionEntry,
-    OtherRegionStream,
     TeamsResponse,
     WatchLinksResponse,
-    YourRegionEntry,
 )
 from merino.providers.wcs.provider import WcsProvider
-from merino.providers.wcs.watch_links import resolve_other_regions, resolve_watch_links
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
 )
@@ -87,27 +83,11 @@ async def get_wcs_live(
 async def get_wcs_watch_links(
     request: Request,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
+    provider: WcsProvider = Depends(get_wcs_provider),
 ) -> WatchLinksResponse:
     """Return locale-resolved watch links for WCS matches."""
     geolocation: Location | None = request.scope.get(ScopeKey.GEOLOCATION)
-    languages = get_accepted_languages(accept_language)
-    your_region = [
-        YourRegionEntry(product_name=e.product_name, entitlement=e.entitlement, url=e.url)
-        for e in resolve_watch_links(geolocation, languages)
-    ]
-    other_regions = [
-        OtherRegionEntry(
-            country_code=display_code,
-            streams=[
-                OtherRegionStream(
-                    product_name=e.product_name, entitlement=e.entitlement, url=e.url
-                )
-                for e in streams
-            ],
-        )
-        for display_code, streams in resolve_other_regions(geolocation, languages)
-    ]
-    return WatchLinksResponse(your_region=your_region, other_regions=other_regions)
+    return await provider.get_watch_links(geolocation, get_accepted_languages(accept_language))
 
 
 @router.get(

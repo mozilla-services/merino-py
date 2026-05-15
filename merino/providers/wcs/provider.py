@@ -3,6 +3,7 @@
 from datetime import UTC, date, datetime, time, timedelta
 import logging
 from typing import Protocol
+
 from aiodogstatsd import Client
 import sentry_sdk
 
@@ -17,9 +18,14 @@ from merino.providers.wcs.protocol import (
     EventInfo,
     LiveMatchesResponse,
     MatchesResponse,
+    OtherRegionEntry,
+    OtherRegionStream,
     TeamInfo,
     TeamsResponse,
+    WatchLinksResponse,
+    YourRegionEntry,
 )
+from merino.providers.wcs.utils import resolve_other_regions, resolve_watch_links
 from merino.utils.metrics import get_metrics_client
 
 _WINDOW = timedelta(days=10)
@@ -166,6 +172,28 @@ class WcsProvider:
             )
         # return teams sorted by name in A - Z order.
         return TeamsResponse(teams=sorted(response, key=lambda t: t.name))
+
+    async def get_watch_links(
+        self, geolocation: Location | None, accepted_languages: list[str]
+    ) -> WatchLinksResponse:
+        """Return locale-resolved watch links for WCS matches."""
+        your_region = [
+            YourRegionEntry(product_name=e.product_name, entitlement=e.entitlement, url=e.url)
+            for e in resolve_watch_links(geolocation, accepted_languages)
+        ]
+        other_regions = [
+            OtherRegionEntry(
+                country_code=display_code,
+                streams=[
+                    OtherRegionStream(
+                        product_name=e.product_name, entitlement=e.entitlement, url=e.url
+                    )
+                    for e in streams
+                ],
+            )
+            for display_code, streams in resolve_other_regions(geolocation, accepted_languages)
+        ]
+        return WatchLinksResponse(your_region=your_region, other_regions=other_regions)
 
     async def _get_eliminated_team_keys(self) -> set[str]:
         """Return team keys that no longer have a tournament path."""
