@@ -26,7 +26,6 @@ from merino.curated_recommendations.ml_backends.protocol import (
     MLRecsBackend,
 )
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
@@ -82,7 +81,6 @@ HEADLINES_SECTION_KEY = "headlines"
 DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
-IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
 MAX_SECTIONS_PER_RESPONSE = 20
 
 # Number of articles to use when ranking the section. We choose 4 because there are typically only
@@ -352,13 +350,6 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
         is_enrolled_in_experiment(request, exp_name, "treatment")
         for exp_name in contextual_ads_experiments
     )
-
-
-def is_inferred_contextual_ranking(personal_interests: ProcessedInterests | None) -> bool:
-    """Return True if inferred contextual ranking should be applied."""
-    if IS_COHORT_FEATURE_DISABLED:
-        return False
-    return personal_interests is not None and personal_interests.cohort is not None
 
 
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -897,7 +888,17 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
+    # The current Canada experiment doesn't have the isMerinoExperiment flag set so we can only check
+    # if there is an interest vector. Contexual ranking shows some advantages of thompson sampling (such as pre
+    # ranking certain topics higher, so it has advantages even when there is no interest vector returned)
+    use_contexual_ranker = (
+        (
+            surface_id == SurfaceId.NEW_TAB_EN_US
+            or (surface_id == SurfaceId.NEW_TAB_EN_CA and personal_interests is not None)
+        )
+        and ml_backend is not None
+        and ml_backend.is_valid(surface_id)
+    )
     # use interest ranker if we have interests available
     use_interest_ranker = (
         is_inferred_interest_experiment(request)
@@ -905,9 +906,7 @@ async def get_sections(
         and personal_interests is not None
         and bool(personal_interests.scores)
     )
-    use_contexual_ranker = (
-        do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
-    )
+    # Interest ranker is experimental so gets priority over contexual ranker
     if use_interest_ranker:
         ranker = InterestRanker(
             engagement_backend=engagement_backend,
@@ -931,8 +930,6 @@ async def get_sections(
             prior_backend=prior_backend,
             surface_id=surface_id,
             ml_backend=ml_backend,
-            disable_time_zone_context=request.experimentBranch
-            == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
         )
     else:
         ranker = ThompsonSamplingRanker(
