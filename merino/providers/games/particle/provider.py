@@ -11,6 +11,12 @@ from pydantic import Json
 from typing import Any
 
 from merino.providers.games.particle.backends.protocol import Particle, ParticleBackend
+from merino.providers.games.particle.backends.utils import (
+    update_files_puzzle,
+    update_files_runtime,
+    validate_manifest_against_schema,
+    validate_manifest_schema_version,
+)
 from merino.utils import cron
 
 logger = logging.getLogger(__name__)
@@ -73,15 +79,12 @@ class Provider:
 
         try:
             raw_manifest_json = await self.backend.fetch_manifest_json_from_remote()
-        except Exception as e:
+        except Exception as ex:
             logger.warning(
-                "Failed to fetch Particle game data from remote endpoint", extra={"error": str(e)}
+                "Failed to fetch Particle game data from remote endpoint", extra={"error": str(ex)}
             )
 
-            sentry_sdk.capture_message(
-                f"Failed to fetch Particle game data from remote endpoint: {e}",
-                level="error",
-            )
+            sentry_sdk.capture_exception(ex)
 
         if raw_manifest_json is None:
             logger.warning(
@@ -96,12 +99,35 @@ class Provider:
             if particle_updated:
                 self.last_successful_update_at = time.time()
 
-    async def process_remote_particle_data(self, manifest_json: Json) -> bool:
+    async def process_remote_particle_data(self, remote_manifest_json: Json) -> bool:
         """Orchestration function to validate and upload new Particle game data files to GCS.
         Returns True only if some files (puzzle runtime and/or daily puzzle) were updated.
         """
-        # TODO in follow up PR
-        return True
+        # ensure the remote schema is valid
+        # this will raise if the schema is invalid
+        validate_manifest_against_schema(remote_manifest_json, self.manifest_schema)
+
+        # ensure the schema verison is as expected
+        # this will raise is the schema version doesn't match
+        validate_manifest_schema_version(remote_manifest_json, self.manifest_schema_version)
+
+        # get the manifest file we last stored in GCS to determine if the
+        # remote version is newer.
+        # returns None if no file is found in GCS, will raise if there's an
+        # error retrieving from GCS.
+        gcs_manifest_json = await self.backend.fetch_manifest_json_from_gcs()
+
+        # conditionally attempt to update file sets - daily puzzle and runtime
+        puzzle_updated = await update_files_puzzle(
+            manifest_remote=remote_manifest_json, manifest_gcs=gcs_manifest_json
+        )
+        runtime_updated = await update_files_runtime(
+            manifest_remote=remote_manifest_json, manifest_gcs=gcs_manifest_json
+        )
+
+        # if either set of files (daily puzzle or runtime) were updated, we can
+        # consider this update successful
+        return True if puzzle_updated or runtime_updated else False
 
     async def get_game_url(self) -> Particle | None:
         """Proxy get_game_url from Particle backend"""

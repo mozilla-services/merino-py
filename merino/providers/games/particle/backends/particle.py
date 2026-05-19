@@ -71,25 +71,23 @@ class ParticleBackend:
 
             logger.error(error_msg)
 
-            sentry_sdk.capture_message(
-                error_msg,
-                level="error",
-            )
+            sentry_sdk.capture_exception(ex)
 
         # if the manifest was retrieved and has a content property, we're good
         if manifest and manifest.content:
             # try to convert the contents of manifest.content to JSON
             try:
                 manifest_json = orjson.loads(manifest.content)
-            except ValueError:
+            except ValueError as ex:
                 error_msg = "JSON error when converting Particle response"
 
                 logger.error(error_msg)
 
-                sentry_sdk.capture_message(
-                    error_msg,
-                    level="error",
-                )
+                sentry_sdk.capture_exception(ex)
 
         # returning json or None
         return manifest_json
+
+    async def fetch_manifest_json_from_gcs(self) -> Json | None:
+        """Retrieve the manifest json last stored in GCS"""
+        return self.remote_file_manager.get_manifest_file()
