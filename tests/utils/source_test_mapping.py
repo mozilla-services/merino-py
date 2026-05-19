@@ -73,17 +73,8 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/unit/providers/suggest/wikipedia/backends/test_elastic.py",
             "tests/unit/providers/suggest/wikipedia/test_provider.py",
             "tests/unit/providers/suggest/yelp/backends/test_yelp.py",
-            "tests/unit/test_config_logging.py",
             "tests/unit/utils/test_icon_processor.py",
         ],
-    },
-    "merino/configs/app_configs/config_logging.py": {
-        "direct": ["tests/unit/test_config_logging.py"],
-        "indirect": [],
-    },
-    "merino/configs/app_configs/config_sentry.py": {
-        "direct": ["tests/unit/test_config_sentry.py"],
-        "indirect": [],
     },
     "merino/curated_recommendations/__init__.py": {
         "direct": [],
@@ -1365,10 +1356,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
     },
     "merino/utils/user_agent_parsing.py": {
         "direct": ["tests/unit/utils/test_user_agent_parsing.py"],
-        "indirect": [],
-    },
-    "merino/utils/version.py": {
-        "direct": ["tests/unit/utils/test_version.py"],
         "indirect": [],
     },
     "merino/web/__init__.py": {

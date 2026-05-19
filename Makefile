@@ -3,10 +3,13 @@ ES_IMAGE := merino-elasticsearch:local
 TEST_DIR := tests
 TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
+COMMON_PACKAGE_DIR := merino-common/merino_common
+COMMON_TEST_DIR := merino-common/tests
 UNIT_TEST_DIR := $(TEST_DIR)/unit
+COMMON_UNIT_TEST_DIR := $(COMMON_TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
 LOAD_TEST_DIR := $(TEST_DIR)/load
-APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR)
+APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR) $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR)
 INSTALL_STAMP := .install.stamp
 UV := $(shell command -v uv 2> /dev/null)
 ALL_TEST_FILES := $(shell $(UV) run python tests/utils/test_probe.py 2> /dev/null)
@@ -36,7 +39,7 @@ NAV_OPTS ?=
 install: $(INSTALL_STAMP)  ##  Install dependencies with uv
 $(INSTALL_STAMP): pyproject.toml uv.lock
 	@if [ -z $(UV) ]; then echo "uv could not be found."; exit 2; fi
-	$(UV) sync --all-groups
+	$(UV) sync --all-groups --all-packages
 	touch $(INSTALL_STAMP)
 
 .PHONY: ruff-lint
@@ -89,7 +92,7 @@ test-coverage-check: $(INSTALL_STAMP)  ##  Evaluate combined unit and integratio
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.unit \
 	    MERINO_ENV=testing \
-	    $(UV) run pytest $(UNIT_TEST_DIR) \
+	    $(UV) run pytest $(UNIT_TEST_DIR) $(COMMON_UNIT_TEST_DIR) \
 	    --junit-xml=$(UNIT_JUNIT_XML) -vv $(XTRA)
 
 .PHONY: quick-test

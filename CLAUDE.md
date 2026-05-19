@@ -42,7 +42,7 @@ Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexe
 
 ## Configuration
 
-Dynaconf with TOML files in `merino/configs/app_configs/`. Switched by `MERINO_ENV` (development/testing/ci/stage/production).
+Dynaconf with TOML files in `merino/configs/`. Switched by `MERINO_ENV` (development/testing/ci/stage/production).
 
 Env var overrides: `MERINO_{SECTION}__{KEY}=value` (double underscore for nesting).
 

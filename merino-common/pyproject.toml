@@ -1,0 +1,22 @@
+[project]
+name = "merino-common"
+version = "0.1.0"
+description = "Common Modules for Merino"
+authors = [{ name = "Mozilla" }]
+requires-python = "~=3.14.0"
+# Note:  uv workspace currently doesn't support inheriting root dependencies
+# for the workspace members. Will need to duplicate them here.
+dependencies = [
+    "pydantic>=2.13.0,<3",
+    "sentry-sdk[fastapi]>=2.13.0,<3",
+    "dockerflow>=2026.3.4,<2027",
+]
+
+[tool.uv.build-backend]
+module-name = "merino_common"
+# Opt for the flat structure "merino_commont" over "src/merino_common"
+module-root = ""
+
+[build-system]
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
