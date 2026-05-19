@@ -13,6 +13,7 @@ from circuitbreaker import CircuitBreakerError
 
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
+from merino.middleware.geolocation import Location
 from merino.providers import wcs as wcs_module
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.wcs.fake_live_data import build_live_events
@@ -22,7 +23,6 @@ from merino.providers.wcs.provider import (
     _LIVE_MATCH_LOOKBACK,
     _WINDOW,
 )
-from merino.providers.wcs.protocol import TeamInfo, TeamsResponse
 from tests.wcs.factories import (
     ANCHOR,
     StubWcsSport,
@@ -31,6 +31,16 @@ from tests.wcs.factories import (
     build_teams,
     event as build_event,
 )
+from merino.providers.wcs.protocol import (
+    LiveMatchesResponse,
+    TeamInfo,
+    TeamsResponse,
+    WatchLinksResponse,
+)
+from merino.providers.wcs.watch_links import build_watch_link
+from tests.wcs.factories import ANCHOR, build_provider, build_teams, event as build_event
+
+_LIVE_EVENT_COUNT = len(build_live_events(ANCHOR))
 
 
 def test_cache_uses_wcs_redis_settings(mocker) -> None:
@@ -635,3 +645,45 @@ async def test_team_elimination_cache_error_leaves_teams_uneliminated(mocker) ->
     assert not any(team.eliminated for team in response.teams)
     metrics_client.increment.assert_called_once_with("wcs.cache_error", tags={"endpoint": "teams"})
     sentry_capture.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_watch_links_no_geolocation_returns_empty_sections() -> None:
+    """Both your_region and other_regions are empty when geolocation is None."""
+    response = await build_provider().get_watch_links(None, [])
+
+    assert isinstance(response, WatchLinksResponse)
+    assert response.your_region == []
+    assert response.other_regions == []
+
+
+@pytest.mark.asyncio
+async def test_get_watch_links_returns_correct_structure(mocker) -> None:
+    """Resolver results are mapped into YourRegionEntry and OtherRegionEntry objects."""
+    stream = build_watch_link(
+        "FIFA+",
+        "https://www.plus.fifa.com",
+        sort_order=1,
+        in_production=True,
+        vpn_available=True,
+        show_vpn_regions=True,
+    )
+    mocker.patch(
+        "merino.providers.wcs.provider.resolve_watch_links",
+        return_value=[stream],
+    )
+    mocker.patch(
+        "merino.providers.wcs.provider.resolve_other_regions",
+        return_value=[("UK", [stream])],
+    )
+
+    response = await build_provider().get_watch_links(Location(country="US"), ["en"])
+
+    assert len(response.your_region) == 1
+    assert response.your_region[0].product_name == "FIFA+"
+    assert response.your_region[0].entitlement == stream.entitlement
+
+    assert len(response.other_regions) == 1
+    assert response.other_regions[0].country_code == "UK"
+    assert len(response.other_regions[0].streams) == 1
+    assert response.other_regions[0].streams[0].product_name == "FIFA+"
