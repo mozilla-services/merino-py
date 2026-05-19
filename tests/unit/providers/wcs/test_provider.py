@@ -32,13 +32,11 @@ from tests.wcs.factories import (
     event as build_event,
 )
 from merino.providers.wcs.protocol import (
-    LiveMatchesResponse,
     TeamInfo,
     TeamsResponse,
     WatchLinksResponse,
 )
 from merino.providers.wcs.watch_links import build_watch_link
-from tests.wcs.factories import ANCHOR, build_provider, build_teams, event as build_event
 
 _LIVE_EVENT_COUNT = len(build_live_events(ANCHOR))
 
