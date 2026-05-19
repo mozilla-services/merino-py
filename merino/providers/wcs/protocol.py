@@ -5,6 +5,9 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
+from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
+    TBD_TEAM_KEY,
+)
 from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
@@ -14,7 +17,6 @@ from merino.utils.logos import LogoCategory, load_manifest
 # Pin WCS flag URLs to the production image bucket so stage and prod render the
 # same assets.
 _LOGO_HOST = "https://storage.googleapis.com/merino-images-prod"
-_TBD_TEAM_KEY = "TBD"
 
 
 def _icon(key: str) -> HttpUrl | None:
@@ -93,9 +95,9 @@ def _is_tbd_event_team(team: dict[str, Any]) -> bool:
     """Return True for the compact placeholder team used in cached WCS events."""
     try:
         team_id = int(team.get("id", -1))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         team_id = -1
-    return str(team.get("key", "")).upper() == _TBD_TEAM_KEY and team_id == 0
+    return str(team.get("key", "")).upper() == TBD_TEAM_KEY and team_id == 0
 
 
 class EventInfo(BaseModel):

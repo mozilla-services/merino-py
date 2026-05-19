@@ -10,7 +10,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Even
 
 _FIRST_KNOCKOUT_ADVANCER_COUNT = 32
 _ELIMINATED_TEAM_KEYS_META_KEY = "meta:eliminated_team_keys"
-_PLACEHOLDER_TEAM_KEYS = {"TBD"}
+TBD_TEAM_KEY = "TBD"
+_PLACEHOLDER_TEAM_KEYS = {TBD_TEAM_KEY}
 
 
 def eliminated_team_keys_cache_key(cache_prefix: str) -> str:

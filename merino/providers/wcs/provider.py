@@ -165,6 +165,5 @@ def _event_date(event: Event) -> date:
 def _has_team(event: EventInfo, team_keys: frozenset[str]) -> bool:
     """Return True if either side of `event` plays for one of `team_keys`."""
     return any(
-        team is not None and team.key in team_keys
-        for team in (event.home_team, event.away_team)
+        team is not None and team.key in team_keys for team in (event.home_team, event.away_team)
     )

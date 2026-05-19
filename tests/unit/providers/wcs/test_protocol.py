@@ -4,9 +4,19 @@
 
 """Unit tests for merino.providers.wcs.protocol."""
 
+from collections.abc import Callable
+
+from pytest_mock import MockerFixture
+
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
-from merino.providers.wcs.protocol import EventInfo
+from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
+    TBD_TEAM_KEY,
+)
+from merino.providers.wcs.protocol import EventInfo, TeamInfo, _is_tbd_event_team
+from merino.utils.logos import LogoCategory, LogoManifest
 from tests.wcs.factories import event
+
+MakeManifest = Callable[..., LogoManifest]
 
 
 def test_event_info_from_event_builds_world_cup_query() -> None:
@@ -42,6 +52,38 @@ def test_event_info_from_event_uses_source_day_for_world_cup_query() -> None:
 
     assert info.date == "2026-06-16T02:00:00+00:00"
     assert info.query == "World Cup 2026 IR Iran vs New Zealand 15 June 2026"
+
+
+def test_team_info_icon_url_can_be_none_when_logo_is_missing(
+    mocker: MockerFixture,
+    make_manifest: MakeManifest,
+) -> None:
+    """Teams without a manifest logo serialize icon_url=None."""
+    mocker.patch("merino.providers.wcs.protocol.load_manifest", return_value=make_manifest())
+
+    info = TeamInfo.from_event_team({"key": "ZZZ", "id": 1, "name": "Unknown"})
+
+    assert info.icon_url is None
+
+
+def test_team_info_icon_url_uses_png_when_svg_is_missing(
+    mocker: MockerFixture,
+    make_manifest: MakeManifest,
+) -> None:
+    """Manifest entries without SVGs fall back to their PNG URL."""
+    mocker.patch(
+        "merino.providers.wcs.protocol.load_manifest",
+        return_value=make_manifest((LogoCategory.Nations, "ZZZ")),
+    )
+
+    info = TeamInfo.from_event_team({"key": "ZZZ", "id": 1, "name": "Unknown"})
+
+    assert str(info.icon_url).endswith("/logos/nations/nations_zzz.png")
+
+
+def test_is_tbd_event_team_ignores_malformed_placeholder_id() -> None:
+    """A malformed placeholder id is not treated as an undecided bracket side."""
+    assert _is_tbd_event_team({"key": TBD_TEAM_KEY, "id": "bad"}) is False
 
 
 def test_event_info_from_event_builds_tbd_world_cup_query() -> None:

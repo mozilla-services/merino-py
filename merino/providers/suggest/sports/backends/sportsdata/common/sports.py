@@ -33,6 +33,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     sportsdata_day_slug,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
+    TBD_TEAM_KEY,
     eliminated_team_keys,
     eliminated_team_keys_cache_key,
     parse_eliminated_team_keys,
@@ -40,7 +41,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination 
 )
 
 FORCE_IMPORT = ""
-_TBD_TEAM_KEY = "TBD"
 _SEASON_TYPE_POSTSEASON = 3
 
 # When creating a new sport class, add its entry to SPORT_CATEGORY_MAP below.
@@ -987,7 +987,7 @@ class WCS(Sport):
     ) -> tuple[dict[str, Any], str] | None:
         """Return compact team data and search terms for one placeholder row side."""
         if team_id is None:
-            return self._tbd_team_minimal(), _TBD_TEAM_KEY.lower()
+            return self._tbd_team_minimal(), TBD_TEAM_KEY.lower()
 
         team = self.teams.get(team_id)
         if team is None:
@@ -1004,7 +1004,7 @@ class WCS(Sport):
 
     def _tbd_team_minimal(self) -> dict[str, Any]:
         """Return the compact event-team shape for an unassigned WCS side."""
-        return {"key": _TBD_TEAM_KEY, "name": _TBD_TEAM_KEY, "colors": [], "id": 0}
+        return {"key": TBD_TEAM_KEY, "name": TBD_TEAM_KEY, "colors": [], "id": 0}
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
