@@ -355,6 +355,26 @@ def expected_us_en_us() -> dict[str, Any]:
     }
 
 
+def test_watch_links_no_geolocation_returns_empty_response(client: TestClient) -> None:
+    """Both sections are empty when geolocation is not available."""
+    response = client.get(_PATH, headers={"Accept-Language": "en-US"})
+
+    assert response.status_code == 200
+    assert response.json() == {"your_region": [], "other_regions": []}
+
+
+def test_watch_links_with_geolocation_returns_populated_response(
+    client: TestClient, inject_us_location: None
+) -> None:
+    """With US geolocation, both sections are populated."""
+    response = client.get(_PATH, headers={"Accept-Language": "en-US"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["your_region"]) > 0
+    assert len(body["other_regions"]) > 0
+
+
 def test_watch_links_us_en_us(
     client: TestClient,
     inject_us_location: None,
