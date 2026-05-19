@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 _SORT_ORDER_LABELS: dict[int, str] = {
-    0: "Trevor",
     1: "FIFA+",
     2: "Free",
     3: "Free and Paid",
@@ -20,7 +19,7 @@ class WatchLinkEntry(BaseModel):
     product_name: str = Field(description="Stream product name.")
     url: HttpUrl = Field(description="Direct stream URL.")
     sort_order: int = Field(
-        description="Display sort order: 0=Trevor, 1=FIFA, 2=Free, 3=Free and Paid, 4=Free Trial, 5=Paid."
+        description="Display sort order: 1=FIFA, 2=Free, 3=Free and Paid, 4=Free Trial, 5=Paid."
     )
     in_production: bool = Field(description="True when this stream is enabled in production.")
     vpn_available: bool = Field(
@@ -46,7 +45,6 @@ class CountryEntry(TypedDict):
 _FIFA_PLUS = HttpUrl(
     "https://www.plus.fifa.com/showcase/fifa-world-cup-26tm/89de0054-9fa6-4741-88e1-a902dc26740f"
 )
-_TREVOR_NOAH_WATCH_PARTY = HttpUrl("https://www.youtube.com/user/trevornoah")
 
 
 def _build_watch_link(
@@ -80,20 +78,6 @@ def _build_fifa_watch_link(
         in_production=True,
         vpn_available=vpn_available,
         show_vpn_regions=show_vpn_regions,
-    )
-
-
-def _build_trevor_noah_watch_party_link(
-    *, vpn_available: bool, sort_order: int = 0
-) -> WatchLinkEntry:
-    """Build a Trevor Noah Watch Party entry reusing the shared YouTube URL."""
-    return WatchLinkEntry(
-        product_name="Trevor Noah's World Cup Watch Party",
-        url=_TREVOR_NOAH_WATCH_PARTY,
-        sort_order=sort_order,
-        in_production=True,
-        vpn_available=vpn_available,
-        show_vpn_regions=False,
     )
 
 
@@ -163,7 +147,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "dau": 593_227,
         "langs": {
             "en": [
-                _build_trevor_noah_watch_party_link(vpn_available=True),
                 _build_fifa_watch_link(vpn_available=True),
                 _build_watch_link(
                     "SBS On Demand",
@@ -256,7 +239,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "dau": 1_160_538,
         "langs": {
             "en": [
-                _build_trevor_noah_watch_party_link(vpn_available=True),
                 _build_fifa_watch_link(vpn_available=True),
                 _build_watch_link(
                     "TSN",
@@ -583,7 +565,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "dau": 1_099_025,
         "langs": {
             "en": [
-                _build_trevor_noah_watch_party_link(vpn_available=True),
                 _build_fifa_watch_link(vpn_available=True),
                 _build_watch_link(
                     "BBC iPlayer",
@@ -656,7 +637,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "dau": 93_558,
         "langs": {
             "en": [
-                _build_trevor_noah_watch_party_link(vpn_available=True),
                 _build_fifa_watch_link(vpn_available=True),
                 _build_watch_link(
                     "RTÉ Player",
@@ -769,7 +749,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "dau": 120_875,
         "langs": {
             "en": [
-                _build_trevor_noah_watch_party_link(vpn_available=True),
                 _build_fifa_watch_link(vpn_available=True),
                 _build_watch_link(
                     "TVNZ+",
@@ -906,7 +885,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "dau": 7_434_829,
         "langs": {
             "en": [
-                _build_trevor_noah_watch_party_link(vpn_available=True),
                 _build_fifa_watch_link(vpn_available=True),
                 _build_watch_link(
                     "Tubi",
@@ -971,7 +949,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "dau": 196_702,
         "langs": {
             "en": [
-                _build_trevor_noah_watch_party_link(vpn_available=True),
                 _build_fifa_watch_link(vpn_available=True),
                 _build_watch_link(
                     "SABC+",

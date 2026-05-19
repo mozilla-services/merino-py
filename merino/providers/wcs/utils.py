@@ -38,7 +38,7 @@ def resolve_watch_links(
     # YOUR REGION
     # Filter: Show in production = 1
     # Filter: LOCAL COUNTRY EXACT MATCH
-    # Sort:   Stream offer entitlement sort order A-Z
+    # Sort:   Stream offer entitlement sort order A-Z (1=FIFA+, 2=Free, 3=Free and Paid, 4=Free Trial, 5=Paid)
     # Sort:   Stream product name A-Z
     """
     if geolocation is None or not geolocation.country:

@@ -27,11 +27,6 @@ def expected_us_en_us() -> dict[str, Any]:
     return {
         "your_region": [
             {
-                "product_name": "Trevor Noah's World Cup Watch Party",
-                "entitlement": "Trevor",
-                "url": "https://www.youtube.com/user/trevornoah",
-            },
-            {
                 "product_name": "FIFA+",
                 "entitlement": "FIFA+",
                 "url": "https://www.plus.fifa.com/showcase/fifa-world-cup-26tm/89de0054-9fa6-4741-88e1-a902dc26740f",
@@ -374,4 +369,4 @@ def test_watch_links_us_en_us(
     total_links = len(body["your_region"]) + sum(
         len(country["streams"]) for country in body["other_regions"]
     )
-    assert total_links == 44
+    assert total_links == 43
