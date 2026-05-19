@@ -107,7 +107,7 @@ class InterestRanker(Ranker):
 
         for r, rec in enumerate(recs):
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
-                rec, rescaler, region
+                rec, rescaler, region, blend_region_with_global=False
             )
 
             # Two conditions must hold to use the LinTS score:

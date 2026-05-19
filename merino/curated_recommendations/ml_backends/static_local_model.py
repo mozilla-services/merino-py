@@ -380,7 +380,7 @@ class SuperInferredModel(LocalModelBackend):
             if is_baysean_smoothing
             else None,
             day_time_weighting=DayTimeWeightingConfig(
-                days=[30],
+                days=[90],
                 relative_weight=[1],
             ),
             interest_vector={
