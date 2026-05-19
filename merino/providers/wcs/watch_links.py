@@ -47,7 +47,7 @@ _FIFA_PLUS = HttpUrl(
 )
 
 
-def _build_watch_link(
+def build_watch_link(
     product_name: str,
     url: str,
     sort_order: int,
@@ -92,7 +92,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "es": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "TVP",
                     "https://www.tvpublica.com.ar/",
                     2,
@@ -100,7 +100,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Pluto TV",
                     "https://pluto.tv/latam/live-tv/66997d18a1b69e00082ee85f?lang=en",
                     4,
@@ -108,7 +108,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Paramount+",
                     "https://www.paramountplus.com/ar/",
                     5,
@@ -124,7 +124,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "de": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "ORF",
                     "https://on.orf.at/live",
                     2,
@@ -132,7 +132,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "ServusTV",
                     "https://www.servustv.com/de/epg",
                     5,
@@ -148,7 +148,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "en": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "SBS On Demand",
                     "https://www.sbs.com.au/ondemand/watch/1726824003663",
                     2,
@@ -166,7 +166,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 _build_fifa_watch_link(vpn_available=True),
             ],
             "fr": [
-                _build_watch_link(
+                build_watch_link(
                     "RTBF",
                     "https://auvio.rtbf.be/categorie/football-11",
                     2,
@@ -176,7 +176,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 ),
             ],
             "nl": [
-                _build_watch_link(
+                build_watch_link(
                     "VRT 1",
                     "https://www.vrt.be/vrtmax/kanalen/sporza/",
                     2,
@@ -192,7 +192,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "bg": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "BNT",
                     "https://tv.bnt.bg/",
                     2,
@@ -208,7 +208,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "pt": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "CazéTV - YouTube",
                     "https://www.youtube.com/@CazeTV/streams",
                     2,
@@ -216,7 +216,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "SBT",
                     "https://mais.sbt.com.br/",
                     2,
@@ -224,7 +224,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Globoplay",
                     "https://globoplay.globo.com/tv-globo/ao-vivo/6120663/",
                     3,
@@ -240,7 +240,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "en": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "TSN",
                     "https://www.tsn.ca/soccer/fifa-world-cup/",
                     3,
@@ -248,7 +248,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "RDS",
                     "https://www.rds.ca/soccer/coupe-du-monde/",
                     3,
@@ -256,7 +256,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Crave",
                     "https://www.crave.ca/en/ctv",
                     5,
@@ -274,7 +274,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 _build_fifa_watch_link(vpn_available=False),
             ],
             "de": [
-                _build_watch_link(
+                build_watch_link(
                     "SRF",
                     "https://www.srf.ch/play/tv/sport-livestreams",
                     2,
@@ -284,7 +284,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 ),
             ],
             "fr": [
-                _build_watch_link(
+                build_watch_link(
                     "RTS",
                     "https://www.rts.ch/play/tv/rts-livestreams",
                     2,
@@ -294,7 +294,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 ),
             ],
             "it": [
-                _build_watch_link(
+                build_watch_link(
                     "RSI",
                     "https://www.rsi.ch/play/tv/streaming",
                     2,
@@ -310,7 +310,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "es": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "Chilevision",
                     "https://www.chilevision.cl/senal-online/",
                     2,
@@ -318,7 +318,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "DGO",
                     "https://www.directvgo.com/cl/home",
                     5,
@@ -326,7 +326,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Paramount+",
                     "https://www.paramountplus.com/cl/",
                     5,
@@ -342,7 +342,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "es": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "Canal RCN",
                     "https://www.canalrcn.com/co/deportes",
                     2,
@@ -350,7 +350,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Ditu",
                     "https://ditu.caracoltv.com/category/copa-mundial-de-futbol-2026",
                     3,
@@ -358,7 +358,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Win Play",
                     "https://winplay.co/co/futbol-internacional",
                     5,
@@ -366,7 +366,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "DIRECTV",
                     "https://www.directvla.com/co/mundial",
                     5,
@@ -382,7 +382,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "cs": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "iVysílání",
                     "https://sport.ceskatelevize.cz/zive-vysilani",
                     2,
@@ -390,7 +390,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Nova Action",
                     "https://tv.nova.cz/sledujte-zive/1-nova",
                     2,
@@ -406,7 +406,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "de": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "ZDF",
                     "https://www.zdf.de/live-tv",
                     2,
@@ -414,7 +414,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "ARD",
                     "https://www.ardmediathek.de/live",
                     2,
@@ -422,7 +422,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "SPORTSCHAU",
                     "https://www.sportschau.de/fussball/fifa-wm-2026/",
                     2,
@@ -430,7 +430,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "MagentaTV",
                     "https://www.telekom.de/sport/magenta-tv-fussball",
                     5,
@@ -446,7 +446,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "da": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "DRTV",
                     "https://www.dr.dk/drtv/kategorier/sport",
                     2,
@@ -454,7 +454,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "TV 2 Play",
                     "https://play.tv2.dk/sport",
                     5,
@@ -470,7 +470,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "es": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "Teleamazonas",
                     "https://www.teleamazonas.com/teleamazonas-en-vivo/",
                     2,
@@ -478,7 +478,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Paramount+",
                     "https://www.paramountplus.com/ec/",
                     5,
@@ -494,7 +494,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "es": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "RTVE",
                     "https://www.rtve.es/play/videos/copa-mundial-de-la-fifa-2026/",
                     2,
@@ -502,7 +502,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "DAZN",
                     "https://www.dazn.com/es-ES/",
                     4,
@@ -518,7 +518,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "fi": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "Yle Areena",
                     "https://areena.yle.fi/1-72511886",
                     3,
@@ -526,7 +526,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "MTV Katsomo",
                     "https://www.mtv.fi/ohjelmat/fifa-2026",
                     3,
@@ -542,7 +542,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "fr": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "M6+",
                     "https://www.m6.fr/coupe-du-monde-2026-p_26649",
                     2,
@@ -550,7 +550,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "beIN SPORTS",
                     "https://connect.beinsports.com/france/",
                     5,
@@ -566,7 +566,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "en": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "BBC iPlayer",
                     "https://www.bbc.co.uk/iplayer/episodes/m002gjj0/fifa-world-cup-2026",
                     2,
@@ -574,7 +574,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "ITVX",
                     "https://www.itv.com/watch",
                     2,
@@ -582,7 +582,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "STV Player",
                     "https://player.stv.tv/live",
                     2,
@@ -598,7 +598,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "hu": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "M4sport",
                     "https://m4sport.hu/elo/mtv4live/",
                     2,
@@ -606,7 +606,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "MÉDIAKLIKK",
                     "https://mediaklikk.hu/elo/dunalive/",
                     2,
@@ -622,7 +622,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "id": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "TVRI Klik",
                     "https://klik.tvri.go.id/detailchannel/TVRI_CH_03",
                     2,
@@ -638,7 +638,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "en": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "RTÉ Player",
                     "https://www.rte.ie/player/onnow",
                     2,
@@ -654,7 +654,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "it": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "RaiPlay",
                     "https://www.raiplay.it/programmi/mondialidicalcio2026",
                     2,
@@ -662,7 +662,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "DAZN",
                     "https://www.dazn.com/it-IT/",
                     5,
@@ -678,7 +678,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "es": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "Azteca Deportes",
                     "https://envivo.tvazteca.com/",
                     2,
@@ -686,7 +686,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "ViX",
                     "https://vix.com/es-es/canales",
                     3,
@@ -702,7 +702,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "nl": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "NPO",
                     "https://npo.nl/start/live",
                     2,
@@ -710,7 +710,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "NOS",
                     "https://nos.nl/live",
                     2,
@@ -726,7 +726,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "nn": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "NRK TV",
                     "https://tv.nrk.no/serie/fifa-fotball-vm-2026",
                     2,
@@ -734,7 +734,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "TV 2 Play",
                     "https://www.tv2.no/livesport/fotball/turneringer/fifa-fotball-vm/a315b842-f4bc-5687-9ecb-3e06d6acdf9a/oversikt",
                     5,
@@ -750,7 +750,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "en": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "TVNZ+",
                     "https://www.tvnz.co.nz/competition/fifa-2026",
                     3,
@@ -766,7 +766,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "pl": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "TVP SPORT",
                     "https://sport.tvp.pl/transmisje",
                     2,
@@ -782,7 +782,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "pt": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "LiveModeTV - YouTube",
                     "https://www.youtube.com/@LiveModeTV_PT",
                     2,
@@ -790,7 +790,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "sport tv",
                     "https://www.sporttv.pt/mundial-fifa-2026",
                     3,
@@ -806,7 +806,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "ro": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "AntenaPLAY",
                     "https://antenaplay.ro/fifa-world-cup",
                     5,
@@ -822,7 +822,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "sr": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "RTS Planeta",
                     "https://rtsplaneta.rs/live/tv",
                     3,
@@ -830,7 +830,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=False,
                     show_vpn_regions=False,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Arena Cloud",
                     "https://webtv.arenacloudtv.com/",
                     4,
@@ -846,7 +846,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "sv": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "TV4 Play",
                     "https://www.tv4play.se/kategorier/fifa-fotbolls-vm-2026",
                     3,
@@ -854,7 +854,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "SVT Play",
                     "https://www.svtplay.se/fifa-fotbolls-vm-2026",
                     3,
@@ -870,7 +870,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "sk": [
                 _build_fifa_watch_link(vpn_available=False),
-                _build_watch_link(
+                build_watch_link(
                     "JOJPLAY",
                     "https://play.joj.sk/",
                     5,
@@ -886,7 +886,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "en": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "Tubi",
                     "https://tubitv.com/hubs/fifa-world-cup-fox-hub",
                     2,
@@ -894,7 +894,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "YouTube TV",
                     "https://tv.youtube.com/browse/UCgL1z0K3r-CJig5sXlSvDbg",
                     4,
@@ -902,7 +902,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "FOX ONE",
                     "https://www.fox.com/soccer/fifa-world-cup",
                     4,
@@ -910,7 +910,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "DirecTV",
                     "https://www.directv.com/sports-info/soccer/worldcup",
                     4,
@@ -918,7 +918,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Hulu",
                     "https://www.hulu.com/soccer",
                     4,
@@ -926,7 +926,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Fubo",
                     "https://www.fubo.tv/stream/worldcup/",
                     4,
@@ -934,7 +934,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "Peacock",
                     "https://www.peacocktv.com/es-us/sports/copa-mundial#ib-section-section-6",
                     5,
@@ -950,7 +950,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         "langs": {
             "en": [
                 _build_fifa_watch_link(vpn_available=True),
-                _build_watch_link(
+                build_watch_link(
                     "SABC+",
                     "https://sabc-plus.com/live",
                     2,
@@ -958,7 +958,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     vpn_available=True,
                     show_vpn_regions=True,
                 ),
-                _build_watch_link(
+                build_watch_link(
                     "DStv Stream",
                     "https://dstv.stream/#/",
                     5,
