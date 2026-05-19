@@ -400,6 +400,11 @@ providers = ["sports", "polygon"]
 # GCS bucket for remote data files (used when data_source = "remote").
 gcs_bucket = ""
 
+# Sections under `[*.providers.<name>]` are loaded by the suggest provider
+# manager only when they expose a `type` field. Sibling subsystem configs can
+# share this namespace without `type` and initialize themselves elsewhere, as
+# `[*.providers.wcs]` does for the World Cup widget API.
+
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
 # The type of this provider, should be `accuweather`.

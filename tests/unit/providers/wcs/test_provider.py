@@ -214,6 +214,8 @@ async def test_match_team_group_comes_from_cached_event_group() -> None:
     )
     event = response.current[0]
 
+    assert event.home_team is not None
+    assert event.away_team is not None
     assert event.home_team.group == "Group C"
     assert event.away_team.group == "Group C"
 
@@ -574,6 +576,7 @@ async def test_cache_error_returns_empty_payloads(mocker) -> None:
     sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
     sport.get_eliminated_team_keys = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
     metrics_client = mocker.Mock()
+    sentry_capture = mocker.patch("merino.providers.wcs.provider.sentry_sdk.capture_exception")
     provider = WcsProvider(sport=sport, metrics_client=metrics_client, live_data_enabled=True)
 
     matches = await provider.get_matches(ANCHOR, limit=None, team_keys=None)
@@ -588,6 +591,7 @@ async def test_cache_error_returns_empty_payloads(mocker) -> None:
     metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "matches"})
     metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "live"})
     metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "teams"})
+    assert sentry_capture.call_count == 3
 
 
 @pytest.mark.asyncio
@@ -597,6 +601,7 @@ async def test_team_elimination_cache_error_leaves_teams_uneliminated(mocker) ->
     sport.get_all_teams = mocker.AsyncMock(return_value={team.id: team for team in build_teams()})
     sport.get_eliminated_team_keys = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
     metrics_client = mocker.Mock()
+    sentry_capture = mocker.patch("merino.providers.wcs.provider.sentry_sdk.capture_exception")
     provider = WcsProvider(sport=sport, metrics_client=metrics_client)
 
     response = await provider.get_teams()
@@ -604,3 +609,4 @@ async def test_team_elimination_cache_error_leaves_teams_uneliminated(mocker) ->
     assert len(response.teams) == 48
     assert not any(team.eliminated for team in response.teams)
     metrics_client.increment.assert_called_once_with("wcs.cache_error", tags={"endpoint": "teams"})
+    sentry_capture.assert_called_once()
