@@ -2461,14 +2461,15 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     """
     sport = WCS(settings=settings.providers.sports)
     sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1615: "Group Stage", 1616: "Round of 32"}
     await sport.async_load_teams_from_source(wcs_static_teams_payload({"SWE", "TUN"}))
 
     sport.load_schedules_from_source(wcs_static_schedule_payload(), event_timezone=ZoneInfo("UTC"))
 
-    # Of the captured rows only SWE vs TUN has both teams loaded; placeholder
-    # rows (SeasonType=3 with null team ids) and partial-team games (e.g. SWE
-    # vs NLD) are dropped by the load filter.
-    assert set(sport.events) == {90086918}
+    # SWE vs TUN has both teams loaded. The knockout placeholder is also
+    # retained with TBD teams, while rows whose real teams are missing from the
+    # test team cache (e.g. SWE vs NLD) are still dropped.
+    assert set(sport.events) == {90086918, 90086979}
     event = sport.events[90086918]
     assert event.away_team["key"] == "TUN"
     assert event.away_team["name"] == "Tunisia"
@@ -2480,6 +2481,16 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     assert event.season_type == 1
     assert event.group == "Group F"
     assert event.is_closed is False
+    assert event.stage == "Group Stage"
+
+    placeholder = sport.events[90086979]
+    assert placeholder.home_team == {"key": "TBD", "name": "TBD", "colors": [], "id": 0}
+    assert placeholder.away_team == {"key": "TBD", "name": "TBD", "colors": [], "id": 0}
+    assert placeholder.date == datetime(2026, 6, 28, 19, 0, tzinfo=timezone.utc)
+    assert placeholder.round_id == 1616
+    assert placeholder.season_type == 3
+    assert placeholder.group is None
+    assert placeholder.stage == "Round of 32"
 
     sport.load_scores_from_source(
         wcs_static_games_by_date_payload(), event_timezone=ZoneInfo("UTC")
@@ -2497,6 +2508,55 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     assert event.winner is None
     assert event.is_closed is False
     assert event.updated == datetime(2026, 4, 29, 14, 26, 26, tzinfo=timezone.utc)
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_ingests_knockout_placeholder_with_one_known_team() -> None:
+    """A knockout row with one unassigned side keeps the known team and emits TBD."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1617: "Quarterfinals"}
+    await sport.async_load_teams_from_source(wcs_static_teams_payload({"SWE"}))
+
+    sport.load_schedules_from_source(
+        [
+            {
+                "GameId": 86997,
+                "RoundId": 1617,
+                "Season": 2026,
+                "SeasonType": 3,
+                "Group": None,
+                "AwayTeamId": None,
+                "HomeTeamId": 959,
+                "Day": "2026-07-05T00:00:00",
+                "DateTime": "2026-07-05T20:00:00",
+                "Status": "Scheduled",
+                "Period": "Regular",
+                "Clock": None,
+                "Winner": None,
+                "AwayTeamKey": None,
+                "AwayTeamName": None,
+                "AwayTeamScore": None,
+                "HomeTeamKey": "SWE",
+                "HomeTeamName": "Sweden",
+                "HomeTeamScore": None,
+                "Updated": "2025-12-06T20:35:30",
+                "UpdatedUtc": "2025-12-07T01:35:30",
+                "GlobalGameId": 90086997,
+                "GlobalAwayTeamId": None,
+                "GlobalHomeTeamId": 90000001,
+                "IsClosed": False,
+            }
+        ],
+        event_timezone=ZoneInfo("UTC"),
+    )
+
+    event = sport.events[90086997]
+    assert event.home_team["key"] == "SWE"
+    assert event.home_team["name"] == "Sweden"
+    assert event.away_team == {"key": "TBD", "name": "TBD", "colors": [], "id": 0}
+    assert event.stage == "Quarterfinals"
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
