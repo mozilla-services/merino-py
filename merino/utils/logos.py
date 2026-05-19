@@ -22,6 +22,7 @@ _cdn_host_name: str = settings.image_gcs_v2.cdn_hostname
 _protocol = "http" if "localhost" in _cdn_host_name else "https"
 CDN_ROOT_URL: str = f"{_protocol}://{_cdn_host_name}"
 
+
 class LogoCategory(StrEnum):
     """Enumeration of logo categories available in GCS."""
 
