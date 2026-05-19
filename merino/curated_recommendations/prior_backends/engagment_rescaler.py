@@ -120,6 +120,7 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
             "fresh_items_top_stories_fixed_position", 4
         )  # Because there are 2 ads, typically 4 is position 6 (0 based)
         data.setdefault("fresh_items_top_stories_max_percentage", 0.03)
+        data.setdefault("fresh_items_limit_prior_threshold_multiplier", 0.7)
         super().__init__(**data)
 
     def compute_estimated_fresh_per_cycle(self, prior: Prior) -> int:

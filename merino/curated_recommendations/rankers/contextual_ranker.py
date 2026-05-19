@@ -112,7 +112,7 @@ class ContextualRanker(Ranker):
         rng = np.random.default_rng()
         for rec in recs:
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
-                rec, rescaler, region
+                rec, rescaler, region, blend_region_with_global=False
             )
             is_fresh = False
             # add random value between 0 and 1 to break ties randomly
