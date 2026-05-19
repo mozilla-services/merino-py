@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Client Runtime Manifest v1",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "compatibility", "channels"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "compatibility": {
+      "type": "object",
+      "required": ["engineApiVersion", "uiContractVersion"],
+      "properties": {
+        "engineApiVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uiContractVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "channels": {
+      "type": "object",
+      "required": ["runtime", "daily"],
+      "properties": {
+        "runtime": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/channel"
+            },
+            {
+              "type": "object",
+              "required": ["entrypointUrl"],
+              "properties": {
+                "entrypointUrl": {
+                  "type": "string",
+                  "pattern": "^runtime/widget-[a-f0-9]{64}\\.html$"
+                }
+              }
+            }
+          ]
+        },
+        "daily": {
+          "$ref": "#/$defs/channel"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "file": {
+      "type": "object",
+      "required": [
+        "path",
+        "url",
+        "size",
+        "sha256",
+        "contentType",
+        "cacheControl"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*\\.\\.)[^\\\\]+$"
+        },
+        "size": {
+          "type": "number",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "contentType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cacheControl": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "channel": {
+      "type": "object",
+      "required": ["version", "digest", "publishedAt", "archive", "files"],
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/sha256"
+        },
+        "digest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "publishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "archive": {
+          "$ref": "#/$defs/file"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/file"
+          }
+        }
+      }
+    }
+  }
+}

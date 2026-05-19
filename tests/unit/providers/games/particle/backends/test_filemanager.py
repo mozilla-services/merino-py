@@ -173,5 +173,5 @@ def test_get_remote_file_error(
     particle_remote_filemanager.gcs_client = MagicMock()
     particle_remote_filemanager.gcs_client.get_file_by_name.side_effect = Exception("Test error")
 
-    result = particle_remote_filemanager.get_manifest_file()
-    assert result is None
+    with pytest.raises(ParticleFileManagerError):
+        particle_remote_filemanager.get_manifest_file()
