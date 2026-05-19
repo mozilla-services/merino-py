@@ -2976,6 +2976,24 @@ async def test_wcs_get_events_by_date_treats_naive_bounds_as_utc() -> None:
     )
 
 
+@pytest.mark.asyncio
+async def test_wcs_fix_country_codes() -> None:
+    """Test that we return corrected country codes"""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.hgetall.side_effect = [
+        {b"name": "Cabo Verde".encode(), b"code": b"CVI"},
+        {b"name": "DR Congo".encode(), b"code": b"CDR"},
+    ]
+    sport.cache = mock_cache
+
+    # code doesn't really matter, but let's be consistent and pretend it does.
+    result = await sport.get_country(44)
+    assert cast(dict, result)[b"code"] == b"CPV"
+    result = await sport.get_country(53)
+    assert cast(dict, result)[b"code"] == b"COD"
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_weird_afc_update_events(

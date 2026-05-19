@@ -688,6 +688,12 @@ class WCS(Sport):
         "CUW": "curacao",
     }
 
+    # Sportsdata.io returns the incorrect official ISO3 for the following countries.
+    ISO_alias = {
+        "CDR": "COD",
+        "CVI": "CPV",
+    }
+
     def __init__(
         self,
         settings: LazySettings,
@@ -920,6 +926,9 @@ class WCS(Sport):
             code = cached[b"code"].decode()
             if code in self.country_alias:
                 cached[b"aliases"] = self.country_alias[code].encode()
+            # Fix ISO3 codes.
+            if code in self.ISO_alias:
+                cached[b"code"] = self.ISO_alias[code].encode()
         return cached
 
     def team_minimal(self, team: Team) -> dict[str, Any]:
@@ -985,7 +994,7 @@ class WCS(Sport):
                     team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
                 # team.key is the authoritative ISO3 code after _TEAM_KEY_OVERRIDES;
                 # prefer for join key over AreaId. Since some teams (e.g. Curaçao)
-                # are returned with an AreaId that maps to ANOTher country's area
+                # are returned with an AreaId that maps to Another country's area
                 # (South Korea, in Curaçao's case 🤦)
                 alias = self.country_alias.get(team.key)
                 if alias:
