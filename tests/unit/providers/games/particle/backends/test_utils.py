@@ -14,10 +14,15 @@ from pydantic import Json
 from pytest import LogCaptureFixture
 from typing import Any
 
+from merino.configs import settings
 from merino.providers.games.particle.backends.utils import (
+    remote_manifest_daily_is_updated,
+    remote_manifest_runtime_is_updated,
     validate_manifest_schema_version,
     validate_manifest_against_schema,
 )
+
+_manifest_schema_version = settings.games_providers.particle.manifest_schema_version
 
 
 # BEGIN FIXTURES
@@ -25,6 +30,13 @@ from merino.providers.games.particle.backends.utils import (
 def valid_manifest_data():
     """Load mock response data from the Particle manifest endpoint."""
     with open("tests/data/games/particle/runtime-manifest.v1.json") as f:
+        return json.load(f)
+
+
+@pytest.fixture()
+def valid_manifest_data_remote_updated():
+    """Load mock response data from the Particle manifest endpoint."""
+    with open("tests/data/games/particle/runtime-manifest-remote-updated.v1.json") as f:
         return json.load(f)
 
 
@@ -49,7 +61,7 @@ def manifest_schema_data():
 def test_validate_manifest_schema_version_does_not_raise_with_valid_json(valid_manifest_data):
     """Verify valid JSON results in no exception raised."""
     with does_not_raise():
-        validate_manifest_schema_version(valid_manifest_data)
+        validate_manifest_schema_version(valid_manifest_data, _manifest_schema_version)
 
 
 def test_validate_manifest_schema_version_raises_with_invalid_json(
@@ -59,7 +71,7 @@ def test_validate_manifest_schema_version_raises_with_invalid_json(
     caplog.set_level(logging.ERROR)
 
     with pytest.raises(Exception):
-        validate_manifest_schema_version("Not valid JSON")
+        validate_manifest_schema_version("Not valid JSON", _manifest_schema_version)
 
         # get error records
         error_records = filter_caplog(
@@ -79,7 +91,9 @@ def test_validate_manifest_schema_version_raises_with_invalid_schema_version(
 ):
     """Verify invalid schema version raises an exception."""
     with pytest.raises(Exception):
-        validate_manifest_schema_version(json.loads('{"schemaVersion": 2}'))
+        validate_manifest_schema_version(
+            json.loads('{"schemaVersion": 2}'), _manifest_schema_version
+        )
 
     # get error records
     error_records = filter_caplog(
@@ -97,7 +111,9 @@ def test_validate_manifest_schema_version_raises_with_no_schema_version_in_json(
 ):
     """Verify missing schema version raises an exception."""
     with pytest.raises(Exception):
-        validate_manifest_schema_version(json.loads('{"cremaVersion": 1}'))
+        validate_manifest_schema_version(
+            json.loads('{"cremaVersion": 1}'), _manifest_schema_version
+        )
 
     # get error records
     error_records = filter_caplog(
@@ -147,3 +163,31 @@ def test_validate_manifest_against_schema_raises_with_invalid_json(
 
 
 # END validate_manifest_against_schema TESTS
+
+
+def test_remote_manifest_runtime_is_updated_was_updated(
+    valid_manifest_data, valid_manifest_data_remote_updated
+):
+    """Test that comparing an old manifest to a new results in an updated signal"""
+    assert remote_manifest_runtime_is_updated(
+        valid_manifest_data_remote_updated, valid_manifest_data
+    )
+
+
+def test_remote_manifest_runtime_is_updated_was_not_updated(valid_manifest_data):
+    """Test that comparing the same manifest results in a not updated signal"""
+    assert not remote_manifest_runtime_is_updated(valid_manifest_data, valid_manifest_data)
+
+
+def test_remote_manifest_daily_is_updated_was_updated(
+    valid_manifest_data, valid_manifest_data_remote_updated
+):
+    """Test that comparing an old manifest to a new results in an updated signal"""
+    assert remote_manifest_daily_is_updated(
+        valid_manifest_data_remote_updated, valid_manifest_data
+    )
+
+
+def test_remote_manifest_daily_is_updated_was_not_updated(valid_manifest_data):
+    """Test that comparing the same manifest results in a not updated signal"""
+    assert not remote_manifest_daily_is_updated(valid_manifest_data, valid_manifest_data)
