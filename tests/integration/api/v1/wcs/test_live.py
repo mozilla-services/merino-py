@@ -36,6 +36,18 @@ def test_matches_sorted_ascending_by_date(client: TestClient) -> None:
     assert matches == sorted(matches, key=lambda e: e["date"])
 
 
+def test_event_contract_required_fields_are_non_null(client: TestClient) -> None:
+    """Live endpoint mock events include the required Mobile branch fields."""
+    matches = client.get(_PATH).json()["matches"]
+
+    assert matches
+    for event in matches:
+        assert event["date"] is not None
+        assert event["global_event_id"] is not None
+        assert event["status_type"] is not None
+        assert event["stage"] is not None
+
+
 def test_teams_filter(client: TestClient) -> None:
     """`teams` filter keeps only matches with that key on either side."""
     body = client.get(_PATH, params={"teams": "BRA"}).json()

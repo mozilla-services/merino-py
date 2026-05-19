@@ -14,6 +14,7 @@ from merino.utils.logos import LogoCategory, load_manifest
 # Pin WCS flag URLs to the production image bucket so stage and prod render the
 # same assets.
 _LOGO_HOST = "https://storage.googleapis.com/merino-images-prod"
+_TBD_TEAM_KEY = "TBD"
 
 
 def _icon(key: str) -> HttpUrl | None:
@@ -88,24 +89,41 @@ class TeamInfo(BaseModel):
         )
 
 
+def _is_tbd_event_team(team: dict[str, Any]) -> bool:
+    """Return True for the compact placeholder team used in cached WCS events."""
+    try:
+        team_id = int(team.get("id", -1))
+    except (TypeError, ValueError):
+        team_id = -1
+    return str(team.get("key", "")).upper() == _TBD_TEAM_KEY and team_id == 0
+
+
 class EventInfo(BaseModel):
     """A single match event."""
 
     date: str = Field(description="UTC ISO datetime for the start of the event.")
     global_event_id: int = Field(description="Stable identifier for this event.")
-    home_team: TeamInfo
-    away_team: TeamInfo
-    period: str = Field(description="Period descriptor: '1', '2', 'Extra', etc.")
+    home_team: TeamInfo | None = Field(
+        default=None,
+        description="Home team metadata, or null when the knockout side is not established.",
+    )
+    away_team: TeamInfo | None = Field(
+        default=None,
+        description="Away team metadata, or null when the knockout side is not established.",
+    )
+    period: str | None = Field(
+        default=None, description="Period descriptor: '1', '2', 'Extra', etc."
+    )
     home_score: int | None
     away_score: int | None
     home_extra: int | None
     away_extra: int | None
     home_penalty: int | None
     away_penalty: int | None
-    clock: str = Field(description="Elapsed minutes; extra time as '90+3'.")
+    clock: str | None = Field(default=None, description="Elapsed minutes; extra time as '90+3'.")
     updated: int = Field(description="UTC unix timestamp of the last record update.")
-    stage: str | None = Field(
-        default=None,
+    stage: str = Field(
+        default="",
         description="Tournament stage, e.g. 'Group Stage', 'Round of 32', 'Final'.",
     )
     status: str = Field(description="Game status: 'Scheduled', 'In Progress', 'Final', etc.")
@@ -116,24 +134,32 @@ class EventInfo(BaseModel):
     @classmethod
     def from_event(cls, event: Event) -> "EventInfo":
         """Build widget event info from a cached SportsData event."""
-        home_team = TeamInfo.from_event_team(event.home_team, group=event.group)
-        away_team = TeamInfo.from_event_team(event.away_team, group=event.group)
+        home_team = (
+            None
+            if _is_tbd_event_team(event.home_team)
+            else TeamInfo.from_event_team(event.home_team, group=event.group)
+        )
+        away_team = (
+            None
+            if _is_tbd_event_team(event.away_team)
+            else TeamInfo.from_event_team(event.away_team, group=event.group)
+        )
         updated = event.updated or event.date
         return cls(
             date=event.date.isoformat(),
             global_event_id=event.id,
             home_team=home_team,
             away_team=away_team,
-            period=event.period or "",
+            period=event.period,
             home_score=event.home_score,
             away_score=event.away_score,
             home_extra=event.home_extra,
             away_extra=event.away_extra,
             home_penalty=event.home_penalty,
             away_penalty=event.away_penalty,
-            clock=event.clock or "",
+            clock=event.clock,
             updated=int(updated.timestamp()),
-            stage=event.stage,
+            stage=event.stage or "",
             status=event.status.as_str(),
             status_type=event.status.as_ui_status(),
             query=build_query(event.model_dump(mode="json")),

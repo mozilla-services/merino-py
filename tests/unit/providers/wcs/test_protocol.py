@@ -45,7 +45,7 @@ def test_event_info_from_event_uses_source_day_for_world_cup_query() -> None:
 
 
 def test_event_info_from_event_builds_tbd_world_cup_query() -> None:
-    """Placeholder teams stay non-null and produce the expected click query."""
+    """Placeholder cache teams serialize as null while preserving the click query."""
     e = event(
         event_id=5,
         day_offset=20,
@@ -59,13 +59,30 @@ def test_event_info_from_event_builds_tbd_world_cup_query() -> None:
 
     info = EventInfo.from_event(e)
 
-    assert info.home_team.name == "TBD"
-    assert info.home_team.global_team_id == 0
-    assert info.home_team.icon_url is None
-    assert info.away_team.name == "TBD"
-    assert info.away_team.global_team_id == 0
-    assert info.away_team.icon_url is None
+    assert info.home_team is None
+    assert info.away_team is None
     assert info.query == "World Cup 2026 TBD vs TBD 05 July 2026"
+
+
+def test_event_info_from_event_serializes_one_tbd_side_as_null() -> None:
+    """A partially known bracket match keeps the real side and nulls the TBD side."""
+    e = event(
+        event_id=8,
+        day_offset=20,
+        hour=20,
+        home=("SWE", "Sweden", 90000001),
+        away=("TBD", "TBD", 0),
+        status=GameStatus.Scheduled,
+        original_date="2026-07-05T00:00:00",
+        stage="Quarterfinals",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None
+    assert info.home_team.name == "Sweden"
+    assert info.away_team is None
+    assert info.query == "World Cup 2026 Sweden vs TBD 05 July 2026"
 
 
 def test_event_info_from_event_includes_stage() -> None:
@@ -84,8 +101,8 @@ def test_event_info_from_event_includes_stage() -> None:
     assert info.stage == "Round of 32"
 
 
-def test_event_info_from_event_stage_defaults_to_none() -> None:
-    """An event with no cached stage serializes stage=None on the widget payload.
+def test_event_info_from_event_stage_defaults_to_empty_string() -> None:
+    """An event with no cached stage serializes a non-null stage value.
     This shouldn't happen with real data.
     """
     e = event(
@@ -98,7 +115,24 @@ def test_event_info_from_event_stage_defaults_to_none() -> None:
     )
 
     info = EventInfo.from_event(e)
-    assert info.stage is None
+    assert info.stage == ""
+
+
+def test_event_info_from_event_missing_period_and_clock_stay_null() -> None:
+    """Scheduled matches without period or clock metadata serialize nulls."""
+    e = event(
+        event_id=7,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Scheduled,
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.period is None
+    assert info.clock is None
 
 
 def test_event_info_from_event_propagates_group_to_both_teams() -> None:
@@ -115,6 +149,8 @@ def test_event_info_from_event_propagates_group_to_both_teams() -> None:
 
     info = EventInfo.from_event(e)
 
+    assert info.home_team is not None
+    assert info.away_team is not None
     assert info.home_team.group == "Group A"
     assert info.away_team.group == "Group A"
 
@@ -132,5 +168,7 @@ def test_event_info_from_event_group_defaults_to_none() -> None:
 
     info = EventInfo.from_event(e)
 
+    assert info.home_team is not None
+    assert info.away_team is not None
     assert info.home_team.group is None
     assert info.away_team.group is None

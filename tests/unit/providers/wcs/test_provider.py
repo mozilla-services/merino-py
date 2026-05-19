@@ -100,7 +100,9 @@ async def test_teams_filter_matches_either_side() -> None:
 
     assert events
     for event in events:
-        assert "BRA" in {event.home_team.key, event.away_team.key}
+        assert "BRA" in {
+            team.key for team in (event.home_team, event.away_team) if team is not None
+        }
 
 
 @pytest.mark.asyncio
@@ -139,8 +141,8 @@ async def test_public_sport_identifier_is_soccer() -> None:
 
 
 @pytest.mark.asyncio
-async def test_matches_include_tbd_placeholder_teams() -> None:
-    """The matches endpoint can return scheduled bracket placeholders."""
+async def test_matches_include_nullable_tbd_teams() -> None:
+    """The matches endpoint can return scheduled bracket slots with null teams."""
     placeholder = build_event(
         90086997,
         20,
@@ -162,12 +164,8 @@ async def test_matches_include_tbd_placeholder_teams() -> None:
 
     assert len(response.current) == 1
     event = response.current[0]
-    assert event.home_team.name == "TBD"
-    assert event.home_team.global_team_id == 0
-    assert event.home_team.icon_url is None
-    assert event.away_team.name == "TBD"
-    assert event.away_team.global_team_id == 0
-    assert event.away_team.icon_url is None
+    assert event.home_team is None
+    assert event.away_team is None
     assert event.stage == "Quarterfinals"
     assert event.query == "World Cup 2026 TBD vs TBD 05 July 2026"
 
@@ -176,8 +174,14 @@ async def test_matches_include_tbd_placeholder_teams() -> None:
 async def test_match_team_colors_are_normalized_to_hex() -> None:
     """Cached event team color names are replaced with WCS hex colors."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
-    event = next(event for event in response.previous if event.home_team.key == "BRA")
+    event = next(
+        event
+        for event in response.previous
+        if event.home_team is not None and event.home_team.key == "BRA"
+    )
 
+    assert event.home_team is not None
+    assert event.away_team is not None
     assert event.home_team.colors == ["#009C3B", "#FFDF00", "#002776"]
     assert event.away_team.colors == ["#74ACDF", "#FFFFFF", "#F6B40E"]
 
@@ -203,6 +207,7 @@ async def test_live_extra_time_match_shows_clock_in_extra_play() -> None:
 
     in_extra = [e for e in response.current if e.period == "ET"]
     assert len(in_extra) == 1
+    assert in_extra[0].clock is not None
     assert in_extra[0].clock.startswith("90+")
 
 
@@ -239,7 +244,9 @@ async def test_live_teams_filter_matches_either_side() -> None:
 
     assert response.matches
     for event in response.matches:
-        assert "BRA" in {event.home_team.key, event.away_team.key}
+        assert "BRA" in {
+            team.key for team in (event.home_team, event.away_team) if team is not None
+        }
 
 
 @pytest.mark.asyncio
