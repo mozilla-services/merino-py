@@ -18,11 +18,11 @@ def _country_display_code(iso: str) -> str:
 def _other_region_streams(candidates: list[WatchLinkEntry]) -> list[WatchLinkEntry]:
     """Return filtered, sorted streams for a country's other-regions section.
 
-    Filters to in_production=True and show_vpn_regions=True, then sorts
+    Filters to in_production=True and show_in_other_regions=True, then sorts
     by product_name ascending, then sort_order ascending.
     """
     return sorted(
-        (e for e in candidates if e.in_production and e.show_vpn_regions),
+        (e for e in candidates if e.in_production and e.show_in_other_regions),
         key=lambda e: (e.product_name, e.sort_order),
     )
 
@@ -67,7 +67,7 @@ def resolve_other_regions(
     """Return (display_country_code, streams) for regions other than the user's.
 
     All non-user countries are included if they have at least one stream with
-    in_production=True and show_vpn_regions=True. Countries are sorted by display
+    in_production=True and show_in_other_regions=True. Countries are sorted by display
     code A-Z; streams within each country are sorted by product_name then sort_order.
 
     # OTHER REGIONS

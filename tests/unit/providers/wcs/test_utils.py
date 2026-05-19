@@ -53,24 +53,21 @@ def mock_watch_links(mocker):
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                     build_watch_link(
                         "Bravo",
                         _URL,
                         sort_order=4,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                     build_watch_link(
                         "Unpublished",
                         _URL,
                         sort_order=2,
                         in_production=False,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                 ],
                 "*": [
@@ -79,8 +76,7 @@ def mock_watch_links(mocker):
                         _URL,
                         sort_order=1,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                 ],
             },
@@ -94,16 +90,14 @@ def mock_watch_links(mocker):
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                     build_watch_link(
                         "ITV",
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=False,
+                        show_in_other_regions=False,
                     ),
                 ],
             },
@@ -117,16 +111,14 @@ def mock_watch_links(mocker):
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                     build_watch_link(
                         "ARD",
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                 ],
             },
@@ -140,8 +132,7 @@ def mock_watch_links(mocker):
                         _URL,
                         sort_order=2,
                         in_production=False,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     ),
                 ],
             },
@@ -204,8 +195,7 @@ def test_resolve_watch_links_highest_priority_language_wins(mocker) -> None:
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     )
                 ],
                 "nl": [
@@ -214,8 +204,7 @@ def test_resolve_watch_links_highest_priority_language_wins(mocker) -> None:
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     )
                 ],
             },
@@ -268,8 +257,8 @@ def test_resolve_other_regions_country_with_no_qualifying_streams_excluded(
     assert "FRA" not in country_codes
 
 
-def test_resolve_other_regions_show_vpn_regions_false_filtered(mock_watch_links) -> None:
-    """Streams with show_vpn_regions=False are excluded."""
+def test_resolve_other_regions_show_in_other_regions_false_filtered(mock_watch_links) -> None:
+    """Streams with show_in_other_regions=False are excluded."""
     result = resolve_other_regions(_US)
     uk_streams = next((streams for code, streams in result if code == "UK"), [])
     names = [link.product_name for link in uk_streams]
@@ -296,8 +285,7 @@ def test_resolve_other_regions_all_language_keys_included(mocker) -> None:
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=False,
+                        show_in_other_regions=False,
                     )
                 ]
             },
@@ -311,8 +299,7 @@ def test_resolve_other_regions_all_language_keys_included(mocker) -> None:
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     )
                 ],
                 "nl": [
@@ -321,8 +308,7 @@ def test_resolve_other_regions_all_language_keys_included(mocker) -> None:
                         _URL,
                         sort_order=2,
                         in_production=True,
-                        vpn_available=True,
-                        show_vpn_regions=True,
+                        show_in_other_regions=True,
                     )
                 ],
             },

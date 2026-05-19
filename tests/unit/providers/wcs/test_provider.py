@@ -663,8 +663,7 @@ async def test_get_watch_links_returns_correct_structure(mocker) -> None:
         "https://www.plus.fifa.com",
         sort_order=1,
         in_production=True,
-        vpn_available=True,
-        show_vpn_regions=True,
+        show_in_other_regions=True,
     )
     mocker.patch(
         "merino.providers.wcs.provider.resolve_watch_links",
