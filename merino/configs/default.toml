@@ -400,6 +400,11 @@ providers = ["sports", "polygon"]
 # GCS bucket for remote data files (used when data_source = "remote").
 gcs_bucket = ""
 
+# Sections under `[*.providers.<name>]` are loaded by the suggest provider
+# manager only when they expose a `type` field. Sibling subsystem configs can
+# share this namespace without `type` and initialize themselves elsewhere, as
+# `[*.providers.wcs]` does for the World Cup widget API.
+
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
 # The type of this provider, should be `accuweather`.
@@ -515,6 +520,12 @@ cache_dir="/tmp"
 # e.g.
 # base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
 # base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
+
+[default.providers.wcs]
+# MERINO_PROVIDERS__WCS__LIVE_DATA_ENABLED
+# Keep the /wcs/live mock response by default. DISCO-4231 can flip this to
+# serve Redis-backed in-progress matches after launch approval.
+live_data_enabled = false
 
 
 [default.manifest]

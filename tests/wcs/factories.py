@@ -204,6 +204,7 @@ def build_provider(
     teams: list[Team] | None = None,
     metrics_client: Any | None = None,
     eliminated_team_keys: set[str] | None = None,
+    live_data_enabled: bool = True,
 ) -> WcsProvider:
     """Build a WCS provider backed by deterministic stub data."""
     stub_events = build_events() if events is None else events
@@ -211,4 +212,5 @@ def build_provider(
     return WcsProvider(
         sport=StubWcsSport(stub_events, stub_teams, eliminated_team_keys),
         metrics_client=metrics_client,
+        live_data_enabled=live_data_enabled,
     )

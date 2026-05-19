@@ -4,14 +4,25 @@
 
 """Integration tests for `GET /api/v1/wcs/live`."""
 
+from collections.abc import Iterator
+
+import freezegun
+import pytest
 from starlette.testclient import TestClient
 
 
 _PATH = "/api/v1/wcs/live"
 
 
+@pytest.fixture(autouse=True)
+def _freeze_live_now() -> Iterator[None]:
+    """Keep deterministic fixture events inside the live Redis query window."""
+    with freezegun.freeze_time("2026-06-15T16:00:00Z"):
+        yield
+
+
 def test_returns_matches_envelope(client: TestClient) -> None:
-    """Response is `{"matches": [...]}` with the mocked live-endpoint events."""
+    """Response is `{"matches": [...]}` with in-progress cached events."""
     response = client.get(_PATH)
     assert response.status_code == 200
 
@@ -19,19 +30,12 @@ def test_returns_matches_envelope(client: TestClient) -> None:
     assert set(body.keys()) == {"matches"}
     assert isinstance(body["matches"], list)
     assert body["matches"]
-    assert {e["status_type"] for e in body["matches"]} == {
-        "live",
-        "past",
-        "scheduled",
-        "unknown",
-    }
-    assert {"Awarded", "Canceled", "Postponed", "Suspended"}.issubset(
-        {event["status"] for event in body["matches"]}
-    )
+    assert {e["status_type"] for e in body["matches"]} == {"live"}
+    assert {event["status"] for event in body["matches"]} == {"In Progress"}
 
 
 def test_matches_sorted_ascending_by_date(client: TestClient) -> None:
-    """Matches come back ordered by event start time."""
+    """Live matches come back ordered by event start time."""
     matches = client.get(_PATH).json()["matches"]
     assert matches == sorted(matches, key=lambda e: e["date"])
 

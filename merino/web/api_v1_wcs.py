@@ -45,7 +45,7 @@ async def get_wcs_matches(
 @router.get(
     "/wcs/live",
     tags=["wcs"],
-    summary="Mocked World Cup Soccer events for the live endpoint",
+    summary="Currently live World Cup Soccer matches",
     response_model=LiveMatchesResponse,
 )
 async def get_wcs_live(
@@ -55,10 +55,7 @@ async def get_wcs_live(
     ] = None,
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> LiveMatchesResponse:
-    """Return mocked live-endpoint events, sorted ascending by date.
-
-    Anchored to fake test data until real live data lands.
-    """
+    """Return in-progress matches sorted ascending by date."""
     return await provider.get_live_matches(_parse_team_keys(teams))
 
 

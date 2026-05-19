@@ -29,7 +29,10 @@ def _build_provider() -> WcsProvider:
     """Build the singleton WCS API provider."""
     global _sport
     _sport = WCS(settings.providers.sports, cache=_cache())
-    return WcsProvider(sport=_sport)
+    return WcsProvider(
+        sport=_sport,
+        live_data_enabled=settings.providers.wcs.live_data_enabled,
+    )
 
 
 async def init_provider() -> None:

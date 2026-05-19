@@ -7,8 +7,10 @@ import asyncio
 import logging
 import orjson
 import json
-from datetime import datetime, timedelta, timezone
+from collections.abc import Iterable
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 # We use this for each Sport subclass, so that there's some flexibility for what config
 # values are used and passed.
@@ -42,6 +44,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination 
 
 FORCE_IMPORT = ""
 _SEASON_TYPE_POSTSEASON = 3
+_WCS_LIVE_REFRESH_WINDOW_DAYS = 1
+_WCS_GAMES_BY_DATE_TTL = timedelta(minutes=2)
 
 # When creating a new sport class, add its entry to SPORT_CATEGORY_MAP below.
 # The key must match the class name, as that is what is stored in the `Event.sport` field.
@@ -1207,27 +1211,49 @@ class WCS(Sport):
         # Treat each WCS schedule refresh as authoritative so removed events are pruned.
         self.events = {}
         self.load_schedules_from_source(response, event_timezone=local_timezone)
-        date_list: set[str] = set()
-        # update scores based on events:
-        # Events may cross multiple days, so we should update those scores.
-        for _id, event in list(self.events.items()):
-            day = sportsdata_day_slug(event.date, local_timezone)
-            if not event.status.is_scheduled() and day not in date_list:
-                url = f"{self.base_url}/GamesByDate/{self.name}/{day}"
-                response = await get_data(
-                    client=client,
-                    url=url,
-                    ttl=timedelta(minutes=5),
-                    cache_dir=self.cache_dir,
-                    headers=self.api_headers(),
-                )
-                self.load_scores_from_source(
-                    response,
-                    event_timezone=local_timezone,
-                )
-                date_list.add(day)
+        for day in self._games_by_date_slugs_to_refresh(
+            self.events.values(), event_timezone=local_timezone
+        ):
+            url = f"{self.base_url}/GamesByDate/{self.name}/{day}"
+            response = await get_data(
+                client=client,
+                url=url,
+                ttl=_WCS_GAMES_BY_DATE_TTL,
+                cache_dir=self.cache_dir,
+                headers=self.api_headers(),
+            )
+            self.load_scores_from_source(
+                response,
+                event_timezone=local_timezone,
+            )
 
         await self.cache_events()
+
+    def _games_by_date_slugs_to_refresh(
+        self, events: Iterable[Event], event_timezone: ZoneInfo
+    ) -> list[str]:
+        """Return SportsData day slugs that need detailed score refreshes.
+
+        Live freshness should not depend on `/SchedulesBasic` first changing a
+        match to `InProgress`. Refresh event days in the active UTC window
+        unconditionally, and keep refreshing days whose schedule rows already
+        report final/live/non-scheduled statuses.
+        """
+        today = datetime.now(tz=timezone.utc).astimezone(event_timezone).date()
+        window_start = today - timedelta(days=_WCS_LIVE_REFRESH_WINDOW_DAYS)
+        window_end = today + timedelta(days=_WCS_LIVE_REFRESH_WINDOW_DAYS)
+        days: dict[date, str] = {}
+
+        for event in events:
+            event_date = event.date
+            if event_date.tzinfo is None:
+                event_date = event_date.replace(tzinfo=timezone.utc)
+            event_day = event_date.astimezone(event_timezone).date()
+            in_active_window = window_start <= event_day <= window_end
+            if in_active_window or not event.status.is_scheduled():
+                days[event_day] = sportsdata_day_slug(event_date, event_timezone)
+
+        return [days[day] for day in sorted(days)]
 
     async def cache_events(self) -> None:
         """Write event data to Redis and index events by kickoff time."""

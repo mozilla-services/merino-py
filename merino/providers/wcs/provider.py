@@ -5,6 +5,7 @@ import logging
 from typing import Protocol
 
 from aiodogstatsd import Client
+import sentry_sdk
 
 from merino.exceptions import CacheAdapterError
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
@@ -20,6 +21,8 @@ from merino.providers.wcs.protocol import (
 from merino.utils.metrics import get_metrics_client
 
 _WINDOW = timedelta(days=10)
+_LIVE_MATCH_LOOKBACK = timedelta(hours=6)
+_LIVE_MATCH_LOOKAHEAD = timedelta(hours=2)
 _CACHE_ERROR_METRIC = "wcs.cache_error"
 logger = logging.getLogger(__name__)
 
@@ -45,10 +48,16 @@ class WcsSport(Protocol):
 class WcsProvider:
     """Serves match data for the World Cup Soccer endpoint."""
 
-    def __init__(self, sport: WcsSport, metrics_client: Client | None = None) -> None:
+    def __init__(
+        self,
+        sport: WcsSport,
+        metrics_client: Client | None = None,
+        live_data_enabled: bool = False,
+    ) -> None:
         """Create a WCS provider backed by the shared WCS sport cache."""
         self.sport = sport
         self.metrics_client = metrics_client or get_metrics_client()
+        self.live_data_enabled = live_data_enabled
 
     async def get_matches(
         self,
@@ -79,14 +88,13 @@ class WcsProvider:
         for event in sorted(events, key=lambda e: e.date):
             event_info = EventInfo.from_event(event)
             event_date = _event_date(event)
-            if team_keys is not None and not _has_team(event_info, team_keys):
-                continue
-            if event_date < target_day:
-                previous.append(event_info)
-            elif event_date == target_day:
-                current.append(event_info)
-            else:
-                next_.append(event_info)
+            if _matches_team_filter(event_info, team_keys):
+                if event_date < target_day:
+                    previous.append(event_info)
+                elif event_date == target_day:
+                    current.append(event_info)
+                else:
+                    next_.append(event_info)
 
         if limit is not None:
             previous, current, next_ = previous[-limit:], current[:limit], next_[:limit]
@@ -94,16 +102,36 @@ class WcsProvider:
         return MatchesResponse(previous=previous, current=current, next_=next_)
 
     async def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
-        """Return fake live-endpoint events, sorted ascending by `date`.
+        """Return live-endpoint events, sorted ascending by `date`.
 
+        The Redis-backed path is gated so we can switch it on via config.
         `team_keys` restricts results to matches with that team on either side.
         """
-        matches = [
-            event
-            for event in sorted(build_live_events(datetime.now(UTC).date()), key=lambda e: e.date)
-            if team_keys is None or _has_team(event, team_keys)
-        ]
-        return LiveMatchesResponse(matches=matches)
+        if not self.live_data_enabled:
+            matches = [
+                event
+                for event in build_live_events(datetime.now(UTC).date())
+                if _matches_team_filter(event, team_keys)
+            ]
+            return LiveMatchesResponse(matches=matches)
+
+        now = datetime.now(UTC)
+        window_start = now - _LIVE_MATCH_LOOKBACK
+        window_end = now + _LIVE_MATCH_LOOKAHEAD
+        try:
+            events = await self.sport.get_events_by_date(start=window_start, end=window_end)
+        except CacheAdapterError as ex:
+            self._record_cache_error("live", ex)
+            return LiveMatchesResponse(matches=[])
+
+        live_events: list[EventInfo] = []
+        for event in sorted(events, key=lambda e: e.date):
+            if not event.status.is_in_progress():
+                continue
+            event_info = EventInfo.from_event(event)
+            if _matches_team_filter(event_info, team_keys):
+                live_events.append(event_info)
+        return LiveMatchesResponse(matches=live_events)
 
     async def get_teams(self) -> TeamsResponse:
         """Return cache-backed teams participating in the tournament."""
@@ -145,6 +173,7 @@ class WcsProvider:
         """Log and count cache read failures by endpoint."""
         logger.warning("WCS cache read failed while fetching %s: %s", endpoint, ex)
         self.metrics_client.increment(_CACHE_ERROR_METRIC, tags={"endpoint": endpoint})
+        sentry_sdk.capture_exception(ex)
 
 
 def _target_day(target_date: date) -> date:
@@ -167,3 +196,8 @@ def _has_team(event: EventInfo, team_keys: frozenset[str]) -> bool:
     return any(
         team is not None and team.key in team_keys for team in (event.home_team, event.away_team)
     )
+
+
+def _matches_team_filter(event: EventInfo, team_keys: frozenset[str] | None) -> bool:
+    """Return True when no filter is set or either side matches the requested teams."""
+    return team_keys is None or _has_team(event, team_keys)
