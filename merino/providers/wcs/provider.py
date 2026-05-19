@@ -187,7 +187,7 @@ class WcsProvider:
 
         # streams grouped by other countries, lang-match first then alphabetical
         other_regions = []
-        for display_code, links in resolve_other_regions(geolocation, accepted_languages):
+        for display_code, links in resolve_other_regions(geolocation):
             streams = [
                 OtherRegionStream(
                     product_name=link.product_name, entitlement=link.entitlement, url=link.url

@@ -15,22 +15,15 @@ def _country_display_code(iso: str) -> str:
     return COUNTRY_DISPLAY_CODES.get(iso, iso)
 
 
-def _other_region_streams(
-    langs: dict[str, list[WatchLinkEntry]], lang_key: str | None
-) -> list[WatchLinkEntry]:
+def _other_region_streams(candidates: list[WatchLinkEntry]) -> list[WatchLinkEntry]:
     """Return filtered, sorted streams for a country's other-regions section.
 
-    When `lang_key` is given, only that key's streams plus wildcard ('*') streams are
-    considered. When None, all streams across every language key are considered.
-    Filters to in_production=True, vpn_available=True, show_vpn_regions=True.
+    Filters to in_production=True and show_vpn_regions=True, then sorts
+    by product_name ascending, then sort_order ascending.
     """
-    if lang_key is not None:
-        candidates = langs.get(lang_key, []) + langs.get("*", [])
-    else:
-        candidates = [stream for streams in langs.values() for stream in streams]
     return sorted(
-        (e for e in candidates if e.in_production and e.vpn_available and e.show_vpn_regions),
-        key=lambda e: (e.sort_order, e.product_name),
+        (e for e in candidates if e.in_production and e.show_vpn_regions),
+        key=lambda e: (e.product_name, e.sort_order),
     )
 
 
@@ -41,6 +34,12 @@ def resolve_watch_links(
 
     Language-specific entries are merged with country-wide ('*') entries, filtered to
     in_production=True, and sorted by sort_order then product_name ascending.
+
+    # YOUR REGION
+    # Filter: Show in production = 1
+    # Filter: LOCAL COUNTRY EXACT MATCH
+    # Sort:   Stream offer entitlement sort order A-Z
+    # Sort:   Stream product name A-Z
     """
     if geolocation is None or not geolocation.country:
         return []
@@ -63,54 +62,35 @@ def resolve_watch_links(
 
 
 def resolve_other_regions(
-    geolocation: Location | None, accepted_languages: list[str]
+    geolocation: Location | None,
 ) -> list[tuple[str, list[WatchLinkEntry]]]:
     """Return (display_country_code, streams) for regions other than the user's.
 
-    Returns lang-match countries first (sorted by matched lang prefix A-Z, then DAU
-    descending), followed by no-lang-match countries (sorted by display code A-Z).
-    Within each country, streams are sorted by sort_order then product_name ascending.
-    Only streams with in_production=True, vpn_available=True, and show_vpn_regions=True
-    are included.
+    All non-user countries are included if they have at least one stream with
+    in_production=True and show_vpn_regions=True. Countries are sorted by display
+    code A-Z; streams within each country are sorted by product_name then sort_order.
+
+    # OTHER REGIONS
+    # Filter: Show in production = 1
+    # Filter: LOCAL COUNTRY NON-MATCH
+    # Filter: Show in other regions list = 1
+    # Sort:   Country A-Z
+    # Sort:   Stream product name A-Z
+    # Sort:   Stream offer entitlement sort order A-Z
     """
     if geolocation is None or not geolocation.country:
         return []
     user_country = geolocation.country
-    user_lang_prefix = accepted_languages[0][:2] if accepted_languages else ""  # e.g. "en"
 
-    lang_match: list[tuple[str, str, int, list[WatchLinkEntry]]] = []
-    no_lang_match: list[tuple[str, int, list[WatchLinkEntry]]] = []
-
+    results: list[tuple[str, list[WatchLinkEntry]]] = []
     for iso, country_data in WATCH_LINKS.items():
         if iso == user_country:
             continue  # exclude the user's own country
-
-        langs = country_data["langs"]
-        dau = country_data["dau"]
-
-        matched_lang: str | None = None
-        if user_lang_prefix:
-            for lang_key in langs:
-                if lang_key != "*" and lang_key[:2] == user_lang_prefix:
-                    matched_lang = lang_key
-                    break  # first matching lang key wins
-
-        streams = _other_region_streams(langs, matched_lang)
+        all_streams = [s for streams in country_data["langs"].values() for s in streams]
+        streams = _other_region_streams(all_streams)
         if not streams:
             continue  # no qualifying streams for this country
+        results.append((iso, streams))
 
-        if matched_lang:
-            lang_match.append((matched_lang, iso, dau, streams))
-        else:
-            no_lang_match.append((iso, dau, streams))
-
-    lang_match.sort(key=lambda x: (x[0], -x[2]))  # lang A-Z, then DAU descending
-    no_lang_match.sort(key=lambda x: _country_display_code(x[0]))  # display code A-Z
-
-    lang_match_result = [
-        (_country_display_code(iso), streams) for _, iso, _, streams in lang_match
-    ]
-    no_lang_match_result = [
-        (_country_display_code(iso), streams) for iso, _, streams in no_lang_match
-    ]
-    return lang_match_result + no_lang_match_result
+    results.sort(key=lambda x: _country_display_code(x[0]))  # country A-Z
+    return [(_country_display_code(iso), streams) for iso, streams in results]

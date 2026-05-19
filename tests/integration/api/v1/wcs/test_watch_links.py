@@ -21,9 +21,8 @@ def expected_us_en_us() -> dict[str, Any]:
     sorted by sort_order then product_name ascending.
 
     other_regions entries come from all other countries whose streams pass the
-    in_production, vpn_available, and show_vpn_regions filters, grouped by country.
-    Lang-match countries (English-keyed) are listed first sorted by DAU descending,
-    followed by no-lang-match countries sorted by display code ascending.
+    in_production and show_vpn_regions filters, grouped by country and sorted by
+    display code ascending. Streams within each country sort by product_name then sort_order.
     """
     return {
         "your_region": [
@@ -74,42 +73,7 @@ def expected_us_en_us() -> dict[str, Any]:
             },
         ],
         "other_regions": [
-            # --- English lang-match, sorted by DAU descending ---
-            {
-                "country_code": "CAN",
-                "streams": [
-                    {
-                        "product_name": "RDS",
-                        "entitlement": "Free and Paid",
-                        "url": "https://www.rds.ca/soccer/coupe-du-monde/",
-                    },
-                    {
-                        "product_name": "TSN",
-                        "entitlement": "Free and Paid",
-                        "url": "https://www.tsn.ca/soccer/fifa-world-cup/",
-                    },
-                ],
-            },
-            {
-                "country_code": "UK",
-                "streams": [
-                    {
-                        "product_name": "BBC iPlayer",
-                        "entitlement": "Free",
-                        "url": "https://www.bbc.co.uk/iplayer/episodes/m002gjj0/fifa-world-cup-2026",
-                    },
-                    {
-                        "product_name": "ITVX",
-                        "entitlement": "Free",
-                        "url": "https://www.itv.com/watch",
-                    },
-                    {
-                        "product_name": "STV Player",
-                        "entitlement": "Free",
-                        "url": "https://player.stv.tv/live",
-                    },
-                ],
-            },
+            # all countries sorted by display code A-Z; streams by product_name then sort_order
             {
                 "country_code": "AUS",
                 "streams": [
@@ -120,37 +84,6 @@ def expected_us_en_us() -> dict[str, Any]:
                     },
                 ],
             },
-            {
-                "country_code": "RSA",
-                "streams": [
-                    {
-                        "product_name": "SABC+",
-                        "entitlement": "Free",
-                        "url": "https://sabc-plus.com/live",
-                    },
-                ],
-            },
-            {
-                "country_code": "NZL",
-                "streams": [
-                    {
-                        "product_name": "TVNZ+",
-                        "entitlement": "Free and Paid",
-                        "url": "https://www.tvnz.co.nz/competition/fifa-2026",
-                    },
-                ],
-            },
-            {
-                "country_code": "IRL",
-                "streams": [
-                    {
-                        "product_name": "RTÉ Player",
-                        "entitlement": "Free",
-                        "url": "https://www.rte.ie/player/onnow",
-                    },
-                ],
-            },
-            # --- No lang-match, sorted by display code ascending ---
             {
                 "country_code": "AUT",
                 "streams": [
@@ -180,6 +113,21 @@ def expected_us_en_us() -> dict[str, Any]:
                 "country_code": "BUL",
                 "streams": [
                     {"product_name": "BNT", "entitlement": "Free", "url": "https://tv.bnt.bg/"},
+                ],
+            },
+            {
+                "country_code": "CAN",
+                "streams": [
+                    {
+                        "product_name": "RDS",
+                        "entitlement": "Free and Paid",
+                        "url": "https://www.rds.ca/soccer/coupe-du-monde/",
+                    },
+                    {
+                        "product_name": "TSN",
+                        "entitlement": "Free and Paid",
+                        "url": "https://www.tsn.ca/soccer/fifa-world-cup/",
+                    },
                 ],
             },
             {
@@ -218,17 +166,27 @@ def expected_us_en_us() -> dict[str, Any]:
                 ],
             },
             {
-                "country_code": "ESP",
+                "country_code": "ECU",
                 "streams": [
                     {
-                        "product_name": "RTVE",
+                        "product_name": "Teleamazonas",
                         "entitlement": "Free",
-                        "url": "https://www.rtve.es/play/videos/copa-mundial-de-la-fifa-2026/",
+                        "url": "https://www.teleamazonas.com/teleamazonas-en-vivo/",
                     },
+                ],
+            },
+            {
+                "country_code": "ESP",
+                "streams": [
                     {
                         "product_name": "DAZN",
                         "entitlement": "Free Trial",
                         "url": "https://www.dazn.com/es-ES/",
+                    },
+                    {
+                        "product_name": "RTVE",
+                        "entitlement": "Free",
+                        "url": "https://www.rtve.es/play/videos/copa-mundial-de-la-fifa-2026/",
                     },
                 ],
             },
@@ -274,6 +232,16 @@ def expected_us_en_us() -> dict[str, Any]:
                         "product_name": "ZDF",
                         "entitlement": "Free",
                         "url": "https://www.zdf.de/live-tv",
+                    },
+                ],
+            },
+            {
+                "country_code": "IRL",
+                "streams": [
+                    {
+                        "product_name": "RTÉ Player",
+                        "entitlement": "Free",
+                        "url": "https://www.rte.ie/player/onnow",
                     },
                 ],
             },
@@ -324,12 +292,32 @@ def expected_us_en_us() -> dict[str, Any]:
                 ],
             },
             {
+                "country_code": "NZL",
+                "streams": [
+                    {
+                        "product_name": "TVNZ+",
+                        "entitlement": "Free and Paid",
+                        "url": "https://www.tvnz.co.nz/competition/fifa-2026",
+                    },
+                ],
+            },
+            {
                 "country_code": "POR",
                 "streams": [
                     {
                         "product_name": "sport tv",
                         "entitlement": "Free and Paid",
                         "url": "https://www.sporttv.pt/mundial-fifa-2026",
+                    },
+                ],
+            },
+            {
+                "country_code": "RSA",
+                "streams": [
+                    {
+                        "product_name": "SABC+",
+                        "entitlement": "Free",
+                        "url": "https://sabc-plus.com/live",
                     },
                 ],
             },
@@ -345,6 +333,26 @@ def expected_us_en_us() -> dict[str, Any]:
                         "product_name": "TV4 Play",
                         "entitlement": "Free and Paid",
                         "url": "https://www.tv4play.se/kategorier/fifa-fotbolls-vm-2026",
+                    },
+                ],
+            },
+            {
+                "country_code": "UK",
+                "streams": [
+                    {
+                        "product_name": "BBC iPlayer",
+                        "entitlement": "Free",
+                        "url": "https://www.bbc.co.uk/iplayer/episodes/m002gjj0/fifa-world-cup-2026",
+                    },
+                    {
+                        "product_name": "ITVX",
+                        "entitlement": "Free",
+                        "url": "https://www.itv.com/watch",
+                    },
+                    {
+                        "product_name": "STV Player",
+                        "entitlement": "Free",
+                        "url": "https://player.stv.tv/live",
                     },
                 ],
             },
@@ -366,4 +374,4 @@ def test_watch_links_us_en_us(
     total_links = len(body["your_region"]) + sum(
         len(country["streams"]) for country in body["other_regions"]
     )
-    assert total_links == 43
+    assert total_links == 44
