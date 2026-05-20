@@ -1,0 +1,9 @@
+# Configurations for development. Configurations defined here will override the
+# counterparts in `default.toml`.
+
+[development]
+dynaconf_merge = true
+
+[development.logging]
+level = "DEBUG"
+format = "pretty"

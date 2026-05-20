@@ -1,0 +1,10 @@
+# Configurations for testing. Configurations defined here will override the
+# counterparts in `default.toml`.
+
+[testing]
+dynaconf_merge = true
+
+[testing.logging]
+level = "DEBUG"
+format = "pretty"
+can_propagate = true
