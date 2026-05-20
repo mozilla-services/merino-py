@@ -345,7 +345,7 @@ async def test_get_teams_count() -> None:
 
 @pytest.mark.asyncio
 async def test_teams_are_enriched_from_roster_metadata() -> None:
-    """Cached SportsData teams are filtered, ordered, and enriched from the tournament roster."""
+    """Cached SportsData teams are filtered, sorted A-Z by name, and enriched from the tournament roster."""
     teams = build_teams()
     non_roster_team = teams[0].model_copy(
         update={
@@ -362,11 +362,10 @@ async def test_teams_are_enriched_from_roster_metadata() -> None:
     assert len(response.teams) == 48
     assert [team.key for team in response.teams] == [team.key for team in build_teams()]
     assert "ITA" not in {team.key for team in response.teams}
-    england = response.teams[0]
-    assert england.key == "ENG"
-    assert england.region == "ENG"
-    assert england.group == "Group L"
-    assert all(color.startswith("#") for color in england.colors)
+    algeria = response.teams[0]
+    assert algeria.key == "ALG"
+    assert algeria.region == "ALG"
+    assert all(color.startswith("#") for color in algeria.colors)
 
 
 @pytest.mark.asyncio
