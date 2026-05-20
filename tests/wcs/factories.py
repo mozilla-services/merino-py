@@ -196,7 +196,7 @@ def build_teams() -> list[Team]:
                 country=roster_team.region,
             )
         )
-    return teams
+    return sorted(teams, key=lambda t: t.name)
 
 
 def build_provider(

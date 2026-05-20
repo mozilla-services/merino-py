@@ -159,7 +159,8 @@ class WcsProvider:
                     region=cached_team.country or roster_team.region,
                 )
             )
-        return TeamsResponse(teams=response)
+        # return teams sorted by name in A - Z order.
+        return TeamsResponse(teams=sorted(response, key=lambda t: t.name))
 
     async def _get_eliminated_team_keys(self) -> set[str]:
         """Return team keys that no longer have a tournament path."""
