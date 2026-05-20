@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         level=settings.logging.level,
         can_propagate=settings.logging.can_propagate,
         current_env=settings.current_env,
+        logger_name="merino_fleece",
     )
     configure_sentry(
         mode=settings.sentry.mode,
