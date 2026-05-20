@@ -90,6 +90,7 @@ def create_lifespan(mode: RuntimeMode | str):
                 level=settings.logging.level,
                 can_propagate=settings.logging.can_propagate,
                 current_env=settings.current_env,
+                logger_name="merino",
             )
             configure_sentry(
                 mode=settings.sentry.mode,
