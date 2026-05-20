@@ -81,6 +81,8 @@ def resolve_other_regions(
     if geolocation is None or not geolocation.country:
         return []
     user_country = geolocation.country
+    if user_country not in WATCH_LINKS:  # country not targeted
+        return []
 
     results: list[tuple[str, list[WatchLinkEntry]]] = []
     for iso, country_data in WATCH_LINKS.items():

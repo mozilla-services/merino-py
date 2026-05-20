@@ -240,6 +240,11 @@ def test_resolve_other_regions_no_geolocation_returns_empty(mock_watch_links) ->
     assert resolve_other_regions(None) == []
 
 
+def test_resolve_other_regions_country_not_in_watch_links_returns_empty(mock_watch_links) -> None:
+    """Returns empty list when the user's country is not in WATCH_LINKS."""
+    assert resolve_other_regions(_UNCOVERED) == []
+
+
 def test_resolve_other_regions_user_country_excluded(mock_watch_links) -> None:
     """The user's own country does not appear in results."""
     result = resolve_other_regions(_US)
