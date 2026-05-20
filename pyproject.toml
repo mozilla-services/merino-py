@@ -59,7 +59,10 @@ module-name = "merino"
 module-root = ""
 
 [tool.uv.workspace]
-members = ["merino-common"]
+members = [
+    "merino-common",
+    "merino-fleece",
+]
 
 [project.scripts]
 merino-jobs = "merino.jobs.cli:cli"

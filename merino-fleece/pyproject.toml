@@ -1,0 +1,33 @@
+[project]
+name = "merino-fleece"
+version = "0.1.0"
+authors = [{ name = "Mozilla" }]
+description = "A supporting application for Merino"
+requires-python = "~=3.14.0"
+readme = "README.md"
+dependencies = [
+    "merino-common",
+    "fastapi[standard]>=0.135.0,<1",
+    "dynaconf>=3.2.4,<4",
+    "pydantic>=2.13.0,<3",
+    "spacy>=3.7,<4",
+    # This model is installed by default for development and testing
+    "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    # Required by spacy.cli.download() — SpaCy shells out to `python -m pip install`
+    # to fetch model wheels. uv-managed venvs don't ship pip by default.
+    "pip>=24",
+]
+
+[tool.uv.sources]
+merino-common = { workspace = true }
+
+[tool.uv.build-backend]
+module-name = "merino_fleece"
+module-root = ""
+
+[build-system]
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
+
+[project.scripts]
+merino-fleece = "merino_fleece.main:main"
