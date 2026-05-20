@@ -162,6 +162,12 @@ async def test_small_population_model(
     )
     assert (
         model_provider.get_cohort_for_interests(
+            model_id=SMALL_POPULATION_MODEL_ID, interests="011001"
+        )
+        == "2"
+    )
+    assert (
+        model_provider.get_cohort_for_interests(
             model_id=SMALL_POPULATION_MODEL_ID, interests="1010"
         )
         == "4"

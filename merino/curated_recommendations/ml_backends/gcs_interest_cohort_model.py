@@ -20,6 +20,8 @@ DEFAULT_TARGET_COHORTS = 10
 DO_EMPTY_COHORT_FOR_NO_CLICKS = True
 NO_CLICKS_COHORT_ID = "-1"
 
+SMALL_POPULATION_EAST_COAST_TIME_ZONE = "01"
+
 SMALL_POPULATION_MAX_CHARS = 4
 SMALL_POPULATION_MODEL_COHORT_LOOKUP = {
     "0101": "1",
@@ -131,12 +133,12 @@ class GcsInterestCohortModel(CohortModelBackend):
             cohort = SMALL_POPULATION_MODEL_COHORT_LOOKUP.get(
                 interests[:SMALL_POPULATION_MAX_CHARS], NO_CLICKS_COHORT_ID
             )
-
             # Note this is a special case. No interest east cost is underperforming
             # because it includes a lot of browsers with no clicks. Default to country
             # cohort
-            if cohort == "4" and interests[:2] == "01":
-                return NO_CLICKS_COHORT_ID
+            if cohort == "4" and interests[:2] == SMALL_POPULATION_EAST_COAST_TIME_ZONE:
+                cohort = NO_CLICKS_COHORT_ID
+            return cohort
 
         if self._model_id != model_id or self._model_id is None:
             return None
