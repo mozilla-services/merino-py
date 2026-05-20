@@ -128,9 +128,15 @@ class GcsInterestCohortModel(CohortModelBackend):
         We special case small country model because model is so simple
         """
         if model_id == SMALL_POPULATION_MODEL_ID:
-            return SMALL_POPULATION_MODEL_COHORT_LOOKUP.get(
+            cohort = SMALL_POPULATION_MODEL_COHORT_LOOKUP.get(
                 interests[:SMALL_POPULATION_MAX_CHARS], NO_CLICKS_COHORT_ID
             )
+
+            # Note this is a special case. No interest east cost is underperforming
+            # because it includes a lot of browsers with no clicks. Default to country
+            # cohort
+            if cohort == "4" and interests[:2] == "01":
+                return NO_CLICKS_COHORT_ID
 
         if self._model_id != model_id or self._model_id is None:
             return None
