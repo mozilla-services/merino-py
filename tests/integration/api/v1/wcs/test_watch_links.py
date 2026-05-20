@@ -17,12 +17,12 @@ _PATH = "/api/v1/wcs/watch-links"
 def expected_us_en_us() -> dict[str, Any]:
     """Return the expected WatchLinks for a US user with Accept-Language: en-US.
 
-    your_region entries are drawn from wcs_watch_links_filtered.csv for the United States,
+    your_region entries are drawn from WATCH_LINKS for the United States,
     sorted by sort_order then product_name ascending.
 
     other_regions entries come from all other countries whose streams pass the
-    in_production and show_vpn_regions filters, grouped by country and sorted by
-    display code ascending. Streams within each country sort by product_name then sort_order.
+    in_production and show_in_other_regions filters, sorted by display code
+    ascending. Streams within each country sort by product_name then sort_order.
     """
     return {
         "your_region": [
@@ -70,6 +70,26 @@ def expected_us_en_us() -> dict[str, Any]:
         "other_regions": [
             # all countries sorted by display code A-Z; streams by product_name then sort_order
             {
+                "country_code": "ARG",
+                "streams": [
+                    {
+                        "product_name": "Paramount+",
+                        "entitlement": "Paid",
+                        "url": "https://www.paramountplus.com/ar/",
+                    },
+                    {
+                        "product_name": "Pluto TV",
+                        "entitlement": "Free Trial",
+                        "url": "https://pluto.tv/latam/live-tv/66997d18a1b69e00082ee85f?lang=en",
+                    },
+                    {
+                        "product_name": "TVP",
+                        "entitlement": "Free",
+                        "url": "https://www.tvpublica.com.ar/",
+                    },
+                ],
+            },
+            {
                 "country_code": "AUS",
                 "streams": [
                     {
@@ -86,6 +106,11 @@ def expected_us_en_us() -> dict[str, Any]:
                         "product_name": "ORF",
                         "entitlement": "Free",
                         "url": "https://on.orf.at/live",
+                    },
+                    {
+                        "product_name": "ServusTV",
+                        "entitlement": "Paid",
+                        "url": "https://www.servustv.com/de/epg",
                     },
                 ],
             },
@@ -105,6 +130,26 @@ def expected_us_en_us() -> dict[str, Any]:
                 ],
             },
             {
+                "country_code": "BRA",
+                "streams": [
+                    {
+                        "product_name": "CazéTV - YouTube",
+                        "entitlement": "Free",
+                        "url": "https://www.youtube.com/@CazeTV/streams",
+                    },
+                    {
+                        "product_name": "Globoplay",
+                        "entitlement": "Free and Paid",
+                        "url": "https://globoplay.globo.com/tv-globo/ao-vivo/6120663/",
+                    },
+                    {
+                        "product_name": "SBT",
+                        "entitlement": "Free",
+                        "url": "https://mais.sbt.com.br/",
+                    },
+                ],
+            },
+            {
                 "country_code": "BUL",
                 "streams": [
                     {"product_name": "BNT", "entitlement": "Free", "url": "https://tv.bnt.bg/"},
@@ -113,6 +158,11 @@ def expected_us_en_us() -> dict[str, Any]:
             {
                 "country_code": "CAN",
                 "streams": [
+                    {
+                        "product_name": "Crave",
+                        "entitlement": "Paid",
+                        "url": "https://www.crave.ca/en/ctv",
+                    },
                     {
                         "product_name": "RDS",
                         "entitlement": "Free and Paid",
@@ -133,6 +183,16 @@ def expected_us_en_us() -> dict[str, Any]:
                         "entitlement": "Free",
                         "url": "https://www.chilevision.cl/senal-online/",
                     },
+                    {
+                        "product_name": "DGO",
+                        "entitlement": "Paid",
+                        "url": "https://www.directvgo.com/cl/home",
+                    },
+                    {
+                        "product_name": "Paramount+",
+                        "entitlement": "Paid",
+                        "url": "https://www.paramountplus.com/cl/",
+                    },
                 ],
             },
             {
@@ -144,9 +204,34 @@ def expected_us_en_us() -> dict[str, Any]:
                         "url": "https://www.canalrcn.com/co/deportes",
                     },
                     {
+                        "product_name": "DIRECTV",
+                        "entitlement": "Paid",
+                        "url": "https://www.directvla.com/co/mundial",
+                    },
+                    {
                         "product_name": "Ditu",
                         "entitlement": "Free and Paid",
                         "url": "https://ditu.caracoltv.com/category/copa-mundial-de-futbol-2026",
+                    },
+                    {
+                        "product_name": "Win Play",
+                        "entitlement": "Paid",
+                        "url": "https://winplay.co/co/futbol-internacional",
+                    },
+                ],
+            },
+            {
+                "country_code": "CZE",
+                "streams": [
+                    {
+                        "product_name": "Nova Action",
+                        "entitlement": "Free",
+                        "url": "https://tv.nova.cz/sledujte-zive/1-nova",
+                    },
+                    {
+                        "product_name": "iVysílání",
+                        "entitlement": "Free",
+                        "url": "https://sport.ceskatelevize.cz/zive-vysilani",
                     },
                 ],
             },
@@ -158,11 +243,21 @@ def expected_us_en_us() -> dict[str, Any]:
                         "entitlement": "Free",
                         "url": "https://www.dr.dk/drtv/kategorier/sport",
                     },
+                    {
+                        "product_name": "TV 2 Play",
+                        "entitlement": "Paid",
+                        "url": "https://play.tv2.dk/sport",
+                    },
                 ],
             },
             {
                 "country_code": "ECU",
                 "streams": [
+                    {
+                        "product_name": "Paramount+",
+                        "entitlement": "Paid",
+                        "url": "https://www.paramountplus.com/ec/",
+                    },
                     {
                         "product_name": "Teleamazonas",
                         "entitlement": "Free",
@@ -208,6 +303,11 @@ def expected_us_en_us() -> dict[str, Any]:
                         "entitlement": "Free",
                         "url": "https://www.m6.fr/coupe-du-monde-2026-p_26649",
                     },
+                    {
+                        "product_name": "beIN SPORTS",
+                        "entitlement": "Paid",
+                        "url": "https://connect.beinsports.com/france/",
+                    },
                 ],
             },
             {
@@ -219,6 +319,11 @@ def expected_us_en_us() -> dict[str, Any]:
                         "url": "https://www.ardmediathek.de/live",
                     },
                     {
+                        "product_name": "MagentaTV",
+                        "entitlement": "Paid",
+                        "url": "https://www.telekom.de/sport/magenta-tv-fussball",
+                    },
+                    {
                         "product_name": "SPORTSCHAU",
                         "entitlement": "Free",
                         "url": "https://www.sportschau.de/fussball/fifa-wm-2026/",
@@ -227,6 +332,31 @@ def expected_us_en_us() -> dict[str, Any]:
                         "product_name": "ZDF",
                         "entitlement": "Free",
                         "url": "https://www.zdf.de/live-tv",
+                    },
+                ],
+            },
+            {
+                "country_code": "HUN",
+                "streams": [
+                    {
+                        "product_name": "M4sport",
+                        "entitlement": "Free",
+                        "url": "https://m4sport.hu/elo/mtv4live/",
+                    },
+                    {
+                        "product_name": "MÉDIAKLIKK",
+                        "entitlement": "Free",
+                        "url": "https://mediaklikk.hu/elo/dunalive/",
+                    },
+                ],
+            },
+            {
+                "country_code": "INA",
+                "streams": [
+                    {
+                        "product_name": "TVRI Klik",
+                        "entitlement": "Free",
+                        "url": "https://klik.tvri.go.id/detailchannel/TVRI_CH_03",
                     },
                 ],
             },
@@ -243,6 +373,11 @@ def expected_us_en_us() -> dict[str, Any]:
             {
                 "country_code": "ITA",
                 "streams": [
+                    {
+                        "product_name": "DAZN",
+                        "entitlement": "Paid",
+                        "url": "https://www.dazn.com/it-IT/",
+                    },
                     {
                         "product_name": "RaiPlay",
                         "entitlement": "Free",
@@ -284,6 +419,11 @@ def expected_us_en_us() -> dict[str, Any]:
                         "entitlement": "Free",
                         "url": "https://tv.nrk.no/serie/fifa-fotball-vm-2026",
                     },
+                    {
+                        "product_name": "TV 2 Play",
+                        "entitlement": "Paid",
+                        "url": "https://www.tv2.no/livesport/fotball/turneringer/fifa-fotball-vm/a315b842-f4bc-5687-9ecb-3e06d6acdf9a/oversikt",
+                    },
                 ],
             },
             {
@@ -297,8 +437,23 @@ def expected_us_en_us() -> dict[str, Any]:
                 ],
             },
             {
+                "country_code": "POL",
+                "streams": [
+                    {
+                        "product_name": "TVP SPORT",
+                        "entitlement": "Free",
+                        "url": "https://sport.tvp.pl/transmisje",
+                    },
+                ],
+            },
+            {
                 "country_code": "POR",
                 "streams": [
+                    {
+                        "product_name": "LiveModeTV - YouTube",
+                        "entitlement": "Free",
+                        "url": "https://www.youtube.com/@LiveModeTV_PT",
+                    },
                     {
                         "product_name": "sport tv",
                         "entitlement": "Free and Paid",
@@ -307,12 +462,72 @@ def expected_us_en_us() -> dict[str, Any]:
                 ],
             },
             {
+                "country_code": "ROU",
+                "streams": [
+                    {
+                        "product_name": "AntenaPLAY",
+                        "entitlement": "Paid",
+                        "url": "https://antenaplay.ro/fifa-world-cup",
+                    },
+                ],
+            },
+            {
                 "country_code": "RSA",
                 "streams": [
+                    {
+                        "product_name": "DStv Stream",
+                        "entitlement": "Paid",
+                        "url": "https://dstv.stream/#/",
+                    },
                     {
                         "product_name": "SABC+",
                         "entitlement": "Free",
                         "url": "https://sabc-plus.com/live",
+                    },
+                ],
+            },
+            {
+                "country_code": "SRB",
+                "streams": [
+                    {
+                        "product_name": "Arena Cloud",
+                        "entitlement": "Free Trial",
+                        "url": "https://webtv.arenacloudtv.com/",
+                    },
+                    {
+                        "product_name": "RTS Planeta",
+                        "entitlement": "Free and Paid",
+                        "url": "https://rtsplaneta.rs/live/tv",
+                    },
+                ],
+            },
+            {
+                "country_code": "SUI",
+                "streams": [
+                    {
+                        "product_name": "RSI",
+                        "entitlement": "Free",
+                        "url": "https://www.rsi.ch/play/tv/streaming",
+                    },
+                    {
+                        "product_name": "RTS",
+                        "entitlement": "Free",
+                        "url": "https://www.rts.ch/play/tv/rts-livestreams",
+                    },
+                    {
+                        "product_name": "SRF",
+                        "entitlement": "Free",
+                        "url": "https://www.srf.ch/play/tv/sport-livestreams",
+                    },
+                ],
+            },
+            {
+                "country_code": "SVK",
+                "streams": [
+                    {
+                        "product_name": "JOJPLAY",
+                        "entitlement": "Paid",
+                        "url": "https://play.joj.sk/",
                     },
                 ],
             },
@@ -390,4 +605,4 @@ def test_watch_links_us_en_us(
     total_links = len(body["your_region"]) + sum(
         len(country["streams"]) for country in body["other_regions"]
     )
-    assert total_links == 43
+    assert total_links == 76
