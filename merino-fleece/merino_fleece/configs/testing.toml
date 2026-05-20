@@ -8,3 +8,6 @@ dynaconf_merge = true
 level = "DEBUG"
 format = "pretty"
 can_propagate = true
+
+[testing.metrics]
+dev_logger = true

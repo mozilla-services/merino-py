@@ -180,7 +180,7 @@ warn_unreachable = true
 markers = [
   "restore_load_manifest: disable the mock_load_manifest autouse fixture and use the real file",
 ]
-testpaths = ["tests", "merino-common/tests"]
+testpaths = ["tests", "merino-common/tests", "merino-fleece/tests"]
 norecursedirs = [
   "tests/data/",
   "tests/utils/",

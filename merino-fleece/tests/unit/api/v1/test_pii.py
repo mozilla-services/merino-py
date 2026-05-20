@@ -3,6 +3,9 @@
 from collections.abc import Iterator
 
 import pytest
+from pytest_mock import MockerFixture
+
+import aiodogstatsd
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -44,7 +47,7 @@ def make_client() -> Iterator:
 def test_pii_true(make_client) -> None:
     """Detector reporting PERSON returns pii=true."""
     client = make_client(True)
-    resp = client.get("/api/v1/pii", params={"q": "Barack Obama"})
+    resp = client.get("/api/v1/pii", params={"q": "Alice Bob"})
     assert resp.status_code == 200
     assert resp.json() == {"pii": True}
 
@@ -69,3 +72,17 @@ def test_query_too_long(make_client) -> None:
     client = make_client(False)
     resp = client.get("/api/v1/pii", params={"q": "x" * 501})
     assert resp.status_code == 422
+
+
+def test_pii_metrics(
+    make_client,
+    mocker: MockerFixture,
+) -> None:
+    """Metrics should be recorded for the 'pii' endpoint"""
+    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+
+    client = make_client(True)
+    client.get("/api/v1/pii", params={"q": "Alice Bob"})
+
+    report.assert_called_once()
+    assert report.call_args[0][0] == "pii.detect_duration"
