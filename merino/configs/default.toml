@@ -535,6 +535,9 @@ circuit_breaker_failure_threshold = 10
 # MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
 # The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
+# MERINO_PROVIDERS__WCS__WATCH_LINKS_CACHE_CONTROL_TTL
+# TTL value for the cache-control header set on the /wcs/watch-links endpoint response.
+watch_links_cache_control_ttl = 3600 # 1 hour
 
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC

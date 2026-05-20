@@ -34,7 +34,7 @@ from tests.wcs.factories import (
 from merino.providers.wcs.protocol import (
     TeamInfo,
     TeamsResponse,
-    WatchLinksResponse,
+    WatchLinks,
 )
 from merino.providers.wcs.watch_links import build_watch_link
 
@@ -650,7 +650,7 @@ async def test_get_watch_links_no_geolocation_returns_empty_sections() -> None:
     """Both your_region and other_regions are empty when geolocation is None."""
     response = await build_provider().get_watch_links(None, [])
 
-    assert isinstance(response, WatchLinksResponse)
+    assert isinstance(response, WatchLinks)
     assert response.your_region == []
     assert response.other_regions == []
 

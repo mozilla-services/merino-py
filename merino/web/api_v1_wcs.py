@@ -5,6 +5,8 @@ from datetime import date as Date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, Header
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 from merino.configs import settings
 from merino.middleware import ScopeKey
@@ -14,7 +16,7 @@ from merino.providers.wcs.protocol import (
     LiveMatchesResponse,
     MatchesResponse,
     TeamsResponse,
-    WatchLinksResponse,
+    WatchLinks,
 )
 from merino.providers.wcs.provider import WcsProvider
 from merino.utils.query_processing.geo_params import (
@@ -24,6 +26,7 @@ from merino.utils.query_processing.geo_params import (
 router = APIRouter()
 
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
+WATCH_LINKS_CACHE_CONTROL_TTL = settings.providers.wcs.watch_links_cache_control_ttl
 
 
 @router.get(
@@ -78,16 +81,23 @@ async def get_wcs_live(
     "/wcs/watch-links",
     tags=["wcs"],
     summary="Watch links for World Cup Soccer matches, resolved for the request locale",
-    response_model=WatchLinksResponse,
+    response_model=WatchLinks,
 )
 async def get_wcs_watch_links(
     request: Request,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WcsProvider = Depends(get_wcs_provider),
-) -> WatchLinksResponse:
+) -> JSONResponse:
     """Return locale-resolved watch links for WCS matches."""
     geolocation: Location | None = request.scope.get(ScopeKey.GEOLOCATION)
-    return await provider.get_watch_links(geolocation, get_accepted_languages(accept_language))
+    watch_links = await provider.get_watch_links(
+        geolocation, get_accepted_languages(accept_language)
+    )
+
+    return JSONResponse(
+        content=jsonable_encoder(watch_links),
+        headers={"Cache-Control": (f"private, max-age={WATCH_LINKS_CACHE_CONTROL_TTL}")},
+    )
 
 
 @router.get(

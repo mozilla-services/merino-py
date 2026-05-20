@@ -22,7 +22,7 @@ from merino.providers.wcs.protocol import (
     OtherRegionStream,
     TeamInfo,
     TeamsResponse,
-    WatchLinksResponse,
+    WatchLinks,
     YourRegionEntry,
 )
 from merino.providers.wcs.utils import resolve_other_regions, resolve_watch_links
@@ -175,7 +175,7 @@ class WcsProvider:
 
     async def get_watch_links(
         self, geolocation: Location | None, accepted_languages: list[str]
-    ) -> WatchLinksResponse:
+    ) -> WatchLinks:
         """Return locale-resolved watch links for WCS matches."""
         # streams available in the user's own country and language
         your_region = [
@@ -196,7 +196,7 @@ class WcsProvider:
             ]
             other_regions.append(OtherRegionEntry(country_code=display_code, streams=streams))
 
-        return WatchLinksResponse(your_region=your_region, other_regions=other_regions)
+        return WatchLinks(your_region=your_region, other_regions=other_regions)
 
     async def _get_eliminated_team_keys(self) -> set[str]:
         """Return team keys that no longer have a tournament path."""

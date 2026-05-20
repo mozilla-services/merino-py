@@ -209,7 +209,7 @@ class OtherRegionEntry(BaseModel):
     streams: list[OtherRegionStream]
 
 
-class WatchLinksResponse(BaseModel):
+class WatchLinks(BaseModel):
     """Response payload for `GET /api/v1/wcs/watch-links`."""
 
     your_region: list[YourRegionEntry]

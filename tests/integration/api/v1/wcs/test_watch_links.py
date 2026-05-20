@@ -15,7 +15,7 @@ _PATH = "/api/v1/wcs/watch-links"
 
 @pytest.fixture
 def expected_us_en_us() -> dict[str, Any]:
-    """Return the expected WatchLinksResponse for a US user with Accept-Language: en-US.
+    """Return the expected WatchLinks for a US user with Accept-Language: en-US.
 
     your_region entries are drawn from wcs_watch_links_filtered.csv for the United States,
     sorted by sort_order then product_name ascending.
@@ -361,6 +361,7 @@ def test_watch_links_no_geolocation_returns_empty_response(client: TestClient) -
 
     assert response.status_code == 200
     assert response.json() == {"your_region": [], "other_regions": []}
+    assert response.headers["cache-control"] == "private, max-age=3600"
 
 
 def test_watch_links_with_geolocation_returns_populated_response(
