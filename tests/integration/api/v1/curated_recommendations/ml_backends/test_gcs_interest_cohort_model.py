@@ -162,9 +162,29 @@ async def test_small_population_model(
     )
     assert (
         model_provider.get_cohort_for_interests(
+            model_id=SMALL_POPULATION_MODEL_ID, interests="011001"
+        )
+        == "2"
+    )
+    assert (
+        model_provider.get_cohort_for_interests(
             model_id=SMALL_POPULATION_MODEL_ID, interests="1010"
         )
         == "4"
+    )
+    assert (
+        model_provider.get_cohort_for_interests(
+            model_id=SMALL_POPULATION_MODEL_ID, interests="101010"
+        )
+        == "4"
+    )
+    # Special case - No interest, East coast time zone (last 2 chars) falls back
+    # to country model.
+    assert (
+        model_provider.get_cohort_for_interests(
+            model_id=SMALL_POPULATION_MODEL_ID, interests="101001"
+        )
+        == NO_CLICKS_COHORT_ID
     )
 
 
