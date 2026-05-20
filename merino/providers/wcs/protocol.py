@@ -5,9 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
-from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
-    TBD_TEAM_KEY,
-)
+from merino.providers.suggest.sports.backends.sportsdata.common.tbd import is_tbd_event_team
 from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
@@ -91,15 +89,6 @@ class TeamInfo(BaseModel):
         )
 
 
-def _is_tbd_event_team(team: dict[str, Any]) -> bool:
-    """Return True for the compact placeholder team used in cached WCS events."""
-    try:
-        team_id = int(team.get("id", -1))
-    except TypeError, ValueError:
-        team_id = -1
-    return str(team.get("key", "")).upper() == TBD_TEAM_KEY and team_id == 0
-
-
 class EventInfo(BaseModel):
     """A single match event."""
 
@@ -138,12 +127,12 @@ class EventInfo(BaseModel):
         """Build widget event info from a cached SportsData event."""
         home_team = (
             None
-            if _is_tbd_event_team(event.home_team)
+            if is_tbd_event_team(event.home_team)
             else TeamInfo.from_event_team(event.home_team, group=event.group)
         )
         away_team = (
             None
-            if _is_tbd_event_team(event.away_team)
+            if is_tbd_event_team(event.away_team)
             else TeamInfo.from_event_team(event.away_team, group=event.group)
         )
         updated = event.updated or event.date

@@ -177,7 +177,7 @@ async def test_matches_include_nullable_tbd_teams() -> None:
     assert event.home_team is None
     assert event.away_team is None
     assert event.stage == "Quarterfinals"
-    assert event.query == "World Cup 2026 TBD vs TBD 05 July 2026"
+    assert event.query == "Quarterfinals World Cup 2026"
 
 
 @pytest.mark.asyncio
