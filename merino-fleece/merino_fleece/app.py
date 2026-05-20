@@ -8,6 +8,7 @@ from merino_common.app_configs.config_logging import configure_logging
 from merino_common.app_configs.config_sentry import configure_sentry
 
 from merino_fleece.api.v1 import router as v1_router
+from merino_fleece.api import dockerflow
 from merino_fleece.configs import settings
 from merino_fleece.pii import init_detector, shutdown_detector
 from merino_fleece.utils.metrics import configure_metrics
@@ -40,4 +41,5 @@ def create_app() -> FastAPI:
     """Construct the FastAPI app."""
     app = FastAPI(title="merino-fleece", lifespan=lifespan)
     app.include_router(v1_router, prefix="/api/v1")
+    app.include_router(dockerflow.router)
     return app
