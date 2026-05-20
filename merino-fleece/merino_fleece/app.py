@@ -10,6 +10,7 @@ from merino_common.app_configs.config_sentry import configure_sentry
 from merino_fleece.api.v1 import router as v1_router
 from merino_fleece.configs import settings
 from merino_fleece.pii import init_detector, shutdown_detector
+from merino_fleece.utils.metrics import configure_metrics
 
 
 @asynccontextmanager
@@ -27,6 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         env=settings.sentry.env,
         traces_sample_rate=settings.sentry.traces_sample_rate,
     )
+    await configure_metrics()
     init_detector()
     try:
         yield

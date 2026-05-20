@@ -46,3 +46,19 @@ level = "INFO"
 # MERINO_FLEECE_LOGGING__CAN_PROPAGATE
 # Whether the merino-fleece loggers should propagate to the root logger.
 can_propagate = false
+
+[default.metrics]
+# Settings for Statsd/Datadog style metrics reporting.
+
+# MERINO_FLEECE_METRICS__DEV_LOGGER
+# Whether or not to send metrics over to the logger.
+# Should only be used for non-production environments.
+dev_logger = false
+
+# MERINO_FLEECE_METRICS__HOST
+# The IP or hostname to send metrics over UDP. Defaults to localhost.
+host = "localhost"
+
+# MERINO_FLEECE_METRICS__PORT
+# The port to send metrics to over UDP. Defaults to 8092.
+port = 8092

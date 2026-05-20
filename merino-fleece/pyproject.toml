@@ -31,3 +31,7 @@ build-backend = "uv_build"
 
 [project.scripts]
 merino-fleece = "merino_fleece.main:main"
+
+[tool.pytest.ini_options]
+addopts = [ "--import-mode=importlib" ]
+pythonpath = [ "." ]
