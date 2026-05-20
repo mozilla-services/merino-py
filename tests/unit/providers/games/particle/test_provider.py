@@ -15,6 +15,7 @@ from pytest_mock import MockerFixture
 from tests.types import FilterCaplogFixture
 from unittest.mock import AsyncMock, patch
 
+from merino.providers.games.particle.backends.filemanager import ParticleFileManagerError
 from merino.providers.games.particle.backends.protocol import (
     Particle,
     ParticleBackend,
@@ -373,3 +374,25 @@ async def test_process_remote_particle_data_no_files_updated(
     mock_fetch_from_gcs.assert_awaited_once()
     mock_update_puzzle.assert_awaited_once()
     mock_update_runtime.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_process_remote_particle_data_gcs_fetch_raises(
+    provider,
+    valid_manifest_data,
+    mock_validate_schema,
+    mock_validate_schema_version,
+    mock_fetch_from_gcs,
+    mock_update_puzzle,
+    mock_update_runtime,
+):
+    """Assert process_remote_particle_data returns False and all expected functions are called when no files require updating"""
+    mock_fetch_from_gcs.side_effect = ParticleFileManagerError("GCS call failed")
+
+    assert not await provider.process_remote_particle_data(valid_manifest_data)
+
+    mock_validate_schema.assert_called_once()
+    mock_validate_schema_version.assert_called_once()
+    mock_fetch_from_gcs.assert_awaited_once()
+    mock_update_puzzle.assert_not_awaited()
+    mock_update_runtime.assert_not_awaited()

@@ -1,6 +1,7 @@
 """Particle game backend."""
 
 import aiodogstatsd
+import asyncio
 import logging
 import orjson
 import sentry_sdk
@@ -90,4 +91,4 @@ class ParticleBackend:
 
     async def fetch_manifest_json_from_gcs(self) -> Json | None:
         """Retrieve the manifest json last stored in GCS"""
-        return self.remote_file_manager.get_manifest_file()
+        return await asyncio.to_thread(self.remote_file_manager.get_manifest_file)

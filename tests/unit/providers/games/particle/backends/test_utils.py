@@ -9,7 +9,6 @@ import logging
 import pytest
 
 from contextlib import nullcontext as does_not_raise
-from jsonschema import exceptions
 from pydantic import Json
 from pytest import LogCaptureFixture
 from typing import Any
@@ -17,6 +16,7 @@ from unittest.mock import patch
 
 from merino.configs import settings
 from merino.providers.games.particle.backends.utils import (
+    ParticleManifestValidationError,
     remote_manifest_puzzle_is_updated,
     remote_manifest_runtime_is_updated,
     update_files_puzzle,
@@ -131,7 +131,7 @@ def test_validate_manifest_schema_version_raises_with_no_schema_version_in_json(
     caplog: LogCaptureFixture, filter_caplog: Any
 ):
     """Verify missing schema version raises an exception."""
-    with pytest.raises(Exception):
+    with pytest.raises(ParticleManifestValidationError):
         validate_manifest_schema_version(
             json.loads('{"cremaVersion": 1}'), _manifest_schema_version
         )
@@ -169,7 +169,7 @@ def test_validate_manifest_against_schema_raises_with_invalid_json(
     filter_caplog: Any,
 ):
     """Verify expected error is raised if manifest JSON does not conform to the schema."""
-    with pytest.raises(exceptions.ValidationError):
+    with pytest.raises(ParticleManifestValidationError):
         validate_manifest_against_schema(invalid_manifest_data, manifest_schema_data)
 
     # get error records
@@ -200,7 +200,7 @@ def test_remote_manifest_runtime_is_updated_was_not_updated(valid_manifest_data)
     assert not remote_manifest_runtime_is_updated(valid_manifest_data, valid_manifest_data)
 
 
-def test_remote_manifest_daily_is_updated_was_updated(
+def test_remote_manifest_puzzle_is_updated_was_updated(
     valid_manifest_data, valid_manifest_data_remote_updated
 ):
     """Test that comparing an old manifest to a new results in an updated signal"""
@@ -209,7 +209,7 @@ def test_remote_manifest_daily_is_updated_was_updated(
     )
 
 
-def test_remote_manifest_daily_is_updated_was_not_updated(valid_manifest_data):
+def test_remote_manifest_puzzle_is_updated_was_not_updated(valid_manifest_data):
     """Test that comparing the same manifest results in a not updated signal"""
     assert not remote_manifest_puzzle_is_updated(valid_manifest_data, valid_manifest_data)
 

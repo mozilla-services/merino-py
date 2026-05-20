@@ -3,19 +3,20 @@
 import aiodogstatsd
 import asyncio
 import logging
-import orjson
 import sentry_sdk
 import time
 
 from pydantic import Json
 from typing import Any
 
+from merino.providers.games.particle.backends.filemanager import ParticleFileManagerError
 from merino.providers.games.particle.backends.protocol import Particle, ParticleBackend
 from merino.providers.games.particle.backends.utils import (
     update_files_puzzle,
     update_files_runtime,
     validate_manifest_against_schema,
     validate_manifest_schema_version,
+    ParticleManifestValidationError,
 )
 from merino.utils import cron
 
@@ -75,10 +76,11 @@ class Provider:
         return (time.time() - self.last_successful_update_at) >= self.resync_interval_sec
 
     async def _fetch_game_data(self) -> None:
-        raw_manifest_json: Json | None = None
+        manifest_json: Json | None = None
 
         try:
-            raw_manifest_json = await self.backend.fetch_manifest_json_from_remote()
+            # if successful, returns Json
+            manifest_json = await self.backend.fetch_manifest_json_from_remote()
         except Exception as ex:
             logger.warning(
                 "Failed to fetch Particle game data from remote endpoint", extra={"error": str(ex)}
@@ -86,14 +88,12 @@ class Provider:
 
             sentry_sdk.capture_exception(ex)
 
-        if raw_manifest_json is None:
+        if manifest_json is None:
             logger.warning(
                 f"Particle game data fetch returned None - will retry on next cron tick ({self.cron_interval_sec} seconds)"
             )
         else:
-            particle_updated = await self.process_remote_particle_data(
-                orjson.loads(raw_manifest_json)
-            )
+            particle_updated = await self.process_remote_particle_data(manifest_json)
 
             # only update the last success time if we actually updated some files
             if particle_updated:
@@ -105,17 +105,30 @@ class Provider:
         """
         # ensure the remote schema is valid
         # this will raise if the schema is invalid
-        validate_manifest_against_schema(remote_manifest_json, self.manifest_schema)
+        try:
+            validate_manifest_against_schema(remote_manifest_json, self.manifest_schema)
+        except ParticleManifestValidationError as ex:
+            sentry_sdk.capture_exception(ex)
+            return False
 
-        # ensure the schema verison is as expected
-        # this will raise is the schema version doesn't match
-        validate_manifest_schema_version(remote_manifest_json, self.manifest_schema_version)
+        # ensure the schema version is as expected
+        # this will raise if the schema version doesn't match
+        try:
+            validate_manifest_schema_version(remote_manifest_json, self.manifest_schema_version)
+        except ParticleManifestValidationError as ex:
+            sentry_sdk.capture_exception(ex)
+            return False
 
         # get the manifest file we last stored in GCS to determine if the
         # remote version is newer.
         # returns None if no file is found in GCS, will raise if there's an
         # error retrieving from GCS.
-        gcs_manifest_json = await self.backend.fetch_manifest_json_from_gcs()
+        try:
+            gcs_manifest_json = await self.backend.fetch_manifest_json_from_gcs()
+        except ParticleFileManagerError:
+            # if an exception occurs retrieving from GCS, return early to
+            # ensure the next cron tick again attempts an update
+            return False
 
         # conditionally attempt to update file sets - daily puzzle and runtime
         puzzle_updated = await update_files_puzzle(
@@ -127,7 +140,7 @@ class Provider:
 
         # if either set of files (daily puzzle or runtime) were updated, we can
         # consider this update successful
-        return True if puzzle_updated or runtime_updated else False
+        return puzzle_updated or runtime_updated
 
     async def get_game_url(self) -> Particle | None:
         """Proxy get_game_url from Particle backend"""
