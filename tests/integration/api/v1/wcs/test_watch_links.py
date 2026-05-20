@@ -28,7 +28,7 @@ def expected_us_en_us() -> dict[str, Any]:
         "your_region": [
             {
                 "product_name": "FIFA+",
-                "entitlement": "FIFA+",
+                "entitlement": "Free and Paid",
                 "url": "https://www.plus.fifa.com/showcase/fifa-world-cup-26tm/89de0054-9fa6-4741-88e1-a902dc26740f",
             },
             {

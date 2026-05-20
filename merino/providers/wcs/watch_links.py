@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 _SORT_ORDER_LABELS: dict[int, str] = {
-    1: "FIFA+",
+    1: "Free and Paid",  # reserved for FIFA+ links; rank 1 pins them first in every region
     2: "Free",
     3: "Free and Paid",
     4: "Free Trial",
