@@ -30,3 +30,7 @@ class ParticleBackend(Protocol):
     async def fetch_manifest_json_from_remote(self) -> Json | None:
         """Retrieve the latest manifest JSON from Particle"""
         ...
+
+    async def fetch_manifest_json_from_gcs(self) -> Json | None:
+        """Retrieve the manifest json last stored in GCS"""
+        ...
