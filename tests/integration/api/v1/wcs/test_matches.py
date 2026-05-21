@@ -109,7 +109,7 @@ def test_matches_returns_nullable_tbd_sides(client: TestClient) -> None:
     assert body["current"][0]["home_team"] is None
     assert body["current"][0]["away_team"] is None
     assert body["current"][0]["stage"] == "Quarterfinals"
-    assert body["current"][0]["query"] == "World Cup 2026 TBD vs TBD 05 July 2026"
+    assert body["current"][0]["query"] == "Quarterfinals World Cup 2026"
 
 
 def test_invalid_date_returns_400(client: TestClient) -> None:

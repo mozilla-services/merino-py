@@ -15,6 +15,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     SPORT_CATEGORY_MAP,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.tbd import is_tbd_event_team
 from merino.utils.logos import get_logo_url, LogoCategory
 
 # Mapping of sport name from SportEventDetail
@@ -50,11 +51,24 @@ def build_query(event: dict[str, Any]) -> str:
         query_timezone: tzinfo = sportsdata_timezone_for_sport(event.get("sport", ""))
         date = event_date.astimezone(query_timezone).strftime("%d %B %Y")
     # catch pre-stored values
+    # Forked query string for WCS vs. other sports
     if event.get("sport", "").lower() == "fifa":
         sport_query_name = "World Cup 2026"
+        home_team = event.get("home_team")
+        away_team = event.get("away_team")
+        if (
+            home_team is None
+            or away_team is None
+            or is_tbd_event_team(home_team)
+            or is_tbd_event_team(away_team)
+        ):
+            return f"{event.get('stage', '')} {sport_query_name}"
+        # If it gets to this point these should be defined, but there is not
+        # type safety so we have to use fallbacks
+        return f"{event.get('home_team', {}).get('name', '')} vs {event.get('away_team', {}).get('name', '')} {sport_query_name}"
     else:
         sport_query_name = event.get("sport", "")
-    return f"""{sport_query_name} {event.get("home_team", {}).get("name", "")} vs {event.get("away_team", {}).get("name", "")} {date}"""
+        return f"""{sport_query_name} {event.get("home_team", {}).get("name", "")} vs {event.get("away_team", {}).get("name", "")} {date}"""
 
 
 class SportEventDetail(BaseModel):

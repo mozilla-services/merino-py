@@ -420,19 +420,43 @@ def test_sport_event_detail_remap() -> None:  # WCS, Widget
 
     result = SportEventDetail.from_event_dict(event)
     assert result.sport == "World Cup"
-    assert result.query == "World Cup 2026 Home Team vs Away Team 01 October 2025"
+    assert result.query == "Home Team vs Away Team World Cup 2026"
 
 
-def test_build_query() -> None:
+@pytest.mark.parametrize(
+    "home_team_name,away_team_name,sport,stage,expected",
+    [
+        ("Home Team", "Away Team", "NFL", None, "NFL Home Team vs Away Team 01 October 2025"),
+        ("Switzerland", "Germany", "FIFA", "Group", "Switzerland vs Germany World Cup 2026"),
+        ("Japan", None, "FIFA", "Round of 16", "Round of 16 World Cup 2026"),
+        (None, None, "FIFA", "Round of 32", "Round of 32 World Cup 2026"),
+        ("South Korea", "TBD", "FIFA", "Semi-Finals", "Semi-Finals World Cup 2026"),
+        ("TBD", "TBD", "FIFA", "3rd Place", "3rd Place World Cup 2026"),
+    ],
+    ids=["NFL", "WCS", "WCS: None (one)", "WCS: None (both)", "WCS: TBD (one)", "WCS: TBD (both)"],
+)
+def test_build_query(home_team_name, away_team_name, sport, stage, expected) -> None:
     """build_query produces a 'sport away vs home date' string."""
     event: dict = {
-        "sport": "NFL",
+        "sport": sport,
         "date": "2025-10-01T16:00:00+00:00",
-        "home_team": {"name": "Home Team"},
-        "away_team": {"name": "Away Team"},
+        "home_team": {
+            "name": home_team_name,
+            "key": home_team_name,
+            "id": 0 if home_team_name == "TBD" else 123,
+        }
+        if home_team_name is not None
+        else None,
+        "away_team": {
+            "name": away_team_name,
+            "key": away_team_name,
+            "id": 0 if away_team_name == "TBD" else 345,
+        }
+        if away_team_name is not None
+        else None,
+        "stage": stage,
     }
-
-    assert build_query(event) == "NFL Home Team vs Away Team 01 October 2025"
+    assert build_query(event) == expected
 
 
 def test_build_query_uses_league_local_date() -> None:
@@ -463,19 +487,6 @@ def test_build_query_uses_source_day_for_scheduled_us_sports() -> None:
     assert build_query(event) == "NFL Fake Home vs Fake Away 26 October 2025"
 
 
-def test_build_query_uses_source_day_for_scheduled_world_cup() -> None:
-    """build_query uses the SportsData source day for WCS click-through queries."""
-    event: dict = {
-        "sport": "fifa",
-        "date": "2026-06-16T02:00:00+00:00",
-        "original_date": "2026-06-15T00:00:00",
-        "home_team": {"name": "IR Iran"},
-        "away_team": {"name": "New Zealand"},
-    }
-
-    assert build_query(event) == "World Cup 2026 IR Iran vs New Zealand 15 June 2026"
-
-
 def test_sport_summary_current_suppresses_previous_and_keeps_next() -> None:
     """SportSummary returns current and next events when both are available."""
 
@@ -501,19 +512,6 @@ def test_sport_summary_current_suppresses_previous_and_keeps_next() -> None:
     )
 
     assert [value.status_type for value in summary.values] == ["live", "scheduled"]
-
-
-def test_build_query_world_cup() -> None:
-    """build_query uses World Cup 2026 prefix for games"""
-    event: dict = {
-        "sport": "fifa",
-        "date": "2026-06-15T02:00:00+00:00",
-        "home_team": {"name": "Home Team"},
-        "away_team": {"name": "Away Team"},
-    }
-
-    assert build_query(event) == "World Cup 2026 Home Team vs Away Team 15 June 2026"
-    assert event["sport"] == "fifa"
 
 
 def test_sport_event_detail_icon_set_when_team_in_manifest(

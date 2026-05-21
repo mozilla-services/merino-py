@@ -12,7 +12,8 @@ from merino.providers.suggest.sports.backends.sportsdata.common import GameStatu
 from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
     TBD_TEAM_KEY,
 )
-from merino.providers.wcs.protocol import EventInfo, TeamInfo, _is_tbd_event_team
+from merino.providers.suggest.sports.backends.sportsdata.common.tbd import is_tbd_event_team
+from merino.providers.wcs.protocol import EventInfo, TeamInfo
 from merino.utils.logos import LogoCategory, LogoManifest
 from tests.wcs.factories import event
 
@@ -20,7 +21,7 @@ MakeManifest = Callable[..., LogoManifest]
 
 
 def test_event_info_from_event_builds_world_cup_query() -> None:
-    """`query` uses the World Cup 2026 prefix and date string."""
+    """`query` uses the World Cup 2026 suffix without game date"""
     e = event(
         event_id=1,
         day_offset=0,
@@ -32,8 +33,7 @@ def test_event_info_from_event_builds_world_cup_query() -> None:
 
     info = EventInfo.from_event(e)
 
-    expected_date = e.date.strftime("%d %B %Y")
-    assert info.query == f"World Cup 2026 Brazil vs Argentina {expected_date}"
+    assert info.query == "Brazil vs Argentina World Cup 2026"
 
 
 def test_event_info_from_event_uses_source_day_for_world_cup_query() -> None:
@@ -51,7 +51,7 @@ def test_event_info_from_event_uses_source_day_for_world_cup_query() -> None:
     info = EventInfo.from_event(e)
 
     assert info.date == "2026-06-16T02:00:00+00:00"
-    assert info.query == "World Cup 2026 IR Iran vs New Zealand 15 June 2026"
+    assert info.query == "IR Iran vs New Zealand World Cup 2026"
 
 
 def test_team_info_icon_url_can_be_none_when_logo_is_missing(
@@ -83,7 +83,7 @@ def test_team_info_icon_url_uses_png_when_svg_is_missing(
 
 def test_is_tbd_event_team_ignores_malformed_placeholder_id() -> None:
     """A malformed placeholder id is not treated as an undecided bracket side."""
-    assert _is_tbd_event_team({"key": TBD_TEAM_KEY, "id": "bad"}) is False
+    assert is_tbd_event_team({"key": TBD_TEAM_KEY, "id": "bad"}) is False
 
 
 def test_event_info_from_event_builds_tbd_world_cup_query() -> None:
@@ -103,7 +103,7 @@ def test_event_info_from_event_builds_tbd_world_cup_query() -> None:
 
     assert info.home_team is None
     assert info.away_team is None
-    assert info.query == "World Cup 2026 TBD vs TBD 05 July 2026"
+    assert info.query == "Quarterfinals World Cup 2026"
 
 
 def test_event_info_from_event_serializes_one_tbd_side_as_null() -> None:
@@ -124,7 +124,7 @@ def test_event_info_from_event_serializes_one_tbd_side_as_null() -> None:
     assert info.home_team is not None
     assert info.home_team.name == "Sweden"
     assert info.away_team is None
-    assert info.query == "World Cup 2026 Sweden vs TBD 05 July 2026"
+    assert info.query == "Quarterfinals World Cup 2026"
 
 
 def test_event_info_from_event_includes_stage() -> None:
