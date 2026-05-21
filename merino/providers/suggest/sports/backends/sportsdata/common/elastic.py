@@ -44,9 +44,9 @@ from merino.utils.metrics import ES_SEARCH_METRIC_NAME
 META_INDEX: str = "sports-meta"
 
 EN_INDEX_SETTINGS: dict = {
-    "number_of_replicas": "1",
     "refresh_interval": "-1",
     "number_of_shards": "2",
+    "index.auto_expand_replicas": "1-all",   # autoscale replicas so all nodes have a copy
     "index.lifecycle.name": "sports-en-policy",
     "analysis": {
         "filter": {
