@@ -657,7 +657,7 @@ async def test_get_watch_links_no_geolocation_returns_empty_sections() -> None:
 
 @pytest.mark.asyncio
 async def test_get_watch_links_returns_correct_structure(mocker) -> None:
-    """Resolver results are mapped into YourRegionEntry and OtherRegionEntry objects."""
+    """Resolver results are mapped into StreamEntry and OtherRegionEntry objects."""
     stream = build_watch_link(
         "FIFA+",
         "https://www.plus.fifa.com",

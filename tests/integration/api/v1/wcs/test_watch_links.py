@@ -656,7 +656,9 @@ def test_watch_links_de_de(
     assert "GER" not in other_codes
 
     # USA must appear in other_regions with all seven qualifying streams
-    usa_entry = next(country for country in body["other_regions"] if country["country_code"] == "USA")
+    usa_entry = next(
+        country for country in body["other_regions"] if country["country_code"] == "USA"
+    )
     assert usa_entry["streams"] == [
         {
             "product_name": "DirecTV",

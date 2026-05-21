@@ -19,11 +19,10 @@ from merino.providers.wcs.protocol import (
     LiveMatchesResponse,
     MatchesResponse,
     OtherRegionEntry,
-    OtherRegionStream,
+    StreamEntry,
     TeamInfo,
     TeamsResponse,
     WatchLinks,
-    YourRegionEntry,
 )
 from merino.providers.wcs.utils import resolve_other_regions, resolve_watch_links
 from merino.utils.metrics import get_metrics_client
@@ -179,17 +178,15 @@ class WcsProvider:
         """Return locale-resolved watch links for WCS matches."""
         # streams available in the user's own country and language
         your_region = [
-            YourRegionEntry(
-                product_name=link.product_name, entitlement=link.entitlement, url=link.url
-            )
+            StreamEntry(product_name=link.product_name, entitlement=link.entitlement, url=link.url)
             for link in resolve_watch_links(geolocation, accepted_languages)
         ]
 
-        # streams grouped by other countries, lang-match first then alphabetical
+        # streams grouped by other countries, sorted by display code A-Z
         other_regions = []
         for display_code, links in resolve_other_regions(geolocation):
             streams = [
-                OtherRegionStream(
+                StreamEntry(
                     product_name=link.product_name, entitlement=link.entitlement, url=link.url
                 )
                 for link in links

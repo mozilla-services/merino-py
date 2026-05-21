@@ -186,16 +186,8 @@ class TeamsResponse(BaseModel):
     teams: list[TeamInfo]
 
 
-class YourRegionEntry(BaseModel):
-    """A streaming service available in the user's region."""
-
-    product_name: str
-    entitlement: str = Field(description="Human-readable entitlement label, e.g. 'Free Trial'.")
-    url: HttpUrl
-
-
-class OtherRegionStream(BaseModel):
-    """A streaming service entry for another region."""
+class StreamEntry(BaseModel):
+    """A streaming service entry returned in watch-links responses."""
 
     product_name: str
     entitlement: str = Field(description="Human-readable entitlement label, e.g. 'Free Trial'.")
@@ -206,11 +198,11 @@ class OtherRegionEntry(BaseModel):
     """Streaming services grouped by a region other than the user's."""
 
     country_code: str = Field(description="Display country code, e.g. 'UK', 'GER'.")
-    streams: list[OtherRegionStream]
+    streams: list[StreamEntry]
 
 
 class WatchLinks(BaseModel):
     """Response payload for `GET /api/v1/wcs/watch-links`."""
 
-    your_region: list[YourRegionEntry]
+    your_region: list[StreamEntry]
     other_regions: list[OtherRegionEntry]
