@@ -29,7 +29,7 @@ Each breaker can be defined as follows:
 from circuitbreaker import CircuitBreaker
 
 from merino.configs import settings
-from merino.exceptions import BackendError
+from merino.exceptions import BackendError, CacheAdapterError
 from merino.providers.suggest.flightaware.backends.errors import FlightawareError
 from merino.providers.suggest.weather.backends.accuweather.errors import (
     AccuweatherError,
@@ -91,5 +91,16 @@ class SportsCircuitBreaker(CircuitBreaker):
     RECOVERY_TIMEOUT = settings.providers.sports.circuit_breaker_recover_timeout_sec
     # BackendError is raised by elasticsearch query errors
     EXPECTED_EXCEPTION = BackendError
+    # When the breaker is open, use this to simply return an empty suggestion list to the caller.
+    FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+
+
+class WCSCircuitBreaker(CircuitBreaker):
+    """Circuit breaker for the WCS provider."""
+
+    FAILURE_THRESHOLD = settings.providers.wcs.circuit_breaker_failure_threshold
+    RECOVERY_TIMEOUT = settings.providers.wcs.circuit_breaker_recover_timeout_sec
+    # BackendError is raised by elasticsearch query errors
+    EXPECTED_EXCEPTION = CacheAdapterError
     # When the breaker is open, use this to simply return an empty suggestion list to the caller.
     FALLBACK_FUNCTION = _suggest_provider_fallback_fn

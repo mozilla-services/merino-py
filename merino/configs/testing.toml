@@ -127,7 +127,12 @@ resync_interval_sec = 10800
 domain_data_source = "local"
 
 [testing.providers.wikipedia]
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
 # The backend of the provider. Either "elasticsearch" or "test".
+backend = "test"
+
+[testing.providers.wcs]
 circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
 backend = "test"

@@ -521,7 +521,12 @@ cache_dir="/tmp"
 # Keep the /wcs/live mock response by default. DISCO-4231 can flip this to
 # serve Redis-backed in-progress matches after launch approval.
 live_data_enabled = false
-
+# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
 
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
