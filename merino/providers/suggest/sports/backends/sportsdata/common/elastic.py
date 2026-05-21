@@ -313,8 +313,6 @@ class ElasticDataStore(ABC):
                     f"{LOGGING_TAG} close complete",
                     extra={"elapsed_sec": monotonic() - started},
                 )
-            finally:
-                self.client = None
 
     @abstractmethod
     def build_event_mappings(self, language_code: str) -> dict[str, Any]:
