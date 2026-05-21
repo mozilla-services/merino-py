@@ -23,7 +23,7 @@ def test_error(
     response = client.get("/__error__")
 
     assert response.status_code == 500
-    records = filter_caplog(caplog.records, "merino.web.dockerflow")
+    records = filter_caplog(caplog.records, "merino_common.routers.dockerflow")
     assert len(records) == 1
     assert records[0].message == "The __error__ endpoint was called"
 

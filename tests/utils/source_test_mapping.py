@@ -1366,14 +1366,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": ["tests/integration/api/v1/"],
         "indirect": [],
     },
-    "merino/web/dockerflow.py": {
-        "direct": [
-            "tests/integration/test_error.py",
-            "tests/integration/test_heartbeat.py",
-            "tests/integration/test_version.py",
-        ],
-        "indirect": [],
-    },
     "merino/web/models_v1.py": {
         "direct": [],
         "indirect": ["tests/integration/api/v1/"],

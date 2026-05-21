@@ -25,7 +25,7 @@ from merino_common.app_configs.config_logging import configure_logging
 from merino_common.app_configs.config_sentry import configure_sentry
 from merino.utils.metrics import configure_metrics, get_metrics_client
 from merino.middleware import featureflags, geolocation, logging as mw_logging, metrics, user_agent
-from merino.web import dockerflow
+from merino_common.routers import dockerflow
 
 tags_metadata = [
     {

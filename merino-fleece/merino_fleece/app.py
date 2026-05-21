@@ -6,9 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from merino_common.app_configs.config_logging import configure_logging
 from merino_common.app_configs.config_sentry import configure_sentry
+from merino_common.routers import dockerflow
 
 from merino_fleece.api.v1 import router as v1_router
-from merino_fleece.api import dockerflow
 from merino_fleece.configs import settings
 from merino_fleece.pii import init_detector, shutdown_detector
 from merino_fleece.utils.metrics import configure_metrics
