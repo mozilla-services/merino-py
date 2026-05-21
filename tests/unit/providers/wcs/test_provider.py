@@ -9,6 +9,7 @@ from typing import Any
 
 import freezegun
 import pytest
+from circuitbreaker import CircuitBreakerError
 
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
@@ -569,7 +570,7 @@ async def test_empty_team_cache_returns_empty_teams() -> None:
 
 @pytest.mark.asyncio
 async def test_cache_error_records_then_breaker_returns_empty(mocker) -> None:
-    """Test cache failure records sentry and metrics and triggers breaker. Calls after return empty payloads.
+    """Test cache failure records sentry and metrics and triggers breaker.
     After the recovery timeout passes, breaker resets.
     """
     with freezegun.freeze_time("2025-04-11") as freezer:
@@ -595,11 +596,13 @@ async def test_cache_error_records_then_breaker_returns_empty(mocker) -> None:
         metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "teams"})
         assert sentry_capture.call_count == 3
 
-        # Breaker triggers so returns should be empty objects
-        matches = await provider.get_matches(ANCHOR, limit=None, team_keys=None)
-        assert matches.model_dump(by_alias=True) == {"previous": [], "current": [], "next": []}
-        assert (await provider.get_live_matches(team_keys=None)).matches == []
-        assert (await provider.get_teams()).teams == []
+        # Circuit breaker triggered
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_live_matches(team_keys=None)
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_teams()
 
         assert metrics_client.increment.call_count == 3
         assert sentry_capture.call_count == 3

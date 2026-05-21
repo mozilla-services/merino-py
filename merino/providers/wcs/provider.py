@@ -30,22 +30,6 @@ _CACHE_ERROR_METRIC = "wcs.cache_error"
 logger = logging.getLogger(__name__)
 
 
-# Because the WCS return multiple different response, these fallback will be used to override the default fallback function
-async def _wcs_matches_fallback_fn(*args, **kwargs) -> MatchesResponse:
-    """Define a fallback function that returns an empty MatchResponse when the circuit breaker is open."""
-    return MatchesResponse(previous=[], current=[], next_=[])
-
-
-async def _wcs_live_matches_fallback_fn(*args, **kwargs) -> LiveMatchesResponse:
-    """Define a fallback function that returns an empty LiveMatchResponse when the circuit breaker is open."""
-    return LiveMatchesResponse(matches=[])
-
-
-async def _wcs_teams_fallback_fn(*args, **kwargs) -> TeamsResponse:
-    """Define a fallback function that returns an empty TeamsResponse when the circuit breaker is open."""
-    return TeamsResponse(teams=[])
-
-
 class WcsSport(Protocol):
     """Cache-backed WCS sport behavior used by the widget provider."""
 
@@ -78,7 +62,7 @@ class WcsProvider:
         self.metrics_client = metrics_client or get_metrics_client()
         self.live_data_enabled = live_data_enabled
 
-    @WCSCircuitBreaker(name="wcs_matches", fallback_function=_wcs_matches_fallback_fn)
+    @WCSCircuitBreaker(name="wcs_matches")
     async def get_matches(
         self,
         target_date: date,
@@ -121,7 +105,7 @@ class WcsProvider:
 
         return MatchesResponse(previous=previous, current=current, next_=next_)
 
-    @WCSCircuitBreaker(name="wcs_live_matches", fallback_function=_wcs_live_matches_fallback_fn)
+    @WCSCircuitBreaker(name="wcs_live_matches")
     async def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
         """Return live-endpoint events, sorted ascending by `date`.
 
@@ -154,7 +138,7 @@ class WcsProvider:
                 live_events.append(event_info)
         return LiveMatchesResponse(matches=live_events)
 
-    @WCSCircuitBreaker(name="wcs_teams", fallback_function=_wcs_teams_fallback_fn)
+    @WCSCircuitBreaker(name="wcs_teams")
     async def get_teams(self) -> TeamsResponse:
         """Return cache-backed teams participating in the tournament."""
         try:
