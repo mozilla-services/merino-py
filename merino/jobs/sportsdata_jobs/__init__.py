@@ -362,7 +362,7 @@ def update():  # pragma: no cover
 
 
 @cli.command("update-widget")
-def update_widget():
+def update_widget():  # pragma: no cover
     """Update widget based info"""
     if provider:
         asyncio.run(provider.update_widget())
@@ -371,7 +371,7 @@ def update_widget():
 
 
 @cli.command("update-and-cache-wcs")
-def update_and_cache_wcs():
+def update_and_cache_wcs():  # pragma: no cover
     """Update Elasticsearch data and refresh the widget cache for WCS (only)."""
     if store and cache:
         wcs_only_settings = copy.copy(sports_settings)
