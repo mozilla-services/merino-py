@@ -20,8 +20,8 @@ _DATA_DIR = Path(__file__).parent.parent.parent / "data" / "query_normalization"
 def _load_wordsegment() -> None:
     """Load wordsegment once; stub reloads since load() re-parses ~10MB each call."""
     wordsegment.load()
-    wordsegment.load = lambda: None  # type: ignore[assignment]
-    wordsegment._segmenter.load = lambda: None  # type: ignore[assignment]
+    wordsegment.load = lambda: None
+    wordsegment._segmenter.load = lambda: None
 
 
 @pytest.fixture(scope="session", name="_canonical_base")
