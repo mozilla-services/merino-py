@@ -45,7 +45,6 @@ def mock_watch_links(mocker):
     """
     data: dict[str, CountryEntry] = {
         "US": {
-            "dau": 1_000,
             "langs": {
                 "en": [
                     build_watch_link(
@@ -82,7 +81,6 @@ def mock_watch_links(mocker):
             },
         },
         "GB": {
-            "dau": 500,
             "langs": {
                 "en": [
                     build_watch_link(
@@ -103,7 +101,6 @@ def mock_watch_links(mocker):
             },
         },
         "DE": {
-            "dau": 300,
             "langs": {
                 "de": [
                     build_watch_link(
@@ -124,7 +121,6 @@ def mock_watch_links(mocker):
             },
         },
         "FR": {
-            "dau": 200,
             "langs": {
                 "fr": [
                     build_watch_link(
@@ -187,7 +183,6 @@ def test_resolve_watch_links_highest_priority_language_wins(mocker) -> None:
     """First accepted language that matches a key is used; later ones are ignored."""
     data: dict[str, CountryEntry] = {
         "BE": {
-            "dau": 100,
             "langs": {
                 "fr": [
                     build_watch_link(
@@ -282,7 +277,6 @@ def test_resolve_other_regions_all_language_keys_included(mocker) -> None:
     """Streams from every language key are pooled regardless of the user's language."""
     data: dict[str, CountryEntry] = {
         "US": {
-            "dau": 1_000,
             "langs": {
                 "en": [
                     build_watch_link(
@@ -296,7 +290,6 @@ def test_resolve_other_regions_all_language_keys_included(mocker) -> None:
             },
         },
         "BE": {
-            "dau": 100,
             "langs": {
                 "fr": [
                     build_watch_link(

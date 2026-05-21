@@ -33,9 +33,8 @@ class WatchLinkEntry(BaseModel):
 
 
 class CountryEntry(TypedDict):
-    """Country-level watch link data with DAU and language-keyed stream lists."""
+    """Country-level watch link data with language-keyed stream lists."""
 
-    dau: int
     langs: dict[str, list[WatchLinkEntry]]
 
 
@@ -80,7 +79,6 @@ def _build_fifa_watch_link(*, show_in_other_regions: bool = False) -> WatchLinkE
 # that apply regardless of language.
 WATCH_LINKS: dict[str, CountryEntry] = {
     "AR": {
-        "dau": 411_130,
         "langs": {
             "es": [
                 _build_fifa_watch_link(),
@@ -109,7 +107,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "AT": {
-        "dau": 501_177,
         "langs": {
             "de": [
                 _build_fifa_watch_link(),
@@ -131,7 +128,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "AU": {
-        "dau": 593_227,
         "langs": {
             "en": [
                 _build_fifa_watch_link(),
@@ -146,7 +142,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "BE": {
-        "dau": 369_344,
         "langs": {
             "*": [
                 _build_fifa_watch_link(),
@@ -172,7 +167,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "BG": {
-        "dau": 173_120,
         "langs": {
             "bg": [
                 _build_fifa_watch_link(),
@@ -187,7 +181,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "BR": {
-        "dau": 1_923_018,
         "langs": {
             "pt": [
                 _build_fifa_watch_link(),
@@ -216,7 +209,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "CA": {
-        "dau": 1_160_538,
         "langs": {
             "en": [
                 _build_fifa_watch_link(),
@@ -245,7 +237,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "CH": {
-        "dau": 539_945,
         "langs": {
             "*": [
                 _build_fifa_watch_link(),
@@ -280,7 +271,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "CL": {
-        "dau": 189_362,
         "langs": {
             "es": [
                 _build_fifa_watch_link(),
@@ -309,7 +299,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "CO": {
-        "dau": 329_562,
         "langs": {
             "es": [
                 _build_fifa_watch_link(),
@@ -345,7 +334,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "CZ": {
-        "dau": 481_742,
         "langs": {
             "cs": [
                 _build_fifa_watch_link(),
@@ -367,7 +355,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "DE": {
-        "dau": 5_475_312,
         "langs": {
             "de": [
                 _build_fifa_watch_link(),
@@ -403,7 +390,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "DK": {
-        "dau": 159_420,
         "langs": {
             "da": [
                 _build_fifa_watch_link(),
@@ -425,7 +411,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "EC": {
-        "dau": 343_907,
         "langs": {
             "es": [
                 _build_fifa_watch_link(),
@@ -447,7 +432,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "ES": {
-        "dau": 1_165_642,
         "langs": {
             "es": [
                 _build_fifa_watch_link(),
@@ -469,7 +453,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "FI": {
-        "dau": 331_156,
         "langs": {
             "fi": [
                 _build_fifa_watch_link(),
@@ -491,7 +474,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "FR": {
-        "dau": 3_446_170,
         "langs": {
             "fr": [
                 _build_fifa_watch_link(),
@@ -513,7 +495,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "GB": {
-        "dau": 1_099_025,
         "langs": {
             "en": [
                 _build_fifa_watch_link(),
@@ -542,7 +523,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "HU": {
-        "dau": 397_461,
         "langs": {
             "hu": [
                 _build_fifa_watch_link(),
@@ -564,7 +544,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "ID": {
-        "dau": 1_547_076,
         "langs": {
             "id": [
                 _build_fifa_watch_link(),
@@ -579,7 +558,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "IE": {
-        "dau": 93_558,
         "langs": {
             "en": [
                 _build_fifa_watch_link(),
@@ -594,7 +572,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "IT": {
-        "dau": 1_347_066,
         "langs": {
             "it": [
                 _build_fifa_watch_link(),
@@ -616,7 +593,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "MX": {
-        "dau": 767_251,
         "langs": {
             "es": [
                 _build_fifa_watch_link(),
@@ -638,7 +614,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "NL": {
-        "dau": 583_396,
         "langs": {
             "nl": [
                 _build_fifa_watch_link(),
@@ -660,7 +635,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "NO": {
-        "dau": 139_189,
         "langs": {
             "nn": [
                 _build_fifa_watch_link(),
@@ -682,7 +656,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "NZ": {
-        "dau": 120_875,
         "langs": {
             "en": [
                 _build_fifa_watch_link(),
@@ -697,7 +670,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "PL": {
-        "dau": 2_083_429,
         "langs": {
             "pl": [
                 _build_fifa_watch_link(),
@@ -712,7 +684,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "PT": {
-        "dau": 221_862,
         "langs": {
             "pt": [
                 _build_fifa_watch_link(),
@@ -734,7 +705,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "RO": {
-        "dau": 240_836,
         "langs": {
             "ro": [
                 _build_fifa_watch_link(),
@@ -749,7 +719,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "RS": {
-        "dau": 155_082,
         "langs": {
             "sr": [
                 _build_fifa_watch_link(),
@@ -771,7 +740,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "SE": {
-        "dau": 288_922,
         "langs": {
             "sv": [
                 _build_fifa_watch_link(),
@@ -793,7 +761,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "SK": {
-        "dau": 185_113,
         "langs": {
             "sk": [
                 _build_fifa_watch_link(),
@@ -808,7 +775,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "US": {
-        "dau": 7_434_829,
         "langs": {
             "en": [
                 _build_fifa_watch_link(),
@@ -865,7 +831,6 @@ WATCH_LINKS: dict[str, CountryEntry] = {
         },
     },
     "ZA": {
-        "dau": 196_702,
         "langs": {
             "en": [
                 _build_fifa_watch_link(),
