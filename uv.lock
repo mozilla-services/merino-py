@@ -1503,6 +1503,7 @@ version = "0.1.0"
 source = { editable = "merino-common" }
 dependencies = [
     { name = "dockerflow" },
+    { name = "fastapi", extra = ["standard"] },
     { name = "pydantic" },
     { name = "sentry-sdk", extra = ["fastapi"] },
 ]
@@ -1510,6 +1511,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "dockerflow", specifier = ">=2026.3.4,<2027" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.135.0,<1" },
     { name = "pydantic", specifier = ">=2.13.0,<3" },
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.13.0,<3" },
 ]
