@@ -2,7 +2,12 @@
 
 from merino.middleware.geolocation import Location
 from merino.providers.wcs.team_colors import TEAM_COLOURS
-from merino.providers.wcs.watch_links import WATCH_LINKS, WatchLinkEntry, COUNTRY_DISPLAY_CODES
+from merino.providers.wcs.watch_links import (
+    COUNTRY_DISPLAY_CODES,
+    WATCH_LINKS,
+    CountryEntry,
+    WatchLinkEntry,
+)
 
 
 def get_team_colours(team_key: str) -> list[str]:
@@ -27,36 +32,49 @@ def _other_region_streams(candidates: list[WatchLinkEntry]) -> list[WatchLinkEnt
     )
 
 
+def _find_lang_streams(
+    langs: dict[str, list[WatchLinkEntry]], accepted_languages: list[str]
+) -> list[WatchLinkEntry]:
+    """Return streams for the highest-priority matching language prefix.
+
+    BCP-47 tags are matched by prefix only ("en-US" matches key "en"). Returns []
+    if no accepted language has a matching key.
+    """
+    for lang in accepted_languages:
+        prefix = lang.split("-")[0]
+        if prefix in langs:
+            return langs[prefix]
+    return []
+
+
+def _flatten_country_streams(country_data: CountryEntry) -> list[WatchLinkEntry]:
+    """Return all streams for a country, pooled across every language key."""
+    return [stream for lang_streams in country_data["langs"].values() for stream in lang_streams]
+
+
 def resolve_watch_links(
     geolocation: Location | None, accepted_languages: list[str]
 ) -> list[WatchLinkEntry]:
-    """Return in-production watch links matched by country and highest-priority language prefix.
+    """Return in-production watch links for the user's country and language.
 
-    Language-specific entries are merged with country-wide ('*') entries, filtered to
-    in_production=True, and sorted by sort_order then product_name ascending.
-
-    # YOUR REGION
-    # Filter: Show in production = 1
-    # Filter: LOCAL COUNTRY EXACT MATCH
-    # Sort:   Stream offer entitlement sort order A-Z (1=FIFA+, 2=Free, 3=Free and Paid, 4=Free Trial, 5=Paid)
-    # Sort:   Stream product name A-Z
+    Language-specific streams are merged with country-wide ('*') streams,
+    filtered to in_production=True, and sorted by sort_order ascending then
+    product_name ascending.
     """
     if geolocation is None or not geolocation.country:
         return []
+
     country_data = WATCH_LINKS.get(geolocation.country)
-    if not country_data:  # country not covered
+    if country_data is None:
         return []
+
     langs = country_data["langs"]
-    wildcard = langs.get("*", [])  # country-wide streams that apply to all languages
-    lang_entries: list[WatchLinkEntry] = []
-    for lang in accepted_languages:
-        prefix = lang.split("-")[0]  # e.g. "en" from "en-US"
-        if prefix in langs:
-            lang_entries = langs[prefix]
-            break  # use highest-priority language match only
-    combined = lang_entries + wildcard
+    country_wide_streams = langs.get("*", [])
+    lang_streams = _find_lang_streams(langs, accepted_languages)
+    candidates = lang_streams + country_wide_streams
+
     return sorted(
-        (entry for entry in combined if entry.in_production),
+        (entry for entry in candidates if entry.in_production),
         key=lambda entry: (entry.sort_order, entry.product_name),
     )
 
@@ -64,35 +82,29 @@ def resolve_watch_links(
 def resolve_other_regions(
     geolocation: Location | None,
 ) -> list[tuple[str, list[WatchLinkEntry]]]:
-    """Return (display_country_code, streams) for regions other than the user's.
+    """Return (display_country_code, streams) for all regions other than the user's.
 
-    All non-user countries are included if they have at least one stream with
-    in_production=True and show_in_other_regions=True. Countries are sorted by display
-    code A-Z; streams within each country are sorted by product_name then sort_order.
-
-    # OTHER REGIONS
-    # Filter: Show in production = 1
-    # Filter: LOCAL COUNTRY NON-MATCH
-    # Filter: Show in other regions list = 1
-    # Sort:   Country A-Z
-    # Sort:   Stream product name A-Z
-    # Sort:   Stream offer entitlement sort order A-Z
+    Only countries with at least one stream passing the in_production and
+    show_in_other_regions filters are included. Results are sorted by display
+    code A-Z; streams within each country by product_name then sort_order.
     """
     if geolocation is None or not geolocation.country:
         return []
+
     user_country = geolocation.country
-    if user_country not in WATCH_LINKS:  # country not targeted
+    if user_country not in WATCH_LINKS:
         return []
 
     results: list[tuple[str, list[WatchLinkEntry]]] = []
     for iso, country_data in WATCH_LINKS.items():
         if iso == user_country:
-            continue  # exclude the user's own country
-        all_streams = [s for streams in country_data["langs"].values() for s in streams]
-        streams = _other_region_streams(all_streams)
-        if not streams:
-            continue  # no qualifying streams for this country
-        results.append((iso, streams))
+            continue  # skip user's own country
 
-    results.sort(key=lambda x: _country_display_code(x[0]))  # country A-Z
-    return [(_country_display_code(iso), streams) for iso, streams in results]
+        streams = _other_region_streams(_flatten_country_streams(country_data))
+        if not streams:
+            continue
+
+        results.append((_country_display_code(iso), streams))
+
+    results.sort(key=lambda entry: entry[0])  # entry[0] is the display country code string
+    return results
