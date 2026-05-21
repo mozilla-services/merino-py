@@ -24,7 +24,7 @@ import copy
 import logging
 import typer
 import sys
-from time import time
+from time import monotonic, time
 from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
 from dynaconf.base import LazySettings
@@ -362,7 +362,7 @@ def update():  # pragma: no cover
 
 
 @cli.command("update-widget")
-def update_widget():
+def update_widget():  # pragma: no cover
     """Update widget based info"""
     if provider:
         asyncio.run(provider.update_widget())
@@ -371,7 +371,7 @@ def update_widget():
 
 
 @cli.command("update-and-cache-wcs")
-def update_and_cache_wcs():
+def update_and_cache_wcs():  # pragma: no cover
     """Update Elasticsearch data and refresh the widget cache for WCS (only)."""
     if store and cache:
         wcs_only_settings = copy.copy(sports_settings)
@@ -383,7 +383,14 @@ def update_and_cache_wcs():
             connect_timeout=sports_settings.get("connect_timeout"),
             read_timeout=sports_settings.get("read_timeout"),
         )
-        asyncio.run(wcs_provider.update_and_cache_wcs())
+        started = monotonic()
+        try:
+            asyncio.run(wcs_provider.update_and_cache_wcs())
+        finally:
+            logger.info(
+                "update-and-cache-wcs finished",
+                extra={"elapsed_sec": monotonic() - started},
+            )
     else:
         logger.error("Sports provider unavailable.")
 
