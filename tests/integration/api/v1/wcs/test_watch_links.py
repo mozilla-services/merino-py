@@ -606,3 +606,99 @@ def test_watch_links_us_en_us(
         len(country["streams"]) for country in body["other_regions"]
     )
     assert total_links == 76
+
+
+def test_watch_links_de_de(
+    client: TestClient,
+    inject_de_location: None,
+) -> None:
+    """Watch links for a German user with de language.
+
+    your_region returns the five German streams sorted by sort_order then product_name.
+    other_regions includes USA (with all seven qualifying US streams) but excludes GER.
+    """
+    response = client.get(_PATH, headers={"Accept-Language": "de"})
+
+    assert response.status_code == 200
+    body = response.json()
+
+    # your_region: German streams sorted by sort_order ASC, product_name ASC
+    assert body["your_region"] == [
+        {
+            "product_name": "FIFA+",
+            "entitlement": "Free and Paid",
+            "url": "https://www.plus.fifa.com/showcase/fifa-world-cup-26tm/89de0054-9fa6-4741-88e1-a902dc26740f",
+        },
+        {
+            "product_name": "ARD",
+            "entitlement": "Free",
+            "url": "https://www.ardmediathek.de/live",
+        },
+        {
+            "product_name": "SPORTSCHAU",
+            "entitlement": "Free",
+            "url": "https://www.sportschau.de/fussball/fifa-wm-2026/",
+        },
+        {
+            "product_name": "ZDF",
+            "entitlement": "Free",
+            "url": "https://www.zdf.de/live-tv",
+        },
+        {
+            "product_name": "MagentaTV",
+            "entitlement": "Paid",
+            "url": "https://www.telekom.de/sport/magenta-tv-fussball",
+        },
+    ]
+
+    # GER must not appear in other_regions (it is the user's own country)
+    other_codes = [country["country_code"] for country in body["other_regions"]]
+    assert "GER" not in other_codes
+
+    # USA must appear in other_regions with all seven qualifying streams
+    usa_entry = next(country for country in body["other_regions"] if country["country_code"] == "USA")
+    assert usa_entry["streams"] == [
+        {
+            "product_name": "DirecTV",
+            "entitlement": "Free Trial",
+            "url": "https://www.directv.com/sports-info/soccer/worldcup",
+        },
+        {
+            "product_name": "FOX ONE",
+            "entitlement": "Free Trial",
+            "url": "https://www.fox.com/soccer/fifa-world-cup",
+        },
+        {
+            "product_name": "Fubo",
+            "entitlement": "Free Trial",
+            "url": "https://www.fubo.tv/stream/worldcup/",
+        },
+        {
+            "product_name": "Hulu",
+            "entitlement": "Free Trial",
+            "url": "https://www.hulu.com/soccer",
+        },
+        {
+            "product_name": "Peacock",
+            "entitlement": "Paid",
+            "url": "https://www.peacocktv.com/es-us/sports/copa-mundial#ib-section-section-6",
+        },
+        {
+            "product_name": "Tubi",
+            "entitlement": "Free",
+            "url": "https://tubitv.com/hubs/fifa-world-cup-fox-hub",
+        },
+        {
+            "product_name": "YouTube TV",
+            "entitlement": "Free Trial",
+            "url": "https://tv.youtube.com/browse/UCgL1z0K3r-CJig5sXlSvDbg",
+        },
+    ]
+
+    # USA sorts last (display code "USA" > "UK" alphabetically)
+    assert other_codes[-1] == "USA"
+
+    total_links = len(body["your_region"]) + sum(
+        len(country["streams"]) for country in body["other_regions"]
+    )
+    assert total_links == 76

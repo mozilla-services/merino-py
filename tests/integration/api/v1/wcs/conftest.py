@@ -36,3 +36,16 @@ def inject_us_location(mocker: MockerFixture) -> None:
         await self.app(scope, receive, send)
 
     mocker.patch.object(GeolocationMiddleware, "__call__", patched_call)
+
+
+@pytest.fixture
+def inject_de_location(mocker: MockerFixture) -> None:
+    """Patch GeolocationMiddleware to inject a Germany location into every HTTP request scope."""
+    de_location = Location(country="DE")
+
+    async def patched_call(self: GeolocationMiddleware, scope, receive, send) -> None:
+        if scope.get("type") == "http":
+            scope[ScopeKey.GEOLOCATION] = de_location
+        await self.app(scope, receive, send)
+
+    mocker.patch.object(GeolocationMiddleware, "__call__", patched_call)
