@@ -136,7 +136,7 @@ class GcsInterestCohortModel(CohortModelBackend):
             # Note this is a special case. No interest east cost is underperforming
             # because it includes a lot of browsers with no clicks. Default to country
             # cohort
-            if cohort == "4" and interests[:2] == SMALL_POPULATION_EAST_COAST_TIME_ZONE:
+            if cohort == "4" and interests[-2:] == SMALL_POPULATION_EAST_COAST_TIME_ZONE:
                 cohort = NO_CLICKS_COHORT_ID
             return cohort
 
