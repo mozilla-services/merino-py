@@ -100,7 +100,7 @@ class WCSCircuitBreaker(CircuitBreaker):
 
     FAILURE_THRESHOLD = settings.providers.wcs.circuit_breaker_failure_threshold
     RECOVERY_TIMEOUT = settings.providers.wcs.circuit_breaker_recover_timeout_sec
-    # BackendError is raised by elasticsearch query errors
+    # CacheAdapterError is raised for cache lookup errors
     EXPECTED_EXCEPTION = CacheAdapterError
     # When the breaker is open, use this to simply return an empty suggestion list to the caller.
     FALLBACK_FUNCTION = _suggest_provider_fallback_fn
