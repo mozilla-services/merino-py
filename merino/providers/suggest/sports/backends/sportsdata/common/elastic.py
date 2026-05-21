@@ -46,7 +46,7 @@ META_INDEX: str = "sports-meta"
 EN_INDEX_SETTINGS: dict = {
     "refresh_interval": "-1",
     "number_of_shards": "2",
-    "index.auto_expand_replicas": "1-all",   # autoscale replicas so all nodes have a copy
+    "index.auto_expand_replicas": "1-all",  # autoscale replicas so all nodes have a copy
     "index.lifecycle.name": "sports-en-policy",
     "analysis": {
         "filter": {
