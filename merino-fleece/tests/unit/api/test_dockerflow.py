@@ -40,7 +40,7 @@ def test_version_returns_payload(client: TestClient, mocker: MockerFixture) -> N
         build="42",
     )
     mocker.patch(
-        "merino_fleece.api.dockerflow.fetch_app_version_from_file",
+        "merino_common.routers.dockerflow.fetch_app_version_from_file",
         return_value=version,
     )
 
@@ -58,7 +58,7 @@ def test_version_returns_payload(client: TestClient, mocker: MockerFixture) -> N
 def test_version_missing_file_returns_500(client: TestClient, mocker: MockerFixture) -> None:
     """GET /__version__ surfaces a 500 when version.json is missing."""
     mocker.patch(
-        "merino_fleece.api.dockerflow.fetch_app_version_from_file",
+        "merino_common.routers.dockerflow.fetch_app_version_from_file",
         side_effect=FileNotFoundError,
     )
 
@@ -85,11 +85,11 @@ def test_error_endpoint_returns_500_and_logs(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """GET /__error__ raises a 500 and logs the invocation."""
-    with caplog.at_level(logging.ERROR, logger="merino_fleece.api.dockerflow"):
+    with caplog.at_level(logging.ERROR, logger="merino_common.routers.dockerflow"):
         resp = client.get("/__error__")
 
     assert resp.status_code == 500
-    records = [r for r in caplog.records if r.name == "merino_fleece.api.dockerflow"]
+    records = [r for r in caplog.records if r.name == "merino_common.routers.dockerflow"]
     assert len(records) == 1
     assert records[0].message == "The __error__ endpoint was called"
     assert records[0].levelno == logging.ERROR
