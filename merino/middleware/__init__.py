@@ -12,3 +12,4 @@ class ScopeKey(str, Enum):
     FEATURE_FLAGS = "merino_feature_flags"
     METRICS_CLIENT = "merino_metrics_client"
     PII_DETECTION = "merino_pii_detection"
+    NORMALIZED_QUERY = "merino_normalized_query"

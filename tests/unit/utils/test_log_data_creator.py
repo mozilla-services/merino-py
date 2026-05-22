@@ -127,6 +127,46 @@ def test_create_suggest_log_data(
 
 
 @pytest.mark.parametrize(
+    ["scope_extras", "expected_normalized_query"],
+    [
+        ({}, None),
+        ({ScopeKey.NORMALIZED_QUERY: "amazon"}, "amazon"),
+        ({ScopeKey.NORMALIZED_QUERY: "dow jones"}, "dow jones"),
+    ],
+    ids=["no_normalization", "normalized_amazon", "normalized_dow_jones"],
+)
+def test_create_suggest_log_data_normalized_query(
+    scope_extras: dict, expected_normalized_query: str | None
+) -> None:
+    """Test that normalized_query is populated from the scope when set, and None otherwise."""
+    location: Location = Location(country="US")
+    user_agent: UserAgent = UserAgent(
+        browser="Firefox(103.0)", os_family="macos", form_factor="desktop"
+    )
+    request: Request = Request(
+        scope={
+            "type": "http",
+            "headers": [],
+            "method": "GET",
+            "path": "/api/v1/suggest",
+            "query_string": b"q=amaz",
+            ScopeKey.GEOLOCATION: location,
+            ScopeKey.USER_AGENT: user_agent,
+            **scope_extras,
+        }
+    )
+    message: Message = {
+        "type": "http.response.start",
+        "status": 200,
+        "headers": [(b"x-request-id", b"1b11844c52b34c33a6ad54b7bc2eb7c7")],
+    }
+    log_data = create_suggest_log_data(request, message, datetime(1998, 3, 31))
+
+    assert log_data.query == "amaz"  # raw param is always preserved
+    assert log_data.normalized_query == expected_normalized_query
+
+
+@pytest.mark.parametrize(
     "time_input",
     ["not a datetime string", {"not", "a", "datetime", "object"}],
     ids=["invalid_string", "invalid_object_type"],

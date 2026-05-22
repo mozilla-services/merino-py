@@ -266,6 +266,8 @@ async def suggest(
     if use_normalization and pipeline:
         with metrics_client.timeit("normalization.experiment.timing"):
             q_normalized = pipeline.normalize(q)
+        # expose normalized query so downstream bigquery has it
+        request.scope[ScopeKey.NORMALIZED_QUERY] = q_normalized
     else:
         q_normalized = q
 

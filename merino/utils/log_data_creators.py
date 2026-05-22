@@ -31,6 +31,7 @@ class SuggestLogDataModel(LogDataModel):
 
     sensitive: bool
     query: str | None = None
+    normalized_query: str | None = None
     code: int
     rid: str  # Provided by the asgi-correlation-id middleware.
     session_id: str | None = None
@@ -62,6 +63,7 @@ def create_suggest_log_data(
         path=request.url.path,
         method=request.method,
         query=request.query_params.get("q"),
+        normalized_query=request.scope.get(ScopeKey.NORMALIZED_QUERY),
         code=message["status"],
         rid=Headers(scope=message)["X-Request-ID"],
         session_id=request.query_params.get("sid"),
