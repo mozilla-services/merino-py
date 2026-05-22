@@ -37,6 +37,9 @@ ENV PATH="${PYTHON_VENV}/bin:${PATH}"
 # Add locust as a non-root user
 RUN useradd --create-home locust
 WORKDIR /home/locust
+RUN ln -s /app/dev dev && \
+    ln -s /app/merino merino && \
+    ln -s /app/merino-common merino-common
 
 COPY ./tests/load/common ./tests/load/common
 COPY ./tests/load/data ./tests/load/data

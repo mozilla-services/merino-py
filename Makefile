@@ -163,7 +163,11 @@ load-tests:  ##  Run local execution of (Locust) load tests
 	docker compose \
       -f $(LOAD_TEST_DIR)/docker-compose.yml \
       -p merino-py-load-tests \
-      up --scale locust_worker=1
+      build locust_master
+	docker compose \
+      -f $(LOAD_TEST_DIR)/docker-compose.yml \
+      -p merino-py-load-tests \
+      up --force-recreate --no-build --scale locust_worker=1
 
 .PHONY: load-tests-clean
 load-tests-clean:  ##  Stop and remove containers and networks for load tests
