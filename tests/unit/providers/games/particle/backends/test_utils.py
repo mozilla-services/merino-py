@@ -19,8 +19,8 @@ from merino.providers.games.particle.backends.utils import (
     ParticleManifestValidationError,
     remote_manifest_puzzle_is_updated,
     remote_manifest_runtime_is_updated,
-    update_files_puzzle,
-    update_files_runtime,
+    update_puzzle_files,
+    update_runtime_files,
     validate_manifest_schema_version,
     validate_manifest_against_schema,
 )
@@ -78,21 +78,42 @@ def mock_remote_manifest_runtime_is_updated():
 # END FIXTURES
 
 
-# BEGIN validate_manifest_schema_version TESTS
-def test_validate_manifest_schema_version_does_not_raise_with_valid_json(valid_manifest_data):
-    """Verify valid JSON results in no exception raised."""
-    with does_not_raise():
-        validate_manifest_schema_version(valid_manifest_data, _manifest_schema_version)
+class TestValidateManifestSchemaVersion:
+    """Tests against validate_manifest_schema_version"""
 
+    def test_does_not_raise_with_valid_json(self, valid_manifest_data):
+        """Verify valid JSON results in no exception raised."""
+        with does_not_raise():
+            validate_manifest_schema_version(valid_manifest_data, _manifest_schema_version)
 
-def test_validate_manifest_schema_version_raises_with_invalid_json(
-    caplog: LogCaptureFixture, filter_caplog: Any
-):
-    """Verify invalid JSON raises an exception."""
-    caplog.set_level(logging.ERROR)
+    def test_raises_with_invalid_json(self, caplog: LogCaptureFixture, filter_caplog: Any):
+        """Verify invalid JSON raises an exception."""
+        caplog.set_level(logging.ERROR)
 
-    with pytest.raises(Exception):
-        validate_manifest_schema_version("Not valid JSON", _manifest_schema_version)
+        with pytest.raises(Exception):
+            validate_manifest_schema_version("Not valid JSON", _manifest_schema_version)
+
+            # get error records
+            error_records = filter_caplog(
+                caplog.records,
+                "merino.providers.games.particle.backends.utils",
+            )
+
+            # verify expected error was logged
+            assert len(error_records) == 1
+            assert (
+                "JSON error retrieving 'schemaVersion' from manifest JSON."
+                == error_records[0].message
+            )
+
+    def test_raises_with_invalid_schema_version(
+        self, caplog: LogCaptureFixture, filter_caplog: Any
+    ):
+        """Verify invalid schema version raises an exception."""
+        with pytest.raises(Exception):
+            validate_manifest_schema_version(
+                json.loads('{"schemaVersion": 2}'), _manifest_schema_version
+            )
 
         # get error records
         error_records = filter_caplog(
@@ -102,173 +123,141 @@ def test_validate_manifest_schema_version_raises_with_invalid_json(
 
         # verify expected error was logged
         assert len(error_records) == 1
+        assert "Error validating Particle manifest schema version" in error_records[0].message
+
+    def test_raises_with_no_schema_version_in_json(
+        self, caplog: LogCaptureFixture, filter_caplog: Any
+    ):
+        """Verify missing schema version raises an exception."""
+        with pytest.raises(ParticleManifestValidationError):
+            validate_manifest_schema_version(
+                json.loads('{"cremaVersion": 1}'), _manifest_schema_version
+            )
+
+        # get error records
+        error_records = filter_caplog(
+            caplog.records,
+            "merino.providers.games.particle.backends.utils",
+        )
+
+        # verify expected errors were logged
+        assert len(error_records) == 2
         assert (
-            "JSON error retrieving 'schemaVersion' from manifest JSON." == error_records[0].message
+            "JSON key error retrieving 'schemaVersion' from manifest JSON."
+            == error_records[0].message
+        )
+        assert "Error validating Particle manifest schema version" in error_records[1].message
+
+
+class TestValidateManifestAgainstSchema:
+    """Tests against validate_manifest_against_schema"""
+
+    def test_does_not_raise_with_valid_json(
+        self, valid_manifest_data: Json, manifest_schema_data: Json
+    ):
+        """Verify no exception raised if manifest JSON is valid."""
+        with does_not_raise():
+            validate_manifest_against_schema(valid_manifest_data, manifest_schema_data)
+
+    def test_raises_with_invalid_json(
+        self,
+        invalid_manifest_data: Json,
+        manifest_schema_data: Json,
+        caplog: LogCaptureFixture,
+        filter_caplog: Any,
+    ):
+        """Verify expected error is raised if manifest JSON does not conform to the schema."""
+        with pytest.raises(ParticleManifestValidationError):
+            validate_manifest_against_schema(invalid_manifest_data, manifest_schema_data)
+
+        # get error records
+        error_records = filter_caplog(
+            caplog.records,
+            "merino.providers.games.particle.backends.utils",
         )
 
+        # verify expected error was logged
+        assert len(error_records) == 1
+        assert "Schema validation failed for manifest JSON" in error_records[0].message
 
-def test_validate_manifest_schema_version_raises_with_invalid_schema_version(
-    caplog: LogCaptureFixture, filter_caplog: Any
-):
-    """Verify invalid schema version raises an exception."""
-    with pytest.raises(Exception):
-        validate_manifest_schema_version(
-            json.loads('{"schemaVersion": 2}'), _manifest_schema_version
+
+class TestRemoteManifestRuntimeIsUpdated:
+    """Tests against remote_manifest_runtime_is_updated"""
+
+    def test_was_updated(self, valid_manifest_data, valid_manifest_data_remote_updated):
+        """Test that comparing an old manifest to a new results in an updated signal"""
+        assert remote_manifest_runtime_is_updated(
+            valid_manifest_data_remote_updated, valid_manifest_data
         )
 
-    # get error records
-    error_records = filter_caplog(
-        caplog.records,
-        "merino.providers.games.particle.backends.utils",
-    )
-
-    # verify expected error was logged
-    assert len(error_records) == 1
-    assert "Error validating Particle manifest schema version" in error_records[0].message
+    def test_was_not_updated(self, valid_manifest_data):
+        """Test that comparing the same manifest results in a not updated signal"""
+        assert not remote_manifest_runtime_is_updated(valid_manifest_data, valid_manifest_data)
 
 
-def test_validate_manifest_schema_version_raises_with_no_schema_version_in_json(
-    caplog: LogCaptureFixture, filter_caplog: Any
-):
-    """Verify missing schema version raises an exception."""
-    with pytest.raises(ParticleManifestValidationError):
-        validate_manifest_schema_version(
-            json.loads('{"cremaVersion": 1}'), _manifest_schema_version
+class TestRemoteManifestPuzzleIsUpdated:
+    """Tests against remote_manifest_puzzle_is_updated"""
+
+    def test_was_updated(self, valid_manifest_data, valid_manifest_data_remote_updated):
+        """Test that comparing an old manifest to a new results in an updated signal"""
+        assert remote_manifest_puzzle_is_updated(
+            valid_manifest_data_remote_updated, valid_manifest_data
         )
 
-    # get error records
-    error_records = filter_caplog(
-        caplog.records,
-        "merino.providers.games.particle.backends.utils",
-    )
-
-    # verify expected errors were logged
-    assert len(error_records) == 2
-    assert (
-        "JSON key error retrieving 'schemaVersion' from manifest JSON." == error_records[0].message
-    )
-    assert "Error validating Particle manifest schema version" in error_records[1].message
+    def test_was_not_updated(self, valid_manifest_data):
+        """Test that comparing the same manifest results in a not updated signal"""
+        assert not remote_manifest_puzzle_is_updated(valid_manifest_data, valid_manifest_data)
 
 
-# END validate_manifest_schema_version TESTS
+class TestUpdateFilesPuzzle:
+    """Tests against update_puzzle_files"""
+
+    @pytest.mark.asyncio
+    async def test_update_puzzle_files_should_update_with_gcs_data(
+        self, valid_manifest_data, mock_remote_manifest_puzzle_is_updated
+    ):
+        """Test that puzzle files are updated if gcs data exists and versions mismatch"""
+        mock_remote_manifest_puzzle_is_updated.return_value = True
+
+        assert await update_puzzle_files(valid_manifest_data, valid_manifest_data)
+
+    @pytest.mark.asyncio
+    async def test_update_puzzle_files_should_not_update_with_gcs_data(
+        self, valid_manifest_data, mock_remote_manifest_puzzle_is_updated
+    ):
+        """Test that puzzle files are not updated if gcs data exists and versions match"""
+        mock_remote_manifest_puzzle_is_updated.return_value = False
+
+        assert not await update_puzzle_files(valid_manifest_data, valid_manifest_data)
+
+    @pytest.mark.asyncio
+    async def test_update_puzzle_files_should_update_without_gcs_data(self, valid_manifest_data):
+        """Test that puzzle files are updated if gcs data does not exist"""
+        assert await update_puzzle_files(valid_manifest_data, None)
 
 
-# BEGIN validate_manifest_against_schema TESTS
-def test_validate_manifest_against_schema_does_not_raise_with_valid_json(
-    valid_manifest_data: Json, manifest_schema_data: Json
-):
-    """Verify no exception raised if manifest JSON is valid."""
-    with does_not_raise():
-        validate_manifest_against_schema(valid_manifest_data, manifest_schema_data)
+class TestUpdateFilesRuntime:
+    """Tests against update_runtime_files"""
 
+    @pytest.mark.asyncio
+    async def test_update_runtime_files_should_update_with_gcs_data(
+        self, valid_manifest_data, mock_remote_manifest_runtime_is_updated
+    ):
+        """Test that runtime files are updated if gcs data exists and versions mismatch"""
+        mock_remote_manifest_runtime_is_updated.return_value = True
 
-def test_validate_manifest_against_schema_raises_with_invalid_json(
-    invalid_manifest_data: Json,
-    manifest_schema_data: Json,
-    caplog: LogCaptureFixture,
-    filter_caplog: Any,
-):
-    """Verify expected error is raised if manifest JSON does not conform to the schema."""
-    with pytest.raises(ParticleManifestValidationError):
-        validate_manifest_against_schema(invalid_manifest_data, manifest_schema_data)
+        assert await update_runtime_files(valid_manifest_data, valid_manifest_data)
 
-    # get error records
-    error_records = filter_caplog(
-        caplog.records,
-        "merino.providers.games.particle.backends.utils",
-    )
+    @pytest.mark.asyncio
+    async def test_update_runtime_files_should_not_update_with_gcs_data(
+        self, valid_manifest_data, mock_remote_manifest_runtime_is_updated
+    ):
+        """Test that runtime files are not updated if gcs data exists and versions match"""
+        mock_remote_manifest_runtime_is_updated.return_value = False
 
-    # verify expected error was logged
-    assert len(error_records) == 1
-    assert "Schema validation failed for manifest JSON" in error_records[0].message
+        assert not await update_runtime_files(valid_manifest_data, valid_manifest_data)
 
-
-# END validate_manifest_against_schema TESTS
-
-
-def test_remote_manifest_runtime_is_updated_was_updated(
-    valid_manifest_data, valid_manifest_data_remote_updated
-):
-    """Test that comparing an old manifest to a new results in an updated signal"""
-    assert remote_manifest_runtime_is_updated(
-        valid_manifest_data_remote_updated, valid_manifest_data
-    )
-
-
-def test_remote_manifest_runtime_is_updated_was_not_updated(valid_manifest_data):
-    """Test that comparing the same manifest results in a not updated signal"""
-    assert not remote_manifest_runtime_is_updated(valid_manifest_data, valid_manifest_data)
-
-
-def test_remote_manifest_puzzle_is_updated_was_updated(
-    valid_manifest_data, valid_manifest_data_remote_updated
-):
-    """Test that comparing an old manifest to a new results in an updated signal"""
-    assert remote_manifest_puzzle_is_updated(
-        valid_manifest_data_remote_updated, valid_manifest_data
-    )
-
-
-def test_remote_manifest_puzzle_is_updated_was_not_updated(valid_manifest_data):
-    """Test that comparing the same manifest results in a not updated signal"""
-    assert not remote_manifest_puzzle_is_updated(valid_manifest_data, valid_manifest_data)
-
-
-# BEGIN update_files_puzzle TESTS
-@pytest.mark.asyncio
-async def test_update_files_puzzle_should_update_with_gcs_data(
-    valid_manifest_data, mock_remote_manifest_puzzle_is_updated
-):
-    """Test that puzzle files are updated if gcs data exists and versions mismatch"""
-    mock_remote_manifest_puzzle_is_updated.return_value = True
-
-    assert await update_files_puzzle(valid_manifest_data, valid_manifest_data)
-
-
-@pytest.mark.asyncio
-async def test_update_files_puzzle_should_not_update_with_gcs_data(
-    valid_manifest_data, mock_remote_manifest_puzzle_is_updated
-):
-    """Test that puzzle files are not updated if gcs data exists and versions match"""
-    mock_remote_manifest_puzzle_is_updated.return_value = False
-
-    assert not await update_files_puzzle(valid_manifest_data, valid_manifest_data)
-
-
-@pytest.mark.asyncio
-async def test_update_files_puzzle_should_update_without_gcs_data(valid_manifest_data):
-    """Test that puzzle files are updated if gcs data does not exist"""
-    assert await update_files_puzzle(valid_manifest_data, None)
-
-
-# END update_files_puzzle TESTS
-
-
-# BEGIN update_files_runtime TESTS
-@pytest.mark.asyncio
-async def test_update_files_runtime_should_update_with_gcs_data(
-    valid_manifest_data, mock_remote_manifest_runtime_is_updated
-):
-    """Test that runtime files are updated if gcs data exists and versions mismatch"""
-    mock_remote_manifest_runtime_is_updated.return_value = True
-
-    assert await update_files_runtime(valid_manifest_data, valid_manifest_data)
-
-
-@pytest.mark.asyncio
-async def test_update_files_runtime_should_not_update_with_gcs_data(
-    valid_manifest_data, mock_remote_manifest_runtime_is_updated
-):
-    """Test that runtime files are not updated if gcs data exists and versions match"""
-    mock_remote_manifest_runtime_is_updated.return_value = False
-
-    assert not await update_files_runtime(valid_manifest_data, valid_manifest_data)
-
-
-@pytest.mark.asyncio
-async def test_update_files_runtime_should_update_without_gcs_data(valid_manifest_data):
-    """Test that runtime files are updated if gcs data does not exist"""
-    assert await update_files_runtime(valid_manifest_data, None)
-
-
-# END update_files_runtime TESTS
+    @pytest.mark.asyncio
+    async def test_update_runtime_files_should_update_without_gcs_data(self, valid_manifest_data):
+        """Test that runtime files are updated if gcs data does not exist"""
+        assert await update_runtime_files(valid_manifest_data, None)

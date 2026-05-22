@@ -12,8 +12,8 @@ from typing import Any
 from merino.providers.games.particle.backends.filemanager import ParticleFileManagerError
 from merino.providers.games.particle.backends.protocol import Particle, ParticleBackend
 from merino.providers.games.particle.backends.utils import (
-    update_files_puzzle,
-    update_files_runtime,
+    update_puzzle_files,
+    update_runtime_files,
     validate_manifest_against_schema,
     validate_manifest_schema_version,
     ParticleManifestValidationError,
@@ -131,10 +131,10 @@ class Provider:
             return False
 
         # conditionally attempt to update file sets - daily puzzle and runtime
-        puzzle_updated = await update_files_puzzle(
+        puzzle_updated = await update_puzzle_files(
             manifest_remote=remote_manifest_json, manifest_gcs=gcs_manifest_json
         )
-        runtime_updated = await update_files_runtime(
+        runtime_updated = await update_runtime_files(
             manifest_remote=remote_manifest_json, manifest_gcs=gcs_manifest_json
         )
 

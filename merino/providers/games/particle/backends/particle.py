@@ -91,4 +91,6 @@ class ParticleBackend:
 
     async def fetch_manifest_json_from_gcs(self) -> Json | None:
         """Retrieve the manifest json last stored in GCS"""
+        # the gcp client library is synchronous - wrap in an async thread so
+        # we don't block processing
         return await asyncio.to_thread(self.remote_file_manager.get_manifest_file)
