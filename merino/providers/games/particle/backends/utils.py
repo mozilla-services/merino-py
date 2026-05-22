@@ -61,7 +61,7 @@ def remote_manifest_puzzle_is_updated(manifest_remote: Json, manifest_gcs: Json)
     return bool(daily_remote != daily_gcs)
 
 
-async def update_files_puzzle(manifest_remote: Json, manifest_gcs: Json | None) -> bool:
+async def update_puzzle_files(manifest_remote: Json, manifest_gcs: Json | None) -> bool:
     """Attempt to update the daily puzzle files - partial stub, async operations to come"""
     should_update_puzzle = (
         remote_manifest_puzzle_is_updated(manifest_remote, manifest_gcs) if manifest_gcs else True
@@ -76,7 +76,7 @@ async def update_files_puzzle(manifest_remote: Json, manifest_gcs: Json | None) 
         return False
 
 
-async def update_files_runtime(manifest_remote: Json, manifest_gcs: Json | None) -> bool:
+async def update_runtime_files(manifest_remote: Json, manifest_gcs: Json | None) -> bool:
     """Attempt to update the runtime files - partial stub, async operations to come"""
     should_update_runtime = (
         remote_manifest_runtime_is_updated(manifest_remote, manifest_gcs) if manifest_gcs else True
