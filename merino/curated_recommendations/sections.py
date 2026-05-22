@@ -407,6 +407,24 @@ def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> b
     )
 
 
+def has_meaningful_interest_signal(personal_interests: ProcessedInterests | None) -> bool:
+    """Return True if the user has at least one positive non-TZ topic strength.
+
+    `bool(personal_interests.scores)` alone is too permissive — the scores dict
+    can be non-empty (carrying model_id and TIME_ZONE_OFFSET_INFERRED_KEY) even
+    when every topic strength is zero. Routing such users into the interest
+    ranker has no personalization effect (they get scored at popularity, the
+    same outcome cohort would produce) but still counts them in the treatment
+    arm, diluting the measured experiment lift.
+    """
+    if personal_interests is None:
+        return False
+    return any(
+        isinstance(value, (int, float)) and value > 0 and key != TIME_ZONE_OFFSET_INFERRED_KEY
+        for key, value in personal_interests.scores.items()
+    )
+
+
 def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if subtopics should be included based on experiments.
 
@@ -899,12 +917,14 @@ async def get_sections(
         and ml_backend is not None
         and ml_backend.is_valid(surface_id)
     )
-    # use interest ranker if we have interests available
+    # Route to the interest ranker only when the user has at least one positive
+    # non-TZ topic strength. Otherwise zero-signal users get scored at popularity
+    # (the same outcome cohort gives them) but are counted in the treatment arm,
+    # diluting the experiment's measured lift. See `has_meaningful_interest_signal`.
     use_interest_ranker = (
         is_inferred_interest_experiment(request)
         and lints_interest_backend.is_valid(surface_id)
-        and personal_interests is not None
-        and bool(personal_interests.scores)
+        and has_meaningful_interest_signal(personal_interests)
     )
     # Interest ranker is experimental so gets priority over contexual ranker
     if use_interest_ranker:

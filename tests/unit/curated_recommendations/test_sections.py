@@ -33,6 +33,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
 from merino.curated_recommendations.protocol import (
     ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
+    ProcessedInterests,
     Section,
     SectionConfiguration,
     EditorialSectionsBranch,
@@ -42,10 +43,14 @@ from merino.curated_recommendations.protocol import (
     RankingData,
 )
 from merino.curated_recommendations.rankers import ThompsonSamplingRanker
+from merino.curated_recommendations.ml_backends.static_local_model import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+)
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
+    has_meaningful_interest_signal,
     is_subtopics_experiment,
     is_daily_briefing_experiment,
     should_exclude_editorial_sections,
@@ -124,6 +129,110 @@ def sample_backend_data() -> list[CorpusSection]:
         )
         for sec_id, count in [("business", 2), ("sports", 1), ("tech", 3)]
     ]
+
+
+class TestHasMeaningfulInterestSignal:
+    """Gate that decides whether the InterestRanker is eligible for a request.
+
+    Before the fix, `bool(personal_interests.scores)` was True even for users
+    whose only non-zero scores were the model_id (string) and TZ keys. Those
+    requests got routed into the InterestRanker treatment arm but had no
+    personalization signal to apply — diluting the measured experiment lift.
+    The helper now requires ≥1 positive non-TZ topic strength.
+    """
+
+    def test_returns_false_when_personal_interests_is_none(self):
+        """A request with no inferred interests at all fails the gate."""
+        assert has_meaningful_interest_signal(None) is False
+
+    def test_returns_false_for_empty_scores(self):
+        """Empty scores dict means no signal."""
+        pi = ProcessedInterests(model_id="inferred-v3-model", scores={})
+        assert has_meaningful_interest_signal(pi) is False
+
+    def test_returns_false_when_all_topic_strengths_are_zero(self):
+        """Topic keys present but all values 0 → still no real signal. This is
+        the case the old `bool(personal_interests.scores)` gate let through.
+        """
+        pi = ProcessedInterests(
+            model_id="inferred-v3-model",
+            scores={
+                "sports": 0.0,
+                "arts": 0.0,
+                "government": 0.0,
+                "society-parenting": 0.0,
+                "food": 0.0,
+                "tech": 0.0,
+                "education-science": 0.0,
+            },
+        )
+        assert has_meaningful_interest_signal(pi) is False
+
+    def test_returns_false_when_only_tz_is_set(self):
+        """TZ is metadata, not interest signal — it alone must not enable the gate."""
+        pi = ProcessedInterests(
+            model_id="inferred-v3-model",
+            scores={
+                "sports": 0.0,
+                "tech": 0.0,
+                TIME_ZONE_OFFSET_INFERRED_KEY: -5,
+            },
+        )
+        assert has_meaningful_interest_signal(pi) is False
+
+    def test_returns_true_when_one_topic_has_positive_strength(self):
+        """Any one topic with strength > 0 is enough to enable the interest ranker."""
+        pi = ProcessedInterests(
+            model_id="inferred-v3-model",
+            scores={
+                "sports": 0.46,
+                "arts": 0.0,
+                TIME_ZONE_OFFSET_INFERRED_KEY: -5,
+            },
+        )
+        assert has_meaningful_interest_signal(pi) is True
+
+    def test_returns_true_with_multiple_positive_strengths(self):
+        """Multi-topic users obviously pass."""
+        pi = ProcessedInterests(
+            model_id="inferred-v3-model",
+            scores={
+                "sports": 0.46,
+                "politics": 0.8,
+                "tech": 0.25,
+                TIME_ZONE_OFFSET_INFERRED_KEY: -5,
+            },
+        )
+        assert has_meaningful_interest_signal(pi) is True
+
+    def test_ignores_non_numeric_values(self):
+        """`model_id` lives on the ProcessedInterests model itself, but if any
+        non-numeric value slips into scores it must not be counted as signal.
+        """
+        # Mutating the dict directly to simulate stray non-numeric values
+        # without going through ProcessedInterests' validation.
+        pi = ProcessedInterests(model_id="inferred-v3-model", scores={})
+        pi.scores["some_string"] = "v3"
+        pi.scores["sports"] = 0.0
+        assert has_meaningful_interest_signal(pi) is False
+
+        pi.scores["sports"] = 0.25
+        assert has_meaningful_interest_signal(pi) is True
+
+    def test_zero_strength_with_positive_tz_value_still_false(self):
+        """A user with only TZ=int(0) and zero topics has no real signal.
+
+        Edge case: TZ values are integers and could be 0 (the easternmost
+        bucket). The gate must exclude TZ regardless of its numeric value.
+        """
+        pi = ProcessedInterests(
+            model_id="inferred-v3-model",
+            scores={
+                "sports": 0.0,
+                TIME_ZONE_OFFSET_INFERRED_KEY: 0,
+            },
+        )
+        assert has_meaningful_interest_signal(pi) is False
 
 
 class TestExcludeRecommendationsFromBlockedSections:
