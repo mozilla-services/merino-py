@@ -11,6 +11,7 @@ from merino.exceptions import CacheAdapterError
 from merino.governance.circuitbreakers import (
     WCSCircuitBreaker,
 )
+from merino.middleware.geolocation import Location
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.wcs.fake_data import get_all_teams
 from merino.providers.wcs.fake_live_data import build_live_events

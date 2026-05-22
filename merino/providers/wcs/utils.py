@@ -44,6 +44,7 @@ def _find_lang_streams(
         prefix = lang.split("-")[0]
         if prefix in langs:
             return langs[prefix]
+
     return []
 
 
@@ -65,6 +66,7 @@ def resolve_watch_links(
         return []
 
     country_data = WATCH_LINKS.get(geolocation.country)
+
     if country_data is None:
         return []
 
@@ -101,6 +103,7 @@ def resolve_other_regions(
             continue  # skip user's own country
 
         streams = _other_region_streams(_flatten_country_streams(country_data))
+
         if not streams:
             continue
 
