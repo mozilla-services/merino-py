@@ -132,28 +132,19 @@ def sample_backend_data() -> list[CorpusSection]:
 
 
 class TestHasMeaningfulInterestSignal:
-    """Gate that decides whether the InterestRanker is eligible for a request.
-
-    Before the fix, `bool(personal_interests.scores)` was True even for users
-    whose only non-zero scores were the model_id (string) and TZ keys. Those
-    requests got routed into the InterestRanker treatment arm but had no
-    personalization signal to apply — diluting the measured experiment lift.
-    The helper now requires ≥1 positive non-TZ topic strength.
-    """
+    """InterestRanker eligibility gate — requires ≥1 positive non-TZ topic strength."""
 
     def test_returns_false_when_personal_interests_is_none(self):
-        """A request with no inferred interests at all fails the gate."""
+        """None input."""
         assert has_meaningful_interest_signal(None) is False
 
     def test_returns_false_for_empty_scores(self):
-        """Empty scores dict means no signal."""
+        """Empty scores dict."""
         pi = ProcessedInterests(model_id="inferred-v3-model", scores={})
         assert has_meaningful_interest_signal(pi) is False
 
     def test_returns_false_when_all_topic_strengths_are_zero(self):
-        """Topic keys present but all values 0 → still no real signal. This is
-        the case the old `bool(personal_interests.scores)` gate let through.
-        """
+        """All topic keys present at strength 0 (case the old gate let through)."""
         pi = ProcessedInterests(
             model_id="inferred-v3-model",
             scores={
@@ -169,7 +160,7 @@ class TestHasMeaningfulInterestSignal:
         assert has_meaningful_interest_signal(pi) is False
 
     def test_returns_false_when_only_tz_is_set(self):
-        """TZ is metadata, not interest signal — it alone must not enable the gate."""
+        """TZ alone is metadata, not signal."""
         pi = ProcessedInterests(
             model_id="inferred-v3-model",
             scores={
@@ -181,7 +172,7 @@ class TestHasMeaningfulInterestSignal:
         assert has_meaningful_interest_signal(pi) is False
 
     def test_returns_true_when_one_topic_has_positive_strength(self):
-        """Any one topic with strength > 0 is enough to enable the interest ranker."""
+        """One positive topic is enough."""
         pi = ProcessedInterests(
             model_id="inferred-v3-model",
             scores={
@@ -193,7 +184,7 @@ class TestHasMeaningfulInterestSignal:
         assert has_meaningful_interest_signal(pi) is True
 
     def test_returns_true_with_multiple_positive_strengths(self):
-        """Multi-topic users obviously pass."""
+        """Multi-topic users pass."""
         pi = ProcessedInterests(
             model_id="inferred-v3-model",
             scores={
@@ -206,11 +197,7 @@ class TestHasMeaningfulInterestSignal:
         assert has_meaningful_interest_signal(pi) is True
 
     def test_ignores_non_numeric_values(self):
-        """`model_id` lives on the ProcessedInterests model itself, but if any
-        non-numeric value slips into scores it must not be counted as signal.
-        """
-        # Mutating the dict directly to simulate stray non-numeric values
-        # without going through ProcessedInterests' validation.
+        """Non-numeric scores don't count as signal."""
         pi = ProcessedInterests(model_id="inferred-v3-model", scores={})
         pi.scores["some_string"] = "v3"
         pi.scores["sports"] = 0.0
@@ -220,11 +207,7 @@ class TestHasMeaningfulInterestSignal:
         assert has_meaningful_interest_signal(pi) is True
 
     def test_zero_strength_with_positive_tz_value_still_false(self):
-        """A user with only TZ=int(0) and zero topics has no real signal.
-
-        Edge case: TZ values are integers and could be 0 (the easternmost
-        bucket). The gate must exclude TZ regardless of its numeric value.
-        """
+        """TZ excluded regardless of its numeric value (could be 0)."""
         pi = ProcessedInterests(
             model_id="inferred-v3-model",
             scores={

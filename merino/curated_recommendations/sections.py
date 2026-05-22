@@ -408,15 +408,7 @@ def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> b
 
 
 def has_meaningful_interest_signal(personal_interests: ProcessedInterests | None) -> bool:
-    """Return True if the user has at least one positive non-TZ topic strength.
-
-    `bool(personal_interests.scores)` alone is too permissive — the scores dict
-    can be non-empty (carrying model_id and TIME_ZONE_OFFSET_INFERRED_KEY) even
-    when every topic strength is zero. Routing such users into the interest
-    ranker has no personalization effect (they get scored at popularity, the
-    same outcome cohort would produce) but still counts them in the treatment
-    arm, diluting the measured experiment lift.
-    """
+    """Return True if the user has at least one positive non-TZ topic strength."""
     if personal_interests is None:
         return False
     return any(
@@ -917,10 +909,8 @@ async def get_sections(
         and ml_backend is not None
         and ml_backend.is_valid(surface_id)
     )
-    # Route to the interest ranker only when the user has at least one positive
-    # non-TZ topic strength. Otherwise zero-signal users get scored at popularity
-    # (the same outcome cohort gives them) but are counted in the treatment arm,
-    # diluting the experiment's measured lift. See `has_meaningful_interest_signal`.
+    # Require ≥1 positive non-TZ topic strength so zero-signal users don't dilute
+    # the experiment arm.
     use_interest_ranker = (
         is_inferred_interest_experiment(request)
         and lints_interest_backend.is_valid(surface_id)
