@@ -9,6 +9,7 @@ from typing import Any
 
 import freezegun
 import pytest
+from circuitbreaker import CircuitBreakerError
 
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
@@ -568,29 +569,54 @@ async def test_empty_team_cache_returns_empty_teams() -> None:
 
 
 @pytest.mark.asyncio
-async def test_cache_error_returns_empty_payloads(mocker) -> None:
-    """A transient WCS cache read failure returns empty cache-backed envelopes."""
-    sport = mocker.Mock()
-    sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
-    sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
-    sport.get_eliminated_team_keys = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
-    metrics_client = mocker.Mock()
-    sentry_capture = mocker.patch("merino.providers.wcs.provider.sentry_sdk.capture_exception")
-    provider = WcsProvider(sport=sport, metrics_client=metrics_client, live_data_enabled=True)
+async def test_cache_error_records_then_breaker_returns_empty(mocker) -> None:
+    """Test cache failure records sentry and metrics and triggers breaker.
+    After the recovery timeout passes, breaker resets.
+    """
+    with freezegun.freeze_time("2025-04-11") as freezer:
+        sport = mocker.Mock()
+        sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        sport.get_eliminated_team_keys = mocker.AsyncMock(
+            side_effect=CacheAdapterError("redis down")
+        )
+        metrics_client = mocker.Mock()
+        sentry_capture = mocker.patch("merino.providers.wcs.provider.sentry_sdk.capture_exception")
+        provider = WcsProvider(sport=sport, metrics_client=metrics_client, live_data_enabled=True)
 
-    matches = await provider.get_matches(ANCHOR, limit=None, team_keys=None)
-    assert matches.model_dump(by_alias=True) == {
-        "previous": [],
-        "current": [],
-        "next": [],
-    }
-    live = await provider.get_live_matches(team_keys=None)
-    assert live.matches == []
-    assert (await provider.get_teams()).teams == []
-    metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "matches"})
-    metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "live"})
-    metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "teams"})
-    assert sentry_capture.call_count == 3
+        with pytest.raises(CacheAdapterError):
+            await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+        with pytest.raises(CacheAdapterError):
+            await provider.get_live_matches(team_keys=None)
+        with pytest.raises(CacheAdapterError):
+            await provider.get_teams()
+
+        metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "matches"})
+        metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "live"})
+        metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "teams"})
+        assert sentry_capture.call_count == 3
+
+        # Circuit breaker triggered
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_live_matches(team_keys=None)
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_teams()
+
+        assert metrics_client.increment.call_count == 3
+        assert sentry_capture.call_count == 3
+
+        # increment time so breaker resets
+        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1.0)
+
+        sport.get_events_by_date = mocker.AsyncMock()
+        sport.get_all_teams = mocker.AsyncMock(return_value={})
+        sport.get_eliminated_team_keys = mocker.AsyncMock(return_value=set())
+
+        await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+        await provider.get_live_matches(team_keys=None)
+        await provider.get_teams()
 
 
 @pytest.mark.asyncio

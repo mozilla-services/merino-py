@@ -39,7 +39,8 @@ async def get_wcs_matches(
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)
-    return await provider.get_matches(target_date, limit, team_keys)
+    matches: MatchesResponse = await provider.get_matches(target_date, limit, team_keys)
+    return matches
 
 
 @router.get(
@@ -56,7 +57,8 @@ async def get_wcs_live(
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> LiveMatchesResponse:
     """Return in-progress matches sorted ascending by date."""
-    return await provider.get_live_matches(_parse_team_keys(teams))
+    live_matches: LiveMatchesResponse = await provider.get_live_matches(_parse_team_keys(teams))
+    return live_matches
 
 
 @router.get(
@@ -69,7 +71,8 @@ async def get_wcs_teams(
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> TeamsResponse:
     """Return all teams participating in the World Cup."""
-    return await provider.get_teams()
+    teams: TeamsResponse = await provider.get_teams()
+    return teams
 
 
 def _parse_team_keys(teams: str | None) -> frozenset[str] | None:

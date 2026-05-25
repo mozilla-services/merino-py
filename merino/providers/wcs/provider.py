@@ -8,6 +8,9 @@ from aiodogstatsd import Client
 import sentry_sdk
 
 from merino.exceptions import CacheAdapterError
+from merino.governance.circuitbreakers import (
+    WCSCircuitBreaker,
+)
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.wcs.fake_data import get_all_teams
 from merino.providers.wcs.fake_live_data import build_live_events
@@ -59,6 +62,7 @@ class WcsProvider:
         self.metrics_client = metrics_client or get_metrics_client()
         self.live_data_enabled = live_data_enabled
 
+    @WCSCircuitBreaker(name="wcs_matches")
     async def get_matches(
         self,
         target_date: date,
@@ -83,7 +87,7 @@ class WcsProvider:
             events = await self.sport.get_events_by_date(start=window_start, end=window_end)
         except CacheAdapterError as ex:
             self._record_cache_error("matches", ex)
-            return MatchesResponse(previous=[], current=[], next_=[])
+            raise
 
         for event in sorted(events, key=lambda e: e.date):
             event_info = EventInfo.from_event(event)
@@ -101,6 +105,7 @@ class WcsProvider:
 
         return MatchesResponse(previous=previous, current=current, next_=next_)
 
+    @WCSCircuitBreaker(name="wcs_live_matches")
     async def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
         """Return live-endpoint events, sorted ascending by `date`.
 
@@ -122,7 +127,7 @@ class WcsProvider:
             events = await self.sport.get_events_by_date(start=window_start, end=window_end)
         except CacheAdapterError as ex:
             self._record_cache_error("live", ex)
-            return LiveMatchesResponse(matches=[])
+            raise
 
         live_events: list[EventInfo] = []
         for event in sorted(events, key=lambda e: e.date):
@@ -133,13 +138,14 @@ class WcsProvider:
                 live_events.append(event_info)
         return LiveMatchesResponse(matches=live_events)
 
+    @WCSCircuitBreaker(name="wcs_teams")
     async def get_teams(self) -> TeamsResponse:
         """Return cache-backed teams participating in the tournament."""
         try:
             teams = await self.sport.get_all_teams()
         except CacheAdapterError as ex:
             self._record_cache_error("teams", ex)
-            return TeamsResponse(teams=[])
+            raise
 
         cached_by_key = {team.key: team for team in teams.values()}
         if not cached_by_key:
