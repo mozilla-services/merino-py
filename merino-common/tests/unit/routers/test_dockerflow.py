@@ -1,27 +1,28 @@
-"""Tests for the merino-fleece Dockerflow endpoints."""
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+"""Unit tests for the shared dockerflow router."""
 
 import logging
 
 import pytest
-
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from merino_common.utils.version import Version
 from pytest_mock import MockerFixture
 
-from merino_fleece.app import create_app
+from merino_common.routers import dockerflow
+from merino_common.utils.version import Version
 
 
 @pytest.fixture
 def client() -> TestClient:
-    """Build a TestClient that bypasses the app lifespan.
-
-    Dockerflow endpoints don't depend on the spaCy detector, metrics client,
-    or any other lifespan-initialized state, so we skip the `with` form to
-    avoid loading the NLP model in tests.
-    """
-    client = TestClient(create_app())
-    client.follow_redirects = False
-    return client
+    """Build a TestClient over a minimal FastAPI app with only the dockerflow router."""
+    app = FastAPI()
+    app.include_router(dockerflow.router)
+    test_client = TestClient(app)
+    test_client.follow_redirects = False
+    return test_client
 
 
 def test_root_redirects_to_docs(client: TestClient) -> None:
