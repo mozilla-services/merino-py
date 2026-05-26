@@ -4,12 +4,14 @@
 
 """Unit tests for fetch_schedules.py module."""
 
-import pytest
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
-from httpx import AsyncClient
-from unittest.mock import MagicMock
-from pytest_mock import MockerFixture
 from typing import Any, cast
+from unittest.mock import MagicMock
+
+import pytest
+from httpx import AsyncClient
+from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.jobs.sportsdata_jobs import SportDataUpdater
@@ -23,6 +25,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
     Event,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 
 
 @pytest.fixture(name="httpx_client")
@@ -65,7 +68,10 @@ def fixture_sport_data_store(es_client: MagicMock, statsd_mock: Any) -> SportsDa
 
 @pytest.mark.asyncio
 async def test_updater(
-    sport_data_store: SportsDataStore, httpx_client: AsyncClient, mocker: MockerFixture
+    sport_data_store: SportsDataStore,
+    httpx_client: AsyncClient,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """Test provider functions:"""
 
@@ -90,7 +96,7 @@ async def test_updater(
         }
         return mock_sport
 
-    settings.providers.sports.sports = ["nfl", "NbA", "NHL", "NoneSuch"]
+    monkeypatch.setattr(settings.providers.sports, "sports", ["nfl", "NbA", "NHL", "NoneSuch"])
     updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
     assert list(updater.sports.keys()) == ["NFL", "NBA", "NHL"]
     assert updater.store == sport_data_store
@@ -122,3 +128,25 @@ async def test_updater(
     await updater.quick_update()
     assert not mock_sport.update_teams.called
     assert mock_sport.update_events.called
+
+
+@pytest.mark.asyncio
+async def test_update_and_cache_wcs_closes_store_on_error(
+    sport_data_store: SportsDataStore,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """WCS cache updates should close the datastore when refresh work fails."""
+    monkeypatch.setattr(settings.providers.sports, "sports", ["WCS"])
+    updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
+    shutdown = mocker.AsyncMock()
+    cast(Any, updater.store).startup = mocker.AsyncMock()
+    cast(Any, updater.store).shutdown = shutdown
+    cast(Any, updater).update_widget = mocker.AsyncMock()
+    cast(Any, updater).update_data = mocker.AsyncMock(side_effect=SportsDataError("provider down"))
+    mocker.patch("merino.jobs.sportsdata_jobs.monitor", return_value=nullcontext())
+
+    with pytest.raises(SportsDataError):
+        await updater.update_and_cache_wcs()
+
+    shutdown.assert_awaited_once()

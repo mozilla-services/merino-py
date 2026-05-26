@@ -507,6 +507,14 @@ api_key=""
 # Directory to store JSON request responses
 cache_dir="/tmp"
 
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__RETRY_MAX_TRIES
+# Total provider fetch attempts, including the first request
+retry_max_tries=5
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__RETRY_FACTOR_SEC
+# Initial exponential backoff delay in seconds
+retry_factor_sec=0.5
+
 # SportsData may have different base_urls per sport (e.g.
 # NFL may use `https://api.sportsdata.io/v3/nfl/scores/json` where
 # UCL may use `https://api.sportsdata.io/v4/soccer/scores/json`

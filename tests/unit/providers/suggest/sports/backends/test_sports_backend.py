@@ -1,22 +1,20 @@
 """Test Gauntlet for SportsData.io"""
 
+import hashlib
+import json
 import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import freezegun
-import pytest
-import json
-from datetime import datetime, timedelta, timezone
-
-from unittest.mock import patch, AsyncMock
-
 import httpx
-
-from unittest.mock import MagicMock
+import pytest
 from pytest_mock import MockerFixture
-from typing import Any, cast
 
 from merino.configs import settings
-from merino.providers.suggest.sports.backends import get_data
+from merino.providers.suggest.sports.backends import SPORTSDATA_STALE_FALLBACK_METRIC, get_data
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
@@ -124,7 +122,82 @@ async def test_get_data_sends_headers():
         headers={SPORTSDATA_API_KEY_HEADER: api_key},
     )
     assert api_key not in str(exc_info.value)
+    assert "status 403" in str(exc_info.value)
     assert exc_info.value.__cause__ is None
+
+
+@pytest.mark.asyncio
+async def test_get_data_retries_transient_provider_fetch_failures(mocker: MockerFixture):
+    """Test that `get_data` retries transient provider fetch errors."""
+    mock_response_error = httpx.Response(
+        status_code=503,
+        request=httpx.Request("GET", "http://example.org"),
+    )
+    mock_response_success = httpx.Response(
+        status_code=200,
+        json={"ok": True},
+        request=httpx.Request("GET", "http://example.org"),
+    )
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(side_effect=[mock_response_error, mock_response_success])
+    sleep = mocker.patch(
+        "merino.providers.suggest.sports.backends._sportsdata_retry_sleep",
+        new=mocker.AsyncMock(),
+    )
+
+    data = await get_data(
+        client=mock_client,
+        url="http://example.org",
+    )
+
+    assert data == {"ok": True}
+    assert mock_client.get.await_count == 2
+    assert sleep.await_count == 1
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2099-01-01T00:00:00", tz_offset=0)
+async def test_get_data_returns_stale_cache_when_provider_fetch_fails(
+    mocker: MockerFixture, tmp_path: Path
+):
+    """Test that `get_data` falls back to stale cache after provider fetch errors."""
+    ttl = timedelta(seconds=5)
+    url = "http://example.org"
+    cached_data = {"stale": True}
+    hasher = hashlib.new("sha1", usedforsecurity=False)
+    hasher.update(url.encode())
+    cache_file = tmp_path / f"{hasher.hexdigest()}.json"
+    cache_file.write_text(json.dumps(cached_data))
+    mock_response = httpx.Response(
+        status_code=503,
+        request=httpx.Request("GET", url),
+    )
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    metrics_client = mocker.patch(
+        "merino.providers.suggest.sports.backends.get_metrics_client"
+    ).return_value
+    sleep = mocker.patch(
+        "merino.providers.suggest.sports.backends._sportsdata_retry_sleep",
+        new=mocker.AsyncMock(),
+    )
+
+    with patch.object(json, "dump") as mock_dump:
+        data = await get_data(
+            client=mock_client,
+            url=url,
+            ttl=ttl,
+            cache_dir=str(tmp_path),
+        )
+
+    assert mock_client.get.await_count == settings.providers.sports.sportsdata.retry_max_tries
+    mock_client.get.assert_awaited_with(url, params=None)
+    assert sleep.await_count == settings.providers.sports.sportsdata.retry_max_tries - 1
+    metrics_client.increment.assert_called_once_with(
+        SPORTSDATA_STALE_FALLBACK_METRIC, tags={"status": "503"}
+    )
+    mock_dump.assert_not_called()
+    assert data == cached_data
 
 
 @pytest.mark.asyncio

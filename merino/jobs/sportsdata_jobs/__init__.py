@@ -270,12 +270,14 @@ class SportDataUpdater:
             # TODO: Ensure errors bubble up to caller or are otherwise elevated
             # so we can track success/fail here
             await self.store.startup()
-            # NOTE: Widget data must be done first, otherwise there may
-            # be missing data like no terms aliases, due to mutable internal
-            # state which depends on ordering of calls in the WCS class
-            await self.update_widget()
-            await self.update_data()
-            await self.store.shutdown()
+            try:
+                # NOTE: Widget data must be done first, otherwise there may
+                # be missing data like no terms aliases, due to mutable internal
+                # state which depends on ordering of calls in the WCS class
+                await self.update_widget()
+                await self.update_data()
+            finally:
+                await self.store.shutdown()
 
 
 logger = logging.getLogger(__name__)

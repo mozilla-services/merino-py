@@ -1189,22 +1189,33 @@ class WCS(Sport):
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
+        # WCS backs the live World Cup cron/widget, so it preserves the existing
+        # cache and degrades partially when SportsData has an intermittent failure.
         await self.get_season(client=client)
         # Stage names are joined by Event.RoundId onto self.rounds
         # Rounds are lazy loaded, so ensure we got them (otherwise
         # stage will always default to None)
         if not self.rounds:
-            await self.load_rounds(client=client)
+            try:
+                await self.load_rounds(client=client)
+            except SportsDataError as ex:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not load WCS rounds; continuing without stages: {ex}"
+                )
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
         local_timezone = SPORTSDATA_UTC
-        response = await get_data(
-            client=client,
-            url=url,
-            ttl=timedelta(minutes=5),
-            cache_dir=self.cache_dir,
-            headers=self.api_headers(),
-        )
+        try:
+            response = await get_data(
+                client=client,
+                url=url,
+                ttl=timedelta(minutes=5),
+                cache_dir=self.cache_dir,
+                headers=self.api_headers(),
+            )
+        except SportsDataError as ex:
+            logger.warning(f"{LOGGING_TAG} Could not refresh WCS schedules: {ex}")
+            return
         if not response:
             logger.warning(f"{LOGGING_TAG} No WCS schedules returned; skipping event cache update")
             return
@@ -1215,13 +1226,17 @@ class WCS(Sport):
             self.events.values(), event_timezone=local_timezone
         ):
             url = f"{self.base_url}/GamesByDate/{self.name}/{day}"
-            response = await get_data(
-                client=client,
-                url=url,
-                ttl=_WCS_GAMES_BY_DATE_TTL,
-                cache_dir=self.cache_dir,
-                headers=self.api_headers(),
-            )
+            try:
+                response = await get_data(
+                    client=client,
+                    url=url,
+                    ttl=_WCS_GAMES_BY_DATE_TTL,
+                    cache_dir=self.cache_dir,
+                    headers=self.api_headers(),
+                )
+            except SportsDataError as ex:
+                logger.warning(f"{LOGGING_TAG} Could not refresh WCS scores for {day}: {ex}")
+                continue
             self.load_scores_from_source(
                 response,
                 event_timezone=local_timezone,
