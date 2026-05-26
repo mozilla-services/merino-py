@@ -4,6 +4,7 @@ import pytest
 
 from merino.utils.query_processing.normalization.pipeline import (
     BM25Index,
+    FlightAwareNormalizePipeline,
     NormalizePipeline,
     _apply_prefix_complete,
     _try_join_normalize,
@@ -264,6 +265,104 @@ def test_bm25_empty_scores() -> None:
     """Query with no matching terms should return None."""
     bm25 = BM25Index(["apple stock", "tesla stock"])
     assert bm25.get_top_reorder("xyz abc") is None
+
+
+# FlightAware structural normalization
+@pytest.fixture(name="flightaware_pipeline")
+def fixture_flightaware_pipeline() -> FlightAwareNormalizePipeline:
+    """Build a FlightAware normalizer using the existing backend airline mapping."""
+    return FlightAwareNormalizePipeline()
+
+
+@pytest.mark.parametrize(
+    "query, expected",
+    [
+        ("ua 123", "ua123"),
+        ("123 ua", "ua123"),
+        ("123ua", "ua123"),
+        ("ua-123", "ua123"),
+        ("ua#123", "ua123"),
+        ("ua:123", "ua123"),
+        ("ua/123", "ua123"),
+        ("ua flight 123", "ua123"),
+        ("united airlines flight 123", "ua123"),
+        ("united airline 123", "ua123"),
+        ("jetblue 123", "b6123"),
+        ("b6 flight 123", "b6123"),
+        ("123 b6", "b6123"),
+    ],
+    ids=[
+        "code_number",
+        "reverse_number_code",
+        "reverse_number_code_compact",
+        "dash_separator",
+        "hash_separator",
+        "colon_separator",
+        "slash_separator",
+        "code_flight_number",
+        "airline_name_flight_number",
+        "singular_airline_name_number",
+        "derived_airline_alias_number",
+        "alphanumeric_code_flight_number",
+        "reverse_alphanumeric_code",
+    ],
+)
+def test_flightaware_normalize_examples(
+    flightaware_pipeline: FlightAwareNormalizePipeline,
+    query: str,
+    expected: str,
+) -> None:
+    """FlightAware structural regexes should normalize common flight-number shapes."""
+    assert flightaware_pipeline.normalize(query) == expected
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "flight",
+        "google flights",
+        "flightaware",
+        "american airlines",
+        "united 123",
+        "gate b23 terminal 1",
+        "123 zzz",
+        "room 237",
+    ],
+    ids=[
+        "bare_flight",
+        "google_flights",
+        "flightaware_nav",
+        "airline_without_number",
+        "ambiguous_airline_alias",
+        "travel_terms_with_digits",
+        "unknown_airline_code",
+        "non_travel_number",
+    ],
+)
+def test_flightaware_normalize_skips_low_confidence_queries(
+    flightaware_pipeline: FlightAwareNormalizePipeline,
+    query: str,
+) -> None:
+    """Generic travel/navigation queries should stay unchanged."""
+    assert flightaware_pipeline.normalize(query) == tier_a(query)
+
+
+def test_flightaware_normalize_is_idempotent(
+    flightaware_pipeline: FlightAwareNormalizePipeline,
+) -> None:
+    """Running FlightAware normalization twice should not change the result again."""
+    once = flightaware_pipeline.normalize("123 ua")
+    assert flightaware_pipeline.normalize(once) == once
+
+
+def test_normalize_for_provider_routes_to_provider_specific_pipeline(
+    pipeline: NormalizePipeline,
+) -> None:
+    """Provider-specific normalization should use each provider's intended pipeline."""
+    assert pipeline.normalize_for_provider("costco stock", "polygon") == "stock costco"
+    assert pipeline.normalize_for_provider("costco stock", "sports") == "stock costco"
+    assert pipeline.normalize_for_provider("123 ua", "flightaware") == "ua123"
+    assert pipeline.normalize_for_provider("DOW JONE", "amo") == "DOW JONE"
 
 
 # normalization e2e

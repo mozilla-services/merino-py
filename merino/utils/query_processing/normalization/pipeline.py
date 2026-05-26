@@ -38,6 +38,10 @@ from itertools import combinations, pairwise
 import wordsegment as _wordsegment
 
 from merino.configs import settings
+from merino.providers.suggest.flightaware.backends.airline_mappings import (
+    NAME_TO_AIRLINE_CODE_MAPPING,
+    VALID_AIRLINE_CODES,
+)
 
 # normalize unicode punctuation to ascii equivalents
 _PUNCT_MAP = str.maketrans(
@@ -328,6 +332,176 @@ class BM25Index:
         return self.corpus[top_idx]
 
 
+_FLIGHTAWARE_AIRLINE_SUFFIX_REWRITES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (" air lines", (" airlines", " airline", "")),
+    (" air line", (" airlines", " airline", "")),
+    (" airlines", (" airline", "")),
+    (" airline", (" airlines", "")),
+    (" airways", (" airway", "")),
+    (" airway", (" airways", "")),
+)
+
+
+def _is_valid_flightaware_code(code: str, valid_codes: set[str]) -> bool:
+    """Return whether the code is a usable FlightAware airline code."""
+    code = code.upper()
+    return code in valid_codes and any(char.isalpha() for char in code)
+
+
+def _flightaware_airline_alias_variants(airline_name: str) -> set[str]:
+    """Return safe mechanical aliases for a FlightAware airline name.
+
+    Examples:
+      - "delta airlines" -> {"delta airlines", "delta airline", "delta"}
+      - "jetblue airways" -> {"jetblue airways", "jetblue airway", "jetblue"}
+
+    The caller discards aliases that map to multiple codes.
+    """
+    normalized_name = tier_a(airline_name)
+    if not normalized_name:
+        return set()
+
+    variants = {normalized_name}
+    for suffix, replacements in _FLIGHTAWARE_AIRLINE_SUFFIX_REWRITES:
+        if not normalized_name.endswith(suffix):
+            continue
+
+        base = normalized_name[: -len(suffix)]
+        if not base:
+            continue
+        variants.update(tier_a(f"{base}{replacement}") for replacement in replacements)
+
+    return {variant for variant in variants if variant}
+
+
+def _build_flightaware_airline_aliases(valid_codes: set[str]) -> dict[str, str]:
+    """Build FlightAware airline aliases from existing backend mapping data.
+
+    The source map already has canonical airline names. This adds only mechanical
+    singular/plural/suffix variants, and only keeps aliases that resolve to a
+    single code in the existing data.
+
+    e.g {"united airlines": "UA", "united airline": "UA", ...}
+    """
+    alias_candidates: dict[str, set[str]] = {}
+
+    for airline_name, code in NAME_TO_AIRLINE_CODE_MAPPING.items():
+        if not _is_valid_flightaware_code(code, valid_codes):
+            continue
+
+        code = code.upper()
+        for alias in _flightaware_airline_alias_variants(airline_name):
+            alias_candidates.setdefault(alias, set()).add(code)
+
+    return {
+        alias: next(iter(codes)) for alias, codes in alias_candidates.items() if len(codes) == 1
+    }
+
+
+# "ua 123" -> "ua123": normal code plus flight number, separated by whitespace.
+_FLIGHTAWARE_CODE_NUMBER_RE = re.compile(r"^(?P<code>[a-z0-9]{1,3})\s+(?P<number>\d{1,5})$")
+
+# "123 ua" -> "ua123": user typed the flight number before the airline code.
+_FLIGHTAWARE_REVERSE_CODE_RE = re.compile(r"^(?P<number>\d{1,5})\s+(?P<code>[a-z0-9]{1,3})$")
+
+# "123ua" -> "ua123": same reverse form, but with no whitespace.
+_FLIGHTAWARE_REVERSE_CODE_COMPACT_RE = re.compile(
+    r"^(?P<number>\d{1,5})(?P<code>[a-z][a-z0-9]{0,2})$"
+)
+
+# "ua-123", "ua#123", "ua:123", "ua/123" -> "ua123".
+_FLIGHTAWARE_CODE_SEPARATOR_RE = re.compile(
+    r"^(?P<code>[a-z0-9]{1,3})\s*[-#:/]\s*(?P<number>\d{1,5})$"
+)
+
+# "ua flight 123" -> "ua123": code plus literal "flight" before the number.
+_FLIGHTAWARE_CODE_FLIGHT_NUMBER_RE = re.compile(
+    r"^(?P<code>[a-z0-9]{1,3})\s+flight\s+(?P<number>\d{1,5})$"
+)
+
+# "united airlines flight 123" -> "ua123": airline name plus "flight" and number.
+_FLIGHTAWARE_AIRLINE_NAME_FLIGHT_NUMBER_RE = re.compile(
+    r"^(?P<airline>[a-z][a-z .&'-]{1,80})\s+flight\s+(?P<number>\d{1,5})$"
+)
+
+# "united airlines 123" -> "ua123": airline name immediately followed by a number.
+_FLIGHTAWARE_AIRLINE_NAME_NUMBER_RE = re.compile(
+    r"^(?P<airline>[a-z][a-z .&'-]{1,80})\s+(?P<number>\d{1,5})$"
+)
+
+
+class FlightAwareNormalizePipeline:
+    """Conservative structural normalizer for FlightAware queries."""
+
+    def __init__(
+        self,
+        valid_airline_codes: set[str] | None = None,
+    ) -> None:
+        """Initialize with valid airline codes from FlightAware mapping data."""
+        self._valid_airline_codes = {
+            code.upper() for code in (valid_airline_codes or VALID_AIRLINE_CODES)
+        }
+        self._airline_aliases = _build_flightaware_airline_aliases(self._valid_airline_codes)
+
+    def _is_valid_code(self, code: str) -> bool:
+        return _is_valid_flightaware_code(code, self._valid_airline_codes)
+
+    def _normalize_code_number(self, code: str, number: str) -> str | None:
+        code = code.upper()
+        if not self._is_valid_code(code):
+            return None
+        return f"{code.casefold()}{number}"
+
+    def _normalize_airline_number(self, airline: str, number: str) -> str | None:
+        code = self._airline_aliases.get(tier_a(airline))
+        if code is None:
+            return None
+        return self._normalize_code_number(code, number)
+
+    def normalize(self, query: str) -> str:
+        """Normalize a FlightAware query if it has a high-confidence flight shape."""
+        q = tier_a(query)
+        if not q:
+            return q
+
+        # first check airline codes
+        code_number_matchers = (
+            _FLIGHTAWARE_CODE_NUMBER_RE,
+            _FLIGHTAWARE_REVERSE_CODE_RE,
+            _FLIGHTAWARE_REVERSE_CODE_COMPACT_RE,
+            _FLIGHTAWARE_CODE_SEPARATOR_RE,
+            _FLIGHTAWARE_CODE_FLIGHT_NUMBER_RE,
+        )
+        for pattern in code_number_matchers:
+            match = pattern.match(q)
+            if match is None:
+                continue
+            normalized = self._normalize_code_number(
+                match.group("code"),
+                match.group("number"),
+            )
+            if normalized is not None:
+                return normalized
+
+        # next check full airline name
+        airline_number_matchers = (
+            _FLIGHTAWARE_AIRLINE_NAME_FLIGHT_NUMBER_RE,
+            _FLIGHTAWARE_AIRLINE_NAME_NUMBER_RE,
+        )
+        for pattern in airline_number_matchers:
+            match = pattern.match(q)
+            if match is None:
+                continue
+            normalized = self._normalize_airline_number(
+                match.group("airline"),
+                match.group("number"),
+            )
+            if normalized is not None:
+                return normalized
+
+        return q
+
+
 class NormalizePipeline:
     """Precision-first query normalization pipeline.
 
@@ -339,12 +513,14 @@ class NormalizePipeline:
         canonical: set[str],
         finance_bm25: BM25Index | None = None,
         canonical_prefix_index: (dict[str, tuple[str, int, int]] | None) = None,
+        flightaware_pipeline: FlightAwareNormalizePipeline | None = None,
     ) -> None:
         """Initialize with pre-built components."""
         self._canonical = canonical
         self._fin_bm25 = finance_bm25
         self._canonical_prefix_index = canonical_prefix_index or {}
         self._canonical_words: set[str] = {w for phrase in canonical for w in phrase.split()}
+        self._flightaware_pipeline = flightaware_pipeline or FlightAwareNormalizePipeline()
 
         # pre-warm cache on canonical words
         _wordsegment.load()
@@ -409,3 +585,11 @@ class NormalizePipeline:
                 q = reordered
 
         return q
+
+    def normalize_for_provider(self, query: str, provider_name: str) -> str:
+        """Normalize a query using the pipeline for the requested provider."""
+        if provider_name == "flightaware":
+            return self._flightaware_pipeline.normalize(query)
+        if provider_name in {"sports", "polygon"}:
+            return self.normalize(query)
+        return query

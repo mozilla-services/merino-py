@@ -69,3 +69,28 @@ def test_emit_normalization_metrics_skips_non_norm_providers() -> None:
         "normalization.experiment.provider_match",
         tags={"provider": "polygon", "matched": "False", "query_changed": "True"},
     )
+
+
+def test_emit_normalization_metrics_uses_provider_specific_query_changed() -> None:
+    """Provider-specific query_changed values should be emitted per provider."""
+    client = MagicMock()
+    suggestions: list[BaseSuggestion] = []
+    providers = [_mock_provider("polygon"), _mock_provider("flightaware")]
+    norm_providers = frozenset({"polygon", "flightaware"})
+
+    emit_normalization_metrics(
+        client,
+        suggestions,
+        providers,
+        norm_providers,
+        query_changed={"polygon": False, "flightaware": True},
+    )
+
+    client.increment.assert_any_call(
+        "normalization.experiment.provider_match",
+        tags={"provider": "polygon", "matched": "False", "query_changed": "False"},
+    )
+    client.increment.assert_any_call(
+        "normalization.experiment.provider_match",
+        tags={"provider": "flightaware", "matched": "False", "query_changed": "True"},
+    )
