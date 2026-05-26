@@ -4,11 +4,13 @@
 
 """Integration tests for `GET /api/v1/wcs/matches`."""
 
+from circuitbreaker import CircuitBreakerError
 from starlette.testclient import TestClient
 
 from merino.main import app
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.wcs import get_provider as get_wcs_provider
+from merino.providers.wcs.provider import WcsProvider
 from tests.wcs.factories import build_provider, event as build_event
 
 
@@ -116,6 +118,19 @@ def test_invalid_date_returns_400(client: TestClient) -> None:
     """Merino's validation handler in main.py converts FastAPI's 422 to 400."""
     response = client.get(_PATH, params={"date": "not-a-date"})
     assert response.status_code == 400
+
+
+def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
+    """An open circuit breaker surfaces as HTTP 503 with `Retry-After`."""
+    provider = mocker.AsyncMock(spec=WcsProvider)
+    provider.get_matches.side_effect = CircuitBreakerError("wcs breaker open")
+    app.dependency_overrides[get_wcs_provider] = lambda: provider
+
+    response = client.get(_PATH)
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "WCS temporarily unavailable"}
+    assert response.headers["retry-after"] == "3"
 
 
 def test_team_icons_pinned_to_prod_logo_bucket(client: TestClient) -> None:

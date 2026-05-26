@@ -8,7 +8,12 @@ from collections.abc import Iterator
 
 import freezegun
 import pytest
+from circuitbreaker import CircuitBreakerError
 from starlette.testclient import TestClient
+
+from merino.main import app
+from merino.providers.wcs import get_provider as get_wcs_provider
+from merino.providers.wcs.provider import WcsProvider
 
 
 _PATH = "/api/v1/wcs/live"
@@ -81,3 +86,16 @@ def test_team_icons_are_svg(client: TestClient) -> None:
 
     expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
     assert all(icon.startswith(expected_prefix) for icon in icons)
+
+
+def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
+    """An open circuit breaker surfaces as HTTP 503 with `Retry-After`."""
+    provider = mocker.AsyncMock(spec=WcsProvider)
+    provider.get_live_matches.side_effect = CircuitBreakerError("wcs breaker open")
+    app.dependency_overrides[get_wcs_provider] = lambda: provider
+
+    response = client.get(_PATH)
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "WCS temporarily unavailable"}
+    assert response.headers["retry-after"] == "3"
