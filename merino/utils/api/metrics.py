@@ -30,7 +30,7 @@ def emit_normalization_metrics(
     suggestions: list[BaseSuggestion],
     searched_providers: list[BaseProvider],
     normalization_providers: frozenset[str],
-    query_changed: bool | dict[str, bool],
+    query_changed: dict[str, bool],
 ) -> None:
     """Emit metrics for query normalization.
 
@@ -40,16 +40,11 @@ def emit_normalization_metrics(
     suggestion_providers = {s.provider for s in suggestions}
     for provider in searched_providers:
         if provider.name in normalization_providers:
-            provider_query_changed = (
-                query_changed.get(provider.name, False)
-                if isinstance(query_changed, dict)
-                else query_changed
-            )
             metrics_client.increment(
                 "normalization.experiment.provider_match",
                 tags={
                     "provider": provider.name,
                     "matched": str(provider.name in suggestion_providers),
-                    "query_changed": str(provider_query_changed),
+                    "query_changed": str(query_changed.get(provider.name, False)),
                 },
             )

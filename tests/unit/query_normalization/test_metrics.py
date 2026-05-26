@@ -27,7 +27,13 @@ def test_emit_normalization_metrics_matched() -> None:
     providers = [_mock_provider("polygon"), _mock_provider("sports")]
     norm_providers = frozenset({"polygon", "sports"})
 
-    emit_normalization_metrics(client, suggestions, providers, norm_providers, query_changed=True)
+    emit_normalization_metrics(
+        client,
+        suggestions,
+        providers,
+        norm_providers,
+        query_changed={"polygon": True, "sports": True},
+    )
 
     assert client.increment.call_count == 2
     client.increment.assert_any_call(
@@ -47,7 +53,13 @@ def test_emit_normalization_metrics_no_match() -> None:
     providers = [_mock_provider("polygon")]
     norm_providers = frozenset({"polygon"})
 
-    emit_normalization_metrics(client, suggestions, providers, norm_providers, query_changed=False)
+    emit_normalization_metrics(
+        client,
+        suggestions,
+        providers,
+        norm_providers,
+        query_changed={"polygon": False},
+    )
 
     client.increment.assert_called_once_with(
         "normalization.experiment.provider_match",
@@ -62,7 +74,13 @@ def test_emit_normalization_metrics_skips_non_norm_providers() -> None:
     providers = [_mock_provider("adm"), _mock_provider("polygon")]
     norm_providers = frozenset({"polygon"})
 
-    emit_normalization_metrics(client, suggestions, providers, norm_providers, query_changed=True)
+    emit_normalization_metrics(
+        client,
+        suggestions,
+        providers,
+        norm_providers,
+        query_changed={"polygon": True},
+    )
 
     assert client.increment.call_count == 1
     client.increment.assert_called_once_with(
