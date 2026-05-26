@@ -1,28 +1,20 @@
 """Balancers for curated recommendation articles."""
 
 from collections import defaultdict
-from dataclasses import dataclass
 import math
-from typing import Callable, Collection
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
-from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG, CuratedRecommendation
-
-
-@dataclass(frozen=True)
-class ArticleBalancerConfig:
-    """Configuration for an ArticleBalancer instance."""
-
-    max_topical_ratio: float
-    max_evergreen_ratio: float
-    max_per_topic_ratio: float
-    max_subtopic_ratio: float
-    max_blocked_topics_ratio: float
-    evergreen_topics: Collection[Topic]
-    subtopic_checker: Callable[[CuratedRecommendation], bool]
-    min_per_topic_limit: int = 0
-    min_subtopic_limit: int = 0
-    blocked_topics_multiplier: int = 1
+from merino.curated_recommendations.article_balancer_configs import (
+    ArticleBalancerConfig,
+    BALANCER_MAX_EVERGREEN as BALANCER_MAX_EVERGREEN,
+    BALANCER_MAX_PER_TOPIC as BALANCER_MAX_PER_TOPIC,
+    BALANCER_MAX_SUBTOPIC as BALANCER_MAX_SUBTOPIC,
+    BALANCER_MAX_TOPICAL as BALANCER_MAX_TOPICAL,
+    DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+    EVERGREEN_TOPICS as EVERGREEN_TOPICS,
+    MAX_BLOCKED_TOPICS as MAX_BLOCKED_TOPICS,
+)
+from merino.curated_recommendations.protocol import CuratedRecommendation
 
 
 class ArticleBalancer:
@@ -132,38 +124,15 @@ class ArticleBalancer:
         return self.article_list
 
 
-BALANCER_MAX_TOPICAL = 0.75
-BALANCER_MAX_EVERGREEN = 0.4
-
-BALANCER_MAX_PER_TOPIC = 0.2
-BALANCER_MAX_SUBTOPIC = 0.1
-MAX_BLOCKED_TOPICS = 0.0  # When set to 0.1 it effectively means 0 when num articles < 10, which is typical (non personalized) case
-
-EVERGREEN_TOPICS = {
-    Topic.FOOD,
-    Topic.SELF_IMPROVEMENT,
-    Topic.PERSONAL_FINANCE,
-    Topic.PARENTING,
-    Topic.HOME,
-}
-
-
 class TopStoriesArticleBalancer(ArticleBalancer):
     """Balancer configured for top stories."""
 
-    def __init__(self, expected_num_articles: int) -> None:
+    def __init__(
+        self,
+        expected_num_articles: int,
+        config: ArticleBalancerConfig | None = None,
+    ) -> None:
         super().__init__(
             expected_num_articles=expected_num_articles,
-            config=ArticleBalancerConfig(
-                max_topical_ratio=BALANCER_MAX_TOPICAL,
-                max_evergreen_ratio=BALANCER_MAX_EVERGREEN,
-                max_per_topic_ratio=BALANCER_MAX_PER_TOPIC,
-                max_subtopic_ratio=BALANCER_MAX_SUBTOPIC,
-                max_blocked_topics_ratio=MAX_BLOCKED_TOPICS,
-                evergreen_topics=EVERGREEN_TOPICS,
-                subtopic_checker=lambda rec: rec.in_experiment(ITEM_SUBTOPIC_FLAG),
-                min_per_topic_limit=2,
-                min_subtopic_limit=1,
-                blocked_topics_multiplier=3,
-            ),
+            config=config or DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
         )

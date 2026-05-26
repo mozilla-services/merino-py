@@ -57,6 +57,10 @@ from merino.curated_recommendations.protocol import (
     ProcessedInterests,
     Layout,
 )
+from merino.curated_recommendations.article_balancer_configs import (
+    ArticleBalancerConfig,
+    get_top_stories_article_balancer_config,
+)
 from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.rankers import (
     ContextualRanker,
@@ -720,6 +724,7 @@ def get_top_story_list(
     rescaler: EngagementRescaler | None = None,
     relax_constraints_for_personalization=False,
     prior: Prior | None = None,
+    article_balancer_config: ArticleBalancerConfig | None = None,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
@@ -764,7 +769,9 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
-    balancer = TopStoriesArticleBalancer(round(top_count * constraint_scale))
+    balancer = TopStoriesArticleBalancer(
+        round(top_count * constraint_scale), config=article_balancer_config
+    )
     topic_limited_stories, remaining_stories = balancer.add_stories(
         items_throttled_fresh, top_count
     )
@@ -959,6 +966,7 @@ async def get_sections(
         rescaler=rescaler,
         relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
         prior=prior,
+        article_balancer_config=get_top_stories_article_balancer_config(surface_id),
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations
