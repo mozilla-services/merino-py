@@ -27,6 +27,9 @@ class ArticleBalancerConfig:
 BALANCER_MAX_TOPICAL = 0.75
 BALANCER_MAX_EVERGREEN = 0.4
 
+# there are two passes where this is used, a top-9 pass then an additional 5
+# BALANCER_MAX_PER_TOPIC = 0.2 causes a max per topic of 2 in top-9 
+# there is also the min_per_topic_limit which affects the two passes independently
 BALANCER_MAX_PER_TOPIC = 0.2
 BALANCER_MAX_SUBTOPIC = 0.1
 MAX_BLOCKED_TOPICS = 0.0  # 0.1 effectively means 0 when num articles < 10.
