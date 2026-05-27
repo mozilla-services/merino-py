@@ -155,11 +155,15 @@ integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integr
 
 .PHONY: docker-build
 docker-build:  ## Build the docker image for Merino named "app:build"
-	docker build -t app:build .
+	docker build -f dockerfiles/Dockerfile -t app:build .
 
 .PHONY: docker-build-jobs
 docker-build-jobs:  ## Build the docker image for Merino job runner named "merino-jobs:build"
-	docker build --target job_runner -t merino-jobs:build .
+	docker build -f dockerfiles/Dockerfile --target job_runner -t merino-jobs:build .
+
+.PHONY: docker-build-fleece
+docker-build-fleece:  ## Build the docker image for Merino named "app:build"
+	docker build -f dockerfiles/Dockerfile-fleece -t app-fleece:build .
 
 .PHONY: load-tests
 load-tests:  ##  Run local execution of (Locust) load tests
