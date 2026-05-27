@@ -15,11 +15,6 @@ def get_team_colours(team_key: str) -> list[str]:
     return TEAM_COLOURS.get(team_key, [])
 
 
-def _country_display_code(iso: str) -> str:
-    """Return the display country code for an ISO 3166-1 alpha-2 code, falling back to the ISO code."""
-    return COUNTRY_DISPLAY_CODES.get(iso, iso)
-
-
 def _other_region_streams(candidates: list[WatchLinkEntry]) -> list[WatchLinkEntry]:
     """Return filtered, sorted streams for a country's other-regions section.
 
@@ -107,7 +102,7 @@ def resolve_other_regions(
         if not streams:
             continue
 
-        results.append((_country_display_code(iso), streams))
+        results.append((COUNTRY_DISPLAY_CODES.get(iso, iso), streams))
 
     results.sort(key=lambda entry: entry[0])  # entry[0] is the display country code string
     return results

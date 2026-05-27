@@ -6,11 +6,8 @@
 
 import pytest
 
-from unittest.mock import patch
-
 from merino.middleware.geolocation import Location
 from merino.providers.wcs.utils import (
-    _country_display_code,
     _find_lang_streams,
     _other_region_streams,
     get_team_colours,
@@ -327,22 +324,6 @@ class TestResolveOtherRegions:
         de_streams = next((streams for code, streams in result if code == "GER"), [])
         # ARD and ZDF both have sort_order=2; alphabetically ARD < ZDF
         assert [link.product_name for link in de_streams] == ["ARD", "ZDF"]
-
-
-class TestCountryDisplayCode:
-    """Tests against _country_display_code"""
-
-    def test_successful_lookup_returns_expected(self):
-        """Test successful lookup"""
-        mock_country_codes = {"AR": "ARG", "AT": "AUT"}
-        with patch("merino.providers.wcs.utils.COUNTRY_DISPLAY_CODES", mock_country_codes):
-            assert _country_display_code("AR") == "ARG"
-
-    def test_missed_lookup_returns_given_iso(self):
-        """Test missed lookup"""
-        mock_country_codes = {"AR": "ARG", "AT": "AUT"}
-        with patch("merino.providers.wcs.utils.COUNTRY_DISPLAY_CODES", mock_country_codes):
-            assert _country_display_code("IT") == "IT"
 
 
 class TestOtherRegionStreams:
