@@ -20,7 +20,6 @@ def test_configure_logging_invalid_format() -> None:
             level="INFO",
             can_propagate=False,
             current_env="development",
-            logger_name="merino",
         )
 
 
@@ -32,40 +31,32 @@ def test_configure_logging_mozlog_production() -> None:
             level="INFO",
             can_propagate=False,
             current_env="production",
-            logger_name="merino",
         )
 
 
-@pytest.mark.parametrize(
-    ("log_format", "expected_handler"),
-    [("mozlog", "console-mozlog"), ("pretty", "console-pretty")],
-    ids=["mozlog", "pretty"],
-)
-def test_configure_log_handler_assigned(log_format: str, expected_handler: str) -> None:
-    """The configured logger uses the handler matching the requested log_format."""
-    configure_logging(
-        log_format=log_format,
-        level="INFO",
-        can_propagate=False,
-        current_env="development",
-        logger_name="merino",
-    )
-
-    log_manager: Any = logging.root.manager
-    handler_name: Any = log_manager.loggerDict["merino"].handlers[0].name
-    assert handler_name == expected_handler
-
-
-def test_configure_logging_uses_provided_logger_name() -> None:
-    """The logger named by `logger_name` is configured (not a hardcoded "merino")."""
+def test_configure_log_handler_assigned_mozlog() -> None:
+    """The merino logger uses the console-mozlog handler when log_format is 'mozlog'."""
     configure_logging(
         log_format="mozlog",
         level="INFO",
         can_propagate=False,
         current_env="development",
-        logger_name="merino_fleece",
     )
 
-    log_manager: Any = logging.root.manager
-    assert "merino_fleece" in log_manager.loggerDict
-    assert log_manager.loggerDict["merino_fleece"].handlers[0].name == "console-mozlog"
+    merino_log_manager: Any = logging.root.manager
+    merino_logger: Any = merino_log_manager.loggerDict["merino"].handlers[0].name
+    assert merino_logger == "console-mozlog"
+
+
+def test_configure_log_handler_assigned_pretty() -> None:
+    """The merino logger uses the console-pretty handler when log_format is 'pretty'."""
+    configure_logging(
+        log_format="pretty",
+        level="INFO",
+        can_propagate=False,
+        current_env="development",
+    )
+
+    merino_log_manager: Any = logging.root.manager
+    merino_logger: Any = merino_log_manager.loggerDict["merino"].handlers[0].name
+    assert merino_logger == "console-pretty"

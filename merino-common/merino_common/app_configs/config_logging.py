@@ -12,18 +12,15 @@ def configure_logging(
     level: str,
     can_propagate: bool,
     current_env: str,
-    logger_name: str,
 ) -> None:
     """Configure logging with MozLog.
 
     Args:
         log_format: Either "mozlog" or "pretty".
         level: Standard logging level name ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL").
-        can_propagate: Whether the application's loggers should propagate to the root logger.
+        can_propagate: Whether the merino loggers should propagate to the root logger.
         current_env: The active Dynaconf environment name (e.g. "development", "testing", "stage",
             "production"). Used to enforce that production runs with "mozlog".
-        logger_name: Root logger name to configure (e.g. "merino", "merino_fleece"). Also used as
-            the MozLog ``Logger`` field on emitted records.
     """
     match log_format:
         case "mozlog":
@@ -41,14 +38,13 @@ def configure_logging(
     dictConfig(
         {
             "version": 1,
-            "disable_existing_loggers": False,
             "formatters": {
                 "text": {
                     "format": "%(message)s",
                 },
                 "json": {
                     "()": GCPCompatibleJSONFormatter,
-                    "logger_name": logger_name,
+                    "logger_name": "merino",
                 },
             },
             "handlers": {
@@ -71,7 +67,7 @@ def configure_logging(
                 },
             },
             "loggers": {
-                logger_name: {
+                "merino": {
                     "handlers": handler,
                     "level": level,
                     "propagate": can_propagate,

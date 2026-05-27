@@ -117,7 +117,6 @@ if __name__ == "__main__":  # pragma: no cover
         level=settings.logging.level,
         can_propagate=settings.logging.can_propagate,
         current_env=settings.current_env,
-        logger_name="merino",
     )
     logger = logging.getLogger(__name__)
     logger.info("Starting up the skeleton.")

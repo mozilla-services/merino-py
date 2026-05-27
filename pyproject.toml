@@ -59,10 +59,7 @@ module-name = "merino"
 module-root = ""
 
 [tool.uv.workspace]
-members = [
-    "merino-common",
-    "merino-fleece",
-]
+members = ["merino-common"]
 
 [project.scripts]
 merino-jobs = "merino.jobs.cli:cli"
@@ -180,7 +177,7 @@ warn_unreachable = true
 markers = [
   "restore_load_manifest: disable the mock_load_manifest autouse fixture and use the real file",
 ]
-testpaths = ["tests", "merino-common/tests", "merino-fleece/tests"]
+testpaths = ["tests", "merino-common/tests"]
 norecursedirs = [
   "tests/data/",
   "tests/utils/",
