@@ -130,7 +130,7 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
 
     assert response.status_code == 503
     assert response.json() == {"detail": "WCS temporarily unavailable"}
-    assert response.headers["retry-after"] == "3"
+    assert response.headers["retry-after"] == "5"
 
 
 def test_team_icons_pinned_to_prod_logo_bucket(client: TestClient) -> None:

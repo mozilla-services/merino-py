@@ -30,6 +30,7 @@ router = APIRouter()
 
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 WATCH_LINKS_CACHE_CONTROL_TTL = settings.providers.wcs.watch_links_cache_control_ttl
+_RETRY_AFTER = str(settings.providers.wcs.circuit_breaker_retry_after_sec)
 
 
 @router.get(
@@ -65,9 +66,7 @@ async def get_wcs_matches(
         raise HTTPException(
             status_code=503,
             detail="WCS temporarily unavailable",
-            headers={
-                "Retry-After": str(settings.providers.wcs.circuit_breaker_recover_timeout_sec)
-            },
+            headers={"Retry-After": _RETRY_AFTER},
         )
 
 
@@ -94,9 +93,7 @@ async def get_wcs_live(
         raise HTTPException(
             status_code=503,
             detail="WCS temporarily unavailable",
-            headers={
-                "Retry-After": str(settings.providers.wcs.circuit_breaker_recover_timeout_sec)
-            },
+            headers={"Retry-After": _RETRY_AFTER},
         )
 
 
@@ -140,9 +137,7 @@ async def get_wcs_teams(
         raise HTTPException(
             status_code=503,
             detail="WCS temporarily unavailable",
-            headers={
-                "Retry-After": str(settings.providers.wcs.circuit_breaker_recover_timeout_sec)
-            },
+            headers={"Retry-After": _RETRY_AFTER},
         )
 
 

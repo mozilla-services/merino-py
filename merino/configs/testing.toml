@@ -138,6 +138,7 @@ resync_interval_sec = 86400
 [testing.providers.wcs]
 circuit_breaker_failure_threshold = 1
 circuit_breaker_recover_timeout_sec = 3
+circuit_breaker_retry_after_sec = 5
 backend = "test"
 
 
