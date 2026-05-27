@@ -12,6 +12,28 @@ import pytest
 from merino_common.app_configs.config_logging import configure_logging
 
 
+@pytest.fixture(autouse=True)
+def restore_logger_disabled_state() -> Any:
+    """Restore each logger's ``disabled`` flag after the test.
+
+    ``configure_logging`` calls ``logging.config.dictConfig``, which defaults to
+    ``disable_existing_loggers=True``. Without this fixture, configuring one logger here
+    silently disables loggers created elsewhere (e.g. ``merino_common.routers.dockerflow``
+    imported during collection) and breaks unrelated tests that rely on caplog.
+    """
+    logger_dict = logging.root.manager.loggerDict
+    snapshot = {
+        name: logger.disabled
+        for name, logger in logger_dict.items()
+        if isinstance(logger, logging.Logger)
+    }
+    yield
+    for name, disabled in snapshot.items():
+        logger = logger_dict.get(name)
+        if isinstance(logger, logging.Logger):
+            logger.disabled = disabled
+
+
 def test_configure_logging_invalid_format() -> None:
     """configure_logging raises ValueError when given an unknown log format."""
     with pytest.raises(ValueError, match="Invalid log format"):

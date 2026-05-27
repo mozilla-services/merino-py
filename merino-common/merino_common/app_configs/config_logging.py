@@ -41,7 +41,6 @@ def configure_logging(
     dictConfig(
         {
             "version": 1,
-            "disable_existing_loggers": False,
             "formatters": {
                 "text": {
                     "format": "%(message)s",
