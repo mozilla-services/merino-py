@@ -11,6 +11,7 @@ from merino.exceptions import CacheAdapterError
 from merino.governance.circuitbreakers import (
     WCSCircuitBreaker,
 )
+from merino.middleware.geolocation import Location
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.wcs.fake_data import get_all_teams
 from merino.providers.wcs.fake_live_data import build_live_events
@@ -18,9 +19,13 @@ from merino.providers.wcs.protocol import (
     EventInfo,
     LiveMatchesResponse,
     MatchesResponse,
+    OtherRegionEntry,
+    StreamEntry,
     TeamInfo,
     TeamsResponse,
+    WatchLinks,
 )
+from merino.providers.wcs.utils import resolve_other_regions, resolve_watch_links
 from merino.utils.metrics import get_metrics_client
 
 _WINDOW = timedelta(days=10)
@@ -167,6 +172,29 @@ class WcsProvider:
             )
         # return teams sorted by name in A - Z order.
         return TeamsResponse(teams=sorted(response, key=lambda t: t.name))
+
+    async def get_watch_links(
+        self, geolocation: Location | None, accepted_languages: list[str]
+    ) -> WatchLinks:
+        """Return locale-resolved watch links for WCS matches."""
+        # streams available in the user's own country and language
+        your_region = [
+            StreamEntry(product_name=link.product_name, entitlement=link.entitlement, url=link.url)
+            for link in resolve_watch_links(geolocation, accepted_languages)
+        ]
+
+        # streams grouped by other countries, sorted by display code A-Z
+        other_regions = []
+        for display_code, links in resolve_other_regions(geolocation):
+            streams = [
+                StreamEntry(
+                    product_name=link.product_name, entitlement=link.entitlement, url=link.url
+                )
+                for link in links
+            ]
+            other_regions.append(OtherRegionEntry(country_code=display_code, streams=streams))
+
+        return WatchLinks(your_region=your_region, other_regions=other_regions)
 
     async def _get_eliminated_team_keys(self) -> set[str]:
         """Return team keys that no longer have a tournament path."""
