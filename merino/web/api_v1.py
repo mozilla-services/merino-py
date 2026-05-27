@@ -261,12 +261,19 @@ async def suggest(
     use_normalization = pipeline is not None
     query_changed_by_provider: dict[str, bool] = {}
     q_tier_a = tier_a(q)
+    # Cache normalized queries by pipeline class within this request so we don't
+    # run the canonical pipeline twice when both sports and polygon are queried.
+    norm_cache: dict[str, str] = {}
 
     for p in search_from:
         q_for_provider = q
         if use_normalization and pipeline and p.name in NORMALIZATION_PROVIDERS:
-            with metrics_client.timeit("normalization.experiment.timing"):
-                q_for_provider = pipeline.normalize_for_provider(q, p.name)
+            # sports and polygon share the canonical pipeline; flightaware has its own.
+            cache_key = p.name if p.name == "flightaware" else "canonical"
+            if cache_key not in norm_cache:
+                with metrics_client.timeit("normalization.experiment.timing"):
+                    norm_cache[cache_key] = pipeline.normalize_for_provider(q, p.name)
+            q_for_provider = norm_cache[cache_key]
             query_changed_by_provider[p.name] = q_for_provider != q_tier_a
 
         srequest = SuggestionRequest(
