@@ -391,6 +391,7 @@ def _build_flightaware_airline_aliases(valid_codes: set[str]) -> dict[str, str]:
 
         code = code.upper()
         for alias in _flightaware_airline_alias_variants(airline_name):
+            # set alias if not done yet and add matching code
             alias_candidates.setdefault(alias, set()).add(code)
 
     return {
