@@ -6,13 +6,7 @@ import math
 from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.article_balancer_configs import (
     ArticleBalancerConfig,
-    BALANCER_MAX_EVERGREEN as BALANCER_MAX_EVERGREEN,
-    BALANCER_MAX_PER_TOPIC as BALANCER_MAX_PER_TOPIC,
-    BALANCER_MAX_SUBTOPIC as BALANCER_MAX_SUBTOPIC,
-    BALANCER_MAX_TOPICAL as BALANCER_MAX_TOPICAL,
     DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
-    EVERGREEN_TOPICS as EVERGREEN_TOPICS,
-    MAX_BLOCKED_TOPICS as MAX_BLOCKED_TOPICS,
 )
 from merino.curated_recommendations.protocol import CuratedRecommendation
 
