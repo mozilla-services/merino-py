@@ -17,7 +17,12 @@ def test_get_top_stories_article_balancer_config_returns_surface_config():
     config = get_top_stories_article_balancer_config(SurfaceId.NEW_TAB_DE_DE)
 
     assert config is TOP_STORIES_BALANCER_CONFIG_BY_SURFACE[SurfaceId.NEW_TAB_DE_DE]
-    assert config.min_per_topic_limit == 3
+    assert (
+        config.max_per_topic_ratio
+        == DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG.max_per_topic_ratio
+    )
+    assert config.min_per_topic_limit == 2
+    assert config.government_max_override == 3
 
 
 def test_get_top_stories_article_balancer_config_falls_back_to_default():
@@ -40,3 +45,47 @@ def test_top_stories_article_balancer_accepts_custom_config():
 
     assert [balancer.add_story(story) for story in stories] == [True, True, True]
     assert [story.corpusItemId for story in balancer.get_stories()] == ["a", "b", "c"]
+
+
+def test_top_stories_article_balancer_accepts_government_override():
+    """A config can give government stories a topic limit separate from the default."""
+    config = replace(DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG, government_max_override=3)
+    balancer = TopStoriesArticleBalancer(expected_num_articles=10, config=config)
+    stories = generate_recommendations(
+        item_ids=["a", "b", "c", "d"],
+        topics=[Topic.POLITICS, Topic.POLITICS, Topic.POLITICS, Topic.POLITICS],
+        time_sensitive_count=0,
+    )
+
+    assert [balancer.add_story(story) for story in stories] == [True, True, True, False]
+    assert [story.corpusItemId for story in balancer.get_stories()] == ["a", "b", "c"]
+
+
+def test_de_config_uses_default_topic_ratio_and_government_override():
+    """The DE surface config uses the normal ratio but allows three government stories."""
+    config = get_top_stories_article_balancer_config(SurfaceId.NEW_TAB_DE_DE)
+    balancer = TopStoriesArticleBalancer(expected_num_articles=9, config=config)
+    stories = generate_recommendations(
+        item_ids=["a", "b", "c", "d", "e", "f", "g"],
+        topics=[
+            Topic.BUSINESS,
+            Topic.BUSINESS,
+            Topic.BUSINESS,
+            Topic.POLITICS,
+            Topic.POLITICS,
+            Topic.POLITICS,
+            Topic.POLITICS,
+        ],
+        time_sensitive_count=0,
+    )
+
+    assert [balancer.add_story(story) for story in stories] == [
+        True,
+        True,
+        False,
+        True,
+        True,
+        True,
+        False,
+    ]
+    assert [story.corpusItemId for story in balancer.get_stories()] == ["a", "b", "d", "e", "f"]

@@ -21,6 +21,7 @@ class ArticleBalancerConfig:
     min_per_topic_limit: int = 0
     min_subtopic_limit: int = 0
     blocked_topics_multiplier: int = 1
+    government_max_override: int | None = None
 
 
 BALANCER_MAX_TOPICAL = 0.75
@@ -57,7 +58,8 @@ DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG = ArticleBalancerConfig(
 TOP_STORIES_BALANCER_CONFIG_BY_SURFACE: dict[SurfaceId, ArticleBalancerConfig] = {
     SurfaceId.NEW_TAB_DE_DE: replace(
         DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
-        min_per_topic_limit=3,
+        min_per_topic_limit=2,
+        government_max_override=3,
     ),
 }
 

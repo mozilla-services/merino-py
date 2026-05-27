@@ -56,6 +56,12 @@ class ArticleBalancer:
         """Return true if item is in a subtopic."""
         return self.subtopic_checker(rec)
 
+    def _max_for_topic(self, topic: Topic) -> int:
+        """Return the max article count for a topic, including configured topic overrides."""
+        if topic == Topic.POLITICS and self.config.government_max_override is not None:
+            return self.config.government_max_override
+        return self.max_per_topic
+
     def is_blocked_rec(self, rec: CuratedRecommendation) -> bool:
         """Return true if topic is a blocked topic."""
         return rec.is_story_blocked_for_top_stories()
@@ -84,7 +90,7 @@ class ArticleBalancer:
         if info_dict.get("blocked_topics", 0) > self.max_blocked_topics:
             return False
         for topic in Topic:
-            if info_dict.get(topic.value, 0) > self.max_per_topic:
+            if info_dict.get(topic.value, 0) > self._max_for_topic(topic):
                 return False
         return True
 
