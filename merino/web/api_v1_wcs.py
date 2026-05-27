@@ -4,13 +4,29 @@ from datetime import UTC, datetime
 from datetime import date as Date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, Header
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
+from merino.configs import settings
+from merino.middleware import ScopeKey
+from merino.middleware.geolocation import Location
 from merino.providers.wcs import get_provider as get_wcs_provider
-from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse, TeamsResponse
+from merino.providers.wcs.protocol import (
+    LiveMatchesResponse,
+    MatchesResponse,
+    TeamsResponse,
+    WatchLinks,
+)
 from merino.providers.wcs.provider import WcsProvider
+from merino.utils.query_processing.geo_params import (
+    get_accepted_languages,
+)
 
 router = APIRouter()
+
+HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
+WATCH_LINKS_CACHE_CONTROL_TTL = settings.providers.wcs.watch_links_cache_control_ttl
 
 
 @router.get(
@@ -59,6 +75,29 @@ async def get_wcs_live(
     """Return in-progress matches sorted ascending by date."""
     live_matches: LiveMatchesResponse = await provider.get_live_matches(_parse_team_keys(teams))
     return live_matches
+
+
+@router.get(
+    "/wcs/watch-links",
+    tags=["wcs"],
+    summary="Watch links for World Cup Soccer matches, resolved for the request locale",
+    response_model=WatchLinks,
+)
+async def get_wcs_watch_links(
+    request: Request,
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
+    provider: WcsProvider = Depends(get_wcs_provider),
+) -> JSONResponse:
+    """Return locale-resolved watch links for WCS matches."""
+    geolocation: Location | None = request.scope.get(ScopeKey.GEOLOCATION)
+    watch_links = await provider.get_watch_links(
+        geolocation, get_accepted_languages(accept_language)
+    )
+
+    return JSONResponse(
+        content=jsonable_encoder(watch_links),
+        headers={"Cache-Control": (f"private, max-age={WATCH_LINKS_CACHE_CONTROL_TTL}")},
+    )
 
 
 @router.get(
