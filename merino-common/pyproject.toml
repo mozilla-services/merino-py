@@ -7,7 +7,6 @@ requires-python = "~=3.14.0"
 # Note:  uv workspace currently doesn't support inheriting root dependencies
 # for the workspace members. Will need to duplicate them here.
 dependencies = [
-    "fastapi[standard]>=0.135.0,<1",
     "pydantic>=2.13.0,<3",
     "sentry-sdk[fastapi]>=2.13.0,<3",
     "dockerflow>=2026.3.4,<2027",
