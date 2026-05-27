@@ -96,6 +96,7 @@ def create_lifespan(mode: RuntimeMode | str):
                 dsn=settings.sentry.dsn,
                 env=settings.sentry.env,
                 traces_sample_rate=settings.sentry.traces_sample_rate,
+                default_tags={"server_region": settings.gcp.region},
             )
             await configure_metrics()
             cleanup_callbacks.append(_close_metrics_client)

@@ -2,6 +2,7 @@
 
 import json
 import logging
+from collections.abc import Mapping
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -20,6 +21,8 @@ def configure_sentry(
     dsn: str,
     env: str,
     traces_sample_rate: float,
+    *,
+    default_tags: Mapping[str, object] | None = None,
 ) -> None:  # pragma: no cover
     """Configure and initialize Sentry integration.
 
@@ -50,6 +53,8 @@ def configure_sentry(
         # We recommend adjusting this value in production,
         traces_sample_rate=traces_sample_rate,
     )
+    if default_tags:
+        sentry_sdk.set_tags(default_tags)
 
 
 def strip_sensitive_data(event: Event, hint: Hint) -> Event | None:
