@@ -155,6 +155,8 @@ _validators = [
     Validator("providers.sports.enabled_by_default", is_type_of=bool),
     Validator("providers.sports.sportsdata.api_key", is_type_of=str),
     Validator("providers.sports.sportsdata.cache_dir", is_type_of=str),
+    Validator("providers.sports.sportsdata.retry_max_tries", is_type_of=int, gte=1),
+    Validator("providers.sports.sportsdata.retry_factor_sec", is_type_of=float, gte=0),
     Validator("providers.sports.mix_sports", is_type_of=bool, required=False),
     Validator("providers.sports.max_suggestions", is_type_of=int, gte=1, required=True),
     Validator("providers.sports.event_ttl_weeks", is_type_of=int, gte=1, required=False),

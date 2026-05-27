@@ -2474,6 +2474,53 @@ async def test_wcs_update_events_fetches_games_by_date_for_live_relevant_days(
 
 
 @pytest.mark.asyncio
+async def test_wcs_update_events_keeps_existing_events_when_schedule_fetch_fails(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Schedule fetch failures should not prune existing WCS cache data."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.rounds = {1615: "Group Stage"}
+    existing_events = {123: mocker.Mock(spec=Event)}
+    sport.events = existing_events
+    cache_events = mocker.patch.object(sport, "cache_events", new=mocker.AsyncMock())
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=SportsDataError("provider down"),
+    )
+
+    await sport.update_events(client=mock_client)
+
+    assert sport.events == existing_events
+    get_data.assert_called_once()
+    cache_events.assert_not_awaited()
+
+
+@freezegun.freeze_time("2026-06-11T12:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_caches_schedule_when_score_fetch_fails(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Detailed score fetch failures should still cache the schedule refresh."""
+    sport = WCS(settings=settings.providers.sports)
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+    sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1615: "Group Stage"}
+    cache_events = mocker.patch.object(sport, "cache_events", new=mocker.AsyncMock())
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[[wcs_schedule_payload()[0]], SportsDataError("provider down")],
+    )
+
+    await sport.update_events(client=mock_client)
+
+    assert 90011111 in sport.events
+    assert get_data.call_count == 2
+    cache_events.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_wcs_national_teams_use_country_name_for_event_display() -> None:
     """WCS team full names are federation names, not widget display names."""
     sport = WCS(settings=settings.providers.sports)
@@ -3197,9 +3244,11 @@ def test_sport_subclasses_have_category_mapping() -> None:
 async def test_sportsdata_errors() -> None:
     """Test that the warning and error wrappers work."""
     warning = SportsDataWarning("Foo")
+    assert isinstance(warning, Exception)
     assert str(warning) == "SportsDataWarning: Foo"
 
     error = SportsDataError("Foo")
+    assert isinstance(error, Exception)
     assert str(error) == "SportsDataError: Foo"
 
 
