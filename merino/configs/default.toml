@@ -235,6 +235,13 @@ countries = ["US"]
 # Form factors to fetch suggestions for from the MARS API.
 form_factors = ["desktop"]
 
+# GCP metadata
+[default.gcp]
+# MERINO_GCP__REGION
+# Used for things like tagging deployment region in Sentry
+# Should be overridden via env var in release environments
+region = "unset"
+
 # Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
 [default.redis]
 # MERINO_REDIS__SERVER - URI to the Redis primary endpoint.
