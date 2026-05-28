@@ -13,7 +13,6 @@ from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from circuitbreaker import CircuitBreakerError
 
-from merino.configs import settings
 from merino.providers.wcs import get_provider as get_wcs_provider
 from merino.providers.wcs.protocol import (
     LiveMatchesResponse,

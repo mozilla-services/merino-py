@@ -4,9 +4,12 @@
 
 """Integration tests for `GET /api/v1/wcs/teams`."""
 
-from circuitbreaker import CircuitBreakerError
+import freezegun
+import pytest
 from fastapi.testclient import TestClient
 
+from merino.configs import settings
+from merino.exceptions import CacheAdapterError
 from merino.main import app
 from merino.providers.wcs import get_provider as get_wcs_provider
 from merino.providers.wcs.provider import WcsProvider
@@ -62,13 +65,22 @@ def test_team_icons_are_svg_from_prod_logo_bucket(client: TestClient) -> None:
 
 
 def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
-    """An open circuit breaker surfaces as HTTP 503 with `Retry-After`."""
-    provider = mocker.AsyncMock(spec=WcsProvider)
-    provider.get_teams.side_effect = CircuitBreakerError("wcs breaker open")
-    app.dependency_overrides[get_wcs_provider] = lambda: provider
+    """A Redis cache failure trips the breaker; subsequent requests return 503 + Retry-After."""
+    with freezegun.freeze_time("2026-06-15T16:00:00Z") as freezer:
+        sport = mocker.Mock()
+        sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        sport.get_eliminated_team_keys = mocker.AsyncMock(return_value=set())
+        app.dependency_overrides[get_wcs_provider] = lambda: WcsProvider(sport=sport)
 
-    response = client.get(_PATH)
+        # Trip the breaker
+        with pytest.raises(CacheAdapterError):
+            client.get(_PATH)
 
-    assert response.status_code == 503
-    assert response.json() == {"detail": "WCS temporarily unavailable"}
-    assert response.headers["retry-after"] == "5"
+        response = client.get(_PATH)
+        assert response.status_code == 503
+        assert response.json() == {"detail": "WCS temporarily unavailable"}
+        assert response.headers["retry-after"] == "5"
+
+        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        sport.get_all_teams = mocker.AsyncMock(return_value={})
+        client.get(_PATH)
