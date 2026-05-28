@@ -1,20 +1,23 @@
 """Unit test for ranker algorithms used to rank curated recommendations."""
 
+from dataclasses import replace
+from datetime import datetime, timezone
 import logging
+import random
 import uuid
 
-import pytest
-import random
-from datetime import datetime, timezone
 import freezegun
+import pytest
 from freezegun import freeze_time
-
 from pydantic import HttpUrl
 
 from merino.curated_recommendations import EngagementBackend
+from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
+from merino.curated_recommendations.article_balancer_configs import (
+    DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+)
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
-from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
     ITEM_HEADLINES_FLAG,
@@ -1241,6 +1244,48 @@ class TestTopStoriesArticleBalancer:
         assert balancer.add_story(stories[0])
         assert balancer.add_story(stories[1])
         assert balancer.add_story(stories[2]) is False
+        assert len(balancer.get_stories()) == 2
+
+    def test_rejects_story_when_publisher_limit_exceeded(self, monkeypatch):
+        """Ensure adding beyond the per-publisher maximum fails."""
+        monkeypatch.setattr(
+            "merino.curated_recommendations.article_balancer.random.random", lambda: 0.84
+        )
+        config = replace(
+            DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+            max_per_publisher=1,
+            publisher_enforcement_likelyhood=0.85,
+        )
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9, config=config)
+        stories = [
+            self._build_recommendation("0", Topic.BUSINESS),
+            self._build_recommendation("1", Topic.ARTS),
+        ]
+        stories[1].publisher = stories[0].publisher
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1]) is False
+        assert len(balancer.get_stories()) == 1
+
+    def test_allows_story_when_publisher_enforcement_is_not_selected(self, monkeypatch):
+        """Duplicate publishers are allowed when the constructor draw disables enforcement."""
+        monkeypatch.setattr(
+            "merino.curated_recommendations.article_balancer.random.random", lambda: 0.85
+        )
+        config = replace(
+            DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+            max_per_publisher=1,
+            publisher_enforcement_likelyhood=0.85,
+        )
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9, config=config)
+        stories = [
+            self._build_recommendation("0", Topic.BUSINESS),
+            self._build_recommendation("1", Topic.ARTS),
+        ]
+        stories[1].publisher = stories[0].publisher
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1])
         assert len(balancer.get_stories()) == 2
 
     def test_rejects_story_when_evergreen_limit_exceeded(self):
