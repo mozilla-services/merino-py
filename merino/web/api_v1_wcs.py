@@ -4,13 +4,15 @@ from datetime import UTC, datetime
 from datetime import date as Date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from merino.configs import settings
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
+from circuitbreaker import CircuitBreakerError
+
 from merino.providers.wcs import get_provider as get_wcs_provider
 from merino.providers.wcs.protocol import (
     LiveMatchesResponse,
@@ -27,6 +29,7 @@ router = APIRouter()
 
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 WATCH_LINKS_CACHE_CONTROL_TTL = settings.providers.wcs.watch_links_cache_control_ttl
+_RETRY_AFTER = str(settings.providers.wcs.circuit_breaker_retry_after_sec)
 
 
 @router.get(
@@ -55,8 +58,15 @@ async def get_wcs_matches(
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)
-    matches: MatchesResponse = await provider.get_matches(target_date, limit, team_keys)
-    return matches
+    try:
+        matches: MatchesResponse = await provider.get_matches(target_date, limit, team_keys)
+        return matches
+    except CircuitBreakerError:
+        raise HTTPException(
+            status_code=503,
+            detail="WCS temporarily unavailable",
+            headers={"Retry-After": _RETRY_AFTER},
+        )
 
 
 @router.get(
@@ -73,8 +83,17 @@ async def get_wcs_live(
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> LiveMatchesResponse:
     """Return in-progress matches sorted ascending by date."""
-    live_matches: LiveMatchesResponse = await provider.get_live_matches(_parse_team_keys(teams))
-    return live_matches
+    try:
+        live_matches: LiveMatchesResponse = await provider.get_live_matches(
+            _parse_team_keys(teams)
+        )
+        return live_matches
+    except CircuitBreakerError:
+        raise HTTPException(
+            status_code=503,
+            detail="WCS temporarily unavailable",
+            headers={"Retry-After": _RETRY_AFTER},
+        )
 
 
 @router.get(
@@ -110,8 +129,15 @@ async def get_wcs_teams(
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> TeamsResponse:
     """Return all teams participating in the World Cup."""
-    teams: TeamsResponse = await provider.get_teams()
-    return teams
+    try:
+        teams: TeamsResponse = await provider.get_teams()
+        return teams
+    except CircuitBreakerError:
+        raise HTTPException(
+            status_code=503,
+            detail="WCS temporarily unavailable",
+            headers={"Retry-After": _RETRY_AFTER},
+        )
 
 
 def _parse_team_keys(teams: str | None) -> frozenset[str] | None:

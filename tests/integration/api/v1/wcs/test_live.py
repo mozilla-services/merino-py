@@ -10,6 +10,12 @@ import freezegun
 import pytest
 from starlette.testclient import TestClient
 
+from merino.configs import settings
+from merino.exceptions import CacheAdapterError
+from merino.main import app
+from merino.providers.wcs import get_provider as get_wcs_provider
+from merino.providers.wcs.provider import WcsProvider
+
 
 _PATH = "/api/v1/wcs/live"
 
@@ -81,3 +87,26 @@ def test_team_icons_are_svg(client: TestClient) -> None:
 
     expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
     assert all(icon.startswith(expected_prefix) for icon in icons)
+
+
+def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
+    """A Redis cache failure trips the breaker; subsequent requests return 503 + Retry-After."""
+    with freezegun.freeze_time("2026-06-15T16:00:00Z") as freezer:
+        sport = mocker.Mock()
+        sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        app.dependency_overrides[get_wcs_provider] = lambda: WcsProvider(
+            sport=sport, live_data_enabled=True
+        )
+
+        # Trip the breaker
+        with pytest.raises(CacheAdapterError):
+            client.get(_PATH)
+
+        response = client.get(_PATH)
+        assert response.status_code == 503
+        assert response.json() == {"detail": "WCS temporarily unavailable"}
+        assert response.headers["retry-after"] == "5"
+
+        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        sport.get_events_by_date = mocker.AsyncMock(return_value=[])
+        client.get(_PATH)
