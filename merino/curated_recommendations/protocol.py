@@ -116,6 +116,9 @@ class ExperimentName(str, Enum):
     INFERRED_LOCAL_EXPERIMENT_V3 = "new-tab-automated-personalization-v3"
     INFERRED_LOCAL_EXPERIMENT_V4 = "new-tab-automated-personalization-v4"
 
+    # Second German sections experiment (3-arm: control / content-only / sections), pre-World Cup.
+    SECTIONS_IN_GERMANY_V2 = "sections-in-germany-v2"
+
 
 class DailyBriefingBranch(str, Enum):
     """Treatment branches for the Daily Briefing experiment."""
@@ -131,6 +134,17 @@ class EditorialSectionsBranch(str, Enum):
 
     # Remove editorial (manually curated) sections; keep ML sections + Popular Today.
     NO_EDITORIAL_SECTIONS = "no-editorial-sections"
+
+
+class SectionsInGermanyV2Branch(str, Enum):
+    """Treatment branches for the sections-in-germany-v2 experiment."""
+
+    # Scheduled-surface content in the legacy (non-sections) response.
+    CONTROL = "control"
+    # Sections-backend content delivered in the legacy (grid) response.
+    CONTENT_ONLY = "content-only"
+    # Sections-backend content delivered in the sections response.
+    SECTIONS = "sections"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
