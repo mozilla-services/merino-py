@@ -9,7 +9,11 @@ app = create_app()
 
 
 def main() -> None:
-    """Run the merino-fleece FastAPI app via uvicorn."""
+    """Run the merino-fleece FastAPI app via uvicorn.
+
+    Note: this is provided as a shortcut to run merino-fleece for local development
+    and profiling.
+    """
     uvicorn.run(
         "merino_fleece.app:create_app",
         factory=True,
