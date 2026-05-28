@@ -502,6 +502,14 @@ class TestFilterSectionsByExperiment:
                 SurfaceId.NEW_TAB_DE_DE,
                 CrawledContentPinnedFreshRescaler,
             ),
+            # DE v2 sections branch gets DECrawledContentRescaler
+            (
+                "sections-in-germany-v2",
+                "sections",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                DECrawledContentRescaler,
+            ),
             # DE surface without experiment falls through to CrawledContentPinnedFreshRescaler
             (None, None, "DE", SurfaceId.NEW_TAB_DE_DE, CrawledContentPinnedFreshRescaler),
         ],

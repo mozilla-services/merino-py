@@ -27,7 +27,9 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
+    ExperimentName,
     ProcessedInterests,
+    SectionsInGermanyV2Branch,
 )
 
 from merino.curated_recommendations.rankers import (
@@ -40,6 +42,7 @@ from merino.curated_recommendations.legacy.sections_adapter import (
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
+    DECrawledContentRescaler,
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
@@ -89,16 +92,13 @@ class CuratedRecommendationsProvider:
         """Check if the 'sections' feed is enabled.
 
         Sections are enabled when the request includes 'sections' in the feeds list
-        and the surface_id is supported (has localized section titles).
-        For surfaces still behind an experiment (e.g. DE), also check enrollment.
+        and the surface_id is supported (has localized section titles). Clients
+        opt in via the request; we don't gate on experiment enrollment here.
         """
         if request.feeds is None or "sections" not in request.feeds:
             return False
         if surface_id not in LOCALIZED_SECTION_TITLES:
             return False
-        # DE sections are gated behind the sections-in-germany experiment
-        if surface_id == SurfaceId.NEW_TAB_DE_DE:
-            return is_enrolled_in_experiment(request, "sections-in-germany", "sections")
         return True
 
     def rank_recommendations(
@@ -186,6 +186,22 @@ class CuratedRecommendationsProvider:
                 count=request.count,
                 region=derive_region(request.locale, request.region),
                 rescaler=rescaler,
+            )
+        elif surface_id == SurfaceId.NEW_TAB_DE_DE and is_enrolled_in_experiment(
+            request,
+            ExperimentName.SECTIONS_IN_GERMANY_V2.value,
+            SectionsInGermanyV2Branch.CONTENT_ONLY.value,
+        ):
+            # sections-in-germany-v2 content-only branch: sections-backend content
+            # delivered in the legacy (grid) response.
+            general_feed = await get_legacy_recommendations_from_sections(
+                sections_backend=self.sections_backend,
+                engagement_backend=self.engagement_backend,
+                prior_backend=self.prior_backend,
+                surface_id=surface_id,
+                count=request.count,
+                region=derive_region(request.locale, request.region),
+                rescaler=DECrawledContentRescaler(),
             )
         else:
             # Other markets: fetch from scheduled surface backend

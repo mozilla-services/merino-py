@@ -56,6 +56,7 @@ from merino.curated_recommendations.protocol import (
     DailyBriefingBranch,
     ProcessedInterests,
     Layout,
+    SectionsInGermanyV2Branch,
 )
 from merino.curated_recommendations.article_balancer_configs import (
     ArticleBalancerConfig,
@@ -462,8 +463,13 @@ def get_ranking_rescaler_for_branch(
     if surface_id == SurfaceId.NEW_TAB_EN_IE:
         return CrawledContentRescaler()
 
-    if surface_id == SurfaceId.NEW_TAB_DE_DE and is_enrolled_in_experiment(
-        request, "sections-in-germany", "sections"
+    if surface_id == SurfaceId.NEW_TAB_DE_DE and (
+        is_enrolled_in_experiment(request, "sections-in-germany", "sections")
+        or is_enrolled_in_experiment(
+            request,
+            ExperimentName.SECTIONS_IN_GERMANY_V2.value,
+            SectionsInGermanyV2Branch.SECTIONS.value,
+        )
     ):
         return DECrawledContentRescaler()
 
