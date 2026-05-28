@@ -16,6 +16,7 @@ dependencies = [
     # Required by spacy.cli.download() — SpaCy shells out to `python -m pip install`
     # to fetch model wheels. uv-managed venvs don't ship pip by default.
     "pip>=24",
+    "aiodogstatsd>=0.16.0,<0.17",
 ]
 
 [tool.uv.sources]
