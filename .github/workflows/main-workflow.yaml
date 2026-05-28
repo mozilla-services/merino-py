@@ -44,6 +44,21 @@ jobs:
       workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-build-gar-image-fleece:
+    uses: ./.github/workflows/build-gar-image-fleece.yaml
+    with:
+      image_tag: latest
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-publish-gar-image-fleece:
+    needs: run-build-gar-image-fleece
+    uses: ./.github/workflows/publish-gar-image-fleece.yaml
+    with:
+      image_tag: latest
+      project_id: ${{ vars.GCP_PROJECT_ID }}
+      workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-build-gar-image-locust:
     uses: ./.github/workflows/build-gar-image-locust.yaml
     with:

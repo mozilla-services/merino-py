@@ -19,11 +19,11 @@ RUN groupadd --gid 10001 app \
 # Copy local code to the container image
 COPY . $APP_HOME
 
-# Install maxmind db and app dependencies. Clean up build tools after
+# Install app dependencies. Clean up build tools after
 RUN apt-get update && \
-    apt-get install --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev libmaxminddb0 libmaxminddb-dev && \
-    uv sync --frozen --no-cache --no-dev --no-group load --all-packages && \
-    apt-get remove --yes build-essential libxml2-dev libxslt-dev python3-dev libffi-dev && \
+    apt-get install --yes build-essential && \
+    uv sync --frozen --no-cache --no-dev --package merino-common --package merino-fleece && \
+    apt-get remove --yes build-essential && \
     apt-get -q --yes autoremove && \
     apt-get clean && \
     rm -rf /root/.cache && \
@@ -31,14 +31,6 @@ RUN apt-get update && \
 
 # Set the PATH environment variable
 ENV PATH="$APP_HOME/.venv/bin:$PATH"
-
-# Create a build context that can be used for running merino jobs
-FROM app_base AS job_runner
-
-USER app
-
-# Set entrypoint to use uv
-ENTRYPOINT ["uv", "run", "--no-project", "python", "-m", "merino.jobs.cli"]
 
 # Now create the final context that runs the web api
 FROM app_base AS web_api
@@ -52,4 +44,4 @@ ENTRYPOINT ["uv", "run", "--no-project", "fastapi", "run"]
 #   * `--proxy-headers` is used as Merino will be running behind an load balancer.
 #   * Only use one Uvicorn worker process per container. Replication and container
 #     management will be handled by container orchestration.
-CMD ["merino/main.py", "--proxy-headers", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["merino-fleece/merino_fleece/main.py", "--proxy-headers", "--host", "0.0.0.0", "--port", "8000"]

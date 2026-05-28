@@ -76,6 +76,7 @@ def setup():
         level=settings.logging.level,
         can_propagate=settings.logging.can_propagate,
         current_env=settings.current_env,
+        logger_name="merino",
     )
 
 

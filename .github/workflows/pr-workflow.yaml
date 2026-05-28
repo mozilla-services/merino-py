@@ -15,6 +15,12 @@ jobs:
       image_tag: latest
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-build-gar-image-fleece:
+    uses: ./.github/workflows/build-gar-image-fleece.yaml
+    with:
+      image_tag: latest
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-build-gar-image-locust:
     uses: ./.github/workflows/build-gar-image-locust.yaml
     with:
