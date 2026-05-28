@@ -1,6 +1,10 @@
 ### A supporting application for Merino
 
-This application is designed to be run alongside with the main Merino application for certain task offloading such as search term sanitization for Firefox Suggest.
+This application is designed to be run with the main Merino application for task offloading, such as search term sanitization for Firefox Suggest.
+
+Search term sanitization looks for most commonly occurring personally identifiable information (PII) and returns a flag if it exists. This flag controls if that information is logged or collected. Detection uses the [spaCy](https://spacy.io/) natural language processing library. Please refer to that library for additional information.
+
+(The project name "fleece" is a play on the source project "[merino](https://github.com/mozilla-services/merino-py/#about-the-name)".)
 
 ## PII / NER endpoint
 
