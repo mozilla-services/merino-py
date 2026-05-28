@@ -791,7 +791,9 @@ def get_top_story_list(
     if len(top_stories) < total_story_count:
         top_stories = top_stories + remaining_items[: total_story_count - len(top_stories)]
 
-    # Insert the fresh story at the special position, and remove the other story
+    # Insert the fresh story at the special position, and remove the other story.
+    # This intentionally bypasses all ArticleBalancer constraints; pick_random_fresh_story()
+    # only excludes stories blocked from Popular Today.
     if fresh_story_for_fixed_position is not None:
         top_stories = (
             top_stories[0:fixed_fresh_item_position]

@@ -21,6 +21,8 @@ class ArticleBalancerConfig:
     min_per_topic_limit: int = 0
     min_subtopic_limit: int = 0
     blocked_topics_multiplier: int = 1
+    max_per_publisher: int = 100
+    publisher_enforcement_likelyhood: float = 0.0
     government_max_override: int | None = None
 
 
@@ -63,6 +65,8 @@ TOP_STORIES_BALANCER_CONFIG_BY_SURFACE: dict[SurfaceId, ArticleBalancerConfig] =
         DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
         min_per_topic_limit=2,
         government_max_override=3,
+        max_per_publisher=1,
+        publisher_enforcement_likelyhood=0.85,
     ),
 }
 

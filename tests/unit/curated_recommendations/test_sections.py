@@ -1,14 +1,17 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
+from dataclasses import replace
 import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from merino.curated_recommendations.prior_backends.protocol import Prior
 import pytest
 from pydantic import HttpUrl
 
+from merino.curated_recommendations.article_balancer_configs import (
+    DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
     SurfaceId,
@@ -30,6 +33,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     DECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
+from merino.curated_recommendations.prior_backends.protocol import Prior
 from merino.curated_recommendations.protocol import (
     ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
@@ -906,6 +910,30 @@ class TestGetTopStoryList:
 
         for ix, item in enumerate(result):
             assert item.receivedRank == ix
+
+    def test_basic_publisher_limiting(self):
+        """Duplicate publishers should be skipped in top stories."""
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"],
+            topics=["arts", "business", "food", "government"],
+        )
+        items[1].publisher = items[0].publisher
+        config = replace(
+            DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+            max_per_publisher=1,
+            publisher_enforcement_likelyhood=1.0,
+        )
+
+        result = get_top_story_list(
+            items,
+            top_count=3,
+            extra_count=0,
+            extra_source_depth=0,
+            article_balancer_config=config,
+        )
+
+        assert [i.corpusItemId for i in result] == ["a", "c", "d"]
+        assert len({i.publisher for i in result}) == len(result)
 
     def test_basic_topic_limiting_with_personalization(self):
         """Extra items should be chosen without repeating topics from top_count items."""

@@ -54,7 +54,7 @@ def generate_recommendations(
             title="little larry",
             excerpt="is failing english",
             topic=topics[i] if topics is not None else random.choice(list(Topic)),
-            publisher="cohens",
+            publisher=f"publisher:{item_id}",
             isTimeSensitive=i in time_sensitive_indices,
             imageUrl=HttpUrl("https://placehold.co/600x400/"),
             iconUrl=None,

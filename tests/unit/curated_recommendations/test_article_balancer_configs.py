@@ -23,14 +23,17 @@ def test_get_top_stories_article_balancer_config_returns_surface_config():
     )
     assert config.min_per_topic_limit == 2
     assert config.government_max_override == 3
+    assert config.max_per_publisher == 1
+    assert config.publisher_enforcement_likelyhood == 0.85
 
 
 def test_get_top_stories_article_balancer_config_falls_back_to_default():
     """Return the default config for surfaces without an explicit override."""
-    assert (
-        get_top_stories_article_balancer_config(SurfaceId.NEW_TAB_ES_ES)
-        is DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG
-    )
+    config = get_top_stories_article_balancer_config(SurfaceId.NEW_TAB_ES_ES)
+
+    assert config is DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG
+    assert config.max_per_publisher == 100
+    assert config.publisher_enforcement_likelyhood == 0.0
 
 
 def test_top_stories_article_balancer_accepts_custom_config():
