@@ -629,6 +629,21 @@ weather/hourly_forecasts:
       The "api/v1/weather" API endpoint.
     alert_policy: []
 
+  sports_sportsdata_endpoint_last_synced_at_seconds:
+    description: |
+      A gauge for the timestamp when sportsdata was last synced; used for
+      staleness meter.
+    type: gauge
+    labels:
+      - name: sport
+        description: name of the sport, e.g. "WCS"
+      - name: component
+        component: |
+          The resource that is synced, typically correlates to the path
+          on the remote source (e.g. "areas", "teams", "events")
+    scope: |
+      The WCS data update job
+
 merino-fleece/pii:
   pii_detect_duration:
     description: |
