@@ -1363,9 +1363,7 @@ class TestTopStoriesArticleBalancer:
         )
 
         info = SimilarStoriesInfo({"rec-0": ["rec-1"]})
-        balancer = TopStoriesArticleBalancer(
-            expected_num_articles=10, similar_stories_info=info
-        )
+        balancer = TopStoriesArticleBalancer(expected_num_articles=10, similar_stories_info=info)
         accepted = self._build_recommendation("0", Topic.BUSINESS)
         dupe = self._build_recommendation("1", Topic.TECHNOLOGY)
         independent = self._build_recommendation("2", Topic.ARTS)

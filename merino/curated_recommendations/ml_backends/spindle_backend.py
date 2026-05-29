@@ -229,9 +229,7 @@ class SpindleBackend(SpindleBackendProtocol):
         try:
             with self.metrics_client.timeit(f"{metric_base}.timing"):
                 res = await self.http_client.post(path, json=json_body)
-            self.metrics_client.increment(
-                f"{metric_base}.status_codes.{res.status_code}"
-            )
+            self.metrics_client.increment(f"{metric_base}.status_codes.{res.status_code}")
             res.raise_for_status()
             return FindSimilarResponse.model_validate(res.json())
         except HTTPError as e:

@@ -778,7 +778,6 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
-<<<<<<< HEAD
     similar_stories_info = None
     if spindle_backend is not None and surface_id is not None:
         # Prefer text similarity (more reliable today); fall back to image.
@@ -786,11 +785,9 @@ def get_top_story_list(
             surface_id
         ) or spindle_backend.get_similar_stories_image(surface_id)
     balancer = TopStoriesArticleBalancer(
-        round(top_count * constraint_scale), similar_stories_info=similar_stories_info
-=======
-    balancer = TopStoriesArticleBalancer(
-        round(top_count * constraint_scale), config=article_balancer_config
->>>>>>> 2a03ac598c5b0c949b6b428060a55bde68582dd6
+        round(top_count * constraint_scale),
+        config=article_balancer_config,
+        similar_stories_info=similar_stories_info,
     )
     topic_limited_stories, remaining_stories = balancer.add_stories(
         items_throttled_fresh, top_count
@@ -989,12 +986,9 @@ async def get_sections(
         rescaler=rescaler,
         relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
         prior=prior,
-<<<<<<< HEAD
         spindle_backend=spindle_backend,
         surface_id=surface_id,
-=======
         article_balancer_config=get_top_stories_article_balancer_config(surface_id),
->>>>>>> 2a03ac598c5b0c949b6b428060a55bde68582dd6
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations

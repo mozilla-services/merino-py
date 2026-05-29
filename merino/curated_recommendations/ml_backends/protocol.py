@@ -265,6 +265,7 @@ class CohortModelBackend(Protocol):
         """Fetch the contextual ranking cohort based on interests string."""
         ...
 
+
 class SimilarStoriesProtocol(Protocol):
     """Protocol for a lookup of similar (near-duplicate) stories keyed by corpus item id."""
 
