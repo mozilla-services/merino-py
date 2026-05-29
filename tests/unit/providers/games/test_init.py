@@ -23,12 +23,15 @@ async def test_init_providers() -> None:
         patch("merino.providers.games._gcs_project", "mock_gcs_project"),
         patch("merino.providers.games._gcs_bucket", "mock_gcs_bucket"),
         patch("merino.providers.games._gcs_cdn_hostname", "mock_cdn_hostname"),
+        patch("merino.providers.games._manifest_gcs_file_name", "mock_manifest_gcs_file_name"),
         patch("merino.providers.games._url_root", "mock_url_root"),
         patch("merino.providers.games._url_path_manifest", "mock_url_path_manifest"),
         patch("merino.providers.games.GcsUploader") as mock_gcs_uploader,
         patch("merino.providers.games.create_http_client") as mock_create_http_client,
         patch("merino.providers.games.get_metrics_client") as mock_get_metrics_client,
         patch("merino.providers.games.ParticleBackend") as mock_particle_backend,
+        patch("merino.providers.games.ParticleLocalFileManager") as mock_local_file_manager,
+        patch("merino.providers.games.ParticleRemoteFileManager") as mock_remote_file_manager,
     ):
         mock_gcs_uploader_instance = Mock(name="mock_gcs_uploader")
         mock_gcs_uploader.return_value = mock_gcs_uploader_instance
@@ -41,6 +44,12 @@ async def test_init_providers() -> None:
 
         mock_particle_backend_instance = Mock(name="mock_particle_backend")
         mock_particle_backend.return_value = mock_particle_backend_instance
+
+        mock_local_filemanager_instance = Mock(name="mock_local_file_manager")
+        mock_local_file_manager.return_value = mock_local_filemanager_instance
+
+        mock_remote_filemanager_instance = Mock(name="mock_remote_file_manager")
+        mock_remote_file_manager.return_value = mock_remote_filemanager_instance
 
         await init_providers()
 
@@ -57,13 +66,16 @@ async def test_init_providers() -> None:
         )
         mock_create_http_client.assert_called_once_with(connect_timeout="mock_connect_timeout")
         mock_get_metrics_client.assert_called_once()
+        mock_local_file_manager.assert_called_once()
 
         mock_particle_backend.assert_called_once_with(
             gcs_uploader=mock_gcs_uploader_instance,
             http_client=mock_http_client_instance,
+            manifest_gcs_file_name="mock_manifest_gcs_file_name",
             metrics_client=mock_metrics_client_instance,
             particle_url_root="mock_url_root",
             particle_url_path_manifest="mock_url_path_manifest",
+            remote_file_manager=mock_remote_filemanager_instance,
         )
 
 

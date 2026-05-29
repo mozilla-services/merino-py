@@ -17,7 +17,7 @@ Read all files in `merino/providers/suggest/{provider_name}/` including:
 
 Also read the provider's registration in `merino/providers/suggest/manager.py` (find the matching `ProviderType` and `case` block).
 
-Read the provider's config section in `merino/configs/app_configs/default.toml`.
+Read the provider's config section in `merino/configs/default.toml`.
 
 Read tests in `tests/unit/providers/suggest/{provider_name}/` and `tests/integration/providers/suggest/{provider_name}/`.
 

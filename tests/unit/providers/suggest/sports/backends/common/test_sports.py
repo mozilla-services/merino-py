@@ -2394,6 +2394,132 @@ async def test_wcs_update_events(
         ]
 
 
+@pytest.mark.parametrize(
+    (
+        "schedule_overrides",
+        "score_overrides",
+        "expected_games_by_date_url",
+        "expected_status",
+    ),
+    [
+        pytest.param(
+            {},
+            {
+                "Status": "InProgress",
+                "Period": "1",
+                "ClockDisplay": "16",
+                "HomeTeamScore": 1,
+                "AwayTeamScore": 0,
+                "UpdatedUtc": "2026-06-11T19:16:00",
+            },
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2026-JUN-11",
+            GameStatus.InProgress,
+            id="scheduled-active-window",
+        ),
+        pytest.param(
+            {
+                "DateTime": "2026-06-20T19:00:00",
+                "Day": "2026-06-20T00:00:00",
+                "Status": "Final",
+                "HomeTeamScore": 2,
+                "AwayTeamScore": 1,
+                "UpdatedUtc": "2026-06-20T21:00:00",
+            },
+            {},
+            "https://api.sportsdata.io/v4/soccer/scores/json/GamesByDate/fifa/2026-JUN-20",
+            GameStatus.Final,
+            id="non-scheduled-outside-active-window",
+        ),
+    ],
+)
+@freezegun.freeze_time("2026-06-11T12:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_fetches_games_by_date_for_live_relevant_days(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+    schedule_overrides: dict[str, Any],
+    score_overrides: dict[str, Any],
+    expected_games_by_date_url: str,
+    expected_status: GameStatus,
+) -> None:
+    """Refresh active-window days and any day already reported non-scheduled."""
+    sport = WCS(settings=settings.providers.sports)
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+    sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1615: "Group Stage"}
+
+    schedule_row = {**wcs_schedule_payload()[0], **schedule_overrides}
+    schedules_payload = [schedule_row]
+    scores_payload = [{**schedule_row, **score_overrides}]
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[schedules_payload, scores_payload],
+    )
+
+    await sport.update_events(client=mock_client)
+
+    event = sport.events[90011111]
+    assert event.status == expected_status
+    assert [call.kwargs["url"] for call in get_data.call_args_list] == [
+        "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/fifa/2026",
+        expected_games_by_date_url,
+    ]
+    assert get_data.call_args_list[1].kwargs["ttl"] == timedelta(minutes=2)
+
+    if expected_status == GameStatus.InProgress:
+        assert event.period == "1"
+        assert event.clock == "16"
+        assert event.home_score == 1
+        assert event.away_score == 0
+
+
+@pytest.mark.asyncio
+async def test_wcs_update_events_keeps_existing_events_when_schedule_fetch_fails(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Schedule fetch failures should not prune existing WCS cache data."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.rounds = {1615: "Group Stage"}
+    existing_events = {123: mocker.Mock(spec=Event)}
+    sport.events = existing_events
+    cache_events = mocker.patch.object(sport, "cache_events", new=mocker.AsyncMock())
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=SportsDataError("provider down"),
+    )
+
+    await sport.update_events(client=mock_client)
+
+    assert sport.events == existing_events
+    get_data.assert_called_once()
+    cache_events.assert_not_awaited()
+
+
+@freezegun.freeze_time("2026-06-11T12:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_caches_schedule_when_score_fetch_fails(
+    mock_client: AsyncClient,
+    mocker: MockerFixture,
+) -> None:
+    """Detailed score fetch failures should still cache the schedule refresh."""
+    sport = WCS(settings=settings.providers.sports)
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+    sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1615: "Group Stage"}
+    cache_events = mocker.patch.object(sport, "cache_events", new=mocker.AsyncMock())
+    get_data = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[[wcs_schedule_payload()[0]], SportsDataError("provider down")],
+    )
+
+    await sport.update_events(client=mock_client)
+
+    assert 90011111 in sport.events
+    assert get_data.call_count == 2
+    cache_events.assert_awaited_once()
+
+
 @pytest.mark.asyncio
 async def test_wcs_national_teams_use_country_name_for_event_display() -> None:
     """WCS team full names are federation names, not widget display names."""
@@ -2461,14 +2587,15 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     """
     sport = WCS(settings=settings.providers.sports)
     sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1615: "Group Stage", 1616: "Round of 32"}
     await sport.async_load_teams_from_source(wcs_static_teams_payload({"SWE", "TUN"}))
 
     sport.load_schedules_from_source(wcs_static_schedule_payload(), event_timezone=ZoneInfo("UTC"))
 
-    # Of the captured rows only SWE vs TUN has both teams loaded; placeholder
-    # rows (SeasonType=3 with null team ids) and partial-team games (e.g. SWE
-    # vs NLD) are dropped by the load filter.
-    assert set(sport.events) == {90086918}
+    # SWE vs TUN has both teams loaded. The knockout placeholder is also
+    # retained with TBD teams, while rows whose real teams are missing from the
+    # test team cache (e.g. SWE vs NLD) are still dropped.
+    assert set(sport.events) == {90086918, 90086979}
     event = sport.events[90086918]
     assert event.away_team["key"] == "TUN"
     assert event.away_team["name"] == "Tunisia"
@@ -2480,6 +2607,16 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     assert event.season_type == 1
     assert event.group == "Group F"
     assert event.is_closed is False
+    assert event.stage == "Group Stage"
+
+    placeholder = sport.events[90086979]
+    assert placeholder.home_team == {"key": "TBD", "name": "TBD", "colors": [], "id": 0}
+    assert placeholder.away_team == {"key": "TBD", "name": "TBD", "colors": [], "id": 0}
+    assert placeholder.date == datetime(2026, 6, 28, 19, 0, tzinfo=timezone.utc)
+    assert placeholder.round_id == 1616
+    assert placeholder.season_type == 3
+    assert placeholder.group is None
+    assert placeholder.stage == "Round of 32"
 
     sport.load_scores_from_source(
         wcs_static_games_by_date_payload(), event_timezone=ZoneInfo("UTC")
@@ -2497,6 +2634,55 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     assert event.winner is None
     assert event.is_closed is False
     assert event.updated == datetime(2026, 4, 29, 14, 26, 26, tzinfo=timezone.utc)
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_ingests_knockout_placeholder_with_one_known_team() -> None:
+    """A knockout row with one unassigned side keeps the known team and emits TBD."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1617: "Quarterfinals"}
+    await sport.async_load_teams_from_source(wcs_static_teams_payload({"SWE"}))
+
+    sport.load_schedules_from_source(
+        [
+            {
+                "GameId": 86997,
+                "RoundId": 1617,
+                "Season": 2026,
+                "SeasonType": 3,
+                "Group": None,
+                "AwayTeamId": None,
+                "HomeTeamId": 959,
+                "Day": "2026-07-05T00:00:00",
+                "DateTime": "2026-07-05T20:00:00",
+                "Status": "Scheduled",
+                "Period": "Regular",
+                "Clock": None,
+                "Winner": None,
+                "AwayTeamKey": None,
+                "AwayTeamName": None,
+                "AwayTeamScore": None,
+                "HomeTeamKey": "SWE",
+                "HomeTeamName": "Sweden",
+                "HomeTeamScore": None,
+                "Updated": "2025-12-06T20:35:30",
+                "UpdatedUtc": "2025-12-07T01:35:30",
+                "GlobalGameId": 90086997,
+                "GlobalAwayTeamId": None,
+                "GlobalHomeTeamId": 90000001,
+                "IsClosed": False,
+            }
+        ],
+        event_timezone=ZoneInfo("UTC"),
+    )
+
+    event = sport.events[90086997]
+    assert event.home_team["key"] == "SWE"
+    assert event.home_team["name"] == "Sweden"
+    assert event.away_team == {"key": "TBD", "name": "TBD", "colors": [], "id": 0}
+    assert event.stage == "Quarterfinals"
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
@@ -2976,6 +3162,24 @@ async def test_wcs_get_events_by_date_treats_naive_bounds_as_utc() -> None:
     )
 
 
+@pytest.mark.asyncio
+async def test_wcs_fix_country_codes() -> None:
+    """Test that we return corrected country codes"""
+    sport = WCS(settings=settings.providers.sports)
+    mock_cache = MagicMock(spec=RedisAdapter)
+    mock_cache.hgetall.side_effect = [
+        {b"name": "Cabo Verde".encode(), b"code": b"CVI"},
+        {b"name": "DR Congo".encode(), b"code": b"CDR"},
+    ]
+    sport.cache = mock_cache
+
+    # code doesn't really matter, but let's be consistent and pretend it does.
+    result = await sport.get_country(44)
+    assert cast(dict, result)[b"code"] == b"CPV"
+    result = await sport.get_country(53)
+    assert cast(dict, result)[b"code"] == b"COD"
+
+
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_weird_afc_update_events(
@@ -3040,9 +3244,11 @@ def test_sport_subclasses_have_category_mapping() -> None:
 async def test_sportsdata_errors() -> None:
     """Test that the warning and error wrappers work."""
     warning = SportsDataWarning("Foo")
+    assert isinstance(warning, Exception)
     assert str(warning) == "SportsDataWarning: Foo"
 
     error = SportsDataError("Foo")
+    assert isinstance(error, Exception)
     assert str(error) == "SportsDataError: Foo"
 
 

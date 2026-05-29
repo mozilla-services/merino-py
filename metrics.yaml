@@ -629,6 +629,7 @@ weather/hourly_forecasts:
       The "api/v1/weather" API endpoint.
     alert_policy: []
 
+<<<<<<< HEAD
 curated_recommendations/spindle:
   recommendation.spindle.text.timing:
     description: |
@@ -696,4 +697,14 @@ curated_recommendations/spindle:
     labels: []
     scope: |
       The Spindle ML server "/find_similar_images" endpoint.
+    alert_policy: []
+
+merino-fleece/pii:
+  pii_detect_duration:
+    description: |
+      A summary to instrument the duration of each PII detection call.
+    type: timing
+    labels: []
+    scope: |
+      The "api/v1/pii" API endpoint of "merino-fleece".
     alert_policy: []

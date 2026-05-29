@@ -3,10 +3,16 @@ ES_IMAGE := merino-elasticsearch:local
 TEST_DIR := tests
 TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
+COMMON_PACKAGE_DIR := merino-common/merino_common
+COMMON_TEST_DIR := merino-common/tests
+FLEECE_PACKAGE_DIR := merino-fleece/merino_fleece
+FLEECE_TEST_DIR := merino-fleece/tests
 UNIT_TEST_DIR := $(TEST_DIR)/unit
+COMMON_UNIT_TEST_DIR := $(COMMON_TEST_DIR)/unit
+FLEECE_UNIT_TEST_DIR := $(FLEECE_TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
 LOAD_TEST_DIR := $(TEST_DIR)/load
-APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR)
+APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR) $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR)
 INSTALL_STAMP := .install.stamp
 UV := $(shell command -v uv 2> /dev/null)
 ALL_TEST_FILES := $(shell $(UV) run python tests/utils/test_probe.py 2> /dev/null)
@@ -36,7 +42,7 @@ NAV_OPTS ?=
 install: $(INSTALL_STAMP)  ##  Install dependencies with uv
 $(INSTALL_STAMP): pyproject.toml uv.lock
 	@if [ -z $(UV) ]; then echo "uv could not be found."; exit 2; fi
-	$(UV) sync --all-groups
+	$(UV) sync --all-groups --all-packages
 	touch $(INSTALL_STAMP)
 
 .PHONY: ruff-lint
@@ -89,7 +95,7 @@ test-coverage-check: $(INSTALL_STAMP)  ##  Evaluate combined unit and integratio
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
 	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.unit \
 	    MERINO_ENV=testing \
-	    $(UV) run pytest $(UNIT_TEST_DIR) \
+	    $(UV) run pytest $(UNIT_TEST_DIR) $(COMMON_UNIT_TEST_DIR) $(FLEECE_UNIT_TEST_DIR) \
 	    --junit-xml=$(UNIT_JUNIT_XML) -vv $(XTRA)
 
 .PHONY: quick-test
@@ -149,18 +155,26 @@ integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integr
 
 .PHONY: docker-build
 docker-build:  ## Build the docker image for Merino named "app:build"
-	docker build -t app:build .
+	docker build -f dockerfiles/Dockerfile -t app:build .
 
 .PHONY: docker-build-jobs
 docker-build-jobs:  ## Build the docker image for Merino job runner named "merino-jobs:build"
-	docker build --target job_runner -t merino-jobs:build .
+	docker build -f dockerfiles/Dockerfile --target job_runner -t merino-jobs:build .
+
+.PHONY: docker-build-fleece
+docker-build-fleece:  ## Build the docker image for Merino named "app:build"
+	docker build -f dockerfiles/Dockerfile-fleece -t app-fleece:build .
 
 .PHONY: load-tests
 load-tests:  ##  Run local execution of (Locust) load tests
 	docker compose \
       -f $(LOAD_TEST_DIR)/docker-compose.yml \
       -p merino-py-load-tests \
-      up --scale locust_worker=1
+      build locust_master
+	docker compose \
+      -f $(LOAD_TEST_DIR)/docker-compose.yml \
+      -p merino-py-load-tests \
+      up --force-recreate --no-build --scale locust_worker=1
 
 .PHONY: load-tests-clean
 load-tests-clean:  ##  Stop and remove containers and networks for load tests

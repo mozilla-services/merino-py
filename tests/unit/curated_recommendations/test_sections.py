@@ -1,14 +1,17 @@
 """Module with tests covering merino/curated_recommendations/sections.py"""
 
 import copy
+from dataclasses import replace
 import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from merino.curated_recommendations.prior_backends.protocol import Prior
 import pytest
 from pydantic import HttpUrl
 
+from merino.curated_recommendations.article_balancer_configs import (
+    DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
     SurfaceId,
@@ -30,6 +33,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     DECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
+from merino.curated_recommendations.prior_backends.protocol import Prior
 from merino.curated_recommendations.protocol import (
     ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
@@ -43,7 +47,6 @@ from merino.curated_recommendations.protocol import (
 )
 from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
-    IS_COHORT_FEATURE_DISABLED,
     adjust_ads_in_sections,
     dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
@@ -499,6 +502,14 @@ class TestFilterSectionsByExperiment:
                 SurfaceId.NEW_TAB_DE_DE,
                 CrawledContentPinnedFreshRescaler,
             ),
+            # DE v2 sections branch gets DECrawledContentRescaler
+            (
+                "sections-in-germany-v2",
+                "sections",
+                "DE",
+                SurfaceId.NEW_TAB_DE_DE,
+                DECrawledContentRescaler,
+            ),
             # DE surface without experiment falls through to CrawledContentPinnedFreshRescaler
             (None, None, "DE", SurfaceId.NEW_TAB_DE_DE, CrawledContentPinnedFreshRescaler),
         ],
@@ -568,33 +579,6 @@ class TestFilterSectionsByExperiment:
         assert "custom-section-1" in result
         assert "health" in result
         assert "nfl" in result
-
-
-class TestIsInferredContextualRankingExperiment:
-    """Tests covering is_inferred_contextual_ranking function"""
-
-    def test_inferred_contextual_ranking(self):
-        """Test that inferred contextual ranking is correctly identified."""
-        from merino.curated_recommendations.sections import is_inferred_contextual_ranking
-        from merino.curated_recommendations.protocol import ProcessedInterests
-
-        # Test case where personal_interests is None
-        assert not is_inferred_contextual_ranking(None)
-
-        # Test case where cohort is None
-        pi_no_cohort = ProcessedInterests(cohort=None, numerical_value=5)
-        assert not is_inferred_contextual_ranking(pi_no_cohort)
-
-        # Test case where numerical_value mod selector is not zero
-        pi_not_selected = ProcessedInterests(cohort="test", numerical_value=3)  # 3 % 4 != 0
-        not is_inferred_contextual_ranking(pi_not_selected)
-
-        # Test case where all conditions are met
-        pi_selected = ProcessedInterests(cohort="test", numerical_value=4)  # 4 % 4 == 0
-        if IS_COHORT_FEATURE_DISABLED:
-            assert not is_inferred_contextual_ranking(pi_selected)
-        else:
-            assert is_inferred_contextual_ranking(pi_selected)
 
 
 class TestUpdateReceivedFeedRank:
@@ -934,6 +918,30 @@ class TestGetTopStoryList:
 
         for ix, item in enumerate(result):
             assert item.receivedRank == ix
+
+    def test_basic_publisher_limiting(self):
+        """Duplicate publishers should be skipped in top stories."""
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"],
+            topics=["arts", "business", "food", "government"],
+        )
+        items[1].publisher = items[0].publisher
+        config = replace(
+            DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+            max_per_publisher=1,
+            publisher_enforcement_likelyhood=1.0,
+        )
+
+        result = get_top_story_list(
+            items,
+            top_count=3,
+            extra_count=0,
+            extra_source_depth=0,
+            article_balancer_config=config,
+        )
+
+        assert [i.corpusItemId for i in result] == ["a", "c", "d"]
+        assert len({i.publisher for i in result}) == len(result)
 
     def test_basic_topic_limiting_with_personalization(self):
         """Extra items should be chosen without repeating topics from top_count items."""

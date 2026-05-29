@@ -4,20 +4,39 @@
 
 """Unit tests for the WCS matches provider."""
 
-from collections import Counter
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+import freezegun
 import pytest
+from circuitbreaker import CircuitBreakerError
 
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
+from merino.middleware.geolocation import Location
 from merino.providers import wcs as wcs_module
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.wcs.fake_live_data import build_live_events
-from merino.providers.wcs.provider import WcsProvider, _WINDOW
-from merino.providers.wcs.protocol import LiveMatchesResponse, TeamInfo, TeamsResponse
-from tests.wcs.factories import ANCHOR, build_provider, build_teams, event as build_event
+from merino.providers.wcs.provider import (
+    WcsProvider,
+    _LIVE_MATCH_LOOKAHEAD,
+    _LIVE_MATCH_LOOKBACK,
+    _WINDOW,
+)
+from tests.wcs.factories import (
+    ANCHOR,
+    StubWcsSport,
+    build_events,
+    build_provider,
+    build_teams,
+    event as build_event,
+)
+from merino.providers.wcs.protocol import (
+    TeamInfo,
+    TeamsResponse,
+    WatchLinks,
+)
+from merino.providers.wcs.watch_links import build_watch_link
 
 _LIVE_EVENT_COUNT = len(build_live_events(ANCHOR))
 
@@ -100,7 +119,9 @@ async def test_teams_filter_matches_either_side() -> None:
 
     assert events
     for event in events:
-        assert "BRA" in {event.home_team.key, event.away_team.key}
+        assert "BRA" in {
+            team.key for team in (event.home_team, event.away_team) if team is not None
+        }
 
 
 @pytest.mark.asyncio
@@ -139,13 +160,73 @@ async def test_public_sport_identifier_is_soccer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_matches_include_nullable_tbd_teams() -> None:
+    """The matches endpoint can return scheduled bracket slots with null teams."""
+    placeholder = build_event(
+        90086997,
+        20,
+        20,
+        ("TBD", "TBD", 0),
+        ("TBD", "TBD", 0),
+        GameStatus.Scheduled,
+        original_date="2026-07-05T00:00:00",
+        stage="Quarterfinals",
+        round_id=1617,
+        season_type=3,
+    )
+
+    response = await build_provider(events=[placeholder]).get_matches(
+        ANCHOR + timedelta(days=20),
+        limit=None,
+        team_keys=None,
+    )
+
+    assert len(response.current) == 1
+    event = response.current[0]
+    assert event.home_team is None
+    assert event.away_team is None
+    assert event.stage == "Quarterfinals"
+    assert event.query == "Quarterfinals World Cup 2026"
+
+
+@pytest.mark.asyncio
 async def test_match_team_colors_are_normalized_to_hex() -> None:
     """Cached event team color names are replaced with WCS hex colors."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
-    event = next(event for event in response.previous if event.home_team.key == "BRA")
+    event = next(
+        event
+        for event in response.previous
+        if event.home_team is not None and event.home_team.key == "BRA"
+    )
 
+    assert event.home_team is not None
+    assert event.away_team is not None
     assert event.home_team.colors == ["#009C3B", "#FFDF00", "#002776"]
     assert event.away_team.colors == ["#74ACDF", "#FFFFFF", "#F6B40E"]
+
+
+@pytest.mark.asyncio
+async def test_match_team_group_comes_from_cached_event_group() -> None:
+    """The matches endpoint maps the cached event group onto both teams."""
+    grouped_event = build_event(
+        1010,
+        0,
+        14,
+        ("BRA", "Brazil", 90000001),
+        ("ARG", "Argentina", 90000002),
+        GameStatus.Scheduled,
+        group="Group C",
+    )
+
+    response = await build_provider(events=[grouped_event]).get_matches(
+        ANCHOR, limit=None, team_keys=None
+    )
+    event = response.current[0]
+
+    assert event.home_team is not None
+    assert event.away_team is not None
+    assert event.home_team.group == "Group C"
+    assert event.away_team.group == "Group C"
 
 
 @pytest.mark.asyncio
@@ -169,46 +250,82 @@ async def test_live_extra_time_match_shows_clock_in_extra_play() -> None:
 
     in_extra = [e for e in response.current if e.period == "ET"]
     assert len(in_extra) == 1
+    assert in_extra[0].clock is not None
     assert in_extra[0].clock.startswith("90+")
 
 
 @pytest.mark.asyncio
-async def test_live_returns_expanded_fake_events() -> None:
-    """`get_live_matches` returns the expanded fake live-endpoint event set."""
-    response = await build_provider(events=[]).get_live_matches(team_keys=None)
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
+async def test_live_returns_mock_events_when_live_data_disabled() -> None:
+    """With live_data_enabled=False, /wcs/live serves build_live_events output."""
+    response = await build_provider(live_data_enabled=False).get_live_matches(team_keys=None)
 
-    assert len(response.matches) == _LIVE_EVENT_COUNT
-    assert Counter(e.status_type for e in response.matches) == Counter(
-        {
-            "past": 5,
-            "live": 11,
-            "scheduled": 3,
-            "unknown": 1,
-        }
-    )
-    assert {"Awarded", "Canceled", "Postponed", "Suspended"}.issubset(
-        {event.status for event in response.matches}
+    assert response.matches == build_live_events(date.today())
+
+
+@pytest.mark.asyncio
+async def test_live_mock_path_does_not_touch_redis(mocker) -> None:
+    """Disabled live-data must not hit the cache at all."""
+    sport = mocker.Mock()
+    sport.get_events_by_date = mocker.AsyncMock()
+
+    await WcsProvider(sport=sport, live_data_enabled=False).get_live_matches(team_keys=None)
+
+    sport.get_events_by_date.assert_not_called()
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
+async def test_live_returns_only_in_progress_cached_events() -> None:
+    """`get_live_matches` reads Redis-backed events and keeps live matches only."""
+    response = await build_provider().get_live_matches(team_keys=None)
+
+    assert len(response.matches) == 2
+    assert {event.global_event_id for event in response.matches} == {1003, 1004}
+    assert {event.status for event in response.matches} == {"In Progress"}
+    assert {event.status_type for event in response.matches} == {"live"}
+
+
+@freezegun.freeze_time("2026-06-15T15:00:00Z")
+@pytest.mark.asyncio
+async def test_live_reads_bounded_cache_window(mocker) -> None:
+    """The Redis path only reads events near now, not the whole tournament calendar."""
+    sport = mocker.Mock(wraps=StubWcsSport(build_events(), build_teams()))
+    sport.get_events_by_date = mocker.AsyncMock(return_value=build_events())
+    provider = WcsProvider(sport=sport, live_data_enabled=True)
+
+    await provider.get_live_matches(team_keys=None)
+
+    now = datetime(2026, 6, 15, 15, tzinfo=UTC)
+    sport.get_events_by_date.assert_awaited_once_with(
+        start=now - _LIVE_MATCH_LOOKBACK,
+        end=now + _LIVE_MATCH_LOOKAHEAD,
     )
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
 async def test_live_matches_sorted_ascending_by_date() -> None:
     """Live events are sorted ascending by `date`."""
-    matches: LiveMatchesResponse = await build_provider().get_live_matches(team_keys=None)
-    assert matches.matches == sorted(matches.matches, key=lambda e: e.date)
+    response = await build_provider().get_live_matches(team_keys=None)
+    assert response.matches == sorted(response.matches, key=lambda e: e.date)
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
 async def test_live_teams_filter_matches_either_side() -> None:
     """Filter retains live events where either side plays for the listed team."""
     response = await build_provider().get_live_matches(team_keys=frozenset({"BRA"}))
 
     assert response.matches
     for event in response.matches:
-        assert "BRA" in {event.home_team.key, event.away_team.key}
+        assert "BRA" in {
+            team.key for team in (event.home_team, event.away_team) if team is not None
+        }
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
 async def test_live_unknown_team_returns_empty() -> None:
     """No match for the filter yields an empty list, not an error."""
     response = await build_provider().get_live_matches(team_keys=frozenset({"ZZZ"}))
@@ -216,9 +333,10 @@ async def test_live_unknown_team_returns_empty() -> None:
 
 
 @pytest.mark.asyncio
-async def test_live_is_deterministic_within_same_utc_day() -> None:
-    """Two calls in the same UTC day produce identical payloads."""
-    provider = build_provider(events=[])
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
+async def test_live_is_deterministic_for_same_cached_events() -> None:
+    """Two calls against unchanged cached events produce identical payloads."""
+    provider = build_provider()
     a = await provider.get_live_matches(team_keys=None)
     b = await provider.get_live_matches(team_keys=None)
     assert a.model_dump() == b.model_dump()
@@ -236,7 +354,7 @@ async def test_get_teams_count() -> None:
 
 @pytest.mark.asyncio
 async def test_teams_are_enriched_from_roster_metadata() -> None:
-    """Cached SportsData teams are filtered, ordered, and enriched from the tournament roster."""
+    """Cached SportsData teams are filtered, sorted A-Z by name, and enriched from the tournament roster."""
     teams = build_teams()
     non_roster_team = teams[0].model_copy(
         update={
@@ -253,11 +371,10 @@ async def test_teams_are_enriched_from_roster_metadata() -> None:
     assert len(response.teams) == 48
     assert [team.key for team in response.teams] == [team.key for team in build_teams()]
     assert "ITA" not in {team.key for team in response.teams}
-    england = response.teams[0]
-    assert england.key == "ENG"
-    assert england.region == "ENG"
-    assert england.group == "Group L"
-    assert all(color.startswith("#") for color in england.colors)
+    algeria = response.teams[0]
+    assert algeria.key == "ALG"
+    assert algeria.region == "ALG"
+    assert all(color.startswith("#") for color in algeria.colors)
 
 
 @pytest.mark.asyncio
@@ -449,7 +566,7 @@ async def test_empty_cache_returns_empty_payloads() -> None:
         "current": [],
         "next": [],
     }
-    assert len((await provider.get_live_matches(team_keys=None)).matches) == _LIVE_EVENT_COUNT
+    assert (await provider.get_live_matches(team_keys=None)).matches == []
     assert len((await provider.get_teams()).teams) == 48
 
 
@@ -460,25 +577,54 @@ async def test_empty_team_cache_returns_empty_teams() -> None:
 
 
 @pytest.mark.asyncio
-async def test_cache_error_returns_empty_payloads(mocker) -> None:
-    """A transient WCS cache read failure returns empty cache-backed envelopes."""
-    sport = mocker.Mock()
-    sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
-    sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
-    sport.get_eliminated_team_keys = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
-    metrics_client = mocker.Mock()
-    provider = WcsProvider(sport=sport, metrics_client=metrics_client)
+async def test_cache_error_records_then_breaker_returns_empty(mocker) -> None:
+    """Test cache failure records sentry and metrics and triggers breaker.
+    After the recovery timeout passes, breaker resets.
+    """
+    with freezegun.freeze_time("2025-04-11") as freezer:
+        sport = mocker.Mock()
+        sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        sport.get_eliminated_team_keys = mocker.AsyncMock(
+            side_effect=CacheAdapterError("redis down")
+        )
+        metrics_client = mocker.Mock()
+        sentry_capture = mocker.patch("merino.providers.wcs.provider.sentry_sdk.capture_exception")
+        provider = WcsProvider(sport=sport, metrics_client=metrics_client, live_data_enabled=True)
 
-    matches = await provider.get_matches(ANCHOR, limit=None, team_keys=None)
-    assert matches.model_dump(by_alias=True) == {
-        "previous": [],
-        "current": [],
-        "next": [],
-    }
-    assert len((await provider.get_live_matches(team_keys=None)).matches) == _LIVE_EVENT_COUNT
-    assert (await provider.get_teams()).teams == []
-    metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "matches"})
-    metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "teams"})
+        with pytest.raises(CacheAdapterError):
+            await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+        with pytest.raises(CacheAdapterError):
+            await provider.get_live_matches(team_keys=None)
+        with pytest.raises(CacheAdapterError):
+            await provider.get_teams()
+
+        metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "matches"})
+        metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "live"})
+        metrics_client.increment.assert_any_call("wcs.cache_error", tags={"endpoint": "teams"})
+        assert sentry_capture.call_count == 3
+
+        # Circuit breaker triggered
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_live_matches(team_keys=None)
+        with pytest.raises(CircuitBreakerError):
+            await provider.get_teams()
+
+        assert metrics_client.increment.call_count == 3
+        assert sentry_capture.call_count == 3
+
+        # increment time so breaker resets
+        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1.0)
+
+        sport.get_events_by_date = mocker.AsyncMock()
+        sport.get_all_teams = mocker.AsyncMock(return_value={})
+        sport.get_eliminated_team_keys = mocker.AsyncMock(return_value=set())
+
+        await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+        await provider.get_live_matches(team_keys=None)
+        await provider.get_teams()
 
 
 @pytest.mark.asyncio
@@ -488,6 +634,7 @@ async def test_team_elimination_cache_error_leaves_teams_uneliminated(mocker) ->
     sport.get_all_teams = mocker.AsyncMock(return_value={team.id: team for team in build_teams()})
     sport.get_eliminated_team_keys = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
     metrics_client = mocker.Mock()
+    sentry_capture = mocker.patch("merino.providers.wcs.provider.sentry_sdk.capture_exception")
     provider = WcsProvider(sport=sport, metrics_client=metrics_client)
 
     response = await provider.get_teams()
@@ -495,3 +642,45 @@ async def test_team_elimination_cache_error_leaves_teams_uneliminated(mocker) ->
     assert len(response.teams) == 48
     assert not any(team.eliminated for team in response.teams)
     metrics_client.increment.assert_called_once_with("wcs.cache_error", tags={"endpoint": "teams"})
+    sentry_capture.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_watch_links_no_geolocation_returns_empty_sections() -> None:
+    """Both your_region and other_regions are empty when geolocation is None."""
+    response = await build_provider().get_watch_links(None, [])
+
+    assert isinstance(response, WatchLinks)
+    assert response.your_region == []
+    assert response.other_regions == []
+
+
+@pytest.mark.asyncio
+async def test_get_watch_links_returns_correct_structure(mocker) -> None:
+    """Resolver results are mapped into StreamEntry and OtherRegionEntry objects."""
+    stream = build_watch_link(
+        "FIFA+",
+        "https://www.plus.fifa.com",
+        sort_order=1,
+        in_production=True,
+        show_in_other_regions=True,
+    )
+    mocker.patch(
+        "merino.providers.wcs.provider.resolve_watch_links",
+        return_value=[stream],
+    )
+    mocker.patch(
+        "merino.providers.wcs.provider.resolve_other_regions",
+        return_value=[("UK", [stream])],
+    )
+
+    response = await build_provider().get_watch_links(Location(country="US"), ["en"])
+
+    assert len(response.your_region) == 1
+    assert response.your_region[0].product_name == "FIFA+"
+    assert response.your_region[0].entitlement == stream.entitlement
+
+    assert len(response.other_regions) == 1
+    assert response.other_regions[0].country_code == "UK"
+    assert len(response.other_regions[0].streams) == 1
+    assert response.other_regions[0].streams[0].product_name == "FIFA+"

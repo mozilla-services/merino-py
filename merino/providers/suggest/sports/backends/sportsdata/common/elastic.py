@@ -1,5 +1,6 @@
 """Store and retrieve Sports information from ElasticSearch"""
 
+import asyncio
 import json
 import logging
 
@@ -7,6 +8,7 @@ import logging
 from abc import abstractmethod, ABC
 from aiodogstatsd import Client as StatsDClient
 from datetime import datetime, timezone
+from time import monotonic
 from typing import Any, Final
 
 
@@ -42,9 +44,9 @@ from merino.utils.metrics import ES_SEARCH_METRIC_NAME
 META_INDEX: str = "sports-meta"
 
 EN_INDEX_SETTINGS: dict = {
-    "number_of_replicas": "1",
     "refresh_interval": "-1",
     "number_of_shards": "2",
+    "index.auto_expand_replicas": "1-all",  # autoscale replicas so all nodes have a copy
     "index.lifecycle.name": "sports-en-policy",
     "analysis": {
         "filter": {
@@ -289,12 +291,28 @@ class ElasticDataStore(ABC):
             )
 
     async def shutdown(self) -> None:
-        """Politely close the data connection. Not strictly required, but python
-        may complain.
+        """Politely close the data connection. Force-abandon if it exceeds 5s.
+
+        Elasticsearch keepalive sockets to a silently-dropped peer can stall
+        ``close()`` for the Linux TCP retransmit ladder (~2-5 min). The
+        ``wait_for`` bound caps that at 5s so the cron exits promptly.
         """
-        logging.getLogger(__name__).info(f"{LOGGING_TAG} closing...")
+        logger = logging.getLogger(__name__)
+        logger.info(f"{LOGGING_TAG} closing...")
         if self.client:  # pragma: no cover  "test called, but Mock prevents coverage detection"
-            await self.client.close()
+            started = monotonic()
+            try:
+                await asyncio.wait_for(self.client.close(), timeout=5.0)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"{LOGGING_TAG} close exceeded 5s timeout; abandoning client",
+                    extra={"elapsed_sec": monotonic() - started},
+                )
+            else:
+                logger.info(
+                    f"{LOGGING_TAG} close complete",
+                    extra={"elapsed_sec": monotonic() - started},
+                )
 
     @abstractmethod
     def build_event_mappings(self, language_code: str) -> dict[str, Any]:

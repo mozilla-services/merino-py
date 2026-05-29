@@ -12,7 +12,7 @@ See [dependencies](./dependencies.md) for how to install uv on your machine.
 Install all the dependencies:
 
 ```
-uv sync --all-groups
+uv sync --all-groups --all-packages
 ```
 
 Run Merino:

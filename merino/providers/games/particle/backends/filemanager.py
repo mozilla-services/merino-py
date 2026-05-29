@@ -33,24 +33,18 @@ class ParticleLocalFileManager:
             with open(self.static_manifest_schema_file_path, "r") as f:
                 manifest_schema: dict = json.load(f)
                 return manifest_schema
-        except OSError as os_error:
+        except OSError as os_ex:
             error_msg = f"Cannot open file '{self.static_manifest_schema_file_path}"
 
-            sentry_sdk.capture_message(
-                error_msg,
-                level="error",
-            )
+            sentry_sdk.capture_exception(os_ex)
 
-            raise ParticleFileManagerError(error_msg) from os_error
-        except JSONDecodeError as json_error:
+            raise ParticleFileManagerError(error_msg) from os_ex
+        except JSONDecodeError as json_ex:
             error_msg = f"Cannot decode JSON file '{self.static_manifest_schema_file_path}"
 
-            sentry_sdk.capture_message(
-                error_msg,
-                level="error",
-            )
+            sentry_sdk.capture_exception(json_ex)
 
-            raise ParticleFileManagerError(error_msg) from json_error
+            raise ParticleFileManagerError(error_msg) from json_ex
 
 
 class ParticleRemoteFileManager:
@@ -87,14 +81,11 @@ class ParticleRemoteFileManager:
                 return file_contents
 
             return None
-        except Exception as e:
-            error_msg = f"Error retrieving remote Particle manifest file. {e}"
+        except Exception as ex:
+            error_msg = f"Error retrieving remote Particle manifest file. {ex}"
 
             logger.error(error_msg)
 
-            sentry_sdk.capture_message(
-                error_msg,
-                level="error",
-            )
+            sentry_sdk.capture_exception(ex)
 
-            return None
+            raise ParticleFileManagerError(error_msg) from ex

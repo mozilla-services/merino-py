@@ -1,22 +1,20 @@
 """Test Gauntlet for SportsData.io"""
 
+import hashlib
+import json
 import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, cast
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import freezegun
-import pytest
-import json
-from datetime import datetime, timedelta, timezone
-
-from unittest.mock import patch, AsyncMock
-
 import httpx
-
-from unittest.mock import MagicMock
+import pytest
 from pytest_mock import MockerFixture
-from typing import Any, cast
 
 from merino.configs import settings
-from merino.providers.suggest.sports.backends import get_data
+from merino.providers.suggest.sports.backends import SPORTSDATA_STALE_FALLBACK_METRIC, get_data
 from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
 )
@@ -124,7 +122,82 @@ async def test_get_data_sends_headers():
         headers={SPORTSDATA_API_KEY_HEADER: api_key},
     )
     assert api_key not in str(exc_info.value)
+    assert "status 403" in str(exc_info.value)
     assert exc_info.value.__cause__ is None
+
+
+@pytest.mark.asyncio
+async def test_get_data_retries_transient_provider_fetch_failures(mocker: MockerFixture):
+    """Test that `get_data` retries transient provider fetch errors."""
+    mock_response_error = httpx.Response(
+        status_code=503,
+        request=httpx.Request("GET", "http://example.org"),
+    )
+    mock_response_success = httpx.Response(
+        status_code=200,
+        json={"ok": True},
+        request=httpx.Request("GET", "http://example.org"),
+    )
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(side_effect=[mock_response_error, mock_response_success])
+    sleep = mocker.patch(
+        "merino.providers.suggest.sports.backends._sportsdata_retry_sleep",
+        new=mocker.AsyncMock(),
+    )
+
+    data = await get_data(
+        client=mock_client,
+        url="http://example.org",
+    )
+
+    assert data == {"ok": True}
+    assert mock_client.get.await_count == 2
+    assert sleep.await_count == 1
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2099-01-01T00:00:00", tz_offset=0)
+async def test_get_data_returns_stale_cache_when_provider_fetch_fails(
+    mocker: MockerFixture, tmp_path: Path
+):
+    """Test that `get_data` falls back to stale cache after provider fetch errors."""
+    ttl = timedelta(seconds=5)
+    url = "http://example.org"
+    cached_data = {"stale": True}
+    hasher = hashlib.new("sha1", usedforsecurity=False)
+    hasher.update(url.encode())
+    cache_file = tmp_path / f"{hasher.hexdigest()}.json"
+    cache_file.write_text(json.dumps(cached_data))
+    mock_response = httpx.Response(
+        status_code=503,
+        request=httpx.Request("GET", url),
+    )
+    mock_client = MagicMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    metrics_client = mocker.patch(
+        "merino.providers.suggest.sports.backends.get_metrics_client"
+    ).return_value
+    sleep = mocker.patch(
+        "merino.providers.suggest.sports.backends._sportsdata_retry_sleep",
+        new=mocker.AsyncMock(),
+    )
+
+    with patch.object(json, "dump") as mock_dump:
+        data = await get_data(
+            client=mock_client,
+            url=url,
+            ttl=ttl,
+            cache_dir=str(tmp_path),
+        )
+
+    assert mock_client.get.await_count == settings.providers.sports.sportsdata.retry_max_tries
+    mock_client.get.assert_awaited_with(url, params=None)
+    assert sleep.await_count == settings.providers.sports.sportsdata.retry_max_tries - 1
+    metrics_client.increment.assert_called_once_with(
+        SPORTSDATA_STALE_FALLBACK_METRIC, tags={"status": "503"}
+    )
+    mock_dump.assert_not_called()
+    assert data == cached_data
 
 
 @pytest.mark.asyncio
@@ -420,19 +493,43 @@ def test_sport_event_detail_remap() -> None:  # WCS, Widget
 
     result = SportEventDetail.from_event_dict(event)
     assert result.sport == "World Cup"
-    assert result.query == "World Cup 2026 Home Team vs Away Team 01 October 2025"
+    assert result.query == "Home Team vs Away Team World Cup 2026"
 
 
-def test_build_query() -> None:
+@pytest.mark.parametrize(
+    "home_team_name,away_team_name,sport,stage,expected",
+    [
+        ("Home Team", "Away Team", "NFL", None, "NFL Home Team vs Away Team 01 October 2025"),
+        ("Switzerland", "Germany", "FIFA", "Group", "Switzerland vs Germany World Cup 2026"),
+        ("Japan", None, "FIFA", "Round of 16", "Round of 16 World Cup 2026"),
+        (None, None, "FIFA", "Round of 32", "Round of 32 World Cup 2026"),
+        ("South Korea", "TBD", "FIFA", "Semi-Finals", "Semi-Finals World Cup 2026"),
+        ("TBD", "TBD", "FIFA", "3rd Place", "3rd Place World Cup 2026"),
+    ],
+    ids=["NFL", "WCS", "WCS: None (one)", "WCS: None (both)", "WCS: TBD (one)", "WCS: TBD (both)"],
+)
+def test_build_query(home_team_name, away_team_name, sport, stage, expected) -> None:
     """build_query produces a 'sport away vs home date' string."""
     event: dict = {
-        "sport": "NFL",
+        "sport": sport,
         "date": "2025-10-01T16:00:00+00:00",
-        "home_team": {"name": "Home Team"},
-        "away_team": {"name": "Away Team"},
+        "home_team": {
+            "name": home_team_name,
+            "key": home_team_name,
+            "id": 0 if home_team_name == "TBD" else 123,
+        }
+        if home_team_name is not None
+        else None,
+        "away_team": {
+            "name": away_team_name,
+            "key": away_team_name,
+            "id": 0 if away_team_name == "TBD" else 345,
+        }
+        if away_team_name is not None
+        else None,
+        "stage": stage,
     }
-
-    assert build_query(event) == "NFL Home Team vs Away Team 01 October 2025"
+    assert build_query(event) == expected
 
 
 def test_build_query_uses_league_local_date() -> None:
@@ -463,19 +560,6 @@ def test_build_query_uses_source_day_for_scheduled_us_sports() -> None:
     assert build_query(event) == "NFL Fake Home vs Fake Away 26 October 2025"
 
 
-def test_build_query_uses_source_day_for_scheduled_world_cup() -> None:
-    """build_query uses the SportsData source day for WCS click-through queries."""
-    event: dict = {
-        "sport": "fifa",
-        "date": "2026-06-16T02:00:00+00:00",
-        "original_date": "2026-06-15T00:00:00",
-        "home_team": {"name": "IR Iran"},
-        "away_team": {"name": "New Zealand"},
-    }
-
-    assert build_query(event) == "World Cup 2026 IR Iran vs New Zealand 15 June 2026"
-
-
 def test_sport_summary_current_suppresses_previous_and_keeps_next() -> None:
     """SportSummary returns current and next events when both are available."""
 
@@ -501,19 +585,6 @@ def test_sport_summary_current_suppresses_previous_and_keeps_next() -> None:
     )
 
     assert [value.status_type for value in summary.values] == ["live", "scheduled"]
-
-
-def test_build_query_world_cup() -> None:
-    """build_query uses World Cup 2026 prefix for games"""
-    event: dict = {
-        "sport": "fifa",
-        "date": "2026-06-15T02:00:00+00:00",
-        "home_team": {"name": "Home Team"},
-        "away_team": {"name": "Away Team"},
-    }
-
-    assert build_query(event) == "World Cup 2026 Home Team vs Away Team 15 June 2026"
-    assert event["sport"] == "fifa"
 
 
 def test_sport_event_detail_icon_set_when_team_in_manifest(

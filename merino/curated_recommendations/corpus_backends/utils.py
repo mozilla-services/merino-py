@@ -9,7 +9,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 )
 from merino.exceptions import BackendError
 from merino.providers.manifest import Provider as ManifestProvider
-from merino.utils.version import fetch_app_version_from_file
+from merino_common.utils.version import fetch_app_version_from_file
 
 
 def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:

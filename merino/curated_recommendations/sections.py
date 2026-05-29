@@ -27,7 +27,6 @@ from merino.curated_recommendations.ml_backends.protocol import (
     SpindleBackendProtocol,
 )
 from merino.curated_recommendations.ml_backends.static_local_model import (
-    CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
     CONTEXTUAL_RANKING_TREATMENT_TZ,
 )
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
@@ -58,6 +57,11 @@ from merino.curated_recommendations.protocol import (
     DailyBriefingBranch,
     ProcessedInterests,
     Layout,
+    SectionsInGermanyV2Branch,
+)
+from merino.curated_recommendations.article_balancer_configs import (
+    ArticleBalancerConfig,
+    get_top_stories_article_balancer_config,
 )
 from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.rankers import (
@@ -83,7 +87,6 @@ HEADLINES_SECTION_KEY = "headlines"
 DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
-IS_COHORT_FEATURE_DISABLED = False  # To be used when we want to disable the feature quickly
 MAX_SECTIONS_PER_RESPONSE = 20
 
 # Number of articles to use when ranking the section. We choose 4 because there are typically only
@@ -355,13 +358,6 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
     )
 
 
-def is_inferred_contextual_ranking(personal_interests: ProcessedInterests | None) -> bool:
-    """Return True if inferred contextual ranking should be applied."""
-    if IS_COHORT_FEATURE_DISABLED:
-        return False
-    return personal_interests is not None and personal_interests.cohort is not None
-
-
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled (either branch)."""
     experiment_name = ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
@@ -468,8 +464,13 @@ def get_ranking_rescaler_for_branch(
     if surface_id == SurfaceId.NEW_TAB_EN_IE:
         return CrawledContentRescaler()
 
-    if surface_id == SurfaceId.NEW_TAB_DE_DE and is_enrolled_in_experiment(
-        request, "sections-in-germany", "sections"
+    if surface_id == SurfaceId.NEW_TAB_DE_DE and (
+        is_enrolled_in_experiment(request, "sections-in-germany", "sections")
+        or is_enrolled_in_experiment(
+            request,
+            ExperimentName.SECTIONS_IN_GERMANY_V2.value,
+            SectionsInGermanyV2Branch.SECTIONS.value,
+        )
     ):
         return DECrawledContentRescaler()
 
@@ -732,6 +733,7 @@ def get_top_story_list(
     prior: Prior | None = None,
     spindle_backend: SpindleBackendProtocol | None = None,
     surface_id: SurfaceId | None = None,
+    article_balancer_config: ArticleBalancerConfig | None = None,
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
@@ -776,6 +778,7 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
+<<<<<<< HEAD
     similar_stories_info = None
     if spindle_backend is not None and surface_id is not None:
         # Prefer text similarity (more reliable today); fall back to image.
@@ -784,6 +787,10 @@ def get_top_story_list(
         ) or spindle_backend.get_similar_stories_image(surface_id)
     balancer = TopStoriesArticleBalancer(
         round(top_count * constraint_scale), similar_stories_info=similar_stories_info
+=======
+    balancer = TopStoriesArticleBalancer(
+        round(top_count * constraint_scale), config=article_balancer_config
+>>>>>>> 2a03ac598c5b0c949b6b428060a55bde68582dd6
     )
     topic_limited_stories, remaining_stories = balancer.add_stories(
         items_throttled_fresh, top_count
@@ -804,7 +811,9 @@ def get_top_story_list(
     if len(top_stories) < total_story_count:
         top_stories = top_stories + remaining_items[: total_story_count - len(top_stories)]
 
-    # Insert the fresh story at the special position, and remove the other story
+    # Insert the fresh story at the special position, and remove the other story.
+    # This intentionally bypasses all ArticleBalancer constraints; pick_random_fresh_story()
+    # only excludes stories blocked from Popular Today.
     if fresh_story_for_fixed_position is not None:
         top_stories = (
             top_stories[0:fixed_fresh_item_position]
@@ -909,7 +918,17 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    do_inferred_contextual = is_inferred_contextual_ranking(personal_interests)
+    # The current Canada experiment doesn't have the isMerinoExperiment flag set so we can only check
+    # if there is an interest vector. Contexual ranking shows some advantages of thompson sampling (such as pre
+    # ranking certain topics higher, so it has advantages even when there is no interest vector returned)
+    use_contexual_ranker = (
+        (
+            surface_id == SurfaceId.NEW_TAB_EN_US
+            or (surface_id == SurfaceId.NEW_TAB_EN_CA and personal_interests is not None)
+        )
+        and ml_backend is not None
+        and ml_backend.is_valid(surface_id)
+    )
     # use interest ranker if we have interests available
     use_interest_ranker = (
         is_inferred_interest_experiment(request)
@@ -917,9 +936,7 @@ async def get_sections(
         and personal_interests is not None
         and bool(personal_interests.scores)
     )
-    use_contexual_ranker = (
-        do_inferred_contextual and ml_backend is not None and ml_backend.is_valid(surface_id)
-    )
+    # Interest ranker is experimental so gets priority over contexual ranker
     if use_interest_ranker:
         ranker = InterestRanker(
             engagement_backend=engagement_backend,
@@ -943,8 +960,6 @@ async def get_sections(
             prior_backend=prior_backend,
             surface_id=surface_id,
             ml_backend=ml_backend,
-            disable_time_zone_context=request.experimentBranch
-            == CONTEXTUAL_RANKING_TREATMENT_COUNTRY,
         )
     else:
         ranker = ThompsonSamplingRanker(
@@ -974,8 +989,12 @@ async def get_sections(
         rescaler=rescaler,
         relax_constraints_for_personalization=False,  # In the future we can set to true for non-empty personal_interests
         prior=prior,
+<<<<<<< HEAD
         spindle_backend=spindle_backend,
         surface_id=surface_id,
+=======
+        article_balancer_config=get_top_stories_article_balancer_config(surface_id),
+>>>>>>> 2a03ac598c5b0c949b6b428060a55bde68582dd6
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations

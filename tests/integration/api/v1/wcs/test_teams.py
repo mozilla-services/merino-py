@@ -4,7 +4,15 @@
 
 """Integration tests for `GET /api/v1/wcs/teams`."""
 
+import freezegun
+import pytest
 from fastapi.testclient import TestClient
+
+from merino.configs import settings
+from merino.exceptions import CacheAdapterError
+from merino.main import app
+from merino.providers.wcs import get_provider as get_wcs_provider
+from merino.providers.wcs.provider import WcsProvider
 
 _PATH = "/api/v1/wcs/teams"
 
@@ -54,3 +62,25 @@ def test_team_icons_are_svg_from_prod_logo_bucket(client: TestClient) -> None:
     assert icons
     expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
     assert all(icon.startswith(expected_prefix) for icon in icons)
+
+
+def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
+    """A Redis cache failure trips the breaker; subsequent requests return 503 + Retry-After."""
+    with freezegun.freeze_time("2026-06-15T16:00:00Z") as freezer:
+        sport = mocker.Mock()
+        sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        sport.get_eliminated_team_keys = mocker.AsyncMock(return_value=set())
+        app.dependency_overrides[get_wcs_provider] = lambda: WcsProvider(sport=sport)
+
+        # Trip the breaker
+        with pytest.raises(CacheAdapterError):
+            client.get(_PATH)
+
+        response = client.get(_PATH)
+        assert response.status_code == 503
+        assert response.json() == {"detail": "WCS temporarily unavailable"}
+        assert response.headers["retry-after"] == "5"
+
+        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        sport.get_all_teams = mocker.AsyncMock(return_value={})
+        client.get(_PATH)

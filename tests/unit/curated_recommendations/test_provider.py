@@ -3,11 +3,13 @@
 import pytest
 from pydantic import HttpUrl
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
+from merino.curated_recommendations.provider import CuratedRecommendationsProvider
 from merino.curated_recommendations.protocol import (
     MAX_TILE_ID,
     MIN_TILE_ID,
     CuratedRecommendation,
+    CuratedRecommendationsRequest,
 )
 
 
@@ -67,3 +69,53 @@ class TestCuratedRecommendationTileId:
                 tileId=invalid_tile_id,
                 **self.common_params,
             )
+
+
+class TestIsSectionsExperiment:
+    """Unit tests for CuratedRecommendationsProvider.is_sections_experiment."""
+
+    @pytest.mark.parametrize(
+        "experiment_name, experiment_branch",
+        [
+            (None, None),
+            ("sections-in-germany", "control"),
+            ("sections-in-germany", "sections"),
+            ("sections-in-germany-v2", "control"),
+            ("sections-in-germany-v2", "content-only"),
+            ("sections-in-germany-v2", "sections"),
+            ("some-unrelated-experiment", "treatment"),
+        ],
+    )
+    def test_de_with_sections_feed_returns_true_regardless_of_enrollment(
+        self, experiment_name, experiment_branch
+    ):
+        """DE clients that request the sections feed get sections, regardless of Nimbus enrollment.
+
+        Gating sections response on enrollment caused the Ireland incident where an experiment
+        gate was forgotten and clients kept receiving the wrong treatment. Sections branches in
+        sections-in-germany-v2 are differentiated from control by what the client requests, not
+        by a backend gate.
+        """
+        request = CuratedRecommendationsRequest(
+            locale="de-DE",
+            feeds=["sections"],
+            experimentName=experiment_name,
+            experimentBranch=experiment_branch,
+        )
+        assert (
+            CuratedRecommendationsProvider.is_sections_experiment(request, SurfaceId.NEW_TAB_DE_DE)
+            is True
+        )
+
+    def test_de_without_sections_feed_returns_false(self):
+        """If the client does not request sections, the response is not sections."""
+        request = CuratedRecommendationsRequest(
+            locale="de-DE",
+            feeds=None,
+            experimentName="sections-in-germany-v2",
+            experimentBranch="content-only",
+        )
+        assert (
+            CuratedRecommendationsProvider.is_sections_experiment(request, SurfaceId.NEW_TAB_DE_DE)
+            is False
+        )

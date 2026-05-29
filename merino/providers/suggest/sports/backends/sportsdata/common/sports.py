@@ -7,8 +7,10 @@ import asyncio
 import logging
 import orjson
 import json
-from datetime import datetime, timedelta, timezone
+from collections.abc import Iterable
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 # We use this for each Sport subclass, so that there's some flexibility for what config
 # values are used and passed.
@@ -18,7 +20,7 @@ from pydantic import ValidationError
 
 from merino.cache.redis import RedisAdapter
 from merino.cache.none import NoCacheAdapter
-from merino.providers.suggest.sports import LOGGING_TAG
+from merino.providers.suggest.sports import LOGGING_TAG, utc_time_from_now
 from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends import get_data
 from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
@@ -27,11 +29,13 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     SportTerms,
     Team,
     Event,
+    SportsDataEventRow,
     SPORTSDATA_US_EASTERN,
     SPORTSDATA_UTC,
     sportsdata_day_slug,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
+    TBD_TEAM_KEY,
     eliminated_team_keys,
     eliminated_team_keys_cache_key,
     parse_eliminated_team_keys,
@@ -39,6 +43,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination 
 )
 
 FORCE_IMPORT = ""
+_SEASON_TYPE_POSTSEASON = 3
+_WCS_LIVE_REFRESH_WINDOW_DAYS = 1
+_WCS_GAMES_BY_DATE_TTL = timedelta(minutes=2)
 
 # When creating a new sport class, add its entry to SPORT_CATEGORY_MAP below.
 # The key must match the class name, as that is what is stored in the `Event.sport` field.
@@ -688,6 +695,12 @@ class WCS(Sport):
         "CUW": "curacao",
     }
 
+    # Sportsdata.io returns the incorrect official ISO3 for the following countries.
+    ISO_alias = {
+        "CDR": "COD",
+        "CVI": "CPV",
+    }
+
     def __init__(
         self,
         settings: LazySettings,
@@ -920,6 +933,9 @@ class WCS(Sport):
             code = cached[b"code"].decode()
             if code in self.country_alias:
                 cached[b"aliases"] = self.country_alias[code].encode()
+            # Fix ISO3 codes.
+            if code in self.ISO_alias:
+                cached[b"code"] = self.ISO_alias[code].encode()
         return cached
 
     def team_minimal(self, team: Team) -> dict[str, Any]:
@@ -927,6 +943,72 @@ class WCS(Sport):
         team_data = super().team_minimal(team)
         team_data["name"] = team.name
         return team_data
+
+    def event_from_row(self, row: SportsDataEventRow) -> Event | None:
+        """Create a WCS event, preserving knockout placeholders with TBD teams."""
+        if self._is_knockout_placeholder_row(row):
+            return self._knockout_placeholder_event_from_row(row)
+        return super().event_from_row(row)
+
+    def _is_knockout_placeholder_row(self, row: SportsDataEventRow) -> bool:
+        """Return True when a knockout row has at least one unassigned team."""
+        return (
+            row.raw.get("SeasonType") == _SEASON_TYPE_POSTSEASON
+            and row.raw.get("Group") is None
+            and (row.home_team_id is None or row.away_team_id is None)
+        )
+
+    def _knockout_placeholder_event_from_row(self, row: SportsDataEventRow) -> Event | None:
+        """Create an Event for knockout rows whose teams are not fully known yet."""
+        if not self.row_in_event_window(row):
+            return None
+
+        home_side = self._event_team_or_tbd_for_row(row, row.home_team_id)
+        away_side = self._event_team_or_tbd_for_row(row, row.away_team_id)
+        if home_side is None or away_side is None:
+            return None
+        home_team, home_terms = home_side
+        away_team, away_terms = away_side
+
+        return Event(
+            sport=self.name,
+            id=row.game_id,
+            terms=" ".join(term for term in (home_terms, away_terms) if term).strip(),
+            date=row.kickoff,
+            original_date=row.original_date,
+            home_team=home_team,
+            away_team=away_team,
+            home_score=row.home_score,
+            away_score=row.away_score,
+            status=row.status,
+            expiry=utc_time_from_now(self.event_ttl),
+            updated=row.updated,
+            **self.event_details(row.raw),
+        )
+
+    def _event_team_or_tbd_for_row(
+        self, row: SportsDataEventRow, team_id: int | None
+    ) -> tuple[dict[str, Any], str] | None:
+        """Return compact team data and search terms for one placeholder row side."""
+        if team_id is None:
+            return self._tbd_team_minimal(), TBD_TEAM_KEY.lower()
+
+        team = self.teams.get(team_id)
+        if team is None:
+            logger.warning(
+                "%s Could not find team info for '%s' vs '%s' for %s: %s",
+                LOGGING_TAG,
+                row.home_team_key,
+                row.away_team_key,
+                self.name,
+                row.raw,
+            )
+            return None
+        return self.team_minimal(team), team.terms
+
+    def _tbd_team_minimal(self) -> dict[str, Any]:
+        """Return the compact event-team shape for an unassigned WCS side."""
+        return {"key": TBD_TEAM_KEY, "name": TBD_TEAM_KEY, "colors": [], "id": 0}
 
     async def get_team(self, id: int) -> Team | None:
         """Fetch a team from the thread locked source"""
@@ -985,7 +1067,7 @@ class WCS(Sport):
                     team.country = area.get(b"code", b"UNK").decode()  # pragma: no cover "widget"
                 # team.key is the authoritative ISO3 code after _TEAM_KEY_OVERRIDES;
                 # prefer for join key over AreaId. Since some teams (e.g. Curaçao)
-                # are returned with an AreaId that maps to ANOTher country's area
+                # are returned with an AreaId that maps to Another country's area
                 # (South Korea, in Curaçao's case 🤦)
                 alias = self.country_alias.get(team.key)
                 if alias:
@@ -1107,49 +1189,86 @@ class WCS(Sport):
 
     async def update_events(self, client: AsyncClient, allow_no_teams: bool = False):
         """Update schedules and game scores for this sport"""
+        # WCS backs the live World Cup cron/widget, so it preserves the existing
+        # cache and degrades partially when SportsData has an intermittent failure.
         await self.get_season(client=client)
         # Stage names are joined by Event.RoundId onto self.rounds
         # Rounds are lazy loaded, so ensure we got them (otherwise
         # stage will always default to None)
         if not self.rounds:
-            await self.load_rounds(client=client)
+            try:
+                await self.load_rounds(client=client)
+            except SportsDataError as ex:
+                logger.warning(
+                    f"{LOGGING_TAG} Could not load WCS rounds; continuing without stages: {ex}"
+                )
         logger.debug(f"{LOGGING_TAG} Getting {self.name} schedules")
         url = f"{self.base_url}/SchedulesBasic/{self.name}/{self.season}"
         local_timezone = SPORTSDATA_UTC
-        response = await get_data(
-            client=client,
-            url=url,
-            ttl=timedelta(minutes=5),
-            cache_dir=self.cache_dir,
-            headers=self.api_headers(),
-        )
+        try:
+            response = await get_data(
+                client=client,
+                url=url,
+                ttl=timedelta(minutes=5),
+                cache_dir=self.cache_dir,
+                headers=self.api_headers(),
+            )
+        except SportsDataError as ex:
+            logger.warning(f"{LOGGING_TAG} Could not refresh WCS schedules: {ex}")
+            return
         if not response:
             logger.warning(f"{LOGGING_TAG} No WCS schedules returned; skipping event cache update")
             return
         # Treat each WCS schedule refresh as authoritative so removed events are pruned.
         self.events = {}
         self.load_schedules_from_source(response, event_timezone=local_timezone)
-        date_list: set[str] = set()
-        # update scores based on events:
-        # Events may cross multiple days, so we should update those scores.
-        for _id, event in list(self.events.items()):
-            day = sportsdata_day_slug(event.date, local_timezone)
-            if not event.status.is_scheduled() and day not in date_list:
-                url = f"{self.base_url}/GamesByDate/{self.name}/{day}"
+        for day in self._games_by_date_slugs_to_refresh(
+            self.events.values(), event_timezone=local_timezone
+        ):
+            url = f"{self.base_url}/GamesByDate/{self.name}/{day}"
+            try:
                 response = await get_data(
                     client=client,
                     url=url,
-                    ttl=timedelta(minutes=5),
+                    ttl=_WCS_GAMES_BY_DATE_TTL,
                     cache_dir=self.cache_dir,
                     headers=self.api_headers(),
                 )
-                self.load_scores_from_source(
-                    response,
-                    event_timezone=local_timezone,
-                )
-                date_list.add(day)
+            except SportsDataError as ex:
+                logger.warning(f"{LOGGING_TAG} Could not refresh WCS scores for {day}: {ex}")
+                continue
+            self.load_scores_from_source(
+                response,
+                event_timezone=local_timezone,
+            )
 
         await self.cache_events()
+
+    def _games_by_date_slugs_to_refresh(
+        self, events: Iterable[Event], event_timezone: ZoneInfo
+    ) -> list[str]:
+        """Return SportsData day slugs that need detailed score refreshes.
+
+        Live freshness should not depend on `/SchedulesBasic` first changing a
+        match to `InProgress`. Refresh event days in the active UTC window
+        unconditionally, and keep refreshing days whose schedule rows already
+        report final/live/non-scheduled statuses.
+        """
+        today = datetime.now(tz=timezone.utc).astimezone(event_timezone).date()
+        window_start = today - timedelta(days=_WCS_LIVE_REFRESH_WINDOW_DAYS)
+        window_end = today + timedelta(days=_WCS_LIVE_REFRESH_WINDOW_DAYS)
+        days: dict[date, str] = {}
+
+        for event in events:
+            event_date = event.date
+            if event_date.tzinfo is None:
+                event_date = event_date.replace(tzinfo=timezone.utc)
+            event_day = event_date.astimezone(event_timezone).date()
+            in_active_window = window_start <= event_day <= window_end
+            if in_active_window or not event.status.is_scheduled():
+                days[event_day] = sportsdata_day_slug(event_date, event_timezone)
+
+        return [days[day] for day in sorted(days)]
 
     async def cache_events(self) -> None:
         """Write event data to Redis and index events by kickoff time."""

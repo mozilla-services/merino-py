@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from merino.configs import settings
 from merino.utils.gcs.gcs_uploader import GcsUploader
+from merino.providers.games.particle.backends.filemanager import ParticleRemoteFileManager
 from merino.providers.games.particle.backends.particle import ParticleBackend
 
 _game_url = settings.games_providers.particle.game_url
@@ -38,24 +39,42 @@ def fixture_gcs_uploader_mock() -> GcsUploader:
     return MagicMock(spec=GcsUploader)
 
 
+@pytest.fixture(name="particle_remote_filemanager_parameters")
+def fixture_particle_remote_filemanager_parameters(gcs_uploader_mock) -> dict[str, Any]:
+    """Define ParticleRemoteFileManager parameters for test."""
+    return {"gcs_client": gcs_uploader_mock, "manifest_file_name": "test_file.json"}
+
+
+@pytest.fixture(name="particle_remote_filemanager")
+def fixture_particle_remote_filemanager(
+    particle_remote_filemanager_parameters: dict[str, Any],
+) -> ParticleRemoteFileManager:
+    """Create a ParticleRemoteFileManager object for test."""
+    return ParticleRemoteFileManager(**particle_remote_filemanager_parameters)
+
+
 @pytest.fixture(name="backend")
 def fixture_backend(
-    gcs_uploader_mock: GcsUploader, mocker: MockerFixture, statsd_mock
+    gcs_uploader_mock: GcsUploader,
+    mocker: MockerFixture,
+    statsd_mock,
+    particle_remote_filemanager: ParticleRemoteFileManager,
 ) -> ParticleBackend:
-    """Return a WikimediaPotdBackend instance for testing."""
+    """Return a ParticleBackend instance for testing."""
     return ParticleBackend(
         gcs_uploader=gcs_uploader_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
+        manifest_gcs_file_name="test.json",
         metrics_client=statsd_mock,
         particle_url_root=PARTICLE_URL_ROOT,
         particle_url_path_manifest=PARTICLE_URL_PATH_MANIFEST,
+        remote_file_manager=particle_remote_filemanager,
     )
 
 
 # END FIXTURES
 
 
-# BEGIN get_game_url TESTS
 @pytest.mark.asyncio
 async def test_get_game_url_returns_correct_particle(backend: ParticleBackend) -> None:
     """Test that get_game_url returns the expected game URL value."""
@@ -65,81 +84,73 @@ async def test_get_game_url_returns_correct_particle(backend: ParticleBackend) -
     assert result.url == _game_url
 
 
-# END get_game_url TESTS
+class TestFetchManifestJson:
+    """Tests against fetch_manifest_json"""
 
+    @pytest.mark.asyncio
+    async def test_returns_json(self, valid_manifest_data, backend: ParticleBackend) -> None:
+        """Test fetching manifest JSON succeeds along happy path."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=valid_manifest_data,
+            request=Request(method="GET", url=PARTICLE_URL_ROOT),
+        )
 
-# BEGIN _fetch_manifest_json TESTS
-@pytest.mark.asyncio
-async def test_fetch_manifest_json_returns_json(
-    valid_manifest_data, backend: ParticleBackend
-) -> None:
-    """Test fetching manifest JSON succeeds along happy path."""
-    client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-    client_mock.get.return_value = Response(
-        status_code=200,
-        content=valid_manifest_data,
-        request=Request(method="GET", url=PARTICLE_URL_ROOT),
-    )
+        result = await backend.fetch_manifest_json_from_remote()
 
-    result = await backend._fetch_manifest_json()
+        # result should be a python object (result of json.loads)
+        assert isinstance(result, object)
 
-    # result should be a python object (result of json.loads)
-    assert isinstance(result, object)
+    @pytest.mark.asyncio
+    async def test_returns_none_for_invalid_json(
+        self, backend: ParticleBackend, caplog: LogCaptureFixture, filter_caplog: Any
+    ):
+        """Test fetching invalid manifest JSON returns None."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            # foo below isn't double quoted, so json conversion fails
+            content="{foo: 1}",
+            request=Request(method="GET", url=PARTICLE_URL_ROOT),
+        )
 
+        caplog.set_level(logging.ERROR)
 
-@pytest.mark.asyncio
-async def test_fetch_manifest_json_returns_none_for_invalid_json(
-    backend: ParticleBackend, caplog: LogCaptureFixture, filter_caplog: Any
-):
-    """Test fetching invalid manifest JSON returns None."""
-    client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-    client_mock.get.return_value = Response(
-        status_code=200,
-        # foo below isn't double quoted, so json conversion fails
-        content="{foo: 1}",
-        request=Request(method="GET", url=PARTICLE_URL_ROOT),
-    )
+        result = await backend.fetch_manifest_json_from_remote()
 
-    caplog.set_level(logging.ERROR)
+        # get error records
+        error_records = filter_caplog(
+            caplog.records,
+            "merino.providers.games.particle.backends.particle",
+        )
 
-    result = await backend._fetch_manifest_json()
+        # verify result is None and expected error was logged
+        assert result is None
+        assert len(error_records) == 1
+        assert "JSON error when converting Particle response" == error_records[0].message
 
-    # get error records
-    error_records = filter_caplog(
-        caplog.records,
-        "merino.providers.games.particle.backends.particle",
-    )
+    @pytest.mark.asyncio
+    async def test_returns_none_for_http_error(
+        self, backend: ParticleBackend, caplog: LogCaptureFixture, filter_caplog: Any
+    ):
+        """Test fetching invalid manifest JSON returns None."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=500, request=Request(method="GET", url=PARTICLE_URL_ROOT)
+        )
 
-    # verify result is None and expected error was logged
-    assert result is None
-    assert len(error_records) == 1
-    assert "JSON error when converting Particle response" == error_records[0].message
+        caplog.set_level(logging.ERROR)
 
+        result = await backend.fetch_manifest_json_from_remote()
 
-@pytest.mark.asyncio
-async def test_fetch_manifest_json_returns_none_for_http_error(
-    backend: ParticleBackend, caplog: LogCaptureFixture, filter_caplog: Any
-):
-    """Test fetching invalid manifest JSON returns None."""
-    client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-    client_mock.get.return_value = Response(
-        status_code=500, request=Request(method="GET", url=PARTICLE_URL_ROOT)
-    )
+        # get error records
+        error_records = filter_caplog(
+            caplog.records,
+            "merino.providers.games.particle.backends.particle",
+        )
 
-    caplog.set_level(logging.ERROR)
-
-    result = await backend._fetch_manifest_json()
-
-    # get error records
-    error_records = filter_caplog(
-        caplog.records,
-        "merino.providers.games.particle.backends.particle",
-    )
-
-    # make sure result is None and expected error has been logged
-    assert result is None
-    assert len(error_records) == 1
-    assert "HTTP error when fetching Particle manifest" in error_records[0].message
-
-
-# END _fetch_manifest_json TESTS
+        # make sure result is None and expected error has been logged
+        assert result is None
+        assert len(error_records) == 1
+        assert "HTTP error when fetching Particle manifest" in error_records[0].message

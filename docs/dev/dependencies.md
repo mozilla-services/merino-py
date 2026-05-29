@@ -23,7 +23,7 @@ See [more][4] about setting up virtual envs and Python version with uv.
 
 Once uv is installed, and a virtual environment is created with the correct Python version, install all the dependencies:
 ```sh
-$ uv sync --all-groups
+$ uv sync --all-groups --all-packages
 ```
 
 Add packages to project via uv

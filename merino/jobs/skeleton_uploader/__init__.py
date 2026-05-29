@@ -25,7 +25,7 @@ from dynaconf.base import LazySettings
 import typer
 
 from merino.configs import settings
-from merino.configs.app_configs.config_logging import configure_logging
+from merino_common.app_configs.config_logging import configure_logging
 
 # Remote Settings accepts CSV files as the upload, so we need to convert
 # our data into CSV format.
@@ -109,10 +109,16 @@ def upload(
 
 # This allows you to call this function outside of the `uv` construct.
 if __name__ == "__main__":  # pragma: no cover
-    # Logging is handled universally by `merino.configs.app_configs.configure_logging`
+    # Logging is handled universally by `merino_common.app_configs.configure_logging`
     # which uses `settings.logging.level` to specify the logging level
     # (DEBUG=10 .. CRITICAL=50)
-    configure_logging()
+    configure_logging(
+        log_format=settings.logging.format,
+        level=settings.logging.level,
+        can_propagate=settings.logging.can_propagate,
+        current_env=settings.current_env,
+        logger_name="merino",
+    )
     logger = logging.getLogger(__name__)
     logger.info("Starting up the skeleton.")
     upload()

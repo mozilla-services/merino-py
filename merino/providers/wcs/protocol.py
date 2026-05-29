@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
+from merino.providers.suggest.sports.backends.sportsdata.common.tbd import is_tbd_event_team
 from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
 from merino.utils.logos import LogoCategory, load_manifest
@@ -83,7 +84,7 @@ class TeamInfo(BaseModel):
             region=str(team.get("region") or team.get("country") or key),
             colors=get_team_colours(key),
             icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
-            group=group,
+            group=team.get("group") or group,
             eliminated=bool(team.get("eliminated", False)),
         )
 
@@ -93,19 +94,27 @@ class EventInfo(BaseModel):
 
     date: str = Field(description="UTC ISO datetime for the start of the event.")
     global_event_id: int = Field(description="Stable identifier for this event.")
-    home_team: TeamInfo
-    away_team: TeamInfo
-    period: str = Field(description="Period descriptor: '1', '2', 'Extra', etc.")
+    home_team: TeamInfo | None = Field(
+        default=None,
+        description="Home team metadata, or null when the knockout side is not established.",
+    )
+    away_team: TeamInfo | None = Field(
+        default=None,
+        description="Away team metadata, or null when the knockout side is not established.",
+    )
+    period: str | None = Field(
+        default=None, description="Period descriptor: '1', '2', 'Extra', etc."
+    )
     home_score: int | None
     away_score: int | None
     home_extra: int | None
     away_extra: int | None
     home_penalty: int | None
     away_penalty: int | None
-    clock: str = Field(description="Elapsed minutes; extra time as '90+3'.")
+    clock: str | None = Field(default=None, description="Elapsed minutes; extra time as '90+3'.")
     updated: int = Field(description="UTC unix timestamp of the last record update.")
-    stage: str | None = Field(
-        default=None,
+    stage: str = Field(
+        default="",
         description="Tournament stage, e.g. 'Group Stage', 'Round of 32', 'Final'.",
     )
     status: str = Field(description="Game status: 'Scheduled', 'In Progress', 'Final', etc.")
@@ -116,24 +125,32 @@ class EventInfo(BaseModel):
     @classmethod
     def from_event(cls, event: Event) -> "EventInfo":
         """Build widget event info from a cached SportsData event."""
-        home_team = TeamInfo.from_event_team(event.home_team, group=event.group)
-        away_team = TeamInfo.from_event_team(event.away_team, group=event.group)
+        home_team = (
+            None
+            if is_tbd_event_team(event.home_team)
+            else TeamInfo.from_event_team(event.home_team, group=event.group)
+        )
+        away_team = (
+            None
+            if is_tbd_event_team(event.away_team)
+            else TeamInfo.from_event_team(event.away_team, group=event.group)
+        )
         updated = event.updated or event.date
         return cls(
             date=event.date.isoformat(),
             global_event_id=event.id,
             home_team=home_team,
             away_team=away_team,
-            period=event.period or "",
+            period=event.period,
             home_score=event.home_score,
             away_score=event.away_score,
             home_extra=event.home_extra,
             away_extra=event.away_extra,
             home_penalty=event.home_penalty,
             away_penalty=event.away_penalty,
-            clock=event.clock or "",
+            clock=event.clock,
             updated=int(updated.timestamp()),
-            stage=event.stage,
+            stage=event.stage or "",
             status=event.status.as_str(),
             status_type=event.status.as_ui_status(),
             query=build_query(event.model_dump(mode="json")),
@@ -157,7 +174,7 @@ class MatchesResponse(BaseModel):
 class LiveMatchesResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/live`.
 
-    Holds mocked live-endpoint events, sorted by `date` ascending.
+    Holds currently live events, sorted by `date` ascending.
     """
 
     matches: list[EventInfo]
@@ -167,3 +184,25 @@ class TeamsResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/teams`."""
 
     teams: list[TeamInfo]
+
+
+class StreamEntry(BaseModel):
+    """A streaming service entry returned in watch-links responses."""
+
+    product_name: str
+    entitlement: str = Field(description="Human-readable entitlement label, e.g. 'Free Trial'.")
+    url: HttpUrl
+
+
+class OtherRegionEntry(BaseModel):
+    """Streaming services grouped by a region other than the user's."""
+
+    country_code: str = Field(description="Display country code, e.g. 'UK', 'GER'.")
+    streams: list[StreamEntry]
+
+
+class WatchLinks(BaseModel):
+    """Response payload for `GET /api/v1/wcs/watch-links`."""
+
+    your_region: list[StreamEntry]
+    other_regions: list[OtherRegionEntry]

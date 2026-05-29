@@ -1,6 +1,6 @@
 """Protocol for Particle provider backend."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Json
 
 from typing import Protocol
 
@@ -25,4 +25,12 @@ class ParticleBackend(Protocol):
         Returns:
             A Particle instance if data is available/valid, otherwise None.
         """
+        ...
+
+    async def fetch_manifest_json_from_remote(self) -> Json | None:
+        """Retrieve the latest manifest JSON from Particle"""
+        ...
+
+    async def fetch_manifest_json_from_gcs(self) -> Json | None:
+        """Retrieve the manifest json last stored in GCS"""
         ...

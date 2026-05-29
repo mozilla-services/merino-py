@@ -33,7 +33,7 @@ merino/providers/suggest/myprovider/
    - Add to `ProviderType` enum
    - Add case in `_create_provider()` factory
 
-6. **Configuration** (`merino/configs/app_configs/default.toml`):
+6. **Configuration** (`merino/configs/default.toml`):
    - Add `[default.providers.myprovider]` with `type`, `backend`, `enabled_by_default`, `score`, `query_timeout_sec`
    - Add `[default.myprovider]` for API keys/URLs if needed
 

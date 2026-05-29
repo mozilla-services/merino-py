@@ -1,20 +1,23 @@
 """Unit test for ranker algorithms used to rank curated recommendations."""
 
+from dataclasses import replace
+from datetime import datetime, timezone
 import logging
+import random
 import uuid
 
-import pytest
-import random
-from datetime import datetime, timezone
 import freezegun
+import pytest
 from freezegun import freeze_time
-
 from pydantic import HttpUrl
 
 from merino.curated_recommendations import EngagementBackend
+from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
+from merino.curated_recommendations.article_balancer_configs import (
+    DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+)
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
-from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
 from merino.curated_recommendations.layouts import layout_4_medium, layout_4_large, layout_6_tiles
 from merino.curated_recommendations.protocol import (
     ITEM_HEADLINES_FLAG,
@@ -1243,6 +1246,48 @@ class TestTopStoriesArticleBalancer:
         assert balancer.add_story(stories[2]) is False
         assert len(balancer.get_stories()) == 2
 
+    def test_rejects_story_when_publisher_limit_exceeded(self, monkeypatch):
+        """Ensure adding beyond the per-publisher maximum fails."""
+        monkeypatch.setattr(
+            "merino.curated_recommendations.article_balancer.random.random", lambda: 0.84
+        )
+        config = replace(
+            DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+            max_per_publisher=1,
+            publisher_enforcement_likelyhood=0.85,
+        )
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9, config=config)
+        stories = [
+            self._build_recommendation("0", Topic.BUSINESS),
+            self._build_recommendation("1", Topic.ARTS),
+        ]
+        stories[1].publisher = stories[0].publisher
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1]) is False
+        assert len(balancer.get_stories()) == 1
+
+    def test_allows_story_when_publisher_enforcement_is_not_selected(self, monkeypatch):
+        """Duplicate publishers are allowed when the constructor draw disables enforcement."""
+        monkeypatch.setattr(
+            "merino.curated_recommendations.article_balancer.random.random", lambda: 0.85
+        )
+        config = replace(
+            DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+            max_per_publisher=1,
+            publisher_enforcement_likelyhood=0.85,
+        )
+        balancer = TopStoriesArticleBalancer(expected_num_articles=9, config=config)
+        stories = [
+            self._build_recommendation("0", Topic.BUSINESS),
+            self._build_recommendation("1", Topic.ARTS),
+        ]
+        stories[1].publisher = stories[0].publisher
+
+        assert balancer.add_story(stories[0])
+        assert balancer.add_story(stories[1])
+        assert len(balancer.get_stories()) == 2
+
     def test_rejects_story_when_evergreen_limit_exceeded(self):
         """Ensure evergreen quota caps additions when already full."""
         balancer = TopStoriesArticleBalancer(expected_num_articles=5)
@@ -1430,6 +1475,38 @@ class TestContextualRanker:
         )
         ranked = ranker.rank_items(recs)
 
+        assert len(ranked) == 1
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.score == pytest.approx(0.8)
+
+    def test_rank_items_uses_ml_score_when_item_in_rankings_with_cohort(self, monkeypatch):
+        """When rankings contain the item, the ML (normal-sampled) score is used."""
+        recs = generate_recommendations(item_ids=["a"], time_sensitive_count=0)
+        prior_backend = StubPriorBackend(
+            Prior(alpha=1, beta=10, total_impressions_per_day=1_000_000)
+        )
+        engagement_backend = StubEngagementBackend({})
+        ml_backend = StubMLRecsBackend(
+            rankings=ContextualArticleRankings(
+                granularity="region",
+                shards={"a": {"mean": 0.8, "std": 0.0}},
+            )
+        )
+        cohort_interests = ProcessedInterests(scores={}, cohort="1")
+        no_cohort_interests = ProcessedInterests(scores={}, cohort=None)
+
+        ranker = ContextualRanker(
+            engagement_backend, prior_backend, SurfaceId.NEW_TAB_EN_US, ml_backend=ml_backend
+        )
+
+        # Test that there is no crash with/without cohorts.
+        # StubMLRecsBackend is 'dumb' and could be upgrade to return
+        ranked = ranker.rank_items(recs, personal_interests=cohort_interests, region="US")
+        assert len(ranked) == 1
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.score == pytest.approx(0.8)
+
+        ranked = ranker.rank_items(recs, personal_interests=no_cohort_interests, region="US")
         assert len(ranked) == 1
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.score == pytest.approx(0.8)

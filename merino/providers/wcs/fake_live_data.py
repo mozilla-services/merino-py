@@ -20,6 +20,7 @@ class EventTemplate:
     away_key: str
     status_type: StatusType
     status: str
+    stage: str = "Group Stage"
     home_score: int | None = None
     away_score: int | None = None
     home_extra: int | None = None
@@ -39,6 +40,7 @@ _TEMPLATES: list[EventTemplate] = [
         away_key="ARG",
         status_type="past",
         status="Final",
+        stage="Round of 16",
         home_score=2,
         away_score=1,
         period="FT",
@@ -51,6 +53,7 @@ _TEMPLATES: list[EventTemplate] = [
         away_key="FRA",
         status_type="past",
         status="Final",
+        stage="Quarterfinals",
         home_score=1,
         away_score=1,
         home_extra=1,
@@ -226,6 +229,7 @@ _TEMPLATES: list[EventTemplate] = [
         away_key="BRA",
         status_type="past",
         status="Final",
+        stage="Final",
         home_score=1,
         away_score=1,
         home_extra=0,
@@ -241,6 +245,7 @@ _TEMPLATES: list[EventTemplate] = [
         away_key="ENG",
         status_type="past",
         status="Final",
+        stage="Third Place Playoff",
         home_score=0,
         away_score=0,
         home_extra=0,
@@ -333,14 +338,15 @@ def _event(
         global_event_id=global_event_id,
         home_team=_team(template.home_key),
         away_team=_team(template.away_key),
-        period=template.period or "",
+        period=template.period,
+        stage=template.stage,
         home_score=template.home_score,
         away_score=template.away_score,
         home_extra=template.home_extra,
         away_extra=template.away_extra,
         home_penalty=template.home_penalty,
         away_penalty=template.away_penalty,
-        clock=template.clock or "",
+        clock=template.clock,
         updated=int(event_dt.timestamp()) - 3600,
         status=template.status,
         status_type=template.status_type,

@@ -120,6 +120,7 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
             "fresh_items_top_stories_fixed_position", 4
         )  # Because there are 2 ads, typically 4 is position 6 (0 based)
         data.setdefault("fresh_items_top_stories_max_percentage", 0.03)
+        data.setdefault("fresh_items_limit_prior_threshold_multiplier", 0.7)
         super().__init__(**data)
 
     def compute_estimated_fresh_per_cycle(self, prior: Prior) -> int:
@@ -141,12 +142,18 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         return round(impressions_for_tile_for_period * scale)
 
 
-DE_EXPERIMENT_TREATMENT_PERCENT = 0.10
+DE_EXPERIMENT_TREATMENT_PERCENT = 0.30
 
 
 class DECrawledContentRescaler(CrawledContentRescaler):
-    """Rescaler for DE experiment — scales engagement up by 1/0.10 = 10x
-    to compensate for only 10% of DE traffic generating engagement data.
+    """Rescaler for DE sections experiments — scales engagement up by 1/p
+    to compensate for the fraction p of DE traffic that generates
+    sections-backend engagement data.
+
+    p = 0.30 reflects three disjoint 10% slices of DE traffic that route
+    through the sections backend: sections-in-germany `sections` branch (v1),
+    sections-in-germany-v2 `sections` branch, and sections-in-germany-v2
+    `content-only` branch (grid layout served from the same backend).
     """
 
     def __init__(self, **data: Any):

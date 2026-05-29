@@ -2,12 +2,13 @@
 
 
 # Errors
-class SportsDataError(BaseException):
+class SportsDataError(Exception):
     """Significant error occurring with Sports"""
 
     message: str
 
     def __init__(self, message: str):
+        super().__init__(message)
         self.message = message
 
     def __str__(self):
@@ -15,12 +16,13 @@ class SportsDataError(BaseException):
         return f"{name}: {self.message}"
 
 
-class SportsDataWarning(BaseException):
+class SportsDataWarning(Exception):
     """Cautionary error occurring with Sports"""
 
     message: str
 
     def __init__(self, message: str):
+        super().__init__(message)
         self.message = message
 
     def __str__(self):

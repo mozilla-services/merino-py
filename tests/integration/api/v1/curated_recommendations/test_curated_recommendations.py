@@ -43,6 +43,7 @@ from merino.curated_recommendations.engagement_backends.protocol import (
 )
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
 from merino.curated_recommendations.ml_backends.static_local_model import (
+    CONTEXTUAL_RANKING_TREATMENT_TZ,
     DEFAULT_PRODUCTION_MODEL_ID,
     SMALL_POPULATION_MODEL_ID,
     SuperInferredModel,
@@ -68,7 +69,6 @@ from merino.curated_recommendations.protocol import (
     Locale,
     CoarseOS,
 )
-from merino.curated_recommendations.sections import IS_COHORT_FEATURE_DISABLED
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
@@ -1761,6 +1761,49 @@ class TestSections:
             if tech_stuff_id in sections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
+    @pytest.mark.parametrize(
+        "experiment_branch",
+        [
+            CONTEXTUAL_RANKING_TREATMENT_TZ,
+        ],
+    )
+    def test_sections_contextual_ranking(self, client: TestClient, experiment_branch):
+        """Test that sections feed includes both manually created and ML-generated sections for contextual ranking.
+        This should happen even when not in an experiment.
+        Both MANUAL and ML sections should be returned together.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+            },
+        )
+        data = response.json()
+
+        # Check if the response is valid
+        assert response.status_code == 200
+
+        feeds = data["feeds"]
+        sections = {name: section for name, section in feeds.items() if section is not None}
+
+        # top_stories_section should always be present
+        assert "top_stories_section" in sections
+
+        # Should have ML sections (legacy topics)
+        legacy_topics = {topic.value for topic in Topic}
+        ml_sections_found = [sid for sid in sections if sid in legacy_topics]
+        assert len(ml_sections_found) > 0, "Should have at least some ML legacy topic sections"
+
+        # Check if any manually created sections appear (they may or may not, depending on
+        # whether they have enough items after top stories are removed)
+        manual_sections = [sid for sid in sections if is_manual_section(sid)]
+        if manual_sections:
+            # If the "Tech stuff" manual section appears, verify it has the correct title
+            tech_stuff_id = "d532b687-108a-4edb-a076-58a6945de714"
+            if tech_stuff_id in sections:
+                assert sections[tech_stuff_id]["title"] == "Tech stuff"
+
     def test_sections_inferred_contextual_ranking_result_for_cohort(
         self,
         ml_recommendations_backend,
@@ -1794,14 +1837,9 @@ class TestSections:
         # top_stories_section should always be present
         assert "top_stories_section" in sections
 
-        if IS_COHORT_FEATURE_DISABLED:
-            assert sections["top_stories_section"]["recommendations"][0][
-                "corpusItemId"
-            ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
-        else:
-            assert sections["top_stories_section"]["recommendations"][0][
-                "corpusItemId"
-            ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+        assert sections["top_stories_section"]["recommendations"][0][
+            "corpusItemId"
+        ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
 
         response = client.post(
             "/api/v1/curated-recommendations",

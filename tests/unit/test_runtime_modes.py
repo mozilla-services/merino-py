@@ -201,6 +201,7 @@ print(
         "/api/v1/wcs/live",
         "/api/v1/wcs/matches",
         "/api/v1/wcs/teams",
+        "/api/v1/wcs/watch-links",
     ]
 
 
@@ -322,8 +323,8 @@ def test_lifespan_starts_and_stops_services_by_mode(
 
     events: list[str] = []
 
-    def record(event: str) -> Callable[[], None]:
-        def _record() -> None:
+    def record(event: str) -> Callable[..., None]:
+        def _record(*args, **kwargs) -> None:
             events.append(event)
 
         return _record

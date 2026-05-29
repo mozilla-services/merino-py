@@ -3,8 +3,9 @@
 import logging
 import typer
 
-from merino.configs.app_configs.config_logging import configure_logging
-from merino.configs.app_configs.config_sentry import configure_sentry
+from merino.configs import settings
+from merino_common.app_configs.config_logging import configure_logging
+from merino_common.app_configs.config_sentry import configure_sentry
 from merino.jobs.amo_rs_uploader import amo_rs_uploader_cmd
 from merino.jobs.csv_rs_uploader import csv_rs_uploader_cmd
 from merino.jobs.geonames_uploader import geonames_uploader_cmd
@@ -60,11 +61,23 @@ cli.add_typer(amp_live_probe_cmd, no_args_is_help=True)
 @cli.callback()
 def setup():
     """CLI Entrypoint"""
-    configure_logging()
     try:
-        configure_sentry()
+        configure_sentry(
+            mode=settings.sentry.mode,
+            dsn=settings.sentry.dsn,
+            env=settings.sentry.env,
+            traces_sample_rate=settings.sentry.traces_sample_rate,
+            default_tags={"server_region": settings.gcp.region},
+        )
     except Exception:
         logging.getLogger(__name__).exception("Error configuring Sentry")
+    configure_logging(
+        log_format=settings.logging.format,
+        level=settings.logging.level,
+        can_propagate=settings.logging.can_propagate,
+        current_env=settings.current_env,
+        logger_name="merino",
+    )
 
 
 if __name__ == "__main__":

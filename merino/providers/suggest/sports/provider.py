@@ -29,9 +29,6 @@ from merino.providers.suggest.sports.backends.sportsdata.backend import (
     SportsDataBackend,
     SportSummary,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common.error import (
-    SportsDataError,
-)
 from merino.utils.metrics import INTENT_WORD_COUNT_METRIC_NAME
 
 
@@ -77,7 +74,7 @@ class SportsDataProvider(BaseProvider):
         try:
             if self.backend:
                 await self.backend.startup()
-        except (Exception, SportsDataError) as ex:
+        except Exception as ex:
             logger.error(f"{LOGGING_TAG} Could not start sports backend: {ex}")
             self.backend = None
 

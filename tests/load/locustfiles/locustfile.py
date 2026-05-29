@@ -13,18 +13,25 @@ import os
 import socket
 import struct
 from collections import defaultdict
+from importlib import resources
 from itertools import chain
 from random import choice, randint, sample
-from typing import Any
+from typing import Any, cast
 
 import faker
 from elasticsearch import ApiError, Elasticsearch, ElasticsearchWarning, TransportError
 from locust import HttpUser, events, task
 from locust.exception import StopUser
 from locust.runners import MasterRunner
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
+from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.protocol import (
+    CuratedRecommendationsRequest,
+    CuratedRecommendationsResponse,
+    Locale,
+)
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.suggest.adm.backends.protocol import SegmentType
 from merino.providers.suggest.adm.backends.remotesettings import (
@@ -37,18 +44,13 @@ from merino.providers.suggest.top_picks.backends.top_picks import (
     TopPicksBackend,
     TopPicksError,
 )
+from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse, TeamsResponse
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
-from merino.utils.version import Version
-from merino.web.models_v1 import SuggestResponse
-from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES
-from merino.curated_recommendations.protocol import (
-    Locale,
-    CuratedRecommendationsRequest,
-    CuratedRecommendationsResponse,
-)
-from merino.utils.icon_processor import IconProcessor
 from merino.utils.http_client import create_http_client
-from merino.configs import settings
+from merino.utils.icon_processor import IconProcessor
+from merino_common.utils.version import Version
+from merino.web.models_v1 import SuggestResponse
+from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES, MOBILE_FIREFOX
 
 # Type definitions
 KintoRecords = list[dict[str, Any]]
@@ -65,6 +67,10 @@ SUGGEST_API: str = "/api/v1/suggest"
 MANIFEST_API: str = "/api/v1/manifest"
 VERSION_API: str = "/__version__"
 CURATED_RECOMMENDATIONS_API = "/api/v1/curated-recommendations"
+WCS_MATCHES_API: str = "/api/v1/wcs/matches"
+WCS_LIVE_API: str = "/api/v1/wcs/live"
+WCS_TEAMS_API: str = "/api/v1/wcs/teams"
+WCS_DEFAULT_HOST: str = os.getenv("LOAD_TESTS__WCS__HOST", "https://merino.services.allizom.org")
 
 # Optional. A comma-separated list of any experiments or rollouts that are
 # affecting the client's Suggest experience
@@ -106,18 +112,115 @@ MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
     "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
 )
 
+
+def _int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        return int(raw_value)
+    except ValueError:
+        logger.warning("Invalid %s=%r; using %d.", name, raw_value, default)
+        return default
+
+
+WCS_DESKTOP_WEIGHT: int = _int_env("LOAD_TESTS__WCS__DESKTOP_WEIGHT", 1)
+WCS_MOBILE_WEIGHT: int = _int_env("LOAD_TESTS__WCS__MOBILE_WEIGHT", 1)
+
+
+def _comma_separated_env(name: str) -> list[str]:
+    raw_value = os.getenv(name)
+    if not raw_value:
+        return []
+    return [value.strip() for value in raw_value.split(",") if value.strip()]
+
+
+def _load_wcs_json(filename: str) -> list[dict[str, Any]]:
+    data_path = resources.files("merino.data").joinpath(filename)
+    with data_path.open() as data_file:
+        records = json.load(data_file)
+    if not isinstance(records, list):
+        raise ValueError(f"{filename} must contain a list")
+    return cast(list[dict[str, Any]], records)
+
+
+def _load_wcs_dates() -> list[str]:
+    override_dates = _comma_separated_env("LOAD_TESTS__WCS__DATES")
+    if override_dates:
+        return override_dates
+
+    try:
+        records = _load_wcs_json("wcs_schedule.json")
+    except (OSError, ValueError) as exc:
+        logger.warning("Could not load local WCS schedule data: %s", exc)
+        return ["2026-06-15"]
+
+    dates = sorted(
+        {str(record["Day"]).split("T", maxsplit=1)[0] for record in records if record.get("Day")}
+    )
+    return dates or ["2026-06-15"]
+
+
+def _load_wcs_team_keys() -> list[str]:
+    override_team_keys = _comma_separated_env("LOAD_TESTS__WCS__TEAM_KEYS")
+    if override_team_keys:
+        return [team_key.upper() for team_key in override_team_keys]
+
+    try:
+        records = _load_wcs_json("wcs_teams.json")
+    except (OSError, ValueError) as exc:
+        logger.warning("Could not load local WCS team data: %s", exc)
+        return ["BRA", "USA", "MEX", "ARG"]
+
+    team_keys = sorted({str(record["Key"]).upper() for record in records if record.get("Key")})
+    return team_keys or ["BRA", "USA", "MEX", "ARG"]
+
+
+def _desktop_headers() -> dict[str, str]:
+    return {
+        "Accept-Language": choice(LOCALES),  # nosec
+        "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
+    }
+
+
+def _wcs_headers() -> dict[str, str]:
+    desktop_weight = max(WCS_DESKTOP_WEIGHT, 0)
+    mobile_weight = max(WCS_MOBILE_WEIGHT, 0)
+    total_weight = desktop_weight + mobile_weight
+    user_agents = DESKTOP_FIREFOX
+    if total_weight > 0 and randint(1, total_weight) > desktop_weight:  # nosec
+        user_agents = MOBILE_FIREFOX
+
+    return {
+        "Accept-Language": choice(LOCALES),  # nosec
+        "User-Agent": choice(user_agents),  # nosec
+    }
+
+
+def _should_download_query_data(environment) -> bool:
+    user_classes = getattr(environment, "user_classes", [])
+    return not user_classes or any(
+        user_class.__name__ == "MerinoUser" for user_class in user_classes
+    )
+
+
 # This will be populated on each worker
 ADM_QUERIES: QueriesList = []
 AMO_QUERIES: list[str] = []
 IP_RANGES: IpRangeList = []
 TOP_PICKS_QUERIES: QueriesList = []
 WIKIPEDIA_QUERIES: list[str] = []
+WCS_DATES: list[str] = _load_wcs_dates()
+WCS_TEAM_KEYS: list[str] = _load_wcs_team_keys()
 
 
 @events.test_start.add_listener
 async def on_locust_test_start(environment, **kwargs) -> None:
     """Download suggestions from Kinto and store suggestions on workers."""
     if not isinstance(environment.runner, MasterRunner):
+        return
+    if not _should_download_query_data(environment):
+        logger.info("Skipping Suggest query data download for WCS-only load test.")
         return
 
     query_data: QueryData = QueryData()
@@ -353,7 +456,31 @@ class QueryData(BaseModel):
     wikipedia: list[str] = []
 
 
-class MerinoUser(HttpUser):
+class _MerinoBaseUser(HttpUser):
+    """Shared behavior for Merino Locust users."""
+
+    abstract = True
+
+    def _request_version(self, headers: dict[str, str] | None = None) -> Version | None:
+        """Request version information from Merino.
+
+        Returns:
+            Version | None: Merino version information or None
+        Raises:
+            ValidationError: Response data is not as expected.
+        """
+        with self.client.get(
+            url=VERSION_API,
+            headers=headers or _desktop_headers(),
+            catch_response=True,
+        ) as response:
+            if response.status_code != 200:
+                response.failure(f"{response.status_code=}, expected 200, {response.text=}")
+                return None
+            return Version(**response.json())
+
+
+class MerinoUser(_MerinoBaseUser):
     """User that sends requests to the Merino API."""
 
     def on_start(self) -> Any:
@@ -615,20 +742,96 @@ class MerinoUser(HttpUser):
             # fields which will be reported as a failure in Locust's statistics.
             SuggestResponse(**response.json())
 
-    def _request_version(self) -> Version | None:
-        """Request version information from Merino.
 
-        Returns:
-            Version | None: Merino version information or None
-        Raises:
-            ValidationError: Response data is not as expected.
+class WcsUser(_MerinoBaseUser):
+    """User that sends requests to the Merino WCS API."""
+
+    host = WCS_DEFAULT_HOST
+
+    def on_start(self) -> Any:
+        """Instructions to execute for each simulated WCS user when they start."""
+        version: Version | None = self._request_version(headers=_wcs_headers())
+        if not version:
+            logger.error(
+                "The Merino version information was unavailable. Verify that "
+                "the Merino 'Host' is reachable."
+            )
+            raise StopUser()
+        logger.debug(f"WCS user will execute queries against Merino: {version.commit}")
+        logger.debug(
+            "WCS user will send queries based on %d dates and %d team keys.",
+            len(WCS_DATES),
+            len(WCS_TEAM_KEYS),
+        )
+
+        return super().on_start()
+
+    @task(weight=80)
+    def wcs_matches(self) -> None:
+        """Send a request for WCS matches."""
+        params: dict[str, Any] = {"date": choice(WCS_DATES)}  # nosec
+        if randint(1, 100) <= 15:  # nosec
+            params["teams"] = self._sample_wcs_team_keys()
+        if randint(1, 100) <= 10:  # nosec
+            params["limit"] = randint(1, 5)  # nosec
+
+        self._request_wcs(WCS_MATCHES_API, MatchesResponse, params=params)
+
+    @task(weight=15)
+    def wcs_live(self) -> None:
+        """Send a request for live WCS matches."""
+        params: dict[str, Any] | None = None
+        if randint(1, 100) <= 20:  # nosec
+            params = {"teams": self._sample_wcs_team_keys()}
+
+        self._request_wcs(WCS_LIVE_API, LiveMatchesResponse, params=params)
+
+    @task(weight=5)
+    def wcs_teams(self) -> None:
+        """Send a request for WCS team metadata."""
+        self._request_wcs(WCS_TEAMS_API, TeamsResponse)
+
+    @staticmethod
+    def _sample_wcs_team_keys() -> str:
+        sample_size = min(randint(1, 2), len(WCS_TEAM_KEYS))  # nosec
+        return ",".join(sample(WCS_TEAM_KEYS, sample_size))
+
+    def _request_wcs(
+        self,
+        url: str,
+        response_model: type[BaseModel],
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        """Request WCS data from Merino and validate the response shape.
+
+        Args:
+            url: WCS endpoint path.
+            response_model: Pydantic model used to validate the response content.
+            params: Optional query parameters.
         """
-        headers: dict[str, str] = {
-            "Accept-Language": choice(LOCALES),  # nosec
-            "User-Agent": choice(DESKTOP_FIREFOX),  # nosec
-        }
-        with self.client.get(url=VERSION_API, headers=headers, catch_response=True) as response:
+        with self.client.get(
+            url=url,
+            params=params,
+            headers=_wcs_headers(),
+            catch_response=True,
+            name=url,
+        ) as response:
+            if response.status_code == 0:
+                # Do not classify as failure.
+                #
+                # 0: The HttpSession catches any requests.RequestException thrown by
+                #    Session (caused by connection errors, timeouts or similar), instead
+                #    returning a dummy Response object with status_code set to 0 and
+                #    content set to None.
+                logger.warning("Received a response with a status code of 0.")
+                response.success()
+                return
+
             if response.status_code != 200:
                 response.failure(f"{response.status_code=}, expected 200, {response.text=}")
-                return None
-            return Version(**response.json())
+                return
+
+            try:
+                response_model(**response.json())
+            except (TypeError, ValueError, ValidationError) as exc:
+                response.failure(f"Response validation failed for {url}: {exc}")

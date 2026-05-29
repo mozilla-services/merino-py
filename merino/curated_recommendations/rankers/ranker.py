@@ -49,6 +49,7 @@ class Ranker:
         rec: CuratedRecommendation,
         rescaler: EngagementRescaler | None = None,
         region: str | None = None,
+        blend_region_with_global=True,
     ) -> tuple[float, float, float, float, float]:
         """Compute opens, no_opens, a_prior, b_prior, non_rescaled_b_prior for a recommendation."""
         opens, no_opens = self.get_opens_no_opens(rec)
@@ -61,14 +62,11 @@ class Ranker:
 
         if region_no_opens and region_prior:
             # Weighted average of regional and global engagement
-            opens = region_opens * self.region_weight + opens * (1 - self.region_weight)
-            no_opens = region_no_opens * self.region_weight + no_opens * (1 - self.region_weight)
-            a_prior = (self.region_weight * region_prior.alpha) + (
-                (1 - self.region_weight) * a_prior
-            )
-            b_prior = (self.region_weight * region_prior.beta) + (
-                (1 - self.region_weight) * b_prior
-            )
+            region_weight = self.region_weight if blend_region_with_global else 1.0
+            opens = region_opens * region_weight + opens * (1 - region_weight)
+            no_opens = region_no_opens * region_weight + no_opens * (1 - region_weight)
+            a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
+            b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
 
         if rescaler is not None:
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)

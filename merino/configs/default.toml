@@ -235,6 +235,13 @@ countries = ["US"]
 # Form factors to fetch suggestions for from the MARS API.
 form_factors = ["desktop"]
 
+# GCP metadata
+[default.gcp]
+# MERINO_GCP__REGION
+# Used for things like tagging deployment region in Sentry
+# Should be overridden via env var in release environments
+region = "unset"
+
 # Global Redis settings. The weather provider optionally uses Redis to cache weather suggestions.
 [default.redis]
 # MERINO_REDIS__SERVER - URI to the Redis primary endpoint.
@@ -338,11 +345,6 @@ gcs_bucket = ""
 # CDN hostname used for public URL
 cdn_hostname = ""
 
-# MERINO_GAMES_PARTICLE_GCS__ENABLED
-# Whether to enable fetching from GCS.
-# Set to `true` in production and `false` in staging or development.
-gcs_enabled = true
-
 [default.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = ""
@@ -399,6 +401,11 @@ providers = ["sports", "polygon"]
 # MERINO_QUERY_NORMALIZATION__GCS_BUCKET
 # GCS bucket for remote data files (used when data_source = "remote").
 gcs_bucket = ""
+
+# Sections under `[*.providers.<name>]` are loaded by the suggest provider
+# manager only when they expose a `type` field. Sibling subsystem configs can
+# share this namespace without `type` and initialize themselves elsewhere, as
+# `[*.providers.wcs]` does for the World Cup widget API.
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
@@ -507,6 +514,14 @@ api_key=""
 # Directory to store JSON request responses
 cache_dir="/tmp"
 
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__RETRY_MAX_TRIES
+# Total provider fetch attempts, including the first request
+retry_max_tries=5
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__RETRY_FACTOR_SEC
+# Initial exponential backoff delay in seconds
+retry_factor_sec=0.5
+
 # SportsData may have different base_urls per sport (e.g.
 # NFL may use `https://api.sportsdata.io/v3/nfl/scores/json` where
 # UCL may use `https://api.sportsdata.io/v4/soccer/scores/json`
@@ -516,6 +531,23 @@ cache_dir="/tmp"
 # base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
 # base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
 
+[default.providers.wcs]
+# MERINO_PROVIDERS__WCS__LIVE_DATA_ENABLED
+# Keep the /wcs/live mock response by default. DISCO-4231 can flip this to
+# serve Redis-backed in-progress matches after launch approval.
+live_data_enabled = false
+# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+circuit_breaker_failure_threshold = 10
+# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+# MERINO_PROVIDERS__WCS__WATCH_LINKS_CACHE_CONTROL_TTL
+# TTL value for the cache-control header set on the /wcs/watch-links endpoint response.
+watch_links_cache_control_ttl = 3600 # 1 hour
+# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_RETRY_AFTER_SEC
+# Value for the `Retry-After` header on 503 responses when the breaker is open.
+circuit_breaker_retry_after_sec = 90
 
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC
@@ -1141,7 +1173,7 @@ feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=pot
 type = "particle"
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED
-# Whether or not this provider is enabled.
+# Whether or not the provider's cron runs to regularly update game files.
 enabled = false
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_TTL
