@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from sentry_sdk._types import MonitorConfig
 
 from aiodogstatsd import Client
+from opentelemetry import metrics
 
 from merino.configs import settings
 from merino.cache.redis import RedisAdapter, create_redis_clients
@@ -157,7 +158,6 @@ class SportDataUpdater:
         self.client = create_http_client(
             connect_timeout=self.connect_timeout, request_timeout=self.read_timeout
         )
-
         logger.debug(f"{LOGGING_TAG}: Starting up...")
 
     async def update_data(
