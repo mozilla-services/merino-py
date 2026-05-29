@@ -79,7 +79,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "code",
-          "expr": "time() - merino_sportsdata_endpoint_last_synced_at_seconds",
+          "expr": "time() - merino_sports_sportsdata_endpoint_last_synced_at_seconds",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,

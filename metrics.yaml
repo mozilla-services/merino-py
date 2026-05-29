@@ -629,7 +629,7 @@ weather/hourly_forecasts:
       The "api/v1/weather" API endpoint.
     alert_policy: []
 
-  sportsdata_endpoint_last_synced_at_seconds:
+  sports_sportsdata_endpoint_last_synced_at_seconds:
     description: |
       A gauge for the timestamp when sportsdata was last synced; used for
       staleness meter.
