@@ -457,9 +457,10 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
         ("MLB", SportCategory.Baseball),
         ("WCS", SportCategory.Soccer),
         ("WORLD CUP", SportCategory.Soccer),
+        ("FIFA", SportCategory.Soccer),
         ("Warhammer40k", SportCategory.Misc),
     ],
-    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "WCS", "WORLD CUP", "miscellaneous"],
+    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "WCS", "WORLD CUP", "FIFA", "miscellaneous"],
 )
 def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
     """Test sport name mapping and fallback behavior"""
@@ -494,6 +495,7 @@ def test_sport_event_detail_remap() -> None:  # WCS, Widget
     result = SportEventDetail.from_event_dict(event)
     assert result.sport == "World Cup"
     assert result.query == "Home Team vs Away Team World Cup 2026"
+    assert result.sport_category == SportCategory.Soccer
 
 
 @pytest.mark.parametrize(
