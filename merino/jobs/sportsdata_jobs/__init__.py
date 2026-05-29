@@ -34,18 +34,12 @@ from sentry_sdk.crons import monitor
 if TYPE_CHECKING:
     from sentry_sdk._types import MonitorConfig
 
-from aiodogstatsd import Client
-from opentelemetry import metrics
-
 from merino.configs import settings
 from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.cache.none import NoCacheAdapter
 
 from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
-from merino.providers.suggest.sports.backends.sportsdata.common.error import (
-    SportsDataError,
-)
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     ElasticCredentials,
