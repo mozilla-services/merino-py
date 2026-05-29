@@ -96,9 +96,10 @@ Validators for the configuration options are stored in the `./merino/configs/__i
 
 The docker-compose file bootstraps all the services needed to collect, export, and view traces and metrics sent by opentelemetry.
 
-In deployed kubernetes environment, the opentelemetry operator enables auto-instrumentation of annotated python services. In addition, custom metrics
+In deployed kubernetes environment, the opentelemetry operator enables auto-instrumentation of annotated python services. In addition, custom metrics are enabled for some areas of the application. These are ingested into grafana similar to
+the existing statsd metrics (but don't require running a sidecar).
 
-If otel is not configured, then any traces/metrics will be no-ops and will have no effect on the
+If otel is not configured, then any traces/metrics will be no-ops and will have no effect on the running application.
 
 Locally we use environment variables and `opentelemetry-instrument` to mimic the kubernetes operator. To run the Merino application with opentelemetry enabled:
 
