@@ -12,6 +12,7 @@ class PIIType(StrEnum):
 
     EMAIL = "email"
     NUMERIC = "numeric"
+    PERSON = "person"
     NON_PII = "non-pii"
 
 

@@ -39,15 +39,26 @@ from merino.middleware import ScopeKey
 from merino.middleware.user_agent import UserAgent
 from merino.providers.rss import get_wikimedia_potd_provider
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
-from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
+from merino.providers.rss.wikimedia_potd.provider import (
+    WikimediaPictureOfTheDayProvider,
+)
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
 from merino.providers.manifest import get_provider as get_manifest_provider
-from merino.providers.suggest.base import BaseProvider, BaseSuggestion, SuggestionRequest
+from merino.providers.suggest.base import (
+    BaseProvider,
+    BaseSuggestion,
+    SuggestionRequest,
+)
 
 from merino.providers.manifest.backends.protocol import ManifestData
-from merino.providers.suggest.weather.backends.accuweather.errors import AccuweatherError
-from merino.providers.suggest.weather.backends.protocol import HourlyForecast, WeatherContext
+from merino.providers.suggest.weather.backends.accuweather.errors import (
+    AccuweatherError,
+)
+from merino.providers.suggest.weather.backends.protocol import (
+    HourlyForecast,
+    WeatherContext,
+)
 from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
 from merino.utils import task_runner
 
@@ -58,6 +69,8 @@ from merino.utils.api.metrics import (
     emit_normalization_metrics,
     emit_suggestions_per_metrics,
 )
+from merino.utils.featureflags import FeatureFlags
+from merino.utils.query_processing.fleece_client import get_fleece_client
 from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
@@ -250,6 +263,19 @@ async def suggest(
             is_soft_pii = True
         case _:
             pass
+
+    # optionally run PII detection via merino-fleece, behind the `fleece-pii-detection` flag.
+    fleece_client = get_fleece_client()
+    if (
+        fleece_client is not None
+        and FeatureFlags().is_enabled("fleece-pii-detection")
+        and await fleece_client.detect_pii_safe(q, metrics_client)
+    ):
+        request.scope[ScopeKey.PII_DETECTION] = PIIType.PERSON
+        metrics_client.increment(
+            "suggestions.query.pii_detected", tags={"type": PIIType.PERSON.name.lower()}
+        )
+        return build_suggestion_response(client_variants, search_from, [])
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)

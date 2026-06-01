@@ -20,6 +20,10 @@ format = "pretty"
 [development.accuweather]
 api_key = "test"
 
+[development.fleece]
+# Point at a merino-fleece instance running locally (see merino-fleece/README.md).
+url_base = "http://localhost:8000"
+
 [development.jobs.wikipedia_indexer]
 # GCS path. Combined bucket and object prefix (folders).
 gcs_path = "merino-jobs-dev/wikipedia-exports"
