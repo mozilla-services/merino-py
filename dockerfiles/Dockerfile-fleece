@@ -19,10 +19,12 @@ RUN groupadd --gid 10001 app \
 # Copy local code to the container image
 COPY . $APP_HOME
 
-# Install app dependencies. Clean up build tools after
+# Install app dependencies. Clean up build tools after.
+# `en_core_web_lg` is also installed by default.
 RUN apt-get update && \
     apt-get install --yes build-essential && \
     uv sync --frozen --no-cache --no-dev --package merino-common --package merino-fleece && \
+    uv pip install "en_core_web_lg @ https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" && \
     apt-get remove --yes build-essential && \
     apt-get -q --yes autoremove && \
     apt-get clean && \
