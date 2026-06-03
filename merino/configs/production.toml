@@ -153,3 +153,8 @@ gcp_project = "moz-fx-merino-prod-5de4"
 
 # GCS bucket that contains the LinTS-interest safetensors bundle.
 bucket_name = "merino-ml-data-prod"
+
+# tz_feature.enabled stays false from default.toml until stage soak is healthy.
+[production.tz_feature.gcs]
+gcp_project = "moz-fx-merino-prod-5de4"
+bucket_name = "merino-ml-data-prod"

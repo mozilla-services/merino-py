@@ -35,6 +35,9 @@ from merino.curated_recommendations.protocol import (
     RankingData,
     Section,
 )
+from merino.curated_recommendations.ml_backends.static_local_model import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+)
 from merino.curated_recommendations.rankers.interest_ranker import InterestRanker
 from tests.unit.curated_recommendations.fixtures import generate_recommendations
 
@@ -126,16 +129,52 @@ class FakeLinTSBackend:
         )
 
 
+class FakeTZFeatureBackend:
+    """Hand-rolled stand-in for ``TZFeatureBackend`` with controllable lookups."""
+
+    def __init__(
+        self,
+        valid: bool = True,
+        ratios: dict[tuple[str, int], float] | None = None,
+        raise_on_get: bool = False,
+    ) -> None:
+        self._valid = valid
+        # (corpus_item_id, tz_index) -> ratio
+        self._ratios = ratios or {}
+        self._raise = raise_on_get
+        self.lookup_calls: list[tuple[str, int]] = []
+
+    def is_valid(self, surface_id: SurfaceId) -> bool:
+        """Return whichever flag the test set."""
+        return self._valid
+
+    def get_ratio(
+        self,
+        surface_id: SurfaceId,
+        corpus_item_id: str,
+        tz_index: int,
+    ) -> float | None:
+        """Return the test's preconfigured ratio (or raise if asked)."""
+        if self._raise:
+            raise RuntimeError("simulated lookup failure")
+        self.lookup_calls.append((corpus_item_id, tz_index))
+        return self._ratios.get((corpus_item_id, tz_index))
+
+
 def _make_ranker(
     backend: FakeLinTSBackend,
     engagement_metrics: dict[str, tuple[int, int]] | None = None,
+    tz_backend: FakeTZFeatureBackend | None = None,
+    tz_alpha: float = 0.0,
 ) -> InterestRanker:
-    """Build an InterestRanker with stubbed engagement / prior backends."""
+    """Build an InterestRanker with stubbed engagement / prior / TZ backends."""
     return InterestRanker(
         engagement_backend=StubEngagementBackend(engagement_metrics or {}),
         prior_backend=StubPriorBackend(),
         surface_id=SurfaceId.NEW_TAB_EN_US,
         lints_backend=backend,  # type: ignore[arg-type]
+        tz_feature_backend=tz_backend,  # type: ignore[arg-type]
+        tz_alpha=tz_alpha,
     )
 
 
@@ -365,3 +404,152 @@ def test_rank_sections_sections_with_no_scored_recs_get_zero() -> None:
     }
     ordered = ranker.rank_sections(sections, top_n=2)
     assert list(ordered.keys()) == ["scored", "empty"]
+
+
+# -----------------------------------------------------------------------------
+# TZ-feature adjustment — strict superset of the LinTS-only path.
+# -----------------------------------------------------------------------------
+def _personal_with_tz(tz_index: int) -> ProcessedInterests:
+    return ProcessedInterests(
+        scores={"sports": 0.5, TIME_ZONE_OFFSET_INFERRED_KEY: float(tz_index)},
+        normalized_scores={},
+        cohort=None,
+    )
+
+
+def test_tz_adjustment_off_when_alpha_zero() -> None:
+    """tz_alpha=0 yields scores identical to the LinTS-only path."""
+    recs = generate_recommendations(item_ids=["A", "B"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(known_items={"A", "B"}, item_scores={"A": 0.40, "B": 0.20})
+    # TZ backend with a strong ratio would normally bump B above A —
+    # but alpha=0 must prevent that.
+    tz = FakeTZFeatureBackend(ratios={("A", 0): 0.5, ("B", 0): 2.0})
+    ranker = _make_ranker(lints, tz_backend=tz, tz_alpha=0.0)
+
+    ranked = ranker.rank_items(recs, personal_interests=_personal_with_tz(tz_index=0))
+    # Ordering follows raw LinTS scores.
+    assert [r.corpusItemId for r in ranked] == ["A", "B"]
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    assert score_by_id["A"] == pytest.approx(0.40, rel=1e-6)
+    assert score_by_id["B"] == pytest.approx(0.20, rel=1e-6)
+
+
+def test_tz_adjustment_applied_for_non_baseline_user() -> None:
+    """With alpha>0 and a PT user, scores are nudged by alpha*log(ratio)."""
+    import math
+
+    recs = generate_recommendations(item_ids=["A", "B"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(known_items={"A", "B"}, item_scores={"A": 0.40, "B": 0.20})
+    # ratio_A < 1 (penalty), ratio_B > 1 (boost) — enough to flip the order
+    # at alpha=0.5 (deliberately exaggerated; real alpha is 0.05).
+    tz = FakeTZFeatureBackend(ratios={("A", 0): 0.5, ("B", 0): 2.0})
+    ranker = _make_ranker(lints, tz_backend=tz, tz_alpha=0.5)
+
+    ranked = ranker.rank_items(recs, personal_interests=_personal_with_tz(tz_index=0))
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    assert score_by_id["A"] == pytest.approx(0.40 + 0.5 * math.log(0.5), rel=1e-6)
+    assert score_by_id["B"] == pytest.approx(0.20 + 0.5 * math.log(2.0), rel=1e-6)
+    # Boost on B was large enough that it overtook A.
+    assert [r.corpusItemId for r in ranked] == ["B", "A"]
+
+
+def test_tz_adjustment_skipped_when_backend_invalid() -> None:
+    """An invalid TZ backend (no fresh artifact) is treated as no-op."""
+    recs = generate_recommendations(item_ids=["A"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(known_items={"A"}, item_scores={"A": 0.40})
+    tz = FakeTZFeatureBackend(valid=False, ratios={("A", 0): 0.1})
+    ranker = _make_ranker(lints, tz_backend=tz, tz_alpha=0.5)
+
+    ranked = ranker.rank_items(recs, personal_interests=_personal_with_tz(tz_index=0))
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    assert score_by_id["A"] == pytest.approx(0.40, rel=1e-6)
+    # is_valid short-circuited the per-item lookup, so the backend was never
+    # asked.
+    assert tz.lookup_calls == []
+
+
+def test_tz_adjustment_skipped_for_baseline_user() -> None:
+    """Baseline TZ (ratio == 1.0) collapses the adjustment to 0."""
+    recs = generate_recommendations(item_ids=["A"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(known_items={"A"}, item_scores={"A": 0.40})
+    # The backend, when consulted, would return 1.0 for the baseline TZ.
+    tz = FakeTZFeatureBackend(ratios={("A", 3): 1.0})
+    ranker = _make_ranker(lints, tz_backend=tz, tz_alpha=0.5)
+
+    # tz_index=3 is the ET baseline in US (default tz_labels ordering).
+    ranked = ranker.rank_items(recs, personal_interests=_personal_with_tz(tz_index=3))
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    # log(1.0) == 0, no change to score.
+    assert score_by_id["A"] == pytest.approx(0.40, rel=1e-6)
+
+
+def test_tz_adjustment_skipped_when_no_tz_key() -> None:
+    """Missing timeZoneOffset in personal_interests → no adjustment."""
+    recs = generate_recommendations(item_ids=["A"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(known_items={"A"}, item_scores={"A": 0.40})
+    tz = FakeTZFeatureBackend(ratios={("A", 0): 0.1})
+    ranker = _make_ranker(lints, tz_backend=tz, tz_alpha=0.5)
+    personal = ProcessedInterests(scores={"sports": 0.5}, normalized_scores={}, cohort=None)
+
+    ranked = ranker.rank_items(recs, personal_interests=personal)
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    assert score_by_id["A"] == pytest.approx(0.40, rel=1e-6)
+    assert tz.lookup_calls == []
+
+
+def test_tz_adjustment_missing_item_skips_quietly() -> None:
+    """If the TZ backend returns None for an item, the score is unchanged."""
+    recs = generate_recommendations(item_ids=["A", "B"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(known_items={"A", "B"}, item_scores={"A": 0.40, "B": 0.20})
+    # A is known; B is not.
+    tz = FakeTZFeatureBackend(ratios={("A", 0): 2.0})
+    ranker = _make_ranker(lints, tz_backend=tz, tz_alpha=0.5)
+    import math
+
+    ranked = ranker.rank_items(recs, personal_interests=_personal_with_tz(tz_index=0))
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    assert score_by_id["A"] == pytest.approx(0.40 + 0.5 * math.log(2.0), rel=1e-6)
+    # B got no adjustment (lookup returned None).
+    assert score_by_id["B"] == pytest.approx(0.20, rel=1e-6)
+
+
+def test_tz_adjustment_exception_disables_remaining_batch(caplog) -> None:
+    """A raising backend mid-loop disables the adjustment for the rest of the batch.
+
+    The ranker should not crash, and the remaining items should still get
+    their LinTS-only scores.
+    """
+    recs = generate_recommendations(item_ids=["A", "B", "C"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(
+        known_items={"A", "B", "C"},
+        item_scores={"A": 0.40, "B": 0.20, "C": 0.10},
+    )
+    tz = FakeTZFeatureBackend(raise_on_get=True)
+    ranker = _make_ranker(lints, tz_backend=tz, tz_alpha=0.5)
+
+    ranked = ranker.rank_items(recs, personal_interests=_personal_with_tz(tz_index=0))
+    # All three items still got ranked; their scores equal the raw LinTS draws.
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    assert score_by_id == pytest.approx({"A": 0.40, "B": 0.20, "C": 0.10}, rel=1e-6)
+    assert any("tz_feature.get_ratio raised" in r.message for r in caplog.records)
+
+
+def test_no_tz_backend_argument_preserves_legacy_behavior() -> None:
+    """Omitting the tz_feature_backend constructor arg falls back to an empty stub.
+
+    This protects any existing callsite that was constructing InterestRanker
+    without a TZ backend — they get the historical LinTS-only behavior
+    automatically.
+    """
+    recs = generate_recommendations(item_ids=["A"], time_sensitive_count=0)
+    lints = FakeLinTSBackend(known_items={"A"}, item_scores={"A": 0.40})
+    ranker = InterestRanker(
+        engagement_backend=StubEngagementBackend({}),
+        prior_backend=StubPriorBackend(),
+        surface_id=SurfaceId.NEW_TAB_EN_US,
+        lints_backend=lints,  # type: ignore[arg-type]
+        # No tz_feature_backend, no tz_alpha.
+    )
+    ranked = ranker.rank_items(recs, personal_interests=_personal_with_tz(tz_index=0))
+    score_by_id = {r.corpusItemId: r.ranking_data.score for r in ranked if r.ranking_data}
+    assert score_by_id["A"] == pytest.approx(0.40, rel=1e-6)
