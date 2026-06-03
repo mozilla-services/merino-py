@@ -12,11 +12,11 @@ from typing import Any
 from merino.providers.games.particle.backends.filemanager import ParticleFileManagerError
 from merino.providers.games.particle.backends.protocol import Particle, ParticleBackend
 from merino.providers.games.particle.backends.utils import (
-    update_puzzle_files,
-    update_runtime_files,
+    update_channel_files,
     validate_manifest_against_schema,
     validate_manifest_schema_version,
     ParticleManifestValidationError,
+    RemoteChannelEnum,
 )
 from merino.utils import cron
 
@@ -131,11 +131,16 @@ class Provider:
             return False
 
         # conditionally attempt to update file sets - daily puzzle and runtime
-        puzzle_updated = await update_puzzle_files(
-            manifest_remote=remote_manifest_json, manifest_gcs=gcs_manifest_json
+        puzzle_updated = await update_channel_files(
+            manifest_remote=remote_manifest_json,
+            manifest_gcs=gcs_manifest_json,
+            channel=RemoteChannelEnum.PUZZLE,
         )
-        runtime_updated = await update_runtime_files(
-            manifest_remote=remote_manifest_json, manifest_gcs=gcs_manifest_json
+
+        runtime_updated = await update_channel_files(
+            manifest_remote=remote_manifest_json,
+            manifest_gcs=gcs_manifest_json,
+            channel=RemoteChannelEnum.RUNTIME,
         )
 
         # if either set of files (daily puzzle or runtime) were updated, we can
