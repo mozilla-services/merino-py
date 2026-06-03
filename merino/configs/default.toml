@@ -1351,15 +1351,17 @@ max_size = 8_000_000
 # updated bundle. ml-services publishes every 10 min.
 cron_interval_seconds = 600
 
-
 [default.spindle.api]
-# MERINO_SPINDLE__BASE_URL
+# MERINO__SPINDLE__API__BASE_URL
 # The base URL of the spindle service.
-base_url = "http://localhost:8001"
+base_url = ""
 
-# MERINO_SPINDLE__MAX_WAIT_TIME_SECONDS
+# MERINO__SPINDLE__API__MAX_WAIT_TIME_SECONDS
 # Wait time when calling the api
-api_wait_seconds = 10
+max_wait_time_seconds = 60
+
+# MERINO__SPINDLE__API__API_KEY
+api_key=""
 
 
 [default.curated_recommendations.corpus_api]

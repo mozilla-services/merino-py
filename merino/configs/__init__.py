@@ -113,6 +113,21 @@ _validators = [
         must_exist=True,
         env=["production", "staging", "development"],
     ),
+    Validator(
+        "spindle.api.base_url",
+        "spindle.api.api_key",
+        is_type_of=str,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
+    Validator(
+        "spindle.api.max_wait_time_seconds",
+        is_type_of=int,
+        gt=0,
+        lte=600,
+        must_exist=True,
+        env=["production", "staging", "development"],
+    ),
     Validator("providers.accuweather.enabled_by_default", is_type_of=bool),
     # The Redis server URL is required when at least one provider wants to use Redis for caching.
     Validator(

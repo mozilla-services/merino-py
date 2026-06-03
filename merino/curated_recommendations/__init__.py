@@ -237,8 +237,9 @@ def init_spindle_backend() -> SpindleBackendProtocol:
     try:
         return SpindleBackend(
             base_url=settings.spindle.api.base_url,
-            request_timeout=settings.spindle.api.api_wait_seconds,
+            request_timeout=settings.spindle.api.max_wait_time_seconds,
             metrics_client=get_metrics_client(),
+            api_key=settings.spindle.api.api_key,
         )
     except Exception as e:
         logger.error(f"Failed to initialize Spindle backend: {e}")

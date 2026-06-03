@@ -629,7 +629,6 @@ weather/hourly_forecasts:
       The "api/v1/weather" API endpoint.
     alert_policy: []
 
-<<<<<<< HEAD
 curated_recommendations/spindle:
   recommendation.spindle.text.timing:
     description: |

@@ -278,10 +278,7 @@ class SpindleBackendProtocol(Protocol):
     """Protocol for connecting to the Content-ML Spindle service."""
 
     async def refresh_duplicate_item_info(
-        self,
-        items: list[CorpusItem],
-        surface: SurfaceId,
-        threshold: float = 0.85,
+        self, items: list[CorpusItem], surface: SurfaceId, threshold: float = 0.7
     ) -> None:
         """Make a best effort to find duplicate stories based on embeddings and store in backend."""
         ...

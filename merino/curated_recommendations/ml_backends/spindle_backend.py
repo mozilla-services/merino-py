@@ -125,6 +125,7 @@ class SpindleBackend(SpindleBackendProtocol):
         request_timeout: float,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient | None = None,
+        api_key: str | None = None,
     ) -> None:
         """Build the backend; an existing `http_client` may be injected for tests."""
         self.base_url = base_url
@@ -136,6 +137,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
+        self._api_key = api_key
 
     def _language_for_surface(self, surface: SurfaceId) -> str | None:
         return LANGUAGE_FOR_SURFACE.get(surface)
@@ -150,7 +152,7 @@ class SpindleBackend(SpindleBackendProtocol):
         self,
         items: list[CorpusItem],
         surface: SurfaceId,
-        threshold: float = 0.85,
+        threshold: float = 0.7,
     ) -> None:
         """Refresh both text and image similarity caches for `surface`.
 
@@ -159,9 +161,11 @@ class SpindleBackend(SpindleBackendProtocol):
         """
         if not self._is_surface_supported(surface) or not items:
             return
+        deduped_items = list({item.corpusItemId: item for item in items}.values())
+        await self._refresh_text(deduped_items, surface, threshold)
 
-        await self._refresh_text(items, surface, threshold)
-        await self._refresh_image(items, surface, threshold)
+        # Refresh images will be rolled out as soon as GPU inference is verified
+        # await self._refresh_image(deduped_items, surface, threshold)
 
     async def _refresh_text(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
@@ -228,7 +232,9 @@ class SpindleBackend(SpindleBackendProtocol):
         metric_base = f"{METRIC_NAMESPACE}.{metric_subname}"
         try:
             with self.metrics_client.timeit(f"{metric_base}.timing"):
-                res = await self.http_client.post(path, json=json_body)
+                res = await self.http_client.post(
+                    path, json=json_body, headers={"X-Spindle-Auth": self._api_key or ""}
+                )
             self.metrics_client.increment(f"{metric_base}.status_codes.{res.status_code}")
             res.raise_for_status()
             return FindSimilarResponse.model_validate(res.json())

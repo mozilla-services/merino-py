@@ -141,9 +141,10 @@ class ArticleBalancer:
             if self.similar_stories_info is not None:
                 # Mark the accepted item's near-duplicates so later passes skip them.
                 # The item itself doesn't need adding because the corpus doesn't duplicate ids.
-                self.do_not_add_similarity_set.update(
-                    self.similar_stories_info.neighbors(rec.corpusItemId)
-                )
+                if random.random() < self.config.similarity_store_neighbors_likelyhood:
+                    self.do_not_add_similarity_set.update(
+                        self.similar_stories_info.neighbors(rec.corpusItemId)
+                    )
             return True
         return False
 
