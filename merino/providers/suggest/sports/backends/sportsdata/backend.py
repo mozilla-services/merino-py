@@ -65,7 +65,7 @@ class SportsDataBackend(SportsDataProtocol):
                 q=query_string,
                 language_code=language_code,
                 mix_sports=self.mix_sports,
-                filter=self.settings.sports,
+                filter=self.settings.get("sports"),
             )
             suggestions: list[SportSummary] = []
             for sport, events in events.items():
