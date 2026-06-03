@@ -28,7 +28,7 @@ from merino.providers.wcs.protocol import (
 from merino.providers.wcs.utils import resolve_other_regions, resolve_watch_links
 from merino.utils.metrics import get_metrics_client
 
-_WINDOW = timedelta(days=10)
+_WINDOW = timedelta(days=21)
 _LIVE_MATCH_LOOKBACK = timedelta(hours=6)
 _LIVE_MATCH_LOOKAHEAD = timedelta(hours=2)
 _CACHE_ERROR_METRIC = "wcs.cache_error"

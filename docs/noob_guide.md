@@ -92,7 +92,37 @@ Configurations for the `jobs` and `suggest` processes are stored under `./merino
 
 Validators for the configuration options are stored in the `./merino/configs/__init__.py` file
 
-<a name="jobs">
+## Running with local otel collector
+
+The docker-compose file bootstraps all the services needed to collect, export, and view traces and metrics sent by opentelemetry.
+
+In deployed kubernetes environment, the opentelemetry operator enables auto-instrumentation of annotated python services. In addition, custom metrics are enabled for some areas of the application. These are ingested into grafana similar to
+the existing statsd metrics (but don't require running a sidecar).
+
+If otel is not configured, then any traces/metrics will be no-ops and will have no effect on the running application.
+
+Locally we use environment variables and `opentelemetry-instrument` to mimic the kubernetes operator. To run the Merino application with opentelemetry enabled:
+
+```sh
+make dev-otel
+```
+
+To run any [job](#jobs) with telemetry enabled, you must include the required variables and invoke `opentelemetry-instrument`, e.g.:
+
+```sh
+OTEL_SERVICE_NAME=merino\
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
+uv run opentelemetry-instrument merino-jobs \
+# replace below with whichever job you want to run
+fetch_sports update-and-cache-wcs
+```
+
+### Viewing traces and metrics
+
+Grafana is included in Merino's docker-compose services and is accessible at localhost:3000 by default. Use the Explore pane and Prometheus data source to explore metrics, and the Tempo data source to explore traces.
+
+A basic dashboard is included. Dadshboards can be added or edited by updating the json files in `./dev/local_setup/otel/grafana/provisioning/dashboards-json`.
 
 ## Jobs
 

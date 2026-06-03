@@ -105,9 +105,9 @@ class SportEventDetail(BaseModel):
         sport_map = {"fifa": "World Cup"}
         home_team_key = event.get("home_team", {}).get("key")
         away_team_key = event.get("away_team", {}).get("key")
-        sport = sport_map.get(event["sport"].lower(), event["sport"])
+        sport = cast(str, sport_map.get(event["sport"].lower(), event["sport"]))
         return cls(
-            sport=cast(str, sport),
+            sport=sport,
             query=build_query(event),
             # The following essentially converts `Z$` to `+00:00`, which
             # keeps the output consistent with prior versions
@@ -129,7 +129,7 @@ class SportEventDetail(BaseModel):
             status=status.as_str(),
             status_type=str(status.as_ui_status()),
             touched=event.get("touched", "None"),
-            sport_category=SPORT_CATEGORY_MAP.get(event["sport"].upper(), SportCategory.Misc),
+            sport_category=SPORT_CATEGORY_MAP.get(sport.upper(), SportCategory.Misc),
         )
 
 

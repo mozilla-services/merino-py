@@ -2243,6 +2243,105 @@ async def test_wcs_load_rounds(mock_client: AsyncClient, mocker: MockerFixture) 
     )
 
 
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_load_areas_records_last_synced_at(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """load_areas sets the last_synced_at gauge for the areas component on success."""
+    sport = WCS(settings=settings.providers.sports)
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[[]],
+    )
+    sport.cache = MagicMock(spec=RedisAdapter)
+    gauge = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.last_synced_at"
+    )
+
+    await sport.load_areas(mock_client)
+
+    gauge.set.assert_called_once_with(
+        datetime.now().timestamp(),
+        {"component": "areas", "sport": "WCS"},
+    )
+
+
+@freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_load_rounds_records_last_synced_at(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """load_rounds sets the last_synced_at gauge for the rounds component on success."""
+    sport = WCS(settings=settings.providers.sports)
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[wcs_competitions_payload()],
+    )
+    sport.cache = MagicMock(spec=RedisAdapter)
+    gauge = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.last_synced_at"
+    )
+
+    await sport.load_rounds(mock_client)
+
+    gauge.set.assert_called_once_with(
+        datetime.now().timestamp(),
+        {"component": "rounds", "sport": "WCS"},
+    )
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_teams_records_last_synced_at(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """update_teams sets the last_synced_at gauge for the teams component on success."""
+    sport = WCS(settings=settings.providers.sports)
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[wcs_teams_payload()],
+    )
+    gauge = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.last_synced_at"
+    )
+
+    await sport.update_teams(mock_client)
+
+    gauge.set.assert_called_once_with(
+        datetime.now().timestamp(),
+        {"component": "teams", "sport": "WCS"},
+    )
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_update_events_records_last_synced_at(
+    mock_client: AsyncClient, mocker: MockerFixture
+) -> None:
+    """update_events sets the last_synced_at gauge for the events component on success."""
+    sport = WCS(settings=settings.providers.sports)
+    await sport.async_load_teams_from_source(wcs_teams_payload())
+    sport.season = "2025"
+    sport.event_ttl = timedelta(weeks=2)
+    sport.rounds = {1615: "Group Stage"}
+    mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.get_data",
+        side_effect=[wcs_schedule_payload(), wcs_score_payload()],
+    )
+    mocker.patch.object(sport, "cache_events", new=mocker.AsyncMock())
+    gauge = mocker.patch(
+        "merino.providers.suggest.sports.backends.sportsdata.common.sports.last_synced_at"
+    )
+
+    await sport.update_events(client=mock_client)
+
+    gauge.set.assert_called_once_with(
+        datetime.now().timestamp(),
+        {"component": "events", "sport": "WCS"},
+    )
+
+
 def test_wcs_event_details_includes_stage_from_rounds() -> None:
     """event_details resolves the schedule's RoundId to a stage name via self.rounds."""
     sport = WCS(settings=settings.providers.sports)
