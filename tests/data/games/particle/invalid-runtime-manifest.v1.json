@@ -61,7 +61,7 @@
         }
       ]
     },
-    "daily": {
+    "puzzle_invalid": {
       "version": "e8cb472335dc7101cbb542708055c957f5361896b71136cdf020419401c3cf8c",
       "digest": "e8cb472335dc7101cbb542708055c957f5361896b71136cdf020419401c3cf8c",
       "publishedAt": "2026-04-22T10:01:47.409Z",
