@@ -29,10 +29,6 @@ from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
     LinTSInterestBackend,
 )
-from merino.curated_recommendations.ml_backends.tz_feature_model import (
-    EmptyTZFeatureBackend,
-    TZFeatureBackend,
-)
 
 from merino.curated_recommendations.ml_backends.gcs_local_model import GCSLocalModel
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -231,33 +227,6 @@ def init_lints_interest_backend() -> LinTSInterestBackend | EmptyLinTSInterestBa
         return EmptyLinTSInterestBackend()
 
 
-def init_tz_feature_backend() -> TZFeatureBackend | EmptyTZFeatureBackend:
-    """Initialize the CTR-timezone feature backend (kill-switched + boot-safe)."""
-    if not settings.tz_feature.enabled:
-        logger.info("TZ feature backend disabled by config; using empty stub.")
-        return EmptyTZFeatureBackend()
-
-    try:
-        synced_gcs_blob = SyncedGcsBlob(
-            storage_client=initialize_storage_client(
-                destination_gcp_project=settings.tz_feature.gcs.gcp_project
-            ),
-            metrics_client=get_metrics_client(),
-            metrics_namespace="recommendation.ml.tz_feature",
-            bucket_name=settings.tz_feature.gcs.bucket_name,
-            blob_name=settings.tz_feature.gcs.blob_name,
-            max_size=settings.tz_feature.gcs.max_size,
-            cron_interval_seconds=settings.tz_feature.gcs.cron_interval_seconds,
-            cron_job_name="fetch_tz_feature_ratios",
-            is_bytes=True,
-        )
-        synced_gcs_blob.initialize()
-        return TZFeatureBackend(synced_gcs_blobs={SurfaceId.NEW_TAB_EN_US: synced_gcs_blob})
-    except Exception as e:
-        logger.error(f"Failed to initialize TZ feature backend: {e}")
-        return EmptyTZFeatureBackend()
-
-
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -268,7 +237,6 @@ def init_provider() -> None:
     ml_recommendations_backend = init_ml_recommendations_backend()
     cohort_model_backend = init_ml_cohort_model_backend()
     lints_interest_backend = init_lints_interest_backend()
-    tz_feature_backend = init_tz_feature_backend()
 
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
@@ -293,7 +261,6 @@ def init_provider() -> None:
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
         lints_interest_backend=lints_interest_backend,
-        tz_feature_backend=tz_feature_backend,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 

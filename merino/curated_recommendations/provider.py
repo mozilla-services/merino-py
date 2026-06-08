@@ -9,10 +9,6 @@ from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
     LinTSInterestBackend,
 )
-from merino.curated_recommendations.ml_backends.tz_feature_model import (
-    EmptyTZFeatureBackend,
-    TZFeatureBackend,
-)
 from merino.curated_recommendations.ml_backends.protocol import (
     LOCAL_MODEL_MODEL_ID_KEY,
     CohortModelBackend,
@@ -78,7 +74,6 @@ class CuratedRecommendationsProvider:
         ml_recommendations_backend: MLRecsBackend,
         cohort_model_backend: CohortModelBackend,
         lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
-        tz_feature_backend: TZFeatureBackend | EmptyTZFeatureBackend,
     ) -> None:
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
@@ -88,7 +83,6 @@ class CuratedRecommendationsProvider:
         self.ml_recommendations_backend = ml_recommendations_backend
         self.cohort_model_backend = cohort_model_backend
         self.lints_interest_backend = lints_interest_backend
-        self.tz_feature_backend = tz_feature_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -178,7 +172,6 @@ class CuratedRecommendationsProvider:
                 sections_backend=self.sections_backend,
                 ml_backend=self.ml_recommendations_backend,
                 lints_interest_backend=self.lints_interest_backend,
-                tz_feature_backend=self.tz_feature_backend,
                 region=derive_region(request.locale, request.region),
             )
         elif surface_id in ROLLED_OUT_SECTION_SURFACES:

@@ -32,11 +32,6 @@ from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
     LinTSInterestBackend,
 )
-from merino.curated_recommendations.ml_backends.tz_feature_model import (
-    EmptyTZFeatureBackend,
-    TZFeatureBackend,
-)
-from merino.configs import settings
 from merino.curated_recommendations.rankers.interest_ranker import InterestRanker
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
@@ -844,7 +839,6 @@ async def get_sections(
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
     lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
-    tz_feature_backend: TZFeatureBackend | EmptyTZFeatureBackend,
     personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
 ) -> dict[str, Section]:
@@ -934,8 +928,6 @@ async def get_sections(
             prior_backend=prior_backend,
             surface_id=surface_id,
             lints_backend=lints_interest_backend,
-            tz_feature_backend=tz_feature_backend,
-            tz_alpha=settings.tz_feature.alpha,
         )
     elif use_contexual_ranker:
         is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)

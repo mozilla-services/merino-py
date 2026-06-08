@@ -2,13 +2,11 @@
 
 Parallels ``ContextualRanker`` in shape, but the per-item score comes from a
 single posterior draw of the LinTS-interest model rather than a precomputed
-slate. When a TZ-feature backend is wired in, each item's LinTS score gets an
-additive ``alpha * log(ratio_for_user_tz)`` nudge; any failure (missing
-artifact, baseline TZ, unknown item, alpha=0) collapses the nudge to 0.
+slate. Items the model doesn't know fall back to vanilla Thompson sampling on
+the engagement Beta posterior.
 """
 
 import logging
-import math
 
 import numpy as np
 from scipy.stats import beta
@@ -18,13 +16,6 @@ from merino.curated_recommendations.engagement_backends.protocol import Engageme
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
     LinTSInterestBackend,
-)
-from merino.curated_recommendations.ml_backends.static_local_model import (
-    TIME_ZONE_OFFSET_INFERRED_KEY,
-)
-from merino.curated_recommendations.ml_backends.tz_feature_model import (
-    EmptyTZFeatureBackend,
-    TZFeatureBackend,
 )
 from merino.curated_recommendations.prior_backends.protocol import (
     EngagementRescaler,
@@ -68,18 +59,11 @@ class InterestRanker(Ranker):
         prior_backend: PriorBackend,
         surface_id: SurfaceId,
         lints_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
-        tz_feature_backend: TZFeatureBackend | EmptyTZFeatureBackend | None = None,
-        tz_alpha: float = 0.0,
         region_weight: float = REGION_ENGAGEMENT_WEIGHT,
     ) -> None:
         super().__init__(engagement_backend, prior_backend, region_weight)
         self.surface_id: SurfaceId = surface_id
         self.lints_backend = lints_backend
-        # Omitting tz_feature_backend keeps the legacy LinTS-only path.
-        self.tz_feature_backend: TZFeatureBackend | EmptyTZFeatureBackend = (
-            tz_feature_backend if tz_feature_backend is not None else EmptyTZFeatureBackend()
-        )
-        self.tz_alpha = float(tz_alpha)
 
     def rank_items(
         self,
@@ -120,17 +104,6 @@ class InterestRanker(Ranker):
             logger.error(f"InterestRanker: score_request failed; falling back: {e}")
             model_scores = None
 
-        # Any short-circuit (alpha=0, no artifact, no TZ key, baseline TZ)
-        # collapses the per-item nudge to 0.
-        tz_adjust_enabled = self.tz_alpha != 0.0 and self.tz_feature_backend.is_valid(
-            self.surface_id
-        )
-        tz_index: int | None = None
-        if tz_adjust_enabled and personal_interests is not None:
-            raw_tz = personal_interests.scores.get(TIME_ZONE_OFFSET_INFERRED_KEY)
-            if isinstance(raw_tz, (int, float)):
-                tz_index = int(raw_tz)
-
         for r, rec in enumerate(recs):
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
                 rec, rescaler, region, blend_region_with_global=False
@@ -146,22 +119,6 @@ class InterestRanker(Ranker):
                 self.surface_id, rec.corpusItemId
             ):
                 score = float(model_scores[r])
-                # TZ nudge only on real LinTS scores — fallback Beta draws
-                # already have enough variance to swamp it.
-                if tz_adjust_enabled and tz_index is not None:
-                    try:
-                        ratio = self.tz_feature_backend.get_ratio(
-                            self.surface_id, rec.corpusItemId, tz_index
-                        )
-                    except Exception as e:
-                        logger.warning(
-                            f"InterestRanker: tz_feature.get_ratio raised; "
-                            f"disabling TZ adjustment for the rest of this batch: {e}"
-                        )
-                        tz_adjust_enabled = False
-                        ratio = None
-                    if ratio is not None and ratio > 0.0:
-                        score += self.tz_alpha * math.log(ratio)
             else:
                 alpha_val = opens + max(a_prior, 1e-18)
                 beta_val = no_opens + max(b_prior, 1e-18)

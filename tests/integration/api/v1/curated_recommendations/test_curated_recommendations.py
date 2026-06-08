@@ -31,9 +31,6 @@ from merino.curated_recommendations import (
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
 )
-from merino.curated_recommendations.ml_backends.tz_feature_model import (
-    EmptyTZFeatureBackend,
-)
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.curated_recommendations.corpus_backends.protocol import (
     Topic,
@@ -414,7 +411,6 @@ def provider(
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
         lints_interest_backend=EmptyLinTSInterestBackend(),
-        tz_feature_backend=EmptyTZFeatureBackend(),
     )
 
 
@@ -2884,7 +2880,6 @@ def test_uk_sections_with_gb_backend_data(
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
         lints_interest_backend=EmptyLinTSInterestBackend(),
-        tz_feature_backend=EmptyTZFeatureBackend(),
     )
 
     # Override the provider dependency for this test

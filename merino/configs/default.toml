@@ -1352,23 +1352,6 @@ max_size = 8_000_000
 cron_interval_seconds = 600
 
 
-[default.tz_feature]
-# MERINO__TZ_FEATURE__ENABLED — kill switch for the TZ score adjustment.
-enabled = false
-
-# MERINO__TZ_FEATURE__ALPHA — score += alpha * log(ratio_for_user_tz).
-# Calibrated from top-100 posterior PDFs: top-K items sit in [0.002, 0.008]
-# with adjacent gaps ~0.0005. alpha=0.003 → max nudge ±0.002, typical ±0.0005.
-alpha = 0.003
-
-[default.tz_feature.gcs]
-gcp_project = ""
-bucket_name = ""
-blob_name = "ctr_tz_feature/EN_US/tz_ratios.safetensors"
-max_size = 500_000
-cron_interval_seconds = 600
-
-
 [default.curated_recommendations.corpus_api]
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_API__RETRY_COUNT
 # The maximum number of times to retry corpus api requests on failure before giving up.
