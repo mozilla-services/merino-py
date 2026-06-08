@@ -14,7 +14,7 @@ jobs:
   build-locust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build Locust Docker image
         run: docker build -t merino-locust -f ./tests/load/Dockerfile .
       - name: Tag with GAR path
@@ -22,7 +22,7 @@ jobs:
       - name: Save image
         run: docker save ${{ secrets.DOCKER_IMAGE_PATH }}/merino-locust:${{ inputs.image_tag }} | gzip > locust-image.tar.gz
       - name: Upload image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: locust-image
           path: locust-image.tar.gz
