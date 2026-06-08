@@ -11,16 +11,13 @@ from enum import StrEnum
 from jsonschema import exceptions, validate
 from pydantic import Json
 
+from merino.providers.games.particle.backends.errors import (
+    ParticleManifestValidationError,
+    ParticleRemoteFileProcessError,
+)
+
 
 logger = logging.getLogger(__name__)
-
-
-class ParticleManifestValidationError(Exception):
-    """Error validating the Particle manifest JSON."""
-
-
-class ParticleRemoteFileProcessError(Exception):
-    """Error processing a remote Particle file."""
 
 
 class RemoteChannelEnum(StrEnum):

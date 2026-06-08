@@ -20,7 +20,7 @@ from merino.providers.games.particle.backends.protocol import (
     Particle,
     ParticleBackend,
 )
-from merino.providers.games.particle.backends.utils import ParticleManifestValidationError
+from merino.providers.games.particle.backends.errors import ParticleManifestValidationError
 from merino.providers.games.particle.provider import Provider
 
 
