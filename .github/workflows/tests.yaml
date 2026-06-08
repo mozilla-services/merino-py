@@ -13,7 +13,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up to run
         uses: ./.github/actions/weave
       - name: Run unit tests
@@ -26,7 +26,7 @@ jobs:
         env:
           GITHUB_REPONAME: ${{ github.event.repository.name }}
           TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always() # Ensure the artifacts upload even if tests fail
         with:
           name: unit-test-results
@@ -35,7 +35,7 @@ jobs:
   integration-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up to run
         uses: ./.github/actions/weave
       - name: Set up Docker Buildx
@@ -60,7 +60,7 @@ jobs:
         env:
           GITHUB_REPONAME: ${{ github.event.repository.name }}
           TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always() # Ensure the artifacts upload even if tests fail
         with:
           name: integration-test-results
@@ -70,11 +70,11 @@ jobs:
     needs: [unit-tests, integration-tests]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up to run
         uses: ./.github/actions/weave
       - name: Download Test Results Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: ${{ inputs.test_result_dir }}
           pattern: "*-test-results"

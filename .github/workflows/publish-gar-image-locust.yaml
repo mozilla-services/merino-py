@@ -24,7 +24,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check for [load test skip] directive
         run: |
           if git log -1 --pretty=%B | grep -qi '\[load test: skip\]'; then
@@ -32,7 +32,7 @@ jobs:
             exit 0
           fi
       - name: Download Locust image artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: locust-image
           path: .
