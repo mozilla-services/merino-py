@@ -646,6 +646,75 @@ weather/hourly_forecasts:
     scope: |
       The WCS data update job
 
+curated_recommendations/spindle:
+  recommendation.spindle.text.timing:
+    description: |
+      A timer covering the count and latency of calls to the Spindle ML server
+      `/find_similar_stories` endpoint, used to find near-duplicate stories
+      by text embedding for the article balancer.
+    type: timing
+    labels: []
+    scope: |
+      The Spindle ML server "/find_similar_stories" endpoint.
+    alert_policy: []
+
+  recommendation.spindle.image.timing:
+    description: |
+      A timer covering the count and latency of calls to the Spindle ML server
+      `/find_similar_images` endpoint, used to find near-duplicate stories
+      by image embedding for the article balancer.
+    type: timing
+    labels: []
+    scope: |
+      The Spindle ML server "/find_similar_images" endpoint.
+    alert_policy: []
+
+  recommendation.spindle.text.status_codes:
+    description: |
+      A counter for HTTP status codes returned by the Spindle ML server
+      `/find_similar_stories` endpoint. The status code is included as a
+      suffix on the metric name (e.g. `...status_codes.200`).
+    type: counter
+    labels: []
+    scope: |
+      The Spindle ML server "/find_similar_stories" endpoint.
+    alert_policy: []
+
+  recommendation.spindle.image.status_codes:
+    description: |
+      A counter for HTTP status codes returned by the Spindle ML server
+      `/find_similar_images` endpoint. The status code is included as a
+      suffix on the metric name (e.g. `...status_codes.500`).
+    type: counter
+    labels: []
+    scope: |
+      The Spindle ML server "/find_similar_images" endpoint.
+    alert_policy: []
+
+  recommendation.spindle.text.error:
+    description: |
+      A counter incremented when a call to the Spindle ML server
+      `/find_similar_stories` endpoint raises an HTTP error or returns a body
+      that cannot be parsed. The previously cached similarity info is
+      preserved on error.
+    type: counter
+    labels: []
+    scope: |
+      The Spindle ML server "/find_similar_stories" endpoint.
+    alert_policy: []
+
+  recommendation.spindle.image.error:
+    description: |
+      A counter incremented when a call to the Spindle ML server
+      `/find_similar_images` endpoint raises an HTTP error or returns a body
+      that cannot be parsed. The previously cached similarity info is
+      preserved on error.
+    type: counter
+    labels: []
+    scope: |
+      The Spindle ML server "/find_similar_images" endpoint.
+    alert_policy: []
+
 merino-fleece/pii:
   pii_detect_duration:
     description: |

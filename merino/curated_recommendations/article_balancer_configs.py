@@ -23,6 +23,7 @@ class ArticleBalancerConfig:
     blocked_topics_multiplier: int = 1
     max_per_publisher: int = 100
     publisher_enforcement_likelyhood: float = 0.0
+    similarity_store_neighbors_likelyhood: float = 0.95
     government_max_override: int | None = None
 
 

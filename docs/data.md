@@ -201,6 +201,22 @@ The following additional metrics are recorded when curated recommendations are r
  A gauge for the staleness (in seconds) of the cohort model data, measured between when the data was
  updated in GCS and the current time. This value could get large as the model may be updated weekly.
 
+#### Spindle ML server
+
+Merino calls the Spindle ML server to find near-duplicate stories so the
+article balancer can drop them from Popular Today. Each section fetch triggers
+a background refresh of the per-surface similarity cache; the metrics below
+are emitted from `merino/curated_recommendations/ml_backends/spindle_backend.py`.
+
+- `recommendation.spindle.{text | image}.timing` -
+ A timer to measure the duration (in ms) of a request to the Spindle
+ `/find_similar_stories` (text) or `/find_similar_images` (image) endpoint.
+- `recommendation.spindle.{text | image}.status_codes.{res.status_code}` -
+ A counter to measure the HTTP status codes returned by Spindle.
+- `recommendation.spindle.{text | image}.error` -
+ A counter incremented when the Spindle call raises an HTTP error or the
+ response cannot be parsed. The previous cached similarity info is left in
+ place when this fires.
 
 
 ### Manifest

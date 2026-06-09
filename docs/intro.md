@@ -104,6 +104,7 @@ subgraph curatedRecommendationsBackends["fa:fa-microchip Curated Recommendations
         extendedExpirationCorpusBackend("corpus extended expiration")
         gcsEngagementBackend("gcs engagement")
         gcsPriorBackend("gcs prior")
+        spindleBackend("spindle ML server")
 end
 subgraph Merino["fa:fa-server Merino"]
         srh("fa:fa-gears Suggest Request Handler")
@@ -152,6 +153,7 @@ end
     gcsEngagementBackend --> gcsMerinoAirflowData[("fa:fa-database GCS Merino Airflow Data")]
     gcsPriorBackend --> gcsMerinoAirflowData
     corpusBackend -..-> curatedCorpusAPI("fa:fa-globe Curated Corpus API")
+    spindleBackend -..-> spindleService("fa:fa-globe Spindle ML server<br>near-duplicate story embeddings")
     offline -..- kinto[("Remote Settings")]
     remoteSettingsBackend --- merinoRustExtension("fa:fa-puzzle-piece Merino Rust Extension")
     merinoRustExtension --> kinto

@@ -25,6 +25,7 @@ def test_get_top_stories_article_balancer_config_returns_surface_config():
     assert config.government_max_override == 3
     assert config.max_per_publisher == 1
     assert config.publisher_enforcement_likelyhood == 0.85
+    assert config.similarity_store_neighbors_likelyhood > 0.8
 
 
 def test_get_top_stories_article_balancer_config_falls_back_to_default():

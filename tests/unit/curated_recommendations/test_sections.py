@@ -1119,6 +1119,54 @@ class TestGetTopStoryList:
             scores = [rec.ranking_data.score if rec.ranking_data else 0 for rec in result]
             assert scores == sorted(scores, reverse=True)
 
+    def test_spindle_dedup_filters_near_duplicates(self):
+        """When the spindle backend reports `b` is a near-duplicate of `a`, `b`
+        should be dropped from the top stories and the next eligible item used.
+        """
+        from merino.curated_recommendations.ml_backends.spindle_backend import (
+            SimilarStoriesInfo,
+        )
+
+        class _FakeSpindle:
+            def __init__(self, info):
+                self._info = info
+
+            def get_similar_stories_text(self, surface):
+                return self._info
+
+            def get_similar_stories_image(self, surface):
+                return None
+
+            async def refresh_duplicate_item_info(self, items, surface, threshold=0.85):
+                return None
+
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d"],
+            topics=["arts", "business", "food", "government"],
+        )
+        info = SimilarStoriesInfo({"a": ["b"]})
+        result = get_top_story_list(
+            items,
+            top_count=3,
+            extra_count=0,
+            extra_source_depth=0,
+            spindle_backend=_FakeSpindle(info),
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+        )
+        ids = [r.corpusItemId for r in result]
+        assert "a" in ids
+        assert "b" not in ids  # dedup'd against a
+        assert len(result) == 3
+
+    def test_spindle_none_preserves_baseline(self):
+        """When no spindle_backend is given, behavior matches the baseline test above."""
+        items = generate_recommendations(
+            item_ids=["a", "b", "c", "d", "e"],
+            topics=["arts", "business", "food", "government", "food"],
+        )
+        result = get_top_story_list(items, top_count=3, extra_count=0)
+        assert [i.corpusItemId for i in result] == ["a", "b", "c"]
+
 
 class TestGetTopStoryListWithPinnedFreshRescaler:
     """End-to-end tests for get_top_story_list with CrawledContentPinnedFreshRescaler.

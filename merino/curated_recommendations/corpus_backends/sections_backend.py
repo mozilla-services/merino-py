@@ -30,6 +30,7 @@ from merino.curated_recommendations.corpus_backends.utils import (
     CorpusGraphQLError,
     CorpusApiGraphConfig,
 )
+from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
 from merino.providers.manifest import Provider as ManifestProvider
 
 logger = logging.getLogger(__name__)
@@ -70,12 +71,14 @@ class SectionsBackend(SectionsProtocol):
         graph_config: CorpusApiGraphConfig,
         metrics_client: aiodogstatsd.Client,
         manifest_provider: ManifestProvider,
+        spindle_backend: SpindleBackendProtocol | None = None,
     ) -> None:
         """Initialize the SectionsCorpusBackend."""
         self.http_client = http_client
         self.graph_config = graph_config
         self.metrics_client = metrics_client
         self.manifest_provider = manifest_provider
+        self.spindle_backend = spindle_backend
         self._cache = {}
         self._background_tasks = set()
 
@@ -187,5 +190,16 @@ class SectionsBackend(SectionsProtocol):
                 base.alternateSection = section
 
         sections_list = base_sections
+
+        # Kick off a background refresh of Spindle's similarity caches so the
+        # next request for this surface can use up-to-date near-duplicate info.
+        if self.spindle_backend is not None:
+            all_items = [item for s in sections_list for item in s.sectionItems]
+            if all_items:
+                task = asyncio.create_task(
+                    self.spindle_backend.refresh_duplicate_item_info(all_items, surface_id)
+                )
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
 
         return sections_list

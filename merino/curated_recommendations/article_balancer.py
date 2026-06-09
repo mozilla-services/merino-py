@@ -5,11 +5,12 @@ import math
 import random
 
 from merino.curated_recommendations.corpus_backends.protocol import Topic
+from merino.curated_recommendations.ml_backends.protocol import SimilarStoriesProtocol
+from merino.curated_recommendations.protocol import CuratedRecommendation
 from merino.curated_recommendations.article_balancer_configs import (
     ArticleBalancerConfig,
     DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
 )
-from merino.curated_recommendations.protocol import CuratedRecommendation
 
 
 class ArticleBalancer:
@@ -20,7 +21,12 @@ class ArticleBalancer:
     external strings and can collide with topic values or aggregate keys like "evergreen".
     """
 
-    def __init__(self, expected_num_articles: int, config: ArticleBalancerConfig) -> None:
+    def __init__(
+        self,
+        expected_num_articles: int,
+        config: ArticleBalancerConfig,
+        similar_stories_info: SimilarStoriesProtocol | None = None,
+    ) -> None:
         """Initialize limits for target number of articles."""
         self.config = config
         self.article_list: list[CuratedRecommendation] = []
@@ -31,6 +37,8 @@ class ArticleBalancer:
         self.evergreen_topics = set(config.evergreen_topics)
         self.subtopic_checker = config.subtopic_checker
         self.set_limits_for_expected_articles(expected_num_articles)
+        self.do_not_add_similarity_set: set[str] = set()
+        self.similar_stories_info = similar_stories_info
 
     def set_limits_for_expected_articles(self, expected_num_articles: int):
         """Update limits for expected number of articles."""
@@ -121,6 +129,8 @@ class ArticleBalancer:
 
     def add_story(self, rec: CuratedRecommendation) -> bool:
         """Add story if it meets requirements. Return true if story added."""
+        if rec.corpusItemId in self.do_not_add_similarity_set:
+            return False
         provisional_stats = self.feature_counts.copy()
         provisional_publisher_counts = self.publisher_counts.copy()
         self._update_stats(provisional_stats, provisional_publisher_counts, rec)
@@ -128,6 +138,13 @@ class ArticleBalancer:
             self.article_list.append(rec)
             self.feature_counts = provisional_stats
             self.publisher_counts = provisional_publisher_counts
+            if self.similar_stories_info is not None:
+                # Mark the accepted item's near-duplicates so later passes skip them.
+                # The item itself doesn't need adding because the corpus doesn't duplicate ids.
+                if random.random() < self.config.similarity_store_neighbors_likelyhood:
+                    self.do_not_add_similarity_set.update(
+                        self.similar_stories_info.neighbors(rec.corpusItemId)
+                    )
             return True
         return False
 
@@ -158,10 +175,12 @@ class TopStoriesArticleBalancer(ArticleBalancer):
         self,
         expected_num_articles: int,
         config: ArticleBalancerConfig | None = None,
+        similar_stories_info: SimilarStoriesProtocol | None = None,
     ) -> None:
         resolved_config = config or DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG
         super().__init__(
             expected_num_articles=expected_num_articles,
             config=resolved_config,
+            similar_stories_info=similar_stories_info,
         )
         self.enforce_publisher = random.random() < resolved_config.publisher_enforcement_likelyhood

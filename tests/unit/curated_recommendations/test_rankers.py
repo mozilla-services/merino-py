@@ -1354,6 +1354,42 @@ class TestTopStoriesArticleBalancer:
         assert remaining_second == batch_one[4:]
         assert len(balancer.get_stories()) == 4
 
+    def test_similarity_set_blocks_near_duplicates(self):
+        """When the spindle lookup reports `rec-1` is near-duplicate of `rec-0`,
+        accepting rec-0 should poison rec-1 so it is rejected later.
+        """
+        from merino.curated_recommendations.ml_backends.spindle_backend import (
+            SimilarStoriesInfo,
+        )
+
+        info = SimilarStoriesInfo({"rec-0": ["rec-1"]})
+
+        config = replace(
+            DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG,
+            similarity_store_neighbors_likelyhood=1.0,
+        )
+
+        balancer = TopStoriesArticleBalancer(
+            expected_num_articles=10, similar_stories_info=info, config=config
+        )
+        accepted = self._build_recommendation("0", Topic.BUSINESS)
+        dupe = self._build_recommendation("1", Topic.TECHNOLOGY)
+        independent = self._build_recommendation("2", Topic.ARTS)
+
+        assert balancer.add_story(accepted) is True
+        assert balancer.add_story(dupe) is False  # Poisoned by accepted's neighbors
+        assert balancer.add_story(independent) is True
+        assert [r.corpusItemId for r in balancer.get_stories()] == ["rec-0", "rec-2"]
+
+    def test_similarity_set_none_preserves_existing_behavior(self):
+        """With no similar_stories_info, balancer behaves exactly like before."""
+        balancer = TopStoriesArticleBalancer(expected_num_articles=10)
+        rec_a = self._build_recommendation("0", Topic.BUSINESS)
+        rec_b = self._build_recommendation("1", Topic.TECHNOLOGY)
+        assert balancer.add_story(rec_a)
+        assert balancer.add_story(rec_b)
+        assert len(balancer.get_stories()) == 2
+
 
 class StubMLRecsBackend:
     """Stub MLRecsBackend returning configurable contextual rankings."""

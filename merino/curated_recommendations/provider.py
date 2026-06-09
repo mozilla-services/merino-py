@@ -12,6 +12,7 @@ from merino.curated_recommendations.ml_backends.lints_interest_model import (
 from merino.curated_recommendations.ml_backends.protocol import (
     LOCAL_MODEL_MODEL_ID_KEY,
     CohortModelBackend,
+    SpindleBackendProtocol,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
@@ -74,7 +75,9 @@ class CuratedRecommendationsProvider:
         ml_recommendations_backend: MLRecsBackend,
         cohort_model_backend: CohortModelBackend,
         lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
+        spindle_backend: SpindleBackendProtocol | None = None,
     ) -> None:
+        """Initialize the provider with all backend dependencies."""
         self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
@@ -83,6 +86,7 @@ class CuratedRecommendationsProvider:
         self.ml_recommendations_backend = ml_recommendations_backend
         self.cohort_model_backend = cohort_model_backend
         self.lints_interest_backend = lints_interest_backend
+        self.spindle_backend = spindle_backend
 
     @staticmethod
     def is_sections_experiment(
@@ -173,6 +177,7 @@ class CuratedRecommendationsProvider:
                 ml_backend=self.ml_recommendations_backend,
                 lints_interest_backend=self.lints_interest_backend,
                 region=derive_region(request.locale, request.region),
+                spindle_backend=self.spindle_backend,
             )
         elif surface_id in ROLLED_OUT_SECTION_SURFACES:
             # Rolled-out section surfaces: fetch from sections backend instead of scheduler

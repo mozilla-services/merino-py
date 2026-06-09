@@ -19,6 +19,10 @@ from merino.curated_recommendations.engagement_backends.fake_engagement import F
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.ml_backends.empty_ml_recs import EmptyMLRecs
+from merino.curated_recommendations.ml_backends.spindle_backend import (
+    DummySpindleBackend,
+    SpindleBackend,
+)
 from merino.curated_recommendations.ml_backends.static_local_model import SuperInferredModel
 from merino.curated_recommendations.ml_backends.gcs_ml_recs import GcsMLRecs
 from merino.curated_recommendations.ml_backends.gcs_interest_cohort_model import (
@@ -36,6 +40,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     CohortModelBackend,
     LocalModelBackend,
     MLRecsBackend,
+    SpindleBackendProtocol,
 )
 from merino.curated_recommendations.prior_backends.gcs_prior import GcsPrior
 from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
@@ -227,6 +232,24 @@ def init_lints_interest_backend() -> LinTSInterestBackend | EmptyLinTSInterestBa
         return EmptyLinTSInterestBackend()
 
 
+def init_spindle_backend() -> SpindleBackendProtocol:
+    """Initialize the Spindle ML backend, falling back to a no-op if construction fails."""
+    if (
+        settings.spindle.api.max_wait_time_seconds == 0 or len(settings.spindle.api.base_url) == 0
+    ):  # Serive is disabled
+        return DummySpindleBackend()
+    try:
+        return SpindleBackend(
+            base_url=settings.spindle.api.base_url,
+            request_timeout=settings.spindle.api.max_wait_time_seconds,
+            metrics_client=get_metrics_client(),
+            api_key=settings.spindle.api.api_key,
+        )
+    except Exception as e:
+        logger.error(f"Failed to initialize Spindle backend: {e}")
+        return DummySpindleBackend()
+
+
 def init_provider() -> None:
     """Initialize the curated recommendations' provider."""
     global _provider
@@ -237,6 +260,7 @@ def init_provider() -> None:
     ml_recommendations_backend = init_ml_recommendations_backend()
     cohort_model_backend = init_ml_cohort_model_backend()
     lints_interest_backend = init_lints_interest_backend()
+    spindle_backend = init_spindle_backend()
 
     scheduled_surface_backend = ScheduledSurfaceBackend(
         http_client=create_http_client(base_url=""),
@@ -250,6 +274,7 @@ def init_provider() -> None:
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=get_manifest_provider(),
+        spindle_backend=spindle_backend,
     )
 
     _provider = CuratedRecommendationsProvider(
@@ -261,6 +286,7 @@ def init_provider() -> None:
         ml_recommendations_backend=ml_recommendations_backend,
         cohort_model_backend=cohort_model_backend,
         lints_interest_backend=lints_interest_backend,
+        spindle_backend=spindle_backend,
     )
     _legacy_provider = LegacyCuratedRecommendationsProvider()
 
