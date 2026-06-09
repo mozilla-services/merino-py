@@ -25,6 +25,8 @@ TILE_6_PERCENTAGE_OF_DAILY_IMPRESSIONS = (
     0.1  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
 )
 
+WORLD_CUP_SECTION_CTR_BOOST = 0.0008
+
 LOCAL_RERANK_WEGHT = (
     80.0  # Experiment weight settings 60-10 server-local boosting.
     # Given high ctr item 0.005 and interest of 0.5 that would
@@ -95,6 +97,12 @@ class CrawledContentRescaler(EngagementRescaler):
             opens = opens * BLOCKED_FROM_MOST_POPULAR_SCALER
             no_opens = no_opens * BLOCKED_FROM_MOST_POPULAR_SCALER
         return opens, no_opens
+
+    def boost_section(self, section_id: str) -> float:
+        """Return ctr boost score for section for special event such as World Cup"""
+        if section_id.startswith("worldcup"):
+            return WORLD_CUP_SECTION_CTR_BOOST
+        return 0.0
 
     def rescale_prior(self, rec: CuratedRecommendation, alpha, beta):
         """Update priors values based on whether item is unique to the experiment.

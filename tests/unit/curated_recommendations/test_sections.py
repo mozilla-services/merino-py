@@ -37,6 +37,7 @@ from merino.curated_recommendations.prior_backends.protocol import Prior
 from merino.curated_recommendations.protocol import (
     ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
+    ITEM_WORLD_CUP_FLAG,
     Section,
     SectionConfiguration,
     EditorialSectionsBranch,
@@ -728,6 +729,18 @@ class TestMapCorpusSectionToSection:
         )
         sec = map_corpus_section_to_section(cs, 0, is_legacy_section=False)
         assert sec.recommendations[0].in_experiment(ITEM_SUBTOPIC_FLAG)
+
+    def test_world_cup_items_flagged_as_world_cup(self):
+        """Items in a worldcup section should carry ITEM_WORLD_CUP_FLAG, not ITEM_SUBTOPIC_FLAG."""
+        cs = CorpusSection(
+            sectionItems=[generate_corpus_item("wc1", "sched_wc1")],
+            title="World Cup",
+            externalId="worldcup-2026",
+            createSource=CreateSource.ML,
+        )
+        sec = map_corpus_section_to_section(cs, 0, is_legacy_section=False)
+        assert sec.recommendations[0].in_experiment(ITEM_WORLD_CUP_FLAG)
+        assert not sec.recommendations[0].in_experiment(ITEM_SUBTOPIC_FLAG)
 
     @pytest.mark.parametrize(
         "followable,allow_ads",
