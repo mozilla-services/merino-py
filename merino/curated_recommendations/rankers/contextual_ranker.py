@@ -169,7 +169,7 @@ class ContextualRanker(Ranker):
     ) -> dict[str, Section]:
         """Re-rank sections using average score of top items."""
 
-        def sample_score(sec: Section) -> float:
+        def sample_score(section_id: str, sec: Section) -> float:
             """Create score based on top items in section"""
             fresh_retain_likelyhood = (
                 rescaler.fresh_items_section_ranking_max_percentage
@@ -186,7 +186,10 @@ class ContextualRanker(Ranker):
                     total_score += rec.ranking_data.score
                     n_scores += 1
 
-            return total_score / n_scores if n_scores > 0 else 0.0
+            # Get any special boost for a particular section
+            boost_amount = rescaler.boost_section(section_id) if rescaler is not None else 0.0
 
-        ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
+            return (total_score / n_scores if n_scores > 0 else 0.0) + boost_amount
+
+        ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[0], kv[1]), reverse=True)
         return renumber_sections(ordered)

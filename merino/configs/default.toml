@@ -235,6 +235,27 @@ countries = ["US"]
 # Form factors to fetch suggestions for from the MARS API.
 form_factors = ["desktop"]
 
+# merino-fleece PII sanitization service (prototype). Used for spaCy-backed
+# search term PII detection behind the `fleece-pii-detection` feature flag. When a
+# query is flagged, suggestions are suppressed and the query is not logged.
+[default.fleece]
+# MERINO_FLEECE__URL_BASE
+# Base URL of the merino-fleece service. An empty value disables the call
+# entirely, even if the feature flag is enabled.
+url_base = ""
+
+# MERINO_FLEECE__PII_PATH
+# Path of the merino-fleece PII detection endpoint.
+pii_path = "/api/v1/pii"
+
+# MERINO_FLEECE__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to merino-fleece.
+connect_timeout_sec = 0.5
+
+# MERINO_FLEECE__REQUEST_TIMEOUT_SEC
+# Timeout in seconds for a request to merino-fleece.
+request_timeout_sec = 0.5
+
 # GCP metadata
 [default.gcp]
 # MERINO_GCP__REGION

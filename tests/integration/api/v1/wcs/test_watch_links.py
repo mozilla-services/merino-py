@@ -84,9 +84,9 @@ def test_watch_links_de_de(
     # your_region: German streams sorted by sort_order ASC, product_name ASC
     assert body["your_region"] == [
         {
-            "product_name": "FIFA+",
+            "product_name": "FIFA+ (DAZN)",
             "entitlement": "Free and Paid",
-            "url": "https://www.plus.fifa.com/showcase/fifa-world-cup-26tm/89de0054-9fa6-4741-88e1-a902dc26740f",
+            "url": "https://www.dazn.com/competition/Competition:50kvbmxi5r9amj2e39hznggqj",
         },
         {
             "product_name": "ARD",

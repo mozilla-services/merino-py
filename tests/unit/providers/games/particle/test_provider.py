@@ -20,7 +20,7 @@ from merino.providers.games.particle.backends.protocol import (
     Particle,
     ParticleBackend,
 )
-from merino.providers.games.particle.backends.utils import ParticleManifestValidationError
+from merino.providers.games.particle.backends.errors import ParticleManifestValidationError
 from merino.providers.games.particle.provider import Provider
 
 
@@ -92,27 +92,18 @@ def mock_validate_schema_version():
 def mock_fetch_from_gcs(provider):
     """Return a mocked fetch_manifest_json_from_gcs async function"""
     with patch.object(
-        provider.backend, "fetch_manifest_json_from_gcs", new=AsyncMock()
+        provider.backend, "fetch_manifest_json_from_gcs", new_callable=AsyncMock
     ) as mock_fetch_from_gcs:
         yield mock_fetch_from_gcs
 
 
 @pytest.fixture
-def mock_update_puzzle():
-    """Return a mocked update_puzzle_files async function"""
+def mock_update_channel_files():
+    """Return a mocked update_channel_files async function"""
     with patch(
-        "merino.providers.games.particle.provider.update_puzzle_files", new=AsyncMock()
-    ) as mock_update_puzzle:
-        yield mock_update_puzzle
-
-
-@pytest.fixture
-def mock_update_runtime():
-    """Return a mocked update_runtime_files async function"""
-    with patch(
-        "merino.providers.games.particle.provider.update_runtime_files", new=AsyncMock()
-    ) as mock_update_runtime:
-        yield mock_update_runtime
+        "merino.providers.games.particle.provider.update_channel_files", new_callable=AsyncMock
+    ) as mock_update_channel_files:
+        yield mock_update_channel_files
 
 
 class TestProvider:
@@ -307,20 +298,17 @@ class TestProcessRemoteParticleData:
         mock_validate_schema,
         mock_validate_schema_version,
         mock_fetch_from_gcs,
-        mock_update_puzzle,
-        mock_update_runtime,
+        mock_update_channel_files,
     ):
         """Assert process_remote_particle_data returns True and all expected functions are called when either puzzle and/or runtime files require updating"""
-        mock_update_puzzle.return_value = update_puzzle
-        mock_update_runtime.return_value = update_runtime
+        mock_update_channel_files.side_effect = [update_puzzle, update_runtime]
 
         assert await provider.process_remote_particle_data(valid_manifest_data)
 
         mock_validate_schema.assert_called_once()
         mock_validate_schema_version.assert_called_once()
         mock_fetch_from_gcs.assert_awaited_once()
-        mock_update_puzzle.assert_awaited_once()
-        mock_update_runtime.assert_awaited_once()
+        assert mock_update_channel_files.await_count == 2
 
     @pytest.mark.asyncio
     async def test_process_remote_particle_data_no_files_updated(
@@ -330,20 +318,17 @@ class TestProcessRemoteParticleData:
         mock_validate_schema,
         mock_validate_schema_version,
         mock_fetch_from_gcs,
-        mock_update_puzzle,
-        mock_update_runtime,
+        mock_update_channel_files,
     ):
         """Assert process_remote_particle_data returns False and all expected functions are called when no files require updating"""
-        mock_update_puzzle.return_value = False
-        mock_update_runtime.return_value = False
+        mock_update_channel_files.side_effect = [False, False]
 
         assert not await provider.process_remote_particle_data(valid_manifest_data)
 
         mock_validate_schema.assert_called_once()
         mock_validate_schema_version.assert_called_once()
         mock_fetch_from_gcs.assert_awaited_once()
-        mock_update_puzzle.assert_awaited_once()
-        mock_update_runtime.assert_awaited_once()
+        assert mock_update_channel_files.await_count == 2
 
     @pytest.mark.asyncio
     async def test_process_remote_particle_data_gcs_fetch_raises(
@@ -353,8 +338,7 @@ class TestProcessRemoteParticleData:
         mock_validate_schema,
         mock_validate_schema_version,
         mock_fetch_from_gcs,
-        mock_update_puzzle,
-        mock_update_runtime,
+        mock_update_channel_files,
     ):
         """Assert process_remote_particle_data returns False and all expected functions are called when no files require updating"""
         mock_fetch_from_gcs.side_effect = ParticleFileManagerError("GCS call failed")
@@ -364,8 +348,7 @@ class TestProcessRemoteParticleData:
         mock_validate_schema.assert_called_once()
         mock_validate_schema_version.assert_called_once()
         mock_fetch_from_gcs.assert_awaited_once()
-        mock_update_puzzle.assert_not_awaited()
-        mock_update_runtime.assert_not_awaited()
+        mock_update_channel_files.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_process_remote_particle_data_validate_schema_raises(
@@ -375,8 +358,7 @@ class TestProcessRemoteParticleData:
         mock_validate_schema,
         mock_validate_schema_version,
         mock_fetch_from_gcs,
-        mock_update_puzzle,
-        mock_update_runtime,
+        mock_update_channel_files,
     ):
         """Assert process_remote_particle_data returns False when validating schema raises and all subsequent functions are not called"""
         mock_validate_schema.side_effect = ParticleManifestValidationError("forced error")
@@ -386,8 +368,7 @@ class TestProcessRemoteParticleData:
         mock_validate_schema.assert_called_once()
         mock_validate_schema_version.assert_not_called()
         mock_fetch_from_gcs.assert_not_awaited()
-        mock_update_puzzle.assert_not_awaited()
-        mock_update_runtime.assert_not_awaited()
+        mock_update_channel_files.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_process_remote_particle_data_validate_schema_version_raises(
@@ -397,8 +378,7 @@ class TestProcessRemoteParticleData:
         mock_validate_schema,
         mock_validate_schema_version,
         mock_fetch_from_gcs,
-        mock_update_puzzle,
-        mock_update_runtime,
+        mock_update_channel_files,
     ):
         """Assert process_remote_particle_data returns False when validating schema version raises and all subsequent functions are not called"""
         mock_validate_schema_version.side_effect = ParticleManifestValidationError("forced error")
@@ -408,5 +388,4 @@ class TestProcessRemoteParticleData:
         mock_validate_schema.assert_called_once()
         mock_validate_schema_version.assert_called_once()
         mock_fetch_from_gcs.assert_not_awaited()
-        mock_update_puzzle.assert_not_awaited()
-        mock_update_runtime.assert_not_awaited()
+        mock_update_channel_files.assert_not_awaited()

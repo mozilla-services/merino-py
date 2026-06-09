@@ -35,7 +35,6 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "etsy": "https://www.etsy.com/apple-touch-icon.png",  # 57x57
     "google": "https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png",  # 128x128
     "imdb": "https://www.imdb.com/apple-touch-icon.png",  # 60x60
-    "reddit": "https://www.reddit.com/apple-touch-icon.png",  # 57x57
     "twitch": "https://www.twitch.tv/apple-touch-icon.png",  # 180x180
 }
 

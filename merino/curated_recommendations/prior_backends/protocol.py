@@ -75,6 +75,10 @@ class EngagementRescaler(BaseModel):
         """Update priors values based on whether item is unique to the experiment."""
         return alpha, beta
 
+    def boost_section(self, section_id: str) -> float:
+        """Return ctr boost score for section for special event such as World Cup"""
+        return 0.0
+
     def compute_estimated_fresh_per_cycle(self, prior: Prior) -> int:
         """Compute the estimated number of impressions that a single top stories tile gets in a content refresh cycle
         based on total impressions and normalized by hour.

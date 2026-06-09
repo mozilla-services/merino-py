@@ -1,0 +1,9 @@
+[production]
+dynaconf_merge = true
+
+# Prototype: route a fraction of suggest traffic through merino-fleece for
+# spaCy-backed PII detection. See merino/configs/flags/default.toml for details.
+# Raise `enabled` to ramp the prototype in production.
+[production.flags.fleece-pii-detection]
+scheme = "random"
+enabled = 0.0
