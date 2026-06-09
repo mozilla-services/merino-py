@@ -25,7 +25,7 @@ TILE_6_PERCENTAGE_OF_DAILY_IMPRESSIONS = (
     0.1  # Generated via https://sql.telemetry.mozilla.org/queries/116006 (using tile 6)
 )
 
-WORLD_CUP_SECTION_CTR_BOOST = 0.0008
+WORLD_CUP_SECTION_CTR_BOOST = 0.002  # Constant for all world markets.
 
 LOCAL_RERANK_WEGHT = (
     80.0  # Experiment weight settings 60-10 server-local boosting.

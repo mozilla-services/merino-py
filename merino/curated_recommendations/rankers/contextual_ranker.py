@@ -188,6 +188,7 @@ class ContextualRanker(Ranker):
 
             # Get any special boost for a particular section
             boost_amount = rescaler.boost_section(section_id) if rescaler is not None else 0.0
+
             return (total_score / n_scores if n_scores > 0 else 0.0) + boost_amount
 
         ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[0], kv[1]), reverse=True)
