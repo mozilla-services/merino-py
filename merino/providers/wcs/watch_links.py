@@ -39,7 +39,7 @@ class CountryEntry(TypedDict):
 
 
 _FIFA_PLUS = HttpUrl(
-    "https://www.plus.fifa.com/showcase/fifa-world-cup-26tm/89de0054-9fa6-4741-88e1-a902dc26740f"
+    "https://www.dazn.com/competition/Competition:50kvbmxi5r9amj2e39hznggqj"
 )
 
 
@@ -64,7 +64,7 @@ def build_watch_link(
 def _build_fifa_watch_link(*, show_in_other_regions: bool = False) -> WatchLinkEntry:
     """Build a FIFA+ entry reusing the shared showcase URL."""
     return WatchLinkEntry(
-        product_name="FIFA+",
+        product_name="FIFA+ (DAZN)",
         url=_FIFA_PLUS,
         sort_order=1,
         in_production=True,
@@ -72,7 +72,6 @@ def _build_fifa_watch_link(*, show_in_other_regions: bool = False) -> WatchLinkE
     )
 
 
-# TODO: SUI has ??? from the source CSV
 
 # Outer key: ISO 3166-1 alpha-2 country code.
 # "langs" inner key: BCP 47 language prefix (e.g. "en", "de") or "*" for country-wide streams
@@ -158,7 +157,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
             "nl": [
                 build_watch_link(
                     "VRT 1",
-                    "https://www.vrt.be/vrtmax/kanalen/sporza/",
+                    "https://www.vrt.be/vrtmax/a-z/sporza--fifa-wk-voetbal-2026/",
                     2,
                     in_production=True,
                     show_in_other_regions=True,
@@ -395,7 +394,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 _build_fifa_watch_link(),
                 build_watch_link(
                     "DRTV",
-                    "https://www.dr.dk/drtv/kategorier/sport",
+                    "https://www.dr.dk/drtv/liste/fifa-vm-2026-_-kampe-_events__351527",
                     2,
                     in_production=True,
                     show_in_other_regions=True,
@@ -500,21 +499,21 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 _build_fifa_watch_link(),
                 build_watch_link(
                     "BBC iPlayer",
-                    "https://www.bbc.co.uk/iplayer/episodes/m002gjj0/fifa-world-cup-2026",
+                    "https://www.bbc.co.uk/iplayer/event/fifa-world-cup",
                     2,
                     in_production=True,
                     show_in_other_regions=True,
                 ),
                 build_watch_link(
                     "ITVX",
-                    "https://www.itv.com/watch",
+                    "https://www.itv.com/watch/fifa-world-cup-2026/1a6247",
                     2,
                     in_production=True,
                     show_in_other_regions=True,
                 ),
                 build_watch_link(
                     "STV Player",
-                    "https://player.stv.tv/live",
+                    "https://player.stv.tv/summary/fifa-world-cup",
                     2,
                     in_production=True,
                     show_in_other_regions=True,
@@ -696,7 +695,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                 ),
                 build_watch_link(
                     "sport tv",
-                    "https://www.sporttv.pt/mundial-fifa-2026",
+                    "https://www.sporttv.pt/noticias/categoria/mundial/5027",
                     3,
                     in_production=True,
                     show_in_other_regions=True,
