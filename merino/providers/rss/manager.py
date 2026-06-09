@@ -6,7 +6,6 @@ from dynaconf.base import Settings
 
 from merino.configs import settings
 from merino.utils.http_client import create_http_client
-from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.providers.rss.base import BaseRssProvider
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPotdBackend,
@@ -38,11 +37,8 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
             return WikimediaPictureOfTheDayProvider(
                 backend=WikimediaPotdBackend(
                     feed_url=setting.feed_url,
-                    gcs_uploader=GcsUploader(
-                        settings.image_gcs.gcs_project,
-                        settings.image_gcs.gcs_bucket,
-                        settings.image_gcs.cdn_hostname,
-                    ),
+                    bucket_name=settings.image_gcs_v2.gcs_bucket,
+                    cdn_hostname=settings.image_gcs_v2.cdn_hostname,
                     http_client=http_client,
                     metrics_client=get_metrics_client(),
                 ),
