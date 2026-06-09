@@ -38,7 +38,7 @@ class CountryEntry(TypedDict):
     langs: dict[str, list[WatchLinkEntry]]
 
 
-_FIFA_PLUS = HttpUrl("https://www.dazn.com/competition/Competition:50kvbmxi5r9amj2e39hznggqj")
+_FIFA_PLUS_DAZN = HttpUrl("https://www.dazn.com/competition/Competition:50kvbmxi5r9amj2e39hznggqj")
 
 
 def build_watch_link(
@@ -63,7 +63,7 @@ def _build_fifa_watch_link(*, show_in_other_regions: bool = False) -> WatchLinkE
     """Build a FIFA+ entry reusing the shared showcase URL."""
     return WatchLinkEntry(
         product_name="FIFA+ (DAZN)",
-        url=_FIFA_PLUS,
+        url=_FIFA_PLUS_DAZN,
         sort_order=1,
         in_production=True,
         show_in_other_regions=show_in_other_regions,
