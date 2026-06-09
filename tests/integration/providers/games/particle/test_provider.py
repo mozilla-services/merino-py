@@ -39,7 +39,6 @@ def fixture_particle_backend(
     return ParticleBackend(
         gcs_uploader=mocker.MagicMock(),
         http_client=mocker.AsyncMock(spec=AsyncClient),
-        manifest_gcs_file_name="runtime-manifest.v1.json",
         metrics_client=statsd_mock,
         particle_url_root="https://test.test/",
         particle_url_path_manifest="manifest.json",

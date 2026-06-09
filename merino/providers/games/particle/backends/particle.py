@@ -5,13 +5,22 @@ import asyncio
 import logging
 import orjson
 import sentry_sdk
+import tempfile
 
 from httpx import AsyncClient, HTTPError, Response
 from pydantic import Json
 
 from merino.configs import settings
 from merino.providers.games.particle.backends.protocol import Particle
+from merino.providers.games.particle.backends.errors import ParticleRemoteFileProcessError
 from merino.providers.games.particle.backends.filemanager import ParticleRemoteFileManager
+from merino.providers.games.particle.backends.utils import (
+    download_remote_file,
+    GameFile,
+    get_remote_files_and_shas_for_channel,
+    RemoteChannelEnum,
+    remote_manifest_channel_is_updated,
+)
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
@@ -37,13 +46,12 @@ class ParticleBackend:
         self,
         gcs_uploader: GcsUploader,
         http_client: AsyncClient,
-        manifest_gcs_file_name: str,
         metrics_client: aiodogstatsd.Client,
         particle_url_root: str,
         particle_url_path_manifest: str,
         remote_file_manager: ParticleRemoteFileManager,
     ) -> None:
-        """Initialize the Polygon backend."""
+        """Initialize the Particle backend."""
         self.gcs_uploader = gcs_uploader
         self.http_client = http_client
         self.metrics_client = metrics_client
@@ -94,3 +102,104 @@ class ParticleBackend:
         # the gcp client library is synchronous - wrap in an async thread so
         # we don't block processing
         return await asyncio.to_thread(self.remote_file_manager.get_manifest_file)
+
+    async def update_channel_files(
+        self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+    ) -> bool:
+        """Attempt to update files for the given channel."""
+        if remote_manifest_channel_is_updated(manifest_remote, manifest_gcs, channel):
+            # get the files for the given channel from the remote manifest
+            files: list[GameFile] = get_remote_files_and_shas_for_channel(manifest_remote, channel)
+
+            # steps necessary for the process to be considered a success
+            staged = False
+            deployed = False
+
+            if not len(files):
+                # if no files were found, exit early
+                sentry_sdk.capture_exception(
+                    ParticleRemoteFileProcessError(
+                        f"No files found in remote manifest for {channel} channel."
+                    )
+                )
+                return False
+            else:
+                # download the remote files, verify their SHAs, and upload to GCS
+                staged, files = await self.stage_channel_files(files=files)
+
+                if staged:
+                    # if staging was successful, attempt to deploy the channel
+                    deployed = await self.deploy_channel_files(
+                        files, manifest_remote=manifest_remote, manifest_gcs=manifest_gcs
+                    )
+
+                # if staging and deploying succeeded, the process was a success
+                return staged and deployed
+        else:
+            # if the channel files don't need to be updated, return False
+            return False
+
+    async def stage_channel_files(self, files: list[GameFile]) -> tuple[bool, list[GameFile]]:
+        """Orchestration function to download remote files for the given channel to a temporary directory,
+        verify their SHAs, and, if valid, upload them to GCS. If one file fails, we cancel the rest of the checks, as all files in a set must
+        validate and upload successfully.
+
+        This will prepare the channel to be "deployed".
+
+        Returns overall success status and the list of GameFiles with their verified/uploaded statuses updated.
+        """
+        # create a temporary directory to store remote files.
+        # at the end of this context, the temp dir will be automatically deleted.
+        with tempfile.TemporaryDirectory() as tmpdir_name:
+            for file in files:
+                # where to store the remote file locally in the context's tempdir
+                file.local_path = f"{tmpdir_name}/{file.name}"
+
+                # attempt to download the file into the temp directory
+                try:
+                    download_remote_file(
+                        f"{self.particle_url_root}/{file.remote_url}", file.local_path
+                    )
+                except Exception as ex:
+                    # capture any exceptions during download and stop processing the manifest files
+                    sentry_sdk.capture_exception(ParticleRemoteFileProcessError(str(ex)))
+                    break
+
+                # validate the SHA of each file
+                file.sha_computed = GameFile.compute_sha(file.local_path)
+
+                if file.sha_target != file.sha_computed:
+                    sentry_sdk.capture_exception(
+                        ParticleRemoteFileProcessError("File SHA mismatch")
+                    )
+                    break
+
+                # if all the above succeeds, the file is considered verified
+                file.sha_verified = True
+
+                # attempt to upload file to GCS - will return the name of the
+                # remote file if successful, an empty string on failure
+                file.gcs_staging_name = await self.remote_file_manager.upload_file(
+                    file_name=file.name, file_path=file.local_path, content_type=file.content_type
+                )
+
+                if file.gcs_staging_name:
+                    file.uploaded = True
+                else:
+                    break
+
+        # if some files were uploaded but not all, erase the partial green deployment
+        # by clearing out the GCS "green" folder
+        if any(f.uploaded for f in files) and not all(f.uploaded for f in files):
+            await self.remote_file_manager.empty_staging_folder()
+
+        # return set of files with sha_verified and uploaded properties
+        # (potentially) updated
+        return all(f.sha_verified and f.uploaded for f in files), files
+
+    async def deploy_channel_files(
+        self, files: list[GameFile], manifest_remote: Json, manifest_gcs: Json
+    ) -> bool:
+        """Deploy files from the 'green' folder in GCS to the root."""
+        # stub
+        return True

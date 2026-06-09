@@ -366,6 +366,10 @@ gcs_bucket = ""
 # CDN hostname used for public URL
 cdn_hostname = ""
 
+# MERINO_GAMES_PARTICLE__GREEN_DEPLOYMENT_FOLDER
+# "folder" name (file prefix) used for staging green deployments
+green_deployment_folder = "green_deployment"
+
 [default.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
 gcs_storage_bucket = ""

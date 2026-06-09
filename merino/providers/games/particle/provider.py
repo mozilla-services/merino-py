@@ -12,7 +12,6 @@ from typing import Any
 from merino.providers.games.particle.backends.filemanager import ParticleFileManagerError
 from merino.providers.games.particle.backends.protocol import Particle, ParticleBackend
 from merino.providers.games.particle.backends.utils import (
-    update_channel_files,
     validate_manifest_against_schema,
     validate_manifest_schema_version,
     ParticleManifestValidationError,
@@ -121,23 +120,22 @@ class Provider:
 
         # get the manifest file we last stored in GCS to determine if the
         # remote version is newer.
-        # returns None if no file is found in GCS, will raise if there's an
-        # error retrieving from GCS.
         try:
             gcs_manifest_json = await self.backend.fetch_manifest_json_from_gcs()
-        except ParticleFileManagerError:
+        except ParticleFileManagerError as ex:
             # if an exception occurs retrieving from GCS, return early to
             # ensure the next cron tick again attempts an update
+            sentry_sdk.capture_exception(ex)
             return False
 
         # conditionally attempt to update file sets - daily puzzle and runtime
-        puzzle_updated = await update_channel_files(
+        puzzle_updated = await self.backend.update_channel_files(
             manifest_remote=remote_manifest_json,
             manifest_gcs=gcs_manifest_json,
             channel=RemoteChannelEnum.PUZZLE,
         )
 
-        runtime_updated = await update_channel_files(
+        runtime_updated = await self.backend.update_channel_files(
             manifest_remote=remote_manifest_json,
             manifest_gcs=gcs_manifest_json,
             channel=RemoteChannelEnum.RUNTIME,

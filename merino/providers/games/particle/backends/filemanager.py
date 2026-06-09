@@ -1,5 +1,6 @@
 """File manager class for the Particle backend."""
 
+import asyncio
 import json
 import logging
 import sentry_sdk
@@ -47,25 +48,30 @@ class ParticleRemoteFileManager:
     """Filemanager for processing remote (GCS) Particle data."""
 
     gcs_client: GcsUploader
+    green_deployment_folder: str
     manifest_file_name: str
 
     def __init__(
         self,
         gcs_client: GcsUploader,
+        green_deployment_folder: str,
         manifest_file_name: str,
     ) -> None:
         """Initialize the remote filemanager."""
         self.gcs_client = gcs_client
+        self.green_deployment_folder = green_deployment_folder
         self.manifest_file_name = manifest_file_name
 
-    def get_manifest_file(self) -> dict[str, Any] | None:
-        """Read remote manifest file.
+    def get_manifest_file(self) -> dict[str, Any]:
+        """Read remote manifest file from GCS.
 
         Raises:
-            ParticleFileManagerError: If the manifest file cannot be accessed.
+            ParticleFileManagerError: If the manifest file cannot be accessed or cannot be converted to JSON.
         Returns:
             Dictionary containing manifest.
         """
+        manifest: dict[str, Any] | None = None
+
         try:
             blob = self.gcs_client.get_file_by_name(self.manifest_file_name)
 
@@ -74,14 +80,44 @@ class ParticleRemoteFileManager:
                 file_contents: dict = json.loads(blob_data)
                 logger.info("Successfully loaded remote Particle manifest file.")
 
-                return file_contents
-
-            return None
+                manifest = file_contents
         except Exception as ex:
-            error_msg = f"Error retrieving remote Particle manifest file. {ex}"
-
+            error_msg = f"Error retrieving GCS manifest file. {ex}"
             logger.error(error_msg)
-
             sentry_sdk.capture_exception(ex)
 
             raise ParticleFileManagerError(error_msg) from ex
+
+        # if manifest is still None, the blob in GCS was empty, so we need to raise
+        if manifest is None:
+            raise ParticleFileManagerError("GCS manifest file is empty.")
+
+        # if the manifest was retrieved and converted to JSON, return it
+        return manifest
+
+    async def upload_file(self, file_name: str, file_path: str, content_type: str) -> str:
+        """Attempt to upload the file to GCS. Overwrites an existing file."""
+        blob_name = ""
+
+        try:
+            # wrap the call in an async thread to unblock other processing
+            blob = await asyncio.to_thread(
+                self.gcs_client.upload_from_filename,
+                file_path=file_path,
+                destination_name=f"{self.green_deployment_folder}/{file_name}",
+                content_type=content_type,
+                forced_upload=True,  # force an overwrite if necessary
+            )
+
+            if blob:
+                blob_name = str(blob.name)
+
+            return blob_name
+        except Exception as ex:
+            sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))
+            return ""
+
+    async def empty_staging_folder(self) -> bool:
+        """Delete all contents of the GCS staging folder. Used when a channel staging fails, e.g. due to SHA validation or upload failure."""
+        # stub
+        return True

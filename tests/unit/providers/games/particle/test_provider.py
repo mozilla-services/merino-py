@@ -98,10 +98,10 @@ def mock_fetch_from_gcs(provider):
 
 
 @pytest.fixture
-def mock_update_channel_files():
+def mock_update_channel_files(provider):
     """Return a mocked update_channel_files async function"""
-    with patch(
-        "merino.providers.games.particle.provider.update_channel_files", new_callable=AsyncMock
+    with patch.object(
+        provider.backend, "update_channel_files", new_callable=AsyncMock
     ) as mock_update_channel_files:
         yield mock_update_channel_files
 
