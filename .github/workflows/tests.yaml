@@ -71,11 +71,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          # diff-cover needs origin/main and full history to compute the PR diff
-          fetch-depth: 0
       - name: Set up to run
         uses: ./.github/actions/weave
+        with:
+          # weave runs its own checkout; full history is required so diff-cover
+          # can find the merge base between origin/main and the PR head.
+          fetch-depth: 0
       - name: Download Test Results Artifacts
         uses: actions/download-artifact@v7
         with:
