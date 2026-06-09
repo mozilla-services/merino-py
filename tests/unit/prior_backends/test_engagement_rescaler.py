@@ -16,6 +16,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     SchedulerHoldbackRescaler,
     PESSIMISTIC_PRIOR_ALPHA_SCALE,
     PESSIMISTIC_PRIOR_ALPHA_SCALE_SUBTOPIC,
+    WORLD_CUP_SECTION_CTR_BOOST,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior
 from merino.curated_recommendations.protocol import ITEM_SUBTOPIC_FLAG
@@ -125,6 +126,13 @@ class TestCrawledContentRescaler:
         alpha, beta = self.rescaler.rescale_prior(rec, 10, 20)
         assert alpha == 10 * PESSIMISTIC_PRIOR_ALPHA_SCALE
         assert beta == 20
+
+    def test_boost_section_world_cup(self):
+        """World Cup sections get a CTR boost, while other sections get none."""
+        assert self.rescaler.boost_section("worldcup__lFR_BE") == WORLD_CUP_SECTION_CTR_BOOST
+        assert self.rescaler.boost_section("worldcup") == WORLD_CUP_SECTION_CTR_BOOST
+        assert self.rescaler.boost_section("nfl") == 0.0
+        assert self.rescaler.boost_section("headlines") == 0.0
 
 
 class TestCrawledContentPinnedFreshRescaler:

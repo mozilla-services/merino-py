@@ -279,6 +279,7 @@ class RankingData(BaseModel):
 # Flags for in_experiment flags. Note that the name in_experiment is historical and should be migrated to a new name
 ITEM_SUBTOPIC_FLAG = "SUBTOPICS"
 ITEM_HEADLINES_FLAG = "HEADLINES"
+ITEM_WORLD_CUP_FLAG = "WORLDCUP"
 
 
 class CuratedRecommendation(CorpusItem):

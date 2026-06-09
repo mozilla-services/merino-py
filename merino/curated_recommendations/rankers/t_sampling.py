@@ -127,7 +127,7 @@ class ThompsonSamplingRanker(Ranker):
         [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
         """
 
-        def sample_score(sec: Section) -> float:
+        def sample_score(section_id: str, sec: Section) -> float:
             """Sample beta distribution for the combined engagement of the top _n_ items."""
             # sum clicks and impressions over top_n items
 
@@ -169,9 +169,12 @@ class ThompsonSamplingRanker(Ranker):
             # Sum engagement and priors.
             opens = max(total_clicks + a_prior_total, 1.0)
             no_opens = max(total_imps - total_clicks + b_prior_total, 1.0)
+
+            boost_amount = rescaler.boost_section(section_id) if rescaler is not None else 0.0
+
             # Sample distribution
-            return float(beta.rvs(opens, no_opens))
+            return float(beta.rvs(opens, no_opens)) + boost_amount
 
         # sort sections by sampled score, highest first
-        ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[1]), reverse=True)
+        ordered = sorted(sections.items(), key=lambda kv: sample_score(kv[0], kv[1]), reverse=True)
         return renumber_sections(ordered)
