@@ -38,9 +38,7 @@ class CountryEntry(TypedDict):
     langs: dict[str, list[WatchLinkEntry]]
 
 
-_FIFA_PLUS = HttpUrl(
-    "https://www.dazn.com/competition/Competition:50kvbmxi5r9amj2e39hznggqj"
-)
+_FIFA_PLUS = HttpUrl("https://www.dazn.com/competition/Competition:50kvbmxi5r9amj2e39hznggqj")
 
 
 def build_watch_link(
@@ -70,7 +68,6 @@ def _build_fifa_watch_link(*, show_in_other_regions: bool = False) -> WatchLinkE
         in_production=True,
         show_in_other_regions=show_in_other_regions,
     )
-
 
 
 # Outer key: ISO 3166-1 alpha-2 country code.

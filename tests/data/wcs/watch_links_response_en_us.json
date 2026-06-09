@@ -1,9 +1,9 @@
 {
   "your_region": [
     {
-      "product_name": "FIFA+",
+      "product_name": "FIFA+ (DAZN)",
       "entitlement": "Free and Paid",
-      "url": "https://www.plus.fifa.com/showcase/fifa-world-cup-26tm/89de0054-9fa6-4741-88e1-a902dc26740f"
+      "url": "https://www.dazn.com/competition/Competition:50kvbmxi5r9amj2e39hznggqj"
     },
     {
       "product_name": "Tubi",
@@ -98,7 +98,7 @@
         {
           "product_name": "VRT 1",
           "entitlement": "Free",
-          "url": "https://www.vrt.be/vrtmax/kanalen/sporza/"
+          "url": "https://www.vrt.be/vrtmax/a-z/sporza--fifa-wk-voetbal-2026/"
         }
       ]
     },
@@ -218,7 +218,7 @@
         {
           "product_name": "DRTV",
           "entitlement": "Free",
-          "url": "https://www.dr.dk/drtv/kategorier/sport"
+          "url": "https://www.dr.dk/drtv/liste/fifa-vm-2026-_-kampe-_events__351527"
         },
         {
           "product_name": "TV 2 Play",
@@ -438,7 +438,7 @@
         {
           "product_name": "sport tv",
           "entitlement": "Free and Paid",
-          "url": "https://www.sporttv.pt/mundial-fifa-2026"
+          "url": "https://www.sporttv.pt/noticias/categoria/mundial/5027"
         }
       ]
     },
@@ -533,17 +533,17 @@
         {
           "product_name": "BBC iPlayer",
           "entitlement": "Free",
-          "url": "https://www.bbc.co.uk/iplayer/episodes/m002gjj0/fifa-world-cup-2026"
+          "url": "https://www.bbc.co.uk/iplayer/event/fifa-world-cup"
         },
         {
           "product_name": "ITVX",
           "entitlement": "Free",
-          "url": "https://www.itv.com/watch"
+          "url": "https://www.itv.com/watch/fifa-world-cup-2026/1a6247"
         },
         {
           "product_name": "STV Player",
           "entitlement": "Free",
-          "url": "https://player.stv.tv/live"
+          "url": "https://player.stv.tv/summary/fifa-world-cup"
         }
       ]
     }
