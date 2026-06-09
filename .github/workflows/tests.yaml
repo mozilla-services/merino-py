@@ -71,6 +71,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # diff-cover needs origin/main and full history to compute the PR diff
+          fetch-depth: 0
       - name: Set up to run
         uses: ./.github/actions/weave
       - name: Download Test Results Artifacts
@@ -79,7 +82,12 @@ jobs:
           path: ${{ inputs.test_result_dir }}
           pattern: "*-test-results"
           merge-multiple: true
-      - name: Evaluate Minimum Test Coverage
+      - name: Evaluate Minimum Test Coverage (total)
         run: make test-coverage-check
+        env:
+          TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}
+      # Uses the combined artifact from step above
+      - name: Evaluate Minimum Test Coverage (PR vs. main)
+        run: make diff-coverage-check
         env:
           TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}

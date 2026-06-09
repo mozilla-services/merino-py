@@ -116,6 +116,7 @@ dev = [
     "opentelemetry-instrumentation-fastapi>=0.63b1",
     "opentelemetry-instrumentation-redis>=0.63b1",
     "opentelemetry-instrumentation-httpx>=0.63b1",
+    "diff-cover>=10.3.0",
 ]
 
 [tool.coverage.report]
