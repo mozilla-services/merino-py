@@ -17,10 +17,10 @@ from unittest.mock import patch
 from urllib.error import ContentTooShortError
 
 from merino.configs import settings
+from merino.providers.games.particle.backends.errors import ParticleManifestValidationError
 from merino.providers.games.particle.backends.utils import (
     GameFile,
     get_remote_files_and_shas_for_channel,
-    ParticleManifestValidationError,
     process_remote_fileset_for_channel,
     RemoteChannelEnum,
     remote_manifest_channel_is_updated,

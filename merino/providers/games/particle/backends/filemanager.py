@@ -7,14 +7,10 @@ import sentry_sdk
 from json import JSONDecodeError
 from typing import Any
 
-from merino.exceptions import FilemanagerError
+from merino.providers.games.particle.backends.errors import ParticleFileManagerError
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
-
-
-class ParticleFileManagerError(FilemanagerError):
-    """Error loading local Particle manifest schema validator file."""
 
 
 class ParticleLocalFileManager:
