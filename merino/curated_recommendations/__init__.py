@@ -234,6 +234,8 @@ def init_lints_interest_backend() -> LinTSInterestBackend | EmptyLinTSInterestBa
 
 def init_spindle_backend() -> SpindleBackendProtocol:
     """Initialize the Spindle ML backend, falling back to a no-op if construction fails."""
+    if settings.spindle.api.max_wait_time_seconds <= 0:  # Serive is disabled
+        return DummySpindleBackend()
     try:
         return SpindleBackend(
             base_url=settings.spindle.api.base_url,

@@ -127,7 +127,7 @@ _validators = [
     Validator(
         "spindle.api.max_wait_time_seconds",
         is_type_of=int,
-        gt=0,
+        gte=0,
         lte=600,
         must_exist=True,
         env=["production", "staging", "development"],

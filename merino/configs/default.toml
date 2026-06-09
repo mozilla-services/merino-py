@@ -1373,15 +1373,15 @@ max_size = 8_000_000
 cron_interval_seconds = 600
 
 [default.spindle.api]
-# MERINO__SPINDLE__API__BASE_URL
+# MERINO_SPINDLE__API__BASE_URL
 # The base URL of the spindle service.
 base_url = ""
 
-# MERINO__SPINDLE__API__MAX_WAIT_TIME_SECONDS
+# MERINO_SPINDLE__API__MAX_WAIT_TIME_SECONDS
 # Wait time when calling the api
 max_wait_time_seconds = 60
 
-# MERINO__SPINDLE__API__API_KEY
+# MERINO_SPINDLE__API__API_KEY
 api_key=""
 
 

@@ -95,7 +95,7 @@ gcp_project = "moz-fx-merino-nonprod-db57"
 bucket_name = "merino-ml-data-stage"
 
 [stage.spindle.api]
-# MERINO__SPINDLE__API__BASE_URL
+# MERINO_SPINDLE__API__BASE_URL
 base_url = "http://spindle-stage.llm-proxy.nonprod.dataservices.mozgcp.net"
 
 

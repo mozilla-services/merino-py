@@ -53,8 +53,15 @@ gcs_bucket = "merino-games-particle-prod"
 cdn_hostname = "prod-games-particle.merino.prod.webservices.mozgcp.net"
 
 [production.spindle.api]
-# MERINO__SPINDLE__API__BASE_URL
+
+# MERINO_SPINDLE__API__BASE_URL
 base_url = "http://spindle-prod.llm-proxy.prod.dataservices.mozgcp.net"
+
+# MERINO_SPINDLE__API__MAX_WAIT_TIME_SECONDS
+# Wait time when calling the api
+# A zero value disables the service. We are testing only on staging.
+max_wait_time_seconds = 0
+
 
 [production.engagement]
 # MERINO_ENGAGEMENT__GCS_STORAGE_BUCKET
