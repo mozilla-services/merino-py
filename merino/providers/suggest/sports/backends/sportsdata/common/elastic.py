@@ -690,7 +690,7 @@ class SportsDataStore(ElasticDataStore):
             cls.choose_current_event(selected_events, event)
 
     async def search_events(
-        self, q: str, language_code: str, mix_sports: bool = False
+        self, q: str, language_code: str, mix_sports: bool = False, filter: list | None = None
     ) -> dict[str, dict]:
         """Search based on the language and platform template"""
         index_id = self.index_map["event"].format(lang=language_code)
@@ -755,6 +755,9 @@ class SportsDataStore(ElasticDataStore):
                         logger.info(f"{LOGGING_TAG}Event has no date, skipping")
                         continue
                     sport = "all" if mix_sports else event["sport"]
+                    if filter and event["sport"] not in filter:
+                        logger.info(f"{LOGGING_TAG} skipping {event['sport']}")
+                        continue
                     selected_events = selected_events_by_sport.setdefault(sport, {})
 
                     # This may be a bit confusing.
