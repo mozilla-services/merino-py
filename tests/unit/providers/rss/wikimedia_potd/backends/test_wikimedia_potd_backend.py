@@ -54,13 +54,18 @@ def fixture_gcs_uploader_mock() -> GcsUploader:
 def fixture_backend(
     statsd_mock,
     mocker: MockerFixture,
-    gcs_uploader_mock: GcsUploader,
 ) -> WikimediaPotdBackend:
     """Return a WikimediaPotdBackend instance for testing."""
+    mocker.patch(
+        "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.get_storage_client",
+        return_value=MagicMock(),
+    )
+
     return WikimediaPotdBackend(
         metrics_client=statsd_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
-        gcs_uploader=gcs_uploader_mock,
+        bucket_name="test-bucket",
+        cdn_hostname="test-cdn",
         feed_url=FEED_URL,
     )
 
