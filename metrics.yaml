@@ -10,8 +10,10 @@ suggest:
       type:
         - email
         - numeric
+        - person
     scope: |
-      The "api/v1/suggest" API endpoint.
+      The "api/v1/suggest" API endpoint. The "person" type is tagged when
+      merino-fleece flags a query and Merino suppresses its suggestions.
     alert_policy: []
   intent_word_count:
     description: |
@@ -652,4 +654,30 @@ merino-fleece/pii:
     labels: []
     scope: |
       The "api/v1/pii" API endpoint of "merino-fleece".
+    alert_policy: []
+
+utils/query_processing/fleece:
+  fleece.pii.detect_duration:
+    description: |
+      A timer covering how long the merino-fleece PII check took to respond.
+    type: timing
+    labels: []
+    scope: |
+      The "api/v1/suggest" API endpoint, when the `fleece-pii-detection`
+      feature flag routes a query through merino-fleece.
+    alert_policy: []
+
+  fleece.pii.error:
+    description: |
+      A counter incremented when the merino-fleece PII check fails open
+      (timeout, unreachable, or unexpected response).
+    type: counter
+    labels:
+      - name: reason
+        description: |
+          The failure category ("http" for transport/status errors,
+          "response" for an unexpected response body).
+    scope: |
+      The "api/v1/suggest" API endpoint, when the `fleece-pii-detection`
+      feature flag routes a query through merino-fleece.
     alert_policy: []
