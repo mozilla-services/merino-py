@@ -21,6 +21,8 @@ def _dynaconf_loader() -> Any:
         envvar_prefix="MERINO",
         settings_files=[
             "configs/flags/default.toml",
+            "configs/flags/stage.toml",
+            "configs/flags/production.toml",
             "configs/flags/testing.toml",
         ],
         environments=True,
