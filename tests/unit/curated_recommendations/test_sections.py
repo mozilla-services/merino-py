@@ -217,7 +217,7 @@ class TestAdjustAdsInSections:
     @pytest.mark.parametrize(
         "section_count, expected_section_ranks_with_ads",
         [
-            (11, {0, 1, 2, 4, 6, 8}),  # All 6 expected sections (1,2,3,5,7,9) to have ads
+            (20, {0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18}),  # All 11 expected sections (1,2,3,5,7,9,11,13,15,17,19) to have ads
             (4, {0, 1, 2}),  # Partially expected sections to have ads
         ],
         ids=["all-allowed-ranks", "partial-allowed-ranks"],

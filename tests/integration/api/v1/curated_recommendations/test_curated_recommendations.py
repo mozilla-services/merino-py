@@ -1955,8 +1955,8 @@ class TestSections:
         # Assert layouts are cycled
         assert_section_layouts_are_cycled(sections)
 
-        # Assert only sections 1,2,3,5,7,9 (ranks: 0,1,2,4,6,8) have ads
-        expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8}
+        # Assert only sections 1,2,3,5,7,9,11,13,15,17,19 (ranks: 0,1,2,4,6,8,10,12,14,16,18) have ads
+        expected_section_ranks_with_ads = {0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18}
         for section in sections.values():
             tiles_with_ads = [
                 tile
