@@ -347,12 +347,12 @@ class TestMlSectionsExperiment:
     @pytest.mark.parametrize(
         "name,branch,region,expected",
         [
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control", "US", False),
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control", "US", True),
             (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", False),
+            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", True),
             ("other", "treatment", "US", True),
             ("other", "treatment", "DE", True),
-            ("other", "treatment", "ZZ", False),
+            ("other", "treatment", "ZZ", True),
         ],
     )
     def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
