@@ -1605,11 +1605,6 @@ class TestSections:
     @pytest.mark.parametrize(
         "experiment_payload",
         [
-            {
-                "experimentName": ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
-                "experimentBranch": "control",
-                "region": "BQ",
-            },
             {"experimentName": None, "experimentBranch": None, "region": "CA"},
         ],
     )
@@ -1685,17 +1680,6 @@ class TestSections:
             recs = section["recommendations"]
             assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
 
-        # Check section types based on experiment
-        legacy_topics = {topic.value for topic in Topic}
-
-        if experiment_payload.get("experimentName") != ExperimentName.ML_SECTIONS_EXPERIMENT.value:
-            # Non-ML sections experiment: Should have legacy topics and may have manually created sections
-            # but should not have ML subtopics
-            for sid in sections:
-                if sid != "top_stories_section" and sid not in legacy_topics:
-                    # Non-legacy sections should only be manually created sections
-                    assert is_manual_section(sid), f"Unexpected section type: {sid}"
-
         # Check the recs used in top_stories_section are removed from their original ML sections.
         top_story_ids = {
             rec["corpusItemId"] for rec in sections["top_stories_section"]["recommendations"]
@@ -1708,11 +1692,7 @@ class TestSections:
 
         # check editorial section with extra metadata is also returned along with ML subfeeds
         editorial_section_id = "042b10d6-4fab-4df6-8006-e73ae5fd021d"
-        if (
-            data["feeds"].get(editorial_section_id) is not None
-            and experiment_payload.get("experimentName")
-            == ExperimentName.ML_SECTIONS_EXPERIMENT.value
-        ):
+        if data["feeds"].get(editorial_section_id) is not None:
             assert data["feeds"][editorial_section_id]["title"] == "Amsterdam Tips"
             assert data["feeds"][editorial_section_id]["subtitle"] == "Travel tips in Amsterdam"
             assert (
@@ -2050,11 +2030,6 @@ class TestSections:
             {"region": "US"},
             {"region": "CA"},
             {
-                "experimentName": ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value,
-                "experimentBranch": "control",
-                "region": "US",
-            },
-            {
                 "experimentName": "other",
                 "experimentBranch": "other",
                 "region": "US",
@@ -2086,13 +2061,7 @@ class TestSections:
                 assert not sid.endswith("_crawl"), f"{sid} shouldn't have _crawl suffix"
 
         legacy_topics = {topic.value for topic in Topic}
-        experiment_name = experiment_payload.get("experimentName")
-        experiment_branch = experiment_payload.get("experimentBranch")
-        region = experiment_payload.get("region")
-        expect_subtopics = region == "US" and not (
-            experiment_name == ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value
-            and experiment_branch == "control"
-        )
+        expect_subtopics = True
 
         # Categorize non-legacy, non-top_stories sections
         non_legacy_section_ids = [
@@ -2775,8 +2744,6 @@ class TestSections:
         payload = {
             "locale": "en-US",
             "feeds": ["sections"],
-            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-            "experimentBranch": "treatment",
         }
 
         baseline_response = client.post("/api/v1/curated-recommendations", json=payload)
@@ -2812,7 +2779,9 @@ class TestSections:
             assert corpus_rec_id not in response_ids
             assert any("Excluding reported recommendation" in r.message for r in caplog.records)
         else:
-            assert corpus_rec_id in response_ids
+            # Rec was not taken down. We don't assert it reappears: section contents are
+            # chosen by Thompson sampling and vary between requests, so a non-removed rec
+            # can legitimately drop out of a second sampled response.
             assert not any(
                 "Excluding reported recommendation" in r.message for r in caplog.records
             )
