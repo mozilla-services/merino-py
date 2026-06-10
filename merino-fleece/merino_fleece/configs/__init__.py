@@ -33,6 +33,12 @@ def _build_validators() -> list[Validator]:
             must_exist=True,
         ),
         Validator(
+            "pii.executor_max_workers",
+            is_type_of=int,
+            gt=0,
+            must_exist=True,
+        ),
+        Validator(
             "logging.format",
             is_in=["mozlog", "pretty"],
             must_exist=True,
