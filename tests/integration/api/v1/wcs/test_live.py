@@ -40,6 +40,14 @@ def test_returns_matches_envelope(client: TestClient) -> None:
     assert {event["status"] for event in body["matches"]} == {"In Progress"}
 
 
+def test_success_sets_short_public_cache_control(client: TestClient) -> None:
+    """Successful live responses are publicly cacheable for the default TTL."""
+    response = client.get(_PATH)
+    assert response.status_code == 200
+    ttl = settings.providers.wcs.default_cache_control_ttl
+    assert response.headers["cache-control"] == f"public, s-maxage={ttl}, max-age={ttl}"
+
+
 def test_matches_sorted_ascending_by_date(client: TestClient) -> None:
     """Live matches come back ordered by event start time."""
     matches = client.get(_PATH).json()["matches"]
@@ -106,6 +114,8 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
         assert response.status_code == 503
         assert response.json() == {"detail": "WCS temporarily unavailable"}
         assert response.headers["retry-after"] == "5"
+        # 503s are not cached, so a recovered backend is served immediately.
+        assert "cache-control" not in response.headers
 
         freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
         sport.get_events_by_date = mocker.AsyncMock(return_value=[])

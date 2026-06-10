@@ -53,6 +53,14 @@ def test_teams_endpoint_returns_correct_list_of_teams(client: TestClient) -> Non
     assert fra["group"] == "Group I"
 
 
+def test_success_sets_short_public_cache_control(client: TestClient) -> None:
+    """Successful teams responses are publicly cacheable for the default TTL."""
+    response = client.get(_PATH)
+    assert response.status_code == 200
+    ttl = settings.providers.wcs.default_cache_control_ttl
+    assert response.headers["cache-control"] == f"public, s-maxage={ttl}, max-age={ttl}"
+
+
 def test_team_icons_are_svg_from_prod_logo_bucket(client: TestClient) -> None:
     """All team flags serve SVG from the hardcoded production GCS bucket."""
     body = client.get(_PATH).json()
@@ -80,6 +88,8 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
         assert response.status_code == 503
         assert response.json() == {"detail": "WCS temporarily unavailable"}
         assert response.headers["retry-after"] == "5"
+        # 503s are not cached, so a recovered backend is served immediately.
+        assert "cache-control" not in response.headers
 
         freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
         sport.get_all_teams = mocker.AsyncMock(return_value={})
