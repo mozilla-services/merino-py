@@ -40,6 +40,7 @@ def test_valid_models_accepted(model: str) -> None:
             "model": model,
             "excluded_components": ["tok2vec"],
             "query_character_max": 100,
+            "executor_max_workers": 4,
         },
         LOGGING={"format": "mozlog", "level": "INFO", "can_propagate": False},
         SENTRY={"mode": "disabled", "dsn": "", "env": "dev", "traces_sample_rate": 0.0},

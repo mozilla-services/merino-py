@@ -17,6 +17,12 @@ excluded_components = ["tok2vec", "tagger", "parser", "attribute_ruler", "lemmat
 # Maximum allowed length of the `q` query parameter.
 query_character_max = 500
 
+# MERINO_FLEECE_PII__EXECUTOR_MAX_WORKERS
+# Size of the thread pool that runs CPU-bound SpaCy NER off the event loop.
+# Roughly match the number of CPU cores available to each worker process; a
+# bounded pool avoids GIL thrashing under load.
+executor_max_workers = 1
+
 [default.sentry]
 # MERINO_FLEECE_SENTRY__MODE
 # One of "disabled", "release", "debug". When "disabled", no Sentry client is initialized.

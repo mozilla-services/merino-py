@@ -1,6 +1,7 @@
 """Tests for the FastAPI /api/v1/pii endpoint with a dependency-overridden detector."""
 
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from pytest_mock import MockerFixture
@@ -10,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from merino_fleece.app import create_app
-from merino_fleece.pii import get_detector
+from merino_fleece.pii import get_detector, get_executor
 
 
 class StubDetector:
@@ -27,21 +28,24 @@ class StubDetector:
 
 @pytest.fixture
 def make_client() -> Iterator:
-    """Yield a factory that builds a TestClient with get_detector overridden."""
+    """Yield a factory that builds a TestClient with the detector and executor overridden."""
     apps: list[FastAPI] = []
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="test-pii-detect")
 
     def _factory(verdict: bool) -> TestClient:
         app = create_app()
         app.dependency_overrides[get_detector] = lambda: StubDetector(verdict)
+        app.dependency_overrides[get_executor] = lambda: executor
         apps.append(app)
-        # No `with` / lifespan needed: the dependency override skips the real
-        # detector and the route does not touch app state.
+        # No `with` / lifespan needed: the dependency overrides supply the
+        # detector and executor, so the route does not touch app state.
         return TestClient(app)
 
     yield _factory
 
     for app in apps:
         app.dependency_overrides.clear()
+    executor.shutdown(wait=True)
 
 
 def test_pii_true(make_client) -> None:
