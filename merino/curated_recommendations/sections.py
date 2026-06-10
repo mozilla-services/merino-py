@@ -419,12 +419,9 @@ def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> b
 
 def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if subtopics should be included based on experiments.
-
-    Include subtopics if:
-    - ML sections experiment is enabled (treatment branch), OR
+    Previously this was an experiment. This function should be refactored out.
     """
-    in_holdback = is_scheduler_holdback_experiment(request)
-    return not in_holdback and request.region in ("US", "GB", "IE", "DE")
+    return True
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
