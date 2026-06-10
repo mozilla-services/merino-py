@@ -45,7 +45,10 @@ def test_success_sets_short_public_cache_control(client: TestClient) -> None:
     response = client.get(_PATH)
     assert response.status_code == 200
     ttl = settings.providers.wcs.default_cache_control_ttl
-    assert response.headers["cache-control"] == f"public, s-maxage={ttl}, max-age={ttl}"
+    assert (
+        response.headers["cache-control"]
+        == f"public, s-maxage={ttl}, max-age={ttl}, stale-while-revalidate={ttl}"
+    )
 
 
 def test_matches_sorted_ascending_by_date(client: TestClient) -> None:

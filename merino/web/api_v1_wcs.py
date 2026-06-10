@@ -65,7 +65,7 @@ async def get_wcs_matches(
     try:
         matches: MatchesResponse = await provider.get_matches(target_date, limit, team_keys)
         response.headers["Cache-Control"] = (
-            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}"
+            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}, stale-while-revalidate={DEFAULT_CACHE_CONTROL_TTL}"
         )
         return matches
     except CircuitBreakerError:
@@ -96,7 +96,7 @@ async def get_wcs_live(
             _parse_team_keys(teams)
         )
         response.headers["Cache-Control"] = (
-            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}"
+            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}, stale-while-revalidate={DEFAULT_CACHE_CONTROL_TTL}"
         )
         return live_matches
     except CircuitBreakerError:
@@ -144,7 +144,7 @@ async def get_wcs_teams(
     try:
         teams: TeamsResponse = await provider.get_teams()
         response.headers["Cache-Control"] = (
-            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}"
+            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}, stale-while-revalidate={DEFAULT_CACHE_CONTROL_TTL}"
         )
         return teams
     except CircuitBreakerError:
