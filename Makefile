@@ -3,6 +3,9 @@ ES_IMAGE := merino-elasticsearch:local
 TEST_DIR := tests
 TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
+DIFF_COV_FAIL_UNDER := 95
+DIFF_COV_BRANCH ?= origin/main
+COMBINED_COVERAGE_XML := $(TEST_RESULTS_DIR)/coverage.xml
 COMMON_PACKAGE_DIR := merino-common/merino_common
 COMMON_TEST_DIR := merino-common/tests
 FLEECE_PACKAGE_DIR := merino-fleece/merino_fleece
@@ -95,6 +98,15 @@ test-coverage-check: $(INSTALL_STAMP)  ##  Evaluate combined unit and integratio
 	$(UV) run coverage report \
 	    --data-file=$(TEST_RESULTS_DIR)/.coverage \
 	    --fail-under=$(COV_FAIL_UNDER)
+
+.PHONY: diff-coverage-check
+diff-coverage-check: $(INSTALL_STAMP)  ##  Check coverage on lines changed vs DIFF_COV_BRANCH (default origin/main); run after `make test`
+	$(UV) run coverage xml \
+	    --data-file=$(TEST_RESULTS_DIR)/.coverage \
+	    -o $(COMBINED_COVERAGE_XML)
+	$(UV) run diff-cover $(COMBINED_COVERAGE_XML) \
+	    --compare-branch=$(DIFF_COV_BRANCH) \
+	    --fail-under=$(DIFF_COV_FAIL_UNDER)
 
 .PHONY: unit-tests
 unit-tests: $(INSTALL_STAMP)  ##  Run unit tests

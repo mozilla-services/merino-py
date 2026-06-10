@@ -73,13 +73,22 @@ jobs:
       - uses: actions/checkout@v5
       - name: Set up to run
         uses: ./.github/actions/weave
+        with:
+          # weave runs its own checkout; full history is required so diff-cover
+          # can find the merge base between origin/main and the PR head.
+          fetch-depth: 0
       - name: Download Test Results Artifacts
         uses: actions/download-artifact@v7
         with:
           path: ${{ inputs.test_result_dir }}
           pattern: "*-test-results"
           merge-multiple: true
-      - name: Evaluate Minimum Test Coverage
+      - name: Evaluate Minimum Test Coverage (total)
         run: make test-coverage-check
+        env:
+          TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}
+      # Uses the combined artifact from step above
+      - name: Evaluate Minimum Test Coverage (PR vs. main)
+        run: make diff-coverage-check
         env:
           TEST_RESULTS_DIR: ${{ inputs.test_result_dir }}

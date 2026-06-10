@@ -478,6 +478,21 @@ wheels = [
 ]
 
 [[package]]
+name = "diff-cover"
+version = "10.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "chardet" },
+    { name = "jinja2" },
+    { name = "pluggy" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/35/21/057e816125c162662d2a2cc2ebcd72dd333e78e51678298d07dd3146011a/diff_cover-10.3.0.tar.gz", hash = "sha256:474dbc63e815fbb7567d7b7ca5b104123e96129f25426ebdbc9a1bdbb935b2c6", size = 106546, upload-time = "2026-05-30T14:17:14.32Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/0a/a96e57a7a3fca419cd5ceff0d13dee2166520fa67103fb82624ad64700fb/diff_cover-10.3.0-py3-none-any.whl", hash = "sha256:2e47d5ab3868d1e92131c11f364f3f4a8583c97123d3bbc6b6cc8ce0a4cc2202", size = 58989, upload-time = "2026-05-30T14:17:12.858Z" },
+]
+
+[[package]]
 name = "distlib"
 version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -1417,6 +1432,7 @@ dependencies = [
 dev = [
     { name = "bandit" },
     { name = "coverage" },
+    { name = "diff-cover" },
     { name = "freezegun" },
     { name = "mypy" },
     { name = "opentelemetry-distro" },
@@ -1493,6 +1509,7 @@ requires-dist = [
 dev = [
     { name = "bandit", extras = ["toml"], specifier = ">=1.9.0,<2" },
     { name = "coverage", specifier = ">=7.13.5,<8" },
+    { name = "diff-cover", specifier = ">=10.3.0" },
     { name = "freezegun", specifier = ">=1.2.2,<2" },
     { name = "mypy", specifier = "==1.20.1" },
     { name = "opentelemetry-distro", specifier = ">=0.63b1" },
