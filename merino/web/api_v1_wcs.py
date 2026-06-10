@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from datetime import date as Date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Header, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
@@ -29,6 +29,9 @@ router = APIRouter()
 
 HEADER_CHARACTER_MAX = settings.web.api.v1.header_character_max
 WATCH_LINKS_CACHE_CONTROL_TTL = settings.providers.wcs.watch_links_cache_control_ttl
+# All game/team data is refreshed on a 3 minute schedule; add a short cache
+# to reduce some requests to the server while not compromising freshness
+DEFAULT_CACHE_CONTROL_TTL = settings.providers.wcs.default_cache_control_ttl
 _RETRY_AFTER = str(settings.providers.wcs.circuit_breaker_retry_after_sec)
 
 
@@ -40,6 +43,7 @@ _RETRY_AFTER = str(settings.providers.wcs.circuit_breaker_retry_after_sec)
     response_model_by_alias=True,
 )
 async def get_wcs_matches(
+    response: Response,
     date: Annotated[
         Date | None, Query(description="RFC date YYYY-MM-DD; defaults to today UTC.")
     ] = None,
@@ -60,6 +64,9 @@ async def get_wcs_matches(
     team_keys = _parse_team_keys(teams)
     try:
         matches: MatchesResponse = await provider.get_matches(target_date, limit, team_keys)
+        response.headers["Cache-Control"] = (
+            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}, stale-while-revalidate={DEFAULT_CACHE_CONTROL_TTL}"
+        )
         return matches
     except CircuitBreakerError:
         raise HTTPException(
@@ -76,6 +83,7 @@ async def get_wcs_matches(
     response_model=LiveMatchesResponse,
 )
 async def get_wcs_live(
+    response: Response,
     teams: Annotated[
         str | None,
         Query(description="Comma-separated 3-letter team keys, e.g. 'BRA,ARG'."),
@@ -86,6 +94,9 @@ async def get_wcs_live(
     try:
         live_matches: LiveMatchesResponse = await provider.get_live_matches(
             _parse_team_keys(teams)
+        )
+        response.headers["Cache-Control"] = (
+            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}, stale-while-revalidate={DEFAULT_CACHE_CONTROL_TTL}"
         )
         return live_matches
     except CircuitBreakerError:
@@ -115,7 +126,7 @@ async def get_wcs_watch_links(
 
     return JSONResponse(
         content=jsonable_encoder(watch_links),
-        headers={"Cache-Control": (f"private, max-age={WATCH_LINKS_CACHE_CONTROL_TTL}")},
+        headers={"Cache-Control": f"private, max-age={WATCH_LINKS_CACHE_CONTROL_TTL}"},
     )
 
 
@@ -126,11 +137,15 @@ async def get_wcs_watch_links(
     response_model=TeamsResponse,
 )
 async def get_wcs_teams(
+    response: Response,
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> TeamsResponse:
     """Return all teams participating in the World Cup."""
     try:
         teams: TeamsResponse = await provider.get_teams()
+        response.headers["Cache-Control"] = (
+            f"public, s-maxage={DEFAULT_CACHE_CONTROL_TTL}, max-age={DEFAULT_CACHE_CONTROL_TTL}, stale-while-revalidate={DEFAULT_CACHE_CONTROL_TTL}"
+        )
         return teams
     except CircuitBreakerError:
         raise HTTPException(

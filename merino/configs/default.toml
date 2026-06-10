@@ -566,6 +566,9 @@ circuit_breaker_recover_timeout_sec = 30
 # MERINO_PROVIDERS__WCS__WATCH_LINKS_CACHE_CONTROL_TTL
 # TTL value for the cache-control header set on the /wcs/watch-links endpoint response.
 watch_links_cache_control_ttl = 3600 # 1 hour
+# MERINO_PROVIDERS__WCS__DEFAULT_CACHE_CONTROL_TTL
+# TTL value for the cache-control header if cacheable and no other more specific TTL exists
+default_cache_control_ttl = 15 # seconds
 # MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_RETRY_AFTER_SEC
 # Value for the `Retry-After` header on 503 responses when the breaker is open.
 circuit_breaker_retry_after_sec = 90
