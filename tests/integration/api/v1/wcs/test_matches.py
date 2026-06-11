@@ -93,6 +93,29 @@ def test_same_day_scheduled_match_is_next_until_kickoff(client: TestClient) -> N
     assert [event["global_event_id"] for event in body["next"]] == [90086908]
 
 
+@freezegun.freeze_time("2026-06-11T12:00:00Z")
+def test_explicit_date_keeps_upcoming_match_next_until_kickoff(client: TestClient) -> None:
+    """The date parameter anchors the window, not the match-state reference time."""
+    app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
+        events=[
+            build_event(
+                90086908,
+                -4,
+                19,
+                ("MEX", "Mexico", 90000868),
+                ("RSA", "South Africa", 90001083),
+                GameStatus.Scheduled,
+            )
+        ]
+    )
+
+    body = client.get(_PATH, params={"date": "2026-06-12"}).json()
+
+    assert body["previous"] == []
+    assert body["current"] == []
+    assert [event["global_event_id"] for event in body["next"]] == [90086908]
+
+
 def test_event_contract_required_fields_are_non_null(client: TestClient) -> None:
     """Event fields Mobile branches on are always present and non-null."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()

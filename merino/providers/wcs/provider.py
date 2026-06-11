@@ -77,18 +77,18 @@ class WcsProvider:
     ) -> MatchesResponse:
         """Return matches in a +/- _WINDOW day window around `target_date`.
 
-        Events are sorted ascending by event date, then bucketed by match state:
-        completed/old matches in `previous`, active matches in `current`, and
-        scheduled future matches in `next`. `limit` keeps the entries closest
-        to `target_date` in each bucket; `team_keys` restricts results to
-        matches involving any of the listed teams.
+        Events are sorted ascending by event date, then bucketed by match state
+        at request time: completed/old matches in `previous`, active matches in
+        `current`, and scheduled future matches in `next`. `limit` keeps the
+        entries closest to `target_date` in each bucket; `team_keys` restricts
+        results to matches involving any of the listed teams.
         """
         previous: list[EventInfo] = []
         current: list[EventInfo] = []
         next_: list[EventInfo] = []
 
         target_day = _target_day(target_date)
-        reference_time = _reference_datetime(target_date)
+        reference_time = _reference_datetime()
         window_start = datetime.combine(target_day - _WINDOW, time.min, tzinfo=UTC)
         window_end = datetime.combine(target_day + _WINDOW, time.max, tzinfo=UTC)
         try:
@@ -221,13 +221,9 @@ def _target_day(target_date: date) -> date:
     return target_date
 
 
-def _reference_datetime(target_date: date) -> datetime:
+def _reference_datetime() -> datetime:
     """Return the UTC time used for status-aware match bucketing."""
-    target_day = _target_day(target_date)
-    now = datetime.now(UTC)
-    if target_day == now.date():
-        return now
-    return datetime.combine(target_day, time.min, tzinfo=UTC)
+    return datetime.now(UTC)
 
 
 def _event_datetime(event: Event) -> datetime:

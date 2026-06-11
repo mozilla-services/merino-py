@@ -110,6 +110,54 @@ async def test_scheduled_match_moves_current_at_kickoff_if_status_lags() -> None
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-11T12:00:00Z")
+async def test_explicit_date_does_not_promote_upcoming_previous_day_match() -> None:
+    """A future `date` window does not make an upcoming scheduled match current."""
+    scheduled = build_event(
+        90086908,
+        -4,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        date(2026, 6, 12),
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert response.current == []
+    assert [event.global_event_id for event in response.next_] == [90086908]
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-11T12:00:00Z")
+async def test_future_midnight_kickoff_stays_next_until_real_kickoff() -> None:
+    """A future 00:00Z scheduled match is not current before its kickoff time."""
+    scheduled = build_event(
+        90086909,
+        -3,
+        0,
+        ("KOR", "Korea Republic", 90001209),
+        ("CZE", "Czechia", 90000945),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        date(2026, 6, 12),
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert response.current == []
+    assert [event.global_event_id for event in response.next_] == [90086909]
+
+
+@pytest.mark.asyncio
 async def test_window_excludes_outside_range() -> None:
     """No event lands more than WINDOW days from the anchor."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
