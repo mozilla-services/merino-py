@@ -34,9 +34,6 @@ LANGUAGE_FOR_SURFACE: dict[SurfaceId, str] = {
 
 LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
     SurfaceId.NEW_TAB_EN_US: "en_US",
-    SurfaceId.NEW_TAB_EN_CA: "en_CA",
-    SurfaceId.NEW_TAB_EN_GB: "en_GB",
-    SurfaceId.NEW_TAB_EN_IE: "en_IE",
 }
 
 METRIC_NAMESPACE = "recommendation.spindle"
