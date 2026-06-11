@@ -5,7 +5,6 @@ import logging
 import os
 import requests
 import sentry_sdk
-import tempfile
 
 from enum import StrEnum
 from jsonschema import exceptions, validate
@@ -34,8 +33,14 @@ class GameFile:
 
     # the name of the file, e.g. style.css - pulled from remote_url
     name: str
+    # the content-type of the file
+    content_type: str
+    # the name of the file when staged in GCS
+    gcs_staging_name: str
     # the local filesystem location of the file after it was downloaded
     local_path: str
+    # set to True only after the file has been uploaded to GCS
+    uploaded: bool = False
     # the remote path to the file, e.g. https://url.com/daily_files/ - pulled from remote_url
     remote_path: str
     # the full remote url to the file, e.g. https://url.com/daily_files/style.css
@@ -48,10 +53,11 @@ class GameFile:
     # set to True only after verifying SHA from downloaded file matches sha_target
     sha_verified: bool = False
 
-    def __init__(self, url: str, sha: str):
+    def __init__(self, url: str, sha: str, content_type: str):
         """Initialize the instance by splitting up the remote file path into
         path and file name
         """
+        self.content_type = content_type
         self.remote_url = url
         self.sha_target = sha
         # get just the file name for the remote file. we store the file in
@@ -63,8 +69,12 @@ class GameFile:
     @staticmethod
     def compute_sha(local_path) -> str:  # pragma: no cover
         """Get the SHA256 value of the given file."""
-        with open(local_path, "rb", buffering=0) as file:
-            return hashlib.file_digest(file, "sha256").hexdigest()
+        try:
+            with open(local_path, "rb", buffering=0) as file:
+                return hashlib.file_digest(file, "sha256").hexdigest()
+        except Exception as ex:
+            sentry_sdk.capture_exception(ParticleRemoteFileProcessError(str(ex)))
+            return ""
 
 
 def validate_manifest_schema_version(manifest_json: Json, manifest_schema_version: int) -> None:
@@ -123,7 +133,9 @@ def get_remote_files_and_shas_for_channel(
         sentry_sdk.capture_exception(ParticleManifestValidationError(str(ex)))
 
     for file in files:
-        game_files.append(GameFile(url=file["url"], sha=file["sha256"]))
+        game_files.append(
+            GameFile(url=file["url"], sha=file["sha256"], content_type=file["contentType"])
+        )
 
     return game_files
 
@@ -136,76 +148,3 @@ def download_remote_file(url: str, destination_path: str) -> None:
 
     with open(destination_path, "wb") as f:
         f.write(response.content)
-
-
-async def process_remote_fileset_for_channel(
-    manifest_remote: Json, channel: RemoteChannelEnum, particle_url_root: str
-) -> bool:
-    """Orchestration function to download remote files for the given channel to a temporary directory,
-    verify their SHAs, and, if valid, upload them to GCS. If one file fails, we cancel the rest of the checks, as all files in a set must
-    validate and upload successfully.
-    """
-    # get the files for the given channel from the remote manifest
-    files: list[GameFile] = get_remote_files_and_shas_for_channel(manifest_remote, channel)
-
-    # if for some reason there are no files in the manifest (very edge case),
-    # exit early
-    if len(files) == 0:
-        return False
-
-    # create a temporary directory to store remote files.
-    # at the end of this context, the temp dir will be automatically deleted.
-    with tempfile.TemporaryDirectory() as tmpdir_name:
-        for file in files:
-            # where to store the remote file locally in the context's tempdir
-            file.local_path = f"{tmpdir_name}/{file.name}"
-
-            # attempt to download the file into the temp directory
-            try:
-                download_remote_file(f"{particle_url_root}/{file.remote_url}", file.local_path)
-            except Exception as ex:
-                # capture any exceptions during download and stop processing the manifest files
-                sentry_sdk.capture_exception(ParticleRemoteFileProcessError(str(ex)))
-                break
-
-            # validate the SHA of each file
-            try:
-                file.sha_computed = GameFile.compute_sha(file.local_path)
-            except Exception as ex:
-                sentry_sdk.capture_exception(ParticleRemoteFileProcessError(str(ex)))
-                break
-
-            if file.sha_target != file.sha_computed:
-                sentry_sdk.capture_exception(ParticleRemoteFileProcessError("File SHA mismatch"))
-                break
-
-            # if all the above succeeds, the file is considered verified
-            file.sha_verified = True
-
-    # return True only if all files in the set were verified and uploaded
-    return all(f.sha_verified for f in files)
-
-
-async def update_channel_files(
-    manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
-) -> bool:
-    """Attempt to update files for the given channel - partial stub, async operations to come"""
-    should_update = (
-        remote_manifest_channel_is_updated(manifest_remote, manifest_gcs, channel)
-        if manifest_gcs
-        else True
-    )
-
-    if should_update:
-        # validate channel files SHAs and, if valid, attempt to upload to GCS
-        # if the above succeeds, return True, else False
-        return True
-
-        # get list of files to be updated and their SHAs as specified by the
-        # remote manifest
-        # files_with_shas = get_remote_files_and_shas(manifest_remote, RemoteChannelEnum.PUZZLE)
-
-        # for each file, verify the checksum
-    else:
-        # if the channel files don't need to be updated, return False
-        return False

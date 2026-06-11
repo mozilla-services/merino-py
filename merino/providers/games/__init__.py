@@ -26,6 +26,7 @@ _enabled = settings.games_providers.particle.enabled
 _gcs_project = settings.games_particle_gcs.gcs_project
 _gcs_bucket = settings.games_particle_gcs.gcs_bucket
 _gcs_cdn_hostname = settings.games_particle_gcs.cdn_hostname
+_gcs_green_deployment_folder = settings.games_particle_gcs.green_deployment_folder
 _manifest_gcs_file_name = settings.games_providers.particle.manifest_gcs_file_name
 _manifest_schema_file_path = (
     f"{_app_root_dir}/{settings.games_providers.particle.manifest_schema_file_path}"
@@ -54,12 +55,15 @@ async def init_providers() -> None:
     local_file_manager = ParticleLocalFileManager(_manifest_schema_file_path)
 
     # manages particle files in gcs
-    remote_file_manager = ParticleRemoteFileManager(gcs_uploader, _manifest_gcs_file_name)
+    remote_file_manager = ParticleRemoteFileManager(
+        gcs_client=gcs_uploader,
+        manifest_file_name=_manifest_gcs_file_name,
+        green_deployment_folder=_gcs_green_deployment_folder,
+    )
 
     particle_backend = ParticleBackend(
         gcs_uploader=gcs_uploader,
         http_client=http_client,
-        manifest_gcs_file_name=_manifest_gcs_file_name,
         metrics_client=metrics_client,
         particle_url_root=_url_root,
         particle_url_path_manifest=_url_path_manifest,

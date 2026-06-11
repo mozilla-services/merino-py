@@ -58,6 +58,7 @@ class GcsUploader(BaseContentUploader):
         try:
             if forced_upload or not destination_blob.exists():
                 logger.info(f"Uploading blob: {destination_blob.name}")
+
                 destination_blob.upload_from_string(
                     content,
                     content_type=content_type,
@@ -66,6 +67,32 @@ class GcsUploader(BaseContentUploader):
 
         except Exception as e:
             logger.error(f"Exception {e} occurred while uploading {destination_name}")
+
+        return destination_blob
+
+    def upload_from_filename(
+        self,
+        file_path: str,
+        destination_name: str,
+        content_type: str,
+        forced_upload: bool = False,
+    ) -> Blob:
+        """Upload a local file and return the blob."""
+        bucket: Bucket = self.storage_client.bucket(self.bucket_name)
+        destination_blob = bucket.blob(destination_name)
+
+        try:
+            if forced_upload or not destination_blob.exists():
+                logger.info(f"Uploading file: {destination_blob.name}")
+                destination_blob.upload_from_filename(
+                    file_path,
+                    content_type=content_type,
+                )
+                destination_blob.make_public()
+
+        except Exception as e:
+            logger.error(f"Exception {e} occurred while uploading {destination_name}")
+            raise e
 
         return destination_blob
 

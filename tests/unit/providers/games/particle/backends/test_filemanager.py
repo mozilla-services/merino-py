@@ -111,7 +111,11 @@ class TestRemoteFileManager:
     @pytest.fixture(name="filemanager_parameters")
     def fixture_filemanager_parameters(self, gcs_uploader_mock) -> dict[str, Any]:
         """Define ParticleRemoteFileManager parameters for test."""
-        return {"gcs_client": gcs_uploader_mock, "manifest_file_name": "test_file.json"}
+        return {
+            "gcs_client": gcs_uploader_mock,
+            "manifest_file_name": "test_manifest.json",
+            "green_deployment_folder": "green_deployment",
+        }
 
     @pytest.fixture(name="filemanager")
     def fixture_particle_remote_filemanager(
@@ -126,7 +130,7 @@ class TestRemoteFileManager:
             mock_auth_default.return_value = (creds, "test-project")
             return ParticleRemoteFileManager(**filemanager_parameters)
 
-    def test_get_file(
+    def test_get_manifest_file(
         self,
         filemanager: ParticleRemoteFileManager,
         caplog: LogCaptureFixture,
@@ -150,24 +154,40 @@ class TestRemoteFileManager:
         assert len(records) == 1
         assert records[0].message.startswith("Successfully loaded remote Particle manifest file.")
 
-    def test_get_remote_file_empty(
+    def test_get_manifest_file_empty(
         self,
         filemanager: ParticleRemoteFileManager,
     ) -> None:
-        """Test that the RemoteFileManager returns None when the call to GCS returns None."""
+        """Test that the RemoteFileManager raises when the call to GCS returns None."""
         filemanager.gcs_client = MagicMock()
         filemanager.gcs_client.get_file_by_name.return_value = None
 
-        result = filemanager.get_manifest_file()
-        assert result is None
+        with pytest.raises(ParticleFileManagerError):
+            filemanager.get_manifest_file()
 
-    def test_get_remote_file_error(
+    def test_get_manifest_file_invalid_json(
         self,
         filemanager: ParticleRemoteFileManager,
     ) -> None:
-        """Test that the RemoteFileManager returns None when the call to GCS fails."""
+        """Test that the RemoteFileManager raises when the call to GCS returns invalid JSON."""
+        filemanager.gcs_client = MagicMock()
+        filemanager.gcs_client.get_file_by_name.return_value = "invalid json"
+
+        with pytest.raises(ParticleFileManagerError):
+            filemanager.get_manifest_file()
+
+    def test_get_manifest_file_error(
+        self,
+        filemanager: ParticleRemoteFileManager,
+    ) -> None:
+        """Test that the RemoteFileManager raises when the call to GCS fails."""
         filemanager.gcs_client = MagicMock()
         filemanager.gcs_client.get_file_by_name.side_effect = Exception("Test error")
 
         with pytest.raises(ParticleFileManagerError):
             filemanager.get_manifest_file()
+
+    @pytest.mark.asyncio
+    async def test_empty_staging_folder(self, filemanager):
+        """Stub test."""
+        assert await filemanager.empty_staging_folder()

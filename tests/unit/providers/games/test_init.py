@@ -71,7 +71,6 @@ async def test_init_providers() -> None:
         mock_particle_backend.assert_called_once_with(
             gcs_uploader=mock_gcs_uploader_instance,
             http_client=mock_http_client_instance,
-            manifest_gcs_file_name="mock_manifest_gcs_file_name",
             metrics_client=mock_metrics_client_instance,
             particle_url_root="mock_url_root",
             particle_url_path_manifest="mock_url_path_manifest",
