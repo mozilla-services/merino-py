@@ -110,6 +110,67 @@ async def test_scheduled_match_moves_previous_after_kickoff_until_status_updates
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T19:45:00Z")
+async def test_break_match_stays_current_after_kickoff() -> None:
+    """SportsData uses Break for halftime, which remains a current live match."""
+    halftime = build_event(
+        90086910,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Break,
+        home_score=1,
+        away_score=1,
+        period="HT",
+        clock="45",
+    )
+
+    response = await build_provider(events=[halftime]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert [event.global_event_id for event in response.current] == [90086910]
+    assert response.next_ == []
+    assert response.current[0].status == "Break"
+    assert response.current[0].status_type == "live"
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T21:10:00Z")
+async def test_penalty_shootout_match_stays_current_until_final() -> None:
+    """A live penalty shootout remains current until SportsData marks it final."""
+    penalties = build_event(
+        90086911,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.InProgress,
+        home_score=2,
+        away_score=2,
+        home_penalty=2,
+        away_penalty=1,
+        period="PenaltyShootout",
+        clock="120",
+    )
+
+    response = await build_provider(events=[penalties]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert [event.global_event_id for event in response.current] == [90086911]
+    assert response.next_ == []
+    assert response.current[0].period == "PenaltyShootout"
+
+
+@pytest.mark.asyncio
 @freezegun.freeze_time("2026-06-11T12:00:00Z")
 async def test_explicit_date_does_not_promote_upcoming_previous_day_match() -> None:
     """A future `date` window does not make an upcoming scheduled match current."""
@@ -359,11 +420,24 @@ async def test_live_mock_path_does_not_touch_redis(mocker) -> None:
 @freezegun.freeze_time("2026-06-15T16:00:00Z")
 async def test_live_returns_only_in_progress_cached_events() -> None:
     """`get_live_matches` reads Redis-backed events and keeps live matches only."""
-    response = await build_provider().get_live_matches(team_keys=None)
+    halftime = build_event(
+        90086910,
+        0,
+        15,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Break,
+        period="HT",
+        clock="45",
+    )
 
-    assert len(response.matches) == 2
-    assert {event.global_event_id for event in response.matches} == {1003, 1004}
-    assert {event.status for event in response.matches} == {"In Progress"}
+    response = await build_provider(events=[*build_events(), halftime]).get_live_matches(
+        team_keys=None
+    )
+
+    assert len(response.matches) == 3
+    assert {event.global_event_id for event in response.matches} == {1003, 1004, 90086910}
+    assert {event.status for event in response.matches} == {"In Progress", "Break"}
     assert {event.status_type for event in response.matches} == {"live"}
 
 

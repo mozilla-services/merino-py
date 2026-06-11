@@ -16,6 +16,7 @@ class GameStatus(StrEnum):
     Delayed = "delayed"  # equivalent to "scheduled"
     Postponed = "postponed"  # equivalent to "scheduled"
     InProgress = "inprogress"
+    Break = "break"  # equivalent to "inprogress" during soccer intervals
     Suspended = "suspended"  # equivalent to "inprogress"
     Canceled = "canceled"
     Final = "final"
@@ -55,7 +56,7 @@ class GameStatus(StrEnum):
 
     def is_in_progress(self) -> bool:
         """Return if the game is currently in progress in some form"""
-        return self in [GameStatus.InProgress, GameStatus.Suspended]
+        return self in [GameStatus.InProgress, GameStatus.Break, GameStatus.Suspended]
 
     def status_type(self) -> GameStatus:
         """Return a simplified status for this event.
