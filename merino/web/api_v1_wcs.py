@@ -57,7 +57,8 @@ async def get_wcs_matches(
     """Return matches grouped into `previous`, `current`, and `next`.
 
     The window is around `date`. `previous` holds completed or old matches,
-    `current` holds active matches, and `next` holds upcoming matches. Each
+    `current` holds active matches and scheduled matches during the short
+    post-kickoff feed-lag grace period, and `next` holds upcoming matches. Each
     bucket is sorted ascending by event date.
     """
     target_date = date or datetime.now(UTC).date()

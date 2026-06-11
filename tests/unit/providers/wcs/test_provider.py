@@ -20,6 +20,7 @@ from merino.providers.wcs.provider import (
     WcsProvider,
     _LIVE_MATCH_LOOKAHEAD,
     _LIVE_MATCH_LOOKBACK,
+    _SCHEDULED_MATCH_POST_KICKOFF_GRACE,
     _WINDOW,
 )
 from tests.wcs.factories import (
@@ -87,8 +88,32 @@ async def test_same_day_scheduled_match_stays_next_until_kickoff() -> None:
 
 @pytest.mark.asyncio
 @freezegun.freeze_time("2026-06-15T19:01:00Z")
-async def test_scheduled_match_moves_previous_after_kickoff_until_status_updates() -> None:
-    """After kickoff, a still-scheduled match is past until the feed marks it live."""
+async def test_scheduled_match_stays_current_during_post_kickoff_grace() -> None:
+    """After kickoff, a still-scheduled match remains current while the feed catches up."""
+    scheduled = build_event(
+        90086908,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert [event.global_event_id for event in response.current] == [90086908]
+    assert response.next_ == []
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T19:31:00Z")
+async def test_scheduled_match_moves_previous_after_post_kickoff_grace() -> None:
+    """A still-scheduled match moves previous after the feed-lag grace window."""
     scheduled = build_event(
         90086908,
         0,
@@ -106,6 +131,31 @@ async def test_scheduled_match_moves_previous_after_kickoff_until_status_updates
 
     assert [event.global_event_id for event in response.previous] == [90086908]
     assert response.current == []
+    assert response.next_ == []
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T19:30:00Z")
+async def test_scheduled_match_grace_includes_boundary() -> None:
+    """Scheduled matches remain current through the configured grace duration."""
+    scheduled = build_event(
+        90086908,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert _SCHEDULED_MATCH_POST_KICKOFF_GRACE == timedelta(minutes=30)
+    assert response.previous == []
+    assert [event.global_event_id for event in response.current] == [90086908]
     assert response.next_ == []
 
 

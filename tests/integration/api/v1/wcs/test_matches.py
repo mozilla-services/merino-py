@@ -93,6 +93,29 @@ def test_same_day_scheduled_match_is_next_until_kickoff(client: TestClient) -> N
     assert [event["global_event_id"] for event in body["next"]] == [90086908]
 
 
+@freezegun.freeze_time("2026-06-15T19:01:00Z")
+def test_scheduled_match_is_current_during_post_kickoff_grace(client: TestClient) -> None:
+    """A same-day scheduled match remains current shortly after kickoff."""
+    app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
+        events=[
+            build_event(
+                90086908,
+                0,
+                19,
+                ("MEX", "Mexico", 90000868),
+                ("RSA", "South Africa", 90001083),
+                GameStatus.Scheduled,
+            )
+        ]
+    )
+
+    body = client.get(_PATH, params={"date": _ANCHOR}).json()
+
+    assert body["previous"] == []
+    assert [event["global_event_id"] for event in body["current"]] == [90086908]
+    assert body["next"] == []
+
+
 @freezegun.freeze_time("2026-06-11T12:00:00Z")
 def test_explicit_date_keeps_upcoming_match_next_until_kickoff(client: TestClient) -> None:
     """The date parameter anchors the window, not the match-state reference time."""
