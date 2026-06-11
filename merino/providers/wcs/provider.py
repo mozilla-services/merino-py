@@ -2,7 +2,7 @@
 
 from datetime import UTC, date, datetime, time, timedelta
 import logging
-from typing import Protocol
+from typing import Literal, Protocol
 
 from aiodogstatsd import Client
 import sentry_sdk
@@ -32,6 +32,7 @@ _WINDOW = timedelta(days=21)
 _LIVE_MATCH_LOOKBACK = timedelta(hours=6)
 _LIVE_MATCH_LOOKAHEAD = timedelta(hours=2)
 _CACHE_ERROR_METRIC = "wcs.cache_error"
+_MatchBucket = Literal["previous", "current", "next"]
 logger = logging.getLogger(__name__)
 
 
@@ -76,8 +77,9 @@ class WcsProvider:
     ) -> MatchesResponse:
         """Return matches in a +/- _WINDOW day window around `target_date`.
 
-        Events are bucketed into `previous`, `current`, and `next` relative to
-        `target_date` and sorted ascending by event date. `limit` keeps the
+        Events are sorted ascending by event date, then bucketed by match state
+        at request time: completed/past matches in `previous`, active matches in
+        `current`, and scheduled future matches in `next`. `limit` keeps the
         entries closest to `target_date` in each bucket; `team_keys` restricts
         results to matches involving any of the listed teams.
         """
@@ -86,6 +88,7 @@ class WcsProvider:
         next_: list[EventInfo] = []
 
         target_day = _target_day(target_date)
+        reference_time = _reference_datetime()
         window_start = datetime.combine(target_day - _WINDOW, time.min, tzinfo=UTC)
         window_end = datetime.combine(target_day + _WINDOW, time.max, tzinfo=UTC)
         try:
@@ -96,11 +99,11 @@ class WcsProvider:
 
         for event in sorted(events, key=lambda e: e.date):
             event_info = EventInfo.from_event(event)
-            event_date = _event_date(event)
             if _matches_team_filter(event_info, team_keys):
-                if event_date < target_day:
+                bucket = _bucket_for_event(event, reference_time)
+                if bucket == "previous":
                     previous.append(event_info)
-                elif event_date == target_day:
+                elif bucket == "current":
                     current.append(event_info)
                 else:
                     next_.append(event_info)
@@ -218,12 +221,30 @@ def _target_day(target_date: date) -> date:
     return target_date
 
 
-def _event_date(event: Event) -> date:
-    """Return the UTC calendar date of `event`."""
+def _reference_datetime() -> datetime:
+    """Return the UTC time used for status-aware match bucketing."""
+    return datetime.now(UTC)
+
+
+def _event_datetime(event: Event) -> datetime:
+    """Return the UTC datetime of `event`."""
     event_datetime = event.date
     if event_datetime.tzinfo is None:
         event_datetime = event_datetime.replace(tzinfo=UTC)
-    return event_datetime.astimezone(UTC).date()
+    return event_datetime.astimezone(UTC)
+
+
+def _bucket_for_event(event: Event, reference_time: datetime) -> _MatchBucket:
+    """Return the matches response bucket for `event` at `reference_time`."""
+    if event.status.is_final():
+        return "previous"
+    if event.status.is_in_progress():
+        return "current"
+
+    event_datetime = _event_datetime(event)
+    if event_datetime > reference_time:
+        return "next"
+    return "previous"
 
 
 def _has_team(event: EventInfo, team_keys: frozenset[str]) -> bool:

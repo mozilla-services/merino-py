@@ -38,7 +38,7 @@ _RETRY_AFTER = str(settings.providers.wcs.circuit_breaker_retry_after_sec)
 @router.get(
     "/wcs/matches",
     tags=["wcs"],
-    summary="World Cup Soccer matches in the +/- 7 day window around `date`",
+    summary="World Cup Soccer matches near `date`, grouped by match state",
     response_model=MatchesResponse,
     response_model_by_alias=True,
 )
@@ -56,9 +56,9 @@ async def get_wcs_matches(
 ) -> MatchesResponse:
     """Return matches grouped into `previous`, `current`, and `next`.
 
-    The window is `+/- 7 days` around `date`. `current` holds matches on `date`,
-    `previous` is older, `next` is newer. Each bucket is sorted ascending by
-    event date.
+    The window is around `date`. `previous` holds completed or old matches,
+    `current` holds active matches, and `next` holds upcoming matches. Each
+    bucket is sorted ascending by event date.
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)

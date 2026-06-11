@@ -5,7 +5,6 @@
 """Unit tests for the WCS matches provider."""
 
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
 
 import freezegun
 import pytest
@@ -62,18 +61,100 @@ def test_cache_uses_wcs_redis_settings(mocker) -> None:
     redis_adapter.assert_called_once_with("primary", "replica")
 
 
-def _dates(events: list[Any]) -> list[date]:
-    return [datetime.fromisoformat(e.date).date() for e in events]
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T12:00:00Z")
+async def test_same_day_scheduled_match_stays_next_until_kickoff() -> None:
+    """A scheduled match later on `target_date` remains in the upcoming bucket."""
+    scheduled = build_event(
+        90086908,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert response.current == []
+    assert [event.global_event_id for event in response.next_] == [90086908]
 
 
 @pytest.mark.asyncio
-async def test_buckets_split_by_date() -> None:
-    """Each bucket holds events on the correct side of `target_date`."""
-    response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
+@freezegun.freeze_time("2026-06-15T19:01:00Z")
+async def test_scheduled_match_moves_previous_after_kickoff_until_status_updates() -> None:
+    """After kickoff, a still-scheduled match is past until the feed marks it live."""
+    scheduled = build_event(
+        90086908,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
 
-    assert all(d < ANCHOR for d in _dates(response.previous))
-    assert all(d == ANCHOR for d in _dates(response.current))
-    assert all(d > ANCHOR for d in _dates(response.next_))
+    response = await build_provider(events=[scheduled]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert [event.global_event_id for event in response.previous] == [90086908]
+    assert response.current == []
+    assert response.next_ == []
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-11T12:00:00Z")
+async def test_explicit_date_does_not_promote_upcoming_previous_day_match() -> None:
+    """A future `date` window does not make an upcoming scheduled match current."""
+    scheduled = build_event(
+        90086908,
+        -4,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        date(2026, 6, 12),
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert response.current == []
+    assert [event.global_event_id for event in response.next_] == [90086908]
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-11T12:00:00Z")
+async def test_future_midnight_kickoff_stays_next_until_real_kickoff() -> None:
+    """A future 00:00Z scheduled match is not current before its kickoff time."""
+    scheduled = build_event(
+        90086909,
+        -3,
+        0,
+        ("KOR", "Korea Republic", 90001209),
+        ("CZE", "Czechia", 90000945),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        date(2026, 6, 12),
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert response.current == []
+    assert [event.global_event_id for event in response.next_] == [90086909]
 
 
 @pytest.mark.asyncio
@@ -181,8 +262,8 @@ async def test_matches_include_nullable_tbd_teams() -> None:
         team_keys=None,
     )
 
-    assert len(response.current) == 1
-    event = response.current[0]
+    assert len(response.next_) == 1
+    event = response.next_[0]
     assert event.home_team is None
     assert event.away_team is None
     assert event.stage == "Quarterfinals"
@@ -221,7 +302,7 @@ async def test_match_team_group_comes_from_cached_event_group() -> None:
     response = await build_provider(events=[grouped_event]).get_matches(
         ANCHOR, limit=None, team_keys=None
     )
-    event = response.current[0]
+    event = response.next_[0]
 
     assert event.home_team is not None
     assert event.away_team is not None

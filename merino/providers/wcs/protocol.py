@@ -160,8 +160,8 @@ class EventInfo(BaseModel):
 class MatchesResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/matches`.
 
-    Each bucket is sorted by `EventInfo.date` ascending. `next_` is aliased to
-    `next` on the wire; populate by either name in Python.
+    Buckets are grouped by match state and sorted by `EventInfo.date` ascending.
+    `next_` is aliased to `next` on the wire; populate by either name in Python.
     """
 
     model_config = ConfigDict(populate_by_name=True)
