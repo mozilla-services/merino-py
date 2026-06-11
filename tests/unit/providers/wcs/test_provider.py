@@ -5,7 +5,6 @@
 """Unit tests for the WCS matches provider."""
 
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
 
 import freezegun
 import pytest
@@ -62,18 +61,52 @@ def test_cache_uses_wcs_redis_settings(mocker) -> None:
     redis_adapter.assert_called_once_with("primary", "replica")
 
 
-def _dates(events: list[Any]) -> list[date]:
-    return [datetime.fromisoformat(e.date).date() for e in events]
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T12:00:00Z")
+async def test_same_day_scheduled_match_stays_next_until_kickoff() -> None:
+    """A scheduled match later on `target_date` remains in the upcoming bucket."""
+    scheduled = build_event(
+        90086908,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
+
+    response = await build_provider(events=[scheduled]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert response.current == []
+    assert [event.global_event_id for event in response.next_] == [90086908]
 
 
 @pytest.mark.asyncio
-async def test_buckets_split_by_date() -> None:
-    """Each bucket holds events on the correct side of `target_date`."""
-    response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
+@freezegun.freeze_time("2026-06-15T19:00:00Z")
+async def test_scheduled_match_moves_current_at_kickoff_if_status_lags() -> None:
+    """At kickoff, a scheduled match is active even before the feed status flips."""
+    scheduled = build_event(
+        90086908,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("RSA", "South Africa", 90001083),
+        GameStatus.Scheduled,
+    )
 
-    assert all(d < ANCHOR for d in _dates(response.previous))
-    assert all(d == ANCHOR for d in _dates(response.current))
-    assert all(d > ANCHOR for d in _dates(response.next_))
+    response = await build_provider(events=[scheduled]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert [event.global_event_id for event in response.current] == [90086908]
+    assert response.next_ == []
 
 
 @pytest.mark.asyncio
@@ -181,8 +214,8 @@ async def test_matches_include_nullable_tbd_teams() -> None:
         team_keys=None,
     )
 
-    assert len(response.current) == 1
-    event = response.current[0]
+    assert len(response.next_) == 1
+    event = response.next_[0]
     assert event.home_team is None
     assert event.away_team is None
     assert event.stage == "Quarterfinals"
@@ -221,7 +254,7 @@ async def test_match_team_group_comes_from_cached_event_group() -> None:
     response = await build_provider(events=[grouped_event]).get_matches(
         ANCHOR, limit=None, team_keys=None
     )
-    event = response.current[0]
+    event = response.next_[0]
 
     assert event.home_team is not None
     assert event.away_team is not None

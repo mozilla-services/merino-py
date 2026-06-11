@@ -70,6 +70,29 @@ def test_matches_per_bucket(client: TestClient) -> None:
     assert all(e["status"] == "Scheduled" for e in body["next"])
 
 
+@freezegun.freeze_time("2026-06-15T12:00:00Z")
+def test_same_day_scheduled_match_is_next_until_kickoff(client: TestClient) -> None:
+    """A same-day scheduled match remains upcoming until kickoff."""
+    app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
+        events=[
+            build_event(
+                90086908,
+                0,
+                19,
+                ("MEX", "Mexico", 90000868),
+                ("RSA", "South Africa", 90001083),
+                GameStatus.Scheduled,
+            )
+        ]
+    )
+
+    body = client.get(_PATH, params={"date": _ANCHOR}).json()
+
+    assert body["previous"] == []
+    assert body["current"] == []
+    assert [event["global_event_id"] for event in body["next"]] == [90086908]
+
+
 def test_event_contract_required_fields_are_non_null(client: TestClient) -> None:
     """Event fields Mobile branches on are always present and non-null."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()
@@ -122,10 +145,10 @@ def test_matches_returns_nullable_tbd_sides(client: TestClient) -> None:
 
     body = client.get(_PATH, params={"date": "2026-07-05"}).json()
 
-    assert body["current"][0]["home_team"] is None
-    assert body["current"][0]["away_team"] is None
-    assert body["current"][0]["stage"] == "Quarterfinals"
-    assert body["current"][0]["query"] == "Quarterfinals World Cup 2026"
+    assert body["next"][0]["home_team"] is None
+    assert body["next"][0]["away_team"] is None
+    assert body["next"][0]["stage"] == "Quarterfinals"
+    assert body["next"][0]["query"] == "Quarterfinals World Cup 2026"
 
 
 def test_invalid_date_returns_400(client: TestClient) -> None:
