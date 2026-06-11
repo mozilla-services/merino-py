@@ -29,6 +29,7 @@ from merino.providers.wcs.utils import resolve_other_regions, resolve_watch_link
 from merino.utils.metrics import get_metrics_client
 
 _WINDOW = timedelta(days=21)
+_SCHEDULED_MATCH_POST_KICKOFF_GRACE = timedelta(minutes=30)
 _LIVE_MATCH_LOOKBACK = timedelta(hours=6)
 _LIVE_MATCH_LOOKAHEAD = timedelta(hours=2)
 _CACHE_ERROR_METRIC = "wcs.cache_error"
@@ -78,10 +79,11 @@ class WcsProvider:
         """Return matches in a +/- _WINDOW day window around `target_date`.
 
         Events are sorted ascending by event date, then bucketed by match state
-        at request time: completed/past matches in `previous`, active matches in
-        `current`, and scheduled future matches in `next`. `limit` keeps the
-        entries closest to `target_date` in each bucket; `team_keys` restricts
-        results to matches involving any of the listed teams.
+        at request time: completed/past matches in `previous`, active or
+        just-started scheduled matches in `current`, and scheduled future matches
+        in `next`. `limit` keeps the entries closest to `target_date` in each
+        bucket; `team_keys` restricts results to matches involving any of the
+        listed teams.
         """
         previous: list[EventInfo] = []
         current: list[EventInfo] = []
@@ -244,6 +246,10 @@ def _bucket_for_event(event: Event, reference_time: datetime) -> _MatchBucket:
     event_datetime = _event_datetime(event)
     if event_datetime > reference_time:
         return "next"
+    if event.status.is_scheduled():
+        time_since_kickoff = reference_time - event_datetime
+        if time_since_kickoff <= _SCHEDULED_MATCH_POST_KICKOFF_GRACE:
+            return "current"
     return "previous"
 
 
