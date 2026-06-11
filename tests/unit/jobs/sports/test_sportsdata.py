@@ -4,6 +4,7 @@
 
 """Unit tests for fetch_schedules.py module."""
 
+import asyncio
 from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
@@ -149,4 +150,66 @@ async def test_update_and_cache_wcs_closes_store_on_error(
     with pytest.raises(SportsDataError):
         await updater.update_and_cache_wcs()
 
+    shutdown.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_wcs_loop_runs_until_stopped(
+    sport_data_store: SportsDataStore,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The WCS loop refreshes widget then event data once per iteration."""
+    monkeypatch.setattr(settings.providers.sports, "sports", ["WCS"])
+    updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
+    stop_event = asyncio.Event()
+    startup = mocker.AsyncMock()
+    shutdown = mocker.AsyncMock()
+    cast(Any, updater.store).startup = startup
+    cast(Any, updater.store).shutdown = shutdown
+    cast(Any, updater).update_widget = mocker.AsyncMock()
+
+    # Stop the loop as part of the first iteration so it runs exactly once.
+    async def _update_data(*args: Any, **kwargs: Any) -> None:
+        stop_event.set()
+
+    cast(Any, updater).update_data = mocker.AsyncMock(side_effect=_update_data)
+    counter = mocker.patch("merino.jobs.sportsdata_jobs.wcs_job_state_counter")
+
+    await updater.run_wcs_loop(interval_sec=0, stop_event=stop_event)
+
+    startup.assert_awaited_once()
+    cast(Any, updater).update_widget.assert_awaited_once()
+    cast(Any, updater).update_data.assert_awaited_once()
+    counter.add.assert_any_call(1, {"job_state": "started"})
+    counter.add.assert_any_call(1, {"job_state": "succeeded"})
+    shutdown.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_wcs_loop_isolates_iteration_errors(
+    sport_data_store: SportsDataStore,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failing iteration is logged/counted but does not stop the loop or raise."""
+    monkeypatch.setattr(settings.providers.sports, "sports", ["WCS"])
+    updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
+    stop_event = asyncio.Event()
+    shutdown = mocker.AsyncMock()
+    cast(Any, updater.store).startup = mocker.AsyncMock()
+    cast(Any, updater.store).shutdown = shutdown
+
+    # update_widget runs first; use it to stop the loop after one failing iteration.
+    async def _update_widget(*args: Any, **kwargs: Any) -> None:
+        stop_event.set()
+
+    cast(Any, updater).update_widget = mocker.AsyncMock(side_effect=_update_widget)
+    cast(Any, updater).update_data = mocker.AsyncMock(side_effect=SportsDataError("provider down"))
+    counter = mocker.patch("merino.jobs.sportsdata_jobs.wcs_job_state_counter")
+
+    # Must not raise despite the iteration failing.
+    await updater.run_wcs_loop(interval_sec=0, stop_event=stop_event)
+
+    counter.add.assert_any_call(1, {"job_state": "failed"})
     shutdown.assert_awaited_once()

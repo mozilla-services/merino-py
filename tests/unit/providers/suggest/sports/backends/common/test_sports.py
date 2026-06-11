@@ -2018,6 +2018,13 @@ async def test_ucl_update_events(
     assert "/SchedulesBasic/UCL/2025" in get_data.call_args_list[0].kwargs["url"]
 
 
+def test_wcs_games_by_date_ttl_from_config() -> None:
+    """The live GamesByDate cache TTL is read from config and stored as a timedelta."""
+    expected_sec = settings.providers.sports.sportsdata.WCS.games_by_date_ttl_sec
+    sport = WCS(settings=settings.providers.sports)
+    assert sport.games_by_date_ttl == timedelta(seconds=expected_sec)
+
+
 @pytest.mark.asyncio
 async def test_wcs_load_areas(mock_client: AsyncClient, mocker: MockerFixture) -> None:
     """Test WCS load areas (widget)"""
@@ -2563,7 +2570,7 @@ async def test_wcs_update_events_fetches_games_by_date_for_live_relevant_days(
         "https://api.sportsdata.io/v4/soccer/scores/json/SchedulesBasic/fifa/2026",
         expected_games_by_date_url,
     ]
-    assert get_data.call_args_list[1].kwargs["ttl"] == timedelta(minutes=2)
+    assert get_data.call_args_list[1].kwargs["ttl"] == timedelta(seconds=5)
 
     if expected_status == GameStatus.InProgress:
         assert event.period == "1"

@@ -46,7 +46,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination 
 FORCE_IMPORT = ""
 _SEASON_TYPE_POSTSEASON = 3
 _WCS_LIVE_REFRESH_WINDOW_DAYS = 1
-_WCS_GAMES_BY_DATE_TTL = timedelta(minutes=2)
 
 # When creating a new sport class, add its entry to SPORT_CATEGORY_MAP below.
 # The key must match the class name, as that is what is stored in the `Event.sport` field.
@@ -677,6 +676,9 @@ class WCS(Sport):
 
     season: str | None = None
     cache_prefix: str = "sport:wcs:v1"  # Unique prefix for Redis
+    # Local-disk cache lifetime for live `GamesByDate` score fetches. Lower this
+    # (via config) to refresh scores faster, e.g. for the continuous WCS ETL loop.
+    games_by_date_ttl: timedelta
     _lock: asyncio.Lock
     teams: dict[int, Team] = {}
     rounds: dict[int, str] = {}
@@ -725,6 +727,8 @@ class WCS(Sport):
         )
         self._lock = asyncio.Lock()
         self.cache = cache
+        games_by_date_ttl_sec = sport_settings.get("games_by_date_ttl_sec")
+        self.games_by_date_ttl = timedelta(seconds=games_by_date_ttl_sec)
         self.normalized_terms.update(
             {
                 SportTerms.GAME_ID: "GlobalGameId",
@@ -1239,7 +1243,7 @@ class WCS(Sport):
                 response = await get_data(
                     client=client,
                     url=url,
-                    ttl=_WCS_GAMES_BY_DATE_TTL,
+                    ttl=self.games_by_date_ttl,
                     cache_dir=self.cache_dir,
                     headers=self.api_headers(),
                 )
