@@ -86,9 +86,9 @@ async def test_same_day_scheduled_match_stays_next_until_kickoff() -> None:
 
 
 @pytest.mark.asyncio
-@freezegun.freeze_time("2026-06-15T19:00:00Z")
-async def test_scheduled_match_moves_current_at_kickoff_if_status_lags() -> None:
-    """At kickoff, a scheduled match is active even before the feed status flips."""
+@freezegun.freeze_time("2026-06-15T19:01:00Z")
+async def test_scheduled_match_moves_previous_after_kickoff_until_status_updates() -> None:
+    """After kickoff, a still-scheduled match is past until the feed marks it live."""
     scheduled = build_event(
         90086908,
         0,
@@ -104,8 +104,8 @@ async def test_scheduled_match_moves_current_at_kickoff_if_status_lags() -> None
         team_keys=None,
     )
 
-    assert response.previous == []
-    assert [event.global_event_id for event in response.current] == [90086908]
+    assert [event.global_event_id for event in response.previous] == [90086908]
+    assert response.current == []
     assert response.next_ == []
 
 

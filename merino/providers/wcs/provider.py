@@ -78,7 +78,7 @@ class WcsProvider:
         """Return matches in a +/- _WINDOW day window around `target_date`.
 
         Events are sorted ascending by event date, then bucketed by match state
-        at request time: completed/old matches in `previous`, active matches in
+        at request time: completed/past matches in `previous`, active matches in
         `current`, and scheduled future matches in `next`. `limit` keeps the
         entries closest to `target_date` in each bucket; `team_keys` restricts
         results to matches involving any of the listed teams.
@@ -244,8 +244,6 @@ def _bucket_for_event(event: Event, reference_time: datetime) -> _MatchBucket:
     event_datetime = _event_datetime(event)
     if event_datetime > reference_time:
         return "next"
-    if event.status.is_scheduled() and event_datetime >= reference_time - _LIVE_MATCH_LOOKBACK:
-        return "current"
     return "previous"
 
 
