@@ -12,6 +12,7 @@ from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
 )
 from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 from merino.utils.metrics import get_metrics_client
+from merino.utils.gcs.gcs_uploader import GcsUploader
 
 
 @unique
@@ -37,10 +38,13 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
             return WikimediaPictureOfTheDayProvider(
                 backend=WikimediaPotdBackend(
                     feed_url=setting.feed_url,
-                    bucket_name=settings.image_gcs_v2.gcs_bucket,
-                    cdn_hostname=settings.image_gcs_v2.cdn_hostname,
                     http_client=http_client,
                     metrics_client=get_metrics_client(),
+                    gcs_uploader=GcsUploader(
+                        settings.image_gcs_v2.gcs_project,
+                        settings.image_gcs_v2.gcs_bucket,
+                        settings.image_gcs_v2.cdn_hostname,
+                    ),
                 ),
                 metrics_client=get_metrics_client(),
                 name=provider_id,

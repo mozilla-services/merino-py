@@ -44,6 +44,7 @@ TEST_RSS_FEED_MISSING_FIELDS = """<?xml version="1.0" encoding="UTF-8"?>
 </rss>"""
 
 
+# TODO remove this?
 @pytest.fixture(name="gcs_uploader_mock")
 def fixture_gcs_uploader_mock() -> GcsUploader:
     """Return a mock GcsUploader."""
@@ -52,21 +53,18 @@ def fixture_gcs_uploader_mock() -> GcsUploader:
 
 @pytest.fixture(name="backend")
 def fixture_backend(
-    statsd_mock,
-    mocker: MockerFixture,
+    statsd_mock, mocker: MockerFixture, gcs_storage_client, gcs_storage_bucket
 ) -> WikimediaPotdBackend:
     """Return a WikimediaPotdBackend instance for testing."""
-    mocker.patch(
-        "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.get_storage_client",
-        return_value=MagicMock(),
-    )
-
     return WikimediaPotdBackend(
         metrics_client=statsd_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
-        bucket_name="test-bucket",
-        cdn_hostname="test-cdn",
         feed_url=FEED_URL,
+        gcs_uploader=GcsUploader(
+            destination_gcp_project=gcs_storage_client.project,
+            destination_bucket_name=gcs_storage_bucket.name,
+            destination_cdn_hostname="test-cdn-name",
+        ),
     )
 
 

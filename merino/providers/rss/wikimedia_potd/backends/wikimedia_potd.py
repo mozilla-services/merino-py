@@ -3,20 +3,19 @@
 import logging
 import aiodogstatsd
 import feedparser
-from datetime import datetime
 from pydantic import HttpUrl
 from feedparser import FeedParserDict
-from httpx import AsyncClient, HTTPError, Response, HTTPStatusError
+from httpx import AsyncClient, HTTPError, Response
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from merino.providers.rss.wikimedia_potd.backends.utils import (
-    extract_potd,
     RSS_FETCH_REQUEST_HEADERS,
+    extract_potd,
+    build_potd_path_and_name,
 )
-from merino.utils.storage import get_storage_client
-from gcloud.aio.storage import Storage
-from sentry_sdk import capture_exception
+import sentry_sdk
 
 logger = logging.getLogger(__name__)
 
@@ -26,25 +25,20 @@ class WikimediaPotdBackend:
 
     metrics_client: aiodogstatsd.Client
     http_client: AsyncClient
-    gcs_client: Storage
-    bucket_name: str
-    cdn_hostname: str
+    gcs_uploader: GcsUploader
 
     def __init__(
         self,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
         feed_url: str,
-        bucket_name: str,
-        cdn_hostname: str,
+        gcs_uploader: GcsUploader,
     ) -> None:
         """Initialize the backend with the RSS feed URL."""
         self.feed_url = feed_url
         self.metrics_client = metrics_client
         self.http_client = http_client
-        self.gcs_client = get_storage_client()
-        self.bucket_name = bucket_name
-        self.cdn_hostname = cdn_hostname
+        self.gcs_uploader = gcs_uploader
 
     async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
         """Fetch the current Wikimedia Picture of the Day.
@@ -94,7 +88,7 @@ class WikimediaPotdBackend:
         """Download the image using the image URL.
 
         Returns an Image object containing the binary content and content type,
-        or None if no image URL is found.
+        or None.
         """
         # verify that the url is an image url
         if str(url).split(".")[-1] not in ["jpg", "jpeg", "png", "webp"]:
@@ -113,39 +107,17 @@ class WikimediaPotdBackend:
                 content=content,
                 content_type=str(content_type),
             )
-        except HTTPStatusError as ex:
-            # throw sentry exception for HTTP exceptions
-            capture_exception(ex)
-            return None
         except Exception as ex:
-            # throw sentry exception for generic exceptions
-            capture_exception(ex)
+            sentry_sdk.capture_exception(ex)
             return None
 
-    async def upload_image(self, image: Image, is_thumbnail: bool) -> str:
+    def upload_image(self, image: Image, is_thumbnail: bool) -> str | None:
         """Upload an image to the bucket."""
-        folder_path_in_bucket = "rss/wikimedia_potd"
+        potd_path_and_name = build_potd_path_and_name(image=image, is_thumbnail=is_thumbnail)
 
-        # YYYY-MM-DD format
-        date_time = datetime.today().strftime("%Y-%m-%d")
-
-        prefix = "POTD"
-        # append "_thumbnail" to the object name if it is a thumbnail image
-        suffix = "thumbnail" if is_thumbnail else "hi_res"
-
-        # extract image extension since the image.content_type has the format image/jpeg
-        extension = image.content_type.split("/")[-1]
-
-        # the path in the bucket for the image
-        # would look like: "merino-images-prod/rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
-        object_name = f"{folder_path_in_bucket}/{prefix}_{date_time}_{suffix}.{extension}"
-
-        await self.gcs_client.upload(
-            bucket=self.bucket_name,
-            object_name=object_name,
-            file_data=image.content,
-            content_type=image.content_type,
-        )
-
-        # TODO return public cdn image url
-        return f"https://{self.cdn_hostname}/{object_name}"
+        try:
+            # return a public cdn url for the image after a successful upload
+            return self.gcs_uploader.upload_image(image=image, destination_name=potd_path_and_name)
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
+            return None
