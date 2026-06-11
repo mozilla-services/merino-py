@@ -12,6 +12,9 @@ from merino.providers.games.particle.backends.filemanager import (
 )
 
 
+GREEN_DEPLOYMENT_FOLDER = "green_deployment"
+
+
 @pytest.fixture(scope="function")
 def gcs_storage_bucket(gcs_storage_client) -> Bucket:
     """Return a test google storage bucket object to be used by all tests. Delete it
@@ -26,51 +29,43 @@ def gcs_storage_bucket(gcs_storage_client) -> Bucket:
     bucket.delete(force=True)
 
 
+@pytest.fixture
+def gcs_client(gcs_storage_client, gcs_storage_bucket) -> GcsUploader:
+    """Return a GcsUploader instance."""
+    return GcsUploader(
+        destination_gcp_project=gcs_storage_client.project,
+        destination_bucket_name=gcs_storage_bucket.name,
+        destination_cdn_hostname="test_cdn_hostname",
+    )
+
+
+@pytest.fixture
+def remote_filemanager(gcs_client) -> ParticleRemoteFileManager:
+    """Return a ParticleRemoteFileManager instance."""
+    return ParticleRemoteFileManager(
+        gcs_client=gcs_client,
+        manifest_file_name="test-manifest.json",
+        green_deployment_folder=GREEN_DEPLOYMENT_FOLDER,
+    )
+
+
 class TestRemoteFileManagerUploadFile:
     """Tests against the upload_file method of the ParticleRemoteFileManager."""
 
-    GREEN_DEPLOYMENT_FOLDER = "green_deployment"
-
     @pytest.mark.asyncio
-    async def test_successful_upload(self, gcs_storage_client, gcs_storage_bucket):
+    async def test_successful_upload(self, remote_filemanager):
         """Verify a successful upload."""
-        # create a GcsUploader instance
-        gcs_client = GcsUploader(
-            destination_gcp_project=gcs_storage_client.project,
-            destination_bucket_name=gcs_storage_bucket.name,
-            destination_cdn_hostname="test_cdn_hostname",
-        )
-
-        remote_filemanager = ParticleRemoteFileManager(
-            gcs_client=gcs_client,
-            manifest_file_name="test-manifest.json",
-            green_deployment_folder=self.GREEN_DEPLOYMENT_FOLDER,
-        )
-
         blob_name = await remote_filemanager.upload_file(
             file_name="image.jpg",
             file_path="tests/data/games/particle/image.jpg",
             content_type="image/jpeg",
         )
 
-        assert blob_name == f"{self.GREEN_DEPLOYMENT_FOLDER}/image.jpg"
+        assert blob_name == f"{GREEN_DEPLOYMENT_FOLDER}/image.jpg"
 
     @pytest.mark.asyncio
-    async def test_unsuccessful_upload(self, gcs_storage_client, gcs_storage_bucket):
+    async def test_unsuccessful_upload(self, remote_filemanager):
         """Verify an unsuccessful upload."""
-        # create a GcsUploader instance
-        gcs_client = GcsUploader(
-            destination_gcp_project=gcs_storage_client.project,
-            destination_bucket_name=gcs_storage_bucket.name,
-            destination_cdn_hostname="test_cdn_hostname",
-        )
-
-        remote_filemanager = ParticleRemoteFileManager(
-            gcs_client=gcs_client,
-            manifest_file_name="test-manifest.json",
-            green_deployment_folder=self.GREEN_DEPLOYMENT_FOLDER,
-        )
-
         with patch.object(
             remote_filemanager.gcs_client, "upload_from_filename", new_callable=AsyncMock
         ) as mock_upload_from_filename:

@@ -9,6 +9,7 @@ from json import JSONDecodeError
 from typing import Any
 
 from merino.providers.games.particle.backends.errors import ParticleFileManagerError
+from merino.providers.games.particle.backends.utils import GameFile
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 logger = logging.getLogger(__name__)
@@ -117,7 +118,12 @@ class ParticleRemoteFileManager:
             sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))
             return ""
 
-    async def empty_staging_folder(self) -> bool:
-        """Delete all contents of the GCS staging folder. Used when a channel staging fails, e.g. due to SHA validation or upload failure."""
-        # stub
-        return True
+    async def empty_staging_folder(self, files: list[GameFile]) -> None:
+        """Delete uploaded files in the GCS staging folder. Used when a channel staging deployment fails midway, e.g. due to SHA validation or upload failure."""
+        uploaded_files = [f for f in files if f.uploaded and hasattr(f, "gcs_staging_name")]
+
+        for f in uploaded_files:
+            try:
+                await asyncio.to_thread(self.gcs_client.delete_file_by_name, f.gcs_staging_name)
+            except Exception as ex:
+                sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))
