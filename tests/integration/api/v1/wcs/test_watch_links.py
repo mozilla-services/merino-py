@@ -163,3 +163,26 @@ def test_watch_links_de_de(
         len(country["streams"]) for country in body["other_regions"]
     )
     assert total_links == 76
+
+
+def test_watch_links_de_en(
+    client: TestClient,
+    inject_de_location: None,
+) -> None:
+    """German users with a non-German browser language still see all five German streams.
+
+    All DE streams are country-wide ('*') so the Accept-Language header does not
+    gate them out.
+    """
+    response = client.get(_PATH, headers={"Accept-Language": "en-US"})
+
+    assert response.status_code == 200
+    body = response.json()
+
+    your_region_names = [s["product_name"] for s in body["your_region"]]
+    assert "FIFA+ (DAZN)" in your_region_names
+    assert "ZDF" in your_region_names
+    assert "ARD" in your_region_names
+    assert "SPORTSCHAU" in your_region_names
+    assert "MagentaTV" in your_region_names
+    assert len(body["your_region"]) == 5

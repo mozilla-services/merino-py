@@ -352,7 +352,7 @@ WATCH_LINKS: dict[str, CountryEntry] = {
     },
     "DE": {
         "langs": {
-            "de": [
+            "*": [
                 _build_fifa_watch_link(),
                 build_watch_link(
                     "ZDF",
