@@ -11,3 +11,8 @@ last_synced_at = _meter.create_gauge(
     unit="s",
     description="Unix timestamp when sportsdata endpoint was last synced successfully",
 )
+# Job state tracking for world cup etl
+wcs_job_state_counter = _meter.create_counter(
+    "merino.sports.sportsdata.endpoint.wcs_job_state",
+    description="Job history (failed/succeeded) for WCS polls",
+)

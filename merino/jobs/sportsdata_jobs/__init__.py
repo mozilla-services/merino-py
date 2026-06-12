@@ -22,6 +22,7 @@ hardcoded in the calling function for now, but is based on the file creation tim
 import asyncio
 import copy
 import logging
+import signal
 import typer
 import sys
 from time import monotonic, time
@@ -43,6 +44,9 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import Spor
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     ElasticCredentials,
+)
+from merino.providers.suggest.sports.backends.sportsdata.common._metrics import (
+    wcs_job_state_counter,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
@@ -273,6 +277,47 @@ class SportDataUpdater:
             finally:
                 await self.store.shutdown()
 
+    async def run_wcs_loop(self, interval_sec: float, stop_event: asyncio.Event) -> None:
+        """Continuously refresh WCS Elasticsearch data and widget cache.
+
+        Intended for a long-lived pod rather than a k8s CronJob: the store, cache,
+        and HTTP clients built in `__init__` are reused across every iteration
+        instead of being recreated per run. Each iteration is wrapped so a
+        transient provider error is logged and counted but does not stop the loop
+        (which would otherwise crash the pod). The loop exits cleanly once
+        `stop_event` is set, so callers can wire it to SIGTERM for rolling restarts.
+        """
+        logger = logging.getLogger(__name__)
+        # `startup()` is idempotent; open the store once and keep it for the
+        # lifetime of the loop rather than reconnecting every iteration.
+        await self.store.startup()
+        try:
+            while not stop_event.is_set():
+                started = monotonic()
+                wcs_job_state_counter.add(1, {"job_state": "started"})
+                try:
+                    # Widget data must be refreshed before event data; see the
+                    # ordering note on `update_and_cache_wcs`.
+                    await self.update_widget()
+                    await self.update_data()
+                    wcs_job_state_counter.add(1, {"job_state": "succeeded"})
+                except Exception as ex:
+                    logger.error(f"{LOGGING_TAG} WCS loop iteration failed: {ex}")
+                    wcs_job_state_counter.add(1, {"job_state": "failed"})
+                finally:
+                    logger.info(
+                        "wcs loop iteration finished",
+                        extra={"elapsed_sec": monotonic() - started},
+                    )
+                # Cancellable sleep: wake immediately if a shutdown signal arrives
+                # mid-gap rather than blocking for the full interval.
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=interval_sec)
+                except asyncio.TimeoutError:
+                    pass
+        finally:
+            await self.store.shutdown()
+
 
 logger = logging.getLogger(__name__)
 sports_settings = settings.providers.sports
@@ -389,6 +434,38 @@ def update_and_cache_wcs():  # pragma: no cover
             )
     else:
         logger.error("Sports provider unavailable.")
+
+
+@cli.command("run-wcs-loop")
+def run_wcs_loop(interval_sec: float = 60.0):  # pragma: no cover
+    """Continuously refresh WCS data on a long-lived pod (not a CronJob).
+
+    Builds the WCS updater once and loops until SIGTERM/SIGINT. Override the gap
+    between iterations with `--interval-sec`; otherwise `providers.sports.
+    wcs_loop_interval_sec` is used.
+    """
+    if not (store and cache):
+        logger.error("Sports provider unavailable.")
+        raise typer.Exit(code=1)
+    wcs_only_settings = copy.copy(sports_settings)
+    wcs_only_settings.sports = ["WCS"]
+    wcs_provider = SportDataUpdater(
+        settings=wcs_only_settings,
+        store=store,
+        cache=cache,
+        connect_timeout=sports_settings.get("connect_timeout"),
+        read_timeout=sports_settings.get("read_timeout"),
+    )
+
+    async def _main() -> None:
+        stop_event = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, stop_event.set)
+        logger.info("Starting WCS loop", extra={"interval_sec": interval_sec})
+        await wcs_provider.run_wcs_loop(interval_sec=interval_sec, stop_event=stop_event)
+
+    asyncio.run(_main())
 
 
 @cli.command("quick_update")

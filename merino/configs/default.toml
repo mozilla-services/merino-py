@@ -556,6 +556,12 @@ retry_factor_sec=0.5
 # base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
 # base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
 
+[default.providers.sports.sportsdata.WCS]
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__WCS__GAMES_BY_DATE_TTL_SEC
+# Local-disk cache lifetime (seconds) for live `GamesByDate` score responses
+# before refetching from SportsData.io. 
+games_by_date_ttl_sec = 5
+
 [default.providers.wcs]
 # MERINO_PROVIDERS__WCS__LIVE_DATA_ENABLED
 # Serve Redis-backed in-progress matches for /wcs/live. Set to false to use
