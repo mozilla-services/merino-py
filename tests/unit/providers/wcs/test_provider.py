@@ -279,11 +279,12 @@ async def test_window_excludes_outside_range() -> None:
 
 
 @pytest.mark.asyncio
-async def test_buckets_sorted_ascending_by_date() -> None:
-    """Each bucket is sorted by event date ascending."""
+async def test_buckets_sorted_by_display_order() -> None:
+    """Previous is newest-first; current and next remain chronological."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
 
-    for bucket in (response.previous, response.current, response.next_):
+    assert response.previous == sorted(response.previous, key=lambda e: e.date, reverse=True)
+    for bucket in (response.current, response.next_):
         assert bucket == sorted(bucket, key=lambda e: e.date)
 
 
@@ -298,7 +299,7 @@ async def test_limit_keeps_closest_to_target_date() -> None:
     assert len(limited.current) <= 1
     assert len(limited.next_) <= 1
     if full.previous and limited.previous:
-        assert limited.previous[-1].date == full.previous[-1].date
+        assert limited.previous[0].date == full.previous[0].date
     if full.next_ and limited.next_:
         assert limited.next_[0].date == full.next_[0].date
 
