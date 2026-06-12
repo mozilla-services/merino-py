@@ -27,6 +27,9 @@ from safetensors.numpy import save
 from scipy.linalg import solve_triangular
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
+from merino.curated_recommendations.ml_backends.protocol import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+)
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
     LinTSInterestBackend,
@@ -76,6 +79,12 @@ def _build_synthetic_bundle(
     corrupt_dtype: bool = False,
     l_as_float16: bool = False,
     topic_names: list[str] | None = None,
+    with_tz_pred: bool = False,
+    tz_pred_values: np.ndarray | None = None,
+    tz_pred_item_to_idx_override: dict[str, int] | None = None,
+    tz_baseline_idx: int = 3,
+    n_tz_labels: int = 4,
+    tz_preds_ndim_override: int | None = None,
 ) -> tuple[bytes, dict]:
     """Assemble a v4 bundle from a tiny synthetic model and return (bytes, expected).
 
@@ -90,6 +99,11 @@ def _build_synthetic_bundle(
     item_to_idx: dict[str, int] = {}
     item_topic_to_idx: dict[tuple[str, int], int] = {}
     next_idx = 1 + n_topics
+    # Reserve a slot for tz_pred when requested, paralleling fit_df's layout.
+    tz_pred_idx = -1
+    if with_tz_pred:
+        tz_pred_idx = next_idx
+        next_idx += 1
     for i in range(n_items):
         iid = f"item_{i:02d}"
         item_to_idx[iid] = next_idx
@@ -139,9 +153,28 @@ def _build_synthetic_bundle(
             {f"{iid}|{t}": idx for (iid, t), idx in item_topic_to_idx.items()}
         ),
     }
-    blob = save({"L_lower": L_packed, "theta_hat": theta_hat}, metadata=metadata)
 
-    return blob, {
+    tensors: dict[str, np.ndarray] = {"L_lower": L_packed, "theta_hat": theta_hat}
+    if with_tz_pred:
+        if tz_pred_item_to_idx_override is not None:
+            tz_pred_item_to_idx = tz_pred_item_to_idx_override
+        else:
+            tz_pred_item_to_idx = {iid: i for i, iid in enumerate(item_to_idx.keys())}
+        if tz_pred_values is None:
+            tz_pred_values = np.zeros((len(tz_pred_item_to_idx), n_tz_labels), dtype=np.float32)
+        else:
+            tz_pred_values = tz_pred_values.astype(np.float32, copy=False)
+        if tz_preds_ndim_override == 1:
+            tz_pred_values = tz_pred_values.reshape(-1)
+        tensors["tz_preds"] = tz_pred_values
+        metadata["tz_pred_idx"] = str(tz_pred_idx)
+        metadata["tz_baseline_idx"] = str(tz_baseline_idx)
+        metadata["tz_labels"] = json.dumps(["PT", "MT", "CT", "ET"][:n_tz_labels])
+        metadata["tz_pred_item_to_idx"] = json.dumps(tz_pred_item_to_idx)
+
+    blob = save(tensors, metadata=metadata)
+
+    expected: dict = {
         "d": d,
         "n_topics": n_topics,
         "L_dense": L_dense,
@@ -152,6 +185,12 @@ def _build_synthetic_bundle(
         "item_to_idx": item_to_idx,
         "item_topic_to_idx": item_topic_to_idx,
     }
+    if with_tz_pred:
+        expected["tz_pred_idx"] = tz_pred_idx
+        expected["tz_baseline_idx"] = tz_baseline_idx
+        expected["tz_pred_item_to_idx"] = tz_pred_item_to_idx
+        expected["tz_preds"] = tz_pred_values
+    return blob, expected
 
 
 def _make_backend(synced_blob_mock: MagicMock | None = None) -> LinTSInterestBackend:
@@ -458,3 +497,191 @@ def test_empty_backend_update_count_zero() -> None:
     """update_count is 0 since the empty stub has no SyncedGcsBlobs."""
     backend = EmptyLinTSInterestBackend()
     assert backend.update_count == 0
+
+
+# -----------------------------------------------------------------------------
+# tz_pred feature (optional, backward-compat under schema v4)
+# -----------------------------------------------------------------------------
+def test_legacy_bundle_without_tz_pred_loads() -> None:
+    """A v4 bundle predating the tz_pred fields loads cleanly; sentinels disable the feature."""
+    blob, _ = _build_synthetic_bundle()
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    assert backend.is_valid(SurfaceId.NEW_TAB_EN_US)
+    assert backend._tz_pred_idx[SurfaceId.NEW_TAB_EN_US] == -1
+    assert backend._tz_baseline_idx[SurfaceId.NEW_TAB_EN_US] == -1
+    assert backend._tz_preds[SurfaceId.NEW_TAB_EN_US].size == 0
+    assert backend._tz_pred_item_to_idx[SurfaceId.NEW_TAB_EN_US] == {}
+
+
+def test_tz_pred_bundle_round_trips() -> None:
+    """A bundle with tz_pred fields restores all of tz_pred_idx/baseline/preds/item_to_idx."""
+    n_items = 5
+    tz_pred_values = np.array(
+        [
+            [0.7, 0.3, 0.2, 0.0],
+            [0.1, 0.9, 0.5, 0.0],
+            [0.4, 0.4, 0.4, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.5, 0.6, 0.7, 0.0],
+        ],
+        dtype=np.float32,
+    )
+    blob, expected = _build_synthetic_bundle(
+        n_items=n_items, with_tz_pred=True, tz_pred_values=tz_pred_values
+    )
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    assert backend._tz_pred_idx[SurfaceId.NEW_TAB_EN_US] == expected["tz_pred_idx"]
+    assert backend._tz_baseline_idx[SurfaceId.NEW_TAB_EN_US] == 3
+    assert backend._tz_pred_item_to_idx[SurfaceId.NEW_TAB_EN_US] == expected["tz_pred_item_to_idx"]
+    np.testing.assert_array_equal(backend._tz_preds[SurfaceId.NEW_TAB_EN_US], tz_pred_values)
+
+
+def test_score_request_includes_tz_pred_contribution_for_non_baseline_user() -> None:
+    """A PT user (tz_index=0) scores higher for items with positive tz_pred[0]."""
+    n_items = 3
+    tz_pred_values = np.array(
+        [[1.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0]],
+        dtype=np.float32,
+    )
+    blob, expected = _build_synthetic_bundle(
+        n_items=n_items, with_tz_pred=True, tz_pred_values=tz_pred_values
+    )
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    # Two scoring runs with the same seeded RNG (so θ̃ matches): one with
+    # PT, one without TZ. The score for the PT-skewed item should differ
+    # by exactly θ̃[tz_pred_idx] * tz_pred_values[0, 0] = θ̃[tz_pred_idx] * 1.0.
+    item_ids = list(expected["item_to_idx"].keys())[:n_items]
+    rng_with_tz = np.random.default_rng(42)
+    rng_no_tz = np.random.default_rng(42)
+    strengths_pt = {
+        Topic.SPORTS.value: 0.46,
+        TIME_ZONE_OFFSET_INFERRED_KEY: 0,
+    }
+    strengths_no_tz = {Topic.SPORTS.value: 0.46}
+    scores_with_tz = backend.score_request(
+        SurfaceId.NEW_TAB_EN_US, strengths_pt, item_ids, rng_with_tz
+    )
+    scores_no_tz = backend.score_request(
+        SurfaceId.NEW_TAB_EN_US, strengths_no_tz, item_ids, rng_no_tz
+    )
+
+    # Item 0 (the PT-skewed one) gets the nudge; items 1 and 2 don't.
+    delta_0 = scores_with_tz[0] - scores_no_tz[0]
+    assert abs(delta_0) > 1e-7, "tz_pred adjustment should produce a visible delta"
+    np.testing.assert_array_equal(scores_with_tz[1], scores_no_tz[1])
+    np.testing.assert_array_equal(scores_with_tz[2], scores_no_tz[2])
+
+
+def test_score_request_skips_tz_pred_for_baseline_user() -> None:
+    """ET (baseline) user receives no tz_pred adjustment even if the tensor is non-zero."""
+    n_items = 3
+    tz_pred_values = np.array(
+        [[1.0, 1.0, 1.0, 1.0], [0.5, 0.5, 0.5, 0.5], [0.2, 0.2, 0.2, 0.2]],
+        dtype=np.float32,
+    )
+    blob, expected = _build_synthetic_bundle(
+        n_items=n_items, with_tz_pred=True, tz_pred_values=tz_pred_values
+    )
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    item_ids = list(expected["item_to_idx"].keys())[:n_items]
+    rng_et = np.random.default_rng(7)
+    rng_no_tz = np.random.default_rng(7)
+    strengths_et = {Topic.SPORTS.value: 0.46, TIME_ZONE_OFFSET_INFERRED_KEY: 3}
+    strengths_no_tz = {Topic.SPORTS.value: 0.46}
+    s_et = backend.score_request(SurfaceId.NEW_TAB_EN_US, strengths_et, item_ids, rng_et)
+    s_no_tz = backend.score_request(SurfaceId.NEW_TAB_EN_US, strengths_no_tz, item_ids, rng_no_tz)
+    np.testing.assert_array_equal(s_et, s_no_tz)
+
+
+def test_score_request_skips_tz_pred_for_unknown_item() -> None:
+    """Items missing from tz_pred_item_to_idx contribute no tz adjustment."""
+    n_items = 2
+    tz_pred_values = np.array([[1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]], dtype=np.float32)
+    # Only the first item appears in tz_pred_item_to_idx — second is "cold".
+    only_first = {"item_00": 0}
+    # Need ratios.shape[0] == len(item_to_idx); slice to match.
+    blob, expected = _build_synthetic_bundle(
+        n_items=n_items,
+        with_tz_pred=True,
+        tz_pred_values=tz_pred_values[:1],
+        tz_pred_item_to_idx_override=only_first,
+    )
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    item_ids = list(expected["item_to_idx"].keys())[:n_items]
+    rng_pt = np.random.default_rng(13)
+    rng_no_tz = np.random.default_rng(13)
+    strengths_pt = {Topic.SPORTS.value: 0.46, TIME_ZONE_OFFSET_INFERRED_KEY: 0}
+    strengths_no_tz = {Topic.SPORTS.value: 0.46}
+    s_pt = backend.score_request(SurfaceId.NEW_TAB_EN_US, strengths_pt, item_ids, rng_pt)
+    s_no_tz = backend.score_request(SurfaceId.NEW_TAB_EN_US, strengths_no_tz, item_ids, rng_no_tz)
+
+    # Cold item (index 1) sees no delta; known item (index 0) does.
+    assert abs(s_pt[0] - s_no_tz[0]) > 1e-7
+    np.testing.assert_array_equal(s_pt[1], s_no_tz[1])
+
+
+def test_score_request_skips_tz_pred_without_offset_key() -> None:
+    """Missing timeZoneOffset in strengths leaves scores untouched."""
+    n_items = 2
+    tz_pred_values = np.array([[0.9, 0.0, 0.0, 0.0], [0.8, 0.0, 0.0, 0.0]], dtype=np.float32)
+    blob, expected = _build_synthetic_bundle(
+        n_items=n_items, with_tz_pred=True, tz_pred_values=tz_pred_values
+    )
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+
+    item_ids = list(expected["item_to_idx"].keys())[:n_items]
+    rng_a = np.random.default_rng(0)
+    rng_b = np.random.default_rng(0)
+    strengths_minimal = {Topic.SPORTS.value: 0.46}
+    s_a = backend.score_request(SurfaceId.NEW_TAB_EN_US, strengths_minimal, item_ids, rng_a)
+    s_b = backend.score_request(SurfaceId.NEW_TAB_EN_US, strengths_minimal, item_ids, rng_b)
+    np.testing.assert_array_equal(s_a, s_b)
+
+
+def test_tz_preds_size_mismatch_rejects_bundle() -> None:
+    """tz_pred_item_to_idx larger than tz_preds rows → parser raises → state untouched."""
+    blob, _ = _build_synthetic_bundle()
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+    pre_dim = backend._dim[SurfaceId.NEW_TAB_EN_US]
+
+    # ratios has 1 row, but item_to_idx claims 5.
+    bad_blob, _ = _build_synthetic_bundle(
+        n_items=5,
+        with_tz_pred=True,
+        tz_pred_values=np.zeros((1, 4), dtype=np.float32),
+        tz_pred_item_to_idx_override={f"item_{i:02d}": i for i in range(5)},
+    )
+    backend._fetch_callback(bad_blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+    # Old state preserved because the new bundle was rejected.
+    assert backend._dim[SurfaceId.NEW_TAB_EN_US] == pre_dim
+
+
+def test_tz_preds_1d_rejects_bundle() -> None:
+    """tz_preds with ndim != 2 is rejected; existing state stays."""
+    blob, _ = _build_synthetic_bundle()
+    backend = _make_backend()
+    backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+    pre_tz_idx = backend._tz_pred_idx[SurfaceId.NEW_TAB_EN_US]
+    assert pre_tz_idx == -1
+
+    bad_blob, _ = _build_synthetic_bundle(
+        n_items=3,
+        with_tz_pred=True,
+        tz_pred_values=np.zeros((3, 4), dtype=np.float32),
+        tz_preds_ndim_override=1,
+    )
+    backend._fetch_callback(bad_blob, surface_id=SurfaceId.NEW_TAB_EN_US)
+    # Old (legacy) state untouched — tz_pred_idx still sentinel.
+    assert backend._tz_pred_idx[SurfaceId.NEW_TAB_EN_US] == -1
