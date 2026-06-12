@@ -30,15 +30,12 @@ def emit_normalization_metrics(
     suggestions: list[BaseSuggestion],
     searched_providers: list[BaseProvider],
     normalization_providers: frozenset[str],
-    query_changed: bool,
+    query_changed: dict[str, bool],
 ) -> None:
-    """Emit metrics for the query normalization experiment.
+    """Emit metrics for query normalization.
 
-    For each provider in the normalization experiment, tracks whether
-    the normalized query produced a suggestion (matched) and whether
-    the pipeline actually changed the query (query_changed). This lets
-    us monitor how often normalization fires and whether it leads to
-    new provider matches.
+    For each normalized provider, tracks whether the normalized query produced
+    a suggestion and whether that provider's pipeline changed the query.
     """
     suggestion_providers = {s.provider for s in suggestions}
     for provider in searched_providers:
@@ -48,6 +45,6 @@ def emit_normalization_metrics(
                 tags={
                     "provider": provider.name,
                     "matched": str(provider.name in suggestion_providers),
-                    "query_changed": str(query_changed),
+                    "query_changed": str(query_changed.get(provider.name, False)),
                 },
             )

@@ -42,6 +42,7 @@ async def test_init_pipeline_local() -> None:
         pipeline = get_pipeline()
         assert pipeline is not None
         assert pipeline.normalize("dow jone") == "dow jones"
+        assert pipeline.normalize_for_provider("123 ua", "flightaware") == "ua123"
 
 
 @pytest.mark.asyncio
@@ -66,3 +67,6 @@ async def test_init_pipeline_remote() -> None:
         await init_pipeline()
         pipeline = get_pipeline()
         assert pipeline is not None
+        assert pipeline.normalize_for_provider("united airlines flight 123", "flightaware") == (
+            "ua123"
+        )

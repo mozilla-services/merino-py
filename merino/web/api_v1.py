@@ -91,8 +91,7 @@ from merino.providers.games.particle.provider import Provider as ParticleProvide
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Query normalization experiment
-NORMALIZATION_CLIENT_VARIANT: str = "query_norm_treatment"
+# Query normalization
 NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
 
 # Param to capture all enabled_by_default=True providers.
@@ -284,21 +283,25 @@ async def suggest(
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
     client_variants_list = client_variants.split(",") if client_variants else []
 
-    # Query normalization experiment (Phase 1: sports + finance only)
     pipeline = get_pipeline()
-    use_normalization = (
-        pipeline is not None and NORMALIZATION_CLIENT_VARIANT in client_variants_list
-    )
-    if use_normalization and pipeline:
-        with metrics_client.timeit("normalization.experiment.timing"):
-            q_normalized = pipeline.normalize(q)
-    else:
-        q_normalized = q
+    use_normalization = pipeline is not None
+    query_changed_by_provider: dict[str, bool] = {}
+    q_tier_a = tier_a(q)
+    # Cache normalized queries by pipeline class within this request so we don't
+    # run the canonical pipeline twice when both sports and polygon are queried.
+    norm_cache: dict[str, str] = {}
 
     for p in search_from:
-        q_for_provider = (
-            q_normalized if use_normalization and p.name in NORMALIZATION_PROVIDERS else q
-        )
+        q_for_provider = q
+        if use_normalization and pipeline and p.name in NORMALIZATION_PROVIDERS:
+            # sports and polygon share the canonical pipeline; flightaware has its own.
+            cache_key = p.name if p.name == "flightaware" else "canonical"
+            if cache_key not in norm_cache:
+                with metrics_client.timeit("normalization.experiment.timing"):
+                    norm_cache[cache_key] = pipeline.normalize_for_provider(q, p.name)
+            q_for_provider = norm_cache[cache_key]
+            query_changed_by_provider[p.name] = q_for_provider != q_tier_a
+
         srequest = SuggestionRequest(
             query=p.normalize_query(q_for_provider),
             geolocation=geolocation,
@@ -349,7 +352,7 @@ async def suggest(
             suggestions,
             search_from,
             NORMALIZATION_PROVIDERS,
-            query_changed=q_normalized != tier_a(q),
+            query_changed=query_changed_by_provider,
         )
 
     return build_suggestion_response(client_variants, search_from, suggestions)

@@ -4,8 +4,10 @@
 
 """Integration tests for the Merino v1 suggest API endpoint configured with a flight provider."""
 
+from collections.abc import Iterator
 from typing import Any
 
+from circuitbreaker import CircuitBreakerMonitor
 import pytest
 from fastapi.testclient import TestClient
 from freezegun import freeze_time
@@ -26,6 +28,17 @@ from merino.providers.suggest.flightaware.backends.protocol import (
     FlightScheduleSegment,
     AirportDetails,
 )
+from merino.utils.query_processing.normalization.pipeline import FlightAwareNormalizePipeline
+
+
+@pytest.fixture(autouse=True)
+def reset_flightaware_circuit_breaker() -> Iterator[None]:
+    """Reset the shared FlightAware circuit breaker before and after each test."""
+    if circuit := CircuitBreakerMonitor.get("flight"):
+        circuit.reset()
+    yield
+    if circuit := CircuitBreakerMonitor.get("flight"):
+        circuit.reset()
 
 
 @pytest.fixture(name="backend_mock")
@@ -99,6 +112,36 @@ def test_suggest_with_flight_summary(
         body["suggestions"][0]["custom_details"]["flightaware"]["values"][0]["flight_number"]
         == "UA123"
     )
+
+
+def test_suggest_with_structurally_normalized_flight_query(
+    client: TestClient,
+    backend_mock: Any,
+    flight_summary: list[FlightSummary],
+    mocker: MockerFixture,
+) -> None:
+    """Test that provider-scoped normalization rewrites a FlightAware query before lookup."""
+    backend_mock.fetch_flight_details.return_value = flight_summary
+
+    flightaware_normalizer = FlightAwareNormalizePipeline(
+        valid_airline_codes={"UA"},
+    )
+    pipeline = mocker.Mock()
+    pipeline.normalize_for_provider.side_effect = lambda query, _: (
+        flightaware_normalizer.normalize(query)
+    )
+    mocker.patch("merino.web.api_v1.get_pipeline", return_value=pipeline)
+
+    response = client.get("/api/v1/suggest?q=123%20ua&providers=flightaware")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert (
+        body["suggestions"][0]["custom_details"]["flightaware"]["values"][0]["flight_number"]
+        == "UA123"
+    )
+    pipeline.normalize_for_provider.assert_called_once_with("123 ua", "flightaware")
+    backend_mock.fetch_flight_details.assert_awaited_once_with("UA123")
 
 
 def test_circuit_breaker_with_backend_error_flight(

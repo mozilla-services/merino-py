@@ -420,8 +420,8 @@ wordsegment_cache_size = 1000
 
 # MERINO_QUERY_NORMALIZATION__PROVIDERS
 # List of provider names that receive normalized queries.
-# Other providers get the raw query even for treatment users.
-providers = ["sports", "polygon"]
+# Other providers get the raw query.
+providers = ["sports", "polygon", "flightaware"]
 
 # MERINO_QUERY_NORMALIZATION__GCS_BUCKET
 # GCS bucket for remote data files (used when data_source = "remote").
