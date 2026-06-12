@@ -329,7 +329,7 @@ def exclude_recommendations_from_blocked_sections(
 def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
     """Disable ads based on section rank position and the allowAds flag.
 
-    Ads are allowed in sections at ranks {0, 1, 2, 4, 6, 8} only.
+    Ads are allowed in sections at ranks {0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18} only.
     Sections with allowAds=False have all ad tiles disabled regardless of rank.
 
     Args:
@@ -338,7 +338,7 @@ def adjust_ads_in_sections(sections: dict[str, Section]) -> None:
     Returns:
         None. Mutates tile.hasAd flags in-place.
     """
-    allowed_ranks = {0, 1, 2, 4, 6, 8}
+    allowed_ranks = {0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18}
     for sec in sections.values():
         if not sec.allowAds or sec.receivedFeedRank not in allowed_ranks:
             for rl in sec.layout.responsiveLayouts:
