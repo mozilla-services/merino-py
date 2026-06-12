@@ -160,7 +160,8 @@ class EventInfo(BaseModel):
 class MatchesResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/matches`.
 
-    Buckets are grouped by match state and sorted by `EventInfo.date` ascending.
+    Buckets are grouped by match state. `previous` is sorted by `EventInfo.date`
+    descending; `current` and `next` are sorted by `EventInfo.date` ascending.
     `next_` is aliased to `next` on the wire; populate by either name in Python.
     """
 

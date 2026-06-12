@@ -58,8 +58,8 @@ async def get_wcs_matches(
 
     The window is around `date`. `previous` holds completed or old matches,
     `current` holds active matches and scheduled matches during the short
-    post-kickoff feed-lag grace period, and `next` holds upcoming matches. Each
-    bucket is sorted ascending by event date.
+    post-kickoff feed-lag grace period, and `next` holds upcoming matches.
+    `previous` is newest-first; `current` and `next` are chronological.
     """
     target_date = date or datetime.now(UTC).date()
     team_keys = _parse_team_keys(teams)

@@ -81,9 +81,10 @@ class WcsProvider:
         Events are sorted ascending by event date, then bucketed by match state
         at request time: completed/past matches in `previous`, active or
         just-started scheduled matches in `current`, and scheduled future matches
-        in `next`. `limit` keeps the entries closest to `target_date` in each
-        bucket; `team_keys` restricts results to matches involving any of the
-        listed teams.
+        in `next`. The `previous` bucket is returned newest-first while `current`
+        and `next` remain chronological. `limit` keeps the entries closest to
+        `target_date` in each bucket; `team_keys` restricts results to matches
+        involving any of the listed teams.
         """
         previous: list[EventInfo] = []
         current: list[EventInfo] = []
@@ -113,6 +114,7 @@ class WcsProvider:
         if limit is not None:
             previous, current, next_ = previous[-limit:], current[:limit], next_[:limit]
 
+        previous.reverse()
         return MatchesResponse(previous=previous, current=current, next_=next_)
 
     @WCSCircuitBreaker(name="wcs_live_matches")

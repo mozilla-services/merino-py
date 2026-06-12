@@ -70,6 +70,15 @@ def test_matches_per_bucket(client: TestClient) -> None:
     assert all(e["status"] == "Scheduled" for e in body["next"])
 
 
+def test_buckets_are_sorted_for_display(client: TestClient) -> None:
+    """Results are newest-first while current and upcoming stay chronological."""
+    body = client.get(_PATH, params={"date": _ANCHOR}).json()
+
+    assert body["previous"] == sorted(body["previous"], key=lambda e: e["date"], reverse=True)
+    assert body["current"] == sorted(body["current"], key=lambda e: e["date"])
+    assert body["next"] == sorted(body["next"], key=lambda e: e["date"])
+
+
 @freezegun.freeze_time("2026-06-15T12:00:00Z")
 def test_same_day_scheduled_match_is_next_until_kickoff(client: TestClient) -> None:
     """A same-day scheduled match remains upcoming until kickoff."""
