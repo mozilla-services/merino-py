@@ -410,6 +410,18 @@ def test_suggest_fleece_not_called_when_flag_off(
     fleece_mock.detect_pii_safe.assert_not_called()
 
 
+def test_suggest_fleece_not_called_for_empty_query(
+    mocker: MockerFixture, client: TestClient
+) -> None:
+    """Test that an empty query is not sent to fleece"""
+    fleece_mock = _patch_fleece(mocker, enabled=True, pii=True)
+
+    response = client.get("/api/v1/suggest?q=")
+
+    assert response.status_code == 200
+    fleece_mock.detect_pii_safe.assert_not_called()
+
+
 def test_suggest_with_invalid_geolocation_ip(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -442,11 +454,19 @@ def test_suggest_with_invalid_geolocation_ip(
                 ("get.api.v1.suggest.timing", None),
                 (
                     "get.api.v1.suggest.status_codes.200",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
                 (
                     "response.status_codes.200",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
             ],
         ),
@@ -457,11 +477,19 @@ def test_suggest_with_invalid_geolocation_ip(
                 ("get.api.v1.suggest.timing", None),
                 (
                     "get.api.v1.suggest.status_codes.200",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
                 (
                     "response.status_codes.200",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
             ],
         ),
@@ -484,11 +512,19 @@ def test_suggest_with_invalid_geolocation_ip(
                 ("get.api.v1.suggest.timing", None),
                 (
                     "get.api.v1.suggest.status_codes.200",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
                 (
                     "response.status_codes.200",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
             ],
         ),
@@ -498,16 +534,29 @@ def test_suggest_with_invalid_geolocation_ip(
                 ("get.api.v1.suggest.timing", None),
                 (
                     "get.api.v1.suggest.status_codes.400",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
                 (
                     "response.status_codes.400",
-                    {"browser": "Firefox(103.0)", "form_factor": "desktop", "os_family": "macos"},
+                    {
+                        "browser": "Firefox(103.0)",
+                        "form_factor": "desktop",
+                        "os_family": "macos",
+                    },
                 ),
             ],
         ),
     ],
-    ids=["status_code_200", "status_code_200_pii", "status_code_200_soft_pii", "status_code_400"],
+    ids=[
+        "status_code_200",
+        "status_code_200_pii",
+        "status_code_200_soft_pii",
+        "status_code_400",
+    ],
 )
 def test_suggest_metrics(
     mocker: MockerFixture,
