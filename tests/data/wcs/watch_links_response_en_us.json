@@ -43,7 +43,7 @@
   ],
   "other_regions": [
     {
-      "country_code": "ARG",
+      "country_code": "Argentina",
       "streams": [
         {
           "product_name": "Paramount+",
@@ -63,7 +63,7 @@
       ]
     },
     {
-      "country_code": "AUS",
+      "country_code": "Australia",
       "streams": [
         {
           "product_name": "SBS On Demand",
@@ -73,7 +73,7 @@
       ]
     },
     {
-      "country_code": "AUT",
+      "country_code": "Austria",
       "streams": [
         {
           "product_name": "ORF",
@@ -88,7 +88,7 @@
       ]
     },
     {
-      "country_code": "BEL",
+      "country_code": "Belgium",
       "streams": [
         {
           "product_name": "RTBF",
@@ -103,7 +103,7 @@
       ]
     },
     {
-      "country_code": "BRA",
+      "country_code": "Brazil",
       "streams": [
         {
           "product_name": "CazéTV - YouTube",
@@ -123,7 +123,7 @@
       ]
     },
     {
-      "country_code": "BUL",
+      "country_code": "Bulgaria",
       "streams": [
         {
           "product_name": "BNT",
@@ -133,7 +133,7 @@
       ]
     },
     {
-      "country_code": "CAN",
+      "country_code": "Canada",
       "streams": [
         {
           "product_name": "Crave",
@@ -153,7 +153,7 @@
       ]
     },
     {
-      "country_code": "CHI",
+      "country_code": "Chile",
       "streams": [
         {
           "product_name": "Chilevision",
@@ -173,7 +173,7 @@
       ]
     },
     {
-      "country_code": "COL",
+      "country_code": "Colombia",
       "streams": [
         {
           "product_name": "Canal RCN",
@@ -198,7 +198,7 @@
       ]
     },
     {
-      "country_code": "CZE",
+      "country_code": "Czechia",
       "streams": [
         {
           "product_name": "Nova Action",
@@ -213,7 +213,7 @@
       ]
     },
     {
-      "country_code": "DEN",
+      "country_code": "Denmark",
       "streams": [
         {
           "product_name": "DRTV",
@@ -228,7 +228,7 @@
       ]
     },
     {
-      "country_code": "ECU",
+      "country_code": "Ecuador",
       "streams": [
         {
           "product_name": "Paramount+",
@@ -243,22 +243,7 @@
       ]
     },
     {
-      "country_code": "ESP",
-      "streams": [
-        {
-          "product_name": "DAZN",
-          "entitlement": "Free Trial",
-          "url": "https://www.dazn.com/es-ES/"
-        },
-        {
-          "product_name": "RTVE",
-          "entitlement": "Free",
-          "url": "https://www.rtve.es/play/videos/copa-mundial-de-la-fifa-2026/"
-        }
-      ]
-    },
-    {
-      "country_code": "FIN",
+      "country_code": "Finland",
       "streams": [
         {
           "product_name": "MTV Katsomo",
@@ -273,22 +258,22 @@
       ]
     },
     {
-      "country_code": "FRA",
+      "country_code": "France",
       "streams": [
         {
           "product_name": "M6+",
           "entitlement": "Free",
-          "url": "https://www.m6.fr/coupe-du-monde-2026-p_26649"
+          "url": "https://www.m6.fr/"
         },
         {
           "product_name": "beIN SPORTS",
           "entitlement": "Paid",
-          "url": "https://connect.beinsports.com/france/"
+          "url": "https://www.canalplus.com/fifa-coupe-du-monde-bein/"
         }
       ]
     },
     {
-      "country_code": "GER",
+      "country_code": "Germany",
       "streams": [
         {
           "product_name": "ARD",
@@ -313,7 +298,7 @@
       ]
     },
     {
-      "country_code": "HUN",
+      "country_code": "Hungary",
       "streams": [
         {
           "product_name": "M4sport",
@@ -328,7 +313,7 @@
       ]
     },
     {
-      "country_code": "INA",
+      "country_code": "Indonesia",
       "streams": [
         {
           "product_name": "TVRI Klik",
@@ -338,7 +323,7 @@
       ]
     },
     {
-      "country_code": "IRL",
+      "country_code": "Ireland",
       "streams": [
         {
           "product_name": "RTÉ Player",
@@ -348,7 +333,7 @@
       ]
     },
     {
-      "country_code": "ITA",
+      "country_code": "Italy",
       "streams": [
         {
           "product_name": "DAZN",
@@ -358,12 +343,12 @@
         {
           "product_name": "RaiPlay",
           "entitlement": "Free",
-          "url": "https://www.raiplay.it/programmi/mondialidicalcio2026"
+          "url": "https://www.raiplay.it/sport"
         }
       ]
     },
     {
-      "country_code": "MEX",
+      "country_code": "Mexico",
       "streams": [
         {
           "product_name": "Azteca Deportes",
@@ -378,7 +363,7 @@
       ]
     },
     {
-      "country_code": "NED",
+      "country_code": "Netherlands",
       "streams": [
         {
           "product_name": "NOS",
@@ -393,7 +378,17 @@
       ]
     },
     {
-      "country_code": "NOR",
+      "country_code": "New Zealand",
+      "streams": [
+        {
+          "product_name": "TVNZ+",
+          "entitlement": "Free and Paid",
+          "url": "https://www.tvnz.co.nz/competition/fifa-2026"
+        }
+      ]
+    },
+    {
+      "country_code": "Norway",
       "streams": [
         {
           "product_name": "NRK TV",
@@ -408,17 +403,7 @@
       ]
     },
     {
-      "country_code": "NZL",
-      "streams": [
-        {
-          "product_name": "TVNZ+",
-          "entitlement": "Free and Paid",
-          "url": "https://www.tvnz.co.nz/competition/fifa-2026"
-        }
-      ]
-    },
-    {
-      "country_code": "POL",
+      "country_code": "Poland",
       "streams": [
         {
           "product_name": "TVP SPORT",
@@ -428,7 +413,7 @@
       ]
     },
     {
-      "country_code": "POR",
+      "country_code": "Portugal",
       "streams": [
         {
           "product_name": "LiveModeTV - YouTube",
@@ -443,7 +428,7 @@
       ]
     },
     {
-      "country_code": "ROU",
+      "country_code": "Romania",
       "streams": [
         {
           "product_name": "AntenaPLAY",
@@ -453,22 +438,7 @@
       ]
     },
     {
-      "country_code": "RSA",
-      "streams": [
-        {
-          "product_name": "DStv Stream",
-          "entitlement": "Paid",
-          "url": "https://dstv.stream/#/"
-        },
-        {
-          "product_name": "SABC+",
-          "entitlement": "Free",
-          "url": "https://sabc-plus.com/live"
-        }
-      ]
-    },
-    {
-      "country_code": "SRB",
+      "country_code": "Serbia",
       "streams": [
         {
           "product_name": "Arena Cloud",
@@ -483,7 +453,62 @@
       ]
     },
     {
-      "country_code": "SUI",
+      "country_code": "Slovakia",
+      "streams": [
+        {
+          "product_name": "JOJPLAY",
+          "entitlement": "Paid",
+          "url": "https://play.joj.sk/"
+        }
+      ]
+    },
+    {
+      "country_code": "South Africa",
+      "streams": [
+        {
+          "product_name": "DStv Stream",
+          "entitlement": "Paid",
+          "url": "https://dstv.stream/#/"
+        },
+        {
+          "product_name": "SABC+",
+          "entitlement": "Free",
+          "url": "https://sabc-plus.com/live"
+        }
+      ]
+    },
+    {
+      "country_code": "Spain",
+      "streams": [
+        {
+          "product_name": "DAZN",
+          "entitlement": "Free Trial",
+          "url": "https://www.dazn.com/es-ES/"
+        },
+        {
+          "product_name": "RTVE",
+          "entitlement": "Free",
+          "url": "https://www.rtve.es/play/teledeporte/"
+        }
+      ]
+    },
+    {
+      "country_code": "Sweden",
+      "streams": [
+        {
+          "product_name": "SVT Play",
+          "entitlement": "Free and Paid",
+          "url": "https://www.svtplay.se/fifa-fotbolls-vm-2026"
+        },
+        {
+          "product_name": "TV4 Play",
+          "entitlement": "Free and Paid",
+          "url": "https://www.tv4play.se/kategorier/fifa-fotbolls-vm-2026"
+        }
+      ]
+    },
+    {
+      "country_code": "Switzerland",
       "streams": [
         {
           "product_name": "RSI",
@@ -503,32 +528,7 @@
       ]
     },
     {
-      "country_code": "SVK",
-      "streams": [
-        {
-          "product_name": "JOJPLAY",
-          "entitlement": "Paid",
-          "url": "https://play.joj.sk/"
-        }
-      ]
-    },
-    {
-      "country_code": "SWE",
-      "streams": [
-        {
-          "product_name": "SVT Play",
-          "entitlement": "Free and Paid",
-          "url": "https://www.svtplay.se/fifa-fotbolls-vm-2026"
-        },
-        {
-          "product_name": "TV4 Play",
-          "entitlement": "Free and Paid",
-          "url": "https://www.tv4play.se/kategorier/fifa-fotbolls-vm-2026"
-        }
-      ]
-    },
-    {
-      "country_code": "UK",
+      "country_code": "United Kingdom",
       "streams": [
         {
           "product_name": "BBC iPlayer",
@@ -538,12 +538,12 @@
         {
           "product_name": "ITVX",
           "entitlement": "Free",
-          "url": "https://www.itv.com/watch/fifa-world-cup-2026/1a6247"
+          "url": "https://www.itv.com/watch"
         },
         {
           "product_name": "STV Player",
           "entitlement": "Free",
-          "url": "https://player.stv.tv/summary/fifa-world-cup"
+          "url": "https://player.stv.tv/"
         }
       ]
     }
