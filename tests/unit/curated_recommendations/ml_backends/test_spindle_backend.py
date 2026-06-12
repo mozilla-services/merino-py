@@ -80,7 +80,7 @@ class TestSpindleBackendRefresh:
         http_client = MagicMock(spec=AsyncClient)
         http_client.post = AsyncMock()
         backend = _make_backend(http_client)
-        await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_DE_DE)
+        await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_FR_FR)
         http_client.post.assert_not_called()
 
     @pytest.mark.asyncio
