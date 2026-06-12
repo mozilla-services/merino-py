@@ -1214,13 +1214,13 @@ class TestTopStoriesArticleBalancer:
         """Test that blocked stories are identified correctly."""
         blocked_story1 = self._build_recommendation("1", Topic.GAMING)
         blocked_story2 = self._build_recommendation("1", Topic.ARTS, subtopic=True)
-        blocked_story3 = self._build_recommendation("1", Topic.BUSINESS, headlines=True)
+        headlines_story = self._build_recommendation("1", Topic.BUSINESS, headlines=True)
         allowed_story1 = self._build_recommendation("2", Topic.BUSINESS)
         allowed_story2 = self._build_recommendation("2", Topic.SPORTS)
 
         assert blocked_story1.is_story_blocked_for_top_stories() is True
         assert blocked_story2.is_story_blocked_for_top_stories() is True
-        assert blocked_story3.is_story_blocked_for_top_stories() is True
+        assert headlines_story.is_story_blocked_for_top_stories() is False
         assert allowed_story1.is_story_blocked_for_top_stories() is False
         assert allowed_story2.is_story_blocked_for_top_stories() is False
 

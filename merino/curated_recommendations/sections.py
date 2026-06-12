@@ -155,8 +155,7 @@ def map_corpus_section_to_section(
     is_headlines = corpus_section.externalId == HEADLINES_SECTION_KEY
     is_world_cup = corpus_section.externalId.startswith("worldcup")
     if is_headlines:
-        # Block headlines from Popular Today to avoid duplicate content with
-        # The Latest / Daily Briefing sections (HNT-2167).
+        # Preserve headlines provenance without treating it as a subtopic.
         item_flags.add(ITEM_HEADLINES_FLAG)
     elif is_world_cup:
         item_flags.add(ITEM_WORLD_CUP_FLAG)
