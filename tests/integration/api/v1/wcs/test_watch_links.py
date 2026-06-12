@@ -110,13 +110,13 @@ def test_watch_links_de_de(
         },
     ]
 
-    # GER must not appear in other_regions (it is the user's own country)
+    # Germany must not appear in other_regions (it is the user's own country)
     other_codes = [country["country_code"] for country in body["other_regions"]]
-    assert "GER" not in other_codes
+    assert "Germany" not in other_codes
 
-    # USA must appear in other_regions with all seven qualifying streams
+    # United States must appear in other_regions with all seven qualifying streams
     usa_entry = next(
-        country for country in body["other_regions"] if country["country_code"] == "USA"
+        country for country in body["other_regions"] if country["country_code"] == "United States"
     )
     assert usa_entry["streams"] == [
         {
@@ -156,8 +156,8 @@ def test_watch_links_de_de(
         },
     ]
 
-    # USA sorts last (display code "USA" > "UK" alphabetically)
-    assert other_codes[-1] == "USA"
+    # United States sorts last (alphabetically after United Kingdom)
+    assert other_codes[-1] == "United States"
 
     total_links = len(body["your_region"]) + sum(
         len(country["streams"]) for country in body["other_regions"]

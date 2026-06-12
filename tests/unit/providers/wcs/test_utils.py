@@ -235,7 +235,7 @@ class TestResolveOtherRegions:
         """The user's own country does not appear in results."""
         result = resolve_other_regions(_US)
         country_codes = [country for country, _ in result]
-        assert "USA" not in country_codes
+        assert "United States" not in country_codes
 
     def test_country_with_no_qualifying_streams_excluded(
         self,
@@ -245,12 +245,12 @@ class TestResolveOtherRegions:
         result = resolve_other_regions(_US)
         # FR has only in_production=False streams
         country_codes = [country for country, _ in result]
-        assert "FRA" not in country_codes
+        assert "France" not in country_codes
 
     def test_show_in_other_regions_false_filtered(self, mock_watch_links) -> None:
         """Streams with show_in_other_regions=False are excluded."""
         result = resolve_other_regions(_US)
-        uk_streams = next((streams for code, streams in result if code == "UK"), [])
+        uk_streams = next((streams for code, streams in result if code == "United Kingdom"), [])
         names = [link.product_name for link in uk_streams]
         assert "BBC" in names
         assert "ITV" not in names
@@ -321,7 +321,7 @@ class TestResolveOtherRegions:
     ) -> None:
         """Streams within a country are sorted by product_name then sort_order."""
         result = resolve_other_regions(_US)
-        de_streams = next((streams for code, streams in result if code == "GER"), [])
+        de_streams = next((streams for code, streams in result if code == "Germany"), [])
         # ARD and ZDF both have sort_order=2; alphabetically ARD < ZDF
         assert [link.product_name for link in de_streams] == ["ARD", "ZDF"]
 
