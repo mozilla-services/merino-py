@@ -198,7 +198,9 @@ class StreamEntry(BaseModel):
 class OtherRegionEntry(BaseModel):
     """Streaming services grouped by a region other than the user's."""
 
-    country_code: str = Field(description="Display country name, e.g. 'Germany', 'United Kingdom'.")
+    country_code: str = Field(
+        description="Display country name, e.g. 'Germany', 'United Kingdom'."
+    )
     streams: list[StreamEntry]
 
 
