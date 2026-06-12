@@ -74,7 +74,6 @@ def record_decision(
     decision = wrapped_method(flag_name, *remaining_args, **kwargs)
 
     instance.decisions[flag_name] = decision
-    logger.info(f"Record feature flag decision for {flag_name}", extra={flag_name: decision})
 
     return decision
 
