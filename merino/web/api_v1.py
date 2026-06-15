@@ -267,7 +267,8 @@ async def suggest(
     # optionally run PII detection via merino-fleece, behind the `fleece-pii-detection` flag.
     fleece_client = get_fleece_client()
     if (
-        fleece_client is not None
+        q
+        and fleece_client is not None
         and FeatureFlags().is_enabled("fleece-pii-detection")
         and await fleece_client.detect_pii_safe(q, metrics_client)
     ):
