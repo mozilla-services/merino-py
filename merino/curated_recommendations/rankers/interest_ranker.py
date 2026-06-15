@@ -1,10 +1,9 @@
 """Ranker that scores items via the LinTS interest backend.
 
 Parallels ``ContextualRanker`` in shape, but the per-item score comes from a
-single posterior draw of the LinTS-interest model (``θ̃ = θ̂ + v · L^{-T} ε``)
-rather than a precomputed slate. Items the model doesn't know fall back to
-Thompson sampling on the engagement Beta posterior, matching the cohort
-ranker's "no ML score" branch.
+single posterior draw of the LinTS-interest model rather than a precomputed
+slate. Items the model doesn't know fall back to vanilla Thompson sampling on
+the engagement Beta posterior.
 """
 
 import logging

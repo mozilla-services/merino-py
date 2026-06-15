@@ -20,6 +20,9 @@ from safetensors import safe_open
 from scipy.linalg.blas import stpsv
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
+from merino.curated_recommendations.ml_backends.protocol import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+)
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 logger = logging.getLogger(__name__)
@@ -55,6 +58,12 @@ class LinTSInterestBackend:
         self._cache_time: dict[SurfaceId, datetime] = {}
         self._model_id: dict[SurfaceId, str] = {}
         self._epoch_id: dict[SurfaceId, str] = {}
+        # Optional tz_pred feature state. -1 sentinel = "tz_pred not present
+        # in this bundle, skip the adjustment entirely".
+        self._tz_pred_idx: dict[SurfaceId, int] = {}
+        self._tz_baseline_idx: dict[SurfaceId, int] = {}
+        self._tz_preds: dict[SurfaceId, np.ndarray] = {}
+        self._tz_pred_item_to_idx: dict[SurfaceId, dict[str, int]] = {}
 
         for surface_id, blob in self.synced_blobs.items():
             blob.set_fetch_binary_callback(partial(self._fetch_callback, surface_id=surface_id))
@@ -87,6 +96,10 @@ class LinTSInterestBackend:
         self._cache_time[surface_id] = parsed["cache_time"]
         self._model_id[surface_id] = parsed["model_id"]
         self._epoch_id[surface_id] = parsed["epoch_id"]
+        self._tz_pred_idx[surface_id] = parsed["tz_pred_idx"]
+        self._tz_baseline_idx[surface_id] = parsed["tz_baseline_idx"]
+        self._tz_preds[surface_id] = parsed["tz_preds"]
+        self._tz_pred_item_to_idx[surface_id] = parsed["tz_pred_item_to_idx"]
 
         logger.info(
             f"LinTSInterestBackend: loaded {surface_id} dim={parsed['dim']} "
@@ -127,6 +140,10 @@ class LinTSInterestBackend:
 
                 L_packed = st.get_tensor("L_lower").copy()
                 theta_hat = st.get_tensor("theta_hat").copy()
+                tensor_keys = set(st.keys())
+                tz_preds_tensor = (
+                    st.get_tensor("tz_preds").copy() if "tz_preds" in tensor_keys else None
+                )
 
         # ml-services serializes L as float16 to halve disk/wire size; we
         # upconvert to float32 here because scipy.linalg.blas.stpsv (used at
@@ -185,6 +202,27 @@ class LinTSInterestBackend:
             # the bundle as already-stale by zeroing the cache time.
             cache_time = datetime.fromtimestamp(0, tz=timezone.utc)
 
+        # Optional tz_pred feature pieces. Old bundles without the tz fields
+        # land here with sentinel values that disable the adjustment entirely.
+        tz_pred_idx = int(meta.get("tz_pred_idx", "-1"))
+        tz_baseline_idx = int(meta.get("tz_baseline_idx", "-1"))
+        tz_pred_item_to_idx: dict[str, int] = {
+            str(k): int(val)
+            for k, val in json.loads(meta.get("tz_pred_item_to_idx", "{}")).items()
+        }
+        if tz_preds_tensor is not None:
+            if tz_preds_tensor.dtype != np.float32:
+                tz_preds_tensor = tz_preds_tensor.astype(np.float32)
+            if tz_preds_tensor.ndim != 2:
+                raise ValueError(f"tz_preds must be 2D, got shape {tz_preds_tensor.shape}")
+            if len(tz_pred_item_to_idx) != tz_preds_tensor.shape[0]:
+                raise ValueError(
+                    f"tz_pred_item_to_idx size {len(tz_pred_item_to_idx)} "
+                    f"does not match tz_preds row count {tz_preds_tensor.shape[0]}"
+                )
+        else:
+            tz_preds_tensor = np.zeros((0, 0), dtype=np.float32)
+
         return {
             "L_packed": L_packed,
             "theta_hat": theta_hat,
@@ -198,6 +236,10 @@ class LinTSInterestBackend:
             "cache_time": cache_time,
             "model_id": meta.get("model_id", "unknown"),
             "epoch_id": epoch_id,
+            "tz_pred_idx": tz_pred_idx,
+            "tz_baseline_idx": tz_baseline_idx,
+            "tz_preds": tz_preds_tensor,
+            "tz_pred_item_to_idx": tz_pred_item_to_idx,
         }
 
     # ----------------------------------------------------------------- query
@@ -243,6 +285,10 @@ class LinTSInterestBackend:
         topic_main_to_idx = self._topic_main_to_idx[surface_id]
         topic_names = self._topic_names[surface_id]
         n_topics = len(topic_names)
+        tz_pred_idx = self._tz_pred_idx.get(surface_id, -1)
+        tz_baseline_idx = self._tz_baseline_idx.get(surface_id, -1)
+        tz_preds = self._tz_preds.get(surface_id, np.zeros((0, 0), dtype=np.float32))
+        tz_pred_item_to_idx = self._tz_pred_item_to_idx.get(surface_id, {})
 
         # 1) Sample θ̃ = θ̂ + v · L^{-T} ε via the packed triangular solve.
         eps = rng.standard_normal(d).astype(np.float32)
@@ -262,7 +308,22 @@ class LinTSInterestBackend:
             np.dot(strength_vec, theta_tilde[topic_main_indices])
         )
 
-        # 3) Per-candidate: item_main if known, plus active (item × topic) pairs.
+        # Resolve the user's tz_index once. tz_pred_idx >= 0 indicates the
+        # bundle carries the feature. Baseline-TZ users (e.g. ET) get no
+        # adjustment because there's no published ratio for the baseline.
+        tz_pred_active = False
+        user_tz_idx = -1
+        tz_pred_coef = 0.0
+        if tz_pred_idx >= 0 and tz_preds is not None and tz_preds.size > 0:
+            raw_tz = strengths.get(TIME_ZONE_OFFSET_INFERRED_KEY)
+            if isinstance(raw_tz, (int, float)):
+                user_tz_idx = int(raw_tz)
+                if 0 <= user_tz_idx < tz_preds.shape[1] and user_tz_idx != tz_baseline_idx:
+                    tz_pred_active = True
+                    tz_pred_coef = float(theta_tilde[tz_pred_idx])
+
+        # 3) Per-candidate: item_main if known, plus active (item × topic) pairs,
+        # plus the tz_pred contribution when the bundle exposes it.
         scores = np.full(len(candidate_item_ids), const_score, dtype=np.float32)
         for r, raw_iid in enumerate(candidate_item_ids):
             iid = str(raw_iid)
@@ -276,6 +337,10 @@ class LinTSInterestBackend:
                 pi = item_topic_to_idx.get((iid, t))
                 if pi is not None:
                     scores[r] += sv_t * theta_tilde[pi]
+            if tz_pred_active:
+                pred_row = tz_pred_item_to_idx.get(iid)
+                if pred_row is not None:
+                    scores[r] += tz_pred_coef * float(tz_preds[pred_row, user_tz_idx])
         return scores
 
     def has_item(self, surface_id: SurfaceId, corpus_item_id: str) -> bool:
