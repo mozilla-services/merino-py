@@ -144,3 +144,14 @@ class GcsUploader(BaseContentUploader):
             return most_recent
 
         return None
+
+    def delete_file_by_name(self, blob_name: str) -> None:
+        """Delete a file by name."""
+        bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+        blob = bucket.blob(blob_name)
+
+        try:
+            blob.delete()
+        except Exception as e:
+            logger.error(f"Exception {e} occurred while deleting {blob_name}")
+            raise e

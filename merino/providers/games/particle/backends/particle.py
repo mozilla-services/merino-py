@@ -191,7 +191,7 @@ class ParticleBackend:
         # if some files were uploaded but not all, erase the partial green deployment
         # by clearing out the GCS "green" folder
         if any(f.uploaded for f in files) and not all(f.uploaded for f in files):
-            await self.remote_file_manager.empty_staging_folder()
+            await self.remote_file_manager.empty_staging_folder(files=files)
 
         # return set of files with sha_verified and uploaded properties
         # (potentially) updated
