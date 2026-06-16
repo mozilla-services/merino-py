@@ -155,3 +155,14 @@ class GcsUploader(BaseContentUploader):
         except Exception as e:
             logger.error(f"Exception {e} occurred while deleting {blob_name}")
             raise e
+
+    def move_file(self, blob_name: str, destination_name: str) -> None:
+        """Move a file by renaming. Will overwrite the destination_name blob if exists."""
+        bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+        blob = bucket.blob(blob_name)
+
+        try:
+            bucket.rename_blob(blob=blob, new_name=destination_name)
+        except Exception as e:
+            logger.error(f"Exception {e} occurred while moving {blob_name}")
+            raise e

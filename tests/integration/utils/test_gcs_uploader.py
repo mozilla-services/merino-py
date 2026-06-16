@@ -139,3 +139,126 @@ class TestDeleteFileByName:
         with pytest.raises(Exception):
             # try to delete a file that doesn't exist
             gcs_client.delete_file_by_name("notfound.jpg")
+
+
+class TestMoveFile:
+    """Tests against the move_file function."""
+
+    def test_success_no_overwrite(self, gcs_client):
+        """Test successfully moving a file when it's not overwriting an existing file."""
+        # put a file in the bucket to move
+        blob = gcs_client.upload_from_filename(
+            file_path="tests/data/games/particle/image.jpg",
+            destination_name="green/image.jpg",
+            content_type="image/jpeg",
+        )
+
+        # move the file
+        gcs_client.move_file(blob_name="green/image.jpg", destination_name="image.jpg")
+
+        # make sure the file was moved
+        blob = gcs_client.get_file_by_name("image.jpg")
+
+        assert blob
+
+    def test_success_overwrite(self, gcs_client):
+        """Test successfully moving a file when it's overwriting an existing file."""
+        # put a file in the bucket to overwrite - the "prod" image
+        prod_image = gcs_client.upload_from_filename(
+            file_path="tests/data/games/particle/image.jpg",
+            destination_name="image.jpg",
+            content_type="image/jpeg",
+        )
+
+        prod_md5 = prod_image.md5_hash
+
+        # put a "staging" file in the bucket to replace the above
+        staging_image = gcs_client.upload_from_filename(
+            file_path="tests/data/games/particle/image2.jpg",
+            destination_name="green/image.jpg",
+            content_type="image/jpeg",
+        )
+
+        staging_md5 = staging_image.md5_hash
+
+        # "deploy" the staged file
+        gcs_client.move_file(blob_name="green/image.jpg", destination_name="image.jpg")
+
+        # make sure the file was moved
+        blob = gcs_client.get_file_by_name("image.jpg")
+
+        # make sure the blob is found
+        assert blob
+
+        # make sure the moved file matches the hash of the staged file
+        assert blob.md5_hash == staging_md5
+
+        # extra check to make double sure the file was actually moved
+        assert prod_md5 != blob.md5_hash
+
+    def test_failure_invalid_source(self, gcs_client):
+        """Test failure when the source/staging file cannot be found."""
+        # put a file in the bucket to overwrite - the "prod" image
+        gcs_client.upload_from_filename(
+            file_path="tests/data/games/particle/image.jpg",
+            destination_name="image.jpg",
+            content_type="image/jpeg",
+        )
+
+        # put a "staging" file in the bucket to replace the above
+        gcs_client.upload_from_filename(
+            file_path="tests/data/games/particle/image2.jpg",
+            destination_name="green/image.jpg",
+            content_type="image/jpeg",
+        )
+
+        with pytest.raises(Exception):
+            # blob_name is invalid
+            gcs_client.move_file(blob_name="blue/image.jpg", destination_name="image.jpg")
+
+
+class TestUploadContent:
+    """Tests against the upload_content function."""
+
+    def test_basic_success(self, gcs_client):
+        """Test basic success scenario - no overwrite/forced upload."""
+        # upload basic json
+        blob = gcs_client.upload_content(
+            content="{}", destination_name="test.json", content_type="application/json"
+        )
+
+        # no matter what happens above, a blob is returned
+        # make sure it has an id, which means it was uploaded successfully(?)
+        assert blob.id
+
+    def test_failure_by_collision(self, gcs_client):
+        """Test failure scenario when the same file exists and forced_upload is False."""
+        # upload basic json to overwrite
+        gcs_client.upload_content(
+            content="{}", destination_name="test.json", content_type="application/json"
+        )
+
+        # attempt to overwrite the basic json without forced_upload
+        blob = gcs_client.upload_content(
+            content="{}", destination_name="test.json", content_type="application/json"
+        )
+
+        # blob should not be uploaded
+        assert not blob.id
+
+    def test_success_with_overwrite(self, gcs_client):
+        """Test success scenario with overwrite."""
+        # upload basic json to overwrite
+        gcs_client.upload_content(
+            content="{}", destination_name="test.json", content_type="application/json"
+        )
+
+        # attempt to overwrite the basic json
+        blob2 = gcs_client.upload_content(
+            content="{}",
+            destination_name="test.json",
+            content_type="application/json",
+            forced_upload=True,
+        )
+
+        assert blob2.id

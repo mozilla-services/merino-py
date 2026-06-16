@@ -68,8 +68,12 @@ class ParticleBackend(Protocol):
         """
         ...
 
-    async def deploy_channel_files(
-        self, files: list[GameFile], manifest_remote: Json, manifest_gcs: Json
-    ) -> bool:
+    async def deploy_channel_files(self, files: list[GameFile], manifest_remote: Json) -> bool:
         """Deploy files from the 'green' folder in GCS to the root."""
+        ...
+
+    async def cleanup_old_files_for_channel(
+        self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+    ) -> bool:
+        """Clean up any outdated files for the given channel. Run after a channel deploy has succeeded."""
         ...
