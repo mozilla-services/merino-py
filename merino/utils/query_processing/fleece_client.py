@@ -24,7 +24,7 @@ class FleeceClient:
 
     async def detect_pii(self, query: str) -> bool:
         """Return whether merino-fleece flags `query` as containing PII."""
-        response = await self.http_client.post(self.pii_path, json={"q": query})
+        response = await self.http_client.get(self.pii_path, params={"q": query})
         response.raise_for_status()
         return bool(response.json()["pii"])
 
