@@ -59,6 +59,7 @@ def test_explicit_date_is_deterministic(client: TestClient) -> None:
     assert a == b
 
 
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
 def test_matches_per_bucket(client: TestClient) -> None:
     """Each of `previous`, `current`, `next` has at least one event sharing a status."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()
