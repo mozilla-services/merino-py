@@ -328,6 +328,7 @@ async def test_response_is_deterministic_for_same_anchor() -> None:
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
 async def test_six_records_two_per_status_type() -> None:
     """The stub set has at least two past, two live, and two scheduled matches
     assuming a window >= 7 days.
