@@ -399,6 +399,7 @@ async def test_match_team_colors_are_normalized_to_hex() -> None:
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T12:00:00Z")
 async def test_match_team_group_comes_from_cached_event_group() -> None:
     """The matches endpoint maps the cached event group onto both teams."""
     grouped_event = build_event(
