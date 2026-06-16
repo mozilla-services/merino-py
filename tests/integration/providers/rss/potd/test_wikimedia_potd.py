@@ -6,9 +6,9 @@
 
 import pytest
 
-from unittest.mock import MagicMock, call
+import freezegun
+from unittest.mock import call
 from httpx import AsyncClient
-from datetime import datetime
 from pytest_mock import MockerFixture
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPotdBackend,
@@ -34,6 +34,7 @@ def fixture_backend(
     )
 
 
+@freezegun.freeze_time("2026-06-07")
 def test_upload_image_thumbnail_only_success(
     backend: WikimediaPotdBackend, gcs_storage_client, gcs_storage_bucket
 ) -> None:
@@ -46,14 +47,12 @@ def test_upload_image_thumbnail_only_success(
     # get the blob (image) from the same bucket assigned to the gcs_uploader instance of the backend object
     blobs_in_bucket = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
 
-    # YYYY-MM-DD format
-    todays_date = datetime.today().strftime("%Y-%m-%d")
-
     # should be only one blob (thumbnail image)
     assert len(blobs_in_bucket) == 1
-    assert blobs_in_bucket[0].name == f"rss/wikimedia_potd/POTD_{todays_date}_thumbnail.jpeg"
+    assert blobs_in_bucket[0].name == "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
 
 
+@freezegun.freeze_time("2026-06-07")
 def test_upload_image_thumbnail_and_hi_res_success(
     backend: WikimediaPotdBackend, gcs_storage_client, gcs_storage_bucket
 ) -> None:
@@ -67,13 +66,11 @@ def test_upload_image_thumbnail_and_hi_res_success(
     # get the blob (image) from the same bucket assigned to the gcs_uploader instance of the backend object
     blobs_in_bucket = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
 
-    # YYYY-MM-DD format
-    todays_date = datetime.today().strftime("%Y-%m-%d")
-
     # should be two blobs (thumbnail and hi-res)
     assert len(blobs_in_bucket) == 2
-    assert blobs_in_bucket[0].name == f"rss/wikimedia_potd/POTD_{todays_date}_hi_res.jpeg"
-    assert blobs_in_bucket[1].name == f"rss/wikimedia_potd/POTD_{todays_date}_thumbnail.jpeg"
+    assert blobs_in_bucket[0].name == "rss/wikimedia_potd/POTD_2026-06-07_hi_res.jpeg"
+    assert blobs_in_bucket[1].name == "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
+
 
 def test_upload_image_captures_sentry_exception(
     backend: WikimediaPotdBackend, mocker: MockerFixture
@@ -85,7 +82,9 @@ def test_upload_image_captures_sentry_exception(
     mocker.patch.object(backend.gcs_uploader, "upload_image").side_effect = ex
 
     # mocker.patch("merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.GcsUploader.upload_image").side_effect = Exception("Test Exception")
-    sentry_capture = mocker.patch("merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception")
+    sentry_capture = mocker.patch(
+        "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
+    )
     backend.upload_image(image=test_image, is_thumbnail=True)
 
     assert sentry_capture.call_count == 1

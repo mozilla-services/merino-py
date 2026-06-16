@@ -6,7 +6,7 @@
 
 import logging
 from typing import Any, cast
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient, Request, Response
@@ -42,13 +42,6 @@ TEST_RSS_FEED_MISSING_FIELDS = """<?xml version="1.0" encoding="UTF-8"?>
     </item>
   </channel>
 </rss>"""
-
-
-# TODO remove this?
-@pytest.fixture(name="gcs_uploader_mock")
-def fixture_gcs_uploader_mock() -> GcsUploader:
-    """Return a mock GcsUploader."""
-    return MagicMock(spec=GcsUploader)
 
 
 @pytest.fixture(name="backend")
