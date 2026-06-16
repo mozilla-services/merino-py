@@ -97,3 +97,8 @@ def build_potd_path_and_name(image: Image, is_thumbnail: bool) -> str:
     # the path in the bucket for the image would look like:
     # "merino-images-prod/rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
     return f"{DIR_PATH_IN_BUCKET}/{prefix}_{date_time}_{suffix}.{extension}"
+
+
+def is_valid_potd_image_url(url: HttpUrl) -> bool:
+    """Validate url is an image url."""
+    return bool(str(url).split(".")[-1] in ["jpg", "jpeg", "png", "webp"])

@@ -14,6 +14,7 @@ from merino.providers.rss.wikimedia_potd.backends.utils import (
     RSS_FETCH_REQUEST_HEADERS,
     extract_potd,
     build_potd_path_and_name,
+    is_valid_potd_image_url,
 )
 import sentry_sdk
 
@@ -90,18 +91,17 @@ class WikimediaPotdBackend:
         Returns an Image object containing the binary content and content type,
         or None.
         """
-        # verify that the url is an image url
-        if str(url).split(".")[-1] not in ["jpg", "jpeg", "png", "webp"]:
+        if not is_valid_potd_image_url(url):
             return None
 
         try:
             # set up request headers to only accept image content types
-            request_headers = {"Accept": "image/jpeg,image/png,image/webp"}
+            request_headers = {"accept": "image/jpeg,image/png,image/webp"}
             response: Response = await self.http_client.get(str(url), headers=request_headers)
             response.raise_for_status()
 
             content = response.content
-            content_type = response.headers["Content-Type"]
+            content_type = response.headers["content-type"]
 
             return Image(
                 content=content,

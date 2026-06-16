@@ -9,7 +9,11 @@ from feedparser import FeedParserDict
 from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
-from merino.providers.rss.wikimedia_potd.backends.utils import extract_potd, parse_potd
+from merino.providers.rss.wikimedia_potd.backends.utils import (
+    extract_potd,
+    is_valid_potd_image_url,
+    parse_potd,
+)
 
 VALID_FIELDS: dict[str, str] = {
     "title": "Test Title",
@@ -140,3 +144,19 @@ def test_parse_potd_derives_high_res_url_from_thumbnail(potd_entry: FeedParserDi
         str(result.high_res_image_url)
         == "https://upload.wikimedia.org/wikipedia/commons/a/ab/Photo.jpg"
     )
+
+
+@pytest.mark.parametrize(
+    ["url", "expected"],
+    [
+        (HttpUrl("http://www.test-image.com/image.jpeg"), True),
+        (HttpUrl("http://www.test-image.com/image.jpg"), True),
+        (HttpUrl("http://www.test-image.com/image.png"), True),
+        (HttpUrl("http://www.test-image.com/image.webp"), True),
+        (HttpUrl("http://www.test-image.com/image.text"), False),
+    ],
+    ids=["jpeg", "jpg", "png", "webp", "text"],
+)
+def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
+    """Test is_valid_potd_image_url for each supported image extension."""
+    assert is_valid_potd_image_url(url) == expected
