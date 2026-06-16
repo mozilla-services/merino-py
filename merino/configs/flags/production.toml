@@ -6,4 +6,4 @@ dynaconf_merge = true
 # Raise `enabled` to ramp the prototype in production.
 [production.flags.fleece-pii-detection]
 scheme = "random"
-enabled = 0.001
+enabled = 0.03
