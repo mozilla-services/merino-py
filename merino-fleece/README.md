@@ -8,7 +8,7 @@ Search term sanitization looks for most commonly occurring personally identifiab
 
 ## PII / NER endpoint
 
-`POST /api/v1/pii` with a JSON body `{"q": "<text>"}` — returns `{"pii": true}` when the input text contains a SpaCy `PERSON` named entity, otherwise `{"pii": false}`.
+`GET /api/v1/pii?q=<text>` — returns `{"pii": true}` when the input text contains a SpaCy `PERSON` named entity, otherwise `{"pii": false}`.
 
 ## Running locally
 

@@ -31,7 +31,7 @@ def _response(json_body: Any, status_code: int = 200) -> httpx.Response:
     return httpx.Response(
         status_code=status_code,
         json=json_body,
-        request=httpx.Request("POST", "http://test-fleece/api/v1/pii"),
+        request=httpx.Request("GET", "http://test-fleece/api/v1/pii?q=test"),
     )
 
 
@@ -41,7 +41,7 @@ async def test_detect_pii_parses_flag(
     mocker: MockerFixture, fleece: FleeceClient, pii: bool, expected: bool
 ) -> None:
     """Test that detect_pii returns the boolean `pii` field from the fleece response."""
-    mocker.patch.object(httpx.AsyncClient, "post", return_value=_response({"pii": pii}))
+    mocker.patch.object(httpx.AsyncClient, "get", return_value=_response({"pii": pii}))
 
     assert await fleece.detect_pii("barack obama") is expected
     await fleece.shutdown()
@@ -52,7 +52,7 @@ async def test_detect_pii_safe_returns_result_and_times(
     mocker: MockerFixture, fleece: FleeceClient, statsd_mock: Any
 ) -> None:
     """Test that detect_pii_safe returns the detected value and records the duration metric."""
-    mocker.patch.object(httpx.AsyncClient, "post", return_value=_response({"pii": True}))
+    mocker.patch.object(httpx.AsyncClient, "get", return_value=_response({"pii": True}))
 
     assert await fleece.detect_pii_safe("barack obama", statsd_mock) is True
     statsd_mock.timeit.assert_called_once_with("fleece.pii.detect_duration")
@@ -68,7 +68,7 @@ async def test_detect_pii_safe_fails_open_on_http_error(
 ) -> None:
     """Test that http error returns False and emits an error metric."""
     mocker.patch.object(
-        httpx.AsyncClient, "post", side_effect=httpx.ConnectError("connection refused")
+        httpx.AsyncClient, "get", side_effect=httpx.ConnectError("connection refused")
     )
 
     assert await fleece.detect_pii_safe("barack obama", statsd_mock) is False
@@ -82,7 +82,7 @@ async def test_detect_pii_safe_fails_open_on_bad_response(
     mocker: MockerFixture, fleece: FleeceClient, statsd_mock: Any
 ) -> None:
     """Test that a response missing the `pii` key returns False and emits a response error metric."""
-    mocker.patch.object(httpx.AsyncClient, "post", return_value=_response({"unexpected": 1}))
+    mocker.patch.object(httpx.AsyncClient, "get", return_value=_response({"unexpected": 1}))
 
     assert await fleece.detect_pii_safe("barack obama", statsd_mock) is False
     statsd_mock.increment.assert_called_once_with("fleece.pii.error", tags={"reason": "response"})
