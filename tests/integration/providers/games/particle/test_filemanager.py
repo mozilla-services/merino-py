@@ -1,9 +1,10 @@
 """Integration tests for the Particle file manager classes."""
 
+import json
 import pytest
 
-from google.cloud.storage import Bucket
-from unittest.mock import AsyncMock, patch
+from google.cloud.storage import Blob, Bucket
+from unittest.mock import patch
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
@@ -39,6 +40,13 @@ def gcs_client(gcs_storage_client, gcs_storage_bucket) -> GcsUploader:
     )
 
 
+@pytest.fixture(name="remote_manifest_json")
+def fixture_remote_manifest_json():
+    """Load manifest data from local file into JSON - simulates data downloaed from Particle endpoint and converted to JSON."""
+    with open("tests/data/games/particle/runtime-manifest.v1.json") as f:
+        return json.load(f)
+
+
 @pytest.fixture
 def remote_filemanager(gcs_client) -> ParticleRemoteFileManager:
     """Return a ParticleRemoteFileManager instance."""
@@ -50,31 +58,54 @@ def remote_filemanager(gcs_client) -> ParticleRemoteFileManager:
 
 
 class TestRemoteFileManagerUploadFile:
-    """Tests against the upload_file method of the ParticleRemoteFileManager."""
+    """Tests against the upload_file method of ParticleRemoteFileManager."""
 
     @pytest.mark.asyncio
     async def test_successful_upload(self, remote_filemanager):
         """Verify a successful upload."""
         blob_name = await remote_filemanager.upload_file(
-            file_name="image.jpg",
+            file_name="images/image.jpg",
             file_path="tests/data/games/particle/image.jpg",
             content_type="image/jpeg",
         )
 
-        assert blob_name == f"{GREEN_DEPLOYMENT_FOLDER}/image.jpg"
+        assert blob_name == f"{GREEN_DEPLOYMENT_FOLDER}/images/image.jpg"
 
     @pytest.mark.asyncio
     async def test_unsuccessful_upload(self, remote_filemanager):
         """Verify an unsuccessful upload."""
         with patch.object(
-            remote_filemanager.gcs_client, "upload_from_filename", new_callable=AsyncMock
+            remote_filemanager.gcs_client, "upload_from_filename"
         ) as mock_upload_from_filename:
             mock_upload_from_filename.side_effect = [Exception("forced exception")]
 
             blob_name = await remote_filemanager.upload_file(
-                file_name="image.jpg",
+                file_name="images/image.jpg",
                 file_path="/tests/data/games/image.jpg",
                 content_type="image/jpeg",
             )
 
             assert blob_name == ""
+
+
+class TestUploadManifest:
+    """Tests against the upload_manifest method of ParticleRemoteFileManager."""
+
+    @pytest.mark.asyncio
+    async def test_success(self, remote_filemanager, remote_manifest_json):
+        """Verify a successful upload."""
+        # actually uploads the json provided to the test GCS buckett
+        assert await remote_filemanager.upload_manifest(remote_manifest_json)
+
+    @pytest.mark.asyncio
+    async def test_failure_blob_not_uploaded(
+        self, gcs_storage_bucket, remote_filemanager, remote_manifest_json
+    ):
+        """Verify a failed upload."""
+        with patch.object(remote_filemanager.gcs_client, "upload_content") as mock_upload_content:
+            # returns a Blob without an id, which should fail the call
+            mock_upload_content.return_value = Blob(
+                name=remote_filemanager.manifest_file_name, bucket=gcs_storage_bucket
+            )
+
+            assert not await remote_filemanager.upload_manifest(remote_manifest_json)

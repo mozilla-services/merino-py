@@ -78,12 +78,12 @@ def mock_remote_manifest_channel_is_updated():
 
 
 @pytest.fixture
-def mock_get_remote_files_and_shas_for_channel():
-    """Return mock get_remote_files_and_shas_for_channel function."""
+def mock_get_files_from_manifest_for_channel():
+    """Return mock get_files_from_manifest_for_channel function."""
     with patch(
-        "merino.providers.games.particle.backends.particle.get_remote_files_and_shas_for_channel"
-    ) as mock_get_remote_files_and_shas_for_channel:
-        yield mock_get_remote_files_and_shas_for_channel
+        "merino.providers.games.particle.backends.particle.get_files_from_manifest_for_channel"
+    ) as mock_get_files_from_manifest_for_channel:
+        yield mock_get_files_from_manifest_for_channel
 
 
 @pytest.fixture(name="backend")
@@ -120,6 +120,15 @@ def mock_deploy_channel_files(backend):
         backend, "deploy_channel_files", new_callable=AsyncMock
     ) as mock_deploy_channel_files:
         yield mock_deploy_channel_files
+
+
+@pytest.fixture
+def mock_cleanup_old_files_for_channel(backend):
+    """Return a mocked cleanup_old_files_for_channel async function."""
+    with patch.object(
+        backend, "cleanup_old_files_for_channel", new_callable=AsyncMock
+    ) as mock_cleanup_old_files_for_channel:
+        yield mock_cleanup_old_files_for_channel
 
 
 @pytest.fixture
@@ -268,9 +277,9 @@ class TestUpdateChannelFiles:
     def setup_method(self):
         """Reset the list of GameFiles before each test."""
         self.mock_game_files = [
-            GameFile(url="/path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
+            GameFile(url="path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
             GameFile(
-                url="/path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"
+                url="path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"
             ),
         ]
 
@@ -288,14 +297,15 @@ class TestUpdateChannelFiles:
         mock_remote_manifest_channel_is_updated,
         mock_stage_channel_files,
         mock_deploy_channel_files,
+        mock_cleanup_old_files_for_channel,
         mock_successfully_updated_game_files,
-        mock_get_remote_files_and_shas_for_channel,
+        mock_get_files_from_manifest_for_channel,
         channel,
     ):
         """Test that channel is marked as updated if manifest versions mismatch, channel files are found, and staging deployment was successful (happy path)."""
         # set up mocks for happy path
         mock_remote_manifest_channel_is_updated.return_value = True
-        mock_get_remote_files_and_shas_for_channel.return_value = self.mock_game_files
+        mock_get_files_from_manifest_for_channel.return_value = self.mock_game_files
         mock_stage_channel_files.side_effect = [(True, mock_successfully_updated_game_files)]
         mock_deploy_channel_files.side_effect = [True]
 
@@ -305,9 +315,10 @@ class TestUpdateChannelFiles:
 
         # ensure all inner functions were called as expected
         mock_remote_manifest_channel_is_updated.assert_called_once()
-        mock_get_remote_files_and_shas_for_channel.assert_called_once()
+        mock_get_files_from_manifest_for_channel.assert_called_once()
         mock_stage_channel_files.assert_awaited_once()
         mock_deploy_channel_files.assert_awaited_once()
+        mock_cleanup_old_files_for_channel.assert_awaited_once()
 
     @pytest.mark.parametrize("channel", test_params)
     @pytest.mark.asyncio
@@ -317,8 +328,9 @@ class TestUpdateChannelFiles:
         valid_manifest_data_json,
         mock_remote_manifest_channel_is_updated,
         mock_stage_channel_files,
-        mock_get_remote_files_and_shas_for_channel,
+        mock_get_files_from_manifest_for_channel,
         mock_deploy_channel_files,
+        mock_cleanup_old_files_for_channel,
         channel,
     ):
         """Test that channel is not marked as updated if manifest versions match."""
@@ -333,9 +345,10 @@ class TestUpdateChannelFiles:
         mock_remote_manifest_channel_is_updated.assert_called_once()
 
         # if the manifest doesn't need an update, then no further processing should happen
-        mock_get_remote_files_and_shas_for_channel.assert_not_called()
+        mock_get_files_from_manifest_for_channel.assert_not_called()
         mock_stage_channel_files.assert_not_awaited()
         mock_deploy_channel_files.assert_not_awaited()
+        mock_cleanup_old_files_for_channel.assert_not_awaited()
 
     @pytest.mark.parametrize("channel", test_params)
     @pytest.mark.asyncio
@@ -345,26 +358,28 @@ class TestUpdateChannelFiles:
         valid_manifest_data_json,
         mock_remote_manifest_channel_is_updated,
         mock_stage_channel_files,
-        mock_get_remote_files_and_shas_for_channel,
+        mock_get_files_from_manifest_for_channel,
         mock_deploy_channel_files,
+        mock_cleanup_old_files_for_channel,
         channel,
     ):
         """Test that channel is not marked as updated if no files were found for the channel."""
         mock_remote_manifest_channel_is_updated.return_value = True
 
         # force no files to be found for the channel
-        mock_get_remote_files_and_shas_for_channel.return_value = []
+        mock_get_files_from_manifest_for_channel.return_value = []
 
         assert not await backend.update_channel_files(
             valid_manifest_data_json, valid_manifest_data_json, channel
         )
 
         mock_remote_manifest_channel_is_updated.assert_called_once()
-        mock_get_remote_files_and_shas_for_channel.assert_called_once()
+        mock_get_files_from_manifest_for_channel.assert_called_once()
 
         # staging and deploying should not be attempted
         mock_stage_channel_files.assert_not_awaited()
         mock_deploy_channel_files.assert_not_awaited()
+        mock_cleanup_old_files_for_channel.assert_not_awaited()
 
     @pytest.mark.parametrize("channel", test_params)
     @pytest.mark.asyncio
@@ -374,13 +389,14 @@ class TestUpdateChannelFiles:
         valid_manifest_data_json,
         mock_remote_manifest_channel_is_updated,
         mock_stage_channel_files,
-        mock_get_remote_files_and_shas_for_channel,
+        mock_get_files_from_manifest_for_channel,
         mock_deploy_channel_files,
+        mock_cleanup_old_files_for_channel,
         channel,
     ):
         """Test that channel is not marked as updated if staging call results in files not successfully verified and uploaded."""
         mock_remote_manifest_channel_is_updated.return_value = True
-        mock_get_remote_files_and_shas_for_channel.return_value = self.mock_game_files
+        mock_get_files_from_manifest_for_channel.return_value = self.mock_game_files
         # force staging to be a failure
         mock_stage_channel_files.side_effect = [(False, self.mock_game_files)]
 
@@ -389,11 +405,12 @@ class TestUpdateChannelFiles:
         )
 
         mock_remote_manifest_channel_is_updated.assert_called_once()
-        mock_get_remote_files_and_shas_for_channel.assert_called_once()
+        mock_get_files_from_manifest_for_channel.assert_called_once()
         mock_stage_channel_files.assert_awaited_once()
 
         # deploy should not be attempted
         mock_deploy_channel_files.assert_not_awaited()
+        mock_cleanup_old_files_for_channel.assert_not_awaited()
 
     @pytest.mark.parametrize("channel", test_params)
     @pytest.mark.asyncio
@@ -403,13 +420,14 @@ class TestUpdateChannelFiles:
         valid_manifest_data_json,
         mock_remote_manifest_channel_is_updated,
         mock_stage_channel_files,
-        mock_get_remote_files_and_shas_for_channel,
+        mock_get_files_from_manifest_for_channel,
         mock_deploy_channel_files,
+        mock_cleanup_old_files_for_channel,
         channel,
     ):
         """Test that channel is not marked as updated if deployment fails."""
         mock_remote_manifest_channel_is_updated.return_value = True
-        mock_get_remote_files_and_shas_for_channel.return_value = self.mock_game_files
+        mock_get_files_from_manifest_for_channel.return_value = self.mock_game_files
         # staging is a success
         mock_stage_channel_files.side_effect = [(True, self.mock_game_files)]
         # force deployment to be a failure
@@ -419,11 +437,13 @@ class TestUpdateChannelFiles:
             valid_manifest_data_json, valid_manifest_data_json, channel
         )
 
-        # all inner functions should have been called
+        # most inner functions should have been called
         mock_remote_manifest_channel_is_updated.assert_called_once()
-        mock_get_remote_files_and_shas_for_channel.assert_called_once()
+        mock_get_files_from_manifest_for_channel.assert_called_once()
         mock_stage_channel_files.assert_awaited_once()
         mock_deploy_channel_files.assert_awaited_once()
+
+        mock_cleanup_old_files_for_channel.assert_not_awaited()
 
 
 class TestStageChannelFiles:
@@ -431,15 +451,15 @@ class TestStageChannelFiles:
 
     # manually computed sha of file above
     MOCK_PARTICLE_GAME_FILE_SHA = (
-        "57120c40b8bd7d84b861751958c19b40343b14fe028ae7f9a1e7251560c6817a"
+        "617cab92e31caf06d337d5330b2d26701469e4d45156a100f9d5e549d61c6925"
     )
 
     def setup_method(self):
         """Reset the list of GameFiles before each test."""
         self.mock_game_files = [
-            GameFile(url="/path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
+            GameFile(url="path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
             GameFile(
-                url="/path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"
+                url="path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"
             ),
         ]
 
@@ -463,7 +483,7 @@ class TestStageChannelFiles:
         mock_compute_sha.side_effect = ["1234abcd", "5678abcd"]
 
         # ensure both file uploads are successful
-        mock_upload_file.side_effect = ["green/file.jpg", "green/style.css"]
+        mock_upload_file.side_effect = ["green/path/to/file.jpg", "green/path/to/style.css"]
 
         success, files = await backend.stage_channel_files(self.mock_game_files)
 
@@ -481,8 +501,8 @@ class TestStageChannelFiles:
         assert all(f.sha_verified and f.uploaded for f in files)
 
         # both files should have the GCS staging name set
-        assert files[0].gcs_staging_name == "green/file.jpg"
-        assert files[1].gcs_staging_name == "green/style.css"
+        assert files[0].gcs_staging_name == "green/path/to/file.jpg"
+        assert files[1].gcs_staging_name == "green/path/to/style.css"
 
     @pytest.mark.asyncio
     async def test_first_file_download_fails(
@@ -740,11 +760,11 @@ class TestStageChannelFiles:
         mock_get.return_value.content = mock_particle_game_file
 
         # ensure the upload succeeds
-        mock_upload_file.side_effect = ["green/file.jpg"]
+        mock_upload_file.side_effect = ["green/path/to/file.jpg"]
 
         mock_game_files = [
             GameFile(
-                url="/path/to/file.jpg",
+                url="path/to/file.jpg",
                 sha=self.MOCK_PARTICLE_GAME_FILE_SHA,
                 content_type="image/jpeg",
             ),
@@ -766,7 +786,7 @@ class TestStageChannelFiles:
         assert all(f.sha_verified and f.uploaded for f in files)
 
         # file should have a GCS name
-        assert files[0].gcs_staging_name == "green/file.jpg"
+        assert files[0].gcs_staging_name == "green/path/to/file.jpg"
 
 
 class TestDeployChannelFiles:
@@ -781,9 +801,19 @@ class TestDeployChannelFiles:
             ),
         ]
 
+    test_params = [True, False]
+
+    @pytest.mark.parametrize("deploy_success", test_params)
     @pytest.mark.asyncio
-    async def test_stub(self, backend, valid_manifest_data_json):
-        """Stub test."""
-        assert await backend.deploy_channel_files(
-            self.mock_game_files, valid_manifest_data_json, valid_manifest_data_json
-        )
+    async def test_success_and_failure_scenarios(self, deploy_success, backend):
+        """Verify success/failure behavior given different sub-function results."""
+        with patch.object(
+            backend.remote_file_manager, "deploy_staged_files", new_callable=AsyncMock
+        ) as mock_deploy:
+            mock_deploy.side_effect = [deploy_success]
+
+            success = await backend.deploy_channel_files(self.mock_game_files)
+
+            assert success == deploy_success
+
+            mock_deploy.assert_awaited_once_with(self.mock_game_files)

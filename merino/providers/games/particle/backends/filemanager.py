@@ -3,9 +3,11 @@
 import asyncio
 import json
 import logging
+import orjson
 import sentry_sdk
 
 from json import JSONDecodeError
+from pydantic import Json
 from typing import Any
 
 from merino.providers.games.particle.backends.errors import ParticleFileManagerError
@@ -97,7 +99,7 @@ class ParticleRemoteFileManager:
         return manifest
 
     async def upload_file(self, file_name: str, file_path: str, content_type: str) -> str:
-        """Attempt to upload the file to GCS. Overwrites an existing file."""
+        """Attempt to upload a file from the local filesystem to GCS. Overwrites an existing file."""
         blob_name = ""
 
         try:
@@ -118,6 +120,28 @@ class ParticleRemoteFileManager:
             sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))
             return ""
 
+    async def upload_manifest(self, manifest: Json) -> bool:
+        """Upload manifest JSON to GCS. Overwrites the existing manifest file."""
+        file_bytes = orjson.dumps(manifest)
+
+        blob = await asyncio.to_thread(
+            self.gcs_client.upload_content,
+            content=file_bytes,
+            destination_name=self.manifest_file_name,
+            content_type="application/json",
+            forced_upload=True,
+        )
+
+        # if the blob doesn't have an id (meaning it wasn't actually uploaded),
+        # the process failed
+        if not blob.id:
+            sentry_sdk.capture_exception(
+                ParticleFileManagerError("Error updating the manifest JSON in GCS.")
+            )
+            return False
+
+        return True
+
     async def empty_staging_folder(self, files: list[GameFile]) -> None:
         """Delete uploaded files in the GCS staging folder. Used when a channel staging deployment fails midway, e.g. due to SHA validation or upload failure."""
         uploaded_files = [f for f in files if f.uploaded and hasattr(f, "gcs_staging_name")]
@@ -127,3 +151,30 @@ class ParticleRemoteFileManager:
                 await asyncio.to_thread(self.gcs_client.delete_file_by_name, f.gcs_staging_name)
             except Exception as ex:
                 sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))
+
+    async def deploy_staged_files(self, files: list[GameFile]) -> bool:
+        """Move files from staging GCS 'folder'/name to 'production'/GCS root."""
+        success = True
+
+        for f in files:
+            # one bit of special casing - force the entry point to the particle
+            # application to be 'index.html' (in the root) to keep the endpoint
+            # URL consistent.
+            # this does assume there is only one HTML file for particle, which
+            # is confirmed to be the case.
+            destination_name = "index.html" if f.name.lower().endswith(".html") else f.remote_path
+
+            try:
+                await asyncio.to_thread(
+                    self.gcs_client.move_file, f.gcs_staging_name, destination_name
+                )
+            except Exception as ex:
+                # this exception should be treated as critical, as the game may
+                # be in a broken state. sentry should be configured to alert to
+                # slack on every error captured here.
+                sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))
+
+                # mark the process as a failure if any file move fails
+                success = False
+
+        return success

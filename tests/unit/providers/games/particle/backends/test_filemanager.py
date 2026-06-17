@@ -4,7 +4,9 @@
 
 """Unit tests for the Particle filemanager module."""
 
+import json
 import logging
+import orjson
 import os
 import pytest
 
@@ -84,19 +86,26 @@ class TestLocalFileManager:
             test_path.get_manifest_schema()
 
 
-@pytest.fixture(name="manifest_json")
-def fixture_manifest_json():
-    """Load manifest data from local file"""
+@pytest.fixture(name="remote_manifest_json")
+def fixture_remote_manifest_json():
+    """Load manifest data from local file into JSON - simulates data downloaed from Particle endpoint and converted to JSON."""
+    with open("tests/data/games/particle/runtime-manifest.v1.json") as f:
+        return json.load(f)
+
+
+@pytest.fixture(name="gcs_manifest_string")
+def fixture_gcs_manifest_string():
+    """Load manifest data from local file - simulates string returned from GCS."""
     with open("tests/data/games/particle/runtime-manifest.v1.json") as f:
         return f.read()
 
 
 @pytest.fixture(name="manifest_gcs_blob_mock")
-def fixture_gcs_manifest_blob(mocker: MockerFixture, manifest_json: str) -> Any:
+def fixture_gcs_manifest_blob(mocker: MockerFixture, gcs_manifest_string: str) -> Any:
     """Create a GCS Blob mock object for testing."""
     mock_blob = mocker.MagicMock(spec=Blob)
     mock_blob.name = "runtime-manifest.v1.json"
-    mock_blob.download_as_text.return_value = manifest_json
+    mock_blob.download_as_text.return_value = gcs_manifest_string
 
     return mock_blob
 
@@ -295,3 +304,125 @@ class TestRemoteFileManagerEmptyStagingFolder:
 
             # two of the deletes should fail and send to sentry
             assert sentry_capture.call_count == 2
+
+
+class TestRemoteFileManagerDeployStagedFiles:
+    """Tests against the deploy_staged_files function."""
+
+    @pytest.mark.asyncio
+    async def test_success(self, remote_filemanager):
+        """Test success scenario."""
+        # simulate a staged fileset
+        files: list[GameFile] = [
+            GameFile(url="runtime/test.html", sha="1234abcd", content_type="text/html"),
+            GameFile(url="assets/test.jpg", sha="1234abcd", content_type="image/jpeg"),
+            GameFile(url="assets/test.png", sha="1234abcd", content_type="image/png"),
+            GameFile(url="generated/test.json", sha="1234abcd", content_type="application/json"),
+        ]
+
+        # finish simulating a staged fileset
+        files[0].uploaded = True
+        files[0].gcs_staging_name = "green/runtime/test.html"
+        files[1].uploaded = True
+        files[1].gcs_staging_name = "green/assets/test.jpg"
+        files[2].uploaded = True
+        files[2].gcs_staging_name = "green/assets/test.png"
+        files[3].uploaded = True
+        files[3].gcs_staging_name = "green/generated/test.json"
+
+        with patch.object(remote_filemanager.gcs_client, "move_file") as mock_move_file:
+            assert await remote_filemanager.deploy_staged_files(files)
+
+            assert mock_move_file.call_count == 4
+
+            # should have been called for each file staged above
+            # note the check for renaming 'runtime/test.html' to 'index.html'
+            calls = [
+                call("green/runtime/test.html", "index.html"),
+                call("green/assets/test.jpg", "assets/test.jpg"),
+                call("green/assets/test.png", "assets/test.png"),
+                call("green/generated/test.json", "generated/test.json"),
+            ]
+
+            mock_move_file.assert_has_calls(calls)
+
+    @pytest.mark.asyncio
+    async def test_failure(self, remote_filemanager, mocker):
+        """Verify sentry is called when the GCS client captures an exception."""
+        # simulate a staged fileset
+        files: list[GameFile] = [
+            GameFile(url="runtime/test.html", sha="1234abcd", content_type="text/html"),
+            GameFile(url="assets/test.jpg", sha="1234abcd", content_type="image/jpeg"),
+            GameFile(url="assets/test.png", sha="1234abcd", content_type="image/png"),
+            GameFile(url="generated/test.json", sha="1234abcd", content_type="application/json"),
+        ]
+
+        # finish simulating a staged fileset
+        files[0].uploaded = True
+        files[0].gcs_staging_name = "green/runtime/test.html"
+        files[1].uploaded = True
+        files[1].gcs_staging_name = "green/assets/test.jpg"
+        files[2].uploaded = True
+        files[2].gcs_staging_name = "green/assets/test.png"
+        files[3].uploaded = True
+        files[3].gcs_staging_name = "green/generated/test.json"
+
+        sentry_capture = mocker.patch(
+            "merino.providers.games.particle.backends.filemanager.sentry_sdk.capture_exception"
+        )
+
+        with patch.object(remote_filemanager.gcs_client, "move_file") as mock_move_file:
+            mock_move_file.side_effect = [
+                Exception("first move fails"),
+                mock.DEFAULT,
+                Exception("third move fails"),
+                mock.DEFAULT,
+            ]
+
+            assert not await remote_filemanager.deploy_staged_files(files)
+
+            # each file should be attempted to be moved
+            assert mock_move_file.call_count == 4
+
+            # two of the moves should fail and send to sentry
+            assert sentry_capture.call_count == 2
+
+
+class TestRemoteFileManagerUploadManifest:
+    """Tests against the upload_manifest function."""
+
+    @pytest.mark.asyncio
+    async def test_success(self, remote_filemanager, remote_manifest_json):
+        """Verify success scenario."""
+        with patch.object(remote_filemanager.gcs_client, "upload_content") as mock_upload:
+            assert await remote_filemanager.upload_manifest(remote_manifest_json)
+
+            mock_upload.assert_called_once_with(
+                content=orjson.dumps(remote_manifest_json),
+                destination_name=remote_filemanager.manifest_file_name,
+                content_type="application/json",
+                forced_upload=True,
+            )
+
+    @pytest.mark.asyncio
+    async def test_failure(self, remote_filemanager, remote_manifest_json, mocker):
+        """Verify failure scenario."""
+        sentry_capture = mocker.patch(
+            "merino.providers.games.particle.backends.filemanager.sentry_sdk.capture_exception"
+        )
+
+        with patch.object(remote_filemanager.gcs_client, "upload_content") as mock_upload:
+            mock_upload.return_value = Blob(
+                name=remote_filemanager.manifest_file_name, bucket=MagicMock()
+            )
+
+            assert not await remote_filemanager.upload_manifest(remote_manifest_json)
+
+            mock_upload.assert_called_once_with(
+                content=orjson.dumps(remote_manifest_json),
+                destination_name=remote_filemanager.manifest_file_name,
+                content_type="application/json",
+                forced_upload=True,
+            )
+
+            assert sentry_capture.call_count == 1

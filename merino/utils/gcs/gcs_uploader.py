@@ -136,7 +136,7 @@ class GcsUploader(BaseContentUploader):
     def get_file_by_name(self, blob_name: str, blob_generation: int = 0) -> Blob | None:
         """Return blob from GCS. If blob_generation is passed (and is not 0), only returns the blob if the current generation does not match the passed version."""
         if blob_name:
-            bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+            bucket: Bucket = self.storage_client.bucket(self.bucket_name)
             # if blob_generation is 0, a blob will only be returned if there is a live version
             # https://docs.cloud.google.com/python/docs/reference/storage/latest/generation_metageneration#using-ifgenerationnotmatch
             most_recent = bucket.get_blob(blob_name, if_generation_not_match=blob_generation)
@@ -147,11 +147,22 @@ class GcsUploader(BaseContentUploader):
 
     def delete_file_by_name(self, blob_name: str) -> None:
         """Delete a file by name."""
-        bucket: Bucket = self.storage_client.get_bucket(self.bucket_name)
+        bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         blob = bucket.blob(blob_name)
 
         try:
             blob.delete()
         except Exception as e:
             logger.error(f"Exception {e} occurred while deleting {blob_name}")
+            raise e
+
+    def move_file(self, blob_name: str, destination_name: str) -> None:
+        """Move a file by renaming. Will overwrite the destination_name blob if exists."""
+        bucket: Bucket = self.storage_client.bucket(self.bucket_name)
+        blob = bucket.blob(blob_name)
+
+        try:
+            bucket.rename_blob(blob=blob, new_name=destination_name)
+        except Exception as e:
+            logger.error(f"Exception {e} occurred while moving {blob_name}")
             raise e

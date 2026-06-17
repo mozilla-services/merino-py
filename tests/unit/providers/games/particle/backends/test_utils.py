@@ -17,7 +17,7 @@ from merino.configs import settings
 from merino.providers.games.particle.backends.errors import ParticleManifestValidationError
 from merino.providers.games.particle.backends.utils import (
     GameFile,
-    get_remote_files_and_shas_for_channel,
+    get_files_from_manifest_for_channel,
     RemoteChannelEnum,
     remote_manifest_channel_is_updated,
     validate_manifest_schema_version,
@@ -185,8 +185,8 @@ class TestRemoteManifestChannelIsUpdated:
         )
 
 
-class TestGetRemoteFilesAndShasForChannel:
-    """Tests against get_remote_files_and_shas_for_channel."""
+class TestFilesFromManifestForChannel:
+    """Tests against get_files_from_manifest_for_channel."""
 
     test_params = [
         (
@@ -202,15 +202,29 @@ class TestGetRemoteFilesAndShasForChannel:
     @pytest.mark.parametrize("channel, file_count", test_params)
     def test_returns_files_and_shas_per_channel(self, valid_manifest_data, channel, file_count):
         """Assert the files found per channel match what's in the manifest JSON."""
-        result = get_remote_files_and_shas_for_channel(valid_manifest_data, channel)
+        result = get_files_from_manifest_for_channel(valid_manifest_data, channel)
 
         assert len(result) == file_count
+
+    def test_file_objects_populated(self, valid_manifest_data):
+        """Assert the GameFile objects created have all expected properties set correctly."""
+        files = get_files_from_manifest_for_channel(valid_manifest_data, RemoteChannelEnum.RUNTIME)
+
+        # verify the properties of just the first file in the manifest for the runtime
+        # to make sure on init, the right properties are set as expected
+        assert files[0].content_type == "application/wasm"
+        assert files[0].remote_path == "assets/crossword_engine_bindings_wasm_bg-D5i4ARx9.wasm"
+        assert (
+            files[0].sha_target
+            == "f90205cdb42d75d046d8c7280c8ea2e0599503674c239008c4a3f9927acaa941"
+        )
+        assert files[0].name == "crossword_engine_bindings_wasm_bg-D5i4ARx9.wasm"
 
     def test_returns_empty_list_for_json_key_error(self, invalid_manifest_data):
         """Assert an empty list is returned if a KeyError happens when looking for files."""
         assert (
             len(
-                get_remote_files_and_shas_for_channel(
+                get_files_from_manifest_for_channel(
                     invalid_manifest_data, RemoteChannelEnum.PUZZLE
                 )
             )
@@ -228,9 +242,8 @@ class TestGameFile:
         content_type = "image/jpeg"
         gf = GameFile(url=url, sha=sha, content_type=content_type)
 
-        assert gf.remote_url == url
         assert gf.sha_target == sha
-        assert gf.remote_path == "/path/to/a/remote"
+        assert gf.remote_path == "/path/to/a/remote/file.jpg"
         assert gf.name == "file.jpg"
         assert gf.content_type == content_type
         assert not gf.sha_verified
