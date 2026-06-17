@@ -187,6 +187,15 @@ def mock_particle_game_file():
         return f.read()
 
 
+@pytest.fixture()
+def mock_get_files_for_cleanup_for_channel():
+    """Return a mocked version of the get_files_for_cleanup_for_channel utils function."""
+    with patch(
+        "merino.providers.games.particle.backends.particle.get_files_for_cleanup_for_channel"
+    ) as mock_get_files_for_cleanup_for_channel:
+        yield mock_get_files_for_cleanup_for_channel
+
+
 # END FIXTURES
 
 
@@ -817,3 +826,22 @@ class TestDeployChannelFiles:
             assert success == deploy_success
 
             mock_deploy.assert_awaited_once_with(self.mock_game_files)
+
+
+class TestCleanupOldFilesForChannel:
+    """Tests against the cleanup_old_files_for_channel function."""
+
+    @pytest.mark.asyncio
+    async def test_success(self, backend, mock_get_files_for_cleanup_for_channel):
+        """Test success scenario."""
+        mock_get_files_for_cleanup_for_channel.return_value = [
+            "assets/index.js",
+            "assets/index.css",
+        ]
+
+        with patch.object(
+            backend.remote_file_manager, "delete_file", new_callable=AsyncMock
+        ) as mock_delete:
+            await backend.cleanup_old_files_for_channel("{}", "{}", RemoteChannelEnum.PUZZLE)
+
+            assert mock_delete.await_count == 2
