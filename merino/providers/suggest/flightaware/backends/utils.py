@@ -38,6 +38,42 @@ FLIGHT_KEYWORD_PATTERN = pattern = re.compile(
 )
 # matches 1-5 words, followed by 1-5 digits e.g united airlines 100, air canada 250
 
+# Phrases that may accompany a flight number and still indicate flight intent.
+# Text around the flight number is accepted if it is empty or a prefix of one of
+# these phrases; the prefix rule also handles per-keystroke typing.
+FLIGHT_TRIGGER_PHRASES: tuple[str, ...] = (
+    "flight status",
+    "flight tracker",
+    "flight tracking",
+    "track flight",
+    "flight number",
+    "track",
+    "tracker",
+    "tracking",
+    "status",
+    "status of",
+    "number",
+    "arrival",
+    "arrivals",
+    "arriving",
+    "departure",
+    "departures",
+    "departing",
+    "live",
+    "eta",
+    "delay",
+    "delayed",
+    "cancelled",
+    "canceled",
+)
+
+
+def is_flight_trigger_context(remaining: str) -> bool:
+    """Return True if the text around a flight number indicates flight intent."""
+    if not remaining:
+        return True
+    return any(phrase.startswith(remaining) for phrase in FLIGHT_TRIGGER_PHRASES)
+
 
 def derive_flight_status(flight: dict) -> FlightStatus:
     """Derive a stable, backend-calculated flight status from AeroAPI fields.
@@ -288,7 +324,7 @@ def get_flight_number_from_query_if_valid(query: str) -> str | None:
         after = query[match.end() :].strip()
         remaining = " ".join(f"{before} {after}".split())
 
-        if not remaining or "flight status".startswith(remaining):
+        if is_flight_trigger_context(remaining):
             return matched_part.replace(" ", "").upper()
 
     # if not a flight number pattern, check if the query is a valid keyword

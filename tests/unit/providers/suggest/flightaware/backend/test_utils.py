@@ -26,6 +26,7 @@ from merino.providers.suggest.flightaware.backends.utils import (
     get_flight_number_from_query_if_valid,
     get_live_url,
     is_delayed,
+    is_flight_trigger_context,
     is_valid_flight_keyword_pattern,
     is_valid_flight_number_pattern,
     is_within_one_hour,
@@ -901,6 +902,10 @@ def test_is_valid_flight_keyword_pattern(description, query, expected):
         ("flight status after number", "ac100 flight status", {}, "AC100"),
         ("flight status before number", "flight status ac100", {}, "AC100"),
         ("embedded in sentence", "my flight is ua123 today", {}, None),
+        ("track trigger before number", "track ac100", {}, "AC100"),
+        ("tracker trigger after number", "ac100 tracker", {}, "AC100"),
+        ("arrival trigger after number", "ac100 arrival", {}, "AC100"),
+        ("non-trigger word after number", "ac100 recipe", {}, None),
     ],
 )
 def test_get_flight_number_from_query_if_valid(description, query, mapping, expected):
@@ -911,6 +916,25 @@ def test_get_flight_number_from_query_if_valid(description, query, mapping, expe
     ):
         result = get_flight_number_from_query_if_valid(query)
         assert result == expected, f"Failed: {description} (input: '{query}')"
+
+
+@pytest.mark.parametrize(
+    "description, remaining, expected",
+    [
+        ("empty is always allowed", "", True),
+        ("full trigger phrase", "track", True),
+        ("prefix of a phrase (incremental typing)", "trac", True),
+        ("existing flight status still works", "flight status", True),
+        ("prefix of flight status", "flight", True),
+        ("new trigger: arrival", "arrival", True),
+        ("new trigger: cancelled", "cancelled", True),
+        ("non-trigger word rejected", "essay", False),
+        ("trigger embedded in longer text rejected", "track my", False),
+    ],
+)
+def test_is_flight_trigger_context(description, remaining, expected):
+    """Trigger context accepts empty/prefix-of-phrase text and rejects unrelated text."""
+    assert is_flight_trigger_context(remaining) == expected, f"Failed: {description}"
 
 
 @pytest.mark.parametrize(
