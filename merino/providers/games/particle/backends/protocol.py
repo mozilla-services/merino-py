@@ -52,7 +52,7 @@ class ParticleBackend(Protocol):
         ...
 
     async def update_channel_files(
-        self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+        self, manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
     ) -> bool:
         """Attempt to update files in GCS for the given channel."""
         ...

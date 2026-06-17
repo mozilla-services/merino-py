@@ -7,26 +7,32 @@ While you can use the vanilla virtualenv to set up the dev environment, we highl
 out [uv][1].
 
 To install `uv`, run:
+
 ```sh
 $ pipx install uv
 ```
+
 Or [install][2] via your preferred method.
 
 Feel free to browse the [pyproject.toml][3] file for a listing of dependencies
 and their versions.
 
 First, lets make sure you have a virtual environment set up with the right Python version. This service uses Python 3.13.
+
 ```sh
 $ uv venv
 ```
+
 See [more][4] about setting up virtual envs and Python version with uv.
 
 Once uv is installed, and a virtual environment is created with the correct Python version, install all the dependencies:
+
 ```sh
 $ uv sync --all-groups --all-packages
 ```
 
 Add packages to project via uv
+
 ```sh
 $ uv add <package_name>
 ```
@@ -38,6 +44,7 @@ $ uv run fastapi run merino/main.py --reload
 ```
 
 ## Moving from the Poetry & Pyenv Set up
+
 If you had your environment previously set up via poetry and pyenv, here are the steps to move to `uv`. This would be a nice clean up and reset.
 
 ```sh
@@ -50,7 +57,6 @@ rm -rf $(pyenv root)
 # or if you installed it via your OS package manager
 brew uninstall pyenv
 ```
-
 
 ## Service Dependencies
 
@@ -99,22 +105,22 @@ $ STORAGE_EMULATOR_HOST=http://localhost:4443 make run
 ```
 
 Optionally, you can create a GCS bucket and preload data into it. The preloaded
-data is located in `dev/local_data/gcs_emulator/`. Say if you want to preload
+data is located in `dev/local_setup/gcs/`. Say if you want to preload
 a JSON file `top_picks_latest.json` into a bucket `merino-images-prodpy`, you
-can create a new sub-directory `merino-images-prody` in `gcs_emulator` and then
+can create a new sub-directory `merino-images-prody` in `gcs` and then
 create or copy `top_picks_latest.json` into it. Then you can set Merino's
 configurations to use those artifacts in the GCS emulator.
 
 ```
 # File layout of the preloaded GCS data
 
-dev/local_data
-└── gcs_emulator
+dev/local_setup
+└── gcs
     └── merino-images-prodpy  <- GCS Bucket ID
         └── top_picks_latest.json  <- A preloaded GCS blob
 ```
 
-Note that `dev/local_data` will not be checked into the source control nor the
+Note that `dev/local_setup` will not be checked into the source control nor the
 docker image of Merino.
 
 ### Dev Helpers
@@ -124,7 +130,6 @@ development.
 
 - Redis Commander, http://localhost:8081 - Explore the Redis database started
   above.
-
 
 [1]: https://docs.astral.sh/uv/
 [2]: https://docs.astral.sh/uv/getting-started/installation/

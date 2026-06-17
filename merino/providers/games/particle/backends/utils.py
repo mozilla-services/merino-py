@@ -110,9 +110,13 @@ def validate_manifest_against_schema(manifest_json: Json, manifest_schema: Json)
 
 
 def remote_manifest_channel_is_updated(
-    manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+    manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
 ) -> bool:
     """Determine if the JSON manifest from Particle has newer files for the given channel than the manifest we have stored in GCS."""
+    # if there is no manifest in GCS (cold start), channel needs to be updated
+    if manifest_gcs is None:
+        return True
+
     remote = manifest_remote["channels"][channel]["version"]
     gcs = manifest_gcs["channels"][channel]["version"]
 

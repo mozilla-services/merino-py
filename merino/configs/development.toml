@@ -90,3 +90,16 @@ cdn_hostname = "localhost:4443"
 [development.contextual_interest]
 # disabled in dev so we don't fetch artifacts locally
 enabled = false
+
+[development.games_particle_gcs]
+# MERINO_GAMES_PARTICLE__GCS_PROJECT
+# GCS project name that contains domain data (GCP V2)
+gcs_project = ""
+
+# MERINO_GAMES_PARTICLE__GCS_BUCKET
+# GCS bucket that contains domain data files (GCP V2)
+gcs_bucket = "merino-games-particle-local"
+
+# MERINO_GAMES_PARTICLE__CDN_HOSTNAME
+# CDN hostname used for public URL (GCP V2)
+cdn_hostname = "localhost:4443"

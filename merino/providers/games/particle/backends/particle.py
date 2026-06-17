@@ -104,7 +104,7 @@ class ParticleBackend:
         return await asyncio.to_thread(self.remote_file_manager.get_manifest_file)
 
     async def update_channel_files(
-        self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+        self, manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
     ) -> bool:
         """Attempt to update files for the given channel."""
         if remote_manifest_channel_is_updated(manifest_remote, manifest_gcs, channel):
@@ -198,7 +198,7 @@ class ParticleBackend:
         return all(f.sha_verified and f.uploaded for f in files), files
 
     async def deploy_channel_files(
-        self, files: list[GameFile], manifest_remote: Json, manifest_gcs: Json
+        self, files: list[GameFile], manifest_remote: Json, manifest_gcs: Json | None
     ) -> bool:
         """Deploy files from the 'green' folder in GCS to the root."""
         # stub
