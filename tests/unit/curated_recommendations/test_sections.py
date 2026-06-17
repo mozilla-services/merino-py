@@ -711,7 +711,7 @@ class TestMapCorpusSectionToSection:
         assert [rec.receivedRank for rec in sec.recommendations] == [0, 1]
 
     def test_headlines_items_flagged_as_headlines(self):
-        """Headlines items should carry ITEM_HEADLINES_FLAG (HNT-2167)."""
+        """Headlines items should carry ITEM_HEADLINES_FLAG."""
         cs = CorpusSection(
             sectionItems=[generate_corpus_item("h1", "sched_h1")],
             title="Headlines",
