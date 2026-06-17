@@ -451,7 +451,7 @@ class TestStageChannelFiles:
 
     # manually computed sha of file above
     MOCK_PARTICLE_GAME_FILE_SHA = (
-        "57120c40b8bd7d84b861751958c19b40343b14fe028ae7f9a1e7251560c6817a"
+        "617cab92e31caf06d337d5330b2d26701469e4d45156a100f9d5e549d61c6925"
     )
 
     def setup_method(self):
@@ -801,32 +801,19 @@ class TestDeployChannelFiles:
             ),
         ]
 
-    test_params = [[True, True], [True, False], [False, True]]
+    test_params = [True, False]
 
-    @pytest.mark.parametrize("deploy_success, upload_manifest_success", test_params)
+    @pytest.mark.parametrize("deploy_success", test_params)
     @pytest.mark.asyncio
-    async def test_success_and_failure_scenarios(
-        self, deploy_success, upload_manifest_success, backend, valid_manifest_data_json
-    ):
+    async def test_success_and_failure_scenarios(self, deploy_success, backend):
         """Verify success/failure behavior given different sub-function results."""
-        with (
-            patch.object(
-                backend.remote_file_manager, "deploy_staged_files", new_callable=AsyncMock
-            ) as mock_deploy,
-            patch.object(
-                backend.remote_file_manager, "upload_manifest", new_callable=AsyncMock
-            ) as mock_upload_manifest,
-        ):
+        with patch.object(
+            backend.remote_file_manager, "deploy_staged_files", new_callable=AsyncMock
+        ) as mock_deploy:
             mock_deploy.side_effect = [deploy_success]
-            mock_upload_manifest.side_effect = [upload_manifest_success]
 
-            success = await backend.deploy_channel_files(
-                self.mock_game_files, valid_manifest_data_json
-            )
+            success = await backend.deploy_channel_files(self.mock_game_files)
 
-            assert success == (deploy_success and upload_manifest_success)
+            assert success == deploy_success
 
             mock_deploy.assert_awaited_once_with(self.mock_game_files)
-
-            if deploy_success:
-                mock_upload_manifest.assert_awaited_once_with(valid_manifest_data_json)

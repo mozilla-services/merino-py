@@ -129,9 +129,7 @@ class ParticleBackend:
 
                 if staged:
                     # if staging was successful, attempt to deploy the channel
-                    deployed = await self.deploy_channel_files(
-                        files, manifest_remote=manifest_remote
-                    )
+                    deployed = await self.deploy_channel_files(files)
 
                     if deployed:
                         await self.cleanup_old_files_for_channel(
@@ -209,23 +207,16 @@ class ParticleBackend:
         # (potentially) updated
         return all(f.sha_verified and f.uploaded for f in files), files
 
-    async def deploy_channel_files(self, files: list[GameFile], manifest_remote: Json) -> bool:
+    async def deploy_channel_files(self, files: list[GameFile]) -> bool:
         """Deploy files from the 'green' folder in GCS to the root."""
         # "move" staging files to GCS bucket root
         # (this is really just a renaming of files)
         # exceptions will be captured and sent to sentry
-        deploy_success = await self.remote_file_manager.deploy_staged_files(files)
+        return await self.remote_file_manager.deploy_staged_files(files)
 
-        # overwrite GCS manifest JSON with latest from particle remote
-        upload_manifest_success = False
-
-        if deploy_success:
-            upload_manifest_success = await self.remote_file_manager.upload_manifest(
-                manifest_remote
-            )
-
-        # if all the above succeeds, the deploy was successful
-        return deploy_success and upload_manifest_success
+    async def update_manifest(self, manifest: Json) -> bool:
+        """Update the manifest in GCS."""
+        return await self.remote_file_manager.upload_manifest(manifest=manifest)
 
     async def cleanup_old_files_for_channel(
         self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum

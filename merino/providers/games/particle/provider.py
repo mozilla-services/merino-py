@@ -141,9 +141,15 @@ class Provider:
             channel=RemoteChannelEnum.RUNTIME,
         )
 
-        # if either set of files (daily puzzle or runtime) were updated, we can
-        # consider this update successful
-        return puzzle_updated or runtime_updated
+        manifest_updated = False
+
+        # only update the manifest in GCS if at least one channel was updated
+        if puzzle_updated or runtime_updated:
+            manifest_updated = await self.backend.update_manifest(manifest=remote_manifest_json)
+
+        # if either set of files (daily puzzle or runtime) were updated, and
+        # the manifest was updated, we can consider this update successful
+        return (puzzle_updated or runtime_updated) and manifest_updated
 
     async def get_game_url(self) -> Particle | None:
         """Proxy get_game_url from Particle backend"""
