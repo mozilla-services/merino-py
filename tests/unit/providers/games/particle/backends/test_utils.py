@@ -180,6 +180,15 @@ class TestRemoteManifestChannelIsUpdated:
         )
 
     @pytest.mark.parametrize("channel", test_params)
+    def test_was_updated_no_gcs_manifest_cold_start(
+        self, valid_manifest_data_remote_updated, channel
+    ):
+        """Test that a missing GCS manifest results in an updated signal"""
+        assert remote_manifest_channel_is_updated(
+            valid_manifest_data_remote_updated, None, channel
+        )
+
+    @pytest.mark.parametrize("channel", test_params)
     def test_was_not_updated(self, valid_manifest_data, channel):
         """Test that comparing the same manifest results in a not updated signal"""
         assert not remote_manifest_channel_is_updated(
@@ -313,8 +322,8 @@ class TestGetFilesForCleanupForChannel:
             # this calls mock_get_files twice, returning the lists above, which
             # are used to determine which files need to be deleted
             runtime_files = get_files_for_cleanup_for_channel(
-                manifest_remote={},
-                manifest_gcs={},
+                manifest_remote="{}",  # these values don't matter, as the file lists are dictated by the mocks above
+                manifest_gcs="{}",
                 channel=RemoteChannelEnum.RUNTIME,
             )
 
@@ -322,3 +331,27 @@ class TestGetFilesForCleanupForChannel:
             # only assets/b.jpg is marked as old and needing to be deleted
             assert len(runtime_files) == 1
             assert runtime_files[0] == "assets/b.jpg"
+
+    def test_no_gcs_manifest_cold_start(self):
+        """Test that no files are marked for cleanup if the GCS manifest is missing (cold start)."""
+        with patch(
+            "merino.providers.games.particle.backends.utils.get_files_from_manifest_for_channel"
+        ) as mock_get_files:
+            # the newly deployed files
+            green_files = [
+                GameFile(url="assets/a.jpg", sha="123", content_type="image/jpeg"),
+                GameFile(url="assets/a.png", sha="123", content_type="image/png"),
+                GameFile(url="runtime/index-1234.html", sha="123", content_type="text/html"),
+            ]
+
+            mock_get_files.side_effect = [green_files]
+
+            # as manifest_gcs is None, there is no base list of files to cleanup
+            assert (
+                get_files_for_cleanup_for_channel(
+                    manifest_remote="{}",
+                    manifest_gcs=None,
+                    channel=RemoteChannelEnum.RUNTIME,
+                )
+                == []
+            )

@@ -65,7 +65,7 @@ class ParticleRemoteFileManager:
         self.green_deployment_folder = green_deployment_folder
         self.manifest_file_name = manifest_file_name
 
-    def get_manifest_file(self) -> dict[str, Any]:
+    def get_manifest_file(self) -> dict[str, Any] | None:
         """Read remote manifest file from GCS.
 
         Raises:
@@ -91,11 +91,7 @@ class ParticleRemoteFileManager:
 
             raise ParticleFileManagerError(error_msg) from ex
 
-        # if manifest is still None, the blob in GCS was empty, so we need to raise
-        if manifest is None:
-            raise ParticleFileManagerError("GCS manifest file is empty.")
-
-        # if the manifest was retrieved and converted to JSON, return it
+        # return json, or None if the blob wasn't found in GCS (cold start)
         return manifest
 
     async def upload_file(self, file_name: str, file_path: str, content_type: str) -> str:

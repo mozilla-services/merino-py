@@ -69,32 +69,32 @@ def fixture_particle_provider(
 
     return Provider(
         backend=particle_backend,
-        cron_interval_sec=60,
         manifest_schema=manifest_validation_schema,
         manifest_schema_version=1,
         metrics_client=statsd_mock,
         name="particle",
-        resync_interval_sec=120,
-        enabled=False,
+        enabled=True,
     )
 
 
 @pytest.mark.asyncio
-async def test_fetch_game_data_successfully_processes_valid_remote_data(particle_provider) -> None:
+async def test_run_update_process_successfully_processes_valid_remote_data(
+    particle_provider,
+) -> None:
     """Test that fetching valid manifest data from particle succeeds"""
-    with patch.object(
-        particle_provider, "process_remote_particle_data", new=AsyncMock()
-    ) as mock_process_remote_data:
+    with (
+        patch.object(
+            particle_provider, "process_remote_particle_data", new_callable=AsyncMock
+        ) as mock_process_remote_data,
+        patch.object(
+            particle_provider.backend, "fetch_manifest_json_from_remote", new_callable=AsyncMock
+        ) as mock_fetch_manifest,
+    ):
         mock_process_remote_data.return_value = True
 
-        # verify last update is at the default value
-        assert particle_provider.last_successful_update_at == 0.0
-
-        await particle_provider._fetch_game_data()
-
-        # _fetch_game_data should have successfully run, updating the last update time
-        assert particle_provider.last_successful_update_at > 0.0
+        assert await particle_provider.run_update_process()
 
         # a successful fetch should result in process_remote_particle_data
         # being called
         mock_process_remote_data.assert_awaited_once()
+        mock_fetch_manifest.assert_awaited_once()

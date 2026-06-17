@@ -54,6 +54,23 @@ gcs_project = "moz-fx-merino-nonprod-db57"
 # Set to `true` in production and `false` in staging or development.
 gcs_enabled = false
 
+# MERINO_GAMES_PARTICLE__GCS_BUCKET
+# GCS bucket that contains domain data files (GCP V2)
+gcs_bucket = "merino-games-particle-stage"
+
+# MERINO_GAMES_PARTICLE__CDN_HOSTNAME
+# CDN hostname used for public URL (GCP V2)
+cdn_hostname = "stage-games-particle.merino.nonprod.webservices.mozgcp.net"
+
+[stage.games_providers.particle]
+# MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED
+# Whether or not the provider's cron runs to regularly update game files.
+enabled = true
+
+# MERINO_GAMES_PROVIDERS__PARTICLE__GAME_URL
+# The URL pointing to the game hosted in GCP (GCS)
+game_url = "https://stage-games-particle.merino.nonprod.webservices.mozgcp.net/index.html"
+
 [stage.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 domain_data_source = "remote"
