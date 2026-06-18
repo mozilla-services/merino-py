@@ -16,6 +16,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     SPORTSDATA_US_EASTERN,
     sportsdata_day_slug,
 )
+from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
     NHL,
@@ -462,7 +463,11 @@ def test_load_teams_from_source(
 
 
 @freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
-@pytest.mark.parametrize("sport_cls", [NFL, NHL, NBA], ids=["NFL", "NHL", "NBA"])
+@pytest.mark.parametrize(
+    "sport_cls",
+    [NFL, NHL, NBA, MLB, UCL],
+    ids=["NFL", "NHL", "NBA", "MLB", "UCL"],
+)
 def test_load_bad_teams_from_source(
     sport_cls: type[Sport],
     events_response: list[dict],
@@ -478,6 +483,38 @@ def test_load_bad_teams_from_source(
     teams_data = sport.load_teams_from_source(teams)
 
     assert set(teams_data.keys()) == {456}
+
+
+@freezegun.freeze_time("2025-09-22T00:00:00", tz_offset=0)
+@pytest.mark.parametrize(
+    "sport_cls",
+    [NFL, NHL, NBA, MLB, UCL],
+    ids=["NFL", "NHL", "NBA", "MLB", "UCL"],
+)
+def test_load_teams_from_source_skips_team_without_key(
+    sport_cls: type[Sport],
+    teams: list[dict],
+):
+    """Ensure teams with missing provider keys are not loaded."""
+    sport = sport_cls(settings=settings.providers.sports, name="", base_url="")
+    teams[0]["Key"] = None
+
+    teams_data = sport.load_teams_from_source(teams)
+
+    assert set(teams_data.keys()) == {456}
+
+
+def test_from_data_requires_key(teams: list[dict]) -> None:
+    """Verify a missing team key raises the loader's expected provider error."""
+    teams[0]["Key"] = None
+
+    with pytest.raises(SportsDataError, match="No Key found"):
+        Team.from_data(
+            teams[0],
+            term_filter=[],
+            team_ttl=timedelta(weeks=1),
+            normalized_terms=SportNormalizedTerms,
+        )
 
 
 @pytest.mark.parametrize(
