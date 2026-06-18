@@ -188,6 +188,42 @@ async def test_query_with_missing_key(
     ]
 
 
+@pytest.mark.parametrize(
+    ("query", "client_variants", "expected_is_top_pick"),
+    [
+        ("firefox", ["top_pick_promotion"], True),
+        ("mozilla", ["top_pick_promotion"], False),
+        ("firefox", [], None),
+        ("firefox", ["some_other_variant"], None),
+    ],
+    ids=[
+        "opted-in-prefix-in-query",
+        "opted-in-prefix-not-in-query",
+        "opted-out-no-variants",
+        "opted-out-other-variant",
+    ],
+)
+@pytest.mark.asyncio
+async def test_query_is_top_pick(
+    srequest: SuggestionRequestFixture,
+    adm_top_pick: Provider,
+    query: str,
+    client_variants: list[str],
+    expected_is_top_pick: bool,
+) -> None:
+    """`is_top_pick` is True only when the request opts into `top_pick_promotion`
+    AND the record's `top_pick_prefix` is a substring of the query.
+    """
+    await adm_top_pick.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    res = await adm_top_pick.query(srequest(query, geolocation, user_agent, client_variants))
+
+    assert len(res) == 1
+    assert res[0].is_top_pick is expected_is_top_pick
+
+
 SAMPLE_ENGAGEMENT_DATA = EngagementData(
     amp={
         "mozilla/firefox": KeywordEntry(
