@@ -13,9 +13,6 @@ RSS_FETCH_REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; Merino/1.0; +https://github.com/mozilla-services/merino-py)"
 }
 
-# Under the bucket merino-images-prod, potd images are stored under the following directory.
-DIR_PATH_IN_BUCKET = "rss/wikimedia_potd"
-
 
 def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
     """Parse the RSS entry description HTML to extract image URLs and text.
@@ -87,16 +84,17 @@ def build_potd_path_and_name(image: Image, is_thumbnail: bool) -> str:
     # YYYY-MM-DD format
     date_time = datetime.today().strftime("%Y-%m-%d")
 
-    prefix = "POTD"
+    # Under the bucket merino-images-prod, potd images are stored in the following directory.
+    dir_path_in_bucket = "rss/wikimedia_potd"
     # append "_thumbnail" to the object name if it is a thumbnail image
     suffix = "thumbnail" if is_thumbnail else "hi_res"
 
     # extract image extension since the image.content_type has the format image/jpeg
     extension = image.content_type.split("/")[-1]
 
-    # the path in the bucket for the image would look like:
-    # "merino-images-prod/rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
-    return f"{DIR_PATH_IN_BUCKET}/{prefix}_{date_time}_{suffix}.{extension}"
+    # the path in the gcs bucket directory for the image would look like:
+    # "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
+    return f"{dir_path_in_bucket}/POTD_{date_time}_{suffix}.{extension}"
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:

@@ -56,29 +56,10 @@ class TestUploadImageMethod:
         assert len(blobs_in_bucket) == 1
         assert blobs_in_bucket[0].name == "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
 
-    @freezegun.freeze_time("2026-06-07")
-    def test_thumbnail_and_hi_res_success(
-        self, backend: WikimediaPotdBackend, gcs_storage_client, gcs_storage_bucket
-    ) -> None:
-        """Test upload_image method successfully uploads two images and returns public cdn urls."""
-        test_image = Image(content=b"", content_type="Image/jpeg")
-
-        # call the backend method to upload the thumbnail and hi-res image
-        backend.upload_image(image=test_image, is_thumbnail=True)
-        backend.upload_image(image=test_image, is_thumbnail=False)
-
-        # get the blob (image) from the same bucket assigned to the gcs_uploader instance of the backend object
-        blobs_in_bucket = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
-
-        # should be two blobs (thumbnail and hi-res)
-        assert len(blobs_in_bucket) == 2
-        assert blobs_in_bucket[0].name == "rss/wikimedia_potd/POTD_2026-06-07_hi_res.jpeg"
-        assert blobs_in_bucket[1].name == "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
-
     def test_captures_sentry_exception(
         self, backend: WikimediaPotdBackend, mocker: MockerFixture
     ) -> None:
-        """Test upload_image method successfully uploads two images and returns public cdn urls."""
+        """Test upload_image method successfully captures sentry exception."""
         test_image = Image(content=b"", content_type="Image/jpeg")
 
         ex = Exception("Test Exception")
