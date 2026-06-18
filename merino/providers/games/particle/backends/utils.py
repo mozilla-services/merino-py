@@ -136,6 +136,35 @@ def get_files_from_manifest_for_channel(
     return game_files
 
 
+def get_files_for_cleanup_for_channel(
+    manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+) -> list[str]:
+    """Get a list of string file names/paths from the old deployment that should be deleted from GCS."""
+    # get files from remote manifest for channel - this is the "green"
+    # deploy that was just released
+    green_files: list[GameFile] = get_files_from_manifest_for_channel(manifest_remote, channel)
+
+    # get files from the previous GCS manifest - this is the "blue"
+    # deployment that is no longer in release
+    blue_files: list[GameFile] = get_files_from_manifest_for_channel(manifest_gcs, channel)
+
+    # get a list of files present in the "blue" deploy that are not present
+    # in the "green" deploy - these files were not overwritten by the
+    # "green" deployment and are now orphaned/unused and should be deleted
+
+    # the only comparison we need to do is on the remote_path attribute, as
+    # that's the file name in GCS.
+    green_file_paths = set([f.remote_path for f in green_files])
+
+    # special casing for HTML file - we'll never need to clean it up, as the
+    # file name always stays consistent.
+    return [
+        f.remote_path
+        for f in blue_files
+        if f.remote_path not in green_file_paths and not f.remote_path.lower().endswith(".html")
+    ]
+
+
 def download_remote_file(url: str, destination_path: str) -> None:
     """Download a remote Particle file."""
     response = requests.get(url)  # nosec

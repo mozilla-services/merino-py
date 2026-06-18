@@ -178,3 +178,10 @@ class ParticleRemoteFileManager:
                 success = False
 
         return success
+
+    async def delete_file(self, file_name: str) -> None:
+        """Delete the given file from GCS."""
+        try:
+            await asyncio.to_thread(self.gcs_client.delete_file_by_name, file_name)
+        except Exception as ex:
+            sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))

@@ -426,3 +426,31 @@ class TestRemoteFileManagerUploadManifest:
             )
 
             assert sentry_capture.call_count == 1
+
+
+class TestRemoteFileManagerDeleteFile:
+    """Tests against the delete_file method of ParticleRemoteFileManager."""
+
+    @pytest.mark.asyncio
+    async def test_success(self, remote_filemanager):
+        """Verify success behavior."""
+        with patch.object(remote_filemanager.gcs_client, "delete_file_by_name") as mock_delete:
+            await remote_filemanager.delete_file("assets/index.js")
+
+            mock_delete.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_failure(self, remote_filemanager, mocker):
+        """Verify failure behavior."""
+        sentry_capture = mocker.patch(
+            "merino.providers.games.particle.backends.filemanager.sentry_sdk.capture_exception"
+        )
+
+        with patch.object(remote_filemanager.gcs_client, "delete_file_by_name") as mock_delete:
+            mock_delete.side_effect = [Exception("forced error")]
+
+            await remote_filemanager.delete_file("assets/index.js")
+
+            sentry_capture.assert_called_once()
+
+            mock_delete.assert_called_once()

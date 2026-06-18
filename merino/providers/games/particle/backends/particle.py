@@ -17,6 +17,7 @@ from merino.providers.games.particle.backends.filemanager import ParticleRemoteF
 from merino.providers.games.particle.backends.utils import (
     download_remote_file,
     GameFile,
+    get_files_for_cleanup_for_channel,
     get_files_from_manifest_for_channel,
     RemoteChannelEnum,
     remote_manifest_channel_is_updated,
@@ -220,7 +221,11 @@ class ParticleBackend:
 
     async def cleanup_old_files_for_channel(
         self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
-    ) -> bool:
+    ) -> None:
         """Clean up any outdated files for the given channel. Run after a channel deploy has succeeded."""
-        # stub
-        return True
+        files_to_delete: list[str] = get_files_for_cleanup_for_channel(
+            manifest_remote=manifest_remote, manifest_gcs=manifest_gcs, channel=channel
+        )
+
+        for f in files_to_delete:
+            await self.remote_file_manager.delete_file(f)

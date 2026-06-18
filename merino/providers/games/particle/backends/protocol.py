@@ -78,6 +78,6 @@ class ParticleBackend(Protocol):
 
     async def cleanup_old_files_for_channel(
         self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
-    ) -> bool:
+    ) -> None:
         """Clean up any outdated files for the given channel. Run after a channel deploy has succeeded."""
         ...

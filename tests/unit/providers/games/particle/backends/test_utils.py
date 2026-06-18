@@ -12,11 +12,13 @@ from contextlib import nullcontext as does_not_raise
 from pydantic import Json
 from pytest import LogCaptureFixture
 from typing import Any
+from unittest.mock import patch
 
 from merino.configs import settings
 from merino.providers.games.particle.backends.errors import ParticleManifestValidationError
 from merino.providers.games.particle.backends.utils import (
     GameFile,
+    get_files_for_cleanup_for_channel,
     get_files_from_manifest_for_channel,
     RemoteChannelEnum,
     remote_manifest_channel_is_updated,
@@ -247,3 +249,76 @@ class TestGameFile:
         assert gf.name == "file.jpg"
         assert gf.content_type == content_type
         assert not gf.sha_verified
+
+
+class TestGetFilesForCleanupForChannel:
+    """Tests against the get_files_for_cleanup_for_channel function."""
+
+    def test_manifests_with_differences(
+        self, valid_manifest_data_remote_updated, valid_manifest_data
+    ):
+        """Verify manifests with differences return the expected list of GameFiles, omitting the .html file."""
+        daily_files = get_files_for_cleanup_for_channel(
+            manifest_remote=valid_manifest_data_remote_updated,
+            manifest_gcs=valid_manifest_data,
+            channel=RemoteChannelEnum.PUZZLE,
+        )
+        runtime_files = get_files_for_cleanup_for_channel(
+            manifest_remote=valid_manifest_data_remote_updated,
+            manifest_gcs=valid_manifest_data,
+            channel=RemoteChannelEnum.RUNTIME,
+        )
+
+        assert len(daily_files) == 2
+
+        assert (
+            daily_files[0]
+            == "assets/cluster-images/42a376c9467b635c6c31c997020ec3f68ee8365992d4fb93e1a61e54712cde74.jpg"
+        )
+        assert (
+            daily_files[1]
+            == "assets/cluster-images/5060e2ba850a7032b2a4a606b2b59781cc85cb7a20833c12aa5c5c7d8d654d58.jpg"
+        )
+
+        # in the manifest data used for this test, there is an HTML file
+        # properly filtered out of this list - see test below
+        assert len(runtime_files) == 2
+
+        assert runtime_files[0] == "assets/index-7wt06ylr.css"
+        assert runtime_files[1] == "assets/index-rc_Uh052.js"
+
+    def test_filters_out_html_file(self):
+        """Test that any HTML files are skipped."""
+        with patch(
+            "merino.providers.games.particle.backends.utils.get_files_from_manifest_for_channel"
+        ) as mock_get_files:
+            # the newly deployed files
+            green_files = [
+                GameFile(url="assets/a.jpg", sha="123", content_type="image/jpeg"),
+                GameFile(url="assets/a.png", sha="123", content_type="image/png"),
+                GameFile(url="runtime/index-1234.html", sha="123", content_type="text/html"),
+            ]
+
+            # the previously deployed files - two are different from green:
+            # - assets/b.jpg
+            # - runtime/index-5678.html
+            blue_files = [
+                GameFile(url="assets/b.jpg", sha="123", content_type="image/jpeg"),
+                GameFile(url="assets/a.png", sha="123", content_type="image/png"),
+                GameFile(url="runtime/index-5678.html", sha="123", content_type="text/html"),
+            ]
+
+            mock_get_files.side_effect = [green_files, blue_files]
+
+            # this calls mock_get_files twice, returning the lists above, which
+            # are used to determine which files need to be deleted
+            runtime_files = get_files_for_cleanup_for_channel(
+                manifest_remote={},
+                manifest_gcs={},
+                channel=RemoteChannelEnum.RUNTIME,
+            )
+
+            # get_files_for_cleanup_for_channel should skip html files, meaning
+            # only assets/b.jpg is marked as old and needing to be deleted
+            assert len(runtime_files) == 1
+            assert runtime_files[0] == "assets/b.jpg"

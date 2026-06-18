@@ -21,7 +21,7 @@ def gcs_storage_bucket(gcs_storage_client) -> Bucket:
     """Return a test google storage bucket object to be used by all tests. Delete it
     after each test run to ensure isolation
     """
-    bucket: Bucket = gcs_storage_client.create_bucket("test_gcp_uploader_bucket")
+    bucket: Bucket = gcs_storage_client.create_bucket("merino-images-local")
 
     # Yield the bucket object for the test to use
     yield bucket
@@ -88,7 +88,7 @@ class TestRemoteFileManagerUploadFile:
             assert blob_name == ""
 
 
-class TestUploadManifest:
+class TestRemoteFileManagerUploadManifest:
     """Tests against the upload_manifest method of ParticleRemoteFileManager."""
 
     @pytest.mark.asyncio
