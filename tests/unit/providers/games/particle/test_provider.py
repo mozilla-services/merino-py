@@ -4,7 +4,6 @@
 
 """Unit tests for the Particle games provider."""
 
-import asyncio
 import json
 import logging
 import pytest
@@ -54,13 +53,11 @@ def fixture_provider(
     """Return a Provider instance for testing."""
     return Provider(
         backend=backend_mock,
-        cron_interval_sec=60,
         manifest_schema=manifest_validation_schema,
         manifest_schema_version=1,
         metrics_client=statsd_mock,
         name="particle",
-        resync_interval_sec=120,
-        enabled=False,
+        enabled=True,
     )
 
 
@@ -124,38 +121,7 @@ class TestProvider:
 
     def test_enabled(self, provider: Provider) -> None:
         """Test that enabled is set correctly."""
-        assert provider._enabled is False
-
-    @pytest.mark.asyncio
-    async def test_initialize(self, provider: Provider) -> None:
-        """Test that initialize completes without error."""
-        await provider.initialize()
-
-    @pytest.mark.asyncio
-    async def test_initialize_runs_cron_when_provider_enabled(self, provider):
-        """Initialize should call _fetch_game_data and create cron job when provider is enabled."""
-        with (
-            patch.object(provider, "_enabled", True),
-            patch("asyncio.create_task", wraps=asyncio.create_task) as mock_create_task,
-            patch("merino.providers.games.particle.provider.cron.Job") as mock_cron_job,
-        ):
-            mock_job_instance = AsyncMock(name="mock_cron_job")
-            mock_cron_job.return_value = mock_job_instance
-
-            await provider.initialize()
-
-            mock_cron_job.assert_called_once_with(
-                name="update_particle_game_data",
-                interval=provider.cron_interval_sec,
-                condition=provider._should_fetch_data,
-                task=provider._fetch_game_data,
-            )
-
-            mock_create_task.assert_called_once()
-            args, _ = mock_create_task.call_args
-            called_arg = args[0]
-            assert asyncio.iscoroutine(called_arg)
-            assert hasattr(provider, "cron_task")
+        assert provider._enabled is True
 
 
 class TestGetGameUrl:
@@ -185,69 +151,42 @@ class TestGetGameUrl:
         assert particle.url == test_game_url
 
 
-class TestShouldFetchData:
-    """Tests against should_fetch_data"""
-
-    def test_should_fetch_data_returns_true_when_interval_satsified(self, provider):
-        """_should_fetch_data should return True if the time interval condition is satisfied"""
-        with (
-            patch("merino.providers.games.particle.provider.time.time", side_effect=[100]),
-            patch.object(provider, "resync_interval_sec", 50),
-            patch.object(provider, "last_successful_update_at", 50),
-        ):
-            assert provider._should_fetch_data() is True
-
-    def test_should_fetch_data_returns_false_when_interval_not_satsified(self, provider):
-        """_should_fetch_data should return False if the time interval condition is not satisfied"""
-        with (
-            patch("merino.providers.games.particle.provider.time.time", side_effect=[100]),
-            patch.object(provider, "resync_interval_sec", 60),
-            patch.object(provider, "last_successful_update_at", 50),
-        ):
-            assert provider._should_fetch_data() is False
-
-
 class TestFetchGameData:
     """Tests against fetch_game_data"""
 
     @pytest.mark.asyncio
     async def test_happy_path(self, provider, valid_manifest_data):
-        """Test that _fetch_game_data retrieves remote json and updates as expected"""
+        """Test that run_update_process retrieves remote json and updates as expected"""
         with (
             patch.object(
                 provider.backend, "fetch_manifest_json_from_remote", new=AsyncMock()
             ) as mock_fetch_manifest,
             patch.object(provider, "process_remote_particle_data") as mock_process_data,
-            patch("merino.providers.games.particle.provider.time.time", side_effect=[100]),
         ):
             mock_fetch_manifest.return_value = valid_manifest_data
             mock_process_data.return_value = True
 
-            await provider._fetch_game_data()
+            assert await provider.run_update_process()
 
             mock_fetch_manifest.assert_awaited_once()
             mock_process_data.assert_called_once()
-            assert provider.last_successful_update_at == 100
 
     @pytest.mark.asyncio
     async def test_processing_remote_data_fails(self, provider, valid_manifest_data):
-        """Test that _fetch_game_data retrieves remote json but processing the json fails"""
+        """Test that run_update_process retrieves remote json but processing the json fails"""
         with (
             patch.object(
                 provider.backend, "fetch_manifest_json_from_remote", new=AsyncMock()
             ) as mock_fetch_manifest,
             patch.object(provider, "process_remote_particle_data") as mock_process_data,
-            patch.object(provider, "last_successful_update_at", 0.0),
-            patch("merino.providers.games.particle.provider.time.time", side_effect=[100]),
         ):
             mock_fetch_manifest.return_value = valid_manifest_data
             mock_process_data.return_value = False
 
-            await provider._fetch_game_data()
+            assert not await provider.run_update_process()
 
             mock_fetch_manifest.assert_awaited_once()
             mock_process_data.assert_called_once()
-            assert provider.last_successful_update_at == 0.0
 
     @pytest.mark.asyncio
     async def test_remote_fetch_fails(
@@ -256,26 +195,21 @@ class TestFetchGameData:
         caplog: LogCaptureFixture,
         filter_caplog: FilterCaplogFixture,
     ):
-        """Test that _fetch_game_data logs as expected if the remote fetch fails"""
+        """Test that run_update_process logs as expected if the remote fetch fails"""
         with (
             patch.object(
                 provider.backend, "fetch_manifest_json_from_remote", new=AsyncMock()
             ) as mock_fetch_manifest,
             patch.object(provider, "process_remote_particle_data") as mock_process_data,
-            patch.object(provider, "last_successful_update_at", 0.0),
-            patch("merino.providers.games.particle.provider.time.time", side_effect=[100]),
         ):
             caplog.set_level(logging.INFO)
 
             mock_fetch_manifest.side_effect = Exception("kaboom!")
 
-            await provider._fetch_game_data()
+            assert not await provider.run_update_process()
 
             mock_fetch_manifest.assert_awaited_once()
             mock_process_data.assert_not_awaited()
-
-            # ensure the last_successful_update_at value was not updated
-            assert provider.last_successful_update_at == 0.0
 
             records: list[LogRecord] = filter_caplog(
                 caplog.records, "merino.providers.games.particle.provider"
@@ -287,7 +221,7 @@ class TestFetchGameData:
                 "Failed to fetch Particle game data from remote endpoint"
             )
             assert records[1].message.startswith(
-                "Particle game data fetch returned None - will retry on next cron tick"
+                "Particle game data fetch returned None - will retry on next cron run."
             )
 
 

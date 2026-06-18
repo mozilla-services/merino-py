@@ -21,7 +21,6 @@ _particle_provider: Provider | None = None
 
 # Module-level variables as looking up from settings each time is expensive.
 _connect_timeout = settings.games_providers.particle.connect_timeout_sec
-_cron_interval_sec = settings.games_providers.particle.cron_interval_sec
 _enabled = settings.games_providers.particle.enabled
 _gcs_project = settings.games_particle_gcs.gcs_project
 _gcs_bucket = settings.games_particle_gcs.gcs_bucket
@@ -32,13 +31,17 @@ _manifest_schema_file_path = (
     f"{_app_root_dir}/{settings.games_providers.particle.manifest_schema_file_path}"
 )
 _manifest_schema_version = settings.games_providers.particle.manifest_schema_version
-_resync_interval_sec = settings.games_providers.particle.resync_interval_sec
 _url_root = settings.games_providers.particle.url_root
 _url_path_manifest = settings.games_providers.particle.url_path_manifest
 
 
 async def init_providers() -> None:
     """Initialize games providers - currently only Particle"""
+    init_particle()
+
+
+def init_particle() -> None:
+    """Initialize the Particle provider."""
     global _particle_provider
 
     gcs_uploader = GcsUploader(
@@ -72,16 +75,12 @@ async def init_providers() -> None:
 
     _particle_provider = Provider(
         backend=particle_backend,
-        cron_interval_sec=_cron_interval_sec,
         manifest_schema=local_file_manager.get_manifest_schema(),
         manifest_schema_version=_manifest_schema_version,
         metrics_client=metrics_client,
         name="Particle Provider",
-        resync_interval_sec=_resync_interval_sec,
         enabled=_enabled,
     )
-
-    await _particle_provider.initialize()
 
 
 def get_particle_provider() -> Provider:

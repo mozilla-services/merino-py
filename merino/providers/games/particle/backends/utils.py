@@ -106,11 +106,15 @@ def validate_manifest_against_schema(manifest_json: Json, manifest_schema: Json)
 
 
 def remote_manifest_channel_is_updated(
-    manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+    manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
 ) -> bool:
     """Determine if the JSON manifest from Particle has newer files for the given channel than the manifest we have stored in GCS."""
-    remote = manifest_remote["channels"][channel]["version"]
-    gcs = manifest_gcs["channels"][channel]["version"]
+    # if there is no manifest in GCS (cold start), channel needs to be updated
+    if manifest_gcs is None:
+        return True
+
+    remote = manifest_remote["channels"][channel.value]["version"]
+    gcs = manifest_gcs["channels"][channel.value]["version"]
 
     return bool(remote != gcs)
 
@@ -122,7 +126,7 @@ def get_files_from_manifest_for_channel(
     game_files = []
 
     try:
-        files = manifest["channels"][channel]["files"]
+        files = manifest["channels"][channel.value]["files"]
     except KeyError as ex:
         files = []
 
@@ -137,7 +141,7 @@ def get_files_from_manifest_for_channel(
 
 
 def get_files_for_cleanup_for_channel(
-    manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+    manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
 ) -> list[str]:
     """Get a list of string file names/paths from the old deployment that should be deleted from GCS."""
     # get files from remote manifest for channel - this is the "green"
@@ -145,8 +149,13 @@ def get_files_for_cleanup_for_channel(
     green_files: list[GameFile] = get_files_from_manifest_for_channel(manifest_remote, channel)
 
     # get files from the previous GCS manifest - this is the "blue"
-    # deployment that is no longer in release
-    blue_files: list[GameFile] = get_files_from_manifest_for_channel(manifest_gcs, channel)
+    # deployment that is no longer in release.
+    # on a cold start, this list is empty.
+    blue_files: list[GameFile] = (
+        get_files_from_manifest_for_channel(manifest_gcs, channel)
+        if manifest_gcs is not None
+        else []
+    )
 
     # get a list of files present in the "blue" deploy that are not present
     # in the "green" deploy - these files were not overwritten by the

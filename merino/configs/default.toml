@@ -1245,17 +1245,6 @@ manifest_gcs_file_name = "runtime-manifest.v1.json"
 # Timeout in seconds for establishing a connection to Particle endpoint.
 connect_timeout_sec = 3.0
 
-# MERINO_GAMES_PROVIDERS__PARTICLE__CRON_INTERVAL_SEC
-# The cron tick interval to try to get Particle data from the remote endpoint.
-# This is the error retry interval, and should be less than the
-# resync_interval_sec value below to allow for retries.
-cron_interval_sec = 600 # ten minutes
-
-# MERINO_GAMES_PROVIDERS__PARTICLE__RESYNC_INTERVAL_SEC
-# Time between re-syncs of Particle game data, in seconds.
-# Particle updates their files daily.
-resync_interval_sec = 86400 # one day
-
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME

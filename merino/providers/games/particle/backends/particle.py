@@ -105,10 +105,12 @@ class ParticleBackend:
         return await asyncio.to_thread(self.remote_file_manager.get_manifest_file)
 
     async def update_channel_files(
-        self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+        self, manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
     ) -> bool:
         """Attempt to update files for the given channel."""
-        if remote_manifest_channel_is_updated(manifest_remote, manifest_gcs, channel):
+        if manifest_gcs is None or remote_manifest_channel_is_updated(
+            manifest_remote, manifest_gcs, channel
+        ):
             # get the files for the given channel from the remote manifest
             files: list[GameFile] = get_files_from_manifest_for_channel(manifest_remote, channel)
 
@@ -120,7 +122,7 @@ class ParticleBackend:
                 # if no files were found, exit early
                 sentry_sdk.capture_exception(
                     ParticleRemoteFileProcessError(
-                        f"No files found in remote manifest for {channel} channel."
+                        f"No files found in remote manifest for {channel.value} channel."
                     )
                 )
                 return False
@@ -220,7 +222,7 @@ class ParticleBackend:
         return await self.remote_file_manager.upload_manifest(manifest=manifest)
 
     async def cleanup_old_files_for_channel(
-        self, manifest_remote: Json, manifest_gcs: Json, channel: RemoteChannelEnum
+        self, manifest_remote: Json, manifest_gcs: Json | None, channel: RemoteChannelEnum
     ) -> None:
         """Clean up any outdated files for the given channel. Run after a channel deploy has succeeded."""
         files_to_delete: list[str] = get_files_for_cleanup_for_channel(

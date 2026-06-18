@@ -173,12 +173,11 @@ class TestRemoteFileManager:
         self,
         remote_filemanager: ParticleRemoteFileManager,
     ) -> None:
-        """Test that the RemoteFileManager raises when the call to GCS returns None."""
+        """Test that the RemoteFileManager returns None when the call to GCS returns None."""
         remote_filemanager.gcs_client = MagicMock()
         remote_filemanager.gcs_client.get_file_by_name.return_value = None
 
-        with pytest.raises(ParticleFileManagerError):
-            remote_filemanager.get_manifest_file()
+        assert remote_filemanager.get_manifest_file() is None
 
     def test_get_manifest_file_invalid_json(
         self,

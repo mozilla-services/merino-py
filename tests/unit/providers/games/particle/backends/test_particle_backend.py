@@ -331,6 +331,35 @@ class TestUpdateChannelFiles:
 
     @pytest.mark.parametrize("channel", test_params)
     @pytest.mark.asyncio
+    async def test_is_updated_with_no_gcs_manifest_cold_start(
+        self,
+        backend,
+        valid_manifest_data_json,
+        mock_remote_manifest_channel_is_updated,
+        mock_stage_channel_files,
+        mock_deploy_channel_files,
+        mock_cleanup_old_files_for_channel,
+        mock_successfully_updated_game_files,
+        mock_get_files_from_manifest_for_channel,
+        channel,
+    ):
+        """Test that channel is marked as updated when GCS manifest is missing (cold start), channel files are found, and staging deployment was successful (happy path)."""
+        # set up mocks for happy path
+        mock_get_files_from_manifest_for_channel.return_value = self.mock_game_files
+        mock_stage_channel_files.side_effect = [(True, mock_successfully_updated_game_files)]
+        mock_deploy_channel_files.side_effect = [True]
+
+        assert await backend.update_channel_files(valid_manifest_data_json, None, channel)
+
+        # ensure all inner functions were called as expected
+        mock_remote_manifest_channel_is_updated.assert_not_called()
+        mock_get_files_from_manifest_for_channel.assert_called_once()
+        mock_stage_channel_files.assert_awaited_once()
+        mock_deploy_channel_files.assert_awaited_once()
+        mock_cleanup_old_files_for_channel.assert_awaited_once()
+
+    @pytest.mark.parametrize("channel", test_params)
+    @pytest.mark.asyncio
     async def test_not_updated_if_manifest_versions_match(
         self,
         backend,
