@@ -45,7 +45,7 @@ gcs_bucket = "merino-images-stagepy"
 # carries the same content as prod.
 cdn_hostname = "prod-images.merino.prod.webservices.mozgcp.net"
 
-[stage.games_particle.gcs]
+[stage.games_particle_gcs]
 # MERINO_GAMES_PARTICLE_GCS__GCS_PROJECT (GCP V2)
 gcs_project = "moz-fx-merino-nonprod-db57"
 
