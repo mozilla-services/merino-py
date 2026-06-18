@@ -141,7 +141,10 @@ class Team(BaseModel):
         country = None
         if areas:
             country = areas.get(team_data.get(normalized_terms.get("AreaId", "AreaId"), 9999))
-        raw_key = team_data["Key"]
+        raw_key = team_data.get("Key")
+        if not isinstance(raw_key, str) or not raw_key:
+            logger.warning(f"{LOGGING_TAG}: No valid key found for team {team_data}")
+            raise SportsDataError(f"No Key found for {fullname}")
         if country and country.get("aliases"):
             terms.add(country.get("aliases"))
         return cls(
