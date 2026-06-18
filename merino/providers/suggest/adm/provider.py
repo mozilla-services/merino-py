@@ -339,7 +339,7 @@ class Provider(BaseProvider):
             is_top_pick = None
             if TOP_PICK_PROMOTION in client_variants:
                 is_top_pick = (
-                    res.top_pick_prefix is not None and res.top_pick_prefix.lower() in q.lower()
+                    res.top_pick_prefix is not None and q.startswith(res.top_pick_prefix.lower())
                 )
 
             url: str = res.url
