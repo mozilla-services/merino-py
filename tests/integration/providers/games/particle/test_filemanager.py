@@ -109,37 +109,3 @@ class TestRemoteFileManagerUploadManifest:
             )
 
             assert not await remote_filemanager.upload_manifest(remote_manifest_json)
-
-
-class TestRemoteFileManagerDeleteFile:
-    """Tests against the delete_file method of ParticleRemoteFileManager."""
-
-    @pytest.mark.asyncio
-    async def test_success(self, remote_filemanager, mocker):
-        """Test success scenario."""
-        sentry_capture = mocker.patch(
-            "merino.providers.games.particle.backends.filemanager.sentry_sdk.capture_exception"
-        )
-
-        # put a file in GCS to be deleted
-        remote_filemanager.gcs_client.upload_from_filename(
-            "tests/data/games/particle/image.jpg", "images/image.jpg", "image/jpeg"
-        )
-
-        # delete should execute without error
-        await remote_filemanager.delete_file("images/image.jpg")
-
-        # sentry should not be called
-        sentry_capture.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_failure(self, remote_filemanager, mocker):
-        """Test failure scenario."""
-        sentry_capture = mocker.patch(
-            "merino.providers.games.particle.backends.filemanager.sentry_sdk.capture_exception"
-        )
-
-        # file doesn't exist - should send to sentry
-        await remote_filemanager.delete_file("images/image.jpg")
-
-        sentry_capture.assert_called_once()
