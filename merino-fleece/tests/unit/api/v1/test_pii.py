@@ -51,7 +51,7 @@ def make_client() -> Iterator:
 def test_pii_true(make_client) -> None:
     """Detector reporting PERSON returns pii=true."""
     client = make_client(True)
-    resp = client.get("/api/v1/pii", params={"q": "Alice Bob"})
+    resp = client.post("/api/v1/pii", json={"q": "Alice Bob"})
     assert resp.status_code == 200
     assert resp.json() == {"pii": True}
 
@@ -59,22 +59,22 @@ def test_pii_true(make_client) -> None:
 def test_pii_false(make_client) -> None:
     """Detector reporting no PERSON returns pii=false."""
     client = make_client(False)
-    resp = client.get("/api/v1/pii", params={"q": "the weather is nice"})
+    resp = client.post("/api/v1/pii", json={"q": "the weather is nice"})
     assert resp.status_code == 200
     assert resp.json() == {"pii": False}
 
 
 def test_missing_query(make_client) -> None:
-    """A missing `q` parameter is rejected with 422."""
+    """A missing `q` field is rejected with 422."""
     client = make_client(False)
-    resp = client.get("/api/v1/pii")
+    resp = client.post("/api/v1/pii", json={})
     assert resp.status_code == 422
 
 
 def test_query_too_long(make_client) -> None:
     """A `q` exceeding the configured max length is rejected with 422."""
     client = make_client(False)
-    resp = client.get("/api/v1/pii", params={"q": "x" * 501})
+    resp = client.post("/api/v1/pii", json={"q": "x" * 501})
     assert resp.status_code == 422
 
 
@@ -86,7 +86,7 @@ def test_pii_metrics(
     report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
     client = make_client(True)
-    client.get("/api/v1/pii", params={"q": "Alice Bob"})
+    client.post("/api/v1/pii", json={"q": "Alice Bob"})
 
     report.assert_called_once()
     assert report.call_args[0][0] == "pii.detect_duration"
