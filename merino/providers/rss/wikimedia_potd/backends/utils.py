@@ -1,10 +1,12 @@
 """Utility functions for parsing Wikimedia POTD RSS feed data."""
 
 from bs4 import BeautifulSoup, Tag
+from datetime import datetime
 from feedparser import FeedParserDict
 from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.utils.gcs.models import Image
 
 # This is needed to prevent Wikimedia from blocking our requests as bot requests.
 RSS_FETCH_REQUEST_HEADERS = {
@@ -75,3 +77,26 @@ def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict | None:
         return None
 
     return potd
+
+
+def build_potd_path_and_name(image: Image, is_thumbnail: bool) -> str:
+    """Build the name string for a potd and prepend the bucket directory path to it."""
+    # YYYY-MM-DD format
+    date_time = datetime.today().strftime("%Y-%m-%d")
+
+    # Under the bucket merino-images-prod, potd images are stored in the following directory.
+    dir_path_in_bucket = "rss/wikimedia_potd"
+    # append "_thumbnail" to the object name if it is a thumbnail image
+    suffix = "thumbnail" if is_thumbnail else "hi_res"
+
+    # extract image extension since the image.content_type has the format image/jpeg
+    extension = image.content_type.split("/")[-1]
+
+    # the path in the gcs bucket directory for the image would look like:
+    # "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
+    return f"{dir_path_in_bucket}/POTD_{date_time}_{suffix}.{extension}"
+
+
+def is_valid_potd_image_url(url: HttpUrl) -> bool:
+    """Validate url is an image url."""
+    return bool(str(url).split(".")[-1] in ["jpg", "jpeg", "png", "webp"])
