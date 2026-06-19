@@ -58,6 +58,7 @@ FALLBACK_COUNTRY_CODE: str = "US"
 CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
 TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
 ENGAGEMENT_GUIDED_SUGGESTIONS: str = "engagement_guided_suggestions"
+TOP_PICK_PROMOTION: str = "top_pick_promotion"
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -331,6 +332,13 @@ class Provider(BaseProvider):
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 
+            # A suggestion gets the "top pick" UI treatment when the request
+            # opted into `top_pick_promotion` and the record's `top_pick_prefix`
+            # appears in the query.
+            is_top_pick = None
+            if TOP_PICK_PROMOTION in client_variants:
+                is_top_pick = res.top_pick_prefix is not None and q.startswith(res.top_pick_prefix)
+
             url: str = res.url
 
             suggestion_dict: dict[str, Any] = {
@@ -346,6 +354,7 @@ class Provider(BaseProvider):
                 "is_sponsored": is_sponsored,
                 "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
                 "score": self.score,
+                "is_top_pick": is_top_pick,
             }
             return [
                 (

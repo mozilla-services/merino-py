@@ -119,6 +119,11 @@ class BaseSuggestion(BaseModel):
         description="[Optional] List that contains categories associated to the suggestion.",
     )
 
+    is_top_pick: bool | None = Field(
+        default=None,
+        description="[Optional] indicating if the suggestion requires a 'top pick' UI treatment.",
+    )
+
 
 class BaseProvider(ABC):
     """Abstract class for suggestion providers."""
