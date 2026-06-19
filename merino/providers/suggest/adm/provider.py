@@ -343,7 +343,7 @@ class Provider(BaseProvider):
                         "providers.adm.top_pick_promotion",
                         tags={
                             "advertiser": res.advertiser.lower(),
-                            "prefix_length": str(len(res.top_pick_prefix)),
+                            "prefix_length": len(res.top_pick_prefix),
                         },
                     )
 

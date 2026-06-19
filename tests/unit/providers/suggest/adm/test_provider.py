@@ -242,7 +242,7 @@ async def test_top_pick_promotion_metric_emitted_on_match(
         "providers.adm.top_pick_promotion",
         tags={
             "advertiser": "example.org",
-            "prefix_length": "4",
+            "prefix_length": 4,
         },
     )
 
