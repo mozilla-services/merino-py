@@ -13,6 +13,7 @@ from merino.utils.gcs.models import Image
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     RSS_FETCH_REQUEST_HEADERS,
     extract_potd,
+    parse_potd,
     build_potd_path_and_name,
     is_valid_potd_image_url,
 )
@@ -42,28 +43,42 @@ class WikimediaPotdBackend:
         self.gcs_uploader = gcs_uploader
 
     async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
-        """Fetch the current Wikimedia Picture of the Day.
+        """Orchestrate the fetching from the RSS feed, downloading and uploading
+        to the GCS bucket of thumbnail and hi-res version of the potd.
 
         Returns:
             A PictureOfTheDay instance if data is available, otherwise None.
         """
-        # TODO: remove when ready to fetch from live rss feed.
-        # potd = await self.fetch_picture_of_the_day()
+        # fetch the Wikimedia potd rss feed
+        rss_potd = await self.fetch_picture_of_the_day()
+        if rss_potd is None:
+            return None
 
-        # if potd is None:
-        #     return None
-        # else:
-        #     return parse_potd(potd=potd)
+        # parse the feed to extract a PictureOfTheDay instance
+        potd = parse_potd(rss_potd)
+        if potd is None:
+            return None
+
+        # download tumbnail and high resolution images for the above potd instance
+        # exit if either of them fails or is None
+        thumbnail_image = await self.download_image(potd.thumbnail_image_url)
+        hi_res_image = await self.download_image(potd.high_res_image_url)
+        if thumbnail_image is None or hi_res_image is None:
+            return None
+
+        # upload thumbnail and high resolution images to the gcs bucket / cdn
+        thumbnail_cdn_url = self.upload_image(image=thumbnail_image, is_thumbnail=True)
+        hires_cdn_url = self.upload_image(image=hi_res_image, is_thumbnail=False)
+        if thumbnail_cdn_url is None or hires_cdn_url is None:
+            return None
+
+        # return the above potd instance with thumbnail and hi-res image urls replaced by cdn urls
         return PictureOfTheDay(
-            title="Wikimedia Commons picture of the day",
-            thumbnail_image_url=HttpUrl(
-                "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_2026_04_13.jpg"
-            ),
-            high_res_image_url=HttpUrl(
-                "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
-            ),
-            published_date="Mon, 13 Apr 2026 00:00:00 GMT",
-            description="Sample Picture of the day description.",
+            title=potd.title,
+            description=potd.description,
+            published_date=potd.published_date,
+            thumbnail_image_url=HttpUrl(thumbnail_cdn_url),
+            high_res_image_url=HttpUrl(hires_cdn_url),
         )
 
     async def fetch_picture_of_the_day(self) -> FeedParserDict | None:
