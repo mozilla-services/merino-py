@@ -69,7 +69,6 @@ class SponsoredSuggestion(BaseSuggestion):
     advertiser: str
     impression_url: HttpUrl
     click_url: HttpUrl
-    is_top_pick: bool | None = None
 
 
 class NonsponsoredSuggestion(BaseSuggestion):
@@ -338,9 +337,7 @@ class Provider(BaseProvider):
             # appears in the query.
             is_top_pick = None
             if TOP_PICK_PROMOTION in client_variants:
-                is_top_pick = res.top_pick_prefix is not None and q.startswith(
-                    res.top_pick_prefix
-                )
+                is_top_pick = res.top_pick_prefix is not None and q.startswith(res.top_pick_prefix)
 
             url: str = res.url
 
