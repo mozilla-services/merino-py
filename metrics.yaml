@@ -258,6 +258,22 @@ suggest/adm:
       The "api/v1/suggest" API endpoint.
     alert_policy: []
 
+  providers_adm_top_pick_promotion:
+    description: |
+      A counter incremented when an ADM suggestion is promoted to the "top pick"
+      UI treatment. Emitted only on a positive match
+    type: counter
+    labels:
+      - name: advertiser
+        description: |
+          The lowercased advertiser name of the promoted suggestion.
+      - name: prefix_length
+        description: |
+          The character length of the matched `top_pick_prefix`.
+    scope: |
+      The "api/v1/suggest" API endpoint.
+    alert_policy: []
+
 suggest/mars:
   mars_fetch:
     description: |

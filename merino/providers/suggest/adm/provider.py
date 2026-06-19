@@ -338,6 +338,14 @@ class Provider(BaseProvider):
             is_top_pick = None
             if TOP_PICK_PROMOTION in client_variants:
                 is_top_pick = res.top_pick_prefix is not None and q.startswith(res.top_pick_prefix)
+                if is_top_pick and res.top_pick_prefix:
+                    self.metrics_client.increment(
+                        "providers.adm.top_pick_promotion",
+                        tags={
+                            "advertiser": res.advertiser.lower(),
+                            "prefix_length": len(res.top_pick_prefix),
+                        },
+                    )
 
             url: str = res.url
 
