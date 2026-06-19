@@ -224,6 +224,57 @@ async def test_query_is_top_pick(
     assert res[0].is_top_pick is expected_is_top_pick
 
 
+@pytest.mark.asyncio
+async def test_top_pick_promotion_metric_emitted_on_match(
+    srequest: SuggestionRequestFixture,
+    adm_top_pick: Provider,
+) -> None:
+    """The `top_pick_promotion` counter is emitted with advertiser, and
+    prefix_length tags when the prefix matches the query.
+    """
+    await adm_top_pick.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    await adm_top_pick.query(srequest("firefox", geolocation, user_agent, ["top_pick_promotion"]))
+
+    adm_top_pick.metrics_client.increment.assert_called_once_with(  # type: ignore[attr-defined]
+        "providers.adm.top_pick_promotion",
+        tags={
+            "advertiser": "example.org",
+            "prefix_length": "4",
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("query", "client_variants"),
+    [
+        ("mozilla", ["top_pick_promotion"]),
+        ("firefox", []),
+        ("firefox", ["some_other_variant"]),
+    ],
+    ids=["opted-in-prefix-not-in-query", "opted-out-no-variants", "opted-out-other-variant"],
+)
+@pytest.mark.asyncio
+async def test_top_pick_promotion_metric_not_emitted(
+    srequest: SuggestionRequestFixture,
+    adm_top_pick: Provider,
+    query: str,
+    client_variants: list[str],
+) -> None:
+    """The `top_pick_promotion` counter is not emitted when the prefix doesn't match
+    or the client did not opt in.
+    """
+    await adm_top_pick.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    await adm_top_pick.query(srequest(query, geolocation, user_agent, client_variants))
+
+    adm_top_pick.metrics_client.increment.assert_not_called()  # type: ignore[attr-defined]
+
+
 SAMPLE_ENGAGEMENT_DATA = EngagementData(
     amp={
         "mozilla/firefox": KeywordEntry(
