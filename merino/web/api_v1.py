@@ -91,8 +91,7 @@ from merino.providers.games.particle.provider import Provider as ParticleProvide
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Query normalization experiment
-NORMALIZATION_CLIENT_VARIANT: str = "query_norm_treatment"
+# Providers enabled for query normalization
 NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
 
 # Param to capture all enabled_by_default=True providers.
@@ -285,12 +284,10 @@ async def suggest(
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
     client_variants_list = client_variants.split(",") if client_variants else []
 
-    # Query normalization experiment (Phase 1: sports + finance only)
+    # Query normalization (sports and finance only)
     pipeline = get_pipeline()
-    use_normalization = (
-        pipeline is not None and NORMALIZATION_CLIENT_VARIANT in client_variants_list
-    )
-    if use_normalization and pipeline:
+    use_normalization = pipeline is not None
+    if pipeline is not None:
         with metrics_client.timeit("normalization.experiment.timing"):
             q_normalized = pipeline.normalize(q)
     else:
