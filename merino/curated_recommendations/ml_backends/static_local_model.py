@@ -57,7 +57,7 @@ FIXED_VALUE_Q = 0.0
 VERY_HIGH_THRESHOLD = 1000.0
 
 # Number of average impressions to blend in for interest calculation.
-BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS = 100
+BAYESIAN_SMOOTHING_PRIOR_IMPRESSIONS = 500
 
 # Features corresponding to a combination of remaining topics not specified in a feature model
 DEFAULT_INTERESTS_KEY = "other"
