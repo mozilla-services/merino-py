@@ -287,7 +287,7 @@ async def suggest(
     # Query normalization (sports and finance only)
     pipeline = get_pipeline()
     use_normalization = pipeline is not None
-    if use_normalization:
+    if pipeline is not None:
         with metrics_client.timeit("normalization.experiment.timing"):
             q_normalized = pipeline.normalize(q)
     else:
