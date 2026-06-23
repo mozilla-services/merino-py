@@ -62,6 +62,8 @@ class Locale(str, Enum):
     DE_DE = ("de-DE",)
     DE_AT = ("de-AT",)
     DE_CH = ("de-CH",)
+    PL = ("pl",)
+    PL_PL = ("pl-PL",)
 
     @staticmethod
     def values():

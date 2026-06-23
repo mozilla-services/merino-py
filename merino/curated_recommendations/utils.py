@@ -42,6 +42,8 @@ def get_recommendation_surface_id(
 
     if language == "de":
         return SurfaceId.NEW_TAB_DE_DE
+    elif language == "pl":
+        return SurfaceId.NEW_TAB_PL_PL
     elif language == "es":
         return SurfaceId.NEW_TAB_ES_ES
     elif language == "fr":

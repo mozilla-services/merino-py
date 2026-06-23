@@ -28,6 +28,12 @@ def test_get_translation_de_de():
     assert result == "Meistgelesen"
 
 
+def test_get_translation_pl_pl():
+    """Test that pl-PL surface has correct localized section title."""
+    result = get_translation(SurfaceId.NEW_TAB_PL_PL, "top-stories", "Default")
+    assert result == "Przegląd dnia"
+
+
 def test_get_translation_non_existing_locale(caplog):
     """Test logs error and falls back to default when locale translations do not exist."""
     result = get_translation(SurfaceId.NEW_TAB_IT_IT, "business", "Default")
