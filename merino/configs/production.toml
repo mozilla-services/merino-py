@@ -39,6 +39,12 @@ gcs_bucket = "merino-images-prodpy"
 # CDN hostname used for public URLs of stored images
 cdn_hostname = "merino-images.services.mozilla.com"
 
+[production.games_providers.particle]
+# MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED
+# Enable/disable execution of the Particle file update process
+# Schedule is managed by K8s cron job
+enabled = true
+
 [production.games_particle_gcs]
 # MERINO_GAMES_PARTICLE__GCS_PROJECT
 # GCS project name that contains domain data (GCP V2)
