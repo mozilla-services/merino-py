@@ -2,6 +2,7 @@
 
 import logging
 import aiodogstatsd
+import asyncio
 from pydantic import HttpUrl
 
 from merino.providers.rss.base import BaseRssProvider
@@ -19,7 +20,7 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
     backend: WikimediaPictureOfTheDayBackend
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
-    manifest_data: None
+    potd: PictureOfTheDay | None
 
     def __init__(
         self,
@@ -35,15 +36,18 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         self.backend = backend
         self.metrics_client = metrics_client
         self.url = HttpUrl("https://merino.services.mozilla.com/")
-        self.manifest_data = None
+        self.potd = None
 
     async def initialize(self) -> None:
         """Initialize the provider."""
+        if self.potd is None:
+            # fetch potd from the gcs bucket instead
+            self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
 
-    async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
-        """Return the current Wikimedia Picture of the Day."""
-        potd = await self.backend.get_picture_of_the_day()
-        return potd if potd else None
+    def get_picture_of_the_day(self) -> PictureOfTheDay | None:
+        """Return the current Wikimedia Picture of the Day or None."""
+        return self.potd
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
+        # TODO

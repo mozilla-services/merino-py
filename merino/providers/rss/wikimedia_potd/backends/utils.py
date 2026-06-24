@@ -21,8 +21,12 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
         A PictureOfTheDay instance if all required data is present, otherwise None.
     """
     title = str(potd.title)
-    published_date = str(potd.published)
     description = str(potd.description)
+
+    # convert date to "2026-06-11" format from this format "Thu, 11 Jun 2026 00:00:00 GMT"
+    published_date = datetime.strptime(str(potd.published), "%a, %d %b %Y %H:%M:%S %Z").strftime(
+        "%Y-%m-%d"
+    )
 
     parser = BeautifulSoup(description, "html.parser")
 

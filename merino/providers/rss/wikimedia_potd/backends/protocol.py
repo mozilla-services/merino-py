@@ -21,10 +21,10 @@ class PictureOfTheDay(BaseModel):
 class WikimediaPictureOfTheDayBackend(Protocol):
     """Protocol for a Wikimedia POTD backend that this provider depends on."""
 
-    async def get_picture_of_the_day(self) -> PictureOfTheDay | None:  # pragma: no cover
-        """Fetch the current Wikimedia Picture of the Day.
+    def fetch_potd_from_gcs_bucket(self) -> PictureOfTheDay | None:  # pragma: no cover
+        """Fetch the Wikimedia picture of the day from the gcs bucket.
 
         Returns:
-            A Potd instance if data is available, otherwise None.
+            A Potd object if available, otherwise None.
         """
         ...
