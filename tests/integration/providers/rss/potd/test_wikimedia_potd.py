@@ -47,7 +47,7 @@ class TestUploadImageMethod:
         test_image = Image(content=b"", content_type="Image/jpeg")
 
         # call the backend method to upload the image
-        backend.upload_image(image=test_image, is_thumbnail=True)
+        backend.upload_potd_image(image=test_image, is_thumbnail=True)
 
         # get the blob (image) from the same bucket assigned to the gcs_uploader instance of the backend object
         blobs_in_bucket = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
@@ -69,7 +69,7 @@ class TestUploadImageMethod:
             "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
         )
 
-        actual = backend.upload_image(image=test_image, is_thumbnail=True)
+        actual = backend.upload_potd_image(image=test_image, is_thumbnail=True)
         assert actual is None
 
         # assert on sentry calls
@@ -89,7 +89,7 @@ class TestDownloadImageMethod:
         url_with_incorrect_extension = HttpUrl("http://www.test-image.com/image.txt")
 
         # call the backend method to download the image
-        actual = await backend.download_image(url=url_with_incorrect_extension)
+        actual = await backend.download_potd_image(url=url_with_incorrect_extension)
 
         assert actual is None
 
@@ -109,7 +109,7 @@ class TestDownloadImageMethod:
         )
 
         # call the backend method to download the image
-        actual = await backend.download_image(url=image_url)
+        actual = await backend.download_potd_image(url=image_url)
 
         assert actual is None
 
@@ -134,7 +134,7 @@ class TestDownloadImageMethod:
         )
 
         # call the backend method to download the image
-        actual: Image | None = await backend.download_image(url=image_url)
+        actual: Image | None = await backend.download_potd_image(url=image_url)
 
         assert actual is not None
         assert actual.content == b"255"

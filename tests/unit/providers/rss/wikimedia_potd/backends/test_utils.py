@@ -99,7 +99,7 @@ def test_parse_potd_returns_picture_of_the_day(potd_entry: FeedParserDict) -> No
 
     assert isinstance(result, PictureOfTheDay)
     assert result.title == "Test POTD"
-    assert result.published_date == "Mon, 13 Apr 2026 00:00:00 GMT"
+    assert result.published_date == "2026-04-13"
     assert result.description == "Test description."
     assert str(result.thumbnail_image_url) == THUMBNAIL_URL
     assert str(result.high_res_image_url) == HIGH_RES_URL

@@ -3,6 +3,8 @@
 import logging
 import aiodogstatsd
 import feedparser
+import orjson
+from datetime import datetime
 from pydantic import HttpUrl
 from feedparser import FeedParserDict
 from httpx import AsyncClient, HTTPError, Response
@@ -42,46 +44,38 @@ class WikimediaPotdBackend:
         self.http_client = http_client
         self.gcs_uploader = gcs_uploader
 
-    async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
-        """Orchestrate the fetching from the RSS feed, downloading and uploading
-        to the GCS bucket of thumbnail and hi-res version of the potd.
-
+    async def download_and_upload_potd_images(self) -> bool:
+        """TODO
         Returns:
             A PictureOfTheDay instance if data is available, otherwise None.
         """
         # fetch the Wikimedia potd rss feed
-        rss_potd = await self.fetch_picture_of_the_day()
+        rss_potd = await self.fetch_picture_of_the_day_from_feed()
         if rss_potd is None:
-            return None
+            return False
 
         # parse the feed to extract a PictureOfTheDay instance
         potd = parse_potd(rss_potd)
         if potd is None:
-            return None
+            return False
 
         # download tumbnail and high resolution images for the above potd instance
         # exit if either of them fails or is None
-        thumbnail_image = await self.download_image(potd.thumbnail_image_url)
-        hi_res_image = await self.download_image(potd.high_res_image_url)
+        thumbnail_image = await self.download_potd_image(potd.thumbnail_image_url)
+        hi_res_image = await self.download_potd_image(potd.high_res_image_url)
         if thumbnail_image is None or hi_res_image is None:
-            return None
+            return False
 
         # upload thumbnail and high resolution images to the gcs bucket / cdn
-        thumbnail_cdn_url = self.upload_image(image=thumbnail_image, is_thumbnail=True)
-        hires_cdn_url = self.upload_image(image=hi_res_image, is_thumbnail=False)
+        thumbnail_cdn_url = self.upload_potd_image(image=thumbnail_image, is_thumbnail=True)
+        hires_cdn_url = self.upload_potd_image(image=hi_res_image, is_thumbnail=False)
         if thumbnail_cdn_url is None or hires_cdn_url is None:
-            return None
+            return False
 
-        # return the above potd instance with thumbnail and hi-res image urls replaced by cdn urls
-        return PictureOfTheDay(
-            title=potd.title,
-            description=potd.description,
-            published_date=potd.published_date,
-            thumbnail_image_url=HttpUrl(thumbnail_cdn_url),
-            high_res_image_url=HttpUrl(hires_cdn_url),
-        )
+        # todo
+        return True
 
-    async def fetch_picture_of_the_day(self) -> FeedParserDict | None:
+    async def fetch_picture_of_the_day_from_feed(self) -> FeedParserDict | None:
         """Fetch Wikimedia Commons picture of the day RSS feed."""
         try:
             feed: Response = await self.http_client.get(
@@ -100,7 +94,7 @@ class WikimediaPotdBackend:
             logger.error(f"HTTP error occurred when fetching Wikimedia POTD feed: {ex}")
             return None
 
-    async def download_image(self, url: HttpUrl) -> Image | None:
+    async def download_potd_image(self, url: HttpUrl) -> Image | None:
         """Download the image using the image URL.
 
         Returns an Image object containing the binary content and content type,
@@ -126,7 +120,7 @@ class WikimediaPotdBackend:
             sentry_sdk.capture_exception(ex)
             return None
 
-    def upload_image(self, image: Image, is_thumbnail: bool) -> str | None:
+    def upload_potd_image(self, image: Image, is_thumbnail: bool) -> str | None:
         """Upload an image to the bucket."""
         potd_path_and_name = build_potd_path_and_name(image=image, is_thumbnail=is_thumbnail)
 
@@ -136,3 +130,41 @@ class WikimediaPotdBackend:
         except Exception as ex:
             sentry_sdk.capture_exception(ex)
             return None
+
+    def build_and_upload_potd(self, potd: PictureOfTheDay) -> bool:
+        """Build and upload a PictureOfTheDay object to the gcs bucket."""
+        is_success = False
+        try:
+            # build manifest json here
+            manifest_json_bytes = orjson.dumps(potd.model_dump_json())
+
+            manifest_blob = self.gcs_uploader.upload_content(
+                content=manifest_json_bytes,
+                destination_name=f"rss/wikimedia_potd/POTD_{potd.published_date}.json",
+                content_type="application/json",
+                forced_upload=True,
+            )
+            if manifest_blob is None:
+                logger.error("Wikimedia potd manifest upload failed.")
+                return is_success
+
+            is_success = True
+            return is_success
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
+            return is_success
+
+    def fetch_potd_from_gcs_bucket(self) -> PictureOfTheDay | None:
+        """Fetch the PictureOfTheDay object from the gcs bucket."""
+        try:
+            today = datetime.today().strftime("%Y-%m-%d")
+            blob = self.gcs_uploader.get_file_by_name(f"rss/wikimedia_potd/POTD_{today}.json")
+
+            if blob:
+                potd_json = blob.download_as_text()
+
+                return PictureOfTheDay.model_validate_json(potd_json)
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
+
+        return None
