@@ -93,6 +93,7 @@ def fixture_potd_entry() -> FeedParserDict:
     )
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_picture_of_the_day(potd_entry: FeedParserDict) -> None:
     """Returns a PictureOfTheDay with correct fields when all data is present."""
     result = parse_potd(potd_entry)
@@ -105,6 +106,7 @@ def test_parse_potd_returns_picture_of_the_day(potd_entry: FeedParserDict) -> No
     assert str(result.high_res_image_url) == HIGH_RES_URL
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_empty_description_when_no_description_div(
     potd_entry: FeedParserDict,
 ) -> None:
@@ -132,6 +134,7 @@ def test_parse_potd_returns_none_when_img_has_no_src(potd_entry: FeedParserDict)
     assert parse_potd(potd_entry) is None
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_derives_high_res_url_from_thumbnail(potd_entry: FeedParserDict) -> None:
     """Derives high_res_image_url by stripping /thumb and the trailing size segment from the thumbnail URL."""
     thumbnail = (
