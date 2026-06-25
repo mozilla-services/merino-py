@@ -131,6 +131,11 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("fr", "FR", SurfaceId.NEW_TAB_FR_FR),
             ("it", "IT", SurfaceId.NEW_TAB_IT_IT),
             ("es", "ES", SurfaceId.NEW_TAB_ES_ES),
+            ("pl", "PL", SurfaceId.NEW_TAB_PL_PL),
+            ("pl-PL", "PL", SurfaceId.NEW_TAB_PL_PL),
+            # Polish locale primarily determines the market, even without a region.
+            ("pl", None, SurfaceId.NEW_TAB_PL_PL),
+            ("pl-PL", None, SurfaceId.NEW_TAB_PL_PL),
             ("en-CA", "IN", SurfaceId.NEW_TAB_EN_INTL),
             ("en-GB", "IN", SurfaceId.NEW_TAB_EN_INTL),
             ("en-US", "IN", SurfaceId.NEW_TAB_EN_INTL),

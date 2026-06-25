@@ -49,6 +49,7 @@ class SurfaceId(str, Enum):
     NEW_TAB_ES_ES = "NEW_TAB_ES_ES"
     NEW_TAB_FR_FR = "NEW_TAB_FR_FR"
     NEW_TAB_IT_IT = "NEW_TAB_IT_IT"
+    NEW_TAB_PL_PL = "NEW_TAB_PL_PL"
 
 
 class CreateSource(str, Enum):

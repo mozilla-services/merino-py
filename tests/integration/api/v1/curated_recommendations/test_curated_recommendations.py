@@ -765,6 +765,8 @@ class TestCuratedRecommendationsRequestParameters:
             (Locale.ES_ES, SurfaceId.NEW_TAB_ES_ES),
             (Locale.IT, SurfaceId.NEW_TAB_IT_IT),
             (Locale.IT_IT, SurfaceId.NEW_TAB_IT_IT),
+            (Locale.PL, SurfaceId.NEW_TAB_PL_PL),
+            (Locale.PL_PL, SurfaceId.NEW_TAB_PL_PL),
         ],
     )
     def test_curated_recommendations_locales(self, locale, surface_id, client: TestClient):
@@ -1529,6 +1531,7 @@ class TestSections:
         [
             SurfaceId.NEW_TAB_EN_US,
             SurfaceId.NEW_TAB_EN_GB,
+            SurfaceId.NEW_TAB_PL_PL,
         ],
     )
     def test_section_translations(self, surface_id):

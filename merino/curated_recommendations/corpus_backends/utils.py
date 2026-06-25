@@ -47,6 +47,7 @@ def get_utm_source(surface_id: SurfaceId) -> str | None:
         SurfaceId.NEW_TAB_ES_ES: "firefox-newtab-es-es",
         SurfaceId.NEW_TAB_FR_FR: "firefox-newtab-fr-fr",
         SurfaceId.NEW_TAB_IT_IT: "firefox-newtab-it-it",
+        SurfaceId.NEW_TAB_PL_PL: "firefox-newtab-pl-pl",
     }
     return utm_mapping.get(surface_id)
 

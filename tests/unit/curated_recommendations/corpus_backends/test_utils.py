@@ -65,6 +65,7 @@ def test_get_utm_source_return_none(scheduled_surface_id):
         (SurfaceId.NEW_TAB_ES_ES, "firefox-newtab-es-es"),
         (SurfaceId.NEW_TAB_FR_FR, "firefox-newtab-fr-fr"),
         (SurfaceId.NEW_TAB_IT_IT, "firefox-newtab-it-it"),
+        (SurfaceId.NEW_TAB_PL_PL, "firefox-newtab-pl-pl"),
     ],
 )
 def test_get_utm_source(scheduled_surface_id, expected_utm_source):
