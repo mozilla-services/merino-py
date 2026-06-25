@@ -6,6 +6,7 @@
 
 import logging
 import pytest
+import freezegun
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
 from pydantic import HttpUrl
@@ -56,120 +57,121 @@ class TestWikimediaPotdBackend:
     class TestDownloadAndUploadPotdImagesMethod:
         """Tests for download_and_upload_potd_images method."""
 
-    @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_true_for_correct_xml_response(
-        self, backend, mocker: MockerFixture
-    ) -> None:
-        """Test that download_and_upload_potd_images method returns true for correct xml response."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        @pytest.mark.asyncio
+        @freezegun.freeze_time("2026-06-24")
+        async def test_download_and_upload_potd_images_returns_true_for_correct_xml_response(
+            self, backend, mocker: MockerFixture
+        ) -> None:
+            """Test that download_and_upload_potd_images method returns true for correct xml response."""
+            client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
-        # mocking http client to respond with the correct xml
-        client_mock.get.return_value = Response(
-            status_code=200,
-            content=TEST_RSS_FEED,
-            request=Request(method="GET", url=FEED_URL),
-        )
+            # mocking http client to respond with the correct xml
+            client_mock.get.return_value = Response(
+                status_code=200,
+                content=TEST_RSS_FEED,
+                request=Request(method="GET", url=FEED_URL),
+            )
 
-        # mocking the download and upload methods to return happy path responses
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/jpeg"
-        )
-        mocker.patch.object(backend, "upload_potd_image").return_value = HttpUrl(
-            "https://www.test-image.com/image.jpeg"
-        )
+            # mocking the download and upload methods to return happy path responses
+            mocker.patch.object(backend, "download_potd_image").return_value = Image(
+                content=b"255", content_type="Image/jpeg"
+            )
+            mocker.patch.object(backend, "upload_potd_image").return_value = HttpUrl(
+                "https://www.test-image.com/image.jpeg"
+            )
 
-        result = await backend.download_and_upload_potd_images()
-        assert result is True
+            result = await backend.download_and_upload_potd_images()
+            assert result is True
 
-    @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_false_when_no_rss_feed_is_fetched_with_200_ok(
-        self, backend
-    ) -> None:
-        """Test that download_and_upload_potd_images method returns false when no rss feed is fetched."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+            @pytest.mark.asyncio
+            async def test_download_and_upload_potd_images_returns_false_when_no_rss_feed_is_fetched_with_200_ok(
+                self, backend
+            ) -> None:
+                """Test that download_and_upload_potd_images method returns false when no rss feed is fetched."""
+                client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
-        # mocking http client to respond with no xml
-        client_mock.get.return_value = Response(
-            status_code=200,
-            content=None,
-            request=Request(method="GET", url=FEED_URL),
-        )
+                # mocking http client to respond with no xml
+                client_mock.get.return_value = Response(
+                    status_code=200,
+                    content=None,
+                    request=Request(method="GET", url=FEED_URL),
+                )
 
-        result = await backend.download_and_upload_potd_images()
-        assert result is False
+                result = await backend.download_and_upload_potd_images()
+                assert result is False
 
-    @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_false_when_response_is_not_200_ok(
-        self, backend
-    ) -> None:
-        """Test that download_and_upload_potd_images method returns false response returns a 500 error."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+            @pytest.mark.asyncio
+            async def test_download_and_upload_potd_images_returns_false_when_response_is_not_200_ok(
+                self, backend
+            ) -> None:
+                """Test that download_and_upload_potd_images method returns false response returns a 500 error."""
+                client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
-        # mocking http client to respond with a 500 error
-        client_mock.get.return_value = Response(
-            status_code=500,
-            content=None,
-            request=Request(method="GET", url=FEED_URL),
-        )
+                # mocking http client to respond with a 500 error
+                client_mock.get.return_value = Response(
+                    status_code=500,
+                    content=None,
+                    request=Request(method="GET", url=FEED_URL),
+                )
 
-        result = await backend.download_and_upload_potd_images()
-        assert result is False
+                result = await backend.download_and_upload_potd_images()
+                assert result is False
 
-    @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_false_when_parsing_fails(
-        self, backend
-    ) -> None:
-        """Test that download_and_upload_potd_images method returns false when an parsing fails on invalid xml response."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+            @pytest.mark.asyncio
+            async def test_download_and_upload_potd_images_returns_false_when_parsing_fails(
+                self, backend
+            ) -> None:
+                """Test that download_and_upload_potd_images method returns false when an parsing fails on invalid xml response."""
+                client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
-        # mocking http client to respond with incorrect xml
-        client_mock.get.return_value = Response(
-            status_code=200,
-            content=TEST_RSS_FEED_MISSING_FIELDS,
-            request=Request(method="GET", url=FEED_URL),
-        )
+                # mocking http client to respond with incorrect xml
+                client_mock.get.return_value = Response(
+                    status_code=200,
+                    content=TEST_RSS_FEED_MISSING_FIELDS,
+                    request=Request(method="GET", url=FEED_URL),
+                )
 
-        result = await backend.download_and_upload_potd_images()
-        assert result is False
+                result = await backend.download_and_upload_potd_images()
+                assert result is False
 
-    @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_false_when_downloading_image_fails(
-        self, backend, mocker: MockerFixture
-    ) -> None:
-        """Test that download_and_upload_potd_images method returns false when downloading image fails."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-        client_mock.get.return_value = Response(
-            status_code=200,
-            content=TEST_RSS_FEED,
-            request=Request(method="GET", url=FEED_URL),
-        )
+            @pytest.mark.asyncio
+            async def test_download_and_upload_potd_images_returns_false_when_downloading_image_fails(
+                self, backend, mocker: MockerFixture
+            ) -> None:
+                """Test that download_and_upload_potd_images method returns false when downloading image fails."""
+                client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+                client_mock.get.return_value = Response(
+                    status_code=200,
+                    content=TEST_RSS_FEED,
+                    request=Request(method="GET", url=FEED_URL),
+                )
 
-        # mocking download_potd_image method to return None
-        mocker.patch.object(backend, "download_potd_image").return_value = None
+                # mocking download_potd_image method to return None
+                mocker.patch.object(backend, "download_potd_image").return_value = None
 
-        result = await backend.download_and_upload_potd_images()
-        assert result is False
+                result = await backend.download_and_upload_potd_images()
+                assert result is False
 
-    @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_false_when_uploading_image_fails(
-        self, backend, mocker: MockerFixture
-    ) -> None:
-        """Test that download_and_upload_potd_images method returns false when uploading image fails."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-        client_mock.get.return_value = Response(
-            status_code=200,
-            content=TEST_RSS_FEED,
-            request=Request(method="GET", url=FEED_URL),
-        )
+            @pytest.mark.asyncio
+            async def test_download_and_upload_potd_images_returns_false_when_uploading_image_fails(
+                self, backend, mocker: MockerFixture
+            ) -> None:
+                """Test that download_and_upload_potd_images method returns false when uploading image fails."""
+                client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+                client_mock.get.return_value = Response(
+                    status_code=200,
+                    content=TEST_RSS_FEED,
+                    request=Request(method="GET", url=FEED_URL),
+                )
 
-        # mocking download method to return a valid value but not for the upload method
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/jpeg"
-        )
-        mocker.patch.object(backend, "upload_potd_image").return_value = None
+                # mocking download method to return a valid value but not for the upload method
+                mocker.patch.object(backend, "download_potd_image").return_value = Image(
+                    content=b"255", content_type="Image/jpeg"
+                )
+                mocker.patch.object(backend, "upload_potd_image").return_value = None
 
-        result = await backend.download_and_upload_potd_images()
-        assert result is False
+                result = await backend.download_and_upload_potd_images()
+                assert result is False
 
     class TestFetchPictureOfTheDayFromFeedMethod:
         """Tests for fetch_picture_of_the_day method."""

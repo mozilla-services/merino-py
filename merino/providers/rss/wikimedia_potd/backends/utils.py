@@ -1,5 +1,6 @@
 """Utility functions for parsing Wikimedia POTD RSS feed data."""
 
+import sentry_sdk
 from bs4 import BeautifulSoup, Tag
 from datetime import datetime
 from feedparser import FeedParserDict
@@ -20,13 +21,22 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
     Returns:
         A PictureOfTheDay instance if all required data is present, otherwise None.
     """
-    title = str(potd.title)
-    description = str(potd.description)
+    today = datetime.today().strftime("%Y-%m-%d")
 
     # convert date to "2026-06-11" format from this format "Thu, 11 Jun 2026 00:00:00 GMT"
     published_date = datetime.strptime(str(potd.published), "%a, %d %b %Y %H:%M:%S %Z").strftime(
         "%Y-%m-%d"
     )
+
+    if published_date != today:
+        sentry_sdk.capture_message(
+            f"Wikimedia potd published date not equal to today. Expected: {today}, received: {published_date}",
+            level="warning",
+        )
+        return None
+
+    title = str(potd.title)
+    description = str(potd.description)
 
     parser = BeautifulSoup(description, "html.parser")
 

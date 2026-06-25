@@ -50,4 +50,4 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
-        # TODO
+        await self.backend.shutdown()

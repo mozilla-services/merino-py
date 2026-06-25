@@ -1,7 +1,6 @@
 """Merino V1 API"""
 
 import logging
-import asyncio
 from asyncio import Task
 from functools import partial
 from itertools import chain
@@ -655,7 +654,7 @@ async def get_picture_of_the_day(
     """Get the picture of the day."""
     potd = None
     try:
-        potd = await asyncio.to_thread(provider.get_picture_of_the_day)
+        potd = provider.get_picture_of_the_day
     except Exception as ex:
         logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
 
