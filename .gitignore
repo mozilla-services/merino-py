@@ -175,3 +175,6 @@ local_data/
 
 # Local data for development
 dev/local_data/
+dev/local_setup/gcs
+# Don't ignore files we need in source control for tests
+!dev/local_setup/gcs/logos
