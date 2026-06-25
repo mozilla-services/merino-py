@@ -32,7 +32,6 @@ services:
     ports:
       - 4443:4443
     volumes:
-      - ./local_data/gcs_emulator:/data
       - ./local_setup/gcs/:/data
     command: -port=4443 -public-host=localhost:4443 -scheme=http
 
