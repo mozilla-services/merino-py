@@ -37,7 +37,6 @@ from merino.curated_recommendations.rankers.interest_ranker import InterestRanke
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
-    DECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import (
@@ -58,7 +57,6 @@ from merino.curated_recommendations.protocol import (
     DailyBriefingBranch,
     ProcessedInterests,
     Layout,
-    SectionsInGermanyV2Branch,
 )
 from merino.curated_recommendations.article_balancer_configs import (
     ArticleBalancerConfig,
@@ -458,21 +456,12 @@ def get_ranking_rescaler_for_branch(
     if is_scheduler_holdback_experiment(request):
         return SchedulerHoldbackRescaler()
 
-    if surface_id == SurfaceId.NEW_TAB_EN_GB:
-        return CrawledContentRescaler()
-
-    if surface_id == SurfaceId.NEW_TAB_EN_IE:
-        return CrawledContentRescaler()
-
-    if surface_id == SurfaceId.NEW_TAB_DE_DE and (
-        is_enrolled_in_experiment(request, "sections-in-germany", "sections")
-        or is_enrolled_in_experiment(
-            request,
-            ExperimentName.SECTIONS_IN_GERMANY_V2.value,
-            SectionsInGermanyV2Branch.SECTIONS.value,
-        )
+    if surface_id in (
+        SurfaceId.NEW_TAB_EN_GB,
+        SurfaceId.NEW_TAB_EN_IE,
+        SurfaceId.NEW_TAB_DE_DE,
     ):
-        return DECrawledContentRescaler()
+        return CrawledContentRescaler()
 
     if surface_id == SurfaceId.NEW_TAB_EN_CA:
         if request.inferredInterests is None:

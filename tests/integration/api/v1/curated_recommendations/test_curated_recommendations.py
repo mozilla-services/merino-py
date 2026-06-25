@@ -440,10 +440,10 @@ def fetch_en_us(client: TestClient) -> Response:
     )
 
 
-def fetch_de_de(client: TestClient) -> Response:
-    """Make a curated recommendations request with de-DE locale (uses scheduled_surface backend)"""
+def fetch_fr_fr(client: TestClient) -> Response:
+    """Make a curated recommendations request with fr-FR locale (uses scheduled_surface backend)"""
     return client.post(
-        "/api/v1/curated-recommendations", json={"locale": "de-DE", "topics": [Topic.FOOD]}
+        "/api/v1/curated-recommendations", json={"locale": "fr-FR", "topics": [Topic.FOOD]}
     )
 
 
@@ -511,14 +511,14 @@ class TestLegacyEndpoints:
     """Test the legacy curated recommendations endpoints (fx114 and fx115-129).
 
     These endpoints have two code paths:
-    - US/CA/GB locales (en-US, en-CA, en-GB): use sections backend via get_legacy_recommendations_from_sections
-    - Other locales (de-DE, fr-FR, etc.): use scheduler backend via CuratedRecommendationsProvider
+    - Rolled-out section surfaces (en-US, en-CA, en-GB, de-DE): use sections backend via get_legacy_recommendations_from_sections
+    - Other locales (fr-FR, es-ES, etc.): use scheduler backend via CuratedRecommendationsProvider
     """
 
-    # Locales that use the sections backend (US/CA/GB)
-    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA", "en-GB"]
-    # Locales that use the scheduler backend (non-US/CA/GB)
-    SCHEDULER_BACKEND_LOCALES = ["de-DE", "fr-FR", "es-ES", "it-IT"]
+    # Locales that use the sections backend (rolled-out section surfaces)
+    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA", "en-GB", "de-DE"]
+    # Locales that use the scheduler backend (non-rolled-out)
+    SCHEDULER_BACKEND_LOCALES = ["fr-FR", "es-ES", "it-IT"]
 
     @pytest.mark.parametrize(
         "locale",
@@ -1098,12 +1098,12 @@ class TestCuratedRecommendationsRequestParameters:
     ):
         """Test non-sections requests boost preferred topics to top positions.
 
-        Uses de-DE locale (scheduler backend path) which supports topic boosting.
+        Uses fr-FR locale (scheduler backend path) which supports topic boosting.
         Note: en-US non-sections requests intentionally do NOT apply topic boosting.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": "de-DE", "topics": preferred_topics},
+            json={"locale": "fr-FR", "topics": preferred_topics},
         )
         data = response.json()
         corpus_items = data["data"]
@@ -1168,7 +1168,7 @@ class TestCuratedRecommendationsRequestParameters:
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
-        Uses de-DE locale to test scheduled_surface backend behavior.
+        Uses fr-FR locale to test scheduled_surface backend behavior.
         """
         caplog.set_level(logging.WARN)
         scheduled_surface_http_client.post.return_value = Response(
@@ -1177,7 +1177,7 @@ class TestCuratedRecommendationsRequestParameters:
             request=fixture_request_data,
         )
         response = client.post(
-            "/api/v1/curated-recommendations", json={"locale": "de-DE", "topics": topics}
+            "/api/v1/curated-recommendations", json={"locale": "fr-FR", "topics": topics}
         )
         data = response.json()
         corpus_items = data["data"]
@@ -1202,7 +1202,7 @@ class TestCuratedRecommendationsRequestParameters:
 
 class TestCorpusApiCaching:
     """Tests covering the caching behavior of the Corpus backend.
-    Uses de-DE locale to test scheduled_surface backend caching (en-US uses sections backend).
+    Uses fr-FR locale to test scheduled_surface backend caching (en-US uses sections backend).
     """
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -1211,7 +1211,7 @@ class TestCorpusApiCaching:
     ):
         """Test that only a single request is made to the curated-corpus-api."""
         # Gather multiple fetch calls
-        results = [fetch_de_de(client) for _ in range(3)]
+        results = [fetch_fr_fr(client) for _ in range(3)]
         # Assert that recommendations were returned in each response.
         assert all(len(result.json()["data"]) > 0 for result in results)
 
@@ -1275,7 +1275,7 @@ class TestCorpusApiCaching:
         # Hit the endpoint until a 200 response is received or until timeout.
         while datetime.now() < start_time + timedelta(seconds=1):
             try:
-                result = fetch_de_de(client)
+                result = fetch_fr_fr(client)
                 if result.status_code == 200:
                     break
             except HTTPStatusError:
@@ -1299,11 +1299,11 @@ class TestCorpusApiCaching:
         client: TestClient,
     ):
         """Test that the cache expires, and subsequent requests return new data.
-        Uses de-DE locale to test scheduled_surface backend caching.
+        Uses fr-FR locale to test scheduled_surface backend caching.
         """
         with freezegun.freeze_time(tick=True) as frozen_datetime:
             # First fetch to populate cache
-            initial_response = fetch_de_de(client)
+            initial_response = fetch_fr_fr(client)
             initial_data = initial_response.json()
 
             for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
@@ -1319,11 +1319,11 @@ class TestCorpusApiCaching:
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
             # When the cache is expired, the first fetch may return stale data.
-            fetch_de_de(client)
+            fetch_fr_fr(client)
             await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
 
             # Next fetch should get the new data
-            new_response = fetch_de_de(client)
+            new_response = fetch_fr_fr(client)
             assert scheduled_surface_http_client.post.call_count == 2
             new_data = new_response.json()
             assert new_data["recommendedAt"] > initial_data["recommendedAt"]
@@ -1334,7 +1334,7 @@ class TestCorpusApiCaching:
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         # First fetch to populate cache with good data
-        initial_response = fetch_de_de(client)
+        initial_response = fetch_fr_fr(client)
         initial_data = initial_response.json()
         assert initial_response.status_code == 200
         assert scheduled_surface_http_client.post.call_count == 1
@@ -1346,7 +1346,7 @@ class TestCorpusApiCaching:
         )
 
         # Try to fetch data when cache expired
-        new_response = fetch_de_de(client)
+        new_response = fetch_fr_fr(client)
         new_data = new_response.json()
 
         assert new_response.status_code == 200
@@ -1356,14 +1356,14 @@ class TestCorpusApiCaching:
 
 class TestCuratedRecommendationsMetrics:
     """Tests that the right metrics are recorded for curated-recommendations requests.
-    Uses de-DE locale to test scheduled_surface backend metrics.
+    Uses fr-FR locale to test scheduled_surface backend metrics.
     """
 
     def test_metrics_cache_miss(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are not yet cached."""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-        fetch_de_de(client)
+        fetch_fr_fr(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1378,11 +1378,11 @@ class TestCuratedRecommendationsMetrics:
     def test_metrics_cache_hit(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are cached."""
         # The first call populates the cache.
-        fetch_de_de(client)
+        fetch_fr_fr(client)
 
         # This test covers only the metrics emitted from the following cached call.
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
-        fetch_de_de(client)
+        fetch_fr_fr(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1419,7 +1419,7 @@ class TestCuratedRecommendationsMetrics:
 
         scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
-        fetch_de_de(client)
+        fetch_fr_fr(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -2920,7 +2920,7 @@ def test_curated_recommendations_enriched_with_icons(
     client: TestClient,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url.
-    Uses de-DE locale to test scheduled_surface backend icon enrichment.
+    Uses fr-FR locale to test scheduled_surface backend icon enrichment.
     """
     # Set up the manifest data first
     manifest_provider.manifest_data.domains = [
@@ -2944,7 +2944,7 @@ def test_curated_recommendations_enriched_with_icons(
                         "id": "scheduledSurfaceItemId-ABC",
                         "corpusItem": {
                             "id": "corpusItemId-XYZ",
-                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-de-de",
+                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-fr-fr",
                             "title": "Some MS Article",
                             "excerpt": "All about Microsoft something",
                             "topic": "tech",
@@ -2965,7 +2965,7 @@ def test_curated_recommendations_enriched_with_icons(
 
     response = client.post(
         "/api/v1/curated-recommendations",
-        json={"locale": "de-DE"},
+        json={"locale": "fr-FR"},
     )
     assert response.status_code == 200
 
@@ -2974,7 +2974,7 @@ def test_curated_recommendations_enriched_with_icons(
     assert len(items) == 1
 
     item = items[0]
-    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-de-de"
+    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-fr-fr"
 
     assert "iconUrl" in item
     assert (
