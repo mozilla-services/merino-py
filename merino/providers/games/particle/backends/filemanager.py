@@ -10,7 +10,10 @@ from json import JSONDecodeError
 from pydantic import Json
 from typing import Any
 
-from merino.providers.games.particle.backends.errors import ParticleFileManagerError
+from merino.providers.games.particle.backends.errors import (
+    ParticleDeploymentError,
+    ParticleFileManagerError,
+)
 from merino.providers.games.particle.backends.utils import GameFile
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
@@ -168,7 +171,7 @@ class ParticleRemoteFileManager:
                 # this exception should be treated as critical, as the game may
                 # be in a broken state. sentry should be configured to alert to
                 # slack on every error captured here.
-                sentry_sdk.capture_exception(ParticleFileManagerError(str(ex)))
+                sentry_sdk.capture_exception(ParticleDeploymentError(str(ex)))
 
                 # mark the process as a failure if any file move fails
                 success = False
