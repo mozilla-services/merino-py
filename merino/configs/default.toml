@@ -1207,7 +1207,8 @@ feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=pot
 type = "particle"
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED
-# Whether or not the provider's cron runs to regularly update game files.
+# Enable/disable execution of the Particle file update process
+# Schedule is managed by K8s cron job
 enabled = false
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_TTL

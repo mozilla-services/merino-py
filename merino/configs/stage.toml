@@ -64,7 +64,8 @@ cdn_hostname = "stage-games-particle.merino.nonprod.webservices.mozgcp.net"
 
 [stage.games_providers.particle]
 # MERINO_GAMES_PROVIDERS__PARTICLE__ENABLED
-# Whether or not the provider's cron runs to regularly update game files.
+# Enable/disable execution of the Particle file update process
+# Schedule is managed by K8s cron job
 enabled = true
 
 # MERINO_GAMES_PROVIDERS__PARTICLE__GAME_URL
