@@ -13,3 +13,7 @@ class ParticleRemoteFileProcessError(Exception):
 
 class ParticleFileManagerError(FilemanagerError):
     """Error loading local Particle manifest schema validator file."""
+
+
+class ParticleDeploymentError(Exception):
+    """Error during deployment of Particle files."""
