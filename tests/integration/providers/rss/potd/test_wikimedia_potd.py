@@ -210,3 +210,124 @@ class TestBuildAndUploadPotdMethod:
         mock_call = [call(upload_error)]
         assert sentry_capture.call_count == 1
         sentry_capture.assert_has_calls(mock_call)
+
+
+class TestFetchPotdFromGcsBucketMethod:
+    """Tests for fetch_potd_from_gcs_bucket method."""
+
+    @freezegun.freeze_time("2026-06-07")
+    def test_fetch_potd_from_gcs_bucket_returns_potd_instance_on_success(
+        self, backend: WikimediaPotdBackend
+    ) -> None:
+        """Returns a PictureOfTheDay object on successful fetch from the bucket."""
+        expected = PictureOfTheDay(
+            title="Test Potd",
+            description="Test potd description",
+            published_date="2026-06-7",
+            high_res_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+            thumbnail_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+        )
+
+        # call the method to build and upload the potd json blob to the bucket
+        backend.build_and_upload_potd(potd=expected)
+
+        # call the method to fetch the uploaded potd json blob from the bucket
+        actual = backend.fetch_potd_from_gcs_bucket()
+
+        assert actual is not None
+        assert actual.title == expected.title
+        assert actual.description == expected.description
+        assert actual.published_date == expected.published_date
+        assert actual.high_res_image_url == expected.high_res_image_url
+        assert actual.thumbnail_image_url == expected.thumbnail_image_url
+
+    def test_fetch_potd_from_gcs_bucket_returns_none_when_path_has_stale_date(
+        self, backend: WikimediaPotdBackend
+    ) -> None:
+        """Returns None when date in the blob path is incorrect (stale)."""
+        potd = PictureOfTheDay(
+            title="Test Potd",
+            description="Test potd description",
+            published_date="2026-06-7",
+            high_res_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+            thumbnail_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+        )
+
+        # call the method to build and upload the potd json blob to the bucket with a stale date
+        with freezegun.freeze_time("2026-06-07"):
+            backend.build_and_upload_potd(potd=potd)
+
+        # call the method to fetch the uploaded potd json blob from the bucket
+        actual = backend.fetch_potd_from_gcs_bucket()
+
+        assert actual is None
+
+    @freezegun.freeze_time("2026-06-07")
+    def test_fetch_potd_from_gcs_bucket_returns_none_when_blob_retrieval_returns_an_error(
+        self, backend: WikimediaPotdBackend, mocker: MockerFixture
+    ) -> None:
+        """Returns None when gcs_uploader.get_file_by_name() returns an error."""
+        potd = PictureOfTheDay(
+            title="Test Potd",
+            description="Test potd description",
+            published_date="2026-06-7",
+            high_res_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+            thumbnail_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+        )
+
+        sentry_capture = mocker.patch(
+            "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
+        )
+
+        blob_retrieval_error = Exception("Failed to retrieve blob.")
+        # mock the get_file_by_name method to return the blob_retrieval_error
+        backend.gcs_uploader = Mock(spec=GcsUploader)
+        backend.gcs_uploader.get_file_by_name.side_effect = blob_retrieval_error
+
+        # call the method to build and upload the potd json blob to the bucket with a stale date
+        backend.build_and_upload_potd(potd=potd)
+
+        # call the method to fetch the uploaded potd json blob from the bucket
+        actual = backend.fetch_potd_from_gcs_bucket()
+
+        assert actual is None
+        # assert on sentry calls
+        mock_call = [call(blob_retrieval_error)]
+        assert sentry_capture.call_count == 1
+        sentry_capture.assert_has_calls(mock_call)
+
+    @freezegun.freeze_time("2026-06-07")
+    def test_fetch_potd_from_gcs_bucket_returns_none_when_blob_download_returns_an_error(
+        self, backend: WikimediaPotdBackend, mocker: MockerFixture
+    ) -> None:
+        """Returns None when gcs_uploader.download_as_text() returns an error"""
+        potd = PictureOfTheDay(
+            title="Test Potd",
+            description="Test potd description",
+            published_date="2026-06-7",
+            high_res_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+            thumbnail_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+        )
+
+        sentry_capture = mocker.patch(
+            "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
+        )
+
+        blob_download_error = Exception("Failed to download blob.")
+
+        # mock the download_as_text() method for the imported Blob class in gcs_uploader.py module
+        mocker.patch(
+            "merino.utils.gcs.gcs_uploader.Blob.download_as_text"
+        ).side_effect = blob_download_error
+
+        # call the method to build and upload the potd json blob to the bucket with a stale date
+        backend.build_and_upload_potd(potd=potd)
+
+        # call the method to fetch the uploaded potd json blob from the bucket
+        actual = backend.fetch_potd_from_gcs_bucket()
+
+        assert actual is None
+        # assert on sentry calls
+        mock_call = [call(blob_download_error)]
+        assert sentry_capture.call_count == 1
+        sentry_capture.assert_has_calls(mock_call)
