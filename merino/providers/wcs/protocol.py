@@ -68,12 +68,15 @@ class TeamInfo(BaseModel):
         team: dict[str, Any],
         *,
         group: str | None = None,
+        eliminated: bool = False,
     ) -> "TeamInfo":
         """Build widget team info from the compact team dict stored on events.
 
         The `group` argument is plumbed in from the parent event because the
         compact team dict does not carry a group of its own; the World Cup
-        group is a per-event attribute.
+        group is a per-event attribute. The `eliminated` argument lets the
+        caller mark the losing side of a completed knockout match, which the
+        compact team dict does not record either.
         """
         key = str(team["key"])
         raw_icon_url = team.get("icon_url")
@@ -85,7 +88,7 @@ class TeamInfo(BaseModel):
             colors=get_team_colours(key),
             icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
             group=team.get("group") or group,
-            eliminated=bool(team.get("eliminated", False)),
+            eliminated=eliminated or bool(team.get("eliminated", False)),
         )
 
 
@@ -125,15 +128,30 @@ class EventInfo(BaseModel):
     @classmethod
     def from_event(cls, event: Event) -> "EventInfo":
         """Build widget event info from a cached SportsData event."""
+        # In knockout stages, a completed match eliminates its loser. Group
+        # Stage standings turn on points, not a single result, so they never
+        # eliminate here. `is_final()` covers regulation, extra time, and
+        # shootout finishes.
+        eliminates_loser = (
+            event.status.is_final() and bool(event.stage) and event.stage != "Group Stage"
+        )
+        winner = (event.winner or "").lower()
+        home_eliminated = eliminates_loser and winner == "awayteam"
+        away_eliminated = eliminates_loser and winner == "hometeam"
+
         home_team = (
             None
             if is_tbd_event_team(event.home_team)
-            else TeamInfo.from_event_team(event.home_team, group=event.group)
+            else TeamInfo.from_event_team(
+                event.home_team, group=event.group, eliminated=home_eliminated
+            )
         )
         away_team = (
             None
             if is_tbd_event_team(event.away_team)
-            else TeamInfo.from_event_team(event.away_team, group=event.group)
+            else TeamInfo.from_event_team(
+                event.away_team, group=event.group, eliminated=away_eliminated
+            )
         )
         updated = event.updated or event.date
         return cls(

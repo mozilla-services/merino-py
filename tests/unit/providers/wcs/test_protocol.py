@@ -160,6 +160,154 @@ def test_event_info_from_event_stage_defaults_to_empty_string() -> None:
     assert info.stage == ""
 
 
+def test_event_info_from_event_eliminates_knockout_loser_home_wins() -> None:
+    """A completed knockout match marks the away (losing) side eliminated."""
+    e = event(
+        event_id=10,
+        day_offset=-1,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Final,
+        home_score=2,
+        away_score=1,
+        stage="Round of 16",
+        winner="HomeTeam",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is True
+
+
+def test_event_info_from_event_eliminates_knockout_loser_away_wins() -> None:
+    """A completed knockout match marks the home (losing) side eliminated."""
+    e = event(
+        event_id=11,
+        day_offset=-1,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Final,
+        home_score=0,
+        away_score=3,
+        stage="Round of 16",
+        winner="AwayTeam",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is True
+    assert info.away_team is not None and info.away_team.eliminated is False
+
+
+def test_event_info_from_event_group_stage_final_eliminates_neither() -> None:
+    """Group Stage standings turn on points, so a single result eliminates no one."""
+    e = event(
+        event_id=12,
+        day_offset=-1,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Final,
+        home_score=2,
+        away_score=1,
+        stage="Group Stage",
+        winner="HomeTeam",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is False
+
+
+def test_event_info_from_event_eliminates_loser_after_shootout() -> None:
+    """A shootout (F_SO) knockout finish still eliminates the loser."""
+    e = event(
+        event_id=13,
+        day_offset=-1,
+        hour=14,
+        home=("GER", "Germany", 90000003),
+        away=("FRA", "France", 90000004),
+        status=GameStatus.F_SO,
+        home_score=1,
+        away_score=1,
+        home_penalty=5,
+        away_penalty=4,
+        stage="Quarterfinals",
+        winner="HomeTeam",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is True
+
+
+def test_event_info_from_event_in_progress_knockout_eliminates_neither() -> None:
+    """A knockout match still in progress eliminates no one."""
+    e = event(
+        event_id=14,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.InProgress,
+        home_score=1,
+        away_score=0,
+        stage="Round of 16",
+        winner="HomeTeam",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is False
+
+
+def test_event_info_from_event_final_without_winner_eliminates_neither() -> None:
+    """A final knockout match with no declared winner eliminates no one."""
+    e = event(
+        event_id=15,
+        day_offset=-1,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Final,
+        home_score=1,
+        away_score=1,
+        stage="Round of 16",
+        winner=None,
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is False
+
+
+def test_event_info_from_event_final_without_stage_eliminates_neither() -> None:
+    """A final match with no cached stage eliminates no one (missing-stage guard)."""
+    e = event(
+        event_id=16,
+        day_offset=-1,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Final,
+        home_score=2,
+        away_score=1,
+        winner="HomeTeam",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is False
+
+
 def test_event_info_from_event_missing_period_and_clock_stay_null() -> None:
     """Scheduled matches without period or clock metadata serialize nulls."""
     e = event(

@@ -207,6 +207,35 @@ def test_matches_returns_nullable_tbd_sides(client: TestClient) -> None:
     assert body["next"][0]["query"] == "Quarterfinals World Cup 2026"
 
 
+@freezegun.freeze_time("2026-07-05T16:00:00Z")
+def test_completed_knockout_match_marks_losing_team_eliminated(client: TestClient) -> None:
+    """A finished knockout match serializes the loser as eliminated and the winner as not."""
+    app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
+        events=[
+            build_event(
+                90086997,
+                0,
+                14,
+                ("BRA", "Brazil", 90000868),
+                ("ARG", "Argentina", 90001083),
+                GameStatus.Final,
+                home_score=2,
+                away_score=1,
+                stage="Round of 16",
+                round_id=1617,
+                season_type=3,
+                winner="HomeTeam",
+            )
+        ]
+    )
+
+    body = client.get(_PATH, params={"date": "2026-07-05"}).json()
+
+    match = body["previous"][0]
+    assert match["home_team"]["eliminated"] is False
+    assert match["away_team"]["eliminated"] is True
+
+
 def test_invalid_date_returns_400(client: TestClient) -> None:
     """Merino's validation handler in main.py converts FastAPI's 422 to 400."""
     response = client.get(_PATH, params={"date": "not-a-date"})
