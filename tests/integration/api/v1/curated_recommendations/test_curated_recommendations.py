@@ -4,7 +4,7 @@ import asyncio
 import json
 from datetime import timedelta, datetime
 import logging
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock
 from uuid import UUID
 
@@ -434,16 +434,22 @@ def setup_legacy_curated_recommendations_provider(legacy_corpus_provider):
 
 def fetch_en_us(client: TestClient) -> Response:
     """Make a curated recommendations request with en-US locale and sections feed."""
-    return client.post(
-        "/api/v1/curated-recommendations",
-        json={"locale": "en-US", "feeds": ["sections"], "topics": [Topic.FOOD]},
+    return cast(
+        Response,
+        client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "feeds": ["sections"], "topics": [Topic.FOOD]},
+        ),
     )
 
 
 def fetch_es_es(client: TestClient) -> Response:
     """Make a curated recommendations request with es-ES locale (uses scheduled_surface backend)"""
-    return client.post(
-        "/api/v1/curated-recommendations", json={"locale": "es-ES", "topics": [Topic.FOOD]}
+    return cast(
+        Response,
+        client.post(
+            "/api/v1/curated-recommendations", json={"locale": "es-ES", "topics": [Topic.FOOD]}
+        ),
     )
 
 
@@ -1544,9 +1550,9 @@ class TestSections:
         localized_titles = LOCALIZED_SECTION_TITLES[surface_id]
 
         # Assert top-stories has a translation (the only key used)
-        assert "top-stories" in localized_titles and localized_titles["top-stories"], (
-            f"Missing translation for 'top-stories' in {surface_id}"
-        )
+        assert (
+            "top-stories" in localized_titles and localized_titles["top-stories"]
+        ), f"Missing translation for 'top-stories' in {surface_id}"
 
     def test_corpus_sections_feed_content(
         self,
@@ -2079,9 +2085,9 @@ class TestSections:
         if expect_subtopics:
             assert ml_subtopic_section_ids, "Expected ML subtopic sections for US treatment"
         else:
-            assert not ml_subtopic_section_ids, (
-                f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
-            )
+            assert (
+                not ml_subtopic_section_ids
+            ), f"Unexpected ML subtopic sections: {ml_subtopic_section_ids}"
 
         # Manually created sections may appear regardless of experiment settings
 
@@ -2877,9 +2883,9 @@ def test_uk_sections_with_gb_backend_data(
         sections = {name: section for name, section in feeds.items() if section is not None}
 
         # Should have top_stories_section and topic sections
-        assert len(sections) >= 2, (
-            f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
-        )
+        assert (
+            len(sections) >= 2
+        ), f"Expected at least 2 sections but got {len(sections)}: {list(sections.keys())}"
         assert "top_stories_section" in sections
 
         # Verify that GB-specific sections are present
@@ -2902,9 +2908,9 @@ def test_uk_sections_with_gb_backend_data(
         # Verify that locale suffixes are stripped from section IDs
         # The backend returns IDs like "food__lEN_GB" but they should be normalized to "food"
         sections_with_suffix = [s for s in sections.keys() if s.endswith("__lEN_GB")]
-        assert len(sections_with_suffix) == 0, (
-            f"Section IDs should not contain '__lEN_GB' suffix, but found: {sections_with_suffix}"
-        )
+        assert (
+            len(sections_with_suffix) == 0
+        ), f"Section IDs should not contain '__lEN_GB' suffix, but found: {sections_with_suffix}"
 
         # data array should be empty (all recommendations in feeds)
         assert len(data["data"]) == 0

@@ -119,7 +119,7 @@ class LinTSInterestBackend:
         with tempfile.NamedTemporaryFile(suffix=".safetensors") as tmp:
             tmp.write(data)
             tmp.flush()
-            with safe_open(tmp.name, framework="numpy") as st:  # type: ignore[no-untyped-call]
+            with safe_open(tmp.name, framework="numpy") as st:
                 meta = st.metadata() or {}
                 schema_version = meta.get("schema_version")
                 if schema_version != SCHEMA_VERSION:
