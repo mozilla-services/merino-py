@@ -8,8 +8,8 @@ import pathlib
 from typing import Any
 
 import pytest
-from click.exceptions import BadParameter
 from pydantic import ValidationError
+from typer import BadParameter
 
 from merino.jobs.csv_rs_uploader import MissingFieldError, upload
 from tests.unit.jobs.csv_rs_uploader.model import (

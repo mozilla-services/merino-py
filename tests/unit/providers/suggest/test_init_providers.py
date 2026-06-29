@@ -8,6 +8,7 @@ import logging
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from dynaconf.nodes import DataDict
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
@@ -81,7 +82,9 @@ async def test_init_providers_with_disabled_provider(provider: str) -> None:
 @pytest.mark.asyncio
 async def test_init_providers_unknown_provider_type(mocker: MockerFixture) -> None:
     """Test for the `init_providers` with an unknown provider."""
-    mocker.patch.dict(settings.providers, values={"unknown-provider": {"type": "unknown-type"}})
+    mocker.patch.dict(
+        settings.providers, values={"unknown-provider": DataDict({"type": "unknown-type"})}
+    )
 
     with pytest.raises(InvalidProviderError) as excinfo:
         await init_providers()

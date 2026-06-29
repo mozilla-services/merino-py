@@ -12,7 +12,7 @@ import pytest_asyncio
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
 from redis.asyncio import Redis
-from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.core.wait_strategies import LogMessageWaitStrategy
 from testcontainers.redis import AsyncRedisContainer
 
 from merino.cache.redis import RedisAdapter
@@ -26,8 +26,9 @@ logger = logging.getLogger(__name__)
 def redis_container() -> AsyncRedisContainer:
     """Spin up a Redis container for the duration of this test module."""
     logger.info("Starting up redis container")
-    container = AsyncRedisContainer().start()
-    wait_for_logs(container, "Server initialized")
+    container = (
+        AsyncRedisContainer().waiting_for(LogMessageWaitStrategy("Server initialized")).start()
+    )
     yield container
     container.stop()
 
