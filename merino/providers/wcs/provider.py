@@ -100,8 +100,9 @@ class WcsProvider:
             self._record_cache_error("matches", ex)
             raise
 
+        eliminated_keys = await self._get_eliminated_team_keys()
         for event in sorted(events, key=lambda e: e.date):
-            event_info = EventInfo.from_event(event)
+            event_info = EventInfo.from_event(event, eliminated_keys)
             if _matches_team_filter(event_info, team_keys):
                 bucket = _bucket_for_event(event, reference_time)
                 if bucket == "previous":

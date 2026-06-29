@@ -318,6 +318,74 @@ async def test_teams_filter_matches_either_side() -> None:
 
 
 @pytest.mark.asyncio
+async def test_matches_reflect_eliminated_keys_across_buckets() -> None:
+    """A team in the eliminated set is flagged in every match it appears in."""
+    provider = build_provider(eliminated_team_keys={"ARG"})
+
+    response = await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+    events = response.previous + response.current + response.next_
+
+    arg_sides = [
+        team
+        for event in events
+        for team in (event.home_team, event.away_team)
+        if team is not None and team.key == "ARG"
+    ]
+    other_sides = [
+        team
+        for event in events
+        for team in (event.home_team, event.away_team)
+        if team is not None and team.key != "ARG"
+    ]
+
+    assert len(arg_sides) >= 2  # ARG appears in both a previous and a next match
+    assert all(team.eliminated for team in arg_sides)
+    assert not any(team.eliminated for team in other_sides)
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T16:00:00Z")
+async def test_live_matches_ignore_eliminated_keys() -> None:
+    """The live endpoint does not apply the eliminated-keys set."""
+    provider = build_provider(eliminated_team_keys={"BRA"})
+
+    response = await provider.get_live_matches(team_keys=None)
+    sides = [
+        team
+        for event in response.matches
+        for team in (event.home_team, event.away_team)
+        if team is not None
+    ]
+
+    assert any(team.key == "BRA" for team in sides)
+    assert not any(team.eliminated for team in sides)
+
+
+@pytest.mark.asyncio
+async def test_matches_elimination_cache_error_leaves_teams_uneliminated(mocker) -> None:
+    """An elimination-cache error degrades to unflagged teams without dropping matches."""
+    sport = mocker.Mock()
+    sport.get_events_by_date = mocker.AsyncMock(return_value=build_events())
+    sport.get_eliminated_team_keys = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+    metrics_client = mocker.Mock()
+    sentry_capture = mocker.patch("merino.providers.wcs.provider.sentry_sdk.capture_exception")
+    provider = WcsProvider(sport=sport, metrics_client=metrics_client)
+
+    response = await provider.get_matches(ANCHOR, limit=None, team_keys=None)
+    events = response.previous + response.current + response.next_
+
+    assert events
+    assert not any(
+        team.eliminated
+        for event in events
+        for team in (event.home_team, event.away_team)
+        if team is not None
+    )
+    metrics_client.increment.assert_called_once_with("wcs.cache_error", tags={"endpoint": "teams"})
+    sentry_capture.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_response_is_deterministic_for_same_anchor() -> None:
     """Two calls with the same anchor produce identical payloads."""
     provider = build_provider()

@@ -308,6 +308,86 @@ def test_event_info_from_event_final_without_stage_eliminates_neither() -> None:
     assert info.away_team is not None and info.away_team.eliminated is False
 
 
+def test_event_info_from_event_marks_team_from_eliminated_keys() -> None:
+    """A side listed in `eliminated_keys` is eliminated even outside a knockout result."""
+    e = event(
+        event_id=20,
+        day_offset=-1,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Final,
+        home_score=2,
+        away_score=1,
+        stage="Group Stage",
+        winner="HomeTeam",
+    )
+
+    info = EventInfo.from_event(e, eliminated_keys={"ARG"})
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is True
+
+
+def test_event_info_from_event_unions_eliminated_keys_with_knockout_loser() -> None:
+    """Both the knockout loser and any key-listed side are eliminated together."""
+    e = event(
+        event_id=21,
+        day_offset=-1,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Final,
+        home_score=2,
+        away_score=1,
+        stage="Round of 16",
+        winner="HomeTeam",
+    )
+
+    # The away side loses this knockout match; the home side is independently
+    # listed as eliminated by the backend set.
+    info = EventInfo.from_event(e, eliminated_keys={"BRA"})
+
+    assert info.home_team is not None and info.home_team.eliminated is True
+    assert info.away_team is not None and info.away_team.eliminated is True
+
+
+def test_event_info_from_event_without_eliminated_keys_preserves_behavior() -> None:
+    """Omitting `eliminated_keys` keeps the prior knockout-only behavior."""
+    e = event(
+        event_id=22,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Scheduled,
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.eliminated is False
+    assert info.away_team is not None and info.away_team.eliminated is False
+
+
+def test_event_info_from_event_eliminated_keys_skip_tbd_side() -> None:
+    """A TBD bracket side stays null even when its placeholder key is not listed."""
+    e = event(
+        event_id=23,
+        day_offset=20,
+        hour=20,
+        home=("SWE", "Sweden", 90000001),
+        away=("TBD", "TBD", 0),
+        status=GameStatus.Scheduled,
+        original_date="2026-07-05T00:00:00",
+        stage="Quarterfinals",
+    )
+
+    info = EventInfo.from_event(e, eliminated_keys={"SWE"})
+
+    assert info.home_team is not None and info.home_team.eliminated is True
+    assert info.away_team is None
+
+
 def test_event_info_from_event_missing_period_and_clock_stay_null() -> None:
     """Scheduled matches without period or clock metadata serialize nulls."""
     e = event(
