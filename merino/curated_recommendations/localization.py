@@ -28,6 +28,9 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
     SurfaceId.NEW_TAB_DE_DE: {
         "top-stories": "Meistgelesen",
     },
+    SurfaceId.NEW_TAB_FR_FR: {
+        "top-stories": "Tendances du jour",
+    },
     SurfaceId.NEW_TAB_PL_PL: {
         "top-stories": "Przegląd dnia",
     },

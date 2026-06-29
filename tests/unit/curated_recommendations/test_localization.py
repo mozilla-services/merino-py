@@ -28,6 +28,12 @@ def test_get_translation_de_de():
     assert result == "Meistgelesen"
 
 
+def test_get_translation_fr_fr():
+    """Test that fr-FR surface has correct localized section title."""
+    result = get_translation(SurfaceId.NEW_TAB_FR_FR, "top-stories", "Default")
+    assert result == "Tendances du jour"
+
+
 def test_get_translation_pl_pl():
     """Test that pl-PL surface has correct localized section title."""
     result = get_translation(SurfaceId.NEW_TAB_PL_PL, "top-stories", "Default")

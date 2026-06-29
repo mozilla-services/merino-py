@@ -16,6 +16,7 @@ ROLLED_OUT_SECTION_SURFACES: frozenset[SurfaceId] = frozenset(
         SurfaceId.NEW_TAB_EN_CA,
         SurfaceId.NEW_TAB_EN_IE,
         SurfaceId.NEW_TAB_DE_DE,
+        SurfaceId.NEW_TAB_FR_FR,
     }
 )
 
