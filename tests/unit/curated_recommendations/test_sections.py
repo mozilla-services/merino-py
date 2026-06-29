@@ -30,7 +30,6 @@ from merino.curated_recommendations.prior_backends.constant_prior import Constan
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentPinnedFreshRescaler,
     CrawledContentRescaler,
-    DECrawledContentRescaler,
     SchedulerHoldbackRescaler,
 )
 from merino.curated_recommendations.prior_backends.protocol import Prior
@@ -490,32 +489,8 @@ class TestFilterSectionsByExperiment:
                 SurfaceId.NEW_TAB_EN_CA,
                 CrawledContentRescaler,
             ),
-            # DE with sections branch gets DECrawledContentRescaler
-            (
-                "sections-in-germany",
-                "sections",
-                "DE",
-                SurfaceId.NEW_TAB_DE_DE,
-                DECrawledContentRescaler,
-            ),
-            # DE with wrong branch falls through to CrawledContentPinnedFreshRescaler
-            (
-                "sections-in-germany",
-                "control",
-                "DE",
-                SurfaceId.NEW_TAB_DE_DE,
-                CrawledContentPinnedFreshRescaler,
-            ),
-            # DE v2 sections branch gets DECrawledContentRescaler
-            (
-                "sections-in-germany-v2",
-                "sections",
-                "DE",
-                SurfaceId.NEW_TAB_DE_DE,
-                DECrawledContentRescaler,
-            ),
-            # DE surface without experiment falls through to CrawledContentPinnedFreshRescaler
-            (None, None, "DE", SurfaceId.NEW_TAB_DE_DE, CrawledContentPinnedFreshRescaler),
+            # DE surface gets CrawledContentRescaler (no experiment gating)
+            (None, None, "DE", SurfaceId.NEW_TAB_DE_DE, CrawledContentRescaler),
         ],
     )
     def test_get_ranking_rescaler_for_branch(
@@ -533,6 +508,22 @@ class TestFilterSectionsByExperiment:
             )
         else:
             assert get_ranking_rescaler_for_branch(req) is None
+
+    def test_de_de_uses_plain_crawled_content_rescaler(self):
+        """de-DE is a rolled-out surface and must use the plain CrawledContentRescaler.
+
+        Asserts the exact type rather than isinstance: CrawledContentPinnedFreshRescaler
+        subclasses CrawledContentRescaler, so an isinstance check would not catch a
+        regression that dropped DE from get_ranking_rescaler_for_branch and let it fall
+        through to the pinned-fresh default.
+        """
+        from merino.curated_recommendations.sections import get_ranking_rescaler_for_branch
+
+        req = SimpleNamespace(
+            experimentName=None, experimentBranch=None, region="DE", inferredInterests=None
+        )
+        rescaler = get_ranking_rescaler_for_branch(req, surface_id=SurfaceId.NEW_TAB_DE_DE)
+        assert type(rescaler) is CrawledContentRescaler
 
     def test_filter_sections_includes_both_manual_and_ml(self):
         """Test that filter_sections_by_experiment includes both MANUAL and ML sections"""

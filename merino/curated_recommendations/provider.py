@@ -23,14 +23,12 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.interest_picker import create_interest_picker
 from merino.curated_recommendations.localization import LOCALIZED_SECTION_TITLES
-from merino.curated_recommendations.prior_backends.protocol import EngagementRescaler, PriorBackend
+from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
-    ExperimentName,
     ProcessedInterests,
-    SectionsInGermanyV2Branch,
 )
 
 from merino.curated_recommendations.rankers import (
@@ -43,7 +41,6 @@ from merino.curated_recommendations.legacy.sections_adapter import (
 )
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
-    DECrawledContentRescaler,
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
@@ -51,7 +48,6 @@ from merino.curated_recommendations.utils import (
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
     derive_region,
-    is_enrolled_in_experiment,
 )
 
 logger = logging.getLogger(__name__)
@@ -181,7 +177,6 @@ class CuratedRecommendationsProvider:
             )
         elif surface_id in ROLLED_OUT_SECTION_SURFACES:
             # Rolled-out section surfaces: fetch from sections backend instead of scheduler
-            rescaler: EngagementRescaler | None = None
             rescaler = CrawledContentRescaler()
             general_feed = await get_legacy_recommendations_from_sections(
                 sections_backend=self.sections_backend,
@@ -191,22 +186,6 @@ class CuratedRecommendationsProvider:
                 count=request.count,
                 region=derive_region(request.locale, request.region),
                 rescaler=rescaler,
-            )
-        elif surface_id == SurfaceId.NEW_TAB_DE_DE and is_enrolled_in_experiment(
-            request,
-            ExperimentName.SECTIONS_IN_GERMANY_V2.value,
-            SectionsInGermanyV2Branch.CONTENT_ONLY.value,
-        ):
-            # sections-in-germany-v2 content-only branch: sections-backend content
-            # delivered in the legacy (grid) response.
-            general_feed = await get_legacy_recommendations_from_sections(
-                sections_backend=self.sections_backend,
-                engagement_backend=self.engagement_backend,
-                prior_backend=self.prior_backend,
-                surface_id=surface_id,
-                count=request.count,
-                region=derive_region(request.locale, request.region),
-                rescaler=DECrawledContentRescaler(),
             )
         else:
             # Other markets: fetch from scheduled surface backend

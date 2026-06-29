@@ -150,31 +150,6 @@ class CrawledContentPinnedFreshRescaler(CrawledContentRescaler):
         return round(impressions_for_tile_for_period * scale)
 
 
-DE_EXPERIMENT_TREATMENT_PERCENT = 0.30
-
-
-class DECrawledContentRescaler(CrawledContentRescaler):
-    """Rescaler for DE sections experiments — scales engagement up by 1/p
-    to compensate for the fraction p of DE traffic that generates
-    sections-backend engagement data.
-
-    p = 0.30 reflects three disjoint 10% slices of DE traffic that route
-    through the sections backend: sections-in-germany `sections` branch (v1),
-    sections-in-germany-v2 `sections` branch, and sections-in-germany-v2
-    `content-only` branch (grid layout served from the same backend).
-    """
-
-    def __init__(self, **data: Any):
-        super().__init__(**data)
-
-    def rescale(self, rec: CuratedRecommendation, opens: float, no_opens: float):
-        """Apply parent scaling (blocked-from-most-popular 5x), then divide by
-        treatment percentage to compensate for small experiment size.
-        """
-        opens, no_opens = super().rescale(rec, opens, no_opens)
-        return opens / DE_EXPERIMENT_TREATMENT_PERCENT, no_opens / DE_EXPERIMENT_TREATMENT_PERCENT
-
-
 class SchedulerHoldbackRescaler(EngagementRescaler):
     """Scales experiment based content on relative size of experiment, as a fractional percentage"""
 

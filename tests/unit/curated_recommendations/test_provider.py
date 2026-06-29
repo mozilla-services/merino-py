@@ -88,11 +88,6 @@ class TestIsSectionsExperiment:
         "experiment_name, experiment_branch",
         [
             (None, None),
-            ("sections-in-germany", "control"),
-            ("sections-in-germany", "sections"),
-            ("sections-in-germany-v2", "control"),
-            ("sections-in-germany-v2", "content-only"),
-            ("sections-in-germany-v2", "sections"),
             ("some-unrelated-experiment", "treatment"),
         ],
     )
@@ -125,7 +120,7 @@ class TestIsSectionsExperiment:
         request = CuratedRecommendationsRequest(
             locale=locale,
             feeds=None,
-            experimentName="sections-in-germany-v2",
-            experimentBranch="content-only",
+            experimentName="some-unrelated-experiment",
+            experimentBranch="treatment",
         )
         assert CuratedRecommendationsProvider.is_sections_experiment(request, surface_id) is False
