@@ -126,8 +126,15 @@ class EventInfo(BaseModel):
     sport: str = Field(default="soccer", description="Sport identifier.")
 
     @classmethod
-    def from_event(cls, event: Event) -> "EventInfo":
-        """Build widget event info from a cached SportsData event."""
+    def from_event(cls, event: Event, eliminated_keys: set[str] | None = None) -> "EventInfo":
+        """Build widget event info from a cached SportsData event.
+
+        `eliminated_keys` carries the teams that no longer have a tournament
+        path; any side whose key is listed is marked eliminated regardless of
+        this match's result. It is unioned with the per-match knockout-loser
+        logic below so a team stays flagged across every match it appears in.
+        """
+        eliminated_keys = eliminated_keys or set()
         # In knockout stages, a completed match eliminates its loser. Group
         # Stage standings turn on points, not a single result, so they never
         # eliminate here. `is_final()` covers regulation, extra time, and
@@ -143,14 +150,18 @@ class EventInfo(BaseModel):
             None
             if is_tbd_event_team(event.home_team)
             else TeamInfo.from_event_team(
-                event.home_team, group=event.group, eliminated=home_eliminated
+                event.home_team,
+                group=event.group,
+                eliminated=home_eliminated or str(event.home_team["key"]) in eliminated_keys,
             )
         )
         away_team = (
             None
             if is_tbd_event_team(event.away_team)
             else TeamInfo.from_event_team(
-                event.away_team, group=event.group, eliminated=away_eliminated
+                event.away_team,
+                group=event.group,
+                eliminated=away_eliminated or str(event.away_team["key"]) in eliminated_keys,
             )
         )
         updated = event.updated or event.date
