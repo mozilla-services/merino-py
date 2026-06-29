@@ -247,6 +247,7 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
     with freezegun.freeze_time("2026-06-15T16:00:00Z") as freezer:
         sport = mocker.Mock()
         sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
+        sport.get_eliminated_team_keys = mocker.AsyncMock(return_value=set())
         app.dependency_overrides[get_wcs_provider] = lambda: WcsProvider(sport=sport)
 
         # Trip the breaker
