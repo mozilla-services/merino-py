@@ -111,8 +111,9 @@ def test_maybe_build_indicies_local(
     """Test the local case for building indicies."""
     caplog.set_level(logging.INFO)
     mocker.patch(
-        "merino.configs.settings.providers.top_picks.domain_data_source"
-    ).return_value = "local"
+        "merino.configs.settings.providers.top_picks.domain_data_source",
+        "local",
+    )
 
     get_file_result_code, result = top_picks_backend.maybe_build_indices()
 
@@ -140,8 +141,9 @@ def test_maybe_build_indicies_remote(
     top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = gcs_blob_mock
 
     mocker.patch(
-        "merino.configs.settings.providers.top_picks.domain_data_source"
-    ).return_value = "remote"
+        "merino.configs.settings.providers.top_picks.domain_data_source",
+        "remote",
+    )
 
     mocker.patch(
         "merino.providers.suggest.top_picks.backends.top_picks.TopPicksRemoteFilemanager",
@@ -172,8 +174,9 @@ def test_maybe_build_indicies_remote_fail(
     top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = None
 
     mocker.patch(
-        "merino.configs.settings.providers.top_picks.domain_data_source"
-    ).return_value = "remote"
+        "merino.configs.settings.providers.top_picks.domain_data_source",
+        "remote",
+    )
 
     mocker.patch(
         "merino.providers.suggest.top_picks.backends.top_picks.TopPicksRemoteFilemanager",
@@ -203,8 +206,9 @@ def test_maybe_build_indicies_remote_skip(
     top_picks_remote_filemanager.gcs_client.get_file_by_name.return_value = None
 
     mocker.patch(
-        "merino.configs.settings.providers.top_picks.domain_data_source"
-    ).return_value = "remote"
+        "merino.configs.settings.providers.top_picks.domain_data_source",
+        "remote",
+    )
 
     mocker.patch(
         "merino.providers.suggest.top_picks.backends.top_picks.TopPicksRemoteFilemanager",
@@ -230,8 +234,9 @@ def test_maybe_build_indicies_error(
     is not defined.
     """
     mocker.patch(
-        "merino.configs.settings.providers.top_picks.domain_data_source"
-    ).return_value = "invalid"
+        "merino.configs.settings.providers.top_picks.domain_data_source",
+        "invalid",
+    )
 
     with pytest.raises(ValueError):
         top_picks_backend.maybe_build_indices()

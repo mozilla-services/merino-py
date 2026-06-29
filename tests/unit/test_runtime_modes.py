@@ -21,13 +21,13 @@ from tests.wcs.factories import build_provider
 
 
 def _route_paths(app: FastAPI) -> set[str]:
-    """Return the registered paths for a FastAPI app."""
-    paths: set[str] = set()
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        if isinstance(path, str):
-            paths.add(path)
-    return paths
+    """Return the registered paths for a FastAPI app.
+
+    Reads the OpenAPI schema rather than ``app.routes`` because starlette
+    nests included routers under opaque wrapper routes, so the flat
+    ``route.path`` attributes no longer surface prefixed endpoint paths.
+    """
+    return set(app.openapi().get("paths", {}).keys())
 
 
 def test_runtime_mode_predicates() -> None:
@@ -164,9 +164,9 @@ regular_route_modules = [
     "merino.web.api_v1",
 ]
 api_paths = sorted(
-    route.path
-    for route in merino.main.app.routes
-    if hasattr(route, "path") and route.path.startswith("/api/v1")
+    path
+    for path in merino.main.app.openapi().get("paths", {})
+    if path.startswith("/api/v1")
 )
 print(
     json.dumps(

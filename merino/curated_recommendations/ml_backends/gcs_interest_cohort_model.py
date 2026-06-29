@@ -52,7 +52,7 @@ class GcsInterestCohortModel(CohortModelBackend):
             tmp.write(data)
             tmp.flush()
             try:
-                with safe_open(tmp.name, framework="pt") as f:  # type: ignore[no-untyped-call]
+                with safe_open(tmp.name, framework="pt") as f:
                     metadata = f.metadata() or {}
                     self._model_id = metadata.get("model_id", "unknown")
                     self._num_bits = int(metadata.get("num_interest_bits", 32))

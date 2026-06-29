@@ -210,6 +210,10 @@ filterwarnings = [
   "ignore:Prefer SyncedGcsBlobV2:DeprecationWarning",
   # Ignored due to gcloud.aio.storage relies on backoff
   "ignore:'asyncio\\.iscoroutinefunction' is deprecated:DeprecationWarning",
+  # Ignored: starlette.testclient nudges toward httpx2, but the suite uses httpx.
+  "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+  # Ignored: testcontainers' own RedisContainer uses the deprecated decorator internally.
+  "ignore:The @wait_container_is_ready decorator is deprecated:DeprecationWarning",
 ]
 
 [build-system]

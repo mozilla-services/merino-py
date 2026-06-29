@@ -17,7 +17,7 @@ from httpx import AsyncClient
 from pytest_mock import MockerFixture
 from unittest.mock import AsyncMock
 from redis.asyncio import Redis
-from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.core.wait_strategies import LogMessageWaitStrategy
 from testcontainers.redis import AsyncRedisContainer
 
 from merino.cache.redis import RedisAdapter
@@ -39,11 +39,10 @@ def redis_container() -> AsyncRedisContainer:
     finished running
     """
     logger.info("Starting up redis container")
-    container = AsyncRedisContainer().start()
-
-    # wait for the container to start and emit logs
-    delay = wait_for_logs(container, "Server initialized")
-    logger.info(f"\n Redis server started with delay: {delay} seconds on port: {container.port}")
+    container = (
+        AsyncRedisContainer().waiting_for(LogMessageWaitStrategy("Server initialized")).start()
+    )
+    logger.info(f"\n Redis server started on port: {container.port}")
 
     yield container
 

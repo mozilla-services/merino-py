@@ -7,7 +7,7 @@ import pytest
 from google.auth.credentials import AnonymousCredentials
 from google.cloud.storage import Client, Bucket
 from testcontainers.core.container import DockerContainer
-from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.core.wait_strategies import LogMessageWaitStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -21,18 +21,18 @@ def gcs_storage_container() -> DockerContainer:
 
     os.environ.setdefault("STORAGE_EMULATOR_HOST", "http://localhost:4443")
 
-    # create a docker container using the `fake-gcs-server` image
+    # create a docker container using the `fake-gcs-server` image, waiting for it
+    # to emit its startup log line before the fixture proceeds
     container = (
         DockerContainer("fsouza/fake-gcs-server")
         .with_command("-scheme http")
         .with_bind_ports(4443, 4443)
+        .waiting_for(LogMessageWaitStrategy("server started at"))
     ).start()
 
-    # wait for the container to start and emit logs
-    delay = wait_for_logs(container, "server started at")
     port = container.get_exposed_port(4443)
 
-    logger.info(f"\n GCS server started with delay: {delay} seconds on port: {port}")
+    logger.info(f"\n GCS server started on port: {port}")
     yield container
 
     container.stop()

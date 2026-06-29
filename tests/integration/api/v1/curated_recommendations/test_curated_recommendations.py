@@ -4,7 +4,7 @@ import asyncio
 import json
 from datetime import timedelta, datetime
 import logging
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock
 from uuid import UUID
 
@@ -434,16 +434,22 @@ def setup_legacy_curated_recommendations_provider(legacy_corpus_provider):
 
 def fetch_en_us(client: TestClient) -> Response:
     """Make a curated recommendations request with en-US locale and sections feed."""
-    return client.post(
-        "/api/v1/curated-recommendations",
-        json={"locale": "en-US", "feeds": ["sections"], "topics": [Topic.FOOD]},
+    return cast(
+        Response,
+        client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "feeds": ["sections"], "topics": [Topic.FOOD]},
+        ),
     )
 
 
 def fetch_es_es(client: TestClient) -> Response:
     """Make a curated recommendations request with es-ES locale (uses scheduled_surface backend)"""
-    return client.post(
-        "/api/v1/curated-recommendations", json={"locale": "es-ES", "topics": [Topic.FOOD]}
+    return cast(
+        Response,
+        client.post(
+            "/api/v1/curated-recommendations", json={"locale": "es-ES", "topics": [Topic.FOOD]}
+        ),
     )
 
 

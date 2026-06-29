@@ -10,7 +10,7 @@ from hashlib import md5
 from typing import Any
 
 import pytest
-from click.exceptions import BadParameter
+from typer import BadParameter
 
 from merino.jobs.csv_rs_uploader import upload
 from tests.unit.jobs.relevancy_uploader.utils import do_csv_test, do_error_test
