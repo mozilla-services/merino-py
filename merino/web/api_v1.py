@@ -657,7 +657,7 @@ async def get_picture_of_the_day(
     """Get the picture of the day."""
     potd = None
     try:
-        potd = provider.get_picture_of_the_day
+        potd = provider.get_picture_of_the_day()
     except Exception as ex:
         logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
 
