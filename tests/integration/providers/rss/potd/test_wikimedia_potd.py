@@ -15,7 +15,7 @@ from httpx import AsyncClient, HTTPError, Request, Response
 from pytest_mock import MockerFixture
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
-    WikimediaPotdBackend,
+    WikimediaPictureOfTheDayBackend,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
@@ -24,9 +24,9 @@ from merino.utils.gcs.models import Image
 @pytest.fixture(name="backend")
 def fixture_backend(
     statsd_mock, mocker: MockerFixture, gcs_storage_client, gcs_storage_bucket
-) -> WikimediaPotdBackend:
-    """Return a WikimediaPotdBackend instance for testing."""
-    return WikimediaPotdBackend(
+) -> WikimediaPictureOfTheDayBackend:
+    """Return a WikimediaPictureOfTheDayBackend instance for testing."""
+    return WikimediaPictureOfTheDayBackend(
         metrics_client=statsd_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
         feed_url="https://example.com/feed",
@@ -43,7 +43,7 @@ class TestUploadImageMethod:
 
     @freezegun.freeze_time("2026-06-07")
     def test_thumbnail_upload_only_success(
-        self, backend: WikimediaPotdBackend, gcs_storage_client, gcs_storage_bucket
+        self, backend: WikimediaPictureOfTheDayBackend, gcs_storage_client, gcs_storage_bucket
     ) -> None:
         """Test upload_image method successfully uploads an image and returns a public cdn url."""
         test_image = Image(content=b"", content_type="Image/jpeg")
@@ -59,7 +59,7 @@ class TestUploadImageMethod:
         assert blobs_in_bucket[0].name == "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
 
     def test_captures_sentry_exception(
-        self, backend: WikimediaPotdBackend, mocker: MockerFixture
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Test upload_image method successfully captures sentry exception."""
         test_image = Image(content=b"", content_type="Image/jpeg")
@@ -85,7 +85,7 @@ class TestDownloadImageMethod:
 
     @pytest.mark.asyncio
     async def test_returns_none_on_incorrect_extenstion(
-        self, backend: WikimediaPotdBackend
+        self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
         """Test download_image method returns None if the url image extension is not supported."""
         url_with_incorrect_extension = HttpUrl("http://www.test-image.com/image.txt")
@@ -97,7 +97,7 @@ class TestDownloadImageMethod:
 
     @pytest.mark.asyncio
     async def test_returns_none_on_http_exception(
-        self, backend: WikimediaPotdBackend, mocker: MockerFixture
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Test download_image method returns None http request raises exception."""
         image_url = HttpUrl("http://www.test-image.com/image.jpeg")
@@ -122,7 +122,7 @@ class TestDownloadImageMethod:
 
     @pytest.mark.asyncio
     async def test_returns_image_on_successful_download(
-        self, backend: WikimediaPotdBackend
+        self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
         """Test download_image method returns Image on successful download."""
         image_url = HttpUrl("http://www.test-image.com/image.png")
@@ -149,7 +149,7 @@ class TestBuildAndUploadPotdMethod:
     @freezegun.freeze_time("2026-06-07")
     @pytest.mark.asyncio
     async def test_build_and_upload_potd_returns_true_on_success(
-        self, backend: WikimediaPotdBackend, gcs_storage_client, gcs_storage_bucket
+        self, backend: WikimediaPictureOfTheDayBackend, gcs_storage_client, gcs_storage_bucket
     ) -> None:
         """Returns True on successful build and upload of an PictureOfTheDay object to the gcs bucket."""
         potd = PictureOfTheDay(
@@ -161,7 +161,7 @@ class TestBuildAndUploadPotdMethod:
         )
 
         # call the method to build and upload the potd jsob blob
-        actual = backend.build_and_upload_potd(potd=potd)
+        actual = backend.upload_potd_manifest(potd=potd)
 
         # get the potd manifest json blob from the bucket
         potd_manifest_blob = list(
@@ -181,7 +181,7 @@ class TestBuildAndUploadPotdMethod:
 
     @pytest.mark.asyncio
     async def test_build_and_upload_potd_returns_false_on_upload_error(
-        self, backend: WikimediaPotdBackend, mocker: MockerFixture
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns False on upload error."""
         potd = PictureOfTheDay(
@@ -203,7 +203,7 @@ class TestBuildAndUploadPotdMethod:
         )
 
         # call the method to build and upload the potd jsob blob
-        actual = backend.build_and_upload_potd(potd=potd)
+        actual = backend.upload_potd_manifest(potd=potd)
 
         assert actual is False
         # assert on sentry calls
@@ -217,7 +217,7 @@ class TestFetchPotdFromGcsBucketMethod:
 
     @freezegun.freeze_time("2026-06-07")
     def test_fetch_potd_from_gcs_bucket_returns_potd_instance_on_success(
-        self, backend: WikimediaPotdBackend
+        self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
         """Returns a PictureOfTheDay object on successful fetch from the bucket."""
         expected = PictureOfTheDay(
@@ -229,7 +229,7 @@ class TestFetchPotdFromGcsBucketMethod:
         )
 
         # call the method to build and upload the potd json blob to the bucket
-        backend.build_and_upload_potd(potd=expected)
+        backend.upload_potd_manifest(potd=expected)
 
         # call the method to fetch the uploaded potd json blob from the bucket
         actual = backend.fetch_potd_from_gcs_bucket()
@@ -242,7 +242,7 @@ class TestFetchPotdFromGcsBucketMethod:
         assert actual.thumbnail_image_url == expected.thumbnail_image_url
 
     def test_fetch_potd_from_gcs_bucket_returns_none_when_path_has_stale_date(
-        self, backend: WikimediaPotdBackend
+        self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
         """Returns None when date in the blob path is incorrect (stale)."""
         potd = PictureOfTheDay(
@@ -255,7 +255,7 @@ class TestFetchPotdFromGcsBucketMethod:
 
         # call the method to build and upload the potd json blob to the bucket with a stale date
         with freezegun.freeze_time("2026-06-07"):
-            backend.build_and_upload_potd(potd=potd)
+            backend.upload_potd_manifest(potd=potd)
 
         # call the method to fetch the uploaded potd json blob from the bucket
         actual = backend.fetch_potd_from_gcs_bucket()
@@ -264,7 +264,7 @@ class TestFetchPotdFromGcsBucketMethod:
 
     @freezegun.freeze_time("2026-06-07")
     def test_fetch_potd_from_gcs_bucket_returns_none_when_blob_retrieval_returns_an_error(
-        self, backend: WikimediaPotdBackend, mocker: MockerFixture
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns None when gcs_uploader.get_file_by_name() returns an error."""
         potd = PictureOfTheDay(
@@ -285,7 +285,7 @@ class TestFetchPotdFromGcsBucketMethod:
         backend.gcs_uploader.get_file_by_name.side_effect = blob_retrieval_error
 
         # call the method to build and upload the potd json blob to the bucket with a stale date
-        backend.build_and_upload_potd(potd=potd)
+        backend.upload_potd_manifest(potd=potd)
 
         # call the method to fetch the uploaded potd json blob from the bucket
         actual = backend.fetch_potd_from_gcs_bucket()
@@ -298,7 +298,7 @@ class TestFetchPotdFromGcsBucketMethod:
 
     @freezegun.freeze_time("2026-06-07")
     def test_fetch_potd_from_gcs_bucket_returns_none_when_blob_download_returns_an_error(
-        self, backend: WikimediaPotdBackend, mocker: MockerFixture
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns None when gcs_uploader.download_as_text() returns an error"""
         potd = PictureOfTheDay(
@@ -321,7 +321,7 @@ class TestFetchPotdFromGcsBucketMethod:
         ).side_effect = blob_download_error
 
         # call the method to build and upload the potd json blob to the bucket with a stale date
-        backend.build_and_upload_potd(potd=potd)
+        backend.upload_potd_manifest(potd=potd)
 
         # call the method to fetch the uploaded potd json blob from the bucket
         actual = backend.fetch_potd_from_gcs_bucket()

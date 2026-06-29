@@ -23,7 +23,7 @@ import sentry_sdk
 logger = logging.getLogger(__name__)
 
 
-class WikimediaPotdBackend:
+class WikimediaPictureOfTheDayBackend:
     """Backend for fetching the Wikimedia Picture of the Day RSS feed."""
 
     metrics_client: aiodogstatsd.Client
@@ -43,39 +43,68 @@ class WikimediaPotdBackend:
         self.http_client = http_client
         self.gcs_uploader = gcs_uploader
 
-    async def download_and_upload_potd_images(self) -> bool:
+    async def orchestrate_picture_of_the_day_upload(self) -> bool:
+        """Orchestrates fetching the RSS feed, extracting the Picture of the Day (POTD),
+        downloading and uploading images, and generating and uploading the POTD JSON manifest.
+
+        Returns:
+            Bool. True if success, False if failure.
+        """
+        try:
+            # fetch the Wikimedia potd rss feed
+            rss_potd = await self.fetch_picture_of_the_day_from_feed()
+            if rss_potd is None:
+                return False
+
+            # parse the feed to extract a PictureOfTheDay instance
+            # this method will return None if the potd feed entry is malformed
+            potd = parse_potd(rss_potd)
+            if potd is None:
+                return False
+
+            # download thumbnail and high resolution images
+            # and get the respective cdn urls, None if failed
+            image_urls = await self.download_and_upload_potd_images(potd)
+            if image_urls is None:
+                return False
+
+            thumbail_url, hi_res_url = image_urls
+
+            potd_to_upload = PictureOfTheDay(
+                **potd.model_dump(),
+                thumbnail_image_url=thumbail_url,
+                high_res_image_url=hi_res_url,
+            )
+
+            return self.upload_potd_manifest(potd_to_upload)
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
+            return False
+
+    async def download_and_upload_potd_images(
+        self, potd: PictureOfTheDay
+    ) -> tuple[HttpUrl, HttpUrl] | None:
         """Download and upload potd thumbnail and high resolution images.
 
         Returns:
             Bool. True if success, False if failure.
         """
-        # fetch the Wikimedia potd rss feed
-        rss_potd = await self.fetch_picture_of_the_day_from_feed()
-        if rss_potd is None:
-            return False
-
-        # parse the feed to extract a PictureOfTheDay instance
-        # this method will return None if the potd feed entry is malformed
-        potd = parse_potd(rss_potd)
-        if potd is None:
-            return False
-
         # download thumbnail and high resolution images for the above potd instance
         # exit if either of them fails or is None
         thumbnail_image = await self.download_potd_image(potd.thumbnail_image_url)
         hi_res_image = await self.download_potd_image(potd.high_res_image_url)
         if thumbnail_image is None or hi_res_image is None:
-            return False
+            return None
 
         # upload thumbnail and high resolution images to the gcs bucket / cdn
         # exit if either of them fails or is None
         thumbnail_cdn_url = self.upload_potd_image(image=thumbnail_image, is_thumbnail=True)
         hires_cdn_url = self.upload_potd_image(image=hi_res_image, is_thumbnail=False)
         if thumbnail_cdn_url is None or hires_cdn_url is None:
-            return False
+            return None
 
-        # fetching, downloads, and uploads were successful
-        return True
+        # TODO
+        return (HttpUrl(thumbnail_cdn_url), HttpUrl(hires_cdn_url))
 
     async def fetch_picture_of_the_day_from_feed(self) -> FeedParserDict | None:
         """Fetch Wikimedia Commons picture of the day RSS feed.
@@ -141,7 +170,7 @@ class WikimediaPotdBackend:
             sentry_sdk.capture_exception(ex)
             return None
 
-    def build_and_upload_potd(self, potd: PictureOfTheDay) -> bool:
+    def upload_potd_manifest(self, potd: PictureOfTheDay) -> bool:
         """Build and upload a PictureOfTheDay object to the gcs bucket.
 
         Returns:

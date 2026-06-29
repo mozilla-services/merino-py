@@ -8,7 +8,7 @@ from merino.configs import settings
 from merino.utils.http_client import create_http_client
 from merino.providers.rss.base import BaseRssProvider
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
-    WikimediaPotdBackend,
+    WikimediaPictureOfTheDayBackend,
 )
 from merino.providers.rss.wikimedia_potd.provider import WikimediaPictureOfTheDayProvider
 from merino.utils.metrics import get_metrics_client
@@ -36,7 +36,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
             )
 
             return WikimediaPictureOfTheDayProvider(
-                backend=WikimediaPotdBackend(
+                backend=WikimediaPictureOfTheDayBackend(
                     feed_url=setting.feed_url,
                     http_client=http_client,
                     metrics_client=get_metrics_client(),
