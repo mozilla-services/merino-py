@@ -70,10 +70,8 @@ class WikimediaPictureOfTheDayBackend:
 
             thumbail_url, hi_res_url = image_urls
 
-            potd_to_upload = PictureOfTheDay(
-                **potd.model_dump(),
-                thumbnail_image_url=thumbail_url,
-                high_res_image_url=hi_res_url,
+            potd_to_upload = potd.model_copy(
+                update={"thumbnail_image_url": thumbail_url, "high_res_image_url": hi_res_url}
             )
 
             return self.upload_potd_manifest(potd_to_upload)
