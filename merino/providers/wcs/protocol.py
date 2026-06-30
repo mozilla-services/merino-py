@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
+from merino.providers.suggest.sports.backends.sportsdata.common.sports import WCS
 from merino.providers.suggest.sports.backends.sportsdata.common.tbd import is_tbd_event_team
 from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
 from merino.providers.wcs.utils import get_team_colours
@@ -99,11 +100,16 @@ class TeamInfo(BaseModel):
         """
         key = str(team["key"])
         raw_icon_url = team.get("icon_url")
+        # SportsData.io returns the wrong official ISO3 for a few countries; remap
+        # through WCS.ISO_alias so the region surfaces the correct code, leaving
+        # codes that are not aliased unchanged.
+        region = str(team.get("region") or team.get("country") or key)
+        region = WCS.ISO_alias.get(region, region)
         return cls(
             key=key,
             global_team_id=int(team["id"]),
             name=str(team["name"]),
-            region=str(team.get("region") or team.get("country") or key),
+            region=region,
             colors=get_team_colours(key),
             icon_url=HttpUrl(raw_icon_url) if raw_icon_url else _icon(key),
             group=team.get("group") or group,

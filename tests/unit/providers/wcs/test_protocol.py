@@ -82,6 +82,71 @@ def test_team_info_icon_url_uses_png_when_svg_is_missing(
     assert str(info.icon_url).endswith("/logos/nations/nations_zzz.png")
 
 
+@pytest.mark.parametrize(
+    ("key", "expected_region"),
+    [
+        pytest.param("CDR", "COD", id="cdr-aliased-to-cod"),
+        pytest.param("CVI", "CPV", id="cvi-aliased-to-cpv"),
+        pytest.param("BRA", "BRA", id="unlisted-code-unchanged"),
+    ],
+)
+def test_team_info_from_event_team_remaps_region_through_iso_alias(
+    key: str, expected_region: str
+) -> None:
+    """SportsData's wrong ISO3 codes are remapped; unlisted codes pass through."""
+    info = TeamInfo.from_event_team({"key": key, "id": 1, "name": "Team"})
+
+    assert info.region == expected_region
+
+
+def test_team_info_from_event_team_remaps_region_from_country() -> None:
+    """An explicit country field is remapped when it is an aliased ISO3 code."""
+    info = TeamInfo.from_event_team({"key": "ZZZ", "id": 1, "name": "Team", "country": "CDR"})
+
+    assert info.region == "COD"
+
+
+@pytest.mark.parametrize(
+    ("home", "away", "expected_home_region", "expected_away_region"),
+    [
+        pytest.param(
+            ("CDR", "Congo DR", 90000091),
+            ("CVI", "Cape Verde", 90000092),
+            "COD",
+            "CPV",
+            id="both-sides-aliased",
+        ),
+        pytest.param(
+            ("CDR", "Congo DR", 90000091),
+            ("BRA", "Brazil", 90000001),
+            "COD",
+            "BRA",
+            id="one-side-aliased",
+        ),
+    ],
+)
+def test_event_info_from_event_remaps_team_regions(
+    home: tuple[str, str, int],
+    away: tuple[str, str, int],
+    expected_home_region: str,
+    expected_away_region: str,
+) -> None:
+    """Both home and away regions are remapped through WCS.ISO_alias end-to-end."""
+    e = event(
+        event_id=30,
+        day_offset=0,
+        hour=14,
+        home=home,
+        away=away,
+        status=GameStatus.Scheduled,
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.home_team is not None and info.home_team.region == expected_home_region
+    assert info.away_team is not None and info.away_team.region == expected_away_region
+
+
 def test_is_tbd_event_team_ignores_malformed_placeholder_id() -> None:
     """A malformed placeholder id is not treated as an undecided bracket side."""
     assert is_tbd_event_team({"key": TBD_TEAM_KEY, "id": "bad"}) is False
