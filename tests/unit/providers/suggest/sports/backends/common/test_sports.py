@@ -2391,6 +2391,62 @@ def test_wcs_event_details_no_rounds_returns_none_stage() -> None:
     assert details["stage"] is None
 
 
+@pytest.mark.parametrize(
+    ("clock", "period", "status", "expected"),
+    [
+        pytest.param("90+3", "PenaltyShootout", GameStatus.InProgress, "PEN", id="live-penalty"),
+        pytest.param(None, "PenaltyShootout", GameStatus.InProgress, "PEN", id="live-no-clock"),
+        pytest.param("90+3", "PenaltyShootout", GameStatus.F_SO, "90+3", id="completed-shootout"),
+        pytest.param("90+3", "PenaltyShootout", GameStatus.Scheduled, "90+3", id="not-yet-live"),
+        pytest.param("45", "Regular", GameStatus.InProgress, "45", id="non-penalty"),
+        pytest.param(90, "ExtraTime", GameStatus.InProgress, "90", id="non-str-clock-coerced"),
+        pytest.param(None, "Regular", GameStatus.InProgress, None, id="no-clock"),
+    ],
+)
+def test_wcs_clock_or_penalty_hint(
+    clock: Any, period: Any, status: GameStatus, expected: str | None
+) -> None:
+    """Surface PEN only for a live penalty shootout; otherwise pass the clock through."""
+    assert WCS._clock_or_penalty_hint(clock, period, status) == expected
+
+
+@pytest.mark.parametrize(
+    ("row", "expected_clock"),
+    [
+        pytest.param(
+            {"Period": "PenaltyShootout", "Status": "InProgress", "ClockDisplay": "90+3"},
+            "PEN",
+            id="live-shootout-gets-pen",
+        ),
+        pytest.param(
+            {"Period": "PenaltyShootout", "Status": "Final", "ClockDisplay": "90+3"},
+            "90+3",
+            id="completed-shootout-keeps-clock",
+        ),
+        pytest.param(
+            # Missing Status normalizes to a non-live status, so no PEN hint.
+            {"Period": "PenaltyShootout", "ClockDisplay": "90+3"},
+            "90+3",
+            id="missing-status-keeps-clock",
+        ),
+        pytest.param(
+            {"Period": "Regular", "Status": "InProgress", "ClockDisplay": "45"},
+            "45",
+            id="non-penalty-keeps-clock",
+        ),
+    ],
+)
+def test_wcs_event_details_clock(row: dict[str, Any], expected_clock: str | None) -> None:
+    """event_details wires Status/Period/clock into the penalty-shootout hint.
+
+    Both `/matches` and `/live` reach this through `event_from_row` and
+    `apply_score_update`, so covering the chokepoint covers both endpoints.
+    """
+    sport = WCS(settings=settings.providers.sports)
+
+    assert sport.event_details(row)["clock"] == expected_clock
+
+
 @freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_wcs_update_events_loads_rounds_when_empty(
