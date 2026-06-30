@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.suggest.sports.backends.sportsdata.common.tbd import is_tbd_event_team
 from merino.providers.suggest.sports.backends.sportsdata.protocol import build_query
@@ -25,6 +26,24 @@ def _icon(key: str) -> HttpUrl | None:
     if entry.svg:
         return HttpUrl(f"{_LOGO_HOST}/{entry.svg}")
     return HttpUrl(f"{_LOGO_HOST}/{entry.url}")
+
+
+def _public_status(event: Event) -> str:
+    """Return the client-facing status string for a WCS event."""
+    if event.status == GameStatus.Break and _is_post_regulation_period(event.period):
+        return GameStatus.InProgress.as_str()
+    return event.status.as_str()
+
+
+def _is_post_regulation_period(period: str | None) -> bool:
+    """Return whether `period` describes extra time or penalties."""
+    normalized = "".join(char for char in (period or "").lower() if char.isalnum())
+    return (
+        normalized.startswith("et")
+        or "extra" in normalized
+        or "penalty" in normalized
+        or normalized in {"p", "pen"}
+    )
 
 
 class TeamInfo(BaseModel):
@@ -180,7 +199,7 @@ class EventInfo(BaseModel):
             clock=event.clock,
             updated=int(updated.timestamp()),
             stage=event.stage or "",
-            status=event.status.as_str(),
+            status=_public_status(event),
             status_type=event.status.as_ui_status(),
             query=build_query(event.model_dump(mode="json")),
         )

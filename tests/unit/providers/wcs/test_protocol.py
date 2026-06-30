@@ -6,6 +6,7 @@
 
 from collections.abc import Callable
 
+import pytest
 from pytest_mock import MockerFixture
 
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
@@ -403,6 +404,62 @@ def test_event_info_from_event_missing_period_and_clock_stay_null() -> None:
 
     assert info.period is None
     assert info.clock is None
+
+
+@pytest.mark.parametrize(
+    ("period", "expected_status"),
+    [
+        pytest.param("HT", "Break", id="halftime"),
+        pytest.param("Regular", "Break", id="regular"),
+        pytest.param("1", "Break", id="first-half"),
+        pytest.param("2", "Break", id="second-half"),
+        pytest.param(None, "Break", id="missing-period"),
+        pytest.param("ExtraTime", "In Progress", id="extra-time"),
+        pytest.param("Extra Time", "In Progress", id="extra-time-spaced"),
+        pytest.param("ET", "In Progress", id="et"),
+        pytest.param("ETHT", "In Progress", id="extra-time-halftime"),
+        pytest.param("PenaltyShootout", "In Progress", id="penalty-shootout"),
+        pytest.param("P", "In Progress", id="penalty-short"),
+    ],
+)
+def test_event_info_from_event_masks_non_halftime_break_status(
+    period: str | None, expected_status: str
+) -> None:
+    """Only regulation halftime is exposed as Break to WCS clients."""
+    e = event(
+        event_id=17,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.Break,
+        period=period,
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.status == expected_status
+    assert info.status_type == "live"
+    assert info.period == period
+
+
+def test_event_info_from_event_keeps_non_break_extra_time_status() -> None:
+    """The extra-time workaround only rewrites Break statuses."""
+    e = event(
+        event_id=18,
+        day_offset=0,
+        hour=14,
+        home=("BRA", "Brazil", 90000001),
+        away=("ARG", "Argentina", 90000002),
+        status=GameStatus.InProgress,
+        period="ExtraTime",
+    )
+
+    info = EventInfo.from_event(e)
+
+    assert info.status == "In Progress"
+    assert info.status_type == "live"
+    assert info.period == "ExtraTime"
 
 
 def test_event_info_from_event_propagates_group_to_both_teams() -> None:
