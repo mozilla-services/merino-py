@@ -118,3 +118,10 @@ def _compile_pattern(entry: Mapping[str, object]) -> QueryPattern | None:
             extra={"pattern_id": pattern_id},
         )
         return None
+
+
+def match_query(matcher: QueryPatternMatcher, query: str) -> tuple[str, ...]:
+    """Return the IDs of all patterns that match *query*."""
+    if not query:
+        return ()
+    return tuple(p.id for p in matcher.patterns if p.regex.search(query))

@@ -6,7 +6,9 @@ import pytest
 
 from merino.utils.query_processing.query_patterns import (
     MAX_REGEX_LENGTH,
+    QueryPatternMatcher,
     build_query_pattern_matcher,
+    match_query,
 )
 
 QUERY_PATTERNS_LOGGER = "merino.utils.query_processing.query_patterns"
@@ -86,7 +88,10 @@ def test_build_query_pattern_matcher_keeps_multiple_valid_patterns() -> None:
     )
 
     assert matcher is not None
-    assert tuple(pattern.id for pattern in matcher.patterns) == ("sports_v1", "flights_v1")
+    assert tuple(pattern.id for pattern in matcher.patterns) == (
+        "sports_v1",
+        "flights_v1",
+    )
     assert matcher.patterns[0].regex.search("NBA scores") is not None
 
 
@@ -139,3 +144,55 @@ def test_build_query_pattern_matcher_all_invalid_returns_none() -> None:
     )
 
     assert matcher is None
+
+
+@pytest.fixture()
+def two_pattern_matcher() -> QueryPatternMatcher:
+    """Build a matcher with sports and flights patterns for reuse across match_query tests."""
+    matcher = build_query_pattern_matcher(
+        enabled=True,
+        sample_rate=1.0,
+        patterns=[
+            {"id": "sports_v1", "regex": r"\b(nba|nfl|mlb|nhl|soccer)\b"},
+            {"id": "flights_v1", "regex": r"\b(flight|airline|airport)\b"},
+        ],
+    )
+    assert matcher is not None
+    return matcher
+
+
+def test_match_query_no_match(two_pattern_matcher: QueryPatternMatcher) -> None:
+    """Test that a query with no pattern matches returns an empty tuple."""
+    assert match_query(two_pattern_matcher, "weather in toronto") == ()
+
+
+def test_match_query_one_match(two_pattern_matcher: QueryPatternMatcher) -> None:
+    """Test that a query matching exactly one pattern returns that pattern's id."""
+    assert match_query(two_pattern_matcher, "nba scores tonight") == ("sports_v1",)
+
+
+def test_match_query_multiple_matches(two_pattern_matcher: QueryPatternMatcher) -> None:
+    """Test that a query matching multiple patterns returns all matching ids."""
+    result = match_query(two_pattern_matcher, "nba airport shuttle")
+    assert result == ("sports_v1", "flights_v1")
+
+
+def test_match_query_case_insensitive(two_pattern_matcher: QueryPatternMatcher) -> None:
+    """Test that matching is case-insensitive regardless of query casing."""
+    assert match_query(two_pattern_matcher, "NBA Finals") == ("sports_v1",)
+    assert match_query(two_pattern_matcher, "FLIGHT deals") == ("flights_v1",)
+
+
+def test_match_query_empty_string(two_pattern_matcher: QueryPatternMatcher) -> None:
+    """Test that an empty query returns an empty tuple without evaluating any patterns."""
+    assert match_query(two_pattern_matcher, "") == ()
+
+
+def test_match_query_returns_ids_not_query_text(
+    two_pattern_matcher: QueryPatternMatcher,
+) -> None:
+    """Test that the return value contains only pattern IDs, never substrings of the query."""
+    result = match_query(two_pattern_matcher, "nba scores")
+    assert all(isinstance(r, str) for r in result)
+    assert "nba" not in result
+    assert "scores" not in result
