@@ -38,7 +38,7 @@ class WikimediaPictureOfTheDayBackend(Protocol):
         """Download and upload potd thumbnail and high resolution images.
 
         Returns:
-            Bool. True if success, False if failure.
+            tuple[HttpUrl, HttpUrl] | None.
         """
         ...
 
