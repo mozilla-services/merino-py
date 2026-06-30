@@ -3,6 +3,7 @@
 import logging
 import aiodogstatsd
 import asyncio
+from merino.configs import settings
 from pydantic import HttpUrl
 
 from merino.providers.rss.base import BaseRssProvider
@@ -40,8 +41,19 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
 
     async def initialize(self) -> None:
         """Initialize the provider."""
-        if self.potd is None:
-            # fetch potd from the gcs bucket instead
+        if settings.current_env.lower() == "production":
+            self.potd = PictureOfTheDay(
+                title="Wikimedia Commons picture of the day",
+                description="Sample Picture of the day description.",
+                published_date="2026-04-13",
+                thumbnail_image_url=HttpUrl(
+                    "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_2026_04_13.jpg"
+                ),
+                high_res_image_url=HttpUrl(
+                    "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
+                ),
+            )
+        elif self.potd is None:
             self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
 
     def get_picture_of_the_day(self) -> PictureOfTheDay | None:
