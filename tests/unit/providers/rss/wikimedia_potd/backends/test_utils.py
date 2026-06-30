@@ -120,6 +120,15 @@ def test_parse_potd_returns_empty_description_when_no_description_div(
     assert isinstance(result.thumbnail_image_url, HttpUrl)
 
 
+def test_parse_potd_returns_none_when_the_published_date_is_not_today(
+    potd_entry: FeedParserDict,
+) -> None:
+    """Returns None when the published date is not today."""
+    # the potd_entry fixture object has the date set to 2026-04-13.
+    assert parse_potd(potd_entry) is None
+
+
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_none_when_no_img_tag(potd_entry: FeedParserDict) -> None:
     """Returns None when the description HTML contains no img element."""
     potd_entry["description"] = '<div class="description">No image here.</div>'
@@ -127,6 +136,7 @@ def test_parse_potd_returns_none_when_no_img_tag(potd_entry: FeedParserDict) -> 
     assert parse_potd(potd_entry) is None
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_none_when_img_has_no_src(potd_entry: FeedParserDict) -> None:
     """Returns None when the img element is missing a src attribute."""
     potd_entry["description"] = '<img alt="missing src" />'

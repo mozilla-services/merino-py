@@ -195,6 +195,7 @@ class TestOrchestratePictureOfTheDayUpload:
         result = await backend.orchestrate_picture_of_the_day_upload()
         assert result is False
 
+    @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
     async def test_orchestrate_picture_of_the_day_upload_returns_false_when_downloading_image_fails(
         self, backend, mocker: MockerFixture
@@ -213,6 +214,7 @@ class TestOrchestratePictureOfTheDayUpload:
         result = await backend.orchestrate_picture_of_the_day_upload()
         assert result is False
 
+    @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
     async def test_orchestrate_picture_of_the_day_upload_returns_false_when_uploading_image_fails(
         self, backend, mocker: MockerFixture
