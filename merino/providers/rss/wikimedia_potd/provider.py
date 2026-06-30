@@ -53,8 +53,9 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
                     "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
                 ),
             )
-        elif self.potd is None:
-            self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
+        # TODO uncomment for stage env testing.
+        # elif self.potd is None:
+        #     self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
 
     def get_picture_of_the_day(self) -> PictureOfTheDay | None:
         """Return the current Wikimedia Picture of the Day or None."""
