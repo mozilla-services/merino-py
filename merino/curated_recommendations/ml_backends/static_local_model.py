@@ -31,12 +31,9 @@ LOCAL_AND_SERVER_BRANCH_NAME = LOCAL_AND_SERVER_V1_MODEL_ID
 LOCAL_AND_SERVER_V3_BRANCH_NAME = "personalized-stories"
 LOCAL_AND_SERVER_V4_BRANCH_NAME = LOCAL_AND_SERVER_V3_BRANCH_NAME
 
-# InferredTimeZone experiment branches. Note: the TZ branch is currently
-# being repurposed to route requests to the LinTS InterestRanker (the original
-# TZ-context treatment underperformed; reusing its enrollment for the
-# InterestRanker rollout). See is_inferred_interest_experiment in sections.py.
+# InferredTimeZone experiment branches.
 CONTEXTUAL_RANKING_TREATMENT_TZ = "contextual-ranking-content-tz"
-# Ranking based on country only — the control branch (current production behavior).
+# Ranking based on country only — the control branch.
 CONTEXTUAL_RANKING_TREATMENT_COUNTRY = "contextual-ranking-content-country"
 
 CTR_TOPIC_MODEL_ID = "ctr_model_topic_1"
