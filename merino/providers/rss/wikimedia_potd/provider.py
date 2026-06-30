@@ -2,7 +2,6 @@
 
 import logging
 import aiodogstatsd
-import asyncio
 from merino.configs import settings
 from pydantic import HttpUrl
 
