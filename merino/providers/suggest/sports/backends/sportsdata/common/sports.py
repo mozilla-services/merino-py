@@ -23,7 +23,7 @@ from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports import LOGGING_TAG, utc_time_from_now
 from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 from merino.providers.suggest.sports.backends import get_data
-from merino.providers.suggest.sports.backends.sportsdata.common import SportCategory
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus, SportCategory
 from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
     SportTerms,
@@ -745,17 +745,33 @@ class WCS(Sport):
         )
         self.default_metric_attributes = {"sport": self.__class__.__name__}
 
+    @staticmethod
+    def _clock_or_penalty_hint(clock: Any, period: Any, status: GameStatus) -> str | None:
+        """Return a clock hint, substituting "PEN" during a live penalty shootout.
+
+        Workaround for a client bug on iOS and Desktop: when the feed reports a
+        penalty shootout the period alone is not enough for the clients to show
+        penalty time, so surface "PEN" in the clock field for them to display.
+
+        The feed keeps `Period` as "PenaltyShootout" after the match ends, so we
+        gate on a live status to avoid showing "PEN" on a completed game.
+        """
+        if period == "PenaltyShootout" and status.is_in_progress():
+            return "PEN"
+        return str(clock) if clock is not None else None
+
     def event_details(self, event_description: dict[str, Any]) -> dict[str, Any]:
         """Return soccer score details used by the WCS widget."""
         clock = event_description.get("ClockDisplay") or event_description.get("Clock")
         round_id = event_description.get("RoundId")
+        status = GameStatus.parse(event_description.get("Status") or "")
         return {
             "period": event_description.get("Period"),
             "home_extra": event_description.get("HomeTeamScoreExtraTime"),
             "away_extra": event_description.get("AwayTeamScoreExtraTime"),
             "home_penalty": event_description.get("HomeTeamScorePenalty"),
             "away_penalty": event_description.get("AwayTeamScorePenalty"),
-            "clock": str(clock) if clock is not None else None,
+            "clock": WCS._clock_or_penalty_hint(clock, event_description.get("Period"), status),
             "stage": self.rounds.get(round_id) if round_id is not None else None,
             "round_id": round_id,
             "season_type": event_description.get("SeasonType"),
