@@ -101,7 +101,6 @@ class WikimediaPictureOfTheDayBackend:
         if thumbnail_cdn_url is None or hires_cdn_url is None:
             return None
 
-        # TODO
         return (HttpUrl(thumbnail_cdn_url), HttpUrl(hires_cdn_url))
 
     async def fetch_picture_of_the_day_from_feed(self) -> FeedParserDict | None:
