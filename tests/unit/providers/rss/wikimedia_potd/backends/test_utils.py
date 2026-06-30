@@ -93,18 +93,20 @@ def fixture_potd_entry() -> FeedParserDict:
     )
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_picture_of_the_day(potd_entry: FeedParserDict) -> None:
     """Returns a PictureOfTheDay with correct fields when all data is present."""
     result = parse_potd(potd_entry)
 
     assert isinstance(result, PictureOfTheDay)
     assert result.title == "Test POTD"
-    assert result.published_date == "Mon, 13 Apr 2026 00:00:00 GMT"
+    assert result.published_date == "2026-04-13"
     assert result.description == "Test description."
     assert str(result.thumbnail_image_url) == THUMBNAIL_URL
     assert str(result.high_res_image_url) == HIGH_RES_URL
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_empty_description_when_no_description_div(
     potd_entry: FeedParserDict,
 ) -> None:
@@ -118,6 +120,15 @@ def test_parse_potd_returns_empty_description_when_no_description_div(
     assert isinstance(result.thumbnail_image_url, HttpUrl)
 
 
+def test_parse_potd_returns_none_when_the_published_date_is_not_today(
+    potd_entry: FeedParserDict,
+) -> None:
+    """Returns None when the published date is not today."""
+    # the potd_entry fixture object has the date set to 2026-04-13.
+    assert parse_potd(potd_entry) is None
+
+
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_none_when_no_img_tag(potd_entry: FeedParserDict) -> None:
     """Returns None when the description HTML contains no img element."""
     potd_entry["description"] = '<div class="description">No image here.</div>'
@@ -125,6 +136,7 @@ def test_parse_potd_returns_none_when_no_img_tag(potd_entry: FeedParserDict) -> 
     assert parse_potd(potd_entry) is None
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_none_when_img_has_no_src(potd_entry: FeedParserDict) -> None:
     """Returns None when the img element is missing a src attribute."""
     potd_entry["description"] = '<img alt="missing src" />'
@@ -132,6 +144,7 @@ def test_parse_potd_returns_none_when_img_has_no_src(potd_entry: FeedParserDict)
     assert parse_potd(potd_entry) is None
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_derives_high_res_url_from_thumbnail(potd_entry: FeedParserDict) -> None:
     """Derives high_res_image_url by stripping /thumb and the trailing size segment from the thumbnail URL."""
     thumbnail = (

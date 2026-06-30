@@ -40,10 +40,10 @@ def fixture_test_potd() -> PictureOfTheDay:
     """Return a test picture of the day instance."""
     return PictureOfTheDay(
         title="Wikimedia Commons picture of the day",
-        thumbnail_image_url="https://test-thumbnail.jpg",
-        high_res_image_url="https://test-high-res.jpg",
+        thumbnail_image_url=HttpUrl("https://test-thumbnail.jpg"),
+        high_res_image_url=HttpUrl("https://test-high-res.jpg"),
         description="test description",
-        published_date="Mon, 13 Apr 2026 00:00:00 GMT",
+        published_date="2026-06-07",
     )
 
 
@@ -75,28 +75,24 @@ async def test_shutdown(provider: WikimediaPictureOfTheDayProvider) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_picture_of_the_day_returns_none_when_backend_returns_none(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock
+async def test_get_picture_of_the_day_returns_none(
+    provider: WikimediaPictureOfTheDayProvider,
 ) -> None:
     """Test that get_picture_of_the_day returns an empty Potd when backend returns None."""
-    backend_mock.get_picture_of_the_day.return_value = None
-
-    potd = await provider.get_picture_of_the_day()
-
-    assert potd is None
+    assert provider.get_picture_of_the_day() is None
 
 
 @pytest.mark.asyncio
 async def test_get_picture_of_the_day_returns_correct_potd(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
+    provider: WikimediaPictureOfTheDayProvider, test_potd
 ) -> None:
     """Test that get_picture_of_the_day returns a correct potd instance."""
-    backend_mock.get_picture_of_the_day.return_value = test_potd
+    provider.potd = test_potd
 
-    potd = await provider.get_picture_of_the_day()
+    potd = provider.get_picture_of_the_day()
 
     assert potd is not None
     assert potd.title == "Wikimedia Commons picture of the day"
     assert potd.thumbnail_image_url == HttpUrl("https://test-thumbnail.jpg")
     assert potd.high_res_image_url == HttpUrl("https://test-high-res.jpg")
-    assert potd.published_date == "Mon, 13 Apr 2026 00:00:00 GMT"
+    assert potd.published_date == "2026-06-07"

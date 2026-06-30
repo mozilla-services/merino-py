@@ -2,6 +2,7 @@
 
 import logging
 import aiodogstatsd
+from merino.configs import settings
 from pydantic import HttpUrl
 
 from merino.providers.rss.base import BaseRssProvider
@@ -19,7 +20,7 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
     backend: WikimediaPictureOfTheDayBackend
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
-    manifest_data: None
+    potd: PictureOfTheDay | None
 
     def __init__(
         self,
@@ -35,15 +36,30 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         self.backend = backend
         self.metrics_client = metrics_client
         self.url = HttpUrl("https://merino.services.mozilla.com/")
-        self.manifest_data = None
+        self.potd = None
 
     async def initialize(self) -> None:
         """Initialize the provider."""
+        if settings.current_env.lower() == "production":
+            self.potd = PictureOfTheDay(
+                title="Wikimedia Commons picture of the day",
+                description="Sample Picture of the day description.",
+                published_date="2026-04-13",
+                thumbnail_image_url=HttpUrl(
+                    "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_2026_04_13.jpg"
+                ),
+                high_res_image_url=HttpUrl(
+                    "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
+                ),
+            )
+        # TODO uncomment for stage env testing.
+        # elif self.potd is None:
+        #     self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
 
-    async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
-        """Return the current Wikimedia Picture of the Day."""
-        potd = await self.backend.get_picture_of_the_day()
-        return potd if potd else None
+    def get_picture_of_the_day(self) -> PictureOfTheDay | None:
+        """Return the current Wikimedia Picture of the Day or None."""
+        return self.potd
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
+        await self.backend.shutdown()
