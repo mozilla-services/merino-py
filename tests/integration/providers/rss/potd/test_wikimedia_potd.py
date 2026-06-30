@@ -19,6 +19,9 @@ from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
+from tests.data.rss.wikimedia_potd.potd_feed import TEST_RSS_FEED
+
+FEED_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
 
 
 @pytest.fixture(name="backend")
@@ -36,6 +39,145 @@ def fixture_backend(
             destination_cdn_hostname="test-cdn-name",
         ),
     )
+
+
+class TestOrchestratePictureOfTheDayUploadMethod:
+    """Tests for orchestrate_picture_of_the_day_upload method."""
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_orchestrate_picture_of_the_day_upload_returns_true_on_success(
+        self,
+        backend: WikimediaPictureOfTheDayBackend,
+        gcs_storage_client,
+        gcs_storage_bucket,
+        mocker: MockerFixture,
+    ) -> None:
+        """Returns True on successful upload orchestration of the PictureOfTheDay object to the gcs bucket."""
+        # mock get request for the RSS feed to return TEST_RSS_FEED
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_RSS_FEED,
+            request=Request(method="GET", url=FEED_URL),
+        )
+
+        # mock download_and_upload_potd_images(potd) returns
+        mocker.patch.object(backend, "download_potd_image").return_value = Image(
+            content=b"255", content_type="Image/png"
+        )
+
+        # call the orchestrate method
+        result = await backend.orchestrate_picture_of_the_day_upload()
+        assert result is True
+
+        # call the backend method to fetch the potd manifest from the gcs bucket
+        potd_manifest = backend.fetch_potd_from_gcs_bucket()
+
+        assert potd_manifest is not None
+        assert isinstance(potd_manifest, PictureOfTheDay)
+        assert potd_manifest.title == "Wikimedia Commons picture of the day for June 24"
+        assert potd_manifest.published_date == "2026-06-24"
+        assert (
+            str(potd_manifest.thumbnail_image_url)
+            == "https://test-cdn-name/rss/wikimedia_potd/POTD_2026-06-24_thumbnail.png"
+        )
+        assert (
+            str(potd_manifest.high_res_image_url)
+            == "https://test-cdn-name/rss/wikimedia_potd/POTD_2026-06-24_hi_res.png"
+        )
+        assert "Sagittarius" in potd_manifest.description
+
+        # fetch the uploaded blobs (two images and one json manifest object)
+        potd_blobs = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
+
+        assert len(potd_blobs) == 3
+        assert potd_blobs[0].name == "rss/wikimedia_potd/POTD_2026-06-24.json"
+        assert potd_blobs[1].name == "rss/wikimedia_potd/POTD_2026-06-24_hi_res.png"
+        assert potd_blobs[2].name == "rss/wikimedia_potd/POTD_2026-06-24_thumbnail.png"
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_feed_fetch_fails(
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    ) -> None:
+        """Returns False when fetch_picture_of_the_day_from_feed returns None."""
+        mocker.patch.object(backend, "fetch_picture_of_the_day_from_feed").return_value = None
+
+        result = await backend.orchestrate_picture_of_the_day_upload()
+        assert result is False
+
+    @freezegun.freeze_time("2026-06-25")
+    @pytest.mark.asyncio
+    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_potd_parsing_fails(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Returns False when the feed's published date does not match today, causing parse_potd to return None."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_RSS_FEED,
+            request=Request(method="GET", url=FEED_URL),
+        )
+
+        result = await backend.orchestrate_picture_of_the_day_upload()
+        assert result is False
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_image_download_fails(
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    ) -> None:
+        """Returns False when download_potd_image returns None, causing download_and_upload_potd_images to return None."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_RSS_FEED,
+            request=Request(method="GET", url=FEED_URL),
+        )
+        mocker.patch.object(backend, "download_potd_image").return_value = None
+
+        result = await backend.orchestrate_picture_of_the_day_upload()
+        assert result is False
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_manifest_upload_fails(
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    ) -> None:
+        """Returns False when upload_potd_manifest returns False."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_RSS_FEED,
+            request=Request(method="GET", url=FEED_URL),
+        )
+        mocker.patch.object(backend, "download_potd_image").return_value = Image(
+            content=b"255", content_type="Image/png"
+        )
+        mocker.patch.object(backend, "upload_potd_manifest").return_value = False
+
+        result = await backend.orchestrate_picture_of_the_day_upload()
+        assert result is False
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_orchestrate_picture_of_the_day_upload_returns_false_and_captures_sentry_exception_on_unexpected_error(
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    ) -> None:
+        """Returns False and captures the exception via Sentry when an unexpected error is raised."""
+        unexpected_error = Exception("Unexpected error during orchestration")
+        mocker.patch.object(
+            backend, "fetch_picture_of_the_day_from_feed"
+        ).side_effect = unexpected_error
+
+        sentry_capture = mocker.patch(
+            "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
+        )
+
+        result = await backend.orchestrate_picture_of_the_day_upload()
+        assert result is False
+        sentry_capture.assert_called_once_with(unexpected_error)
 
 
 class TestUploadImageMethod:
