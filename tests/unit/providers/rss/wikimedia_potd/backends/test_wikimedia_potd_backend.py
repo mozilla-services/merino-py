@@ -60,7 +60,7 @@ def fixture_potd() -> PictureOfTheDay:
     return PictureOfTheDay(
         title="Test Potd",
         description="Test potd description",
-        published_date="2206-06-07",
+        published_date="2026-06-07",
         thumbnail_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
         high_res_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
     )
