@@ -2798,6 +2798,86 @@ async def test_wcs_sportsdata_schedule_and_games_by_date_payloads_match_expected
     assert event.updated == datetime(2026, 4, 29, 14, 26, 26, tzinfo=timezone.utc)
 
 
+@freezegun.freeze_time("2026-07-01T01:24:36", tz_offset=0)
+@pytest.mark.asyncio
+async def test_wcs_games_by_date_updates_start_delay_status_and_kickoff() -> None:
+    """A delayed score row updates both status and kickoff time from SportsData."""
+    sport = WCS(settings=settings.providers.sports)
+    sport.event_ttl = timedelta(weeks=8)
+    sport.rounds = {1616: "Round of 32"}
+    await sport.async_load_teams_from_source(wcs_static_teams_payload({"MEX", "ECU"}))
+
+    sport.load_schedules_from_source(
+        [
+            {
+                "GameId": 86985,
+                "GlobalGameId": 90086985,
+                "RoundId": 1616,
+                "Season": 2026,
+                "SeasonType": 3,
+                "Group": None,
+                "AwayTeamId": 865,
+                "GlobalAwayTeamId": 90000865,
+                "HomeTeamId": 868,
+                "GlobalHomeTeamId": 90000868,
+                "Day": "2026-07-01T00:00:00",
+                "DateTime": "2026-07-01T01:00:00",
+                "Status": "Scheduled",
+                "Period": "Regular",
+                "Clock": None,
+                "ClockDisplay": "",
+                "Winner": None,
+                "AwayTeamKey": "ECU",
+                "AwayTeamScore": None,
+                "HomeTeamKey": "MEX",
+                "HomeTeamScore": None,
+                "UpdatedUtc": "2026-07-01T00:00:00",
+                "IsClosed": False,
+            },
+        ],
+        event_timezone=ZoneInfo("UTC"),
+    )
+
+    sport.load_scores_from_source(
+        [
+            {
+                "GameId": 86985,
+                "GlobalGameId": 90086985,
+                "RoundId": 1616,
+                "Season": 2026,
+                "SeasonType": 3,
+                "Group": None,
+                "AwayTeamId": 865,
+                "GlobalAwayTeamId": 90000865,
+                "HomeTeamId": 868,
+                "GlobalHomeTeamId": 90000868,
+                "Day": "2026-07-01T00:00:00",
+                "DateTime": "2026-07-01T02:00:00",
+                "Status": "Start Delay",
+                "Period": "Regular",
+                "Clock": None,
+                "ClockDisplay": "",
+                "Winner": None,
+                "AwayTeamKey": "ECU",
+                "AwayTeamScore": None,
+                "HomeTeamKey": "MEX",
+                "HomeTeamScore": None,
+                "UpdatedUtc": "2026-07-01T01:24:36",
+                "IsClosed": False,
+            },
+        ],
+        event_timezone=ZoneInfo("UTC"),
+    )
+
+    event = sport.events[90086985]
+    assert event.status == GameStatus.Delayed
+    assert event.status.is_scheduled()
+    assert event.date == datetime(2026, 7, 1, 2, 0, tzinfo=timezone.utc)
+    assert event.updated == datetime(2026, 7, 1, 1, 24, 36, tzinfo=timezone.utc)
+    assert event.period == "Regular"
+    assert event.stage == "Round of 32"
+
+
 @freezegun.freeze_time("2026-06-10T00:00:00", tz_offset=0)
 @pytest.mark.asyncio
 async def test_wcs_ingests_knockout_placeholder_with_one_known_team() -> None:

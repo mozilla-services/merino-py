@@ -28,7 +28,7 @@ def _freeze_live_now() -> Iterator[None]:
 
 
 def test_returns_matches_envelope(client: TestClient) -> None:
-    """Response is `{"matches": [...]}` with in-progress cached events."""
+    """Response is `{"matches": [...]}` with current cached events."""
     response = client.get(_PATH)
     assert response.status_code == 200
 

@@ -80,7 +80,7 @@ async def get_wcs_matches(
 @router.get(
     "/wcs/live",
     tags=["wcs"],
-    summary="Currently live World Cup Soccer matches",
+    summary="Current World Cup Soccer matches",
     response_model=LiveMatchesResponse,
 )
 async def get_wcs_live(
@@ -91,7 +91,7 @@ async def get_wcs_live(
     ] = None,
     provider: WcsProvider = Depends(get_wcs_provider),
 ) -> LiveMatchesResponse:
-    """Return in-progress matches sorted ascending by date."""
+    """Return current matches sorted ascending by date."""
     try:
         live_matches: LiveMatchesResponse = await provider.get_live_matches(
             _parse_team_keys(teams)

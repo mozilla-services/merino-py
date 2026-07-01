@@ -229,7 +229,7 @@ class MatchesResponse(BaseModel):
 class LiveMatchesResponse(BaseModel):
     """Response payload for `GET /api/v1/wcs/live`.
 
-    Holds currently live events, sorted by `date` ascending.
+    Holds current events, sorted by `date` ascending.
     """
 
     matches: list[EventInfo]
