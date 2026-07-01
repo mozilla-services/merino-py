@@ -160,6 +160,33 @@ async def test_scheduled_match_grace_includes_boundary() -> None:
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T18:45:00Z")
+async def test_delayed_match_stays_current_before_updated_kickoff() -> None:
+    """A known start-delay state remains current even when kickoff moves later."""
+    delayed = build_event(
+        90086985,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("ECU", "Ecuador", 90000865),
+        GameStatus.Delayed,
+        period="Regular",
+    )
+
+    response = await build_provider(events=[delayed]).get_matches(
+        ANCHOR,
+        limit=None,
+        team_keys=None,
+    )
+
+    assert response.previous == []
+    assert [event.global_event_id for event in response.current] == [90086985]
+    assert response.next_ == []
+    assert response.current[0].status == "Delayed"
+    assert response.current[0].status_type == "scheduled"
+
+
+@pytest.mark.asyncio
 @freezegun.freeze_time("2026-06-15T19:45:00Z")
 async def test_break_match_stays_current_after_kickoff() -> None:
     """SportsData uses Break for halftime, which remains a current live match."""
@@ -539,8 +566,8 @@ async def test_live_mock_path_does_not_touch_redis(mocker) -> None:
 
 @pytest.mark.asyncio
 @freezegun.freeze_time("2026-06-15T16:00:00Z")
-async def test_live_returns_only_in_progress_cached_events() -> None:
-    """`get_live_matches` reads Redis-backed events and keeps live matches only."""
+async def test_live_returns_current_cached_events() -> None:
+    """`get_live_matches` reads Redis-backed events and keeps current matches only."""
     halftime = build_event(
         90086910,
         0,
@@ -560,6 +587,27 @@ async def test_live_returns_only_in_progress_cached_events() -> None:
     assert {event.global_event_id for event in response.matches} == {1003, 1004, 90086910}
     assert {event.status for event in response.matches} == {"In Progress", "Break"}
     assert {event.status_type for event in response.matches} == {"live"}
+
+
+@pytest.mark.asyncio
+@freezegun.freeze_time("2026-06-15T18:45:00Z")
+async def test_live_returns_delayed_current_match() -> None:
+    """The live endpoint includes delayed matches from the current bucket."""
+    delayed = build_event(
+        90086985,
+        0,
+        19,
+        ("MEX", "Mexico", 90000868),
+        ("ECU", "Ecuador", 90000865),
+        GameStatus.Delayed,
+        period="Regular",
+    )
+
+    response = await build_provider(events=[delayed]).get_live_matches(team_keys=None)
+
+    assert [event.global_event_id for event in response.matches] == [90086985]
+    assert response.matches[0].status == "Delayed"
+    assert response.matches[0].status_type == "scheduled"
 
 
 @freezegun.freeze_time("2026-06-15T15:00:00Z")

@@ -622,6 +622,8 @@ class Sport:
 
     def apply_score_update(self, event: Event, row: SportsDataEventRow) -> None:
         """Apply score fields and source freshness from a normalized score row."""
+        event.date = row.kickoff
+        event.original_date = row.original_date
         event.home_score = row.home_score
         event.away_score = row.away_score
         event.status = row.status

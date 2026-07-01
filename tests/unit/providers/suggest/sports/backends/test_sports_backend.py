@@ -260,10 +260,13 @@ async def test_gamestatus():
     assert GameStatus.parse("final - over time") == GameStatus.F_OT
     assert GameStatus.parse("final - shoot out") == GameStatus.F_SO
     assert GameStatus.parse("not necessary") == GameStatus.NotNecessary
+    assert GameStatus.parse("cancelled") == GameStatus.Canceled
+    assert GameStatus.parse("Start Delay") == GameStatus.Delayed
     assert GameStatus.parse("Banana") == GameStatus.Unknown
 
     assert GameStatus.Final.is_final()
     assert GameStatus.parse("scheduled").is_scheduled()
+    assert GameStatus.parse("Start Delay").is_scheduled()
     assert GameStatus.parse("break").is_in_progress()
     assert GameStatus.parse("suspended").is_in_progress()
     assert GameStatus.parse("In Progress").status_type() == GameStatus.InProgress

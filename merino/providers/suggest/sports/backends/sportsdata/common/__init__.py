@@ -30,12 +30,13 @@ class GameStatus(StrEnum):
     @classmethod
     def parse(cls, state: str) -> GameStatus:
         """Instantiate from a string"""
+        normalized = state.strip().lower()
         try:
-            return cls(state.lower())
+            return cls(normalized)
         except ValueError:
             # Handle our custom strings
-            match state.lower():
-                case "in progress":
+            match normalized:
+                case "in progress" | "in-progress":
                     return GameStatus.InProgress
                 case "final - over time":
                     return GameStatus.F_OT
@@ -43,6 +44,10 @@ class GameStatus(StrEnum):
                     return GameStatus.F_SO
                 case "not necessary":
                     return GameStatus.NotNecessary
+                case "cancelled":
+                    return GameStatus.Canceled
+                case _ if "delay" in normalized:
+                    return GameStatus.Delayed
                 case _:
                     return GameStatus.Unknown
 

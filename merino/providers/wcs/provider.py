@@ -12,6 +12,7 @@ from merino.governance.circuitbreakers import (
     WCSCircuitBreaker,
 )
 from merino.middleware.geolocation import Location
+from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event, Team
 from merino.providers.wcs.fake_data import get_all_teams
 from merino.providers.wcs.fake_live_data import build_live_events
@@ -120,7 +121,7 @@ class WcsProvider:
 
     @WCSCircuitBreaker(name="wcs_live_matches")
     async def get_live_matches(self, team_keys: frozenset[str] | None) -> LiveMatchesResponse:
-        """Return live-endpoint events, sorted ascending by `date`.
+        """Return current live-endpoint events, sorted ascending by `date`.
 
         The Redis-backed path is gated so we can switch it on via config.
         `team_keys` restricts results to matches with that team on either side.
@@ -144,7 +145,7 @@ class WcsProvider:
 
         live_events: list[EventInfo] = []
         for event in sorted(events, key=lambda e: e.date):
-            if not event.status.is_in_progress():
+            if _bucket_for_event(event, now) != "current":
                 continue
             event_info = EventInfo.from_event(event)
             if _matches_team_filter(event_info, team_keys):
@@ -244,6 +245,8 @@ def _bucket_for_event(event: Event, reference_time: datetime) -> _MatchBucket:
     if event.status.is_final():
         return "previous"
     if event.status.is_in_progress():
+        return "current"
+    if event.status == GameStatus.Delayed:
         return "current"
 
     event_datetime = _event_datetime(event)
