@@ -60,7 +60,7 @@ def test_team_info_icon_url_can_be_none_when_logo_is_missing(
     make_manifest: MakeManifest,
 ) -> None:
     """Teams without a manifest logo serialize icon_url=None."""
-    mocker.patch("merino.providers.wcs.protocol.load_manifest", return_value=make_manifest())
+    mocker.patch("merino.utils.logos.load_manifest", return_value=make_manifest())
 
     info = TeamInfo.from_event_team({"key": "ZZZ", "id": 1, "name": "Unknown"})
 
@@ -73,7 +73,7 @@ def test_team_info_icon_url_uses_png_when_svg_is_missing(
 ) -> None:
     """Manifest entries without SVGs fall back to their PNG URL."""
     mocker.patch(
-        "merino.providers.wcs.protocol.load_manifest",
+        "merino.utils.logos.load_manifest",
         return_value=make_manifest((LogoCategory.Nations, "ZZZ")),
     )
 

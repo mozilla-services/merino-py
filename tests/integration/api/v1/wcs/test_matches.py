@@ -266,8 +266,9 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
         client.get(_PATH)
 
 
-def test_team_icons_pinned_to_prod_logo_bucket(client: TestClient) -> None:
-    """Stage lacks a CDN host override, so icons hardcode the prod GCS bucket."""
+@pytest.mark.restore_load_manifest
+def test_team_icons_served_through_configured_cdn(client: TestClient) -> None:
+    """Team flag icons are served through the configured image CDN host."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()
     events = body["previous"] + body["current"] + body["next"]
 
@@ -275,5 +276,5 @@ def test_team_icons_pinned_to_prod_logo_bucket(client: TestClient) -> None:
     icons = [e["home_team"]["icon_url"] for e in events] + [
         e["away_team"]["icon_url"] for e in events
     ]
-    expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
+    expected_prefix = "https://test-cdn.mozilla.net/logos/nations/svg/"
     assert all(icon and icon.startswith(expected_prefix) for icon in icons)
