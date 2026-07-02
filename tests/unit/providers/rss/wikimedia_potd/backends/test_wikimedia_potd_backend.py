@@ -4,17 +4,18 @@
 
 """Unit tests for the Wikimedia Picture of the Day backend."""
 
-import logging
 import pytest
 import freezegun
-from typing import Any, cast
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 from pydantic import HttpUrl
-from httpx import AsyncClient, Request, Response
-from pytest import LogCaptureFixture
+from httpx import AsyncClient, HTTPError, Request, Response
 from pytest_mock import MockerFixture
 
-from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.backends.protocol import (
+    PictureOfTheDay,
+    WikimediaPotdError,
+)
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.providers.rss.wikimedia_potd.backends.utils import RSS_FETCH_REQUEST_HEADERS
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
@@ -110,10 +111,10 @@ class TestDownloadAndUploadPotdImagesMethod:
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2026-06-24")
-    async def test_download_and_upload_potd_images_returns_none_when_one_download_call_fails(
+    async def test_download_and_upload_potd_images_propagates_error_when_one_download_call_fails(
         self, backend, potd, mocker: MockerFixture
     ) -> None:
-        """Test that download_and_upload_potd_images method returns two urls when successful."""
+        """Propagates the HTTP error when one of the image download requests fails."""
         test_image = Image(content=b"255", content_type="Image/jpeg")
 
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
@@ -134,38 +135,45 @@ class TestDownloadAndUploadPotdImagesMethod:
             ),
         ]
 
-        result = await backend.download_and_upload_potd_images(potd)
-        assert result is None
+        with pytest.raises(HTTPError):
+            await backend.download_and_upload_potd_images(potd)
 
     @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_none_when_download_image_method_returns_none(
+    async def test_download_and_upload_potd_images_propagates_error_when_download_image_raises(
         self, backend, potd, mocker: MockerFixture
     ) -> None:
-        """Test that download_and_upload_potd_images method returns None when download_image method returns None."""
-        mocker.patch.object(backend, "download_potd_image").return_value = None
+        """Propagates the error raised by download_potd_image."""
+        mocker.patch.object(backend, "download_potd_image").side_effect = WikimediaPotdError(
+            "download failed"
+        )
 
-        result = await backend.download_and_upload_potd_images(potd)
-        assert result is None
+        with pytest.raises(WikimediaPotdError):
+            await backend.download_and_upload_potd_images(potd)
 
     @pytest.mark.asyncio
-    async def test_download_and_upload_potd_images_returns_none_when_upload_potd_image_method_returns_none(
+    async def test_download_and_upload_potd_images_propagates_error_when_upload_image_raises(
         self, backend, potd, mocker: MockerFixture
     ) -> None:
-        """Test that download_and_upload_potd_images method returns None when upload_potd_image method returns None."""
-        mocker.patch.object(backend, "upload_potd_image").return_value = None
+        """Propagates the error raised by upload_potd_image."""
+        mocker.patch.object(backend, "download_potd_image").return_value = Image(
+            content=b"255", content_type="Image/jpeg"
+        )
+        mocker.patch.object(backend, "upload_potd_image").side_effect = WikimediaPotdError(
+            "upload failed"
+        )
 
-        result = await backend.download_and_upload_potd_images(potd)
-        assert result is None
+        with pytest.raises(WikimediaPotdError):
+            await backend.download_and_upload_potd_images(potd)
 
 
 class TestOrchestratePictureOfTheDayUpload:
     """Tests for orchestrate_picture_of_the_day_upload method."""
 
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_no_rss_feed_is_fetched(
+    async def test_upload_picture_of_the_day_returns_false_when_no_rss_feed_is_fetched(
         self, backend
     ) -> None:
-        """Test that download_and_upload_potd_images method returns false when no rss feed is fetched."""
+        """Returns False when the feed fetch fails with a non-2xx status."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
         # mocking http client to respond with incorrect xml
@@ -175,14 +183,14 @@ class TestOrchestratePictureOfTheDayUpload:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_parsing_fails(
+    async def test_upload_picture_of_the_day_returns_false_when_parsing_fails(
         self, backend
     ) -> None:
-        """Test that download_and_upload_potd_images method returns false when an parsing fails on invalid xml response."""
+        """Returns False when parsing fails on an invalid xml response."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
         # mocking http client to respond with incorrect xml
@@ -192,15 +200,15 @@ class TestOrchestratePictureOfTheDayUpload:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_downloading_image_fails(
+    async def test_upload_picture_of_the_day_returns_false_when_downloading_image_fails(
         self, backend, mocker: MockerFixture
     ) -> None:
-        """Test that orchestrate_picture_of_the_day_upload method returns false when downloading image fails."""
+        """Returns False when downloading an image raises, caught at the orchestrator boundary."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
@@ -208,18 +216,20 @@ class TestOrchestratePictureOfTheDayUpload:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        # mocking download_potd_image method to return None
-        mocker.patch.object(backend, "download_potd_image").return_value = None
+        # mocking download_potd_image method to raise
+        mocker.patch.object(backend, "download_potd_image").side_effect = WikimediaPotdError(
+            "download failed"
+        )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_uploading_image_fails(
+    async def test_upload_picture_of_the_day_returns_false_when_uploading_image_fails(
         self, backend, mocker: MockerFixture
     ) -> None:
-        """Test that orchestrate_picture_of_the_day_upload method returns false when uploading image fails."""
+        """Returns False when uploading an image raises, caught at the orchestrator boundary."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
@@ -227,13 +237,15 @@ class TestOrchestratePictureOfTheDayUpload:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        # mocking download method to return a valid value but not for the upload method
+        # mocking download method to return a valid value but raise on the upload method
         mocker.patch.object(backend, "download_potd_image").return_value = Image(
             content=b"255", content_type="Image/jpeg"
         )
-        mocker.patch.object(backend, "upload_potd_image").return_value = None
+        mocker.patch.object(backend, "upload_potd_image").side_effect = WikimediaPotdError(
+            "upload failed"
+        )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
 
@@ -261,11 +273,11 @@ class TestFetchPictureOfTheDayFromFeedMethod:
         client_mock.get.assert_called_once_with(FEED_URL, headers=RSS_FETCH_REQUEST_HEADERS)
 
     @pytest.mark.asyncio
-    async def test_fetch_potd_returns_none_for_empty_content(
+    async def test_fetch_potd_raises_for_empty_content(
         self,
         backend: WikimediaPictureOfTheDayBackend,
     ) -> None:
-        """Returns None when the HTTP response body is empty."""
+        """Raises WikimediaPotdError when the HTTP response body is empty."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
@@ -273,41 +285,30 @@ class TestFetchPictureOfTheDayFromFeedMethod:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        result = await backend.fetch_picture_of_the_day_from_feed()
-
-        assert result is None
+        with pytest.raises(WikimediaPotdError):
+            await backend.fetch_picture_of_the_day_from_feed()
 
     @pytest.mark.asyncio
-    async def test_fetch_potd_returns_none_and_logs_on_http_error(
+    async def test_fetch_potd_propagates_http_error(
         self,
         backend: WikimediaPictureOfTheDayBackend,
-        caplog: LogCaptureFixture,
-        filter_caplog: Any,
     ) -> None:
-        """Returns None and logs an error when the HTTP request fails with a non-2xx status."""
+        """Propagates the HTTP error when the request fails with a non-2xx status."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=500,
             request=Request(method="GET", url=FEED_URL),
         )
 
-        caplog.set_level(logging.ERROR)
-        result = await backend.fetch_picture_of_the_day_from_feed()
-
-        assert result is None
-        records = filter_caplog(
-            caplog.records,
-            "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd",
-        )
-        assert len(records) == 1
-        assert "HTTP error occurred when fetching Wikimedia POTD feed" in records[0].message
+        with pytest.raises(HTTPError):
+            await backend.fetch_picture_of_the_day_from_feed()
 
     @pytest.mark.asyncio
-    async def test_fetch_potd_returns_none_when_feed_has_no_valid_entries(
+    async def test_fetch_potd_raises_when_feed_has_no_valid_entries(
         self,
         backend: WikimediaPictureOfTheDayBackend,
     ) -> None:
-        """Returns None when the feed entries are missing required fields."""
+        """Raises WikimediaPotdError when the feed entries are missing required fields."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
@@ -315,6 +316,5 @@ class TestFetchPictureOfTheDayFromFeedMethod:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        result = await backend.fetch_picture_of_the_day_from_feed()
-
-        assert result is None
+        with pytest.raises(WikimediaPotdError):
+            await backend.fetch_picture_of_the_day_from_feed()

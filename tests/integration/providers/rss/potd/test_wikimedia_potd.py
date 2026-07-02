@@ -13,7 +13,10 @@ from pydantic import HttpUrl
 from unittest.mock import call, AsyncMock, Mock
 from httpx import AsyncClient, HTTPError, Request, Response
 from pytest_mock import MockerFixture
-from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.backends.protocol import (
+    PictureOfTheDay,
+    WikimediaPotdError,
+)
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPictureOfTheDayBackend,
 )
@@ -68,7 +71,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
         )
 
         # call the orchestrate method
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is True
 
         # call the backend method to fetch the potd manifest from the gcs bucket
@@ -101,10 +104,12 @@ class TestOrchestratePictureOfTheDayUploadMethod:
     async def test_orchestrate_picture_of_the_day_upload_returns_false_when_feed_fetch_fails(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
-        """Returns False when fetch_picture_of_the_day_from_feed returns None."""
-        mocker.patch.object(backend, "fetch_picture_of_the_day_from_feed").return_value = None
+        """Returns False when fetch_picture_of_the_day_from_feed raises."""
+        mocker.patch.object(
+            backend, "fetch_picture_of_the_day_from_feed"
+        ).side_effect = WikimediaPotdError("feed fetch failed")
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
     @freezegun.freeze_time("2026-06-25")
@@ -112,7 +117,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
     async def test_orchestrate_picture_of_the_day_upload_returns_false_when_potd_parsing_fails(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Returns False when the feed's published date does not match today, causing parse_potd to return None."""
+        """Returns False when the feed's published date does not match today, causing parse_potd to raise."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
@@ -120,7 +125,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
     @freezegun.freeze_time("2026-06-24")
@@ -128,16 +133,18 @@ class TestOrchestratePictureOfTheDayUploadMethod:
     async def test_orchestrate_picture_of_the_day_upload_returns_false_when_image_download_fails(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
-        """Returns False when download_potd_image returns None, causing download_and_upload_potd_images to return None."""
+        """Returns False when download_potd_image raises, propagating up to the orchestrator boundary."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
             content=TEST_RSS_FEED,
             request=Request(method="GET", url=FEED_URL),
         )
-        mocker.patch.object(backend, "download_potd_image").return_value = None
+        mocker.patch.object(backend, "download_potd_image").side_effect = WikimediaPotdError(
+            "image download failed"
+        )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
     @freezegun.freeze_time("2026-06-24")
@@ -145,7 +152,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
     async def test_orchestrate_picture_of_the_day_upload_returns_false_when_manifest_upload_fails(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
-        """Returns False when upload_potd_manifest returns False."""
+        """Returns False when upload_potd_manifest raises."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
@@ -155,9 +162,11 @@ class TestOrchestratePictureOfTheDayUploadMethod:
         mocker.patch.object(backend, "download_potd_image").return_value = Image(
             content=b"255", content_type="Image/png"
         )
-        mocker.patch.object(backend, "upload_potd_manifest").return_value = False
+        mocker.patch.object(backend, "upload_potd_manifest").side_effect = WikimediaPotdError(
+            "manifest upload failed"
+        )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
 
     @freezegun.freeze_time("2026-06-24")
@@ -175,7 +184,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
             "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
         )
 
-        result = await backend.orchestrate_picture_of_the_day_upload()
+        result = await backend.upload_picture_of_the_day()
         assert result is False
         sentry_capture.assert_called_once_with(unexpected_error)
 
@@ -200,67 +209,47 @@ class TestUploadImageMethod:
         assert len(blobs_in_bucket) == 1
         assert blobs_in_bucket[0].name == "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
 
-    def test_captures_sentry_exception(
+    def test_propagates_upload_error(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
-        """Test upload_image method successfully captures sentry exception."""
+        """Test upload_image method propagates the underlying upload error to the caller."""
         test_image = Image(content=b"", content_type="Image/jpeg")
 
         ex = Exception("Test Exception")
         mocker.patch.object(backend.gcs_uploader, "upload_image").side_effect = ex
 
-        sentry_capture = mocker.patch(
-            "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
-        )
-
-        actual = backend.upload_potd_image(image=test_image, is_thumbnail=True)
-        assert actual is None
-
-        # assert on sentry calls
-        mock_call = [call(ex)]
-        assert sentry_capture.call_count == 1
-        sentry_capture.assert_has_calls(mock_call)
+        with pytest.raises(Exception, match="Test Exception"):
+            backend.upload_potd_image(image=test_image, is_thumbnail=True)
 
 
 class TestDownloadImageMethod:
     """Tests for the download_image method."""
 
     @pytest.mark.asyncio
-    async def test_returns_none_on_incorrect_extenstion(
+    async def test_raises_on_incorrect_extenstion(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Test download_image method returns None if the url image extension is not supported."""
+        """Test download_image method raises if the url image extension is not supported."""
         url_with_incorrect_extension = HttpUrl("http://www.test-image.com/image.txt")
 
         # call the backend method to download the image
-        actual = await backend.download_potd_image(url=url_with_incorrect_extension)
-
-        assert actual is None
+        with pytest.raises(WikimediaPotdError):
+            await backend.download_potd_image(url=url_with_incorrect_extension)
 
     @pytest.mark.asyncio
-    async def test_returns_none_on_http_exception(
-        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    async def test_propagates_http_exception(
+        self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Test download_image method returns None http request raises exception."""
+        """Test download_image method propagates the HTTP error raised by the request."""
         image_url = HttpUrl("http://www.test-image.com/image.jpeg")
         http_error = HTTPError("Error fetching POTD")
 
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.side_effect = http_error
 
-        sentry_capture = mocker.patch(
-            "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
-        )
-
         # call the backend method to download the image
-        actual = await backend.download_potd_image(url=image_url)
-
-        assert actual is None
-
-        # assert on sentry calls
-        mock_call = [call(http_error)]
-        assert sentry_capture.call_count == 1
-        sentry_capture.assert_has_calls(mock_call)
+        with pytest.raises(HTTPError, match="Error fetching POTD"):
+            await backend.download_potd_image(url=image_url)
 
     @pytest.mark.asyncio
     async def test_returns_image_on_successful_download(
@@ -290,10 +279,10 @@ class TestBuildAndUploadPotdMethod:
 
     @freezegun.freeze_time("2026-06-07")
     @pytest.mark.asyncio
-    async def test_build_and_upload_potd_returns_true_on_success(
+    async def test_build_and_upload_potd_succeeds(
         self, backend: WikimediaPictureOfTheDayBackend, gcs_storage_client, gcs_storage_bucket
     ) -> None:
-        """Returns True on successful build and upload of an PictureOfTheDay object to the gcs bucket."""
+        """Successfully builds and uploads a PictureOfTheDay object to the gcs bucket."""
         potd = PictureOfTheDay(
             title="Test Potd",
             description="Test potd description",
@@ -303,7 +292,7 @@ class TestBuildAndUploadPotdMethod:
         )
 
         # call the method to build and upload the potd jsob blob
-        actual = backend.upload_potd_manifest(potd=potd)
+        backend.upload_potd_manifest(potd=potd)
 
         # get the potd manifest json blob from the bucket
         potd_manifest_blob = list(
@@ -313,7 +302,6 @@ class TestBuildAndUploadPotdMethod:
         # download the above manifest blob as json
         blob_json = orjson.loads(potd_manifest_blob.download_as_text())
 
-        assert actual is True
         assert potd_manifest_blob.name == "rss/wikimedia_potd/POTD_2026-06-07.json"
         assert blob_json["title"] == potd.title
         assert blob_json["description"] == potd.description
@@ -322,10 +310,10 @@ class TestBuildAndUploadPotdMethod:
         assert blob_json["thumbnail_image_url"] == str(potd.thumbnail_image_url)
 
     @pytest.mark.asyncio
-    async def test_build_and_upload_potd_returns_false_on_upload_error(
-        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    async def test_build_and_upload_potd_propagates_upload_error(
+        self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Returns False on upload error."""
+        """Propagates the underlying error on upload failure."""
         potd = PictureOfTheDay(
             title="Test Potd",
             description="Test potd description",
@@ -336,22 +324,13 @@ class TestBuildAndUploadPotdMethod:
 
         upload_error = Exception("Failed upload content.")
 
-        # mock the upload_content method to return the upload_error
+        # mock the upload_content method to raise the upload_error
         backend.gcs_uploader = Mock(spec=GcsUploader)
         backend.gcs_uploader.upload_content.side_effect = upload_error
 
-        sentry_capture = mocker.patch(
-            "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
-        )
-
         # call the method to build and upload the potd jsob blob
-        actual = backend.upload_potd_manifest(potd=potd)
-
-        assert actual is False
-        # assert on sentry calls
-        mock_call = [call(upload_error)]
-        assert sentry_capture.call_count == 1
-        sentry_capture.assert_has_calls(mock_call)
+        with pytest.raises(Exception, match="Failed upload content."):
+            backend.upload_potd_manifest(potd=potd)
 
 
 class TestFetchPotdFromGcsBucketMethod:

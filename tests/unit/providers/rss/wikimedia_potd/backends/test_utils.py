@@ -9,7 +9,10 @@ import freezegun
 from feedparser import FeedParserDict
 from pydantic import HttpUrl
 
-from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.backends.protocol import (
+    PictureOfTheDay,
+    WikimediaPotdError,
+)
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     extract_potd,
     is_valid_potd_image_url,
@@ -52,9 +55,10 @@ def fixture_valid_entry() -> FeedParserDict:
     return _make_entry(**VALID_FIELDS)
 
 
-def test_extract_potd_returns_none_for_empty_entries() -> None:
-    """Returns None when the feed has no entries."""
-    assert extract_potd(_make_feed([])) is None
+def test_extract_potd_raises_for_empty_entries() -> None:
+    """Raises WikimediaPotdError when the feed has no entries."""
+    with pytest.raises(WikimediaPotdError):
+        extract_potd(_make_feed([]))
 
 
 def test_extract_potd_returns_entry_for_single_valid_entry(
@@ -74,13 +78,14 @@ def test_extract_potd_returns_last_entry_from_multiple(
     assert extract_potd(feed) is valid_entry
 
 
-def test_extract_potd_returns_none_when_a_required_field_missing() -> None:
-    """Returns None when a required field is absent from the entry."""
-    fields = VALID_FIELDS
+def test_extract_potd_raises_when_a_required_field_missing() -> None:
+    """Raises WikimediaPotdError when a required field is absent from the entry."""
+    fields = dict(VALID_FIELDS)
     # remove the "published" key.
     fields.pop("published")
     feed = _make_feed([_make_entry(**fields)])
-    assert extract_potd(feed) is None
+    with pytest.raises(WikimediaPotdError):
+        extract_potd(feed)
 
 
 @pytest.fixture(name="potd_entry")
@@ -120,28 +125,31 @@ def test_parse_potd_returns_empty_description_when_no_description_div(
     assert isinstance(result.thumbnail_image_url, HttpUrl)
 
 
-def test_parse_potd_returns_none_when_the_published_date_is_not_today(
+def test_parse_potd_raises_when_the_published_date_is_not_today(
     potd_entry: FeedParserDict,
 ) -> None:
-    """Returns None when the published date is not today."""
+    """Raises WikimediaPotdError when the published date is not today."""
     # the potd_entry fixture object has the date set to 2026-04-13.
-    assert parse_potd(potd_entry) is None
+    with pytest.raises(WikimediaPotdError):
+        parse_potd(potd_entry)
 
 
 @freezegun.freeze_time("2026-04-13")
-def test_parse_potd_returns_none_when_no_img_tag(potd_entry: FeedParserDict) -> None:
-    """Returns None when the description HTML contains no img element."""
+def test_parse_potd_raises_when_no_img_tag(potd_entry: FeedParserDict) -> None:
+    """Raises WikimediaPotdError when the description HTML contains no img element."""
     potd_entry["description"] = '<div class="description">No image here.</div>'
 
-    assert parse_potd(potd_entry) is None
+    with pytest.raises(WikimediaPotdError):
+        parse_potd(potd_entry)
 
 
 @freezegun.freeze_time("2026-04-13")
-def test_parse_potd_returns_none_when_img_has_no_src(potd_entry: FeedParserDict) -> None:
-    """Returns None when the img element is missing a src attribute."""
+def test_parse_potd_raises_when_img_has_no_src(potd_entry: FeedParserDict) -> None:
+    """Raises WikimediaPotdError when the img element is missing a src attribute."""
     potd_entry["description"] = '<img alt="missing src" />'
 
-    assert parse_potd(potd_entry) is None
+    with pytest.raises(WikimediaPotdError):
+        parse_potd(potd_entry)
 
 
 @freezegun.freeze_time("2026-04-13")
