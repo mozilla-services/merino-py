@@ -60,7 +60,7 @@ def load_manifest() -> LogoManifest:
     return LogoManifest.model_validate(orjson.loads(manifest_path.read_bytes()))
 
 
-def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
+def get_logo_url(category: LogoCategory, key: str, format: str | None = None) -> Optional[HttpUrl]:
     """Logo lookup for suggest providers.
 
     The process for creating suggestions is currently manual,
@@ -72,6 +72,10 @@ def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
     For sports teams, it corresponds to the "key" field in the
     `merino.providers.suggest.sports.backends.sportsdata.common.Team`
     model.
+
+    When `format` is set, will look for an entry with the specified
+    format (e.g. "svg", "png") otherwise will fall back to the
+    default URL entry in the manifest.
     """
     logo = load_manifest().get(category, key)
     if logo is None:
@@ -85,4 +89,5 @@ def get_logo_url(category: LogoCategory, key: str) -> Optional[HttpUrl]:
             tags={"name": f"logos.{category}", "key": normalized_key, "result": "miss"},
         )
         return None
-    return HttpUrl(urljoin(CDN_ROOT_URL, logo.url))
+    path = (format and getattr(logo, format.lower(), None)) or logo.url
+    return HttpUrl(urljoin(CDN_ROOT_URL, path))

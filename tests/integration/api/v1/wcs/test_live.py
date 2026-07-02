@@ -85,8 +85,9 @@ def test_unknown_team_returns_empty_list(client: TestClient) -> None:
     assert response.json() == {"matches": []}
 
 
+@pytest.mark.restore_load_manifest
 def test_team_icons_are_svg(client: TestClient) -> None:
-    """Live match team flags serve SVG from the production GCS bucket."""
+    """Live match team flags serve SVG through the configured image CDN host."""
     matches = client.get(_PATH).json()["matches"]
 
     assert matches
@@ -96,7 +97,7 @@ def test_team_icons_are_svg(client: TestClient) -> None:
         team["icon_url"] for match in matches for team in (match["home_team"], match["away_team"])
     ]
 
-    expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
+    expected_prefix = "https://test-cdn.mozilla.net/logos/nations/svg/"
     assert all(icon.startswith(expected_prefix) for icon in icons)
 
 

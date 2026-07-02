@@ -64,14 +64,15 @@ def test_success_sets_short_public_cache_control(client: TestClient) -> None:
     )
 
 
-def test_team_icons_are_svg_from_prod_logo_bucket(client: TestClient) -> None:
-    """All team flags serve SVG from the hardcoded production GCS bucket."""
+@pytest.mark.restore_load_manifest
+def test_team_icons_are_svg_from_configured_cdn(client: TestClient) -> None:
+    """All team flags serve SVG through the configured image CDN host."""
     body = client.get(_PATH).json()
 
     icons = [team["icon_url"] for team in body["teams"] if team["icon_url"] is not None]
 
     assert icons
-    expected_prefix = "https://storage.googleapis.com/merino-images-prod/logos/nations/svg/"
+    expected_prefix = "https://test-cdn.mozilla.net/logos/nations/svg/"
     assert all(icon.startswith(expected_prefix) for icon in icons)
 
 
