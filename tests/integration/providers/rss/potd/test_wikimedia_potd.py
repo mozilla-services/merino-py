@@ -44,12 +44,12 @@ def fixture_backend(
     )
 
 
-class TestOrchestratePictureOfTheDayUploadMethod:
-    """Tests for orchestrate_picture_of_the_day_upload method."""
+class TestUploadPictureOfTheDayMethod:
+    """Tests for upload_picture_of_the_day_upload method."""
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_true_on_success(
+    async def test_upload_picture_of_the_day_upload_returns_true_on_success(
         self,
         backend: WikimediaPictureOfTheDayBackend,
         gcs_storage_client,
@@ -101,7 +101,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_feed_fetch_fails(
+    async def test_upload_picture_of_the_day_upload_returns_false_when_feed_fetch_fails(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns False when fetch_picture_of_the_day_from_feed raises."""
@@ -114,7 +114,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
 
     @freezegun.freeze_time("2026-06-25")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_potd_parsing_fails(
+    async def test_upload_picture_of_the_day_upload_returns_false_when_potd_parsing_fails(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
         """Returns False when the feed's published date does not match today, causing parse_potd to raise."""
@@ -130,7 +130,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_image_download_fails(
+    async def test_upload_picture_of_the_day_upload_returns_false_when_image_download_fails(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns False when download_potd_image raises, propagating up to the orchestrator boundary."""
@@ -149,7 +149,7 @@ class TestOrchestratePictureOfTheDayUploadMethod:
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_when_manifest_upload_fails(
+    async def test_upload_picture_of_the_day_upload_returns_false_when_manifest_upload_fails(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns False when upload_potd_manifest raises."""
@@ -171,7 +171,48 @@ class TestOrchestratePictureOfTheDayUploadMethod:
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
-    async def test_orchestrate_picture_of_the_day_upload_returns_false_and_captures_sentry_exception_on_unexpected_error(
+    async def test_upload_picture_of_the_day_upload_returns_false_when_gcs_upload_fails(
+        self,
+        backend: WikimediaPictureOfTheDayBackend,
+        gcs_storage_client,
+        gcs_storage_bucket,
+        mocker: MockerFixture,
+    ) -> None:
+        """A failed GCS upload must be reported as failure and must not publish a manifest."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_RSS_FEED,
+            request=Request(method="GET", url=FEED_URL),
+        )
+        # Images "download" fine; only the GCS upload should fail.
+        mocker.patch.object(backend, "download_potd_image").return_value = Image(
+            content=b"255", content_type="Image/png"
+        )
+
+        # Simulate a real GCS write failure at the storage layer, so the real
+        # GcsUploader.upload_content path runs.
+        mocker.patch(
+            "google.cloud.storage.Blob.upload_from_string",
+            side_effect=Exception("GCS upload failed"),
+        )
+
+        result = await backend.upload_picture_of_the_day()
+
+        # Intended contract: the upload failed, so orchestration reports failure.
+        assert result is False
+
+        # Intended contract: no manifest is published pointing at images that never uploaded.
+        assert backend.fetch_potd_from_gcs_bucket() is None
+        blob_names = [
+            blob.name
+            for blob in gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs()
+        ]
+        assert "rss/wikimedia_potd/POTD_2026-06-24.json" not in blob_names
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_upload_returns_false_and_captures_sentry_exception_on_unexpected_error(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns False and captures the exception via Sentry when an unexpected error is raised."""
@@ -388,14 +429,6 @@ class TestFetchPotdFromGcsBucketMethod:
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
         """Returns None when gcs_uploader.get_file_by_name() returns an error."""
-        potd = PictureOfTheDay(
-            title="Test Potd",
-            description="Test potd description",
-            published_date="2026-06-7",
-            high_res_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
-            thumbnail_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
-        )
-
         sentry_capture = mocker.patch(
             "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
         )
@@ -404,9 +437,6 @@ class TestFetchPotdFromGcsBucketMethod:
         # mock the get_file_by_name method to return the blob_retrieval_error
         backend.gcs_uploader = Mock(spec=GcsUploader)
         backend.gcs_uploader.get_file_by_name.side_effect = blob_retrieval_error
-
-        # call the method to build and upload the potd json blob to the bucket with a stale date
-        backend.upload_potd_manifest(potd=potd)
 
         # call the method to fetch the uploaded potd json blob from the bucket
         actual = backend.fetch_potd_from_gcs_bucket()

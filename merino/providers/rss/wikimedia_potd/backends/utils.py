@@ -95,7 +95,7 @@ def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict:
     return potd
 
 
-def build_potd_path_and_name(image: Image, is_thumbnail: bool) -> str:
+def build_potd_image_path(image: Image, is_thumbnail: bool) -> str:
     """Build the name string for a potd and prepend the bucket directory path to it."""
     # YYYY-MM-DD format
     date_time = datetime.today().strftime("%Y-%m-%d")

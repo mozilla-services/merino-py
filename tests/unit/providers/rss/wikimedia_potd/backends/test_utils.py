@@ -17,7 +17,7 @@ from merino.providers.rss.wikimedia_potd.backends.utils import (
     extract_potd,
     is_valid_potd_image_url,
     parse_potd,
-    build_potd_path_and_name,
+    build_potd_image_path,
 )
 from merino.utils.gcs.models import Image
 
@@ -187,15 +187,15 @@ def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
 
 
 @freezegun.freeze_time("2026-06-07")
-def test_build_potd_path_and_name() -> None:
-    """Test build_potd_path_and_name returns correct path for thumbnail and hi-res urls."""
+def test_build_potd_path() -> None:
+    """Test build_potd_path returns correct path for thumbnail and hi-res urls."""
     image = Image(content=b"255", content_type="Image/jpeg")
 
     expected_thumbnail_path = "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
     expected_hires_path = "rss/wikimedia_potd/POTD_2026-06-07_hi_res.jpeg"
 
-    actual_thumbnail_path = build_potd_path_and_name(image=image, is_thumbnail=True)
-    actual_hires_path = build_potd_path_and_name(image=image, is_thumbnail=False)
+    actual_thumbnail_path = build_potd_image_path(image=image, is_thumbnail=True)
+    actual_hires_path = build_potd_image_path(image=image, is_thumbnail=False)
 
     assert actual_thumbnail_path == expected_thumbnail_path
     assert actual_hires_path == expected_hires_path

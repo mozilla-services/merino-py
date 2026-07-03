@@ -318,3 +318,37 @@ class TestFetchPictureOfTheDayFromFeedMethod:
 
         with pytest.raises(WikimediaPotdError):
             await backend.fetch_picture_of_the_day_from_feed()
+
+
+class TestGcsUploadVerification:
+    """Tests that a swallowed GCS write is surfaced as a WikimediaPotdError.
+
+    GcsUploader.upload_content logs and swallows storage errors, so the POTD backend
+    verifies the object actually landed in the bucket after uploading.
+    """
+
+    def test_upload_potd_image_raises_when_object_not_in_bucket(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Raises when the image is absent from the bucket after a (swallowed) failed upload."""
+        # upload_image still returns a public url even though the write failed and was swallowed.
+        backend.gcs_uploader.upload_image.return_value = (  # type: ignore[attr-defined]
+            "https://cdn/rss/wikimedia_potd/image.png"
+        )
+        # the object is not actually present in the bucket.
+        backend.gcs_uploader.get_file_by_name.return_value = None  # type: ignore[attr-defined]
+
+        with pytest.raises(WikimediaPotdError):
+            backend.upload_potd_image(
+                image=Image(content=b"255", content_type="image/png"), is_thumbnail=True
+            )
+
+    def test_upload_potd_manifest_raises_when_object_not_in_bucket(
+        self, backend: WikimediaPictureOfTheDayBackend, potd: PictureOfTheDay
+    ) -> None:
+        """Raises when the manifest is absent from the bucket after a (swallowed) failed upload."""
+        # the object is not actually present in the bucket after the (swallowed) failed upload.
+        backend.gcs_uploader.get_file_by_name.return_value = None  # type: ignore[attr-defined]
+
+        with pytest.raises(WikimediaPotdError):
+            backend.upload_potd_manifest(potd)

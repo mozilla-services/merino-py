@@ -18,7 +18,7 @@ from merino.providers.rss.wikimedia_potd.backends.utils import (
     RSS_FETCH_REQUEST_HEADERS,
     extract_potd,
     parse_potd,
-    build_potd_path_and_name,
+    build_potd_image_path,
     is_valid_potd_image_url,
 )
 import sentry_sdk
@@ -141,29 +141,42 @@ class WikimediaPictureOfTheDayBackend:
 
         Returns:
             Public gcs bucket cdn url (str) of the uploaded image.
-            Raises WikimediaPotdError on failure.
+            Raises WikimediaPotdError if the image fails to upload.
         """
-        potd_path_and_name = build_potd_path_and_name(image=image, is_thumbnail=is_thumbnail)
+        potd_image_path = build_potd_image_path(image=image, is_thumbnail=is_thumbnail)
 
         # return a public cdn url for the image after a successful upload
-        return self.gcs_uploader.upload_image(image=image, destination_name=potd_path_and_name)
+        public_url = self.gcs_uploader.upload_image(image=image, destination_name=potd_image_path)
+
+        # GcsUploader.upload_content swallows storage errors and returns a public url regardless,
+        # so confirm the object actually landed in the bucket and fail loudly otherwise.
+        if self.gcs_uploader.get_file_by_name(potd_image_path) is None:
+            raise WikimediaPotdError(f"Failed to upload POTD image: {potd_image_path}")
+
+        return public_url
 
     def upload_potd_manifest(self, potd: PictureOfTheDay) -> None:
         """Build and upload a PictureOfTheDay object to the gcs bucket.
 
-        Raises WikimediaPotdError on failure.
+        Raises WikimediaPotdError if the manifest fails to upload.
         """
         today = datetime.today().strftime("%Y-%m-%d")
 
         # manifest json is just the PictureOfTheDay model in json format
         manifest_json = potd.model_dump_json()
+        destination_name = f"rss/wikimedia_potd/POTD_{today}.json"
 
         self.gcs_uploader.upload_content(
             content=manifest_json,
-            destination_name=f"rss/wikimedia_potd/POTD_{today}.json",
+            destination_name=destination_name,
             content_type="application/json",
             forced_upload=True,
         )
+
+        # GcsUploader.upload_content swallows storage errors, so confirm the object actually
+        # landed in the bucket and fail loudly otherwise.
+        if self.gcs_uploader.get_file_by_name(destination_name) is None:
+            raise WikimediaPotdError(f"Failed to upload POTD manifest: {destination_name}")
 
     def fetch_potd_from_gcs_bucket(self) -> PictureOfTheDay | None:
         """Fetch the PictureOfTheDay object from the gcs bucket.
