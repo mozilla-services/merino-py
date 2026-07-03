@@ -648,6 +648,13 @@ WATCH_LINKS: dict[str, CountryEntry] = {
                     in_production=True,
                     show_in_other_regions=True,
                 ),
+                build_watch_link(
+                    "NOS",
+                    "https://nos.nl/sport/wk-voetbal-2026",
+                    2,
+                    in_production=True,
+                    show_in_other_regions=True,
+                ),
             ],
         },
     },
