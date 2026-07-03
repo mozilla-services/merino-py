@@ -32,6 +32,7 @@ from tests.wcs.factories import (
     event as build_event,
 )
 from merino.providers.wcs.protocol import (
+    EventInfo,
     TeamInfo,
     TeamsResponse,
     WatchLinks,
@@ -520,17 +521,67 @@ async def test_match_team_group_comes_from_cached_event_group() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extra_and_penalty_populated_on_one_finalized_match() -> None:
-    """Exactly one finalized match exposes extra-time and penalty-shootout values."""
+async def test_penalty_populated_on_one_finalized_match() -> None:
+    """Exactly one finalized match exposes penalty-shootout values."""
     response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
 
-    finalized_with_extras = [
-        e for e in response.previous if e.home_extra is not None and e.home_penalty is not None
+    # Extra-time is force-zeroed in the response, so key on penalty fields, which
+    # are preserved, to isolate the single finalized shootout match.
+    finalized_with_penalties = [
+        e for e in response.previous if e.home_penalty is not None and e.away_penalty is not None
     ]
-    assert len(finalized_with_extras) == 1
-    event = finalized_with_extras[0]
-    assert event.away_extra is not None
+    assert len(finalized_with_penalties) == 1
+    event = finalized_with_penalties[0]
     assert event.away_penalty is not None
+    # Extra-time goals are already included in the scores, so they report 0.
+    assert event.home_extra == 0
+    assert event.away_extra == 0
+
+
+@pytest.mark.asyncio
+async def test_matches_force_extra_time_to_zero() -> None:
+    """Every match in the response reports home_extra/away_extra as 0."""
+    response = await build_provider().get_matches(ANCHOR, limit=None, team_keys=None)
+
+    all_events = [*response.previous, *response.current, *response.next_]
+    assert all_events
+    assert all(e.home_extra == 0 and e.away_extra == 0 for e in all_events)
+
+
+@pytest.mark.asyncio
+async def test_live_fake_data_forces_extra_time_to_zero() -> None:
+    """The fake live-data path also reports home_extra/away_extra as 0."""
+    response = await build_provider(live_data_enabled=False).get_live_matches(None)
+
+    assert response.matches
+    assert all(m.home_extra == 0 and m.away_extra == 0 for m in response.matches)
+
+
+def test_from_event_forces_extra_time_to_zero() -> None:
+    """EventInfo.from_event zeroes extra-time regardless of the source Event values."""
+    source = build_event(
+        2001,
+        -1,
+        18,
+        ("GER", "Germany", 90000003),
+        ("FRA", "France", 90000004),
+        GameStatus.Final,
+        home_score=1,
+        away_score=1,
+        home_extra=1,
+        away_extra=1,
+        home_penalty=5,
+        away_penalty=4,
+        period="FT(P)",
+    )
+
+    info = EventInfo.from_event(source)
+
+    assert info.home_extra == 0
+    assert info.away_extra == 0
+    # Penalty values are unaffected by the override.
+    assert info.home_penalty == 5
+    assert info.away_penalty == 4
 
 
 @pytest.mark.asyncio
