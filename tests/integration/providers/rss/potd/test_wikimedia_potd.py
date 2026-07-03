@@ -4,6 +4,8 @@
 
 """Integration tests for the Picture of the Day Provider."""
 
+from pathlib import Path
+
 import pytest
 import freezegun
 import orjson
@@ -22,9 +24,11 @@ from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
-from tests.data.rss.wikimedia_potd.potd_feed import TEST_RSS_FEED
 
 FEED_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
+
+# The sample feed is stored verbatim as XML so the fixture matches the production RSS payload.
+TEST_RSS_FEED = Path("tests/data/rss/wikimedia_potd/potd_feed.xml").read_text(encoding="utf-8")
 
 
 @pytest.fixture(name="backend")

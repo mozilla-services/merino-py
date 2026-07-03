@@ -4,6 +4,8 @@
 
 """Unit tests for the Wikimedia Picture of the Day backend."""
 
+from pathlib import Path
+
 import pytest
 import freezegun
 from typing import cast
@@ -22,9 +24,11 @@ from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPictureOfTheDayBackend,
 )
 from merino.utils.gcs.models import Image
-from tests.data.rss.wikimedia_potd.potd_feed import TEST_RSS_FEED
 
 FEED_URL = "https://example.com/feed"
+
+# The sample feed is stored verbatim as XML so the fixture matches the production RSS payload.
+TEST_RSS_FEED = Path("tests/data/rss/wikimedia_potd/potd_feed.xml").read_text(encoding="utf-8")
 
 TEST_RSS_FEED_MISSING_FIELDS = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
