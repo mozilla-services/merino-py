@@ -342,8 +342,11 @@ def _event(
         stage=template.stage,
         home_score=template.home_score,
         away_score=template.away_score,
-        home_extra=template.home_extra,
-        away_extra=template.away_extra,
+        # Match the real serialization path: home_score/away_score already
+        # include extra-time goals, so the response always reports 0 here to
+        # avoid client-side double-counting.
+        home_extra=0,
+        away_extra=0,
         home_penalty=template.home_penalty,
         away_penalty=template.away_penalty,
         clock=template.clock,

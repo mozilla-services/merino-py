@@ -187,8 +187,12 @@ class EventInfo(BaseModel):
             period=event.period,
             home_score=event.home_score,
             away_score=event.away_score,
-            home_extra=event.home_extra,
-            away_extra=event.away_extra,
+            # Consumers mistakenly summed home_score + home_extra (and the away
+            # equivalents), but home_score/away_score already include extra-time
+            # goals. Force these to 0 so the totals cannot be double-counted
+            # client-side.
+            home_extra=0,
+            away_extra=0,
             home_penalty=event.home_penalty,
             away_penalty=event.away_penalty,
             clock=event.clock,
