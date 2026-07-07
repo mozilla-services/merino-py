@@ -17,6 +17,7 @@ from pytest_mock import MockerFixture
 
 from merino.configs import settings
 from merino.utils.log_data_creators import SuggestLogDataModel
+from merino.utils.query_processing.query_patterns import build_query_pattern_matcher
 from tests.integration.api.v1.fake_providers import FakeProviderFactory
 from tests.integration.api.v1.types import Providers
 from tests.types import FilterCaplogFixture
@@ -420,6 +421,76 @@ def test_suggest_fleece_not_called_for_empty_query(
 
     assert response.status_code == 200
     fleece_mock.detect_pii_safe.assert_not_called()
+
+
+@pytest.fixture()
+def sports_pattern_matcher() -> Any:
+    """Build a matcher for use in query pattern integration tests."""
+    return build_query_pattern_matcher(
+        enabled=True,
+        sample_rate=1.0,
+        patterns=[{"id": "sports_v1", "regex": r"\b(nba|nfl)\b"}],
+    )
+
+
+def test_query_pattern_metrics_emitted_before_email_pii_drop(
+    mocker: MockerFixture, client: TestClient, sports_pattern_matcher: Any
+) -> None:
+    """Test that pattern match metrics fire even when the email PII check drops the query."""
+    mocker.patch("merino.web.api_v1._QUERY_PATTERN_MATCHER", sports_pattern_matcher)
+    add = mocker.patch("merino.utils.query_processing.query_patterns._match_counter.add")
+
+    response = client.get("/api/v1/suggest?q=nba@example.com")
+
+    assert response.json()["suggestions"] == []
+    add.assert_called_once_with(1, {"pattern_id": "sports_v1", "source": "unknown"})
+
+    # raw query should never appear in any metric call.
+    assert "nba@example.com" not in str(add.call_args_list)
+
+
+def test_query_pattern_metrics_emitted_before_fleece_pii_drop(
+    mocker: MockerFixture, client: TestClient, sports_pattern_matcher: Any
+) -> None:
+    """Test that pattern match metrics fire even when fleece drops the query as PII."""
+    mocker.patch("merino.web.api_v1._QUERY_PATTERN_MATCHER", sports_pattern_matcher)
+    _patch_fleece(mocker, enabled=True, pii=True)
+    add = mocker.patch("merino.utils.query_processing.query_patterns._match_counter.add")
+
+    response = client.get("/api/v1/suggest?q=nba")
+
+    assert response.json()["suggestions"] == []
+    add.assert_called_once_with(1, {"pattern_id": "sports_v1", "source": "unknown"})
+
+
+def test_query_pattern_metrics_not_emitted_when_matcher_none(
+    mocker: MockerFixture, client: TestClient
+) -> None:
+    """Test that no query_pattern metrics are emitted when the matcher is disabled (None)."""
+    mocker.patch("merino.web.api_v1._QUERY_PATTERN_MATCHER", None)
+    add = mocker.patch("merino.utils.query_processing.query_patterns._match_counter.add")
+
+    client.get("/api/v1/suggest?q=nba")
+
+    add.assert_not_called()
+
+
+def test_query_pattern_metrics_not_emitted_outside_sample_rate(
+    mocker: MockerFixture, client: TestClient
+) -> None:
+    """Test that no metrics are emitted when the random roll falls outside the sample rate."""
+    low_rate_matcher = build_query_pattern_matcher(
+        enabled=True,
+        sample_rate=0.01,
+        patterns=[{"id": "sports_v1", "regex": r"\bnba\b"}],
+    )
+    mocker.patch("merino.web.api_v1._QUERY_PATTERN_MATCHER", low_rate_matcher)
+    mocker.patch("merino.utils.query_processing.query_patterns.random.random", return_value=0.5)
+    add = mocker.patch("merino.utils.query_processing.query_patterns._match_counter.add")
+
+    client.get("/api/v1/suggest?q=nba")
+
+    add.assert_not_called()
 
 
 def test_suggest_with_invalid_geolocation_ip(

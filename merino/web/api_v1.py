@@ -71,6 +71,11 @@ from merino.utils.api.metrics import (
 )
 from merino.utils.featureflags import FeatureFlags
 from merino.utils.query_processing.fleece_client import get_fleece_client
+from merino.utils.query_processing.query_patterns import (
+    QueryPatternMatcher,
+    build_query_pattern_matcher,
+    emit_query_pattern_metrics,
+)
 from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
@@ -93,6 +98,13 @@ router = APIRouter()
 
 # Providers enabled for query normalization
 NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
+
+# Compiled query pattern matcher, or None when the feature is disabled.
+_QUERY_PATTERN_MATCHER: QueryPatternMatcher | None = build_query_pattern_matcher(
+    enabled=settings.query_pattern_matching.enabled,
+    sample_rate=settings.query_pattern_matching.sample_rate,
+    patterns=settings.query_pattern_matching.patterns,
+)
 
 # Param to capture all enabled_by_default=True providers.
 DEFAULT_PROVIDERS_PARAM_NAME: str = "default"
@@ -231,6 +243,10 @@ async def suggest(
     # feature_flags: FeatureFlags = request.scope[ScopeKey.FEATURE_FLAGS]
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
     user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
+
+    # Emit query pattern match metrics
+    if _QUERY_PATTERN_MATCHER is not None:
+        emit_query_pattern_metrics(_QUERY_PATTERN_MATCHER, q, source)
 
     active_providers, default_providers = sources
     if providers is not None:

@@ -3,11 +3,14 @@
 import logging
 
 import pytest
+from pytest_mock import MockerFixture
 
+from merino.utils.query_processing import query_patterns
 from merino.utils.query_processing.query_patterns import (
     MAX_REGEX_LENGTH,
     QueryPatternMatcher,
     build_query_pattern_matcher,
+    emit_query_pattern_metrics,
     match_query,
 )
 
@@ -196,3 +199,73 @@ def test_match_query_returns_ids_not_query_text(
     assert all(isinstance(r, str) for r in result)
     assert "nba" not in result
     assert "scores" not in result
+
+
+@pytest.fixture()
+def sports_matcher() -> QueryPatternMatcher:
+    """Build a matcher with a single sports pattern."""
+    matcher = build_query_pattern_matcher(
+        enabled=True,
+        sample_rate=1.0,
+        patterns=[{"id": "sports_v1", "regex": r"\b(nba|nfl)\b"}],
+    )
+    assert matcher is not None
+    return matcher
+
+
+@pytest.fixture()
+def low_rate_matcher() -> QueryPatternMatcher:
+    """Build a sports matcher with a low sample rate for sampling gate tests."""
+    matcher = build_query_pattern_matcher(
+        enabled=True,
+        sample_rate=0.01,
+        patterns=[{"id": "sports_v1", "regex": r"\b(nba|nfl)\b"}],
+    )
+    assert matcher is not None
+    return matcher
+
+
+def test_emit_query_pattern_metrics_emits_for_match(
+    mocker: MockerFixture, sports_matcher: QueryPatternMatcher
+) -> None:
+    """Test that a matching query within the sample rate emits one metric per pattern."""
+    add = mocker.patch.object(query_patterns._match_counter, "add")
+
+    emit_query_pattern_metrics(sports_matcher, "nba scores", "urlbar")
+
+    add.assert_called_once_with(1, {"pattern_id": "sports_v1", "source": "urlbar"})
+
+
+def test_emit_query_pattern_metrics_no_match_emits_nothing(
+    mocker: MockerFixture, sports_matcher: QueryPatternMatcher
+) -> None:
+    """Test that a non-matching query emits no metrics."""
+    add = mocker.patch.object(query_patterns._match_counter, "add")
+
+    emit_query_pattern_metrics(sports_matcher, "weather in toronto", "urlbar")
+
+    add.assert_not_called()
+
+
+def test_emit_query_pattern_metrics_within_sample_rate_emits(
+    mocker: MockerFixture, sports_matcher: QueryPatternMatcher
+) -> None:
+    """Test that a roll below the sample rate still emits the match metric."""
+    add = mocker.patch.object(query_patterns._match_counter, "add")
+
+    mocker.patch.object(query_patterns.random, "random", return_value=0.99)
+    emit_query_pattern_metrics(sports_matcher, "nba", "urlbar")
+
+    add.assert_called_once()
+
+
+def test_emit_query_pattern_metrics_outside_sample_rate_emits_nothing(
+    mocker: MockerFixture, low_rate_matcher: QueryPatternMatcher
+) -> None:
+    """Test that a roll above the sample rate emits nothing."""
+    add = mocker.patch.object(query_patterns._match_counter, "add")
+
+    mocker.patch.object(query_patterns.random, "random", return_value=0.5)
+    emit_query_pattern_metrics(low_rate_matcher, "nba", "urlbar")
+
+    add.assert_not_called()
