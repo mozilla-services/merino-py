@@ -450,6 +450,7 @@ async def test_public_sport_identifier_is_soccer() -> None:
 
 
 @pytest.mark.asyncio
+@freezegun.freeze_time("2026-07-05T16:00:00Z")
 async def test_matches_include_nullable_tbd_teams() -> None:
     """The matches endpoint can return scheduled bracket slots with null teams."""
     placeholder = build_event(
