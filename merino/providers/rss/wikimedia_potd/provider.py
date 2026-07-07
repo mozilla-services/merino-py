@@ -2,6 +2,7 @@
 
 import logging
 import aiodogstatsd
+import asyncio
 from merino.configs import settings
 from pydantic import HttpUrl
 
@@ -52,13 +53,16 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
                     "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
                 ),
             )
-        # TODO uncomment for stage env testing.
-        # elif self.potd is None:
-        #     self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
+        elif self.potd is None:
+            self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
 
     def get_picture_of_the_day(self) -> PictureOfTheDay | None:
         """Return the current Wikimedia Picture of the Day or None."""
         return self.potd
+
+    async def upload_picture_of_the_day(self) -> bool:
+        """Execute the upload flow. This method is called by the job cli command only."""
+        return await self.backend.upload_picture_of_the_day()
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
