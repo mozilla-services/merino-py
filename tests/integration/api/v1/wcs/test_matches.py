@@ -180,6 +180,7 @@ def test_teams_filter(client: TestClient) -> None:
         assert "BRA" in {event["home_team"]["key"], event["away_team"]["key"]}
 
 
+@freezegun.freeze_time("2026-07-05T16:00:00Z")
 def test_matches_returns_nullable_tbd_sides(client: TestClient) -> None:
     """Knockout placeholders serialize null team objects for Mobile."""
     app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
