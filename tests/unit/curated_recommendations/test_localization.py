@@ -1,55 +1,28 @@
 """Tests covering merino/curated_recommendations/localization.py"""
 
+import pytest
+
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 
 
-def test_get_translation_existing_translation():
-    """Test that get_translation returns existing translations."""
-    result = get_translation(SurfaceId.NEW_TAB_EN_US, "top-stories", "Default")
-    assert result == "Popular Today"
-
-
-def test_get_translation_en_ca():
-    """Test that en-CA surface has correct localized section title."""
-    result = get_translation(SurfaceId.NEW_TAB_EN_CA, "top-stories", "Default")
-    assert result == "Popular Today"
-
-
-def test_get_translation_en_ie():
-    """Test that en-IE surface has correct localized section title."""
-    result = get_translation(SurfaceId.NEW_TAB_EN_IE, "top-stories", "Default")
-    assert result == "Popular Today"
-
-
-def test_get_translation_en_xe():
-    """Test that the cross-Europe English surface has a localized section title."""
-    result = get_translation(SurfaceId.NEW_TAB_EN_XE, "top-stories", "Default")
-    assert result == "Popular Today"
-
-
-def test_get_translation_es_xa():
-    """Test that the global Spanish surface has a localized section title."""
-    result = get_translation(SurfaceId.NEW_TAB_ES_XA, "top-stories", "Default")
-    assert result == "Tendencias"
-
-
-def test_get_translation_de_de():
-    """Test that de-DE surface has correct localized section title."""
-    result = get_translation(SurfaceId.NEW_TAB_DE_DE, "top-stories", "Default")
-    assert result == "Meistgelesen"
-
-
-def test_get_translation_fr_fr():
-    """Test that fr-FR surface has correct localized section title."""
-    result = get_translation(SurfaceId.NEW_TAB_FR_FR, "top-stories", "Default")
-    assert result == "Tendances du jour"
-
-
-def test_get_translation_pl_pl():
-    """Test that pl-PL surface has correct localized section title."""
-    result = get_translation(SurfaceId.NEW_TAB_PL_PL, "top-stories", "Default")
-    assert result == "Przegląd dnia"
+@pytest.mark.parametrize(
+    ("surface_id", "expected_title"),
+    [
+        (SurfaceId.NEW_TAB_EN_US, "Popular Today"),
+        (SurfaceId.NEW_TAB_EN_CA, "Popular Today"),
+        (SurfaceId.NEW_TAB_EN_IE, "Popular Today"),
+        (SurfaceId.NEW_TAB_EN_XE, "Popular Today"),
+        (SurfaceId.NEW_TAB_DE_DE, "Meistgelesen"),
+        (SurfaceId.NEW_TAB_ES_XA, "Tendencias"),
+        (SurfaceId.NEW_TAB_FR_FR, "Tendances du jour"),
+        (SurfaceId.NEW_TAB_PL_PL, "Przegląd dnia"),
+    ],
+    ids=["en_us", "en_ca", "en_ie", "en_xe", "de_de", "es_xa", "fr_fr", "pl_pl"],
+)
+def test_get_translation_top_stories(surface_id: SurfaceId, expected_title: str):
+    """Test that each supported surface returns its localized top-stories title."""
+    assert get_translation(surface_id, "top-stories", "Default") == expected_title
 
 
 def test_get_translation_non_existing_locale(caplog):

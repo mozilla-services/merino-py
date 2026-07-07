@@ -94,8 +94,7 @@ def get_recommendation_surface_id(
         ):
             # English-speaking users in continental Europe enrolled in the
             # sections-in-en-europe experiment get the cross-Europe English surface.
-            # Checked after the more specific English markets above, so this is a
-            # fall-back for otherwise-unhandled European regions.
+            # Fall-back for European regions not matched above (specific markets keep priority).
             return SurfaceId.NEW_TAB_EN_XE
         else:
             # Default to the en-US New Tab if no 2-letter region can be derived from locale or region.
