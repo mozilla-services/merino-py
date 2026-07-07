@@ -58,12 +58,16 @@ def get_recommendation_surface_id(
         return SurfaceId.NEW_TAB_PL_PL
     elif language == "es":
         # Spanish-speaking users enrolled in the sections-in-global-spanish experiment
-        # get the global Spanish surface regardless of country. This is a fall-back:
-        # non-enrolled users keep the existing NEW_TAB_ES_ES surface.
-        if request is not None and is_enrolled_in_experiment(
-            request,
-            ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value,
-            "treatment",
+        # get the global Spanish surface, except in Spain (es-ES) whose more specific
+        # market keeps priority. Non-enrolled users also keep NEW_TAB_ES_ES.
+        if (
+            request is not None
+            and derived_region != "ES"
+            and is_enrolled_in_experiment(
+                request,
+                ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value,
+                "treatment",
+            )
         ):
             return SurfaceId.NEW_TAB_ES_XA
         return SurfaceId.NEW_TAB_ES_ES

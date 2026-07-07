@@ -249,12 +249,14 @@ class TestGetRecommendationSurfaceIdExperiments:
     @pytest.mark.parametrize(
         "locale, region, branch, expected",
         [
-            # Enrolled Spanish speakers get NEW_TAB_ES_XA regardless of country.
-            ("es", "ES", "treatment", SurfaceId.NEW_TAB_ES_XA),
+            # Enrolled Spanish speakers outside Spain get NEW_TAB_ES_XA.
             ("es", "MX", "treatment", SurfaceId.NEW_TAB_ES_XA),
             ("es", "US", "treatment", SurfaceId.NEW_TAB_ES_XA),
             ("es", None, "treatment", SurfaceId.NEW_TAB_ES_XA),
             ("es-MX", None, "treatment", SurfaceId.NEW_TAB_ES_XA),
+            # Spain keeps its more specific market even when enrolled (XA is a fall-back).
+            ("es", "ES", "treatment", SurfaceId.NEW_TAB_ES_ES),
+            ("es-ES", None, "treatment", SurfaceId.NEW_TAB_ES_ES),
             # Non-treatment branch -> the existing Spanish surface.
             ("es", "MX", "control", SurfaceId.NEW_TAB_ES_ES),
             # The experiment does not affect English speakers.
@@ -265,8 +267,8 @@ class TestGetRecommendationSurfaceIdExperiments:
     def test_sections_in_global_spanish_surface(
         self, locale: Locale, region: str | None, branch: str, expected: SurfaceId
     ):
-        """NEW_TAB_ES_XA is served to enrolled Spanish speakers in any country;
-        non-enrolled Spanish speakers keep NEW_TAB_ES_ES and English is unaffected.
+        """NEW_TAB_ES_XA is served to enrolled Spanish speakers outside Spain; Spain
+        (es-ES), non-enrolled Spanish speakers, and English are unaffected.
         """
         request = self._request(_GLOBAL_SPANISH, branch)
         assert get_recommendation_surface_id(locale, region, request) == expected
