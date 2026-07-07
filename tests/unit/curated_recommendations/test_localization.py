@@ -31,7 +31,7 @@ def test_get_translation_en_xe():
 def test_get_translation_es_xa():
     """Test that the global Spanish surface has a localized section title."""
     result = get_translation(SurfaceId.NEW_TAB_ES_XA, "top-stories", "Default")
-    assert result == "Tendencias de hoy"
+    assert result == "Tendencias"
 
 
 def test_get_translation_de_de():

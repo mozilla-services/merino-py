@@ -32,8 +32,7 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
         "top-stories": "Meistgelesen",
     },
     SurfaceId.NEW_TAB_ES_XA: {
-        # TODO(HNT-2767): confirm the Spanish "top-stories" label with l10n/editorial.
-        "top-stories": "Tendencias de hoy",
+        "top-stories": "Tendencias",
     },
     SurfaceId.NEW_TAB_FR_FR: {
         "top-stories": "Tendances du jour",
