@@ -1,8 +1,8 @@
 """Query pattern matching for aggregate suggest metrics.
 
 PRIVACY CONTRACT:
-- Emits only ``merino.query_pattern.match`` (attributes ``pattern_id``, ``matched``,
-  ``source``) and ``merino.query_pattern.error`` (attribute ``source``).
+- Emits only ``merino_query_pattern_match`` (attributes ``pattern_id``, ``matched``,
+  ``source``) and ``merino_query_pattern_error`` (attribute ``source``).
 - Never emits raw query text, the matched substring, or the regex source.
 - ``pattern_id`` is operator-controlled and low-cardinality (``PATTERN_ID_RE``), so a
   metric series identifies a query *category*, never a search.
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 _meter = metrics.get_meter("merino.query_pattern")
 
 _match_counter = _meter.create_counter(
-    "merino.query_pattern.match",
+    "merino_query_pattern_match",
     description="Count of suggest queries matching a configured query pattern, "
     "by pattern id and source",
 )
