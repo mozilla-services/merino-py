@@ -7,7 +7,11 @@ import freezegun
 import pytest
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
-from merino.curated_recommendations.protocol import Locale
+from merino.curated_recommendations.protocol import (
+    CuratedRecommendationsRequest,
+    ExperimentName,
+    Locale,
+)
 from merino.curated_recommendations.utils import (
     derive_region,
     extract_language_from_locale,
@@ -15,6 +19,9 @@ from merino.curated_recommendations.utils import (
     is_enrolled_in_experiment,
     get_millisecond_epoch_time,
 )
+
+_EN_EUROPE = ExperimentName.SECTIONS_IN_EN_EUROPE_EXPERIMENT.value
+_GLOBAL_SPANISH = ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value
 
 
 class TestCuratedRecommendationsProviderExtractLanguageFromLocale:
@@ -184,6 +191,79 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
         ensure correct surface id is returned based on passed locale & region
         """
         assert get_recommendation_surface_id(locale, region) == recommendation_surface_id
+
+
+class TestGetRecommendationSurfaceIdExperiments:
+    """Unit tests for experiment-gated surface routing: NEW_TAB_EN_XE
+    (sections-in-en-europe) and NEW_TAB_ES_XA (sections-in-global-spanish).
+    """
+
+    @staticmethod
+    def _request(experiment_name: str, branch: str) -> CuratedRecommendationsRequest:
+        """Build a request with the given experiment enrollment. The request's own
+        locale is irrelevant here: routing uses the `locale`/`region` args directly.
+        """
+        return CuratedRecommendationsRequest(
+            locale=Locale.EN_US,
+            experimentName=experiment_name,
+            experimentBranch=branch,
+        )
+
+    @pytest.mark.parametrize(
+        "locale, region, experiment_name, branch, expected",
+        [
+            # --- NEW_TAB_EN_XE: English speakers in continental Europe, enrolled ---
+            ("en", "DE", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "FR", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "AT", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "CH", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "BE", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "IT", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "ES", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "PL", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            # Region derived from the locale suffix, and the optin- forced-enrollment prefix.
+            ("en-DE", None, _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_XE),
+            ("en", "DE", f"optin-{_EN_EUROPE}", "treatment", SurfaceId.NEW_TAB_EN_XE),
+            # Fall-back: more specific English markets keep priority even when enrolled.
+            ("en", "US", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_US),
+            ("en", "GB", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_GB),
+            ("en", "CA", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_CA),
+            ("en", "IE", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_IE),
+            ("en", "IN", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_INTL),
+            # Enrolled in the wrong branch / wrong experiment -> default en-US.
+            ("en", "DE", _EN_EUROPE, "control", SurfaceId.NEW_TAB_EN_US),
+            ("en", "DE", _GLOBAL_SPANISH, "treatment", SurfaceId.NEW_TAB_EN_US),
+            # European region outside the XE set -> default en-US even when enrolled.
+            ("en", "NL", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_EN_US),
+            # Language takes priority over the English-Europe experiment.
+            ("de", "DE", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_DE_DE),
+            # --- NEW_TAB_ES_XA: Spanish speakers anywhere, enrolled ---
+            ("es", "ES", _GLOBAL_SPANISH, "treatment", SurfaceId.NEW_TAB_ES_XA),
+            ("es", "MX", _GLOBAL_SPANISH, "treatment", SurfaceId.NEW_TAB_ES_XA),
+            ("es", "US", _GLOBAL_SPANISH, "treatment", SurfaceId.NEW_TAB_ES_XA),
+            ("es", None, _GLOBAL_SPANISH, "treatment", SurfaceId.NEW_TAB_ES_XA),
+            ("es-MX", None, _GLOBAL_SPANISH, "treatment", SurfaceId.NEW_TAB_ES_XA),
+            ("es", "AR", f"optin-{_GLOBAL_SPANISH}", "treatment", SurfaceId.NEW_TAB_ES_XA),
+            # Fall-back: non-enrolled Spanish keeps NEW_TAB_ES_ES.
+            ("es", "MX", _GLOBAL_SPANISH, "control", SurfaceId.NEW_TAB_ES_ES),
+            ("es", "ES", _EN_EUROPE, "treatment", SurfaceId.NEW_TAB_ES_ES),
+            # The Spanish experiment does not affect English speakers.
+            ("en", "MX", _GLOBAL_SPANISH, "treatment", SurfaceId.NEW_TAB_EN_US),
+        ],
+    )
+    def test_experiment_gated_surface(
+        self,
+        locale: Locale,
+        region: str | None,
+        experiment_name: str,
+        branch: str,
+        expected: SurfaceId,
+    ):
+        """Ensure enrolled users get NEW_TAB_EN_XE / NEW_TAB_ES_XA, and that
+        more-specific markets and non-enrolled users fall back correctly.
+        """
+        request = self._request(experiment_name, branch)
+        assert get_recommendation_surface_id(locale, region, request) == expected
 
 
 class TestIsEnrolledInExperiment:

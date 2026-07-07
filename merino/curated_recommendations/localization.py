@@ -25,8 +25,15 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
     SurfaceId.NEW_TAB_EN_IE: {
         "top-stories": "Popular Today",
     },
+    SurfaceId.NEW_TAB_EN_XE: {
+        "top-stories": "Popular Today",
+    },
     SurfaceId.NEW_TAB_DE_DE: {
         "top-stories": "Meistgelesen",
+    },
+    SurfaceId.NEW_TAB_ES_XA: {
+        # TODO(HNT-2767): confirm the Spanish "top-stories" label with l10n/editorial.
+        "top-stories": "Tendencias de hoy",
     },
     SurfaceId.NEW_TAB_FR_FR: {
         "top-stories": "Tendances du jour",

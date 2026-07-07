@@ -111,6 +111,10 @@ class ExperimentName(str, Enum):
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
     # Experiment to measure the impact of editorial sections by hiding them in the treatment branch
     EDITORIAL_SECTIONS_EXPERIMENT = "editorial-sections-experiment"
+    # Experiment to serve the cross-Europe English sections surface (NEW_TAB_EN_XE)
+    SECTIONS_IN_EN_EUROPE_EXPERIMENT = "sections-in-en-europe"
+    # Experiment to serve the global Spanish sections surface (NEW_TAB_ES_XA)
+    SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT = "sections-in-global-spanish"
 
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"

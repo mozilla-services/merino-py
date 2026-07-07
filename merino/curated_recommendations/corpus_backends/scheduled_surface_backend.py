@@ -82,8 +82,10 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
             SurfaceId.NEW_TAB_EN_CA: "America/Toronto",
             # Note: en-Intl is poorly named. Only India is currently eligible.
             SurfaceId.NEW_TAB_EN_INTL: "Asia/Kolkata",
+            SurfaceId.NEW_TAB_EN_XE: "Europe/Berlin",
             SurfaceId.NEW_TAB_DE_DE: "Europe/Berlin",
             SurfaceId.NEW_TAB_ES_ES: "Europe/Madrid",
+            SurfaceId.NEW_TAB_ES_XA: "America/Mexico_City",
             SurfaceId.NEW_TAB_FR_FR: "Europe/Paris",
             SurfaceId.NEW_TAB_IT_IT: "Europe/Rome",
             SurfaceId.NEW_TAB_PL_PL: "Europe/Warsaw",

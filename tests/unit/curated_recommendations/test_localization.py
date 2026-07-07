@@ -22,6 +22,18 @@ def test_get_translation_en_ie():
     assert result == "Popular Today"
 
 
+def test_get_translation_en_xe():
+    """Test that the cross-Europe English surface has a localized section title."""
+    result = get_translation(SurfaceId.NEW_TAB_EN_XE, "top-stories", "Default")
+    assert result == "Popular Today"
+
+
+def test_get_translation_es_xa():
+    """Test that the global Spanish surface has a localized section title."""
+    result = get_translation(SurfaceId.NEW_TAB_ES_XA, "top-stories", "Default")
+    assert result == "Tendencias de hoy"
+
+
 def test_get_translation_de_de():
     """Test that de-DE surface has correct localized section title."""
     result = get_translation(SurfaceId.NEW_TAB_DE_DE, "top-stories", "Default")

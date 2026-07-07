@@ -4,7 +4,11 @@ import re
 import time
 
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
-from merino.curated_recommendations.protocol import CuratedRecommendationsRequest, Locale
+from merino.curated_recommendations.protocol import (
+    CuratedRecommendationsRequest,
+    ExperimentName,
+    Locale,
+)
 
 # Surfaces where sections have rolled out at 100%. Non-sections requests for these
 # surfaces are served from the sections backend (via the legacy adapter) instead of
@@ -19,6 +23,12 @@ ROLLED_OUT_SECTION_SURFACES: frozenset[SurfaceId] = frozenset(
         SurfaceId.NEW_TAB_FR_FR,
     }
 )
+
+# Continental-European regions whose English-speaking users are routed to the
+# cross-Europe English surface (NEW_TAB_EN_XE) when enrolled in the
+# sections-in-en-europe experiment. More specific English markets (US, GB, CA, IE,
+# IN) take priority, so this only applies to regions not handled above.
+EN_XE_REGIONS: frozenset[str] = frozenset({"DE", "FR", "AT", "CH", "BE", "IT", "ES", "PL"})
 
 
 def get_recommendation_surface_id(
@@ -47,6 +57,15 @@ def get_recommendation_surface_id(
     elif language == "pl":
         return SurfaceId.NEW_TAB_PL_PL
     elif language == "es":
+        # Spanish-speaking users enrolled in the sections-in-global-spanish experiment
+        # get the global Spanish surface regardless of country. This is a fall-back:
+        # non-enrolled users keep the existing NEW_TAB_ES_ES surface.
+        if request is not None and is_enrolled_in_experiment(
+            request,
+            ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value,
+            "treatment",
+        ):
+            return SurfaceId.NEW_TAB_ES_XA
         return SurfaceId.NEW_TAB_ES_ES
     elif language == "fr":
         return SurfaceId.NEW_TAB_FR_FR
@@ -64,6 +83,20 @@ def get_recommendation_surface_id(
             return SurfaceId.NEW_TAB_EN_GB
         elif derived_region == "IN":
             return SurfaceId.NEW_TAB_EN_INTL
+        elif (
+            request is not None
+            and derived_region in EN_XE_REGIONS
+            and is_enrolled_in_experiment(
+                request,
+                ExperimentName.SECTIONS_IN_EN_EUROPE_EXPERIMENT.value,
+                "treatment",
+            )
+        ):
+            # English-speaking users in continental Europe enrolled in the
+            # sections-in-en-europe experiment get the cross-Europe English surface.
+            # Checked after the more specific English markets above, so this is a
+            # fall-back for otherwise-unhandled European regions.
+            return SurfaceId.NEW_TAB_EN_XE
         else:
             # Default to the en-US New Tab if no 2-letter region can be derived from locale or region.
             return SurfaceId.NEW_TAB_EN_US
