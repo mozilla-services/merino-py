@@ -1,5 +1,6 @@
 """CLI commands for the Wikimedia Picture of the Day updater job."""
 
+import asyncio
 import logging
 import typer
 from merino.providers.rss import get_wikimedia_potd_provider, init_providers
@@ -12,14 +13,18 @@ cli = typer.Typer(
 )
 
 
+async def _potd_update_job() -> bool:
+    """Get the provider and call the method to upload potd."""
+    await init_providers()
+    provider = get_wikimedia_potd_provider()
+    return await provider.upload_picture_of_the_day()
+
+
 @cli.command("update-wikimedia-potd")
-async def update_wikimedia_potd():  # pragma: no cover
+def update_wikimedia_potd():  # pragma: no cover
     """Execute the process to attempt to update the Wikimedia Picture of the Day."""
     logger.info("Beginning wikimedia potd update process...")
 
-    # TODO @herraj refactor this to not init all future rss providers
-    await init_providers()
-    provider = get_wikimedia_potd_provider()
-    await provider.upload_picture_of_the_day()
+    success = asyncio.run(_potd_update_job())
 
-    logger.info("Finished wikimedia potd update.")
+    logger.info("Wikimedia potd update job finished", extra={"success": success})
