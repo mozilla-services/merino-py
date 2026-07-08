@@ -1,6 +1,5 @@
 """CLI commands for the Wikimedia Picture of the Day updater job."""
 
-import asyncio
 import logging
 import typer
 from merino.providers.rss import get_wikimedia_potd_provider

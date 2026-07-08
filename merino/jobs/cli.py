@@ -19,6 +19,7 @@ from merino.jobs.relevancy_uploader import relevancy_csv_rs_uploader_cmd
 from merino.jobs.sportsdata_jobs import cli as sportsdata_cmd
 from merino.jobs.wikipedia_indexer import indexer_cmd
 from merino.jobs.wikipedia_offline_uploader import wiki_offline_uploader_cmd
+from merino.jobs.pitcture_of_the_day import cli as picture_of_the_day_upload_cmd
 
 # Include your new jobs module here.
 
@@ -60,6 +61,9 @@ cli.add_typer(amp_live_probe_cmd, no_args_is_help=True)
 
 # Add the games task runner subcommand
 cli.add_typer(games_tasks_cmd, no_args_is_help=True)
+
+# Add the picture of the day task runner subcommand
+cli.add_typer(picture_of_the_day_upload_cmd, no_args_is_help=True)
 
 
 @cli.callback()
