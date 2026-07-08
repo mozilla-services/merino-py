@@ -741,6 +741,75 @@ merino-fleece/pii:
       The "api/v1/pii" API endpoint of "merino-fleece".
     alert_policy: []
 
+middleware/metrics:
+  http_request_duration:
+    description: |
+      An OpenTelemetry histogram recording the wall-clock duration, in
+      milliseconds, of each HTTP request. Emitted for all matched (non-404)
+      responses, and once with the request-so-far duration when the downstream
+      app raises an unhandled exception.
+    type: histogram
+    labels:
+      - name: method
+        description: |
+          The HTTP request method (e.g. "GET", "POST").
+      - name: path
+        description: |
+          The request URL path (e.g. "/api/v1/suggest"). Bounded because Merino
+          routes are static.
+      - name: form_factor
+        description: |
+          The client form factor parsed from the User-Agent, one of "desktop",
+          "phone", "tablet", or "other". The higher-cardinality browser version
+          is intentionally excluded to keep series count bounded.
+      - name: application
+        description: |
+          Constant tag identifying the service ("merino-py").
+      - name: deployment.canary
+        description: |
+          Constant tag indicating whether the emitting instance is a canary
+          deployment (1) or not (0).
+    scope: |
+      All HTTP requests handled by MetricsMiddleware.
+    alert_policy: []
+
+  http_request_status_code:
+    description: |
+      An OpenTelemetry counter incremented once per HTTP response, labeled by
+      status code. Emitted for all responses, and once with status_code 500 when
+      the downstream app raises an unhandled exception.
+      NOT_FOUND (404) responses are emitted WITHOUT the `path`
+      label, since unmatched paths are unbounded and would otherwise explode
+      series cardinality.
+    type: counter
+    labels:
+      - name: method
+        description: |
+          The HTTP request method (e.g. "GET", "POST").
+      - name: path
+        description: |
+          The request URL path (e.g. "/api/v1/suggest"). Bounded because Merino
+          routes are static (no path parameters). Omitted for 404 responses,
+          whose paths are unbounded.
+      - name: status_code
+        description: |
+          The HTTP response status code (e.g. 200, 404, 500).
+      - name: form_factor
+        description: |
+          The client form factor parsed from the User-Agent, one of "desktop",
+          "phone", "tablet", or "other". The higher-cardinality browser version
+          is intentionally excluded to keep series count bounded.
+      - name: application
+        description: |
+          Constant tag identifying the service ("merino-py").
+      - name: deployment.canary
+        description: |
+          Constant tag indicating whether the emitting instance is a canary
+          deployment (1) or not (0).
+    scope: |
+      All HTTP requests handled by MetricsMiddleware.
+    alert_policy: []
+
 utils/query_processing/fleece:
   fleece.pii.detect_duration:
     description: |
