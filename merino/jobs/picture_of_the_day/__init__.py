@@ -13,7 +13,7 @@ cli = typer.Typer(
 )
 
 
-async def _potd_update_job() -> bool:
+async def _potd_update_job() -> bool:  # pragma: no cover
     """Get the provider and call the method to upload potd."""
     await init_providers()
     provider = get_wikimedia_potd_provider()
