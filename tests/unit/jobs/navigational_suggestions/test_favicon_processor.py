@@ -72,9 +72,7 @@ class TestFaviconProcessorInit:
 
     def test_init_with_cache_control(self, mock_favicon_downloader):
         """Test that cache_control is stored on the instance."""
-        processor = FaviconProcessor(
-            mock_favicon_downloader, cache_control="public, max-age=99"
-        )
+        processor = FaviconProcessor(mock_favicon_downloader, cache_control="public, max-age=99")
         assert processor.cache_control == "public, max-age=99"
 
 
@@ -290,10 +288,7 @@ class TestProcessSvgFavicons:
 
         assert result == "https://cdn.example.com/test_favicon.png"
         mock_uploader.upload_image.assert_called_once()
-        assert (
-            mock_uploader.upload_image.call_args.kwargs["cache_control"]
-            == "public, max-age=99"
-        )
+        assert mock_uploader.upload_image.call_args.kwargs["cache_control"] == "public, max-age=99"
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_skip_masked(
