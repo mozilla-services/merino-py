@@ -34,14 +34,14 @@ gcs_enabled = false
 
 [stage.image_gcs_v2]
 # MERINO_IMAGE_GCS_V2__GCS_PROJECT
-gcs_project = "moz-fx-merino-nonprod-ee93"
+gcs_project = "moz-fx-merino-nonprod-db57"
 
 # MERINO_IMAGE_GCS_V2__GCS_BUCKET
-gcs_bucket = "merino-images-stagepy"
+gcs_bucket = "merino-images-stage"
 
 # MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
 # Stage temporarily points at the prod CDN because the stage image bucket
-# isn't populated with the WCS logo assets yet. Revisit once `merino-images-stagepy`
+# isn't populated with the WCS logo assets yet. Revisit once `merino-images-stage`
 # carries the same content as prod.
 cdn_hostname = "prod-images.merino.prod.webservices.mozgcp.net"
 
