@@ -702,6 +702,7 @@ class WCS(Sport):
     ISO_alias = {
         "CDR": "COD",
         "CVI": "CPV",
+        "CHE": "SUI",
     }
 
     def __init__(

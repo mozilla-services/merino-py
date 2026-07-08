@@ -87,6 +87,7 @@ def test_team_info_icon_url_uses_png_when_svg_is_missing(
     [
         pytest.param("CDR", "COD", id="cdr-aliased-to-cod"),
         pytest.param("CVI", "CPV", id="cvi-aliased-to-cpv"),
+        pytest.param("CHE", "SUI", id="che-aliased-to-sui"),
         pytest.param("BRA", "BRA", id="unlisted-code-unchanged"),
     ],
 )
