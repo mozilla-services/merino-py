@@ -5,7 +5,10 @@ from datetime import datetime
 from feedparser import FeedParserDict
 from pydantic import HttpUrl
 
-from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.backends.protocol import (
+    PictureOfTheDay,
+    WikimediaPotdError,
+)
 from merino.utils.gcs.models import Image
 
 # This is needed to prevent Wikimedia from blocking our requests as bot requests.
@@ -14,14 +17,26 @@ RSS_FETCH_REQUEST_HEADERS = {
 }
 
 
-def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
+def parse_potd(potd: FeedParserDict) -> PictureOfTheDay:
     """Parse the RSS entry description HTML to extract image URLs and text.
 
     Returns:
-        A PictureOfTheDay instance if all required data is present, otherwise None.
+        A PictureOfTheDay instance. Raises WikimediaPotdError if required data is missing.
     """
+    today = datetime.today().strftime("%Y-%m-%d")
+
+    # convert date to "2026-06-11" format from this format "Thu, 11 Jun 2026 00:00:00 GMT"
+    published_date = datetime.strptime(str(potd.published), "%a, %d %b %Y %H:%M:%S %Z").strftime(
+        "%Y-%m-%d"
+    )
+
+    if published_date != today:
+        raise WikimediaPotdError(
+            f"Wikimedia potd published date not equal to today. "
+            f"Expected: {today}, received: {published_date}"
+        )
+
     title = str(potd.title)
-    published_date = str(potd.published)
     description = str(potd.description)
 
     parser = BeautifulSoup(description, "html.parser")
@@ -30,13 +45,13 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
 
     # <img> tag is required to extract thumbnail url.
     if not isinstance(img_tag, Tag):
-        return None
+        raise WikimediaPotdError("Wikimedia potd feed entry is missing an <img> tag")
 
     thumbnail_url = img_tag.get("src")
 
     # Thumbnail url is required.
     if not thumbnail_url or not isinstance(thumbnail_url, str):
-        return None
+        raise WikimediaPotdError("Wikimedia potd feed entry is missing a thumbnail url")
 
     # Wikimedia thumbnail URLs follow: /commons/thumb/{h1}/{h2}/{file}/{size}px-{file}
     # Removing "/thumb" and the trailing size segment gives the full-res URL.
@@ -58,15 +73,16 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay | None:
     )
 
 
-def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict | None:
+def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict:
     """Extract the latest valid entry from a parsed RSS feed.
 
     Returns:
-        The latest entry if it contains the required fields, otherwise None.
+        The latest entry if it contains the required fields.
+        Raises WikimediaPotdError if the feed is malformed.
     """
     # Malformed feed if entries property doesn't exist.
     if not parsed_feed.entries:
-        return None
+        raise WikimediaPotdError("Wikimedia potd feed contains no entries")
 
     potd = parsed_feed.entries[-1]
 
@@ -74,12 +90,12 @@ def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict | None:
     # The "description" entry contains the html that contain image urls and actual description text,
     # which is parsed in the parse_potd method.
     if not ("title" in potd and "description" in potd and "published" in potd):
-        return None
+        raise WikimediaPotdError("Wikimedia potd feed entry is missing required fields")
 
     return potd
 
 
-def build_potd_path_and_name(image: Image, is_thumbnail: bool) -> str:
+def build_potd_image_path(image: Image, is_thumbnail: bool) -> str:
     """Build the name string for a potd and prepend the bucket directory path to it."""
     # YYYY-MM-DD format
     date_time = datetime.today().strftime("%Y-%m-%d")

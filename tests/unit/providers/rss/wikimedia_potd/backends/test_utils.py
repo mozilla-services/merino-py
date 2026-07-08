@@ -9,12 +9,15 @@ import freezegun
 from feedparser import FeedParserDict
 from pydantic import HttpUrl
 
-from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
+from merino.providers.rss.wikimedia_potd.backends.protocol import (
+    PictureOfTheDay,
+    WikimediaPotdError,
+)
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     extract_potd,
     is_valid_potd_image_url,
     parse_potd,
-    build_potd_path_and_name,
+    build_potd_image_path,
 )
 from merino.utils.gcs.models import Image
 
@@ -52,9 +55,10 @@ def fixture_valid_entry() -> FeedParserDict:
     return _make_entry(**VALID_FIELDS)
 
 
-def test_extract_potd_returns_none_for_empty_entries() -> None:
-    """Returns None when the feed has no entries."""
-    assert extract_potd(_make_feed([])) is None
+def test_extract_potd_raises_for_empty_entries() -> None:
+    """Raises WikimediaPotdError when the feed has no entries."""
+    with pytest.raises(WikimediaPotdError):
+        extract_potd(_make_feed([]))
 
 
 def test_extract_potd_returns_entry_for_single_valid_entry(
@@ -74,13 +78,14 @@ def test_extract_potd_returns_last_entry_from_multiple(
     assert extract_potd(feed) is valid_entry
 
 
-def test_extract_potd_returns_none_when_a_required_field_missing() -> None:
-    """Returns None when a required field is absent from the entry."""
-    fields = VALID_FIELDS
+def test_extract_potd_raises_when_a_required_field_missing() -> None:
+    """Raises WikimediaPotdError when a required field is absent from the entry."""
+    fields = dict(VALID_FIELDS)
     # remove the "published" key.
     fields.pop("published")
     feed = _make_feed([_make_entry(**fields)])
-    assert extract_potd(feed) is None
+    with pytest.raises(WikimediaPotdError):
+        extract_potd(feed)
 
 
 @pytest.fixture(name="potd_entry")
@@ -93,18 +98,20 @@ def fixture_potd_entry() -> FeedParserDict:
     )
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_picture_of_the_day(potd_entry: FeedParserDict) -> None:
     """Returns a PictureOfTheDay with correct fields when all data is present."""
     result = parse_potd(potd_entry)
 
     assert isinstance(result, PictureOfTheDay)
     assert result.title == "Test POTD"
-    assert result.published_date == "Mon, 13 Apr 2026 00:00:00 GMT"
+    assert result.published_date == "2026-04-13"
     assert result.description == "Test description."
     assert str(result.thumbnail_image_url) == THUMBNAIL_URL
     assert str(result.high_res_image_url) == HIGH_RES_URL
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_returns_empty_description_when_no_description_div(
     potd_entry: FeedParserDict,
 ) -> None:
@@ -118,20 +125,34 @@ def test_parse_potd_returns_empty_description_when_no_description_div(
     assert isinstance(result.thumbnail_image_url, HttpUrl)
 
 
-def test_parse_potd_returns_none_when_no_img_tag(potd_entry: FeedParserDict) -> None:
-    """Returns None when the description HTML contains no img element."""
+def test_parse_potd_raises_when_the_published_date_is_not_today(
+    potd_entry: FeedParserDict,
+) -> None:
+    """Raises WikimediaPotdError when the published date is not today."""
+    # the potd_entry fixture object has the date set to 2026-04-13.
+    with pytest.raises(WikimediaPotdError):
+        parse_potd(potd_entry)
+
+
+@freezegun.freeze_time("2026-04-13")
+def test_parse_potd_raises_when_no_img_tag(potd_entry: FeedParserDict) -> None:
+    """Raises WikimediaPotdError when the description HTML contains no img element."""
     potd_entry["description"] = '<div class="description">No image here.</div>'
 
-    assert parse_potd(potd_entry) is None
+    with pytest.raises(WikimediaPotdError):
+        parse_potd(potd_entry)
 
 
-def test_parse_potd_returns_none_when_img_has_no_src(potd_entry: FeedParserDict) -> None:
-    """Returns None when the img element is missing a src attribute."""
+@freezegun.freeze_time("2026-04-13")
+def test_parse_potd_raises_when_img_has_no_src(potd_entry: FeedParserDict) -> None:
+    """Raises WikimediaPotdError when the img element is missing a src attribute."""
     potd_entry["description"] = '<img alt="missing src" />'
 
-    assert parse_potd(potd_entry) is None
+    with pytest.raises(WikimediaPotdError):
+        parse_potd(potd_entry)
 
 
+@freezegun.freeze_time("2026-04-13")
 def test_parse_potd_derives_high_res_url_from_thumbnail(potd_entry: FeedParserDict) -> None:
     """Derives high_res_image_url by stripping /thumb and the trailing size segment from the thumbnail URL."""
     thumbnail = (
@@ -166,15 +187,15 @@ def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
 
 
 @freezegun.freeze_time("2026-06-07")
-def test_build_potd_path_and_name() -> None:
-    """Test build_potd_path_and_name returns correct path for thumbnail and hi-res urls."""
+def test_build_potd_path() -> None:
+    """Test build_potd_path returns correct path for thumbnail and hi-res urls."""
     image = Image(content=b"255", content_type="Image/jpeg")
 
     expected_thumbnail_path = "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
     expected_hires_path = "rss/wikimedia_potd/POTD_2026-06-07_hi_res.jpeg"
 
-    actual_thumbnail_path = build_potd_path_and_name(image=image, is_thumbnail=True)
-    actual_hires_path = build_potd_path_and_name(image=image, is_thumbnail=False)
+    actual_thumbnail_path = build_potd_image_path(image=image, is_thumbnail=True)
+    actual_hires_path = build_potd_image_path(image=image, is_thumbnail=False)
 
     assert actual_thumbnail_path == expected_thumbnail_path
     assert actual_hires_path == expected_hires_path
