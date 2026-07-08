@@ -124,7 +124,10 @@ class WikimediaPictureOfTheDayBackend:
             raise WikimediaPotdError(f"Invalid Wikimedia POTD image url: {url}")
 
         # set up request headers to only accept image content types
-        request_headers = {"accept": "image/jpeg,image/png,image/webp"}
+        request_headers = {
+            **RSS_FETCH_REQUEST_HEADERS,
+            "accept": "image/jpeg,image/png,image/webp",
+        }
         response: Response = await self.http_client.get(str(url), headers=request_headers)
         response.raise_for_status()
 
