@@ -45,8 +45,12 @@ class SurfaceId(str, Enum):
     NEW_TAB_EN_CA = "NEW_TAB_EN_CA"
     NEW_TAB_EN_IE = "NEW_TAB_EN_IE"
     NEW_TAB_EN_INTL = "NEW_TAB_EN_INTL"
+    # Cross-Europe English surface for English-speaking users in continental Europe.
+    NEW_TAB_EN_XE = "NEW_TAB_EN_XE"
     NEW_TAB_DE_DE = "NEW_TAB_DE_DE"
     NEW_TAB_ES_ES = "NEW_TAB_ES_ES"
+    # Global Spanish surface for Spanish-speaking users regardless of country.
+    NEW_TAB_ES_XA = "NEW_TAB_ES_XA"
     NEW_TAB_FR_FR = "NEW_TAB_FR_FR"
     NEW_TAB_IT_IT = "NEW_TAB_IT_IT"
     NEW_TAB_PL_PL = "NEW_TAB_PL_PL"
