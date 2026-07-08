@@ -68,11 +68,11 @@ def _raising_app(exc: Exception) -> ASGIApp:
 
 def _build_middleware(
     mocker: MockerFixture, app: ASGIApp
-) -> tuple[MetricsMiddleware, MagicMock, MagicMock, MagicMock]:
-    """Build a MetricsMiddleware with mocked otel instruments and StatsD client.
+) -> tuple[MetricsMiddleware, MagicMock, MagicMock]:
+    """Build a MetricsMiddleware with mocked otel instruments.
 
-    Returns the middleware along with the mocked (counter, histogram, statsd_client), so
-    tests can assert on the exact attributes/metrics our code passes to them.
+    Returns the middleware along with the mocked (counter, histogram), so tests can assert
+    on the exact attributes our code passes to them.
     """
     counter = mocker.MagicMock(name="counter")
     histogram = mocker.MagicMock(name="histogram")
@@ -80,11 +80,11 @@ def _build_middleware(
     meter.create_counter.return_value = counter
     meter.create_histogram.return_value = histogram
     mocker.patch("merino.middleware.metrics.metrics.get_meter", return_value=meter)
-    # Avoid touching the real (memoized) StatsD client / network.
-    statsd = mocker.MagicMock(name="statsd")
-    mocker.patch("merino.middleware.metrics.get_metrics_client", return_value=statsd)
+    # The middleware still stores a metrics client in the request scope for downstream use;
+    # stub it out to avoid touching the real (memoized) StatsD client / network.
+    mocker.patch("merino.middleware.metrics.get_metrics_client", return_value=mocker.MagicMock())
 
-    return MetricsMiddleware(app), counter, histogram, statsd
+    return MetricsMiddleware(app), counter, histogram
 
 
 @pytest.mark.asyncio
@@ -94,7 +94,7 @@ async def test_metrics_otel_attributes(
     send_mock: Send,
 ) -> None:
     """Test the otel attributes our code emits: bounded tags only, no browser version."""
-    middleware, counter, histogram, _ = _build_middleware(mocker, _responding_app(200))
+    middleware, counter, histogram = _build_middleware(mocker, _responding_app(200))
 
     await middleware(_http_scope(), receive_mock, send_mock)
 
@@ -129,7 +129,7 @@ async def test_metrics_otel_404_counter_omits_path(
 
     The duration histogram is not recorded for 404s at all.
     """
-    middleware, counter, histogram, _ = _build_middleware(mocker, _responding_app(404))
+    middleware, counter, histogram = _build_middleware(mocker, _responding_app(404))
 
     await middleware(_http_scope("/api/v1/unsupported"), receive_mock, send_mock)
 
@@ -153,9 +153,9 @@ async def test_metrics_records_500_on_unhandled_exception(
     receive_mock: Receive,
     send_mock: Send,
 ) -> None:
-    """Test that an unhandled exception records 500 otel + statsd metrics and re-raises."""
+    """Test that an unhandled exception records 500 otel metrics and re-raises."""
     error = RuntimeError("boom")
-    middleware, counter, histogram, statsd = _build_middleware(mocker, _raising_app(error))
+    middleware, counter, histogram = _build_middleware(mocker, _raising_app(error))
 
     with pytest.raises(RuntimeError, match="boom"):
         await middleware(_http_scope(), receive_mock, send_mock)
@@ -177,13 +177,3 @@ async def test_metrics_records_500_on_unhandled_exception(
         **MetricsMiddleware.constant_tags,
     }
     assert "browser" not in status_attrs
-
-    # StatsD records the timing and both status-code counters under the 500 status.
-    statsd.timing.assert_called_once_with(
-        "get.api.v1.suggest.timing", value=mocker.ANY, tags=mocker.ANY
-    )
-    increment_names = [call.args[0] for call in statsd.increment.call_args_list]
-    assert increment_names == [
-        "get.api.v1.suggest.status_codes.500",
-        "response.status_codes.500",
-    ]

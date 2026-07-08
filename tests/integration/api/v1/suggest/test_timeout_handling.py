@@ -48,9 +48,6 @@ SCENARIOS: dict[str, Scenario] = {
             "providers.timedout-sponsored.query.timeout",
             "suggestions-per.request",
             "suggestions-per.provider.timedout-sponsored",
-            "get.api.v1.suggest.timing",
-            "get.api.v1.suggest.status_codes.200",
-            "response.status_codes.200",
         },
     ),
     # Case II: One provider that will time out and another one will not.
@@ -76,9 +73,6 @@ SCENARIOS: dict[str, Scenario] = {
             "suggestions-per.request",
             "suggestions-per.provider.sponsored",
             "suggestions-per.provider.timedout-sponsored",
-            "get.api.v1.suggest.timing",
-            "get.api.v1.suggest.status_codes.200",
-            "response.status_codes.200",
         },
     ),
     # Case III: One provider that should not time out since it uses the custom timeout
@@ -100,9 +94,6 @@ SCENARIOS: dict[str, Scenario] = {
             "providers.timedout-tolerant-sponsored.query",
             "suggestions-per.request",
             "suggestions-per.provider.timedout-tolerant-sponsored",
-            "get.api.v1.suggest.timing",
-            "get.api.v1.suggest.status_codes.200",
-            "response.status_codes.200",
         },
     ),
     # Case IV: A regular non-timedout provider, a timed-out-tolerant provider, and a timed-out
@@ -131,9 +122,6 @@ SCENARIOS: dict[str, Scenario] = {
             "suggestions-per.provider.timedout-tolerant-sponsored",
             "suggestions-per.provider.timedout-sponsored",
             "suggestions-per.provider.sponsored",
-            "get.api.v1.suggest.timing",
-            "get.api.v1.suggest.status_codes.200",
-            "response.status_codes.200",
         },
     ),
 }
