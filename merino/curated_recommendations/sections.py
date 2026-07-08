@@ -393,27 +393,6 @@ def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> 
     )
 
 
-def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the user is enrolled in the InterestRanker treatment.
-
-    Reuses the InferredTimeZone experiment's TZ branch (originally a TZ-cohort
-    treatment that underperformed) — this avoids a fresh-experiment enrollment
-    ramp and gets the InterestRanker to traffic faster. Users on this branch
-    get the LinTS InterestRanker; users on the COUNTRY branch (control) stay
-    on the existing cohort path with TZ context disabled.
-
-    Gates the first tier of the ranker chain in get_sections: when this fires
-    and the LinTS backend is loaded, we rank with InterestRanker; otherwise
-    we fall through to the cohort ContextualRanker (or vanilla
-    ThompsonSamplingRanker).
-    """
-    return is_enrolled_in_experiment(
-        request,
-        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_TZ,
-    )
-
-
 def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if subtopics should be included based on experiments.
     Previously this was an experiment. This function should be refactored out.
@@ -915,10 +894,9 @@ async def get_sections(
         and ml_backend is not None
         and ml_backend.is_valid(surface_id)
     )
-    # use interest ranker if we have interests available
+    # Use InterestRanker when the per-surface LinTS bundle is loaded and the request has interests.
     use_interest_ranker = (
-        is_inferred_interest_experiment(request)
-        and lints_interest_backend.is_valid(surface_id)
+        lints_interest_backend.is_valid(surface_id)
         and personal_interests is not None
         and bool(personal_interests.scores)
     )
