@@ -515,8 +515,12 @@ def test_process_decodes_when_different_present(inferred_model, local_model_back
                 assert out.normalized_scores[key] == 0.0
 
 
-def test_gets_cohort(inferred_model, local_model_backend, cohort_model_backend):
-    """When model_id matches and values are present, decode into floats."""
+def test_decodes_values_without_cohort(inferred_model, local_model_backend, cohort_model_backend):
+    """When model_id matches and values are present, decode into floats.
+
+    Cohort assignment has been phased out with contextual ranking, so ``cohort`` is
+    always ``None`` regardless of whether a cohort model / training-run id is supplied.
+    """
     # Build a valid dp_values array aligned with the model's interest_vector order
     iv = inferred_model.model_data.interest_vector
     dp_values = []
@@ -539,27 +543,13 @@ def test_gets_cohort(inferred_model, local_model_backend, cohort_model_backend):
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved
     assert out.model_id == SERVER_V3_MODEL_ID
-    assert out.cohort is not None
+    # Cohort assignment is no longer performed.
+    assert out.cohort is None
     assert out.numerical_value is not None
-    assert len(out.cohort) > 0
 
     # No cohort model training run id passed.
     out = CuratedRecommendationsProvider.process_request_interests(
         req, SurfaceId.NEW_TAB_EN_US, local_model_backend, cohort_model_backend
-    )
-    assert isinstance(out, ProcessedInterests)
-    # model_id is preserved
-    assert out.model_id == SERVER_V3_MODEL_ID
-    assert out.cohort is not None
-    assert out.numerical_value is not None
-    assert len(out.cohort) > 0
-
-    out = CuratedRecommendationsProvider.process_request_interests(
-        req,
-        SurfaceId.NEW_TAB_EN_US,
-        local_model_backend,
-        cohort_model_backend,
-        cohort_model_training_run_id="some-other-id",
     )
     assert isinstance(out, ProcessedInterests)
     # model_id is preserved

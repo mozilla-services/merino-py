@@ -26,9 +26,6 @@ from merino.curated_recommendations.ml_backends.protocol import (
     MLRecsBackend,
     SpindleBackendProtocol,
 )
-from merino.curated_recommendations.ml_backends.static_local_model import (
-    CONTEXTUAL_RANKING_TREATMENT_TZ,
-)
 from merino.curated_recommendations.ml_backends.lints_interest_model import (
     EmptyLinTSInterestBackend,
     LinTSInterestBackend,
@@ -381,36 +378,6 @@ def should_show_popular_today_with_daily_briefing(
         request,
         ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
         DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
-    )
-
-
-def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the contextual ranking time zone experiment is enabled."""
-    return is_enrolled_in_experiment(
-        request,
-        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_TZ,
-    )
-
-
-def is_inferred_interest_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if the user is enrolled in the InterestRanker treatment.
-
-    Reuses the InferredTimeZone experiment's TZ branch (originally a TZ-cohort
-    treatment that underperformed) — this avoids a fresh-experiment enrollment
-    ramp and gets the InterestRanker to traffic faster. Users on this branch
-    get the LinTS InterestRanker; users on the COUNTRY branch (control) stay
-    on the existing cohort path with TZ context disabled.
-
-    Gates the first tier of the ranker chain in get_sections: when this fires
-    and the LinTS backend is loaded, we rank with InterestRanker; otherwise
-    we fall through to the cohort ContextualRanker (or vanilla
-    ThompsonSamplingRanker).
-    """
-    return is_enrolled_in_experiment(
-        request,
-        ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
-        CONTEXTUAL_RANKING_TREATMENT_TZ,
     )
 
 
@@ -831,6 +798,21 @@ def get_top_story_list(
     return top_stories
 
 
+def should_use_contextual_ranker(
+    surface_id: SurfaceId,
+    ml_backend: MLRecsBackend,
+    personal_interests: ProcessedInterests | None,
+) -> bool:
+    """Return whether the contextual (cohort) ranker should be used.
+
+    Contextual ranking is being phased out in favor of the interest ranker, so this
+    always returns False in production. It remains a dedicated function so the
+    ContextualRanker fallback path stays reachable in tests (which patch this to
+    True) while the code is retired.
+    """
+    return False
+
+
 async def get_sections(
     request: CuratedRecommendationsRequest,
     surface_id: SurfaceId,
@@ -904,21 +886,14 @@ async def get_sections(
         ]
     ranker: Ranker
 
-    # The current Canada experiment doesn't have the isMerinoExperiment flag set so we can only check
-    # if there is an interest vector. Contexual ranking shows some advantages of thompson sampling (such as pre
-    # ranking certain topics higher, so it has advantages even when there is no interest vector returned)
-    use_contexual_ranker = (
-        (
-            surface_id == SurfaceId.NEW_TAB_EN_US
-            or (surface_id == SurfaceId.NEW_TAB_EN_CA and personal_interests is not None)
-        )
-        and ml_backend is not None
-        and ml_backend.is_valid(surface_id)
+    # Contextual ranker is off and we may be phasing it out.
+    use_contexual_ranker = should_use_contextual_ranker(
+        surface_id, ml_backend, personal_interests
     )
+
     # use interest ranker if we have interests available
     use_interest_ranker = (
-        is_inferred_interest_experiment(request)
-        and lints_interest_backend.is_valid(surface_id)
+        lints_interest_backend.is_valid(surface_id)
         and personal_interests is not None
         and bool(personal_interests.scores)
     )
@@ -931,10 +906,8 @@ async def get_sections(
             lints_backend=lints_interest_backend,
         )
     elif use_contexual_ranker:
-        is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
         if (
-            not is_inferred_time_zone_experiment_enabled
-            and personal_interests
+            personal_interests
             and TIME_ZONE_OFFSET_INFERRED_KEY in personal_interests.scores
             and surface_id == SurfaceId.NEW_TAB_EN_US
         ):

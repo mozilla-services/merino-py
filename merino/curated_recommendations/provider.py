@@ -274,12 +274,6 @@ class CuratedRecommendationsProvider:
                     for k, v in decoded.items()
                     if k != LOCAL_MODEL_MODEL_ID_KEY and isinstance(v, (int, float))
                 }
-                if interest_cohort_model_backend is not None:
-                    cohort = interest_cohort_model_backend.get_cohort_for_interests(
-                        interests=dp_values_joined,
-                        model_id=model_id,
-                        training_run_id=cohort_model_training_run_id,
-                    )
                 return ProcessedInterests(
                     model_id=model_id,
                     scores=scores,

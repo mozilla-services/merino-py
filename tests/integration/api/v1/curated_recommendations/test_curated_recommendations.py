@@ -1793,7 +1793,7 @@ class TestSections:
             if tech_stuff_id in sections:
                 assert sections[tech_stuff_id]["title"] == "Tech stuff"
 
-    def test_sections_inferred_contextual_ranking_result_for_cohort(
+    def test_sections_inferred_ranking_no_longer_uses_cohort(
         self,
         ml_recommendations_backend,
         engagement_backend,
@@ -1801,8 +1801,12 @@ class TestSections:
         cohort_model_backend,
         client: TestClient,
     ):
-        """Test end to end content ranking based on cohort and tz offset. Note that engagement_backend is required
-        because the ml_recommendations_backend relies on it to find fresh items, which are limited
+        """Contextual/cohort ranking has been phased out in favor of the interest ranker.
+
+        When the interest ranker is unavailable (as with the EmptyLinTSInterestBackend used in
+        these tests), ranking falls back to global Thompson sampling, so the top story is no
+        longer the cohort-specific item. Note that engagement_backend is required because the
+        ml_recommendations_backend relies on it to find fresh items, which are limited.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1826,9 +1830,13 @@ class TestSections:
         # top_stories_section should always be present
         assert "top_stories_section" in sections
 
-        assert sections["top_stories_section"]["recommendations"][0][
-            "corpusItemId"
-        ] == ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+        # Cohort ranking is disabled, so the top story is not the cohort-specific item.
+        top_item = sections["top_stories_section"]["recommendations"][0]
+        assert (
+            top_item["corpusItemId"]
+            != ml_recommendations_backend.get_most_popular_content_id_by_cohort(8)
+        )
+        assert isinstance(top_item["serverScore"], float)
 
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -1866,6 +1874,63 @@ class TestSections:
         assert top_item[
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort_timezone(6, 2)
+        assert isinstance(top_item["serverScore"], float)
+
+    def test_sections_contextual_ranking_when_enabled(
+        self,
+        mocker: MockerFixture,
+        ml_recommendations_backend,
+        engagement_backend,
+        sections_backend,
+        cohort_model_backend,
+        client: TestClient,
+    ):
+        """Cover the ContextualRanker fallback path while it is being retired.
+
+        Contextual ranking is disabled in production (should_use_contextual_ranker returns
+        False), so this test patches that seam to True to keep the ContextualRanker branch of
+        get_sections exercised. The interests below carry a time-zone component, which the US
+        path strips before ranking. Cohort-specific ranking no longer happens (cohort lookup was
+        removed), so we assert that the ContextualRanker actually ran (it is the only ranker that
+        queries the ML backend) and produced a valid, scored top story. engagement_backend is
+        required because the ml_recommendations_backend relies on it to find fresh items.
+        """
+        mocker.patch(
+            "merino.curated_recommendations.sections.should_use_contextual_ranker",
+            return_value=True,
+        )
+        ml_get_spy = mocker.spy(ml_recommendations_backend, "get")
+
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "en-US",
+                "feeds": ["sections"],
+                "region": "US",
+                "inferredInterests": {
+                    "values": [
+                        "1000",
+                        "0000",
+                        "1000",
+                        "1000",
+                        "1000",
+                        "0000",
+                        "0001",
+                        "0010",
+                    ],  # <- this indicates time zone 2
+                    "model_id": "inferred-model-v3",
+                },
+            },
+        )
+        data = response.json()
+        assert response.status_code == 200
+
+        # The ContextualRanker branch ran: it is the only ranker that queries the ML backend.
+        assert ml_get_spy.called
+
+        sections = {n: s for n, s in data["feeds"].items() if s is not None}
+        assert "top_stories_section" in sections
+        top_item = sections["top_stories_section"]["recommendations"][0]
         assert isinstance(top_item["serverScore"], float)
 
     @pytest.mark.parametrize(
