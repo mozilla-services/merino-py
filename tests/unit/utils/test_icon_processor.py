@@ -259,6 +259,31 @@ async def test_process_icon_url_integration(icon_processor, mock_image, mocker: 
 
 
 @pytest.mark.asyncio
+async def test_process_icon_url_forwards_cache_control(
+    icon_processor, mock_image, mocker: MockerFixture
+):
+    """Test that cache_control from settings is forwarded to upload_image."""
+    url = "https://example.com/favicon.ico"
+
+    # Mock the internal methods
+    mocker.patch.object(icon_processor, "_download_favicon", return_value=mock_image)
+    mocker.patch.object(icon_processor, "_is_valid_image", return_value=True)
+    upload_mock = mocker.patch.object(
+        icon_processor.uploader,
+        "upload_image",
+        return_value="https://cdn.test.mozilla.net/favicons/test_hash_17.png",
+    )
+
+    # Process the URL
+    await icon_processor.process_icon_url(url)
+
+    # Verify upload_image received the cache_control value from settings
+    upload_mock.assert_called_once()
+    assert upload_mock.call_args.kwargs["cache_control"] == settings.icon.cache_control
+    assert icon_processor.cache_control == settings.icon.cache_control
+
+
+@pytest.mark.asyncio
 async def test_process_icon_url_content_hash_cache(
     icon_processor, mock_image, mocker: MockerFixture
 ):

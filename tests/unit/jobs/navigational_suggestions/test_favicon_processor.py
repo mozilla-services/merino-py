@@ -65,6 +65,18 @@ class TestFaviconProcessorInit:
         processor = FaviconProcessor(mock_favicon_downloader)
         assert processor.base_url == ""
 
+    def test_init_default_cache_control_is_none(self, mock_favicon_downloader):
+        """Test that cache_control defaults to None."""
+        processor = FaviconProcessor(mock_favicon_downloader)
+        assert processor.cache_control is None
+
+    def test_init_with_cache_control(self, mock_favicon_downloader):
+        """Test that cache_control is stored on the instance."""
+        processor = FaviconProcessor(
+            mock_favicon_downloader, cache_control="public, max-age=99"
+        )
+        assert processor.cache_control == "public, max-age=99"
+
 
 class TestProcessAndUploadBestFavicon:
     """Test the main process_and_upload_best_favicon method."""
@@ -253,6 +265,35 @@ class TestProcessSvgFavicons:
 
         assert result == "https://cdn.example.com/test_favicon.png"
         mock_uploader.upload_image.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_process_svg_favicons_passes_cache_control(
+        self, mock_favicon_downloader, mock_uploader, mock_svg_image
+    ):
+        """Test that cache_control is threaded through to uploader.upload_image."""
+        processor = FaviconProcessor(
+            mock_favicon_downloader,
+            "https://example.com",
+            cache_control="public, max-age=99",
+        )
+        svg_urls = ["https://example.com/favicon.svg"]
+        svg_indices = [0]
+        masked_svg_indices: list[int] = []
+
+        mock_favicon_downloader.download_multiple_favicons = AsyncMock(
+            return_value=[mock_svg_image]
+        )
+
+        result = await processor._process_svg_favicons(
+            svg_urls, svg_indices, masked_svg_indices, mock_uploader
+        )
+
+        assert result == "https://cdn.example.com/test_favicon.png"
+        mock_uploader.upload_image.assert_called_once()
+        assert (
+            mock_uploader.upload_image.call_args.kwargs["cache_control"]
+            == "public, max-age=99"
+        )
 
     @pytest.mark.asyncio
     async def test_process_svg_favicons_skip_masked(

@@ -8,11 +8,14 @@ from datetime import datetime
 
 from google.cloud.storage import Blob
 
+from merino.configs import settings
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from merino.jobs.navigational_suggestions.io.async_favicon_downloader import AsyncFaviconDownloader
 
 logger = logging.getLogger(__name__)
+
+CACHE_CONTROL = settings.jobs.navigational_suggestions.cache_control
 
 
 class DomainMetadataUploader:
@@ -104,7 +107,10 @@ class DomainMetadataUploader:
             try:
                 dst_favicon_name = self.destination_favicon_name(favicon_image)
                 dst_favicon_public_url = self.uploader.upload_image(
-                    favicon_image, dst_favicon_name, forced_upload=self.force_upload
+                    favicon_image,
+                    dst_favicon_name,
+                    forced_upload=self.force_upload,
+                    cache_control=CACHE_CONTROL,
                 )
                 return dst_favicon_public_url
             except Exception as e:
@@ -113,7 +119,11 @@ class DomainMetadataUploader:
         return ""
 
     def upload_image(
-        self, favicon_image: Image, dst_favicon_name: str, forced_upload: bool
+        self,
+        favicon_image: Image,
+        dst_favicon_name: str,
+        forced_upload: bool,
+        cache_control: str | None = None,
     ) -> str:
         """Upload an already downloaded favicon image to GCS and return its public URL.
 
@@ -126,7 +136,10 @@ class DomainMetadataUploader:
             Public URL of the uploaded favicon
         """
         return self.uploader.upload_image(
-            favicon_image, dst_favicon_name, forced_upload=forced_upload
+            favicon_image,
+            dst_favicon_name,
+            forced_upload=forced_upload,
+            cache_control=cache_control,
         )
 
     def upload_favicons(self, src_favicons: list[str]) -> list[str]:

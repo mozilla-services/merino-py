@@ -135,6 +135,7 @@ class PolygonBackend:
         self.cache.register_script(
             SCRIPT_ID_BULK_WRITE_TICKERS, LUA_SCRIPT_CACHE_BULK_WRITE_TICKERS
         )
+        self.cache_control = settings.providers.polygon.image_cache_control
 
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
         """Get snapshots for the list of tickers."""
@@ -311,12 +312,14 @@ class PolygonBackend:
                         image=logo,
                         destination_name=destination_name,
                         forced_upload=False,
+                        cache_control=self.cache_control,
                     )
 
                     public_url_v2 = self.gcs_uploader_v2.upload_image(
                         image=logo,
                         destination_name=destination_name,
                         forced_upload=False,
+                        cache_control=self.cache_control,
                     )
 
                     uploaded_urls["v1"][ticker] = public_url

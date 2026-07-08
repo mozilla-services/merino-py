@@ -14,6 +14,7 @@ from pydantic import HttpUrl
 from httpx import AsyncClient, HTTPError, Request, Response
 from pytest_mock import MockerFixture
 
+from merino.configs import settings
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
     WikimediaPotdError,
@@ -346,6 +347,23 @@ class TestGcsUploadVerification:
             backend.upload_potd_image(
                 image=Image(content=b"255", content_type="image/png"), is_thumbnail=True
             )
+
+    def test_upload_potd_image_forwards_cache_control_to_uploader(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Forwards the configured cache_control setting to gcs_uploader.upload_image."""
+        backend.gcs_uploader.upload_image.return_value = (  # type: ignore[attr-defined]
+            "https://cdn/rss/wikimedia_potd/image.png"
+        )
+        # the object is present in the bucket so the upload does not raise.
+        backend.gcs_uploader.get_file_by_name.return_value = MagicMock()  # type: ignore[attr-defined]
+
+        backend.upload_potd_image(
+            image=Image(content=b"255", content_type="image/png"), is_thumbnail=True
+        )
+
+        _, kwargs = backend.gcs_uploader.upload_image.call_args  # type: ignore[attr-defined]
+        assert kwargs["cache_control"] == settings.rss_providers.wikimedia_potd.cache_control
 
     def test_upload_potd_manifest_raises_when_object_not_in_bucket(
         self, backend: WikimediaPictureOfTheDayBackend, potd: PictureOfTheDay

@@ -32,12 +32,17 @@ class GcsUploader(BaseContentUploader):
         self.cdn_hostname = destination_cdn_hostname
 
     def upload_image(
-        self, image: Image, destination_name: str, forced_upload: bool = False
+        self,
+        image: Image,
+        destination_name: str,
+        forced_upload: bool = False,
+        cache_control: str | None = None,
     ) -> str:
         """Upload an Image to our GCS Bucket and return the public URL where it is hosted."""
         image_blob: Blob = self.upload_content(
-            image.content, destination_name, image.content_type, forced_upload
+            image.content, destination_name, image.content_type, forced_upload, cache_control
         )
+
         image_public_url = self._get_public_url(image_blob, destination_name)
 
         logger.info(f"Content public url: {image_public_url}")
@@ -50,6 +55,7 @@ class GcsUploader(BaseContentUploader):
         destination_name: str,
         content_type: str = "text/plain",
         forced_upload: bool = False,
+        cache_control: str | None = None,
     ) -> Blob:
         """Upload the content then return the blob."""
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
@@ -58,7 +64,7 @@ class GcsUploader(BaseContentUploader):
         try:
             if forced_upload or not destination_blob.exists():
                 logger.info(f"Uploading blob: {destination_blob.name}")
-
+                destination_blob.cache_control = cache_control
                 destination_blob.upload_from_string(
                     content,
                     content_type=content_type,
@@ -76,6 +82,7 @@ class GcsUploader(BaseContentUploader):
         destination_name: str,
         content_type: str,
         forced_upload: bool = False,
+        cache_control: str | None = None,
     ) -> Blob:
         """Upload a local file and return the blob."""
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
@@ -84,6 +91,7 @@ class GcsUploader(BaseContentUploader):
         try:
             if forced_upload or not destination_blob.exists():
                 logger.info(f"Uploading file: {destination_blob.name}")
+                destination_blob.cache_control = cache_control
                 destination_blob.upload_from_filename(
                     file_path,
                     content_type=content_type,

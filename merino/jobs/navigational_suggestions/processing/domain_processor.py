@@ -7,6 +7,7 @@ from typing import Any, Optional, TYPE_CHECKING
 
 import tldextract
 
+from merino.configs import settings
 from merino.jobs.navigational_suggestions.enrichments.custom_favicons import get_custom_favicon_url
 from merino.jobs.navigational_suggestions.favicon.favicon_extractor import FaviconExtractor
 from merino.jobs.navigational_suggestions.favicon.favicon_processor import FaviconProcessor
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 current_web_scraper: contextvars.ContextVar[WebScraper] = contextvars.ContextVar(
     "current_web_scraper"
 )
+CACHE_CONTROL = settings.jobs.navigational_suggestions.cache_control
 
 
 class DomainProcessor:
@@ -208,7 +210,10 @@ class DomainProcessor:
                 if favicon_image:
                     dst_favicon_name = uploader.destination_favicon_name(favicon_image)
                     favicon = uploader.upload_image(
-                        favicon_image, dst_favicon_name, forced_upload=uploader.force_upload
+                        favicon_image,
+                        dst_favicon_name,
+                        forced_upload=uploader.force_upload,
+                        cache_control=CACHE_CONTROL,
                     )
                 else:
                     favicon = ""

@@ -8,6 +8,7 @@ from pydantic import HttpUrl
 from feedparser import FeedParserDict
 from httpx import AsyncClient, Response
 
+from merino.configs import settings
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
     WikimediaPotdError,
@@ -45,6 +46,7 @@ class WikimediaPictureOfTheDayBackend:
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.gcs_uploader = gcs_uploader
+        self.cache_control = settings.rss_providers.wikimedia_potd.cache_control
 
     async def upload_picture_of_the_day(self) -> bool:
         """Orchestrates fetching the RSS feed, extracting the Picture of the Day (POTD),
@@ -149,7 +151,9 @@ class WikimediaPictureOfTheDayBackend:
         potd_image_path = build_potd_image_path(image=image, is_thumbnail=is_thumbnail)
 
         # return a public cdn url for the image after a successful upload
-        public_url = self.gcs_uploader.upload_image(image=image, destination_name=potd_image_path)
+        public_url = self.gcs_uploader.upload_image(
+            image=image, destination_name=potd_image_path, cache_control=self.cache_control
+        )
 
         # GcsUploader.upload_content swallows storage errors and returns a public url regardless,
         # so confirm the object actually landed in the bucket and fail loudly otherwise.

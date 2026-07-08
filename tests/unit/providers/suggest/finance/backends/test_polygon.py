@@ -811,6 +811,31 @@ async def test_upload_ticker_images_upload_fails(
     assert upload_image_mock.called
 
 
+@pytest.mark.asyncio
+async def test_upload_ticker_images_passes_cache_control_to_both_uploaders(
+    polygon: PolygonBackend,
+    sample_image: Image,
+    mock_gcs_uploader: GcsUploader,
+    mocker,
+):
+    """Test that both v1 and v2 uploaders receive the configured cache_control string."""
+    expected_cache_control = settings.providers.polygon.image_cache_control
+    # Lock the config shape: image_cache_control must resolve to a plain string.
+    assert isinstance(expected_cache_control, str)
+
+    mocker.patch.object(polygon, "download_ticker_image", return_value=sample_image)
+    upload_image_mock = mocker.patch.object(
+        mock_gcs_uploader, "upload_image", return_value="https://cdn.example.com/fake.svg"
+    )
+
+    await polygon.bulk_download_and_upload_ticker_images(["AAPL"])
+
+    # gcs_uploader (v1) and gcs_uploader_v2 both call upload_image once per ticker.
+    assert upload_image_mock.call_count == 2
+    for upload_call in upload_image_mock.call_args_list:
+        assert upload_call.kwargs["cache_control"] == expected_cache_control
+
+
 def test_build_finance_manifest_valid():
     """Test that build_finance_manifest creates a valid FinanceManifest with uppercased tickers
     and valid URLs

@@ -23,9 +23,11 @@ class FaviconProcessor:
         self,
         favicon_downloader: AsyncFaviconDownloader,
         base_url: str = "",
+        cache_control: str | None = None,
     ) -> None:
         self.favicon_downloader = favicon_downloader
         self.base_url = base_url
+        self.cache_control = cache_control
 
     async def process_and_upload_best_favicon(
         self,
@@ -135,7 +137,12 @@ class FaviconProcessor:
                     # Upload and return immediately - SVGs are top priority
                     dst_favicon_name = uploader.destination_favicon_name(image)
                     try:
-                        result = uploader.upload_image(image, dst_favicon_name, forced_upload=True)
+                        result = uploader.upload_image(
+                            image,
+                            dst_favicon_name,
+                            forced_upload=True,
+                            cache_control=self.cache_control,
+                        )
                         return str(result)
                     except Exception as e:
                         logger.warning(f"Failed to upload SVG favicon: {e}")
@@ -207,7 +214,10 @@ class FaviconProcessor:
                                     try:
                                         dst_favicon_name = uploader.destination_favicon_name(image)
                                         result = uploader.upload_image(
-                                            image, dst_favicon_name, forced_upload=True
+                                            image,
+                                            dst_favicon_name,
+                                            forced_upload=True,
+                                            cache_control=self.cache_control,
                                         )
                                         return str(result), min_width, failed_image_validations
                                     except Exception as svg_err:
@@ -230,7 +240,10 @@ class FaviconProcessor:
                                 try:
                                     dst_favicon_name = uploader.destination_favicon_name(image)
                                     favicon_url = uploader.upload_image(
-                                        image, dst_favicon_name, forced_upload=True
+                                        image,
+                                        dst_favicon_name,
+                                        forced_upload=True,
+                                        cache_control=self.cache_control,
                                     )
                                     best_favicon_url = favicon_url
                                     best_favicon_width = width_val
