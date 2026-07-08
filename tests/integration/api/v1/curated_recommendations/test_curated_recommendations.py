@@ -782,6 +782,22 @@ class TestCuratedRecommendationsRequestParameters:
         data = response.json()
         assert data["surfaceId"] == surface_id
 
+    @pytest.mark.parametrize("locale", [Locale.ES_AR, Locale.ES_CL, Locale.ES_MX])
+    def test_global_spanish_locales_route_to_es_xa(self, locale, client: TestClient):
+        """Latin-American Spanish locales are accepted and, in the sections-in-global-spanish
+        treatment, route to the global Spanish surface (NEW_TAB_ES_XA).
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": locale,
+                "experimentName": "sections-in-global-spanish",
+                "experimentBranch": "treatment",
+            },
+        )
+        assert response.status_code == 200, f"{locale} resulted in {response.status_code}"
+        assert response.json()["surfaceId"] == SurfaceId.NEW_TAB_ES_XA
+
     @pytest.mark.parametrize(
         "locale",
         [
