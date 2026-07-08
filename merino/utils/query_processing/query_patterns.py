@@ -1,8 +1,8 @@
 """Query pattern matching for aggregate suggest metrics.
 
 PRIVACY CONTRACT:
-- Emits only ``merino.query_pattern.match`` (attributes ``pattern_id``, ``matched``,
-  ``source``) and ``merino.query_pattern.error`` (attribute ``source``).
+- Emits only ``merino_query_pattern_match`` (attributes ``pattern_id``, ``matched``,
+  ``source``) and ``merino_query_pattern_error`` (attribute ``source``).
 - Never emits raw query text, the matched substring, or the regex source.
 - ``pattern_id`` is operator-controlled and low-cardinality (``PATTERN_ID_RE``), so a
   metric series identifies a query *category*, never a search.
@@ -12,12 +12,23 @@ PRIVACY CONTRACT:
 """
 
 import logging
+import random
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final, cast
 
+from opentelemetry import metrics
+
 logger = logging.getLogger(__name__)
+
+_meter = metrics.get_meter("merino.query_pattern")
+
+_match_counter = _meter.create_counter(
+    "merino_query_pattern_match",
+    description="Count of suggest queries matching a configured query pattern, "
+    "by pattern id and source",
+)
 
 # A pattern id is the only operator-supplied value that reaches metrics, so it is
 # constrained to a short, lowercase token to keep metric cardinality bounded and
@@ -125,3 +136,11 @@ def match_query(matcher: QueryPatternMatcher, query: str) -> tuple[str, ...]:
     if not query:
         return ()
     return tuple(p.id for p in matcher.patterns if p.regex.search(query))
+
+
+def emit_query_pattern_metrics(matcher: QueryPatternMatcher, query: str, source: str) -> None:
+    """Run the query pattern matcher and emit a metric for each matched pattern ID."""
+    if random.random() >= matcher.sample_rate:
+        return
+    for pattern_id in match_query(matcher, query):
+        _match_counter.add(1, {"pattern_id": pattern_id, "source": source})
