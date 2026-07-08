@@ -2,12 +2,9 @@
 
 import logging
 import typer
-from merino.providers.rss import get_wikimedia_potd_provider
+from merino.providers.rss import get_wikimedia_potd_provider, init_providers
 
 logger = logging.getLogger(__name__)
-
-
-provider = get_wikimedia_potd_provider()
 
 cli = typer.Typer(
     name="wikimedia_potd_updater",
@@ -20,6 +17,9 @@ async def update_wikimedia_potd():  # pragma: no cover
     """Execute the process to attempt to update the Wikimedia Picture of the Day."""
     logger.info("Beginning wikimedia potd update process...")
 
+    # TODO @herraj refactor this to not init all future rss providers
+    await init_providers()
+    provider = get_wikimedia_potd_provider()
     await provider.upload_picture_of_the_day()
 
     logger.info("Finished wikimedia potd update.")
