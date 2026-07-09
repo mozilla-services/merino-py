@@ -76,14 +76,12 @@ async def test_initialize_caches_fresh_potd(
     assert provider.potd is test_potd
 
 
-@freezegun.freeze_time("2026-06-08")
 @pytest.mark.asyncio
-async def test_initialize_leaves_potd_none_when_fetch_is_stale_or_missing(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
+async def test_initialize_leaves_potd_none_when_fetch_returns_none(
+    provider: WikimediaPictureOfTheDayProvider, backend_mock
 ) -> None:
-    """Test that initialize leaves potd unset when the backend has no fresh potd."""
-    # test_potd is published 2026-06-07, stale relative to the freeze time
-    backend_mock.fetch_potd_from_gcs_bucket.return_value = test_potd
+    """Test that initialize leaves potd unset when the backend fetch returns nothing."""
+    backend_mock.fetch_potd_from_gcs_bucket.return_value = None
 
     await provider.initialize()
 
@@ -144,13 +142,20 @@ async def test_get_picture_of_the_day_returns_correct_potd_when_backend_fetch_re
 
 @freezegun.freeze_time("2026-06-08")
 @pytest.mark.asyncio
-async def test_get_picture_of_the_day_returns_None_when_backend_fetch_returns_stale_potd(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
+async def test_get_picture_of_the_day_caches_and_returns_fetched_potd(
+    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd, mocker: MockerFixture
 ) -> None:
-    """Test that get_picture_of_the_day returns None when backend returns a stale potd."""
-    # test_potd has the published date as 2026-06-07, a day old compared to test freeze time
+    """Test that a potd returned by the fetch is cached and served without a Sentry warning."""
     backend_mock.fetch_potd_from_gcs_bucket.return_value = test_potd
-    assert await provider.get_picture_of_the_day() is None
+    capture = mocker.patch(
+        "merino.providers.rss.wikimedia_potd.provider.sentry_sdk.capture_message"
+    )
+
+    potd = await provider.get_picture_of_the_day()
+
+    assert potd is test_potd
+    assert provider.potd is test_potd
+    capture.assert_not_called()
 
 
 @freezegun.freeze_time("2026-06-07")
@@ -191,17 +196,18 @@ async def test_get_picture_of_the_day_refetches_when_cached_potd_is_stale(
 
 @freezegun.freeze_time("2026-06-08")
 @pytest.mark.asyncio
-async def test_get_picture_of_the_day_returns_none_when_cached_stale_and_refetch_misses(
+async def test_get_picture_of_the_day_serves_stale_potd_when_refetch_misses(
     provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
 ) -> None:
-    """Test that a stale cache with no fresh potd available returns None."""
+    """Test that a stale cached potd is served when today's potd cannot be fetched."""
+    # cached test_potd is published 2026-06-07, a day old compared to the freeze time
     provider.potd = test_potd
     backend_mock.fetch_potd_from_gcs_bucket.return_value = None
 
     potd = await provider.get_picture_of_the_day()
 
     backend_mock.fetch_potd_from_gcs_bucket.assert_called_once()
-    assert potd is None
+    assert potd is test_potd
 
 
 @freezegun.freeze_time("2026-06-08")
@@ -209,7 +215,7 @@ async def test_get_picture_of_the_day_returns_none_when_cached_stale_and_refetch
 async def test_get_picture_of_the_day_reports_missing_potd_to_sentry_once(
     provider: WikimediaPictureOfTheDayProvider, backend_mock, mocker: MockerFixture
 ) -> None:
-    """Test that repeated misses emit a single Sentry warning per stale window."""
+    """Test that repeated fetch misses emit a single Sentry warning per missing window."""
     backend_mock.fetch_potd_from_gcs_bucket.return_value = None
     capture = mocker.patch(
         "merino.providers.rss.wikimedia_potd.provider.sentry_sdk.capture_message"
@@ -222,52 +228,32 @@ async def test_get_picture_of_the_day_reports_missing_potd_to_sentry_once(
     assert backend_mock.fetch_potd_from_gcs_bucket.call_count == 2
     capture.assert_called_once()
     message = capture.call_args.args[0]
-    assert "Fetched published_date: none" in message
-    assert "today: 2026-06-08" in message
-
-
-@freezegun.freeze_time("2026-06-08")
-@pytest.mark.asyncio
-async def test_get_picture_of_the_day_sentry_message_includes_stale_published_date(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd, mocker: MockerFixture
-) -> None:
-    """Test that the Sentry warning reports the fetched (stale) published date and today."""
-    # test_potd is published 2026-06-07, stale relative to the freeze time
-    backend_mock.fetch_potd_from_gcs_bucket.return_value = test_potd
-    capture = mocker.patch(
-        "merino.providers.rss.wikimedia_potd.provider.sentry_sdk.capture_message"
-    )
-
-    assert await provider.get_picture_of_the_day() is None
-
-    message = capture.call_args.args[0]
-    assert "Fetched published_date: 2026-06-07" in message
-    assert "today: 2026-06-08" in message
+    assert "could not fetch a potd from the gcs bucket for 2026-06-08" in message
 
 
 @pytest.mark.asyncio
 async def test_get_picture_of_the_day_reports_again_after_recovery(
     provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd, mocker: MockerFixture
 ) -> None:
-    """Test that a fresh fetch resets the stale window so a later miss reports again."""
+    """Test that a successful fetch resets the missing window so a later miss reports again."""
     capture = mocker.patch(
         "merino.providers.rss.wikimedia_potd.provider.sentry_sdk.capture_message"
     )
 
-    # Day 1: miss -> one warning.
+    # Day 1: fetch miss -> one warning, nothing cached.
     with freezegun.freeze_time("2026-06-08"):
         backend_mock.fetch_potd_from_gcs_bucket.return_value = None
         assert await provider.get_picture_of_the_day() is None
 
-    # Day 2: fresh potd available -> cached, stale window reset.
+    # Day 2: fetch succeeds -> cached, missing window reset.
     with freezegun.freeze_time("2026-06-09"):
         fresh_potd = test_potd.model_copy(update={"published_date": "2026-06-09"})
         backend_mock.fetch_potd_from_gcs_bucket.return_value = fresh_potd
         assert await provider.get_picture_of_the_day() is fresh_potd
 
-    # Day 3: miss again -> a second warning is emitted.
+    # Day 3: fetch miss again -> a second warning, and the stale day-2 potd is served.
     with freezegun.freeze_time("2026-06-10"):
         backend_mock.fetch_potd_from_gcs_bucket.return_value = None
-        assert await provider.get_picture_of_the_day() is None
+        assert await provider.get_picture_of_the_day() is fresh_potd
 
     assert capture.call_count == 2

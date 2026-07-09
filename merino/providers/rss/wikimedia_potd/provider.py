@@ -24,7 +24,7 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     potd: PictureOfTheDay | None
-    _reported_stale_potd: bool
+    _reported_missing_potd: bool
 
     def __init__(
         self,
@@ -41,9 +41,8 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         self.metrics_client = metrics_client
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.potd = None
-        # Track whether the current stale/missing window has already been reported, so we
-        # emit at most one Sentry warning per window instead of one per request.
-        self._reported_stale_potd = False
+        # track whether the current fetch from the gcs bucket has been reported for sentry capture
+        self._reported_missing_potd = False
 
     @staticmethod
     def _today() -> str:
@@ -55,32 +54,28 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         return potd is not None and potd.published_date == self._today()
 
     async def _refresh_potd(self) -> None:
-        """Fetch the potd from GCS and cache it when today's is available.
+        """Fetch the potd from GCS and cache whatever the bucket returns.
 
-        On a miss (nothing fetched, or the fetched potd is from another day) the cached
-        potd is left untouched and a single Sentry warning is emitted per stale window,
-        which resets once today's potd is cached again.
+        When the fetch returns nothing the cached potd is left untouched and
+        a single Sentry warning is emitted per missing window, which resets once a potd is fetched again.
         """
         fetched_potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
 
-        # if today's potd is available, cache it and close the stale window
-        if self._is_todays_potd(fetched_potd):
+        # cache the fetched potd and close the missing window
+        if fetched_potd is not None:
             self.potd = fetched_potd
-            self._reported_stale_potd = False
+            self._reported_missing_potd = False
             return
 
-        # return if the stale window is open. Means that stale potd has been reported.
-        if self._reported_stale_potd:
+        # fetch returned nothing, warn once per missing window and keep any cached potd
+        if self._reported_missing_potd:
             return
 
-        # open the stale window and report it once
-        fetched_date = fetched_potd.published_date if fetched_potd is not None else "none"
         sentry_sdk.capture_message(
-            f"Provider could not fetch a fresh potd for today from the gcs bucket. "
-            f"Fetched published_date: {fetched_date}, today: {self._today()}",
+            f"Provider could not fetch a potd from the gcs bucket for {self._today()}.",
             "warning",
         )
-        self._reported_stale_potd = True
+        self._reported_missing_potd = True
 
     async def initialize(self) -> None:
         """Initialize the provider by warming the potd cache."""
@@ -90,16 +85,19 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         await self._refresh_potd()
 
     async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
-        """Return today's Wikimedia Picture of the Day or None.
+        """Return the Wikimedia Picture of the Day, or None if none has ever been cached.
 
-        Re-fetches when the cached potd is missing or from a previous day. We intentionally
-        do not throttle the re-fetch. A single Sentry warning per stale window surfaces the
-        gap.
+        Re-fetches when the cached potd is missing or from a previous day. When today's
+        potd isn't available yet we serve the previous day's cached potd rather than
+        nothing.
         """
         if not self._is_todays_potd(self.potd):
             await self._refresh_potd()
 
-        return self.potd if self._is_todays_potd(self.potd) else None
+        # TODO @herraj jira: [HNT-2162]
+        # add a metric to track when we serve a stale (previous-day) potd here
+        # because today's picture isn't yet available in the gcs bucket.
+        return self.potd
 
     async def upload_picture_of_the_day(self) -> bool:
         """Execute the upload flow. This method is called by the job cli command only."""
