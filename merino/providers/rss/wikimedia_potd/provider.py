@@ -5,7 +5,6 @@ import aiodogstatsd
 import asyncio
 from datetime import datetime, timezone
 
-import sentry_sdk
 from pydantic import HttpUrl
 
 from merino.providers.rss.base import BaseRssProvider
@@ -24,7 +23,6 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
     metrics_client: aiodogstatsd.Client
     url: HttpUrl
     potd: PictureOfTheDay | None
-    _reported_missing_potd: bool
 
     def __init__(
         self,
@@ -41,8 +39,6 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         self.metrics_client = metrics_client
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.potd = None
-        # track whether the current fetch from the gcs bucket has been reported for sentry capture
-        self._reported_missing_potd = False
 
     @staticmethod
     def _today() -> str:
@@ -56,26 +52,13 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
     async def _refresh_potd(self) -> None:
         """Fetch the potd from GCS and cache whatever the bucket returns.
 
-        When the fetch returns nothing the cached potd is left untouched and
-        a single Sentry warning is emitted per missing window, which resets once a potd is fetched again.
+        When the fetch returns nothing (e.g. today's manifest hasn't been uploaded yet) the
+        cached potd is left untouched, so a previously cached picture keeps being served.
         """
         fetched_potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
 
-        # cache the fetched potd and close the missing window
         if fetched_potd is not None:
             self.potd = fetched_potd
-            self._reported_missing_potd = False
-            return
-
-        # fetch returned nothing, warn once per missing window and keep any cached potd
-        if self._reported_missing_potd:
-            return
-
-        sentry_sdk.capture_message(
-            f"Provider could not fetch a potd from the gcs bucket for {self._today()}.",
-            "warning",
-        )
-        self._reported_missing_potd = True
 
     async def initialize(self) -> None:
         """Initialize the provider by warming the potd cache."""
