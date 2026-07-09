@@ -148,6 +148,9 @@ async def test_fetch(
         "icons_count": 1,
         "advertisers_count": 1,
         "url_templates_count": 1,
+        "full_keywords_count": 2,
+        "fuzzy_keywords_count": 2,
+        "fuzzy_delete_index_size": 39,
     }
 
 

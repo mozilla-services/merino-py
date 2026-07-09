@@ -106,6 +106,10 @@ dummy_attempted_count = 1000
 # MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
 dry_run = false
 
+[production.providers.adm.fuzzy]
+# MERINO_PROVIDERS__ADM__FUZZY__ENABLED
+enabled = false
+
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
 # Enum of either `remote` or `local` that defines whether domain data

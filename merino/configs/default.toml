@@ -115,7 +115,7 @@ client_variant_character_max = 100
 
 # MERINO_WEB__API__V1__CLIENT_VARIANT_ALLOW_LIST
 # list of client variants the merino will be aware about
-client_variant_allow_list = ["engagement_guided_suggestions", "query_norm_treatment", "top_pick_promotion"]
+client_variant_allow_list = ["engagement_guided_suggestions", "query_norm_treatment", "top_pick_promotion", "amp-fuzzy-matching-treatment"]
 
 # MERINO_WEB__API__V1__HEADER_CHARACTER_MAX
 # A non-negative integer that limits the string character length of a given header string,
@@ -770,6 +770,11 @@ engagement_resync_interval_sec = 3600
 # This is intentionally set to be greater than the score in Remote Settings to fix
 # a reporting issue. See DISCO-3167.
 score = 0.31
+
+[default.providers.adm.fuzzy]
+# MERINO_PROVIDERS__ADM__FUZZY__ENABLED
+# Toggle fuzzy matching for AMP suggestions (only in experiment for now)
+enabled = true
 
 [default.providers.adm.thompson]
 # MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
