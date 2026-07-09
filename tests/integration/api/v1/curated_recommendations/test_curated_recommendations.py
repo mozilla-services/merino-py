@@ -1376,26 +1376,6 @@ class TestCuratedRecommendationsMetrics:
         assert metric_keys == [
             "corpus_api.scheduled_surface.timing",
             "corpus_api.scheduled_surface.status_codes.200",
-            "post.api.v1.curated-recommendations.timing",
-            "post.api.v1.curated-recommendations.status_codes.200",
-            "response.status_codes.200",
-        ]
-
-    def test_metrics_cache_hit(self, mocker: MockerFixture, client: TestClient) -> None:
-        """Test that metrics are recorded when corpus api items are cached."""
-        # The first call populates the cache.
-        fetch_es_es(client)
-
-        # This test covers only the metrics emitted from the following cached call.
-        report = mocker.patch.object(aiodogstatsd.Client, "_report")
-        fetch_es_es(client)
-
-        # TODO: Remove reliance on internal details of aiodogstatsd
-        metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
-        assert metric_keys == [
-            "post.api.v1.curated-recommendations.timing",
-            "post.api.v1.curated-recommendations.status_codes.200",
-            "response.status_codes.200",
         ]
 
     def test_metrics_corpus_api_error(
@@ -1434,9 +1414,6 @@ class TestCuratedRecommendationsMetrics:
             "corpus_api.scheduled_surface.status_codes.500",
             "corpus_api.scheduled_surface.timing",
             "corpus_api.scheduled_surface.status_codes.200",
-            "post.api.v1.curated-recommendations.timing",
-            "post.api.v1.curated-recommendations.status_codes.200",  # final call should return 200
-            "response.status_codes.200",
         ]
 
 

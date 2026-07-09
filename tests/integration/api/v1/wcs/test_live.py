@@ -5,9 +5,10 @@
 """Integration tests for `GET /api/v1/wcs/live`."""
 
 from collections.abc import Iterator
+from datetime import timedelta
 
-import freezegun
 import pytest
+import time_machine
 from starlette.testclient import TestClient
 
 from merino.configs import settings
@@ -23,7 +24,7 @@ _PATH = "/api/v1/wcs/live"
 @pytest.fixture(autouse=True)
 def _freeze_live_now() -> Iterator[None]:
     """Keep deterministic fixture events inside the live Redis query window."""
-    with freezegun.freeze_time("2026-06-15T16:00:00Z"):
+    with time_machine.travel("2026-06-15T16:00:00Z", tick=False):
         yield
 
 
@@ -103,7 +104,7 @@ def test_team_icons_are_svg(client: TestClient) -> None:
 
 def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
     """A Redis cache failure trips the breaker; subsequent requests return 503 + Retry-After."""
-    with freezegun.freeze_time("2026-06-15T16:00:00Z") as freezer:
+    with time_machine.travel("2026-06-15T16:00:00Z", tick=False) as traveller:
         sport = mocker.Mock()
         sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
         app.dependency_overrides[get_wcs_provider] = lambda: WcsProvider(
@@ -121,6 +122,8 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
         # 503s are not cached, so a recovered backend is served immediately.
         assert "cache-control" not in response.headers
 
-        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        traveller.shift(
+            timedelta(seconds=settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        )
         sport.get_events_by_date = mocker.AsyncMock(return_value=[])
         client.get(_PATH)
