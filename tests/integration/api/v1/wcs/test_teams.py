@@ -4,8 +4,10 @@
 
 """Integration tests for `GET /api/v1/wcs/teams`."""
 
-import freezegun
+from datetime import timedelta
+
 import pytest
+import time_machine
 from fastapi.testclient import TestClient
 
 from merino.configs import settings
@@ -78,7 +80,7 @@ def test_team_icons_are_svg_from_configured_cdn(client: TestClient) -> None:
 
 def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
     """A Redis cache failure trips the breaker; subsequent requests return 503 + Retry-After."""
-    with freezegun.freeze_time("2026-06-15T16:00:00Z") as freezer:
+    with time_machine.travel("2026-06-15T16:00:00Z", tick=False) as traveller:
         sport = mocker.Mock()
         sport.get_all_teams = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
         sport.get_eliminated_team_keys = mocker.AsyncMock(return_value=set())
@@ -95,6 +97,8 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
         # 503s are not cached, so a recovered backend is served immediately.
         assert "cache-control" not in response.headers
 
-        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        traveller.shift(
+            timedelta(seconds=settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        )
         sport.get_all_teams = mocker.AsyncMock(return_value={})
         client.get(_PATH)

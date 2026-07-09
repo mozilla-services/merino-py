@@ -4,8 +4,10 @@
 
 """Integration tests for `GET /api/v1/wcs/matches`."""
 
-import freezegun
+from datetime import timedelta
+
 import pytest
+import time_machine
 from starlette.testclient import TestClient
 
 from merino.configs import settings
@@ -59,7 +61,7 @@ def test_explicit_date_is_deterministic(client: TestClient) -> None:
     assert a == b
 
 
-@freezegun.freeze_time("2026-06-15T16:00:00Z")
+@time_machine.travel("2026-06-15T16:00:00Z", tick=False)
 def test_matches_per_bucket(client: TestClient) -> None:
     """Each of `previous`, `current`, `next` has at least one event sharing a status."""
     body = client.get(_PATH, params={"date": _ANCHOR}).json()
@@ -80,7 +82,7 @@ def test_buckets_are_sorted_for_display(client: TestClient) -> None:
     assert body["next"] == sorted(body["next"], key=lambda e: e["date"])
 
 
-@freezegun.freeze_time("2026-06-15T12:00:00Z")
+@time_machine.travel("2026-06-15T12:00:00Z", tick=False)
 def test_same_day_scheduled_match_is_next_until_kickoff(client: TestClient) -> None:
     """A same-day scheduled match remains upcoming until kickoff."""
     app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
@@ -103,7 +105,7 @@ def test_same_day_scheduled_match_is_next_until_kickoff(client: TestClient) -> N
     assert [event["global_event_id"] for event in body["next"]] == [90086908]
 
 
-@freezegun.freeze_time("2026-06-15T19:01:00Z")
+@time_machine.travel("2026-06-15T19:01:00Z", tick=False)
 def test_scheduled_match_is_current_during_post_kickoff_grace(client: TestClient) -> None:
     """A same-day scheduled match remains current shortly after kickoff."""
     app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
@@ -126,7 +128,7 @@ def test_scheduled_match_is_current_during_post_kickoff_grace(client: TestClient
     assert body["next"] == []
 
 
-@freezegun.freeze_time("2026-06-11T12:00:00Z")
+@time_machine.travel("2026-06-11T12:00:00Z", tick=False)
 def test_explicit_date_keeps_upcoming_match_next_until_kickoff(client: TestClient) -> None:
     """The date parameter anchors the window, not the match-state reference time."""
     app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
@@ -180,7 +182,7 @@ def test_teams_filter(client: TestClient) -> None:
         assert "BRA" in {event["home_team"]["key"], event["away_team"]["key"]}
 
 
-@freezegun.freeze_time("2026-07-05T16:00:00Z")
+@time_machine.travel("2026-07-05T16:00:00Z", tick=False)
 def test_matches_returns_nullable_tbd_sides(client: TestClient) -> None:
     """Knockout placeholders serialize null team objects for Mobile."""
     app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
@@ -208,7 +210,7 @@ def test_matches_returns_nullable_tbd_sides(client: TestClient) -> None:
     assert body["next"][0]["query"] == "Quarterfinals World Cup 2026"
 
 
-@freezegun.freeze_time("2026-07-05T16:00:00Z")
+@time_machine.travel("2026-07-05T16:00:00Z", tick=False)
 def test_completed_knockout_match_marks_losing_team_eliminated(client: TestClient) -> None:
     """A finished knockout match serializes the loser as eliminated and the winner as not."""
     app.dependency_overrides[get_wcs_provider] = lambda: build_provider(
@@ -245,7 +247,7 @@ def test_invalid_date_returns_400(client: TestClient) -> None:
 
 def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
     """A Redis cache failure trips the breaker; subsequent requests return 503 + Retry-After."""
-    with freezegun.freeze_time("2026-06-15T16:00:00Z") as freezer:
+    with time_machine.travel("2026-06-15T16:00:00Z", tick=False) as traveller:
         sport = mocker.Mock()
         sport.get_events_by_date = mocker.AsyncMock(side_effect=CacheAdapterError("redis down"))
         sport.get_eliminated_team_keys = mocker.AsyncMock(return_value=set())
@@ -262,7 +264,9 @@ def test_open_circuit_breaker_returns_503(client: TestClient, mocker) -> None:
         # 503s are not cached, so a recovered backend is served immediately.
         assert "cache-control" not in response.headers
 
-        freezer.tick(settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        traveller.shift(
+            timedelta(seconds=settings.providers.wcs.circuit_breaker_recover_timeout_sec + 1)
+        )
         sport.get_events_by_date = mocker.AsyncMock(return_value=[])
         client.get(_PATH)
 
