@@ -86,9 +86,7 @@ TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later secti
 HEADLINES_SECTION_KEY = "headlines"
 DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
 
-# When a request has personal_interests but no non-zero topic strength, inject a
-# modest default for these topics so InterestRanker has signal to work with.
-# Strength matches the first v3 threshold (mild interest).
+# Users with no topic interests will be assigned this default topic interest.
 DEFAULT_TOPIC_INTERESTS: dict[str, float] = {"arts": 1.1, "government": 1.1}
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
