@@ -22,6 +22,7 @@ from merino.curated_recommendations.layouts import (
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.ml_backends.protocol import (
+    LOCAL_MODEL_MODEL_ID_KEY,
     TIME_ZONE_OFFSET_INFERRED_KEY,
     MLRecsBackend,
     SpindleBackendProtocol,
@@ -84,6 +85,11 @@ DOUBLE_ROW_TOP_STORIES_COUNT = 9
 TOP_STORIES_SECTION_EXTRA_COUNT = 5  # Extra top stories pulled from later sections
 HEADLINES_SECTION_KEY = "headlines"
 DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
+
+# When a request has personal_interests but no non-zero topic strength, inject a
+# modest default for these topics so InterestRanker has signal to work with.
+# Strength matches the first v3 threshold (mild interest).
+DEFAULT_TOPIC_INTERESTS: dict[str, float] = {"arts": 1.1, "government": 1.1}
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
 MAX_SECTIONS_PER_RESPONSE = 20
@@ -894,6 +900,15 @@ async def get_sections(
         and ml_backend is not None
         and ml_backend.is_valid(surface_id)
     )
+    # If the client sent interests but every topic strength is zero, inject a
+    # small default so InterestRanker has something to personalize against.
+    if personal_interests is not None and not any(
+        isinstance(v, (int, float)) and v > 0.0
+        for k, v in personal_interests.scores.items()
+        if k not in (LOCAL_MODEL_MODEL_ID_KEY, TIME_ZONE_OFFSET_INFERRED_KEY)
+    ):
+        personal_interests.scores.update(DEFAULT_TOPIC_INTERESTS)
+
     # Use InterestRanker when the per-surface LinTS bundle is loaded and the request has interests.
     use_interest_ranker = (
         lints_interest_backend.is_valid(surface_id)
