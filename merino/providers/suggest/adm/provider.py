@@ -57,7 +57,6 @@ FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
 CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
 TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
-ENGAGEMENT_GUIDED_SUGGESTIONS: str = "engagement_guided_suggestions"
 TOP_PICK_PROMOTION: str = "top_pick_promotion"
 
 
@@ -97,7 +96,6 @@ class Provider(BaseProvider):
     backend: AdmBackend
     resync_interval_sec: float
     min_attempted_count: int
-    should_check_client_variants: bool
     thompson: ThompsonSampler | None = None
     engagement_resync_interval_sec: float
     engagement_data: EngagementData
@@ -120,7 +118,6 @@ class Provider(BaseProvider):
         enabled_by_default: bool = True,
         min_attempted_count: int = 0,
         thompson: ThompsonSampler | None = None,
-        should_check_client_variants=True,
         **kwargs: Any,
     ) -> None:
         """Store the given Remote Settings backend on the provider."""
@@ -141,7 +138,6 @@ class Provider(BaseProvider):
             gcs_bucket_path=engagement_gcs_bucket,
             blob_name=engagement_blob_name,
         )
-        self.should_check_client_variants = should_check_client_variants
         super().__init__(**kwargs)
 
     async def initialize(self) -> None:
@@ -254,19 +250,15 @@ class Provider(BaseProvider):
 
         return EngagementMetrics(engaged=engaged, attempted=attempted)
 
-    def _is_thompson_eligible(self, client_variants: list[str]) -> bool:
+    def _is_thompson_eligible(self) -> bool:
         """Return True if Thompson sampling should be applied to this request."""
         if not self.thompson:
             return False
         if not self.engagement_data.amp:
             return False
-        if self.should_check_client_variants:
-            return ENGAGEMENT_GUIDED_SUGGESTIONS in client_variants
         return True
 
-    def _select(
-        self, suggestions: list[PyAmpResult], client_variants: list[str], query: str
-    ) -> PyAmpResult | None:
+    def _select(self, suggestions: list[PyAmpResult], query: str) -> PyAmpResult | None:
         def _sampling() -> PyAmpResult | None:
             """Thompson sampling helper function."""
             candidates = [
@@ -305,7 +297,7 @@ class Provider(BaseProvider):
                 )
                 return None
 
-        if self._is_thompson_eligible(client_variants):
+        if self._is_thompson_eligible():
             winner = _sampling()
             if not TS_DRY_RUN:
                 return winner
@@ -328,7 +320,7 @@ class Provider(BaseProvider):
         if (
             self.suggestion_content.index_manager.has(idx_id)
             and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
-            and (res := self._select(suggestions, client_variants, q))
+            and (res := self._select(suggestions, q))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 

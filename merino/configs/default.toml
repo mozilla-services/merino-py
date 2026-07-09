@@ -792,10 +792,6 @@ dummy_engaged_count = 1
 # The dummy candidate for Thompson sampling - attempted count
 dummy_attempted_count = 1000
 
-# MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
-# Whether to check `client_variants` for Thompson sampling
-check_client_variants = true
-
 # MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
 # Toggle to determine whether to return fallback suggestion or thompson selected suggestion
 dry_run = true
