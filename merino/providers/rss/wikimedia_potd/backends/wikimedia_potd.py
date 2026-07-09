@@ -3,7 +3,7 @@
 import logging
 import aiodogstatsd
 import feedparser
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import HttpUrl
 from feedparser import FeedParserDict
 from httpx import AsyncClient, Response
@@ -163,7 +163,7 @@ class WikimediaPictureOfTheDayBackend:
 
         Raises WikimediaPotdError if the manifest fails to upload.
         """
-        today = datetime.today().strftime("%Y-%m-%d")
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         # manifest json is just the PictureOfTheDay model in json format
         manifest_json = potd.model_dump_json()
@@ -188,7 +188,7 @@ class WikimediaPictureOfTheDayBackend:
             A PictureOfTheDay object if available, otherwise None.
         """
         try:
-            today = datetime.today().strftime("%Y-%m-%d")
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             blob = self.gcs_uploader.get_file_by_name(f"rss/wikimedia_potd/POTD_{today}.json")
 
             if blob:
