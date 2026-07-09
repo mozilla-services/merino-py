@@ -60,7 +60,7 @@ class FindSimilarStoriesRequest(BaseModel):
     """Request body for /find_similar_stories."""
 
     items: list[SimilarStoriesTextItem]
-    threshold: float = Field(0.85, ge=0.0, le=1.0)
+    threshold: float = Field(0.8, ge=0.0, le=1.0)
     language: str = Field("en", min_length=2, max_length=10)
 
 
@@ -68,7 +68,7 @@ class FindSimilarImagesRequest(BaseModel):
     """Request body for /find_similar_images."""
 
     items: list[SimilarStoriesImageItem]
-    threshold: float = Field(0.85, ge=0.0, le=1.0)
+    threshold: float = Field(0.8, ge=0.0, le=1.0)
     locale: str = Field("en_US", min_length=2, max_length=10)
 
 
@@ -262,7 +262,7 @@ class DummySpindleBackend(SpindleBackendProtocol):
         self,
         items: list[CorpusItem],
         surface: SurfaceId,
-        threshold: float = 0.85,
+        threshold: float = 0.8,
     ) -> None:
         """No-op."""
         return None
