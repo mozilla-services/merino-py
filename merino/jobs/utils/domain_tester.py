@@ -60,12 +60,19 @@ async def async_test_domain(domain: str, min_width: int) -> DomainTestResult:
         # Create a mock uploader that doesn't actually upload to GCS
         class MockUploader(BaseContentUploader):
             def upload_content(
-                self, content, destination_name, content_type="text/plain", forced_upload=False
+                self,
+                content,
+                destination_name,
+                content_type="text/plain",
+                forced_upload=False,
+                cache_control=None,
             ):
                 mock_blob = Blob(name=destination_name, bucket=None)
                 return mock_blob
 
-            def upload_image(self, image, destination_name, forced_upload=False):
+            def upload_image(
+                self, image, destination_name, forced_upload=False, cache_control=None
+            ):
                 return f"https://dummy-cdn.example.com/{destination_name}"
 
             def get_most_recent_file(self, match, sort_key):

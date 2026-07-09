@@ -56,13 +56,24 @@ class DummyUploader(BaseContentUploader):
     """Dummy uploader."""
 
     def upload_content(
-        self, content, destination_name, content_type="text/plain", forced_upload=False
+        self,
+        content,
+        destination_name,
+        content_type="text/plain",
+        forced_upload=False,
+        cache_control: str | None = None,
     ) -> DummyBlob:
         """Upload dummy content."""
         # Return a dummy blob with a predictable URL
         return DummyBlob(destination_name)
 
-    def upload_image(self, image: Image, destination_name: str, forced_upload=None) -> str:
+    def upload_image(
+        self,
+        image: Image,
+        destination_name: str,
+        forced_upload=None,
+        cache_control: str | None = None,
+    ) -> str:
         """Upload dummy image."""
         # Use upload_content to simulate uploading and get the URL
         blob = self.upload_content(

@@ -5,6 +5,7 @@ import pytest
 from google.cloud.storage import Bucket
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
+from merino.utils.gcs.models import Image
 
 
 @pytest.fixture(scope="function")
@@ -66,9 +67,11 @@ class TestUploadFromFilename:
             file_path="tests/data/games/particle/image.jpg",
             destination_name="image.jpg",
             content_type="image/jpeg",
+            cache_control="public, max-age=86400",
         )
 
         assert blob.name == "image.jpg"
+        assert blob.cache_control == "public, max-age=86400"
 
     def test_bucket_failure(self, gcs_storage_client):
         """Verify bucket failure raises."""
@@ -262,3 +265,48 @@ class TestUploadContent:
         )
 
         assert blob2.id
+
+    def test_cache_control_set(self, gcs_client):
+        """Verify cache_control is applied to the uploaded blob."""
+        gcs_client.upload_content(
+            content="{}",
+            destination_name="test.json",
+            content_type="application/json",
+            cache_control="public, max-age=99",
+        )
+
+        blob = gcs_client.get_file_by_name("test.json")
+
+        assert blob
+        assert blob.cache_control == "public, max-age=99"
+
+    def test_cache_control_default_none(self, gcs_client):
+        """Verify cache_control is unset when not provided."""
+        gcs_client.upload_content(
+            content="{}", destination_name="test.json", content_type="application/json"
+        )
+
+        blob = gcs_client.get_file_by_name("test.json")
+
+        assert blob
+        assert blob.cache_control is None
+
+
+class TestUploadImage:
+    """Tests against the upload_image function."""
+
+    def test_cache_control_threaded_through(self, gcs_client):
+        """Verify upload_image forwards cache_control down to the stored blob."""
+        image = Image(content=b"fake_image_bytes", content_type="image/png")
+
+        gcs_client.upload_image(
+            image,
+            destination_name="image.png",
+            forced_upload=True,
+            cache_control="public, max-age=99",
+        )
+
+        blob = gcs_client.get_file_by_name("image.png")
+
+        assert blob
+        assert blob.cache_control == "public, max-age=99"

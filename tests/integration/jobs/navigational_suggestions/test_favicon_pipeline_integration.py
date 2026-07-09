@@ -426,7 +426,7 @@ class TestFaviconProcessorIntegration:
         # Only one download call should be made (for SVG), since SVG succeeds
         assert mock_downloader.download_multiple_favicons.call_count == 1
         mock_uploader.upload_image.assert_called_once_with(
-            svg_image, "favicon.svg", forced_upload=True
+            svg_image, "favicon.svg", forced_upload=True, cache_control=None
         )
 
     @pytest.mark.asyncio

@@ -38,6 +38,7 @@ class BaseContentUploader(ABC):
         destination_name: str,
         content_type: str = "text/plain",
         forced_upload: bool = False,
+        cache_control: str | None = None,
     ) -> Blob:
         """Abstract method for uploading content to our GCS Bucket."""
         ...
@@ -47,7 +48,8 @@ class BaseContentUploader(ABC):
         self,
         image: Image,
         destination_name: str,
-        forced_upload=None,
+        forced_upload: bool = False,
+        cache_control: str | None = None,
     ) -> str:
         """Abstract method for uploading an image to our GCS Bucket."""
         ...

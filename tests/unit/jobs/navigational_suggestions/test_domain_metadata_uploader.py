@@ -13,6 +13,7 @@ from google.cloud.storage import Blob, Bucket, Client
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino.configs import settings
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from merino.jobs.navigational_suggestions.io.domain_metadata_uploader import (
@@ -299,7 +300,10 @@ def test_upload_favicons_upload_if_not_present(mock_favicon_downloader, mock_gcs
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
-        expected_image, expected_destination, forced_upload=FORCE_UPLOAD
+        expected_image,
+        expected_destination,
+        forced_upload=FORCE_UPLOAD,
+        cache_control=settings.jobs.navigational_suggestions.cache_control,
     )
 
 
@@ -326,7 +330,59 @@ def test_upload_favicons_upload_if_force_upload_set(
 
     assert uploaded_favicons == [UPLOADED_FAVICON_PUBLIC_URL]
     mock_gcs_uploader.upload_image.assert_called_once_with(
-        expected_image, expected_destination, forced_upload=FORCE_UPLOAD
+        expected_image,
+        expected_destination,
+        forced_upload=FORCE_UPLOAD,
+        cache_control=settings.jobs.navigational_suggestions.cache_control,
+    )
+
+
+def test_upload_favicon_passes_cache_control_to_uploader(
+    mock_favicon_downloader, mock_gcs_uploader
+) -> None:
+    """Test that upload_favicon forwards the configured cache_control to the uploader."""
+    mock_gcs_uploader.upload_image.return_value = "DUMMY_PUBLIC_URL"
+
+    domain_metadata_uploader = DomainMetadataUploader(
+        uploader=mock_gcs_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
+    )
+
+    domain_metadata_uploader.upload_favicon("favicon1.png")
+
+    _, call_kwargs = mock_gcs_uploader.upload_image.call_args
+    assert call_kwargs["cache_control"] == settings.jobs.navigational_suggestions.cache_control
+
+
+def test_upload_image_forwards_cache_control_to_uploader(
+    mock_favicon_downloader, mock_gcs_uploader
+) -> None:
+    """Test that upload_image forwards the given cache_control value to the uploader."""
+    mock_gcs_uploader.upload_image.return_value = "DUMMY_PUBLIC_URL"
+
+    domain_metadata_uploader = DomainMetadataUploader(
+        uploader=mock_gcs_uploader,
+        force_upload=False,
+        async_favicon_downloader=mock_favicon_downloader,
+    )
+
+    favicon_image = Image(content=b"\xff", content_type="image/png")
+    dst_favicon_name = domain_metadata_uploader.destination_favicon_name(favicon_image)
+
+    result = domain_metadata_uploader.upload_image(
+        favicon_image,
+        dst_favicon_name,
+        forced_upload=False,
+        cache_control="public, max-age=99",
+    )
+
+    assert result == "DUMMY_PUBLIC_URL"
+    mock_gcs_uploader.upload_image.assert_called_once_with(
+        favicon_image,
+        dst_favicon_name,
+        forced_upload=False,
+        cache_control="public, max-age=99",
     )
 
 

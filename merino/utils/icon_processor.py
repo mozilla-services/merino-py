@@ -34,6 +34,7 @@ class IconProcessor:
 
         # Metrics
         self.metrics_client = metrics.get_metrics_client()
+        self.cache_control = settings.icon.cache_control
 
     async def process_icon_url(self, url: str) -> str:
         """Process an external icon URL and return a GCS-hosted URL."""
@@ -75,7 +76,10 @@ class IconProcessor:
                 # GcsUploader already checks if the file exists before uploading
                 with self.metrics_client.timeit("icon_processor.upload_time"):
                     gcs_url = self.uploader.upload_image(
-                        favicon_image, destination, forced_upload=False
+                        favicon_image,
+                        destination,
+                        forced_upload=False,
+                        cache_control=self.cache_control,
                     )
 
                 # Cache the result

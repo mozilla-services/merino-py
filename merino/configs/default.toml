@@ -391,6 +391,8 @@ favicons_root = "favicons"
 max_size = 16777216 # 16MB
 # HTTP timeout for favicon downloads (in seconds)
 http_timeout = 5
+# Cache control headers (12 hrs)
+cache_control = "public, max-age=43200"
 
 [default.query_normalization]
 # MERINO_QUERY_NORMALIZATION__ENABLED
@@ -1032,9 +1034,12 @@ circuit_breaker_failure_threshold = 10
 # The circuit breaker will stay open for this period of time until the next recovery attempt.
 circuit_breaker_recover_timeout_sec = 30
 
+# MERINO_PROVIDERS__POLYGON__IMAGE_CACHE_CONTROL
+# Cache control headers for ticker images
+image_cache_control = "public, max-age=43200"
+
 [default.providers.polygon.cache_ttls]
 # Cache TTLs for Polygon ticker snapshots.
-
 # MERINO_PROVIDERS__POLYGON__CACHE_TTLS__TICKER_TTL_SEC
 ticker_ttl_sec = 300 # 5 minutes
 
@@ -1219,6 +1224,10 @@ query_timeout_sec = 1.0
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
 # URL for the Wikimedia Picture of the Day RSS feed.
 feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CACHE_CONTROL
+# Cache control headers for stored images in the bucket (1hr)
+cache_control = "public, max-age=3600"
 
 [default.games_providers.particle]
 # MERINO_GAMES_PROVIDERS__PARTICLE__TYPE
@@ -1501,6 +1510,10 @@ force_upload = false
 # MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__MIN_FAVICON_WIDTH
 # Minimum width of the domain favicon required for it to be a part of domain metadata
 min_favicon_width = 48
+
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__CACHE_CONTROL  
+# cache control headers for uploaded favicons (12 hrs)
+cache_control = "public, max-age=43200"
 
 
 [default.jobs.amo_rs_uploader]

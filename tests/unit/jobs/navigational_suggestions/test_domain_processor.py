@@ -4,6 +4,9 @@
 
 """Unit tests for domain_processor module."""
 
+import pytest
+
+from merino.configs import settings
 from merino.jobs.navigational_suggestions.processing.domain_processor import DomainProcessor
 
 
@@ -137,3 +140,41 @@ class TestDomainProcessorExtractTitle:
         result = processor._extract_title(mock_scraper, "secure")
 
         assert result == "Secure"
+
+
+class TestDomainProcessorTryCustomFavicon:
+    """Tests for DomainProcessor._try_custom_favicon method."""
+
+    @pytest.mark.asyncio
+    async def test_passes_cache_control_to_upload_image(self, mocker):
+        """Test that the configured cache_control setting is passed to upload_image."""
+        mocker.patch(
+            "merino.jobs.navigational_suggestions.processing.domain_processor."
+            "get_custom_favicon_url",
+            return_value="https://example.com/favicon.ico",
+        )
+
+        downloader_mock = mocker.AsyncMock()
+        downloader_mock.download_favicon.return_value = b"favicon-bytes"
+        processor = DomainProcessor(blocked_domains=set(), favicon_downloader=downloader_mock)
+
+        uploader_mock = mocker.MagicMock()
+        uploader_mock.uploader.cdn_hostname = "cdn.example.net"
+        uploader_mock.force_upload = False
+        uploader_mock.destination_favicon_name.return_value = "favicons/favicon.ico"
+        uploader_mock.upload_image.return_value = "https://cdn.example.net/favicons/favicon.ico"
+
+        result = await processor._try_custom_favicon(
+            domain_key="example",
+            full_domain="www.example.com",
+            second_level_domain="example",
+            uploader=uploader_mock,
+        )
+
+        assert result is not None
+        uploader_mock.upload_image.assert_called_once_with(
+            b"favicon-bytes",
+            "favicons/favicon.ico",
+            forced_upload=uploader_mock.force_upload,
+            cache_control=settings.jobs.navigational_suggestions.cache_control,
+        )
