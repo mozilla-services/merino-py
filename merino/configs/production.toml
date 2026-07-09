@@ -103,9 +103,6 @@ dummy_engaged_count = 1
 # MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
 dummy_attempted_count = 1000
 
-# MERINO_PROVIDERS__ADM__THOMPSON__CHECK_CLIENT_VARIANTS
-check_client_variants = true
-
 # MERINO_PROVIDERS__ADM__THOMPSON__DRY_RUN
 dry_run = false
 
