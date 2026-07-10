@@ -244,6 +244,25 @@ class TestUploadPictureOfTheDayMethod:
         sentry_capture.assert_called_once_with(unexpected_error)
 
 
+class TestFetchPictureOfTheDayMethod:
+    """Tests for the fetch_picture_of_the_day method."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_picture_of_the_day_raises_on_invalid_json(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Raises WikimediaPotdError when the Featured API returns a non-JSON body."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=b"<html>not json</html>",
+            request=Request(method="GET", url=FEED_URL),
+        )
+
+        with pytest.raises(WikimediaPotdError):
+            await backend.fetch_picture_of_the_day()
+
+
 class TestUploadImageMethod:
     """Tests for the upload_image method."""
 
