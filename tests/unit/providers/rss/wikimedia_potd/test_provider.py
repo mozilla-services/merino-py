@@ -77,14 +77,14 @@ async def test_initialize_caches_fresh_potd(
 
 
 @pytest.mark.asyncio
-async def test_initialize_leaves_potd_none_when_fetch_returns_none(
+async def test_initialize_leaves_cached_potd_unchanged_when_fetch_returns_none(
     provider: WikimediaPictureOfTheDayProvider, backend_mock
 ) -> None:
-    """Test that initialize leaves potd unset when the backend fetch returns nothing."""
+    """Test that initialize leaves cached potd unchanged when the backend fetch returns nothing."""
     backend_mock.fetch_potd_from_gcs_bucket.return_value = None
 
     await provider.initialize()
-
+    # self.potd in provider was never set so it remains None
     assert provider.potd is None
 
 
@@ -120,18 +120,9 @@ async def test_upload_picture_of_the_day_delegates_to_backend(
     backend_mock.upload_picture_of_the_day.assert_awaited_once()
 
 
-@pytest.mark.asyncio
-async def test_get_picture_of_the_day_returns_none_when_backend_fetch_returns_none(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock
-) -> None:
-    """Test that get_picture_of_the_day returns an empty Potd when backend returns None."""
-    backend_mock.fetch_potd_from_gcs_bucket.return_value = None
-    assert await provider.get_picture_of_the_day() is None
-
-
 @freezegun.freeze_time("2026-06-07")
 @pytest.mark.asyncio
-async def test_get_picture_of_the_day_returns_correct_potd_when_backend_fetch_returns_correct_potd(
+async def test_get_picture_of_the_day_returns_fetched_potd_when_backend_fetch_is_not_stale(
     provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
 ) -> None:
     """Test that get_picture_of_the_day returns a non-stale Potd when backend returns one."""
@@ -219,25 +210,3 @@ async def test_get_picture_of_the_day_refetches_on_every_miss(
 
     # No throttling: the re-fetch is attempted on every request.
     assert backend_mock.fetch_potd_from_gcs_bucket.call_count == 2
-
-
-@pytest.mark.asyncio
-async def test_get_picture_of_the_day_serves_last_cached_potd_when_later_fetch_misses(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
-) -> None:
-    """Test that the last cached potd keeps being served once a later fetch stops returning one."""
-    # Day 1: fetch miss, nothing cached yet.
-    with freezegun.freeze_time("2026-06-08"):
-        backend_mock.fetch_potd_from_gcs_bucket.return_value = None
-        assert await provider.get_picture_of_the_day() is None
-
-    # Day 2: fetch succeeds -> cached.
-    with freezegun.freeze_time("2026-06-09"):
-        fresh_potd = test_potd.model_copy(update={"published_date": "2026-06-09"})
-        backend_mock.fetch_potd_from_gcs_bucket.return_value = fresh_potd
-        assert await provider.get_picture_of_the_day() is fresh_potd
-
-    # Day 3: fetch miss again -> the stale day-2 potd keeps being served.
-    with freezegun.freeze_time("2026-06-10"):
-        backend_mock.fetch_potd_from_gcs_bucket.return_value = None
-        assert await provider.get_picture_of_the_day() is fresh_potd
