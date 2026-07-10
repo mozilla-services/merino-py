@@ -898,7 +898,7 @@ async def get_sections(
     has_interest_non_zero_scores = False
     if personal_interests is not None and personal_interests.scores:
         for key, score in personal_interests.scores.items():
-            if score > 0 and key != "timeZoneOffset":
+            if score > 0 and key != TIME_ZONE_OFFSET_INFERRED_KEY:
                 has_interest_non_zero_scores = True
     use_interest_ranker = (
         lints_interest_backend.is_valid(surface_id) and has_interest_non_zero_scores
