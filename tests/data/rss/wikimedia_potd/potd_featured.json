@@ -1,0 +1,34 @@
+{
+  "image": {
+    "title": "File:Milky Way over Sagittarius.jpg",
+    "thumbnail": {
+      "source": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Test.jpg/320px-Test.jpg",
+      "width": 320,
+      "height": 213
+    },
+    "image": {
+      "source": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Test.jpg",
+      "width": 5000,
+      "height": 3333
+    },
+    "file_page": "https://commons.wikimedia.org/wiki/File:Test.jpg",
+    "artist": {
+      "html": "<bdi>Test Artist</bdi>",
+      "text": "Test Artist"
+    },
+    "credit": {
+      "html": "<span>Own work</span>",
+      "text": "Own work"
+    },
+    "license": {
+      "type": "CC BY-SA 4.0",
+      "code": "cc-by-sa-4.0",
+      "url": "https://creativecommons.org/licenses/by-sa/4.0"
+    },
+    "description": {
+      "html": "The Milky Way over the <a href=\"https://en.wikipedia.org/wiki/Sagittarius\">Sagittarius</a> region.",
+      "text": "The Milky Way over the Sagittarius region.",
+      "lang": "en"
+    }
+  }
+}

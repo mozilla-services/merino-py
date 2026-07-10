@@ -20,7 +20,7 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
     WikimediaPotdError,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
-from merino.providers.rss.wikimedia_potd.backends.utils import RSS_FETCH_REQUEST_HEADERS
+from merino.providers.rss.wikimedia_potd.backends.utils import WIKIMEDIA_REQUEST_HEADERS
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPictureOfTheDayBackend,
 )
@@ -28,17 +28,13 @@ from merino.utils.gcs.models import Image
 
 FEED_URL = "https://example.com/feed"
 
-# The sample feed is stored verbatim as XML so the fixture matches the production RSS payload.
-TEST_RSS_FEED = Path("tests/data/rss/wikimedia_potd/potd_feed.xml").read_text(encoding="utf-8")
+# The sample response is stored verbatim as JSON so the fixture matches the Featured API payload.
+TEST_FEATURED_JSON = Path("tests/data/rss/wikimedia_potd/potd_featured.json").read_text(
+    encoding="utf-8"
+)
 
-TEST_RSS_FEED_MISSING_FIELDS = """<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
-  <channel>
-    <item>
-      <title>Only Title No Other Fields</title>
-    </item>
-  </channel>
-</rss>"""
+# A well-formed JSON response that is missing the "image" object, so parse_potd raises.
+TEST_FEATURED_JSON_NO_IMAGE = "{}"
 
 
 @pytest.fixture(name="gcs_uploader_mock")
@@ -175,13 +171,13 @@ class TestOrchestratePictureOfTheDayUpload:
     """Tests for orchestrate_picture_of_the_day_upload method."""
 
     @pytest.mark.asyncio
-    async def test_upload_picture_of_the_day_returns_false_when_no_rss_feed_is_fetched(
+    async def test_upload_picture_of_the_day_returns_false_when_no_feed_is_fetched(
         self, backend
     ) -> None:
-        """Returns False when the feed fetch fails with a non-2xx status."""
+        """Returns False when the fetch fails with a non-2xx status."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
-        # mocking http client to respond with incorrect xml
+        # mocking http client to respond with a server error
         client_mock.get.return_value = Response(
             status_code=500,
             content=None,
@@ -195,13 +191,13 @@ class TestOrchestratePictureOfTheDayUpload:
     async def test_upload_picture_of_the_day_returns_false_when_parsing_fails(
         self, backend
     ) -> None:
-        """Returns False when parsing fails on an invalid xml response."""
+        """Returns False when parsing fails on a response missing the image object."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
-        # mocking http client to respond with incorrect xml
+        # mocking http client to respond with json that has no image object
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED_MISSING_FIELDS,
+            content=TEST_FEATURED_JSON_NO_IMAGE,
             request=Request(method="GET", url=FEED_URL),
         )
 
@@ -217,7 +213,7 @@ class TestOrchestratePictureOfTheDayUpload:
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED,
+            content=TEST_FEATURED_JSON,
             request=Request(method="GET", url=FEED_URL),
         )
 
@@ -238,7 +234,7 @@ class TestOrchestratePictureOfTheDayUpload:
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED,
+            content=TEST_FEATURED_JSON,
             request=Request(method="GET", url=FEED_URL),
         )
 
@@ -254,28 +250,30 @@ class TestOrchestratePictureOfTheDayUpload:
         assert result is False
 
 
-class TestFetchPictureOfTheDayFromFeedMethod:
+class TestFetchPictureOfTheDayMethod:
     """Tests for fetch_picture_of_the_day method."""
 
     @pytest.mark.asyncio
-    async def test_fetch_potd_returns_entry_on_success(
+    @freezegun.freeze_time("2026-06-24")
+    async def test_fetch_potd_returns_json_on_success(
         self,
         backend: WikimediaPictureOfTheDayBackend,
     ) -> None:
-        """Returns a FeedParserDict entry when the feed is fetched and parsed successfully."""
+        """Returns the parsed JSON dict and requests the dated Featured API url."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED.encode(),
+            content=TEST_FEATURED_JSON.encode(),
             request=Request(method="GET", url=FEED_URL),
         )
 
-        result = await backend.fetch_picture_of_the_day_from_feed()
+        result = await backend.fetch_picture_of_the_day()
 
         assert result is not None
-        assert result["title"] == "Wikimedia Commons picture of the day for June 24"
-        assert result["published"] == "Wed, 24 Jun 2026 00:00:00 GMT"
-        client_mock.get.assert_called_once_with(FEED_URL, headers=RSS_FETCH_REQUEST_HEADERS)
+        assert result["image"]["title"] == "File:Milky Way over Sagittarius.jpg"
+        client_mock.get.assert_called_once_with(
+            f"{FEED_URL}/2026/06/24", headers=WIKIMEDIA_REQUEST_HEADERS
+        )
 
     @pytest.mark.asyncio
     async def test_fetch_potd_raises_for_empty_content(
@@ -291,7 +289,7 @@ class TestFetchPictureOfTheDayFromFeedMethod:
         )
 
         with pytest.raises(WikimediaPotdError):
-            await backend.fetch_picture_of_the_day_from_feed()
+            await backend.fetch_picture_of_the_day()
 
     @pytest.mark.asyncio
     async def test_fetch_potd_propagates_http_error(
@@ -306,23 +304,7 @@ class TestFetchPictureOfTheDayFromFeedMethod:
         )
 
         with pytest.raises(HTTPError):
-            await backend.fetch_picture_of_the_day_from_feed()
-
-    @pytest.mark.asyncio
-    async def test_fetch_potd_raises_when_feed_has_no_valid_entries(
-        self,
-        backend: WikimediaPictureOfTheDayBackend,
-    ) -> None:
-        """Raises WikimediaPotdError when the feed entries are missing required fields."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-        client_mock.get.return_value = Response(
-            status_code=200,
-            content=TEST_RSS_FEED_MISSING_FIELDS.encode(),
-            request=Request(method="GET", url=FEED_URL),
-        )
-
-        with pytest.raises(WikimediaPotdError):
-            await backend.fetch_picture_of_the_day_from_feed()
+            await backend.fetch_picture_of_the_day()
 
 
 class TestGcsUploadVerification:
