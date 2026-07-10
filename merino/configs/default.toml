@@ -1210,7 +1210,7 @@ type = "wikimedia_potd"
 enabled_by_default = false
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CONNECT_TIMEOUT_SEC
-# Timeout in seconds for establishing a connection to Wikimedia RSS endpoint.
+# Timeout in seconds for establishing a connection to the Wikimedia Featured API endpoint.
 connect_timeout_sec = 3.0
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__QUERY_TIMEOUT_SEC
@@ -1218,8 +1218,8 @@ connect_timeout_sec = 3.0
 query_timeout_sec = 1.0
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
-# URL for the Wikimedia Picture of the Day RSS feed.
-feed_url = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
+# Base URL for the Wikimedia Featured API; the backend appends /{yyyy}/{mm}/{dd}.
+feed_url = "https://api.wikimedia.org/feed/v1/wikipedia/en/featured"
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CACHE_CONTROL
 # Cache control headers for stored images in the bucket (1hr)
