@@ -3,7 +3,8 @@
 import logging
 import aiodogstatsd
 import asyncio
-from merino.configs import settings
+from datetime import datetime, timezone
+
 from pydantic import HttpUrl
 
 from merino.providers.rss.base import BaseRssProvider
@@ -39,25 +40,46 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.potd = None
 
-    async def initialize(self) -> None:
-        """Initialize the provider."""
-        if settings.current_env.lower() == "production":
-            self.potd = PictureOfTheDay(
-                title="Wikimedia Commons picture of the day",
-                description="Sample Picture of the day description.",
-                published_date="2026-04-13",
-                thumbnail_image_url=HttpUrl(
-                    "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_2026_04_13.jpg"
-                ),
-                high_res_image_url=HttpUrl(
-                    "https://prod-images.merino.prod.webservices.mozgcp.net/rss/wikimedia_potd/POTD_hi_res_2026_4_13.jpg"
-                ),
-            )
-        elif self.potd is None:
-            self.potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
+    @staticmethod
+    def _today() -> str:
+        """Return today's date (UTC) as a YYYY-MM-DD string."""
+        return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    def get_picture_of_the_day(self) -> PictureOfTheDay | None:
-        """Return the current Wikimedia Picture of the Day or None."""
+    def _is_todays_potd(self, potd: PictureOfTheDay | None) -> bool:
+        """Return True when `potd` exists and was published today (UTC)."""
+        return potd is not None and potd.published_date == self._today()
+
+    async def _refresh_potd(self) -> None:
+        """Fetch the potd from GCS and cache whatever the bucket returns.
+
+        When the fetch returns nothing (e.g. today's manifest hasn't been uploaded yet) the
+        cached potd is left untouched, so a previously cached picture keeps being served.
+        """
+        fetched_potd = await asyncio.to_thread(self.backend.fetch_potd_from_gcs_bucket)
+
+        if fetched_potd is not None:
+            self.potd = fetched_potd
+
+    async def initialize(self) -> None:
+        """Initialize the provider by warming the potd cache."""
+        if self.potd is not None:
+            return
+
+        await self._refresh_potd()
+
+    async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
+        """Return the Wikimedia Picture of the Day, or None if none has ever been cached.
+
+        Re-fetches when the cached potd is missing or from a previous day. When today's
+        potd isn't available yet we serve the previous day's cached potd rather than
+        nothing.
+        """
+        if not self._is_todays_potd(self.potd):
+            await self._refresh_potd()
+
+        # TODO @herraj jira: [HNT-2162]
+        # add a metric to track when we serve a stale (previous-day) potd here
+        # because today's picture isn't yet available in the gcs bucket.
         return self.potd
 
     async def upload_picture_of_the_day(self) -> bool:

@@ -1,7 +1,7 @@
 """Utility functions for parsing Wikimedia POTD RSS feed data."""
 
 from bs4 import BeautifulSoup, Tag
-from datetime import datetime
+from datetime import datetime, timezone
 from feedparser import FeedParserDict
 from pydantic import HttpUrl
 
@@ -23,7 +23,7 @@ def parse_potd(potd: FeedParserDict) -> PictureOfTheDay:
     Returns:
         A PictureOfTheDay instance. Raises WikimediaPotdError if required data is missing.
     """
-    today = datetime.today().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # convert date to "2026-06-11" format from this format "Thu, 11 Jun 2026 00:00:00 GMT"
     published_date = datetime.strptime(str(potd.published), "%a, %d %b %Y %H:%M:%S %Z").strftime(
@@ -98,7 +98,7 @@ def extract_potd(parsed_feed: FeedParserDict) -> FeedParserDict:
 def build_potd_image_path(image: Image, is_thumbnail: bool) -> str:
     """Build the name string for a potd and prepend the bucket directory path to it."""
     # YYYY-MM-DD format
-    date_time = datetime.today().strftime("%Y-%m-%d")
+    date_time = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Under the bucket merino-images-prod, potd images are stored in the following directory.
     dir_path_in_bucket = "rss/wikimedia_potd"
