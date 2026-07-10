@@ -22,11 +22,10 @@ class PictureOfTheDay(BaseModel):
     )
     published_date: str = Field(description="Date when the image was published.")
     description: str = Field(description="Description of the image.")
-    description_html: str = Field(default="", description="HTML description of the image.")
-    artist_name: str = Field(default="", description="Name of the image's artist.")
+    artist: str = Field(default="", description="Name of the image's artist.")
     attribution_url: HttpUrl | None = Field(default=None, description="Commons file page URL.")
-    license_name: str = Field(default="", description="License type, e.g. 'CC BY-SA 4.0'.")
-    license_url: HttpUrl | None = Field(default=None, description="License URL.")
+    license_label: str = Field(default="", description="License type, e.g. 'CC BY-SA 4.0'.")
+    license_link: HttpUrl | None = Field(default=None, description="License URL.")
 
 
 class WikimediaPictureOfTheDayBackend(Protocol):

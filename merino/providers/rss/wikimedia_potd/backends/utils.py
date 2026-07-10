@@ -43,11 +43,10 @@ def parse_potd(data: dict) -> PictureOfTheDay:
         thumbnail_image_url=HttpUrl(thumbnail_url),
         high_res_image_url=HttpUrl(high_res_url),
         description=description.get("text", ""),
-        description_html=description.get("html", ""),
-        artist_name=artist.get("text", ""),
+        artist=artist.get("text", ""),
         attribution_url=HttpUrl(file_page) if file_page else None,
-        license_name=lic.get("type", ""),
-        license_url=HttpUrl(lic["url"]) if lic.get("url") else None,
+        license_label=lic.get("type", ""),
+        license_link=HttpUrl(lic["url"]) if lic.get("url") else None,
     )
 
 

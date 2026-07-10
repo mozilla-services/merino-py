@@ -99,14 +99,13 @@ class TestUploadPictureOfTheDayMethod:
             == "https://test-cdn-name/rss/wikimedia_potd/POTD_2026-06-24_hi_res.png"
         )
         assert "Sagittarius" in potd_manifest.description
-        assert "Sagittarius" in potd_manifest.description_html
-        assert potd_manifest.artist_name == "Test Artist"
+        assert potd_manifest.artist == "Test Artist"
         assert (
             str(potd_manifest.attribution_url)
             == "https://commons.wikimedia.org/wiki/File:Test.jpg"
         )
-        assert potd_manifest.license_name == "CC BY-SA 4.0"
-        assert str(potd_manifest.license_url) == "https://creativecommons.org/licenses/by-sa/4.0"
+        assert potd_manifest.license_label == "CC BY-SA 4.0"
+        assert str(potd_manifest.license_link) == "https://creativecommons.org/licenses/by-sa/4.0"
 
         # fetch the uploaded blobs (two images and one json manifest object)
         potd_blobs = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())

@@ -73,14 +73,13 @@ def test_parse_potd_returns_empty_description_when_no_description(featured: dict
 
 @freezegun.freeze_time("2026-04-13")
 def test_parse_potd_maps_metadata_fields(featured: dict) -> None:
-    """Maps the Featured API metadata: description html, artist, attribution, and license."""
+    """Maps the Featured API metadata: artist, attribution, and license."""
     result = parse_potd(featured)
 
-    assert result.description_html == "<p>Test description.</p>"
-    assert result.artist_name == "Test Artist"
+    assert result.artist == "Test Artist"
     assert str(result.attribution_url) == FILE_PAGE_URL
-    assert result.license_name == "CC BY-SA 4.0"
-    assert str(result.license_url) == LICENSE_URL
+    assert result.license_label == "CC BY-SA 4.0"
+    assert str(result.license_link) == LICENSE_URL
 
 
 @freezegun.freeze_time("2026-04-13")
@@ -93,11 +92,10 @@ def test_parse_potd_defaults_missing_metadata(featured: dict) -> None:
     result = parse_potd(featured)
 
     assert result.description == ""
-    assert result.description_html == ""
-    assert result.artist_name == ""
+    assert result.artist == ""
     assert result.attribution_url is None
-    assert result.license_name == ""
-    assert result.license_url is None
+    assert result.license_label == ""
+    assert result.license_link is None
 
 
 @freezegun.freeze_time("2026-04-13")
