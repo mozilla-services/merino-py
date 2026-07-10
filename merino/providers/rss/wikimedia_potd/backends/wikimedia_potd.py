@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class WikimediaPictureOfTheDayBackend:
-    """Backend for fetching the Wikimedia Picture of the Day RSS feed."""
+    """Backend for fetching the Wikimedia Picture of the Day from the Featured API."""
 
     metrics_client: aiodogstatsd.Client
     http_client: AsyncClient
@@ -38,7 +38,7 @@ class WikimediaPictureOfTheDayBackend:
         feed_url: str,
         gcs_uploader: GcsUploader,
     ) -> None:
-        """Initialize the backend with the RSS feed URL."""
+        """Initialize the backend with the Featured API base url."""
         self.feed_url = feed_url
         self.metrics_client = metrics_client
         self.http_client = http_client
@@ -46,7 +46,7 @@ class WikimediaPictureOfTheDayBackend:
         self.cache_control = settings.rss_providers.wikimedia_potd.cache_control
 
     async def upload_picture_of_the_day(self) -> bool:
-        """Orchestrates fetching the RSS feed, extracting the Picture of the Day (POTD),
+        """Orchestrates fetching the Featured API, extracting the Picture of the Day (POTD),
         downloading and uploading images, and generating and uploading the POTD JSON manifest.
 
         Returns:
@@ -111,7 +111,10 @@ class WikimediaPictureOfTheDayBackend:
         if not response.content:
             raise WikimediaPotdError("Wikimedia POTD featured api returned empty content")
 
-        data: dict = response.json()
+        try:
+            data: dict = response.json()
+        except ValueError as ex:
+            raise WikimediaPotdError("Wikimedia POTD featured api returned invalid JSON") from ex
 
         return data
 

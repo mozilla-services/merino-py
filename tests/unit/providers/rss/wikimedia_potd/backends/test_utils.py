@@ -21,6 +21,8 @@ from merino.utils.gcs.models import Image
 
 THUMBNAIL_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Test.jpg/320px-Test.jpg"
 HIGH_RES_URL = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Test.jpg"
+FILE_PAGE_URL = "https://commons.wikimedia.org/wiki/File:Test.jpg"
+LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0"
 
 
 def _make_featured(**image_overrides: object) -> dict:
@@ -30,6 +32,9 @@ def _make_featured(**image_overrides: object) -> dict:
         "thumbnail": {"source": THUMBNAIL_URL},
         "image": {"source": HIGH_RES_URL},
         "description": {"text": "Test description.", "html": "<p>Test description.</p>"},
+        "artist": {"text": "Test Artist", "html": "<bdi>Test Artist</bdi>"},
+        "license": {"type": "CC BY-SA 4.0", "url": LICENSE_URL},
+        "file_page": FILE_PAGE_URL,
     }
     image.update(image_overrides)
     return {"image": image}
@@ -64,6 +69,35 @@ def test_parse_potd_returns_empty_description_when_no_description(featured: dict
     assert result is not None
     assert result.description == ""
     assert isinstance(result.thumbnail_image_url, HttpUrl)
+
+
+@freezegun.freeze_time("2026-04-13")
+def test_parse_potd_maps_metadata_fields(featured: dict) -> None:
+    """Maps the Featured API metadata: description html, artist, attribution, and license."""
+    result = parse_potd(featured)
+
+    assert result.description_html == "<p>Test description.</p>"
+    assert result.artist_name == "Test Artist"
+    assert str(result.attribution_url) == FILE_PAGE_URL
+    assert result.license_name == "CC BY-SA 4.0"
+    assert str(result.license_url) == LICENSE_URL
+
+
+@freezegun.freeze_time("2026-04-13")
+def test_parse_potd_defaults_missing_metadata(featured: dict) -> None:
+    """Falls back to empty/None defaults when the optional metadata fields are absent."""
+    image = featured["image"]
+    for key in ("description", "artist", "license", "file_page"):
+        image.pop(key, None)
+
+    result = parse_potd(featured)
+
+    assert result.description == ""
+    assert result.description_html == ""
+    assert result.artist_name == ""
+    assert result.attribution_url is None
+    assert result.license_name == ""
+    assert result.license_url is None
 
 
 @freezegun.freeze_time("2026-04-13")

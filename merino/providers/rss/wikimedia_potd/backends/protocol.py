@@ -33,7 +33,7 @@ class WikimediaPictureOfTheDayBackend(Protocol):
     """Protocol for a Wikimedia POTD backend that this provider depends on."""
 
     async def upload_picture_of_the_day(self) -> bool:  # pragma: no cover
-        """Orchestrates fetching the RSS feed, extracting the Picture of the Day (POTD),
+        """Orchestrates fetching the Featured API, extracting the Picture of the Day (POTD),
         downloading and uploading images, and generating and uploading the POTD JSON manifest.
 
         Returns:
