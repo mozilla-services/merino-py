@@ -33,6 +33,7 @@ def parse_potd(data: dict) -> PictureOfTheDay:
 
     today = datetime.now(timezone.utc)
     description = image.get("description", {})
+    # this field gets mapped to "author"
     artist = image.get("artist", {})
     lic = image.get("license", {})
     file_page = image.get("file_page")
@@ -43,7 +44,7 @@ def parse_potd(data: dict) -> PictureOfTheDay:
         thumbnail_image_url=HttpUrl(thumbnail_url),
         high_res_image_url=HttpUrl(high_res_url),
         description=description.get("text", ""),
-        artist=artist.get("text", ""),
+        author=artist.get("text", ""),
         file_page=HttpUrl(file_page) if file_page else None,
         license_label=lic.get("type", ""),
         license_link=HttpUrl(lic["url"]) if lic.get("url") else None,

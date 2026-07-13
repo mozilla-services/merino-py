@@ -22,7 +22,7 @@ class PictureOfTheDay(BaseModel):
     )
     published_date: str = Field(description="Date when the image was published.")
     description: str = Field(description="Description of the image.")
-    artist: str = Field(default="", description="Name of the image's artist.")
+    author: str = Field(default="", description="Name of the image's artist.")
     file_page: HttpUrl | None = Field(default=None, description="Commons file page URL.")
     license_label: str = Field(default="", description="License type, e.g. 'CC BY-SA 4.0'.")
     license_link: HttpUrl | None = Field(default=None, description="License URL.")
