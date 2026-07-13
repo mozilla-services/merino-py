@@ -462,6 +462,9 @@ def test_query_pattern_metrics_emitted_before_fleece_pii_drop(
     assert response.json()["suggestions"] == []
     add.assert_called_once_with(1, {"pattern_id": "sports_v1", "source": "unknown"})
 
+    # raw query should not appear in any metric call.
+    assert "nba" not in str(add.call_args_list)
+
 
 def test_query_pattern_metrics_not_emitted_when_matcher_none(
     mocker: MockerFixture, client: TestClient
@@ -491,6 +494,21 @@ def test_query_pattern_metrics_not_emitted_outside_sample_rate(
     client.get("/api/v1/suggest?q=nba")
 
     add.assert_not_called()
+
+
+def test_query_pattern_metrics_emitted_for_numeric_pii(
+    mocker: MockerFixture, client: TestClient, sports_pattern_matcher: Any
+) -> None:
+    """Test that pattern metrics fire for a numeric (soft PII) query without leaking text."""
+    mocker.patch("merino.web.api_v1._QUERY_PATTERN_MATCHER", sports_pattern_matcher)
+    add = mocker.patch("merino.utils.query_processing.query_patterns._match_counter.add")
+
+    client.get("/api/v1/suggest?q=nba 2026")
+
+    add.assert_called_once_with(1, {"pattern_id": "sports_v1", "source": "unknown"})
+
+    assert "nba 2026" not in str(add.call_args_list)
+    assert "2026" not in str(add.call_args_list)
 
 
 def test_suggest_with_invalid_geolocation_ip(
