@@ -571,3 +571,51 @@ async def test_should_emit_staleness(
 
     backend_mock.last_new_data_at = 1000.0
     assert adm._should_emit_staleness() is True
+
+
+# _refresh_normalization_terms (d2)
+@pytest.mark.asyncio
+async def test_fetch_refreshes_normalization_terms(mocker: MockerFixture, adm: Provider) -> None:
+    """_fetch feeds MARS full keywords to the pipeline when adm is a normalization provider."""
+    mock_pipeline = mocker.MagicMock()
+    mocker.patch("merino.providers.suggest.adm.provider.get_pipeline", return_value=mock_pipeline)
+    mocker.patch(
+        "merino.providers.suggest.adm.provider.NORMALIZATION_PROVIDERS", frozenset({"adm"})
+    )
+
+    await adm._fetch()
+
+    mock_pipeline.update_mars_terms.assert_called_once()
+    terms = mock_pipeline.update_mars_terms.call_args.args[0]
+    assert {"firefox accounts", "mozilla firefox accounts"} <= terms
+
+
+@pytest.mark.asyncio
+async def test_fetch_skips_normalization_when_adm_not_enabled(
+    mocker: MockerFixture, adm: Provider
+) -> None:
+    """When adm is not a normalization provider (e.g. prod), the pipeline is left untouched."""
+    mock_pipeline = mocker.MagicMock()
+    mocker.patch("merino.providers.suggest.adm.provider.get_pipeline", return_value=mock_pipeline)
+    mocker.patch(
+        "merino.providers.suggest.adm.provider.NORMALIZATION_PROVIDERS", frozenset({"sports"})
+    )
+
+    await adm._fetch()
+
+    mock_pipeline.update_mars_terms.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fetch_normalization_noop_without_pipeline(
+    mocker: MockerFixture, adm: Provider
+) -> None:
+    """A missing pipeline (e.g. adm's first fetch at startup) is a safe no-op."""
+    mocker.patch("merino.providers.suggest.adm.provider.get_pipeline", return_value=None)
+    mocker.patch(
+        "merino.providers.suggest.adm.provider.NORMALIZATION_PROVIDERS", frozenset({"adm"})
+    )
+
+    await adm._fetch()
+
+    assert adm.last_fetch_at > 0

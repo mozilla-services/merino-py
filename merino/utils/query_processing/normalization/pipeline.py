@@ -342,6 +342,7 @@ class NormalizePipeline:
     ) -> None:
         """Initialize with pre-built components."""
         self._canonical = canonical
+        self._base_canonical = canonical  # AMP terms layer on top via update_mars_terms()
         self._fin_bm25 = finance_bm25
         self._canonical_prefix_index = canonical_prefix_index or {}
         self._canonical_words: set[str] = {w for phrase in canonical for w in phrase.split()}
@@ -409,3 +410,11 @@ class NormalizePipeline:
                 q = reordered
 
         return q
+
+    def update_mars_terms(self, full_keywords: set[str]) -> None:
+        """Rebuild canonical as base ∪ MARS full keywords (called on each ADM resync)."""
+        canonical = self._base_canonical | full_keywords
+        canonical_words = {word for phrase in canonical for word in phrase.split()}
+        # single-assignment swap so a concurrent normalize() sees a consistent pair
+        self._canonical = canonical
+        self._canonical_words = canonical_words
