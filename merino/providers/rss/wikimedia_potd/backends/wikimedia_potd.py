@@ -99,10 +99,11 @@ class WikimediaPictureOfTheDayBackend:
         Returns:
             The parsed JSON response as a dict. Raises WikimediaPotdError on failure.
         """
-        today = datetime.now(timezone.utc)
+        # setting the format to YYYY/MM/DD which is accepted as the url param
+        today = datetime.now(timezone.utc).strftime("%Y/%m/%d")
 
         # the Featured API expects the date in the url path: .../en/featured/{yyyy}/{mm}/{dd}
-        url = f"{self.feed_url}/{today:%Y/%m/%d}"
+        url = f"{self.feed_url}/{today}"
 
         response: Response = await self.http_client.get(url, headers=WIKIMEDIA_REQUEST_HEADERS)
 

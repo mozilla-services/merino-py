@@ -77,7 +77,7 @@ def test_parse_potd_maps_metadata_fields(featured: dict) -> None:
     result = parse_potd(featured)
 
     assert result.artist == "Test Artist"
-    assert str(result.attribution_url) == FILE_PAGE_URL
+    assert str(result.file_page) == FILE_PAGE_URL
     assert result.license_label == "CC BY-SA 4.0"
     assert str(result.license_link) == LICENSE_URL
 
@@ -93,7 +93,7 @@ def test_parse_potd_defaults_missing_metadata(featured: dict) -> None:
 
     assert result.description == ""
     assert result.artist == ""
-    assert result.attribution_url is None
+    assert result.file_page is None
     assert result.license_label == ""
     assert result.license_link is None
 

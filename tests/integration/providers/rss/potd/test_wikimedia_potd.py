@@ -100,10 +100,7 @@ class TestUploadPictureOfTheDayMethod:
         )
         assert "Sagittarius" in potd_manifest.description
         assert potd_manifest.artist == "Test Artist"
-        assert (
-            str(potd_manifest.attribution_url)
-            == "https://commons.wikimedia.org/wiki/File:Test.jpg"
-        )
+        assert str(potd_manifest.file_page) == "https://commons.wikimedia.org/wiki/File:Test.jpg"
         assert potd_manifest.license_label == "CC BY-SA 4.0"
         assert str(potd_manifest.license_link) == "https://creativecommons.org/licenses/by-sa/4.0"
 
