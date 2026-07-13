@@ -24,15 +24,6 @@ logger = logging.getLogger(__name__)
 SIMILAR_STORIES_TEXT_API_PATH = "/find_similar_stories"
 SIMILAR_STORIES_IMAGE_API_PATH = "/find_similar_images"
 
-# Spindle only supports English-language surfaces for now.
-LANGUAGE_FOR_SURFACE: dict[SurfaceId, str] = {
-    SurfaceId.NEW_TAB_EN_US: "en",
-    SurfaceId.NEW_TAB_EN_CA: "en",
-    SurfaceId.NEW_TAB_EN_GB: "en",
-    SurfaceId.NEW_TAB_EN_IE: "en",
-    SurfaceId.NEW_TAB_DE_DE: "de",
-}
-
 LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
     SurfaceId.NEW_TAB_EN_US: "en_US",
     SurfaceId.NEW_TAB_DE_DE: "de_DE",
@@ -139,13 +130,13 @@ class SpindleBackend(SpindleBackendProtocol):
         self._api_key = api_key
 
     def _language_for_surface(self, surface: SurfaceId) -> str | None:
-        return LANGUAGE_FOR_SURFACE.get(surface)
+        parts = surface.value.split("_")
+        if len(parts) < 3:
+            return None
+        return parts[2].lower()
 
     def _locale_for_surface(self, surface: SurfaceId) -> str | None:
         return LOCALE_FOR_SURFACE.get(surface)
-
-    def _is_surface_supported(self, surface: SurfaceId) -> bool:
-        return self._language_for_surface(surface) is not None
 
     async def refresh_duplicate_item_info(
         self,
@@ -158,7 +149,7 @@ class SpindleBackend(SpindleBackendProtocol):
         Each call is best-effort: failures are logged and leave the previously
         cached values in place.
         """
-        if not self._is_surface_supported(surface) or not items:
+        if not items:
             return
         deduped_items = list({item.corpusItemId: item for item in items}.values())
         await self._refresh_text(deduped_items, surface, threshold)

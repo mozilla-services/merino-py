@@ -74,14 +74,51 @@ class TestSimilarStoriesInfo:
 class TestSpindleBackendRefresh:
     """Behavior of refresh_duplicate_item_info."""
 
-    @pytest.mark.asyncio
-    async def test_unsupported_surface_skips_http(self):
-        """A surface with no language mapping should not hit the network."""
+    @pytest.mark.parametrize(
+        ("surface", "expected_language"),
+        [
+            (SurfaceId.NEW_TAB_EN_US, "en"),
+            (SurfaceId.NEW_TAB_EN_GB, "en"),
+            (SurfaceId.NEW_TAB_EN_CA, "en"),
+            (SurfaceId.NEW_TAB_EN_IE, "en"),
+            (SurfaceId.NEW_TAB_EN_INTL, "en"),
+            (SurfaceId.NEW_TAB_EN_XE, "en"),
+            (SurfaceId.NEW_TAB_DE_DE, "de"),
+            (SurfaceId.NEW_TAB_ES_ES, "es"),
+            (SurfaceId.NEW_TAB_ES_XA, "es"),
+            (SurfaceId.NEW_TAB_FR_FR, "fr"),
+            (SurfaceId.NEW_TAB_IT_IT, "it"),
+            (SurfaceId.NEW_TAB_PL_PL, "pl"),
+        ],
+    )
+    def test_language_is_derived_from_surface(
+        self, surface: SurfaceId, expected_language: str
+    ) -> None:
+        """Every current surface should map to its language prefix."""
         http_client = MagicMock(spec=AsyncClient)
-        http_client.post = AsyncMock()
         backend = _make_backend(http_client)
-        await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_FR_FR)
-        http_client.post.assert_not_called()
+
+        assert backend._language_for_surface(surface) == expected_language
+
+    @pytest.mark.asyncio
+    async def test_non_english_surface_posts_with_derived_language(self):
+        """A formerly gated surface should call Spindle with its language."""
+        http_client = MagicMock(spec=AsyncClient)
+        response_body = {
+            "similar": {},
+            "model_version": "text-v1",
+            "threshold": 0.7,
+            "language": "pl",
+            "num_items": 1,
+            "num_pairs": 0,
+        }
+        http_client.post = AsyncMock(return_value=_ok_response(response_body))
+        backend = _make_backend(http_client)
+
+        await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_PL_PL)
+
+        http_client.post.assert_awaited_once()
+        assert http_client.post.call_args.kwargs["json"]["language"] == "pl"
 
     @pytest.mark.asyncio
     async def test_empty_items_skips_http(self):
