@@ -5,6 +5,7 @@
 """Unit tests for the adm provider module."""
 
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from pydantic import HttpUrl
@@ -19,7 +20,12 @@ from merino.providers.suggest.adm.backends.protocol import (
     KeywordEntry,
     KeywordMetrics,
 )
-from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
+from merino.providers.suggest.adm.fuzzy import RejectionReason
+from merino.providers.suggest.adm.provider import (
+    AMP_FUZZY_VARIANT,
+    NonsponsoredSuggestion,
+    Provider,
+)
 
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
@@ -46,6 +52,9 @@ async def test_initialize(adm: Provider) -> None:
         "icons_count": 1,
         "advertisers_count": 1,
         "url_templates_count": 1,
+        "full_keywords_count": 2,
+        "fuzzy_keywords_count": 2,
+        "fuzzy_delete_index_size": 39,
     }
     assert adm.suggestion_content.index_manager.stats(f"DE/({FormFactor.PHONE.value},)") == {
         "keyword_index_size": 7,
@@ -53,8 +62,188 @@ async def test_initialize(adm: Provider) -> None:
         "icons_count": 1,
         "suggestions_count": 1,
         "url_templates_count": 1,
+        "full_keywords_count": 2,
+        "fuzzy_keywords_count": 2,
+        "fuzzy_delete_index_size": 45,
     }
     assert adm.last_fetch_at > 0
+
+
+@pytest.mark.asyncio
+async def test_full_keywords_returns_indexed_full_keywords(adm: Provider) -> None:
+    """`full_keywords()` returns the distinct full keywords indexed for a segment.
+
+    These are the terms the ED1 fuzzy index is built from (and the source for the
+    AMP slice of the query-normalization canonical). For the `firefox accounts`
+    fixture record they are exactly its two `full_keywords` entries.
+    """
+    await adm.initialize()
+
+    assert sorted(
+        adm.suggestion_content.index_manager.full_keywords(f"US/({FormFactor.DESKTOP.value},)")
+    ) == ["firefox accounts", "mozilla firefox accounts"]
+
+
+@pytest.mark.asyncio
+async def test_fuzzy_rescues_single_typo(adm: Provider) -> None:
+    """A single-typo query misses with fuzzy off and is rescued with fuzzy on.
+
+    `firefox accountz` is one substitution from the full keyword `firefox accounts`:
+    exact/prefix lookup misses it, while the ED1 fuzzy fallback recovers it and flags
+    the result `matched_via == "fuzzy"`.
+    """
+    await adm.initialize()
+    idx_id = f"US/({FormFactor.DESKTOP.value},)"
+    index_manager = adm.suggestion_content.index_manager
+
+    # fuzzy off: the typo is not a prefix of any keyword -> no match
+    assert index_manager.query(idx_id, "firefox accountz", fuzzy=False) == []
+
+    # fuzzy on: rescued to the nearest full keyword, flagged as a fuzzy match
+    rescued = index_manager.query(idx_id, "firefox accountz", fuzzy=True)
+    assert len(rescued) == 1
+    assert rescued[0].matched_via == "fuzzy"
+    assert rescued[0].full_keyword == "firefox accounts"
+    assert rescued[0].advertiser == "Example.org"
+
+
+@pytest.mark.parametrize(
+    "client_variants",
+    [None, [], ["some_other_variant"]],
+    ids=["no-variants", "empty-variants", "other-variant"],
+)
+@pytest.mark.asyncio
+async def test_query_no_fuzzy_without_treatment_variant(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    client_variants: list[str] | None,
+) -> None:
+    """Without the treatment variant the fuzzy fallback stays off, so a typo returns nothing."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    res = await adm.query(srequest("firefox accountz", geolocation, user_agent, client_variants))
+
+    assert res == []
+
+
+@pytest.mark.asyncio
+async def test_query_fuzzy_rescues_typo_for_treatment(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    adm_parameters: dict[str, Any],
+) -> None:
+    """With the treatment variant, a single-typo miss is rescued to its AMP suggestion."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    res = await adm.query(
+        srequest("firefox accountz", geolocation, user_agent, [AMP_FUZZY_VARIANT])
+    )
+
+    assert res == [
+        NonsponsoredSuggestion(
+            block_id=2,
+            full_keyword="firefox accounts",
+            title="Mozilla Firefox Accounts",
+            url=HttpUrl("https://example.org/target/mozfirefoxaccounts"),
+            categories=[],
+            impression_url=HttpUrl("https://example.org/impression/mozilla"),
+            click_url=HttpUrl("https://example.org/click/mozilla"),
+            provider="adm",
+            advertiser="Example.org",
+            is_sponsored=False,
+            icon="attachment-host/main-workspace/quicksuggest/icon-01",
+            score=adm_parameters["score"],
+        )
+    ]
+
+
+@pytest.mark.asyncio
+async def test_query_fuzzy_drops_guardrail_rejected_candidate(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+) -> None:
+    """A fuzzy candidate that fails a guardrail (first-char substitution) is dropped."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    # "girefox accounts" is a first-char substitution of "firefox accounts": the extension
+    # surfaces it as a fuzzy candidate, but the guardrail rejects it as too risky.
+    res = await adm.query(
+        srequest("girefox accounts", geolocation, user_agent, [AMP_FUZZY_VARIANT])
+    )
+
+    assert res == []
+
+
+@pytest.mark.asyncio
+async def test_query_fuzzy_variant_leaves_exact_match_unchanged(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+) -> None:
+    """The treatment variant does not disturb exact/prefix matches."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    res = await adm.query(srequest("firefox", geolocation, user_agent, [AMP_FUZZY_VARIANT]))
+
+    assert len(res) == 1
+    suggestion = res[0]
+    assert isinstance(suggestion, NonsponsoredSuggestion)
+    assert suggestion.full_keyword == "firefox accounts"
+
+
+@pytest.mark.asyncio
+async def test_query_fuzzy_emits_metrics(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    statsd_mock: Any,
+) -> None:
+    """Fuzzy serving emits candidate_found + served on a rescue, and candidate_found +
+    rejected(reason) + miss when every candidate is guardrail-rejected.
+    """
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    # rescue -> candidate found and served
+    await adm.query(srequest("firefox accountz", geolocation, user_agent, [AMP_FUZZY_VARIANT]))
+    statsd_mock.increment.assert_any_call("providers.adm.fuzzy.candidate_found")
+    statsd_mock.increment.assert_any_call("providers.adm.fuzzy.served")
+
+    statsd_mock.increment.reset_mock()
+
+    # guardrail drop -> candidate found, rejected with reason, and overall miss
+    await adm.query(srequest("girefox accounts", geolocation, user_agent, [AMP_FUZZY_VARIANT]))
+    statsd_mock.increment.assert_any_call("providers.adm.fuzzy.candidate_found")
+    statsd_mock.increment.assert_any_call(
+        "providers.adm.fuzzy.rejected",
+        tags={"reason": RejectionReason.FIRST_CHAR_SUBSTITUTION},
+    )
+    statsd_mock.increment.assert_any_call("providers.adm.fuzzy.miss")
+
+
+@patch("merino.providers.suggest.adm.provider.AMP_FUZZY_ENABLED", False)
+@pytest.mark.asyncio
+async def test_query_fuzzy_disabled_by_kill_switch(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+) -> None:
+    """With the kill-switch off, the treatment variant no longer enables the fuzzy fallback."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    res = await adm.query(
+        srequest("firefox accountz", geolocation, user_agent, [AMP_FUZZY_VARIANT])
+    )
+
+    assert res == []
 
 
 @pytest.mark.parametrize(
@@ -382,3 +571,51 @@ async def test_should_emit_staleness(
 
     backend_mock.last_new_data_at = 1000.0
     assert adm._should_emit_staleness() is True
+
+
+# _refresh_normalization_terms (d2)
+@pytest.mark.asyncio
+async def test_fetch_refreshes_normalization_terms(mocker: MockerFixture, adm: Provider) -> None:
+    """_fetch feeds MARS full keywords to the pipeline when adm is a normalization provider."""
+    mock_pipeline = mocker.MagicMock()
+    mocker.patch("merino.providers.suggest.adm.provider.get_pipeline", return_value=mock_pipeline)
+    mocker.patch(
+        "merino.providers.suggest.adm.provider.NORMALIZATION_PROVIDERS", frozenset({"adm"})
+    )
+
+    await adm._fetch()
+
+    mock_pipeline.update_mars_terms.assert_called_once()
+    terms = mock_pipeline.update_mars_terms.call_args.args[0]
+    assert {"firefox accounts", "mozilla firefox accounts"} <= terms
+
+
+@pytest.mark.asyncio
+async def test_fetch_skips_normalization_when_adm_not_enabled(
+    mocker: MockerFixture, adm: Provider
+) -> None:
+    """When adm is not a normalization provider (e.g. prod), the pipeline is left untouched."""
+    mock_pipeline = mocker.MagicMock()
+    mocker.patch("merino.providers.suggest.adm.provider.get_pipeline", return_value=mock_pipeline)
+    mocker.patch(
+        "merino.providers.suggest.adm.provider.NORMALIZATION_PROVIDERS", frozenset({"sports"})
+    )
+
+    await adm._fetch()
+
+    mock_pipeline.update_mars_terms.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_fetch_normalization_noop_without_pipeline(
+    mocker: MockerFixture, adm: Provider
+) -> None:
+    """A missing pipeline (e.g. adm's first fetch at startup) is a safe no-op."""
+    mocker.patch("merino.providers.suggest.adm.provider.get_pipeline", return_value=None)
+    mocker.patch(
+        "merino.providers.suggest.adm.provider.NORMALIZATION_PROVIDERS", frozenset({"adm"})
+    )
+
+    await adm._fetch()
+
+    assert adm.last_fetch_at > 0

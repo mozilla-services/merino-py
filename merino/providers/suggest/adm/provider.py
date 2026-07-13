@@ -22,7 +22,9 @@ from merino.utils.gcs.engagement.filemanager import (
     EngagementFilemanager,
 )
 from merino.utils import cron
+from merino.utils.query_processing.normalization import get_pipeline
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
+from merino.providers.suggest.adm.fuzzy import rejection_reason
 from merino.providers.suggest.base import (
     BaseProvider,
     BaseSuggestion,
@@ -58,6 +60,12 @@ FALLBACK_COUNTRY_CODE: str = "US"
 CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
 TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
 TOP_PICK_PROMOTION: str = "top_pick_promotion"
+# Experiment treatment variant that opts a request into the ED1 fuzzy fallback.
+AMP_FUZZY_VARIANT: str = "amp-fuzzy-matching-treatment"
+# toggle fuzzy matching for AMP suggestions
+AMP_FUZZY_ENABLED: bool = settings.providers.adm.fuzzy.enabled
+# providers that receive normalized queries (AMP gated per-environment)
+NORMALIZATION_PROVIDERS = frozenset(settings.query_normalization.providers)
 
 
 class SponsoredSuggestion(BaseSuggestion):
@@ -208,6 +216,18 @@ class Provider(BaseProvider):
         """Fetch suggestions, keywords, and icons from Remote Settings."""
         self.suggestion_content = await self.backend.fetch()
         self.last_fetch_at = time.time()
+        self._refresh_normalization_terms()
+
+    def _refresh_normalization_terms(self) -> None:
+        """Feed MARS full keywords to the normalization canonical (AMP arm only)."""
+        pipeline = get_pipeline()
+        if pipeline is None or self.name not in NORMALIZATION_PROVIDERS:
+            return
+        index_manager = self.suggestion_content.index_manager
+        full_keywords: set[str] = set()
+        for idx_id in index_manager.list():
+            full_keywords.update(index_manager.full_keywords(idx_id))
+        pipeline.update_mars_terms(full_keywords)
 
     async def _fetch_engagement_data(self) -> None:
         """Fetch engagement data from GCS and store it in memory.
@@ -304,6 +324,31 @@ class Provider(BaseProvider):
 
         return suggestions[0] if suggestions else None
 
+    def _query_index(self, idx_id: str, query: str, fuzzy: bool) -> list[PyAmpResult]:
+        """Query the AMP index; on the fuzzy arm, drop guardrail-failing fuzzy candidates.
+
+        Exact/prefix results pass through unchanged. Fuzzy candidates (only produced on
+        an exact miss when ``fuzzy`` is set) are filtered through the guardrails.
+        """
+        suggestions = self.suggestion_content.index_manager.query(idx_id, query, fuzzy=fuzzy)
+        if not fuzzy or not suggestions or suggestions[0].matched_via != "fuzzy":
+            return suggestions
+
+        self.metrics_client.increment("providers.adm.fuzzy.candidate_found")
+        kept: list[PyAmpResult] = []
+        for suggestion in suggestions:
+            reason = rejection_reason(query, suggestion.full_keyword)
+            if reason is None:
+                kept.append(suggestion)
+            else:
+                self.metrics_client.increment(
+                    "providers.adm.fuzzy.rejected", tags={"reason": reason}
+                )
+        self.metrics_client.increment(
+            "providers.adm.fuzzy.served" if kept else "providers.adm.fuzzy.miss"
+        )
+        return kept
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q: str = srequest.query
@@ -317,9 +362,10 @@ class Provider(BaseProvider):
 
         segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
         idx_id = f"{country}/{segment}"
+        fuzzy = AMP_FUZZY_ENABLED and AMP_FUZZY_VARIANT in client_variants
         if (
             self.suggestion_content.index_manager.has(idx_id)
-            and (suggestions := self.suggestion_content.index_manager.query(idx_id, q))
+            and (suggestions := self._query_index(idx_id, q, fuzzy))
             and (res := self._select(suggestions, q))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING

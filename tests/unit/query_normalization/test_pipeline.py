@@ -358,3 +358,36 @@ def test_pipeline_prefix_then_bm25_reorder() -> None:
 def test_pipeline_long_query_skips_split(pipeline: NormalizePipeline) -> None:
     """Queries with more than 2 tokens should skip split step."""
     assert pipeline.normalize("this is a long query") == "this is a long query"
+
+
+# update_mars_terms
+def test_update_mars_terms_enables_amp_normalization() -> None:
+    """After update_mars_terms, queries normalize to the newly added MARS terms."""
+    pipeline = NormalizePipeline(canonical={"dow jones"})
+    # not recognized before the MARS terms are loaded
+    assert pipeline.normalize("door dash") == "door dash"
+
+    pipeline.update_mars_terms({"doordash"})
+
+    assert pipeline.normalize("doordash") == "doordash"  # exact hit
+    assert pipeline.normalize("door dash") == "doordash"  # join -> MARS term
+
+
+def test_update_mars_terms_replaces_slice_and_keeps_base() -> None:
+    """Each refresh rebuilds base ∪ MARS: the previous slice drops, the base stays."""
+    pipeline = NormalizePipeline(canonical={"dow jones"})
+    pipeline.update_mars_terms({"doordash"})
+    assert pipeline.normalize("door dash") == "doordash"
+
+    pipeline.update_mars_terms({"instacart"})
+    assert pipeline.normalize("door dash") == "door dash"  # old slice dropped -> no join
+    assert pipeline.normalize("insta cart") == "instacart"  # new MARS term joins
+    assert pipeline.normalize("dow jones") == "dow jones"  # base preserved
+
+
+def test_update_mars_terms_recomputes_canonical_words() -> None:
+    """The word index (used by prefix-complete) picks up the new MARS tokens."""
+    pipeline = NormalizePipeline(canonical={"dow jones"})
+    pipeline.update_mars_terms({"home depot"})
+    assert {"home", "depot"} <= pipeline._canonical_words
+    assert "dow" in pipeline._canonical_words  # base words retained

@@ -44,6 +44,8 @@ from merino.providers.rss.wikimedia_potd.provider import (
 )
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
+from merino.providers.suggest.adm.provider import AMP_FUZZY_VARIANT
+from merino.providers.suggest.manager import ProviderType
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.suggest.base import (
     BaseProvider,
@@ -98,6 +100,19 @@ router = APIRouter()
 
 # Providers enabled for query normalization
 NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
+
+
+def _should_normalize_query(provider_name: str, client_variants: list[str]) -> bool:
+    """Whether a provider receives the normalized query for this request.
+
+    sports/polygon are always-on (graduated); AMP is gated on the experiment variant.
+    """
+    if provider_name not in NORMALIZATION_PROVIDERS:
+        return False
+    if provider_name == ProviderType.ADM:
+        return AMP_FUZZY_VARIANT in client_variants
+    return True
+
 
 # Compiled query pattern matcher, or None when the feature is disabled.
 _QUERY_PATTERN_MATCHER: QueryPatternMatcher | None = build_query_pattern_matcher(
@@ -300,7 +315,7 @@ async def suggest(
     geolocation = refine_geolocation_for_suggestion(request, city, region, country)
     client_variants_list = client_variants.split(",") if client_variants else []
 
-    # Query normalization (sports and finance only)
+    # Query normalization (sports/finance always-on; AMP gated on the experiment variant)
     pipeline = get_pipeline()
     use_normalization = pipeline is not None
     if pipeline is not None:
@@ -311,7 +326,9 @@ async def suggest(
 
     for p in search_from:
         q_for_provider = (
-            q_normalized if use_normalization and p.name in NORMALIZATION_PROVIDERS else q
+            q_normalized
+            if use_normalization and _should_normalize_query(p.name, client_variants_list)
+            else q
         )
         srequest = SuggestionRequest(
             query=p.normalize_query(q_for_provider),
