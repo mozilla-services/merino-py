@@ -100,6 +100,17 @@ class TestSpindleBackendRefresh:
 
         assert backend._language_for_surface(surface) == expected_language
 
+    def test_malformed_surface_has_no_language(self) -> None:
+        """A malformed future surface should not produce a Spindle language."""
+
+        class _MalformedSurface:
+            value = "BAD"
+
+        http_client = MagicMock(spec=AsyncClient)
+        backend = _make_backend(http_client)
+
+        assert backend._language_for_surface(_MalformedSurface()) is None
+
     @pytest.mark.asyncio
     async def test_non_english_surface_posts_with_derived_language(self):
         """A formerly gated surface should call Spindle with its language."""
