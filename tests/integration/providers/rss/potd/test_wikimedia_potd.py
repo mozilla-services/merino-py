@@ -25,10 +25,15 @@ from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 
-FEED_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss"
+FEED_URL = "https://api.wikimedia.org/feed/v1/wikipedia/en/featured"
 
-# The sample feed is stored verbatim as XML so the fixture matches the production RSS payload.
-TEST_RSS_FEED = Path("tests/data/rss/wikimedia_potd/potd_feed.xml").read_text(encoding="utf-8")
+# The sample response is stored verbatim as JSON so the fixture matches the Featured API payload.
+TEST_FEATURED_JSON = Path("tests/data/rss/wikimedia_potd/potd_featured.json").read_text(
+    encoding="utf-8"
+)
+
+# A well-formed JSON response that is missing the "image" object, so parse_potd raises.
+TEST_FEATURED_JSON_NO_IMAGE = "{}"
 
 
 @pytest.fixture(name="backend")
@@ -61,11 +66,11 @@ class TestUploadPictureOfTheDayMethod:
         mocker: MockerFixture,
     ) -> None:
         """Returns True on successful upload orchestration of the PictureOfTheDay object to the gcs bucket."""
-        # mock get request for the RSS feed to return TEST_RSS_FEED
+        # mock get request for the Featured API to return TEST_FEATURED_JSON
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED,
+            content=TEST_FEATURED_JSON,
             request=Request(method="GET", url=FEED_URL),
         )
 
@@ -83,7 +88,7 @@ class TestUploadPictureOfTheDayMethod:
 
         assert potd_manifest is not None
         assert isinstance(potd_manifest, PictureOfTheDay)
-        assert potd_manifest.title == "Wikimedia Commons picture of the day for June 24"
+        assert potd_manifest.title == "Wikimedia Commons Picture of the Day for June 24"
         assert potd_manifest.published_date == "2026-06-24"
         assert (
             str(potd_manifest.thumbnail_image_url)
@@ -94,6 +99,10 @@ class TestUploadPictureOfTheDayMethod:
             == "https://test-cdn-name/rss/wikimedia_potd/POTD_2026-06-24_hi_res.png"
         )
         assert "Sagittarius" in potd_manifest.description
+        assert potd_manifest.author == "Test Artist"
+        assert str(potd_manifest.file_page) == "https://commons.wikimedia.org/wiki/File:Test.jpg"
+        assert potd_manifest.license_label == "CC BY-SA 4.0"
+        assert str(potd_manifest.license_link) == "https://creativecommons.org/licenses/by-sa/4.0"
 
         # fetch the uploaded blobs (two images and one json manifest object)
         potd_blobs = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
@@ -108,10 +117,10 @@ class TestUploadPictureOfTheDayMethod:
     async def test_upload_picture_of_the_day_upload_returns_false_when_feed_fetch_fails(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
     ) -> None:
-        """Returns False when fetch_picture_of_the_day_from_feed raises."""
-        mocker.patch.object(
-            backend, "fetch_picture_of_the_day_from_feed"
-        ).side_effect = WikimediaPotdError("feed fetch failed")
+        """Returns False when fetch_picture_of_the_day raises."""
+        mocker.patch.object(backend, "fetch_picture_of_the_day").side_effect = WikimediaPotdError(
+            "feed fetch failed"
+        )
 
         result = await backend.upload_picture_of_the_day()
         assert result is False
@@ -121,11 +130,11 @@ class TestUploadPictureOfTheDayMethod:
     async def test_upload_picture_of_the_day_upload_returns_false_when_potd_parsing_fails(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Returns False when the feed's published date does not match today, causing parse_potd to raise."""
+        """Returns False when the response has no image object, causing parse_potd to raise."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED,
+            content=TEST_FEATURED_JSON_NO_IMAGE,
             request=Request(method="GET", url=FEED_URL),
         )
 
@@ -141,7 +150,7 @@ class TestUploadPictureOfTheDayMethod:
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED,
+            content=TEST_FEATURED_JSON,
             request=Request(method="GET", url=FEED_URL),
         )
         mocker.patch.object(backend, "download_potd_image").side_effect = WikimediaPotdError(
@@ -160,7 +169,7 @@ class TestUploadPictureOfTheDayMethod:
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED,
+            content=TEST_FEATURED_JSON,
             request=Request(method="GET", url=FEED_URL),
         )
         mocker.patch.object(backend, "download_potd_image").return_value = Image(
@@ -186,7 +195,7 @@ class TestUploadPictureOfTheDayMethod:
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
-            content=TEST_RSS_FEED,
+            content=TEST_FEATURED_JSON,
             request=Request(method="GET", url=FEED_URL),
         )
         # Images "download" fine; only the GCS upload should fail.
@@ -221,9 +230,7 @@ class TestUploadPictureOfTheDayMethod:
     ) -> None:
         """Returns False and captures the exception via Sentry when an unexpected error is raised."""
         unexpected_error = Exception("Unexpected error during orchestration")
-        mocker.patch.object(
-            backend, "fetch_picture_of_the_day_from_feed"
-        ).side_effect = unexpected_error
+        mocker.patch.object(backend, "fetch_picture_of_the_day").side_effect = unexpected_error
 
         sentry_capture = mocker.patch(
             "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd.sentry_sdk.capture_exception"
@@ -232,6 +239,25 @@ class TestUploadPictureOfTheDayMethod:
         result = await backend.upload_picture_of_the_day()
         assert result is False
         sentry_capture.assert_called_once_with(unexpected_error)
+
+
+class TestFetchPictureOfTheDayMethod:
+    """Tests for the fetch_picture_of_the_day method."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_picture_of_the_day_raises_on_invalid_json(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Raises WikimediaPotdError when the Featured API returns a non-JSON body."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=b"<html>not json</html>",
+            request=Request(method="GET", url=FEED_URL),
+        )
+
+        with pytest.raises(WikimediaPotdError):
+            await backend.fetch_picture_of_the_day()
 
 
 class TestUploadImageMethod:

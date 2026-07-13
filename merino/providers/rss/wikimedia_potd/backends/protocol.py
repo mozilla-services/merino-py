@@ -2,7 +2,6 @@
 
 from typing import Protocol
 from pydantic import BaseModel, Field, HttpUrl
-from feedparser import FeedParserDict
 from merino.exceptions import BackendError
 from merino.utils.gcs.models import Image
 
@@ -23,13 +22,17 @@ class PictureOfTheDay(BaseModel):
     )
     published_date: str = Field(description="Date when the image was published.")
     description: str = Field(description="Description of the image.")
+    author: str = Field(default="", description="Name of the image's artist.")
+    file_page: HttpUrl | None = Field(default=None, description="Commons file page URL.")
+    license_label: str = Field(default="", description="License type, e.g. 'CC BY-SA 4.0'.")
+    license_link: HttpUrl | None = Field(default=None, description="License URL.")
 
 
 class WikimediaPictureOfTheDayBackend(Protocol):
     """Protocol for a Wikimedia POTD backend that this provider depends on."""
 
     async def upload_picture_of_the_day(self) -> bool:  # pragma: no cover
-        """Orchestrates fetching the RSS feed, extracting the Picture of the Day (POTD),
+        """Orchestrates fetching the Featured API, extracting the Picture of the Day (POTD),
         downloading and uploading images, and generating and uploading the POTD JSON manifest.
 
         Returns:
@@ -47,13 +50,13 @@ class WikimediaPictureOfTheDayBackend(Protocol):
         """
         ...
 
-    async def fetch_picture_of_the_day_from_feed(
+    async def fetch_picture_of_the_day(
         self,
-    ) -> FeedParserDict:  # pragma: no cover
-        """Fetch Wikimedia Commons picture of the day RSS feed.
+    ) -> dict:  # pragma: no cover
+        """Fetch the Wikimedia Featured API picture of the day for today.
 
         Returns:
-            A FeedParseDict object containing xml. Raises WikimediaPotdError on failure.
+            The parsed JSON response as a dict. Raises WikimediaPotdError on failure.
         """
         ...
 

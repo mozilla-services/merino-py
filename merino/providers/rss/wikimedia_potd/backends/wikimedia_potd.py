@@ -2,10 +2,8 @@
 
 import logging
 import aiodogstatsd
-import feedparser
 from datetime import datetime, timezone
 from pydantic import HttpUrl
-from feedparser import FeedParserDict
 from httpx import AsyncClient, Response
 
 from merino.configs import settings
@@ -16,8 +14,7 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from merino.providers.rss.wikimedia_potd.backends.utils import (
-    RSS_FETCH_REQUEST_HEADERS,
-    extract_potd,
+    WIKIMEDIA_REQUEST_HEADERS,
     parse_potd,
     build_potd_image_path,
     is_valid_potd_image_url,
@@ -28,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class WikimediaPictureOfTheDayBackend:
-    """Backend for fetching the Wikimedia Picture of the Day RSS feed."""
+    """Backend for fetching the Wikimedia Picture of the Day from the Featured API."""
 
     metrics_client: aiodogstatsd.Client
     http_client: AsyncClient
@@ -41,7 +38,7 @@ class WikimediaPictureOfTheDayBackend:
         feed_url: str,
         gcs_uploader: GcsUploader,
     ) -> None:
-        """Initialize the backend with the RSS feed URL."""
+        """Initialize the backend with the Featured API base url."""
         self.feed_url = feed_url
         self.metrics_client = metrics_client
         self.http_client = http_client
@@ -49,7 +46,7 @@ class WikimediaPictureOfTheDayBackend:
         self.cache_control = settings.rss_providers.wikimedia_potd.cache_control
 
     async def upload_picture_of_the_day(self) -> bool:
-        """Orchestrates fetching the RSS feed, extracting the Picture of the Day (POTD),
+        """Orchestrates fetching the Featured API, extracting the Picture of the Day (POTD),
         downloading and uploading images, and generating and uploading the POTD JSON manifest.
 
         Returns:
@@ -58,11 +55,11 @@ class WikimediaPictureOfTheDayBackend:
         # This is the single error boundary for the upload job: every helper below either
         # returns a value or raises, and any failure is reported to Sentry once here.
         try:
-            # fetch the Wikimedia potd rss feed
-            rss_potd = await self.fetch_picture_of_the_day_from_feed()
+            # fetch today's Wikimedia Featured API response
+            data = await self.fetch_picture_of_the_day()
 
-            # parse the feed to extract a PictureOfTheDay instance
-            potd = parse_potd(rss_potd)
+            # parse the response to extract a PictureOfTheDay instance
+            potd = parse_potd(data)
 
             # download thumbnail and high resolution images and get the respective cdn urls
             thumbnail_url, hi_res_url = await self.download_and_upload_potd_images(potd)
@@ -96,24 +93,31 @@ class WikimediaPictureOfTheDayBackend:
 
         return (HttpUrl(thumbnail_cdn_url), HttpUrl(hires_cdn_url))
 
-    async def fetch_picture_of_the_day_from_feed(self) -> FeedParserDict:
-        """Fetch Wikimedia Commons picture of the day RSS feed.
+    async def fetch_picture_of_the_day(self) -> dict:
+        """Fetch the Wikimedia Featured API picture of the day for today.
 
         Returns:
-            A FeedParseDict object containing xml. Raises WikimediaPotdError on failure.
+            The parsed JSON response as a dict. Raises WikimediaPotdError on failure.
         """
-        feed: Response = await self.http_client.get(
-            self.feed_url, headers=RSS_FETCH_REQUEST_HEADERS
-        )
+        # setting the format to YYYY/MM/DD which is accepted as the url param
+        today = datetime.now(timezone.utc).strftime("%Y/%m/%d")
 
-        feed.raise_for_status()
+        # the Featured API expects the date in the url path: .../en/featured/{yyyy}/{mm}/{dd}
+        url = f"{self.feed_url}/{today}"
 
-        if not feed.content:
-            raise WikimediaPotdError("Wikimedia POTD feed returned empty content")
+        response: Response = await self.http_client.get(url, headers=WIKIMEDIA_REQUEST_HEADERS)
 
-        parsed_feed: FeedParserDict = feedparser.parse(feed.text)
+        response.raise_for_status()
 
-        return extract_potd(parsed_feed)
+        if not response.content:
+            raise WikimediaPotdError("Wikimedia POTD featured api returned empty content")
+
+        try:
+            data: dict = response.json()
+        except ValueError as ex:
+            raise WikimediaPotdError("Wikimedia POTD featured api returned invalid JSON") from ex
+
+        return data
 
     async def download_potd_image(self, url: HttpUrl) -> Image:
         """Download the image using the image URL.
@@ -127,7 +131,7 @@ class WikimediaPictureOfTheDayBackend:
 
         # set up request headers to only accept image content types
         request_headers = {
-            **RSS_FETCH_REQUEST_HEADERS,
+            **WIKIMEDIA_REQUEST_HEADERS,
             "accept": "image/jpeg,image/png,image/webp",
         }
         response: Response = await self.http_client.get(str(url), headers=request_headers)

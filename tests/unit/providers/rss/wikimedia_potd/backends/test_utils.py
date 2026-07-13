@@ -6,7 +6,6 @@
 
 import pytest
 import freezegun
-from feedparser import FeedParserDict
 from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
@@ -14,97 +13,46 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
     WikimediaPotdError,
 )
 from merino.providers.rss.wikimedia_potd.backends.utils import (
-    extract_potd,
     is_valid_potd_image_url,
     parse_potd,
     build_potd_image_path,
 )
 from merino.utils.gcs.models import Image
 
-VALID_FIELDS: dict[str, str] = {
-    "title": "Test Title",
-    "description": (
-        "<img src='https://upload.wikimedia.org/thumb/a/b/file/100px-file.jpg' />"
-        "<div class='description'>A photo</div>"
-    ),
-    "published": "Mon, 13 Apr 2026 00:00:00 GMT",
-}
-
 THUMBNAIL_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Test.jpg/320px-Test.jpg"
 HIGH_RES_URL = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Test.jpg"
-
-DESCRIPTION_HTML = f'<img src="{THUMBNAIL_URL}" /><div class="description">Test description.</div>'
-
-
-def _make_entry(**fields: str) -> FeedParserDict:
-    entry = FeedParserDict()
-    for k, v in fields.items():
-        entry[k] = v
-    return entry
+FILE_PAGE_URL = "https://commons.wikimedia.org/wiki/File:Test.jpg"
+LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0"
 
 
-def _make_feed(entries: list[FeedParserDict]) -> FeedParserDict:
-    feed = FeedParserDict()
-    feed["entries"] = entries
-    return feed
+def _make_featured(**image_overrides: object) -> dict:
+    """Build a minimal Wikimedia Featured API response dict with an image object."""
+    image: dict = {
+        "title": "File:Test.jpg",
+        "thumbnail": {"source": THUMBNAIL_URL},
+        "image": {"source": HIGH_RES_URL},
+        "description": {"text": "Test description.", "html": "<p>Test description.</p>"},
+        "artist": {"text": "Test Artist", "html": "<bdi>Test Artist</bdi>"},
+        "license": {"type": "CC BY-SA 4.0", "url": LICENSE_URL},
+        "file_page": FILE_PAGE_URL,
+    }
+    image.update(image_overrides)
+    return {"image": image}
 
 
-@pytest.fixture(name="valid_entry")
-def fixture_valid_entry() -> FeedParserDict:
-    """Return a FeedParserDict entry with all required fields."""
-    return _make_entry(**VALID_FIELDS)
-
-
-def test_extract_potd_raises_for_empty_entries() -> None:
-    """Raises WikimediaPotdError when the feed has no entries."""
-    with pytest.raises(WikimediaPotdError):
-        extract_potd(_make_feed([]))
-
-
-def test_extract_potd_returns_entry_for_single_valid_entry(
-    valid_entry: FeedParserDict,
-) -> None:
-    """Returns the entry when feed has one valid entry."""
-    result = extract_potd(_make_feed([valid_entry]))
-    assert result is valid_entry
-
-
-def test_extract_potd_returns_last_entry_from_multiple(
-    valid_entry: FeedParserDict,
-) -> None:
-    """Returns the last entry when feed has multiple valid entries."""
-    older_entry = _make_entry(**VALID_FIELDS)
-    feed = _make_feed([older_entry, valid_entry])
-    assert extract_potd(feed) is valid_entry
-
-
-def test_extract_potd_raises_when_a_required_field_missing() -> None:
-    """Raises WikimediaPotdError when a required field is absent from the entry."""
-    fields = dict(VALID_FIELDS)
-    # remove the "published" key.
-    fields.pop("published")
-    feed = _make_feed([_make_entry(**fields)])
-    with pytest.raises(WikimediaPotdError):
-        extract_potd(feed)
-
-
-@pytest.fixture(name="potd_entry")
-def fixture_potd_entry() -> FeedParserDict:
-    """Return a FeedParserDict entry with all fields required by parse_potd."""
-    return _make_entry(
-        title="Test POTD",
-        published="Mon, 13 Apr 2026 00:00:00 GMT",
-        description=DESCRIPTION_HTML,
-    )
+@pytest.fixture(name="featured")
+def fixture_featured() -> dict:
+    """Return a Featured API response dict with all fields required by parse_potd."""
+    return _make_featured()
 
 
 @freezegun.freeze_time("2026-04-13")
-def test_parse_potd_returns_picture_of_the_day(potd_entry: FeedParserDict) -> None:
+def test_parse_potd_returns_picture_of_the_day(featured: dict) -> None:
     """Returns a PictureOfTheDay with correct fields when all data is present."""
-    result = parse_potd(potd_entry)
+    result = parse_potd(featured)
 
     assert isinstance(result, PictureOfTheDay)
-    assert result.title == "Test POTD"
+    assert result.title == "Wikimedia Commons Picture of the Day for April 13"
     assert result.published_date == "2026-04-13"
     assert result.description == "Test description."
     assert str(result.thumbnail_image_url) == THUMBNAIL_URL
@@ -112,58 +60,71 @@ def test_parse_potd_returns_picture_of_the_day(potd_entry: FeedParserDict) -> No
 
 
 @freezegun.freeze_time("2026-04-13")
-def test_parse_potd_returns_empty_description_when_no_description_div(
-    potd_entry: FeedParserDict,
-) -> None:
-    """Returns a PictureOfTheDay with empty description when no description div is present."""
-    potd_entry["description"] = f'<img src="{THUMBNAIL_URL}" />'
+def test_parse_potd_returns_empty_description_when_no_description(featured: dict) -> None:
+    """Returns a PictureOfTheDay with empty description when no description is present."""
+    featured["image"].pop("description")
 
-    result = parse_potd(potd_entry)
+    result = parse_potd(featured)
 
     assert result is not None
     assert result.description == ""
     assert isinstance(result.thumbnail_image_url, HttpUrl)
 
 
-def test_parse_potd_raises_when_the_published_date_is_not_today(
-    potd_entry: FeedParserDict,
-) -> None:
-    """Raises WikimediaPotdError when the published date is not today."""
-    # the potd_entry fixture object has the date set to 2026-04-13.
-    with pytest.raises(WikimediaPotdError):
-        parse_potd(potd_entry)
+@freezegun.freeze_time("2026-04-13")
+def test_parse_potd_maps_metadata_fields(featured: dict) -> None:
+    """Maps the Featured API metadata: artist, attribution, and license."""
+    result = parse_potd(featured)
+
+    assert result.author == "Test Artist"
+    assert str(result.file_page) == FILE_PAGE_URL
+    assert result.license_label == "CC BY-SA 4.0"
+    assert str(result.license_link) == LICENSE_URL
 
 
 @freezegun.freeze_time("2026-04-13")
-def test_parse_potd_raises_when_no_img_tag(potd_entry: FeedParserDict) -> None:
-    """Raises WikimediaPotdError when the description HTML contains no img element."""
-    potd_entry["description"] = '<div class="description">No image here.</div>'
+def test_parse_potd_defaults_missing_metadata(featured: dict) -> None:
+    """Falls back to empty/None defaults when the optional metadata fields are absent."""
+    image = featured["image"]
+    for key in ("description", "artist", "license", "file_page"):
+        image.pop(key, None)
 
-    with pytest.raises(WikimediaPotdError):
-        parse_potd(potd_entry)
+    result = parse_potd(featured)
 
-
-@freezegun.freeze_time("2026-04-13")
-def test_parse_potd_raises_when_img_has_no_src(potd_entry: FeedParserDict) -> None:
-    """Raises WikimediaPotdError when the img element is missing a src attribute."""
-    potd_entry["description"] = '<img alt="missing src" />'
-
-    with pytest.raises(WikimediaPotdError):
-        parse_potd(potd_entry)
+    assert result.description == ""
+    assert result.author == ""
+    assert result.file_page is None
+    assert result.license_label == ""
+    assert result.license_link is None
 
 
 @freezegun.freeze_time("2026-04-13")
-def test_parse_potd_derives_high_res_url_from_thumbnail(potd_entry: FeedParserDict) -> None:
-    """Derives high_res_image_url by stripping /thumb and the trailing size segment from the thumbnail URL."""
-    thumbnail = (
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Photo.jpg/640px-Photo.jpg"
+def test_parse_potd_raises_when_image_missing() -> None:
+    """Raises WikimediaPotdError when the response has no image object."""
+    with pytest.raises(WikimediaPotdError):
+        parse_potd({"news": []})
+
+
+@freezegun.freeze_time("2026-04-13")
+def test_parse_potd_raises_when_source_url_missing(featured: dict) -> None:
+    """Raises WikimediaPotdError when a thumbnail or full-res source url is absent."""
+    featured["image"]["thumbnail"] = {}
+
+    with pytest.raises(WikimediaPotdError):
+        parse_potd(featured)
+
+
+@freezegun.freeze_time("2026-04-13")
+def test_parse_potd_uses_full_res_image_source_directly(featured: dict) -> None:
+    """Reads high_res_image_url straight from image.source without deriving it."""
+    featured["image"]["image"]["source"] = (
+        "https://upload.wikimedia.org/wikipedia/commons/a/ab/Photo.jpg"
     )
-    potd_entry["description"] = f'<img src="{thumbnail}" />'
 
-    result = parse_potd(potd_entry)
+    result = parse_potd(featured)
 
     assert result is not None
-    assert str(result.thumbnail_image_url) == thumbnail
+    assert str(result.thumbnail_image_url) == THUMBNAIL_URL
     assert (
         str(result.high_res_image_url)
         == "https://upload.wikimedia.org/wikipedia/commons/a/ab/Photo.jpg"
