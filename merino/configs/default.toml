@@ -776,6 +776,10 @@ score = 0.31
 # Toggle fuzzy matching for AMP suggestions (only in experiment for now)
 enabled = true
 
+# MERINO_PROVIDERS__ADM__FUZZY__MIN_SUBSTITUTION_LEN
+# Reject single-substitution fuzzy matches on queries shorter than this (typo-FP guard).
+min_substitution_len = 7
+
 [default.providers.adm.thompson]
 # MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
 # Toggle Thompson sampling
