@@ -92,11 +92,11 @@ class TestUploadPictureOfTheDayMethod:
         assert potd_manifest.published_date == "2026-06-24"
         assert (
             str(potd_manifest.thumbnail_image_url)
-            == "https://test-cdn-name/rss/wikimedia_potd/POTD_2026-06-24_thumbnail.png"
+            == "https://test-cdn-name/rss/wikimedia_potd/2026-06-24/thumbnail.png"
         )
         assert (
             str(potd_manifest.high_res_image_url)
-            == "https://test-cdn-name/rss/wikimedia_potd/POTD_2026-06-24_hi_res.png"
+            == "https://test-cdn-name/rss/wikimedia_potd/2026-06-24/hi_res.png"
         )
         assert "Sagittarius" in potd_manifest.description
         assert potd_manifest.author == "Test Artist"
@@ -108,9 +108,9 @@ class TestUploadPictureOfTheDayMethod:
         potd_blobs = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
 
         assert len(potd_blobs) == 3
-        assert potd_blobs[0].name == "rss/wikimedia_potd/POTD_2026-06-24.json"
-        assert potd_blobs[1].name == "rss/wikimedia_potd/POTD_2026-06-24_hi_res.png"
-        assert potd_blobs[2].name == "rss/wikimedia_potd/POTD_2026-06-24_thumbnail.png"
+        assert potd_blobs[0].name == "rss/wikimedia_potd/2026-06-24/hi_res.png"
+        assert potd_blobs[1].name == "rss/wikimedia_potd/2026-06-24/manifest.json"
+        assert potd_blobs[2].name == "rss/wikimedia_potd/2026-06-24/thumbnail.png"
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
@@ -221,7 +221,7 @@ class TestUploadPictureOfTheDayMethod:
             blob.name
             for blob in gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs()
         ]
-        assert "rss/wikimedia_potd/POTD_2026-06-24.json" not in blob_names
+        assert "rss/wikimedia_potd/2026-06-24/manifest.json" not in blob_names
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
@@ -278,7 +278,7 @@ class TestUploadImageMethod:
 
         # should be only one blob (thumbnail image)
         assert len(blobs_in_bucket) == 1
-        assert blobs_in_bucket[0].name == "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
+        assert blobs_in_bucket[0].name == "rss/wikimedia_potd/2026-06-07/thumbnail.jpeg"
 
     def test_propagates_upload_error(
         self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
@@ -373,7 +373,7 @@ class TestBuildAndUploadPotdMethod:
         # download the above manifest blob as json
         blob_json = orjson.loads(potd_manifest_blob.download_as_text())
 
-        assert potd_manifest_blob.name == "rss/wikimedia_potd/POTD_2026-06-07.json"
+        assert potd_manifest_blob.name == "rss/wikimedia_potd/2026-06-07/manifest.json"
         assert blob_json["title"] == potd.title
         assert blob_json["description"] == potd.description
         assert blob_json["published_date"] == potd.published_date
