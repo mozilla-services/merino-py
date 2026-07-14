@@ -965,7 +965,7 @@ class TestReorderTopSectionsForSimilarity:
         assert _get_spindle_similarity_info(None, SurfaceId.NEW_TAB_EN_US) is None
 
     def test_promotes_buffered_fallback_when_visible_item_conflicts(self):
-        """A visible item conflicting with an earlier section is moved behind a fallback."""
+        """A visible conflict is moved to the end when the buffer has a clean story."""
         sections = {
             "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
             "lower": self.build_section(["bad", "l1", "l2", "l3", "ok", "spare"], 1, "Lower"),
@@ -975,14 +975,33 @@ class TestReorderTopSectionsForSimilarity:
         reorder_top_sections_for_similarity(sections, similarity_info)
 
         assert [rec.corpusItemId for rec in sections["lower"].recommendations] == [
-            "ok",
             "l1",
             "l2",
             "l3",
+            "ok",
             "spare",
             "bad",
         ]
         assert [rec.receivedRank for rec in sections["lower"].recommendations] == list(range(6))
+
+    def test_conflict_removal_shifts_later_items_left(self):
+        """Removing a conflict from the visible range shifts later stories left."""
+        sections = {
+            "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
+            "lower": self.build_section(["l0", "l1", "l2", "bad", "ok", "spare"], 1, "Lower"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == [
+            "l0",
+            "l1",
+            "l2",
+            "ok",
+            "spare",
+            "bad",
+        ]
 
     def test_popular_today_section_is_not_reordered(self):
         """Popular Today is protected even when it has visible duplicate stories."""
@@ -1011,10 +1030,10 @@ class TestReorderTopSectionsForSimilarity:
         reorder_top_sections_for_similarity(sections, similarity_info)
 
         assert [rec.corpusItemId for rec in sections["daily-briefing"].recommendations] == [
-            "ok",
             "d1",
             "d2",
             "d3",
+            "ok",
             "spare",
             "bad",
         ]
@@ -1033,9 +1052,9 @@ class TestReorderTopSectionsForSimilarity:
 
         assert [rec.corpusItemId for rec in sections["first"].recommendations] == [
             "a",
-            "ok",
             "f1",
             "f2",
+            "ok",
             "spare",
             "bad",
         ]
@@ -1052,10 +1071,10 @@ class TestReorderTopSectionsForSimilarity:
         reorder_top_sections_for_similarity(sections, similarity_info)
 
         assert [rec.corpusItemId for rec in sections["third"].recommendations] == [
-            "ok",
             "t1",
             "t2",
             "t3",
+            "ok",
             "spare",
             "bad",
         ]
@@ -1071,12 +1090,12 @@ class TestReorderTopSectionsForSimilarity:
         reorder_top_sections_for_similarity(sections, similarity_info)
 
         assert [rec.corpusItemId for rec in sections["lower"].recommendations] == [
-            "ok",
             "l1",
             "l2",
             "l3",
-            "also-bad",
+            "ok",
             "bad",
+            "also-bad",
         ]
 
     def test_prior_section_without_visible_items_is_noop(self):

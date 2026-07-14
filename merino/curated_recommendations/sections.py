@@ -564,16 +564,6 @@ def _renumber_recommendations(section: Section) -> None:
         rec.receivedRank = idx
 
 
-def _index_by_identity(
-    recommendations: list[CuratedRecommendation], target: CuratedRecommendation
-) -> int | None:
-    """Return the list index for `target`, using object identity."""
-    for idx, rec in enumerate(recommendations):
-        if rec is target:
-            return idx
-    return None
-
-
 def _get_spindle_similarity_info(
     spindle_backend: SpindleBackendProtocol | None,
     surface_id: SurfaceId | None,
@@ -598,8 +588,9 @@ def reorder_top_sections_for_similarity(
     This is best-effort and reorder-only. For the configured top ranked sections,
     visible recommendations that conflict with already-accepted visible stories
     are moved to the end only when an acceptable fallback exists in the section's
-    small hidden buffer. Fallbacks must be clean against all other visible stories
-    that would remain beside them.
+    small hidden buffer. Later recommendations shift left to fill the vacated
+    slot, and the shifted-in fallback must be clean against all other visible
+    stories that would remain beside it.
 
     Protected sections, like Popular Today, are never reordered. Their visible
     stories are treated as accepted up front so other top sections yield to them
@@ -625,8 +616,11 @@ def reorder_top_sections_for_similarity(
         if section_id in protected_section_ids:
             continue
 
-        candidate_end = min(len(section.recommendations), visible_count + extra_candidates)
-        fallback_candidates = section.recommendations[visible_count:candidate_end]
+        available_extra_candidates = min(
+            extra_candidates,
+            len(section.recommendations) - visible_count,
+        )
+        consumed_extra_candidates = 0
 
         idx = 0
         while idx < visible_count:
@@ -642,28 +636,25 @@ def reorder_top_sections_for_similarity(
                 for visible_idx, rec in enumerate(section.recommendations[:visible_count])
                 if visible_idx != idx
             ]
-            replacement_idx = None
-            fallback_idx_to_remove = None
-            for fallback_idx, candidate in enumerate(fallback_candidates):
+            shift_count = None
+            remaining_extra_candidates = available_extra_candidates - consumed_extra_candidates
+            for candidate_offset in range(remaining_extra_candidates):
+                candidate = section.recommendations[visible_count + candidate_offset]
                 if _has_similar_story_conflict(
                     candidate, visible_without_current, similar_stories_info
                 ):
                     continue
-                replacement_idx = _index_by_identity(section.recommendations, candidate)
-                fallback_idx_to_remove = fallback_idx
+                shift_count = candidate_offset + 1
                 break
 
-            if replacement_idx is None:
+            if shift_count is None:
                 idx += 1
                 continue
 
-            assert fallback_idx_to_remove is not None
-            fallback_candidates.pop(fallback_idx_to_remove)
-            replacement = section.recommendations.pop(replacement_idx)
-            conflict = section.recommendations.pop(idx)
-            section.recommendations.insert(idx, replacement)
-            section.recommendations.append(conflict)
-            idx += 1
+            section.recommendations.append(section.recommendations.pop(idx))
+            for _ in range(shift_count - 1):
+                section.recommendations.append(section.recommendations.pop(visible_count - 1))
+            consumed_extra_candidates += shift_count
 
         _renumber_recommendations(section)
         accepted_visible.extend(section.recommendations[:visible_count])
