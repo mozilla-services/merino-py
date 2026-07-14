@@ -142,6 +142,21 @@ enabled = true
 data_source = "remote"
 gcs_bucket = "merino-ml-data-prod"
 
+[production.query_pattern_matching]
+# MERINO_QUERY_PATTERN_MATCHING__ENABLED
+# Master switch. When false the matcher is never built and the hot path is a no-op.
+enabled = false
+
+# MERINO_QUERY_PATTERN_MATCHING__SAMPLE_RATE
+# Fraction of suggest requests to evaluate, 0.0–1.0. 0.0 disables evaluation.
+sample_rate = 0.0
+
+# MERINO_QUERY_PATTERN_MATCHING__PATTERNS
+# List of { id = "...", regex = "..." }. `id` is a low-cardinality metric label
+# (^[a-z][a-z0-9_]{0,63}$); `regex` is matched case-insensitively. Invalid
+# entries are skipped at build time rather than failing startup.
+patterns = []
+
 [production.ml_recommendations.gcs]
 # MERINO__ML_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.

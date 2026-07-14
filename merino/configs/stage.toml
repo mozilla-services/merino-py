@@ -147,6 +147,21 @@ gcs_bucket = "merino-ml-data-stage"
 # appended to default (sports, polygon); enables AMP normalization on stage only
 providers = ["adm"]
 
+[stage.query_pattern_matching]
+# MERINO_QUERY_PATTERN_MATCHING__ENABLED
+# Master switch. When false the matcher is never built and the hot path is a no-op.
+enabled = false
+
+# MERINO_QUERY_PATTERN_MATCHING__SAMPLE_RATE
+# Fraction of suggest requests to evaluate, 0.0–1.0. 0.0 disables evaluation.
+sample_rate = 0.0
+
+# MERINO_QUERY_PATTERN_MATCHING__PATTERNS
+# List of { id = "...", regex = "..." }. `id` is a low-cardinality metric label
+# (^[a-z][a-z0-9_]{0,63}$); `regex` is matched case-insensitively. Invalid
+# entries are skipped at build time rather than failing startup.
+patterns = []
+
 [stage.mars]
 # MERINO_MARS__BASE_URL
 base_url = "https://ads.allizom.org/v1/suggest/"
