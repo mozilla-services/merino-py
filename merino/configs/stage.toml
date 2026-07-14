@@ -144,7 +144,7 @@ dummy_attempted_count = 1000
 enabled = true
 data_source = "remote"
 gcs_bucket = "merino-ml-data-stage"
-# appended to default (sports, polygon); enables AMP normalization on stage only
+# appended to default (sports, polygon)
 providers = ["adm"]
 
 [stage.query_pattern_matching]

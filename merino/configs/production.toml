@@ -141,7 +141,7 @@ cache = "redis"
 enabled = true
 data_source = "remote"
 gcs_bucket = "merino-ml-data-prod"
-# appended to default (sports, polygon); enables AMP normalization for the experiment
+# appended to default (sports, polygon); only enabled for experiment
 providers = ["adm"]
 
 [production.query_pattern_matching]
