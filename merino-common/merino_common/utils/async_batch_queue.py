@@ -187,7 +187,7 @@ class AsyncBatchQueue(Generic[T]):
         batch: list[T] = []
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.collection_delay_s
-        shutdown = asyncio.ensure_future(self._shutdown.wait())
+        shutdown = asyncio.create_task(self._shutdown.wait())
         try:
             while len(batch) < self.max_batch_size:
                 remaining = deadline - loop.time()
@@ -289,7 +289,7 @@ class AsyncBatchQueue(Generic[T]):
         within a running event loop.
         """
         if self._current_task is None:
-            self._current_task = asyncio.get_running_loop().create_task(self.run())
+            self._current_task = asyncio.create_task(self.run())
             # Yield once so run() reaches its first await and is_running() is
             # True by the time start() returns.
             await asyncio.sleep(0)
@@ -316,7 +316,7 @@ class AsyncBatchQueue(Generic[T]):
                     await in_flight
                     in_flight = None
                 if batch:
-                    in_flight = asyncio.get_running_loop().create_task(self._process(batch))
+                    in_flight = asyncio.create_task(self._process(batch))
             # On shutdown, finish the in-flight request and then drain the rest.
             if in_flight is not None:
                 await in_flight
