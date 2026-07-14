@@ -220,7 +220,7 @@ class TestSpindleBackendRefresh:
             [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
         )
         await backend.refresh_duplicate_item_info(
-            [_item("b"), _item("a")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
         )
 
         http_client.post.assert_awaited_once()

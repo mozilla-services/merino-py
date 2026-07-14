@@ -6,7 +6,6 @@ ranking pipeline via the `SimilarStoriesProtocol`.
 """
 
 import logging
-from hashlib import sha256
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
@@ -33,13 +32,12 @@ LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
 METRIC_NAMESPACE = "recommendation.spindle"
 
 
-def _content_id_hash(items: list[CorpusItem]) -> str:
-    """Return a stable hash for the unique corpus ids in `items`."""
-    digest = sha256()
-    for corpus_item_id in sorted({item.corpusItemId for item in items}):
-        digest.update(corpus_item_id.encode("utf-8"))
-        digest.update(b"\0")
-    return digest.hexdigest()
+def _content_ids(items: list[CorpusItem]) -> tuple[str, ...]:
+    """Return corpus ids in received order."""
+    # The Sections API is expected to return unchanged content in a stable
+    # order, so avoid sorting here. A pure reorder may cause an extra Spindle
+    # refresh, but it will not reuse stale similarity info.
+    return tuple(item.corpusItemId for item in items)
 
 
 class SimilarStoriesTextItem(BaseModel):
@@ -137,7 +135,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
-        self._text_content_id_hashes: dict[SurfaceId, str] = {}
+        self._text_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
         self._api_key = api_key
 
     def _language_for_surface(self, surface: SurfaceId) -> str | None:
@@ -175,8 +173,8 @@ class SpindleBackend(SpindleBackendProtocol):
         if language is None:
             return
 
-        content_id_hash = _content_id_hash(items)
-        if self._text_content_id_hashes.get(surface) == content_id_hash:
+        content_ids = _content_ids(items)
+        if self._text_content_ids.get(surface) == content_ids:
             return
 
         request = FindSimilarStoriesRequest(
@@ -198,7 +196,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         if response is not None:
             self._text_info[surface] = SimilarStoriesInfo(response.similar)
-            self._text_content_id_hashes[surface] = content_id_hash
+            self._text_content_ids[surface] = content_ids
 
     async def _refresh_image(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
