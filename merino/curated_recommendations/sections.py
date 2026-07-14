@@ -25,6 +25,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     TIME_ZONE_OFFSET_INFERRED_KEY,
     MLRecsBackend,
     SpindleBackendProtocol,
+    SimilarStoriesProtocol,
 )
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_TZ,
@@ -95,6 +96,8 @@ MAX_SECTIONS_PER_RESPONSE = 20
 # This Gist runs an eval script on localhost https://gist.github.com/rolf-moz/cfd1062016f1898869248b27af009830
 
 SECTION_ITEM_RANKING_TOP_N = 4
+TOP_SECTION_SIMILAR_DEDUP_SECTION_LIMIT = 3
+TOP_SECTION_SIMILAR_DEDUP_EXTRA_CANDIDATES = 2
 
 
 def map_section_item_to_recommendation(
@@ -538,6 +541,120 @@ def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict
     return deduped_sections
 
 
+def _has_similar_story_conflict(
+    rec: CuratedRecommendation,
+    comparison_recs: list[CuratedRecommendation],
+    similar_stories_info: SimilarStoriesProtocol,
+) -> bool:
+    """Return whether `rec` is near-duplicate of any comparison recommendation."""
+    rec_neighbors = set(similar_stories_info.neighbors(rec.corpusItemId))
+    for comparison_rec in comparison_recs:
+        if comparison_rec.corpusItemId in rec_neighbors:
+            return True
+        if rec.corpusItemId in similar_stories_info.neighbors(comparison_rec.corpusItemId):
+            return True
+    return False
+
+
+def _renumber_recommendations(section: Section) -> None:
+    """Set recommendation ranks to match their current order in a section."""
+    for idx, rec in enumerate(section.recommendations):
+        rec.receivedRank = idx
+
+
+def _index_by_identity(
+    recommendations: list[CuratedRecommendation], target: CuratedRecommendation
+) -> int | None:
+    """Return the list index for `target`, using object identity."""
+    for idx, rec in enumerate(recommendations):
+        if rec is target:
+            return idx
+    return None
+
+
+def _get_spindle_similarity_info(
+    spindle_backend: SpindleBackendProtocol | None,
+    surface_id: SurfaceId | None,
+) -> SimilarStoriesProtocol | None:
+    """Return cached Spindle near-duplicate info, preferring text similarity."""
+    if spindle_backend is None or surface_id is None:
+        return None
+    return spindle_backend.get_similar_stories_text(
+        surface_id
+    ) or spindle_backend.get_similar_stories_image(surface_id)
+
+
+def reorder_top_sections_for_similarity(
+    sections: dict[str, Section],
+    similar_stories_info: SimilarStoriesProtocol | None,
+    section_limit: int = TOP_SECTION_SIMILAR_DEDUP_SECTION_LIMIT,
+    extra_candidates: int = TOP_SECTION_SIMILAR_DEDUP_EXTRA_CANDIDATES,
+) -> None:
+    """Move visible near-duplicates in top ranked sections behind fallbacks.
+
+    This is best-effort and reorder-only. For the configured top ranked sections,
+    visible recommendations that conflict with already-accepted visible stories
+    are moved to the end only when an acceptable fallback exists in the section's
+    small hidden buffer. Fallbacks must be clean against all other visible stories
+    that would remain beside them.
+    """
+    if similar_stories_info is None or section_limit < 1 or extra_candidates < 1:
+        return
+
+    ranked_sections = sorted(sections.values(), key=lambda section: section.receivedFeedRank)[
+        :section_limit
+    ]
+    accepted_visible: list[CuratedRecommendation] = []
+
+    for section in ranked_sections:
+        visible_count = min(section.layout.max_tile_count, len(section.recommendations))
+        if visible_count == 0:
+            continue
+
+        candidate_end = min(len(section.recommendations), visible_count + extra_candidates)
+        fallback_candidates = section.recommendations[visible_count:candidate_end]
+
+        idx = 0
+        while idx < visible_count:
+            already_accepted = accepted_visible + section.recommendations[:idx]
+            if not _has_similar_story_conflict(
+                section.recommendations[idx], already_accepted, similar_stories_info
+            ):
+                idx += 1
+                continue
+
+            visible_without_current = accepted_visible + [
+                rec
+                for visible_idx, rec in enumerate(section.recommendations[:visible_count])
+                if visible_idx != idx
+            ]
+            replacement_idx = None
+            fallback_idx_to_remove = None
+            for fallback_idx, candidate in enumerate(fallback_candidates):
+                if _has_similar_story_conflict(
+                    candidate, visible_without_current, similar_stories_info
+                ):
+                    continue
+                replacement_idx = _index_by_identity(section.recommendations, candidate)
+                fallback_idx_to_remove = fallback_idx
+                break
+
+            if replacement_idx is None:
+                idx += 1
+                continue
+
+            assert fallback_idx_to_remove is not None
+            fallback_candidates.pop(fallback_idx_to_remove)
+            replacement = section.recommendations.pop(replacement_idx)
+            conflict = section.recommendations.pop(idx)
+            section.recommendations.insert(idx, replacement)
+            section.recommendations.append(conflict)
+            idx += 1
+
+        _renumber_recommendations(section)
+        accepted_visible.extend(section.recommendations[:visible_count])
+
+
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
     """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'daily-briefing'."""
     # Exclude top_stories_section & daily-briefing (if present) from layout cycling
@@ -746,12 +863,7 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
-    similar_stories_info = None
-    if spindle_backend is not None and surface_id is not None:
-        # Prefer text similarity (more reliable today); fall back to image.
-        similar_stories_info = spindle_backend.get_similar_stories_text(
-            surface_id
-        ) or spindle_backend.get_similar_stories_image(surface_id)
+    similar_stories_info = _get_spindle_similarity_info(spindle_backend, surface_id)
     balancer = TopStoriesArticleBalancer(
         round(top_count * constraint_scale),
         config=article_balancer_config,
@@ -1041,7 +1153,13 @@ async def get_sections(
     # 17. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
-    # 18. Apply ad adjustments
+    # 18. Use cached near-duplicate info to reduce similar stories across top visible sections.
+    reorder_top_sections_for_similarity(
+        sections,
+        _get_spindle_similarity_info(spindle_backend, surface_id),
+    )
+
+    # 19. Apply ad adjustments
     adjust_ads_in_sections(sections)
 
     return sections

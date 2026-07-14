@@ -72,6 +72,8 @@ from merino.curated_recommendations.sections import (
     resolve_section_experiment,
     split_daily_briefing_section,
     dedupe_recommendations_across_sections,
+    _get_spindle_similarity_info,
+    reorder_top_sections_for_similarity,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -885,6 +887,237 @@ class TestDedupeRecommendationsAcrossSections:
         assert [rec.receivedRank for rec in sections["mid"].recommendations] == list(
             range(len(sections["mid"].recommendations))
         )
+
+
+class TestReorderTopSectionsForSimilarity:
+    """Tests for Spindle-backed top-section visible near-duplicate reordering."""
+
+    @staticmethod
+    def build_section(item_ids: list[str], rank: int, title: str) -> Section:
+        """Lightweight helper to create a section with the given ids and rank."""
+        return Section(
+            receivedFeedRank=rank,
+            recommendations=generate_recommendations(item_ids=item_ids, time_sensitive_count=0),
+            title=title,
+            layout=copy.deepcopy(layout_4_medium),
+        )
+
+    class SimilarityInfo:
+        """Small SimilarStoriesProtocol implementation for tests."""
+
+        def __init__(self, neighbors: dict[str, list[str]]) -> None:
+            self._neighbors = neighbors
+
+        def neighbors(self, corpus_item_id: str) -> list[str]:
+            """Return test neighbors for a corpus item id."""
+            return self._neighbors.get(corpus_item_id, [])
+
+    class SpindleBackend:
+        """Small SpindleBackendProtocol implementation for tests."""
+
+        def __init__(
+            self,
+            text_info: "TestReorderTopSectionsForSimilarity.SimilarityInfo | None" = None,
+            image_info: "TestReorderTopSectionsForSimilarity.SimilarityInfo | None" = None,
+        ) -> None:
+            self._text_info = text_info
+            self._image_info = image_info
+
+        async def refresh_duplicate_item_info(self, items, surface, threshold=0.7) -> None:
+            """No-op refresh for protocol compatibility."""
+            return None
+
+        def get_similar_stories_text(self, surface):
+            """Return configured text similarity info."""
+            return self._text_info
+
+        def get_similar_stories_image(self, surface):
+            """Return configured image similarity info."""
+            return self._image_info
+
+    def test_get_spindle_similarity_info_prefers_text_similarity(self):
+        """Cached text similarity is preferred over cached image similarity."""
+        text_info = self.SimilarityInfo({"a": ["b"]})
+        image_info = self.SimilarityInfo({"a": ["c"]})
+
+        assert (
+            _get_spindle_similarity_info(
+                self.SpindleBackend(text_info=text_info, image_info=image_info),
+                SurfaceId.NEW_TAB_EN_US,
+            )
+            is text_info
+        )
+
+    def test_get_spindle_similarity_info_falls_back_to_image_similarity(self):
+        """Cached image similarity is used when text similarity is unavailable."""
+        image_info = self.SimilarityInfo({"a": ["c"]})
+
+        assert (
+            _get_spindle_similarity_info(
+                self.SpindleBackend(image_info=image_info),
+                SurfaceId.NEW_TAB_EN_US,
+            )
+            is image_info
+        )
+
+    def test_get_spindle_similarity_info_without_backend_is_none(self):
+        """Missing Spindle backend means no cached similarity info is available."""
+        assert _get_spindle_similarity_info(None, SurfaceId.NEW_TAB_EN_US) is None
+
+    def test_promotes_buffered_fallback_when_visible_item_conflicts(self):
+        """A visible item conflicting with an earlier section is moved behind a fallback."""
+        sections = {
+            "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
+            "lower": self.build_section(["bad", "l1", "l2", "l3", "ok", "spare"], 1, "Lower"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == [
+            "ok",
+            "l1",
+            "l2",
+            "l3",
+            "spare",
+            "bad",
+        ]
+        assert [rec.receivedRank for rec in sections["lower"].recommendations] == list(range(6))
+
+    def test_promotes_later_same_section_conflict_behind_fallback(self):
+        """A later visible item conflicting within its section is moved behind a fallback."""
+        sections = {
+            "first": self.build_section(["a", "bad", "f1", "f2", "ok", "spare"], 0, "First"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["first"].recommendations] == [
+            "a",
+            "ok",
+            "f1",
+            "f2",
+            "spare",
+            "bad",
+        ]
+
+    def test_compares_against_all_prior_visible_top_sections(self):
+        """A third section is checked against every prior top-section visible item."""
+        sections = {
+            "first": self.build_section(["a", "f1", "f2", "f3", "f4"], 0, "First"),
+            "second": self.build_section(["s0", "s1", "s2", "s3", "s4"], 1, "Second"),
+            "third": self.build_section(["bad", "t1", "t2", "t3", "ok", "spare"], 2, "Third"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["third"].recommendations] == [
+            "ok",
+            "t1",
+            "t2",
+            "t3",
+            "spare",
+            "bad",
+        ]
+
+    def test_skips_fallback_that_conflicts_with_same_section_visible_item(self):
+        """A fallback must be clean against visible items it would remain beside."""
+        sections = {
+            "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
+            "lower": self.build_section(["bad", "l1", "l2", "l3", "also-bad", "ok"], 1, "Lower"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"], "also-bad": ["l1"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == [
+            "ok",
+            "l1",
+            "l2",
+            "l3",
+            "also-bad",
+            "bad",
+        ]
+
+    def test_prior_section_without_visible_items_is_noop(self):
+        """A higher-ranked section with no visible items contributes no comparisons."""
+        lower_ids = ["bad", "l1", "l2", "l3", "ok", "spare"]
+        sections = {
+            "prior": self.build_section([], 0, "Prior"),
+            "lower": self.build_section(lower_ids, 1, "Lower"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == lower_ids
+
+    def test_lower_section_without_visible_items_is_noop(self):
+        """A lower section with no recommendations is left unchanged."""
+        sections = {
+            "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
+            "lower": self.build_section([], 1, "Lower"),
+        }
+        similarity_info = self.SimilarityInfo({"a": ["bad"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert sections["lower"].recommendations == []
+
+    def test_lower_section_without_buffer_candidates_is_noop(self):
+        """A lower section without hidden fallbacks is left unchanged."""
+        lower_ids = ["bad", "l1", "l2", "l3"]
+        sections = {
+            "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
+            "lower": self.build_section(lower_ids, 1, "Lower"),
+        }
+        similarity_info = self.SimilarityInfo({"a": ["bad"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == lower_ids
+
+    def test_leaves_conflict_when_buffer_candidates_also_conflict(self):
+        """If both buffered fallbacks conflict, leave the visible order unchanged."""
+        lower_ids = ["bad", "l1", "l2", "l3", "also-bad-1", "also-bad-2", "ok-too-deep"]
+        sections = {
+            "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
+            "lower": self.build_section(lower_ids, 1, "Lower"),
+        }
+        similarity_info = self.SimilarityInfo({"a": ["bad", "also-bad-1", "also-bad-2"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == lower_ids
+
+    def test_no_similarity_info_is_noop(self):
+        """Without cached Spindle info, section order is unchanged."""
+        lower_ids = ["bad", "l1", "l2", "l3", "ok", "spare"]
+        sections = {
+            "prior": self.build_section(["a", "p1", "p2", "p3", "p4"], 0, "Prior"),
+            "lower": self.build_section(lower_ids, 1, "Lower"),
+        }
+
+        reorder_top_sections_for_similarity(sections, similar_stories_info=None)
+
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == lower_ids
+
+    def test_only_first_three_sections_are_considered_by_default(self):
+        """The default section limit does not compare the third and fourth sections."""
+        fourth_ids = ["bad", "l1", "l2", "l3", "ok", "spare"]
+        sections = {
+            "first": self.build_section(["a0", "p1", "p2", "p3", "p4"], 0, "First"),
+            "second": self.build_section(["a1", "s1", "s2", "s3", "s4"], 1, "Second"),
+            "third": self.build_section(["a2", "t1", "t2", "t3", "t4"], 2, "Third"),
+            "fourth": self.build_section(fourth_ids, 3, "Fourth"),
+        }
+        similarity_info = self.SimilarityInfo({"a2": ["bad"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["fourth"].recommendations] == fourth_ids
 
 
 class TestGetTopStoryList:
