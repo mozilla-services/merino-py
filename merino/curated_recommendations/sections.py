@@ -589,11 +589,12 @@ def reorder_top_sections_for_similarity(
 
     This is best-effort and reorder-only. For each adjacent pair in the
     configured top ranked sections, visible recommendations in the lower-ranked
-    section that conflict with the immediately previous section are moved to the
-    end only when an acceptable fallback exists in the section's small hidden
-    buffer. Later recommendations shift left to fill the vacated slot, and the
-    shifted-in fallback must be clean against the previous section plus all
-    other visible stories that would remain beside it.
+    section that conflict with the immediately previous section or an earlier
+    visible story in the same section are moved to the end only when an
+    acceptable fallback exists in the section's small hidden buffer. Later
+    recommendations shift left to fill the vacated slot, and the shifted-in
+    fallback must be clean against the previous section plus all other visible
+    stories that would remain beside it.
 
     Protected sections, like Daily Briefing and Popular Today, are never
     reordered. They can still be the previous section that the next ranked
@@ -602,22 +603,27 @@ def reorder_top_sections_for_similarity(
     if similar_stories_info is None or section_limit < 1 or extra_candidates < 1:
         return
 
+    # Only the top feed-ranked sections participate. Sections outside this slice
+    # are left exactly as they came in.
     ranked_sections = sorted(sections.items(), key=lambda item: item[1].receivedFeedRank)[
         :section_limit
     ]
+
+    # This is intentionally only the visible window from the immediately
+    # previous ranked section. We do not compare against every earlier section.
     previous_visible: list[CuratedRecommendation] = []
 
     for section_id, section in ranked_sections:
         visible_count = min(section.layout.max_tile_count, len(section.recommendations))
         if visible_count == 0:
+            # An empty section has no visible stories for the next section to
+            # compare against, so it breaks the adjacent-section chain.
             previous_visible = []
             continue
 
         if section_id in protected_section_ids:
-            previous_visible = section.recommendations[:visible_count]
-            continue
-
-        if not previous_visible:
+            # Protected sections can anchor the next section, but their own
+            # recommendation order is never changed.
             previous_visible = section.recommendations[:visible_count]
             continue
 
@@ -629,12 +635,18 @@ def reorder_top_sections_for_similarity(
 
         idx = 0
         while idx < visible_count:
+            # A visible story moves only if it conflicts with the immediately
+            # previous section or with an earlier visible story in this section.
+            comparison_recs = previous_visible + section.recommendations[:idx]
             if not _has_similar_story_conflict(
-                section.recommendations[idx], previous_visible, similar_stories_info
+                section.recommendations[idx], comparison_recs, similar_stories_info
             ):
                 idx += 1
                 continue
 
+            # A replacement candidate must be clean against the previous
+            # section and against the other visible stories it would sit beside
+            # after the conflict is moved out.
             visible_without_current = previous_visible + [
                 rec
                 for visible_idx, rec in enumerate(section.recommendations[:visible_count])
@@ -655,6 +667,9 @@ def reorder_top_sections_for_similarity(
                 idx += 1
                 continue
 
+            # Move the conflicting visible story to the end. Later items shift
+            # left, and if the clean fallback was not the first hidden item, any
+            # skipped hidden candidates are moved behind the conflict too.
             section.recommendations.append(section.recommendations.pop(idx))
             for _ in range(shift_count - 1):
                 section.recommendations.append(section.recommendations.pop(visible_count - 1))

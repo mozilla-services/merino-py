@@ -1076,17 +1076,23 @@ class TestReorderTopSectionsForSimilarity:
             "bad",
         ]
 
-    def test_first_section_same_section_conflict_is_not_reordered(self):
-        """The first ranked section is not checked against itself."""
-        first_ids = ["a", "bad", "f1", "f2", "ok", "spare"]
+    def test_first_section_same_section_conflict_moves_behind_fallback(self):
+        """The first ranked section can still dedupe within its visible range."""
         sections = {
-            "first": self.build_section(first_ids, 0, "First"),
+            "first": self.build_section(["a", "bad", "f1", "f2", "ok", "spare"], 0, "First"),
         }
         similarity_info = self.SimilarityInfo({"bad": ["a"]})
 
         reorder_top_sections_for_similarity(sections, similarity_info)
 
-        assert [rec.corpusItemId for rec in sections["first"].recommendations] == first_ids
+        assert [rec.corpusItemId for rec in sections["first"].recommendations] == [
+            "a",
+            "f1",
+            "f2",
+            "ok",
+            "spare",
+            "bad",
+        ]
 
     def test_compares_only_against_immediately_prior_visible_top_section(self):
         """A third section is not checked against the first section."""
