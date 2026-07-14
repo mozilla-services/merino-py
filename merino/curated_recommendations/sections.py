@@ -1,6 +1,7 @@
 """Module for building and ranking curated recommendation sections."""
 
 import logging
+from collections.abc import Collection
 from copy import deepcopy
 
 import random
@@ -25,6 +26,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     TIME_ZONE_OFFSET_INFERRED_KEY,
     MLRecsBackend,
     SpindleBackendProtocol,
+    SimilarStoriesProtocol,
 )
 from merino.curated_recommendations.ml_backends.static_local_model import (
     CONTEXTUAL_RANKING_TREATMENT_TZ,
@@ -95,6 +97,11 @@ MAX_SECTIONS_PER_RESPONSE = 20
 # This Gist runs an eval script on localhost https://gist.github.com/rolf-moz/cfd1062016f1898869248b27af009830
 
 SECTION_ITEM_RANKING_TOP_N = 4
+TOP_SECTION_SIMILAR_DEDUP_SECTION_LIMIT = 3
+TOP_SECTION_SIMILAR_DEDUP_EXTRA_CANDIDATES = 2
+TOP_SECTION_SIMILAR_DEDUP_PROTECTED_SECTION_IDS = frozenset(
+    {DAILY_BRIEFING_SECTION_KEY, TOP_STORIES_SECTION_KEY}
+)
 
 
 def map_section_item_to_recommendation(
@@ -538,6 +545,140 @@ def dedupe_recommendations_across_sections(sections: dict[str, Section]) -> dict
     return deduped_sections
 
 
+def _has_similar_story_conflict(
+    rec: CuratedRecommendation,
+    comparison_recs: list[CuratedRecommendation],
+    similar_stories_info: SimilarStoriesProtocol,
+) -> bool:
+    """Return whether `rec` is near-duplicate of any comparison recommendation."""
+    rec_neighbors = set(similar_stories_info.neighbors(rec.corpusItemId))
+    for comparison_rec in comparison_recs:
+        if comparison_rec.corpusItemId in rec_neighbors:
+            return True
+        if rec.corpusItemId in similar_stories_info.neighbors(comparison_rec.corpusItemId):
+            return True
+    return False
+
+
+def _renumber_recommendations(section: Section) -> None:
+    """Set recommendation ranks to match their current order in a section."""
+    for idx, rec in enumerate(section.recommendations):
+        rec.receivedRank = idx
+
+
+def _get_spindle_similarity_info(
+    spindle_backend: SpindleBackendProtocol | None,
+    surface_id: SurfaceId | None,
+) -> SimilarStoriesProtocol | None:
+    """Return cached Spindle near-duplicate info, preferring text similarity."""
+    if spindle_backend is None or surface_id is None:
+        return None
+    return spindle_backend.get_similar_stories_text(
+        surface_id
+    ) or spindle_backend.get_similar_stories_image(surface_id)
+
+
+def reorder_top_sections_for_similarity(
+    sections: dict[str, Section],
+    similar_stories_info: SimilarStoriesProtocol | None,
+    section_limit: int = TOP_SECTION_SIMILAR_DEDUP_SECTION_LIMIT,
+    extra_candidates: int = TOP_SECTION_SIMILAR_DEDUP_EXTRA_CANDIDATES,
+    protected_section_ids: Collection[str] = TOP_SECTION_SIMILAR_DEDUP_PROTECTED_SECTION_IDS,
+) -> None:
+    """Move visible near-duplicates in top ranked sections behind fallbacks.
+
+    This is best-effort and reorder-only. For each adjacent pair in the
+    configured top ranked sections, visible recommendations in the lower-ranked
+    section that conflict with the immediately previous section or an earlier
+    visible story in the same section are moved to the end only when an
+    acceptable fallback exists in the section's small hidden buffer. Later
+    recommendations shift left to fill the vacated slot, and the shifted-in
+    fallback must be clean against the previous section plus all other visible
+    stories that would remain beside it.
+
+    Protected sections, like Daily Briefing and Popular Today, are never
+    reordered. They can still be the previous section that the next ranked
+    section yields to.
+    """
+    if similar_stories_info is None or section_limit < 1 or extra_candidates < 1:
+        return
+
+    # Only the top feed-ranked sections participate. Sections outside this slice
+    # are left exactly as they came in.
+    ranked_sections = sorted(sections.items(), key=lambda item: item[1].receivedFeedRank)[
+        :section_limit
+    ]
+
+    # This is intentionally only the visible window from the immediately
+    # previous ranked section. We do not compare against every earlier section.
+    previous_visible: list[CuratedRecommendation] = []
+
+    for section_id, section in ranked_sections:
+        visible_count = min(section.layout.max_tile_count, len(section.recommendations))
+        if visible_count == 0:
+            # An empty section has no visible stories for the next section to
+            # compare against, so it breaks the adjacent-section chain.
+            previous_visible = []
+            continue
+
+        if section_id in protected_section_ids:
+            # Protected sections can anchor the next section, but their own
+            # recommendation order is never changed.
+            previous_visible = section.recommendations[:visible_count]
+            continue
+
+        available_extra_candidates = min(
+            extra_candidates,
+            len(section.recommendations) - visible_count,
+        )
+        consumed_extra_candidates = 0
+
+        idx = 0
+        while idx < visible_count:
+            # A visible story moves only if it conflicts with the immediately
+            # previous section or with an earlier visible story in this section.
+            comparison_recs = previous_visible + section.recommendations[:idx]
+            if not _has_similar_story_conflict(
+                section.recommendations[idx], comparison_recs, similar_stories_info
+            ):
+                idx += 1
+                continue
+
+            # A replacement candidate must be clean against the previous
+            # section and against the other visible stories it would sit beside
+            # after the conflict is moved out.
+            visible_without_current = previous_visible + [
+                rec
+                for visible_idx, rec in enumerate(section.recommendations[:visible_count])
+                if visible_idx != idx
+            ]
+            shift_count = None
+            remaining_extra_candidates = available_extra_candidates - consumed_extra_candidates
+            for candidate_offset in range(remaining_extra_candidates):
+                candidate = section.recommendations[visible_count + candidate_offset]
+                if _has_similar_story_conflict(
+                    candidate, visible_without_current, similar_stories_info
+                ):
+                    continue
+                shift_count = candidate_offset + 1
+                break
+
+            if shift_count is None:
+                idx += 1
+                continue
+
+            # Move the conflicting visible story to the end. Later items shift
+            # left, and if the clean fallback was not the first hidden item, any
+            # skipped hidden candidates are moved behind the conflict too.
+            section.recommendations.append(section.recommendations.pop(idx))
+            for _ in range(shift_count - 1):
+                section.recommendations.append(section.recommendations.pop(visible_count - 1))
+            consumed_extra_candidates += shift_count
+
+        _renumber_recommendations(section)
+        previous_visible = section.recommendations[:visible_count]
+
+
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
     """Cycle through layouts & assign final layouts to all ranked sections except 'top_stories_section' & 'daily-briefing'."""
     # Exclude top_stories_section & daily-briefing (if present) from layout cycling
@@ -746,12 +887,7 @@ def get_top_story_list(
     )
     non_throttled = items[len(items_throttled_fresh) + len(unused_fresh) :]
 
-    similar_stories_info = None
-    if spindle_backend is not None and surface_id is not None:
-        # Prefer text similarity (more reliable today); fall back to image.
-        similar_stories_info = spindle_backend.get_similar_stories_text(
-            surface_id
-        ) or spindle_backend.get_similar_stories_image(surface_id)
+    similar_stories_info = _get_spindle_similarity_info(spindle_backend, surface_id)
     balancer = TopStoriesArticleBalancer(
         round(top_count * constraint_scale),
         config=article_balancer_config,
@@ -1041,7 +1177,13 @@ async def get_sections(
     # 17. Apply final layout cycling to ranked sections except top_stories
     cycle_layouts_for_ranked_sections(sections, LAYOUT_CYCLE)
 
-    # 18. Apply ad adjustments
+    # 18. Use cached near-duplicate info to reduce similar stories across top visible sections.
+    reorder_top_sections_for_similarity(
+        sections,
+        _get_spindle_similarity_info(spindle_backend, surface_id),
+    )
+
+    # 19. Apply ad adjustments
     adjust_ads_in_sections(sections)
 
     return sections
