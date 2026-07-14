@@ -6,6 +6,7 @@ ranking pipeline via the `SimilarStoriesProtocol`.
 """
 
 import logging
+from hashlib import sha256
 
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError
@@ -30,6 +31,15 @@ LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
 }
 
 METRIC_NAMESPACE = "recommendation.spindle"
+
+
+def _content_id_hash(items: list[CorpusItem]) -> str:
+    """Return a stable hash for the unique corpus ids in `items`."""
+    digest = sha256()
+    for corpus_item_id in sorted({item.corpusItemId for item in items}):
+        digest.update(corpus_item_id.encode("utf-8"))
+        digest.update(b"\0")
+    return digest.hexdigest()
 
 
 class SimilarStoriesTextItem(BaseModel):
@@ -127,6 +137,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
+        self._text_content_id_hashes: dict[SurfaceId, str] = {}
         self._api_key = api_key
 
     def _language_for_surface(self, surface: SurfaceId) -> str | None:
@@ -163,6 +174,11 @@ class SpindleBackend(SpindleBackendProtocol):
         language = self._language_for_surface(surface)
         if language is None:
             return
+
+        content_id_hash = _content_id_hash(items)
+        if self._text_content_id_hashes.get(surface) == content_id_hash:
+            return
+
         request = FindSimilarStoriesRequest(
             items=[
                 SimilarStoriesTextItem(
@@ -182,6 +198,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         if response is not None:
             self._text_info[surface] = SimilarStoriesInfo(response.similar)
+            self._text_content_id_hashes[surface] = content_id_hash
 
     async def _refresh_image(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
