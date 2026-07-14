@@ -1017,67 +1017,90 @@ class TestReorderTopSectionsForSimilarity:
             rec.corpusItemId for rec in sections[TOP_STORIES_SECTION_KEY].recommendations
         ] == popular_today_ids
 
-    def test_non_first_popular_today_is_protected_and_used_for_comparisons(self):
-        """Higher-ranked mutable sections yield to protected Popular Today stories."""
-        mutable_ids = ["bad", "d1", "d2", "d3", "ok", "spare"]
+    def test_non_first_popular_today_is_protected_and_used_for_next_section_comparison(self):
+        """Popular Today is protected and only the next ranked section yields to it."""
+        higher_ranked_ids = ["bad", "d1", "d2", "d3", "d4"]
         popular_today_ids = ["pt", "p1", "p2", "p3", "p4"]
+        lower_ids = ["bad-lower", "l1", "l2", "l3", "ok", "spare"]
         sections = {
-            "daily-briefing": self.build_section(mutable_ids, 0, "Daily Briefing"),
+            "higher-ranked-section": self.build_section(higher_ranked_ids, 0, "Higher Ranked"),
             TOP_STORIES_SECTION_KEY: self.build_section(popular_today_ids, 1, "Popular Today"),
+            "lower": self.build_section(lower_ids, 2, "Lower"),
         }
-        similarity_info = self.SimilarityInfo({"bad": ["pt"]})
+        similarity_info = self.SimilarityInfo({"bad": ["pt"], "bad-lower": ["pt"]})
 
         reorder_top_sections_for_similarity(sections, similarity_info)
 
-        assert [rec.corpusItemId for rec in sections["daily-briefing"].recommendations] == [
+        assert [rec.corpusItemId for rec in sections["higher-ranked-section"].recommendations] == [
+            "bad",
             "d1",
             "d2",
             "d3",
-            "ok",
-            "spare",
-            "bad",
+            "d4",
         ]
         assert [
             rec.corpusItemId for rec in sections[TOP_STORIES_SECTION_KEY].recommendations
         ] == popular_today_ids
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == [
+            "l1",
+            "l2",
+            "l3",
+            "ok",
+            "spare",
+            "bad-lower",
+        ]
 
-    def test_promotes_later_same_section_conflict_behind_fallback(self):
-        """A later visible item conflicting within its section is moved behind a fallback."""
+    def test_daily_briefing_is_protected_and_used_for_comparisons(self):
+        """Mutable sections yield to Daily Briefing, but Daily Briefing is unchanged."""
+        daily_briefing_ids = ["db", "db-bad", "db1", "db2", "db-ok", "db-spare"]
+        lower_ids = ["bad", "l1", "l2", "l3", "ok", "spare"]
         sections = {
-            "first": self.build_section(["a", "bad", "f1", "f2", "ok", "spare"], 0, "First"),
+            DAILY_BRIEFING_SECTION_KEY: self.build_section(
+                daily_briefing_ids, 0, "Daily Briefing"
+            ),
+            "lower": self.build_section(lower_ids, 1, "Lower"),
         }
-        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+        similarity_info = self.SimilarityInfo({"db-bad": ["db"], "bad": ["db"]})
 
         reorder_top_sections_for_similarity(sections, similarity_info)
 
-        assert [rec.corpusItemId for rec in sections["first"].recommendations] == [
-            "a",
-            "f1",
-            "f2",
+        assert [
+            rec.corpusItemId for rec in sections[DAILY_BRIEFING_SECTION_KEY].recommendations
+        ] == daily_briefing_ids
+        assert [rec.corpusItemId for rec in sections["lower"].recommendations] == [
+            "l1",
+            "l2",
+            "l3",
             "ok",
             "spare",
             "bad",
         ]
 
-    def test_compares_against_all_prior_visible_top_sections(self):
-        """A third section is checked against every prior top-section visible item."""
+    def test_first_section_same_section_conflict_is_not_reordered(self):
+        """The first ranked section is not checked against itself."""
+        first_ids = ["a", "bad", "f1", "f2", "ok", "spare"]
+        sections = {
+            "first": self.build_section(first_ids, 0, "First"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["first"].recommendations] == first_ids
+
+    def test_compares_only_against_immediately_prior_visible_top_section(self):
+        """A third section is not checked against the first section."""
+        third_ids = ["bad", "t1", "t2", "t3", "ok", "spare"]
         sections = {
             "first": self.build_section(["a", "f1", "f2", "f3", "f4"], 0, "First"),
             "second": self.build_section(["s0", "s1", "s2", "s3", "s4"], 1, "Second"),
-            "third": self.build_section(["bad", "t1", "t2", "t3", "ok", "spare"], 2, "Third"),
+            "third": self.build_section(third_ids, 2, "Third"),
         }
         similarity_info = self.SimilarityInfo({"bad": ["a"]})
 
         reorder_top_sections_for_similarity(sections, similarity_info)
 
-        assert [rec.corpusItemId for rec in sections["third"].recommendations] == [
-            "t1",
-            "t2",
-            "t3",
-            "ok",
-            "spare",
-            "bad",
-        ]
+        assert [rec.corpusItemId for rec in sections["third"].recommendations] == third_ids
 
     def test_skips_fallback_that_conflicts_with_same_section_visible_item(self):
         """A fallback must be clean against visible items it would remain beside."""

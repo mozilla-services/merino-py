@@ -99,7 +99,9 @@ MAX_SECTIONS_PER_RESPONSE = 20
 SECTION_ITEM_RANKING_TOP_N = 4
 TOP_SECTION_SIMILAR_DEDUP_SECTION_LIMIT = 3
 TOP_SECTION_SIMILAR_DEDUP_EXTRA_CANDIDATES = 2
-TOP_SECTION_SIMILAR_DEDUP_PROTECTED_SECTION_IDS = frozenset({TOP_STORIES_SECTION_KEY})
+TOP_SECTION_SIMILAR_DEDUP_PROTECTED_SECTION_IDS = frozenset(
+    {DAILY_BRIEFING_SECTION_KEY, TOP_STORIES_SECTION_KEY}
+)
 
 
 def map_section_item_to_recommendation(
@@ -585,16 +587,17 @@ def reorder_top_sections_for_similarity(
 ) -> None:
     """Move visible near-duplicates in top ranked sections behind fallbacks.
 
-    This is best-effort and reorder-only. For the configured top ranked sections,
-    visible recommendations that conflict with already-accepted visible stories
-    are moved to the end only when an acceptable fallback exists in the section's
-    small hidden buffer. Later recommendations shift left to fill the vacated
-    slot, and the shifted-in fallback must be clean against all other visible
-    stories that would remain beside it.
+    This is best-effort and reorder-only. For each adjacent pair in the
+    configured top ranked sections, visible recommendations in the lower-ranked
+    section that conflict with the immediately previous section are moved to the
+    end only when an acceptable fallback exists in the section's small hidden
+    buffer. Later recommendations shift left to fill the vacated slot, and the
+    shifted-in fallback must be clean against the previous section plus all
+    other visible stories that would remain beside it.
 
-    Protected sections, like Popular Today, are never reordered. Their visible
-    stories are treated as accepted up front so other top sections yield to them
-    even when the protected section is not first by feed rank.
+    Protected sections, like Daily Briefing and Popular Today, are never
+    reordered. They can still be the previous section that the next ranked
+    section yields to.
     """
     if similar_stories_info is None or section_limit < 1 or extra_candidates < 1:
         return
@@ -602,18 +605,20 @@ def reorder_top_sections_for_similarity(
     ranked_sections = sorted(sections.items(), key=lambda item: item[1].receivedFeedRank)[
         :section_limit
     ]
-    accepted_visible = [
-        rec
-        for section_id, section in ranked_sections
-        if section_id in protected_section_ids
-        for rec in section.recommendations[: section.layout.max_tile_count]
-    ]
+    previous_visible: list[CuratedRecommendation] = []
 
     for section_id, section in ranked_sections:
         visible_count = min(section.layout.max_tile_count, len(section.recommendations))
         if visible_count == 0:
+            previous_visible = []
             continue
+
         if section_id in protected_section_ids:
+            previous_visible = section.recommendations[:visible_count]
+            continue
+
+        if not previous_visible:
+            previous_visible = section.recommendations[:visible_count]
             continue
 
         available_extra_candidates = min(
@@ -624,14 +629,13 @@ def reorder_top_sections_for_similarity(
 
         idx = 0
         while idx < visible_count:
-            already_accepted = accepted_visible + section.recommendations[:idx]
             if not _has_similar_story_conflict(
-                section.recommendations[idx], already_accepted, similar_stories_info
+                section.recommendations[idx], previous_visible, similar_stories_info
             ):
                 idx += 1
                 continue
 
-            visible_without_current = accepted_visible + [
+            visible_without_current = previous_visible + [
                 rec
                 for visible_idx, rec in enumerate(section.recommendations[:visible_count])
                 if visible_idx != idx
@@ -657,7 +661,7 @@ def reorder_top_sections_for_similarity(
             consumed_extra_candidates += shift_count
 
         _renumber_recommendations(section)
-        accepted_visible.extend(section.recommendations[:visible_count])
+        previous_visible = section.recommendations[:visible_count]
 
 
 def cycle_layouts_for_ranked_sections(sections: dict[str, Section], layout_cycle: list[Layout]):
