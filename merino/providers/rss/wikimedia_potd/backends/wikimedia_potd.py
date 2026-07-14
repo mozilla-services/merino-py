@@ -16,7 +16,7 @@ from merino.utils.gcs.models import Image
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     WIKIMEDIA_REQUEST_HEADERS,
     parse_potd,
-    build_potd_image_path,
+    build_potd_bucket_directory_path,
     is_valid_potd_image_url,
 )
 import sentry_sdk
@@ -152,7 +152,13 @@ class WikimediaPictureOfTheDayBackend:
             Public gcs bucket cdn url (str) of the uploaded image.
             Raises WikimediaPotdError if the image fails to upload.
         """
-        potd_image_path = build_potd_image_path(image=image, is_thumbnail=is_thumbnail)
+        # name the image file "thumbnail" or "hi_res" depending on the image variant
+        suffix = "thumbnail" if is_thumbnail else "hi_res"
+
+        # extract image extension since the image.content_type has the format image/jpeg
+        extension = image.content_type.split("/")[-1]
+
+        potd_image_path = f"{build_potd_bucket_directory_path()}{suffix}.{extension}"
 
         # return a public cdn url for the image after a successful upload
         public_url = self.gcs_uploader.upload_image(
@@ -171,11 +177,9 @@ class WikimediaPictureOfTheDayBackend:
 
         Raises WikimediaPotdError if the manifest fails to upload.
         """
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
         # manifest json is just the PictureOfTheDay model in json format
         manifest_json = potd.model_dump_json()
-        destination_name = f"rss/wikimedia_potd/POTD_{today}.json"
+        destination_name = f"{build_potd_bucket_directory_path()}manifest.json"
 
         self.gcs_uploader.upload_content(
             content=manifest_json,
@@ -196,8 +200,9 @@ class WikimediaPictureOfTheDayBackend:
             A PictureOfTheDay object if available, otherwise None.
         """
         try:
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            blob = self.gcs_uploader.get_file_by_name(f"rss/wikimedia_potd/POTD_{today}.json")
+            blob = self.gcs_uploader.get_file_by_name(
+                f"{build_potd_bucket_directory_path()}manifest.json"
+            )
 
             if blob:
                 potd_json = blob.download_as_text()
