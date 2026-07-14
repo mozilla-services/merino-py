@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import aiodogstatsd
@@ -109,7 +110,7 @@ class TestSpindleBackendRefresh:
         http_client = MagicMock(spec=AsyncClient)
         backend = _make_backend(http_client)
 
-        assert backend._language_for_surface(_MalformedSurface()) is None
+        assert backend._language_for_surface(cast(SurfaceId, _MalformedSurface())) is None
 
     @pytest.mark.asyncio
     async def test_non_english_surface_posts_with_derived_language(self):
