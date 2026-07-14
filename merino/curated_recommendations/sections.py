@@ -1,6 +1,7 @@
 """Module for building and ranking curated recommendation sections."""
 
 import logging
+from collections.abc import Collection
 from copy import deepcopy
 
 import random
@@ -98,6 +99,7 @@ MAX_SECTIONS_PER_RESPONSE = 20
 SECTION_ITEM_RANKING_TOP_N = 4
 TOP_SECTION_SIMILAR_DEDUP_SECTION_LIMIT = 3
 TOP_SECTION_SIMILAR_DEDUP_EXTRA_CANDIDATES = 2
+TOP_SECTION_SIMILAR_DEDUP_PROTECTED_SECTION_IDS = frozenset({TOP_STORIES_SECTION_KEY})
 
 
 def map_section_item_to_recommendation(
@@ -589,6 +591,7 @@ def reorder_top_sections_for_similarity(
     similar_stories_info: SimilarStoriesProtocol | None,
     section_limit: int = TOP_SECTION_SIMILAR_DEDUP_SECTION_LIMIT,
     extra_candidates: int = TOP_SECTION_SIMILAR_DEDUP_EXTRA_CANDIDATES,
+    protected_section_ids: Collection[str] = TOP_SECTION_SIMILAR_DEDUP_PROTECTED_SECTION_IDS,
 ) -> None:
     """Move visible near-duplicates in top ranked sections behind fallbacks.
 
@@ -597,18 +600,29 @@ def reorder_top_sections_for_similarity(
     are moved to the end only when an acceptable fallback exists in the section's
     small hidden buffer. Fallbacks must be clean against all other visible stories
     that would remain beside them.
+
+    Protected sections, like Popular Today, are never reordered. Their visible
+    stories are treated as accepted up front so other top sections yield to them
+    even when the protected section is not first by feed rank.
     """
     if similar_stories_info is None or section_limit < 1 or extra_candidates < 1:
         return
 
-    ranked_sections = sorted(sections.values(), key=lambda section: section.receivedFeedRank)[
+    ranked_sections = sorted(sections.items(), key=lambda item: item[1].receivedFeedRank)[
         :section_limit
     ]
-    accepted_visible: list[CuratedRecommendation] = []
+    accepted_visible = [
+        rec
+        for section_id, section in ranked_sections
+        if section_id in protected_section_ids
+        for rec in section.recommendations[: section.layout.max_tile_count]
+    ]
 
-    for section in ranked_sections:
+    for section_id, section in ranked_sections:
         visible_count = min(section.layout.max_tile_count, len(section.recommendations))
         if visible_count == 0:
+            continue
+        if section_id in protected_section_ids:
             continue
 
         candidate_end = min(len(section.recommendations), visible_count + extra_candidates)

@@ -45,7 +45,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     RankingData,
 )
-from merino.curated_recommendations.rankers import ThompsonSamplingRanker
+from merino.curated_recommendations.rankers import TOP_STORIES_SECTION_KEY, ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     dedupe_experiment_sections,
@@ -983,6 +983,44 @@ class TestReorderTopSectionsForSimilarity:
             "bad",
         ]
         assert [rec.receivedRank for rec in sections["lower"].recommendations] == list(range(6))
+
+    def test_popular_today_section_is_not_reordered(self):
+        """Popular Today is protected even when it has visible duplicate stories."""
+        popular_today_ids = ["a", "bad", "p1", "p2", "ok", "spare"]
+        sections = {
+            TOP_STORIES_SECTION_KEY: self.build_section(popular_today_ids, 0, "Popular Today"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["a"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [
+            rec.corpusItemId for rec in sections[TOP_STORIES_SECTION_KEY].recommendations
+        ] == popular_today_ids
+
+    def test_non_first_popular_today_is_protected_and_used_for_comparisons(self):
+        """Higher-ranked mutable sections yield to protected Popular Today stories."""
+        mutable_ids = ["bad", "d1", "d2", "d3", "ok", "spare"]
+        popular_today_ids = ["pt", "p1", "p2", "p3", "p4"]
+        sections = {
+            "daily-briefing": self.build_section(mutable_ids, 0, "Daily Briefing"),
+            TOP_STORIES_SECTION_KEY: self.build_section(popular_today_ids, 1, "Popular Today"),
+        }
+        similarity_info = self.SimilarityInfo({"bad": ["pt"]})
+
+        reorder_top_sections_for_similarity(sections, similarity_info)
+
+        assert [rec.corpusItemId for rec in sections["daily-briefing"].recommendations] == [
+            "ok",
+            "d1",
+            "d2",
+            "d3",
+            "spare",
+            "bad",
+        ]
+        assert [
+            rec.corpusItemId for rec in sections[TOP_STORIES_SECTION_KEY].recommendations
+        ] == popular_today_ids
 
     def test_promotes_later_same_section_conflict_behind_fallback(self):
         """A later visible item conflicting within its section is moved behind a fallback."""
