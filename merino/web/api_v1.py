@@ -71,8 +71,6 @@ from merino.utils.api.metrics import (
     emit_normalization_metrics,
     emit_suggestions_per_metrics,
 )
-from merino.utils.featureflags import FeatureFlags
-from merino.utils.query_processing.fleece_client import get_fleece_client
 from merino.utils.query_processing.query_patterns import (
     QueryPatternMatcher,
     build_query_pattern_matcher,
@@ -293,20 +291,6 @@ async def suggest(
             is_soft_pii = True
         case _:
             pass
-
-    # optionally run PII detection via merino-fleece, behind the `fleece-pii-detection` flag.
-    fleece_client = get_fleece_client()
-    if (
-        q
-        and fleece_client is not None
-        and FeatureFlags().is_enabled("fleece-pii-detection")
-        and await fleece_client.detect_pii_safe(q, metrics_client)
-    ):
-        request.scope[ScopeKey.PII_DETECTION] = PIIType.PERSON
-        metrics_client.increment(
-            "suggestions.query.pii_detected", tags={"type": PIIType.PERSON.name.lower()}
-        )
-        return build_suggestion_response(client_variants, search_from, [])
 
     lookups: list[Task] = []
     languages = get_accepted_languages(accept_language)
