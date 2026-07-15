@@ -158,6 +158,7 @@ class WikimediaPictureOfTheDayBackend:
         # extract image extension since the image.content_type has the format image/jpeg
         extension = image.content_type.split("/")[-1]
 
+        # path for a thumbnail image will look like: "wikimedia_potd/2026-06-07/thumbnail.jpeg
         potd_image_path = f"{build_potd_bucket_directory_path()}{suffix}.{extension}"
 
         # return a public cdn url for the image after a successful upload
@@ -179,7 +180,8 @@ class WikimediaPictureOfTheDayBackend:
         """
         # manifest json is just the PictureOfTheDay model in json format
         manifest_json = potd.model_dump_json()
-        destination_name = f"{build_potd_bucket_directory_path()}manifest.json"
+        # path for the potd will look like: "wikimedia_potd/2026-06-07/potd.json
+        destination_name = f"{build_potd_bucket_directory_path()}potd.json"
 
         self.gcs_uploader.upload_content(
             content=manifest_json,
@@ -201,7 +203,7 @@ class WikimediaPictureOfTheDayBackend:
         """
         try:
             blob = self.gcs_uploader.get_file_by_name(
-                f"{build_potd_bucket_directory_path()}manifest.json"
+                f"{build_potd_bucket_directory_path()}potd.json"
             )
 
             if blob:

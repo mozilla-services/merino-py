@@ -55,10 +55,7 @@ def build_potd_bucket_directory_path() -> str:
     """Build the dated gcs bucket directory path where today's potd assets are stored."""
     # YYYY-MM-DD format
     date_time = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-    # the directory in the gcs bucket for today's POTD assets looks like:
-    # "rss/wikimedia_potd/2026-06-07/"
-    return f"rss/wikimedia_potd/{date_time}/"
+    return f"wikimedia_potd/{date_time}/"
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:

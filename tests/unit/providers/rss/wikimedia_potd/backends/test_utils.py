@@ -145,4 +145,4 @@ def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
 @freezegun.freeze_time("2026-06-07")
 def test_build_potd_bucket_directory_path() -> None:
     """Test build_potd_bucket_directory_path returns the dated gcs bucket directory path."""
-    assert build_potd_bucket_directory_path() == "rss/wikimedia_potd/2026-06-07/"
+    assert build_potd_bucket_directory_path() == "wikimedia_potd/2026-06-07/"
