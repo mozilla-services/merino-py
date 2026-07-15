@@ -108,7 +108,7 @@ dry_run = false
 
 [production.providers.adm.fuzzy]
 # MERINO_PROVIDERS__ADM__FUZZY__ENABLED
-enabled = false
+enabled = true
 
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
@@ -141,6 +141,8 @@ cache = "redis"
 enabled = true
 data_source = "remote"
 gcs_bucket = "merino-ml-data-prod"
+# appended to default (sports, polygon); only enabled for experiment
+providers = ["adm"]
 
 [production.query_pattern_matching]
 # MERINO_QUERY_PATTERN_MATCHING__ENABLED
