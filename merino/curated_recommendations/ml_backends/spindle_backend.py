@@ -32,6 +32,14 @@ LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
 METRIC_NAMESPACE = "recommendation.spindle"
 
 
+def _content_ids(items: list[CorpusItem]) -> tuple[str, ...]:
+    """Return corpus ids in received order."""
+    # The Sections API is expected to return unchanged content in a stable
+    # order, so avoid sorting here. A pure reorder may cause an extra Spindle
+    # refresh, but it will not reuse stale similarity info.
+    return tuple(item.corpusItemId for item in items)
+
+
 class SimilarStoriesTextItem(BaseModel):
     """Text payload entry sent to /find_similar_stories."""
 
@@ -127,6 +135,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
+        self._text_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
         self._api_key = api_key
 
     def _language_for_surface(self, surface: SurfaceId) -> str | None:
@@ -163,6 +172,11 @@ class SpindleBackend(SpindleBackendProtocol):
         language = self._language_for_surface(surface)
         if language is None:
             return
+
+        content_ids = _content_ids(items)
+        if self._text_content_ids.get(surface) == content_ids:
+            return
+
         request = FindSimilarStoriesRequest(
             items=[
                 SimilarStoriesTextItem(
@@ -182,6 +196,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         if response is not None:
             self._text_info[surface] = SimilarStoriesInfo(response.similar)
+            self._text_content_ids[surface] = content_ids
 
     async def _refresh_image(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
