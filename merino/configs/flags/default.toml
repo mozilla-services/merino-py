@@ -14,12 +14,3 @@
 #   the flag is 'off' (meaning that a check for the flag will return False 100%
 #   of the time) and a value of 1 indicates that the flag is 'on' for all.
 # enabled=0.5
-
-# Prototype: route a fraction of suggest traffic through merino-fleece for
-# spaCy-backed PII detection. When enabled (and `fleece.url_base` is configured),
-# a flagged query has its suggestions suppressed and is excluded from logging.
-# `enabled` is the fraction of traffic to apply it to. Start at 0.0 (off) and
-# raise this value in later deploys to gradually roll the prototype out.
-[default.flags.fleece-pii-detection]
-scheme = "random"
-enabled = 0.0

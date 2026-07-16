@@ -362,67 +362,6 @@ def test_suggest_request_pii_does_not_log_data(
     assert len(records) == 0
 
 
-def _patch_fleece(mocker: MockerFixture, *, enabled: bool, pii: bool) -> Any:
-    """Patch the fleece client and feature flag, returning the fleece client mock."""
-    fleece_mock = mocker.Mock()
-    fleece_mock.detect_pii_safe = mocker.AsyncMock(return_value=pii)
-    mocker.patch("merino.web.api_v1.get_fleece_client", return_value=fleece_mock)
-    mocker.patch("merino.web.api_v1.FeatureFlags.is_enabled", return_value=enabled)
-    return fleece_mock
-
-
-def test_suggest_fleece_suppresses_pii_query(
-    mocker: MockerFixture,
-    caplog: LogCaptureFixture,
-    filter_caplog: FilterCaplogFixture,
-    client: TestClient,
-) -> None:
-    """When the flag is on and fleece flags PII, suggestions are empty and not logged."""
-    caplog.set_level(logging.INFO)
-    _patch_fleece(mocker, enabled=True, pii=True)
-
-    response = client.get("/api/v1/suggest?q=sponsored")
-
-    assert response.status_code == 200
-    assert response.json()["suggestions"] == []
-    assert len(filter_caplog(caplog.records, "web.suggest.request")) == 0
-
-
-def test_suggest_fleece_allows_clean_query(mocker: MockerFixture, client: TestClient) -> None:
-    """When fleece reports no PII, suggestions are returned normally."""
-    _patch_fleece(mocker, enabled=True, pii=False)
-
-    response = client.get("/api/v1/suggest?q=sponsored")
-
-    assert response.status_code == 200
-    assert len(response.json()["suggestions"]) == 1
-
-
-def test_suggest_fleece_not_called_when_flag_off(
-    mocker: MockerFixture, client: TestClient
-) -> None:
-    """When the flag is off, fleece is not consulted and suggestions are returned."""
-    fleece_mock = _patch_fleece(mocker, enabled=False, pii=True)
-
-    response = client.get("/api/v1/suggest?q=sponsored")
-
-    assert response.status_code == 200
-    assert len(response.json()["suggestions"]) == 1
-    fleece_mock.detect_pii_safe.assert_not_called()
-
-
-def test_suggest_fleece_not_called_for_empty_query(
-    mocker: MockerFixture, client: TestClient
-) -> None:
-    """Test that an empty query is not sent to fleece"""
-    fleece_mock = _patch_fleece(mocker, enabled=True, pii=True)
-
-    response = client.get("/api/v1/suggest?q=")
-
-    assert response.status_code == 200
-    fleece_mock.detect_pii_safe.assert_not_called()
-
-
 @pytest.fixture()
 def sports_pattern_matcher() -> Any:
     """Build a matcher for use in query pattern integration tests."""
@@ -447,23 +386,6 @@ def test_query_pattern_metrics_emitted_before_email_pii_drop(
 
     # raw query should never appear in any metric call.
     assert "nba@example.com" not in str(add.call_args_list)
-
-
-def test_query_pattern_metrics_emitted_before_fleece_pii_drop(
-    mocker: MockerFixture, client: TestClient, sports_pattern_matcher: Any
-) -> None:
-    """Test that pattern match metrics fire even when fleece drops the query as PII."""
-    mocker.patch("merino.web.api_v1._QUERY_PATTERN_MATCHER", sports_pattern_matcher)
-    _patch_fleece(mocker, enabled=True, pii=True)
-    add = mocker.patch("merino.utils.query_processing.query_patterns._match_counter.add")
-
-    response = client.get("/api/v1/suggest?q=nba")
-
-    assert response.json()["suggestions"] == []
-    add.assert_called_once_with(1, {"pattern_id": "sports_v1", "source": "unknown"})
-
-    # raw query should not appear in any metric call.
-    assert "nba" not in str(add.call_args_list)
 
 
 def test_query_pattern_metrics_not_emitted_when_matcher_none(
