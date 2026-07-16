@@ -898,17 +898,21 @@ async def get_sections(
         and ml_backend.is_valid(surface_id)
     )
     # Use InterestRanker when the per-surface LinTS bundle is loaded and the request has interests.
-    use_interest_ranker = lints_interest_backend.is_valid(surface_id) and personal_interests is not None
+    use_interest_ranker = (
+        lints_interest_backend.is_valid(surface_id)
+        and personal_interests is not None
+        and bool(personal_interests.scores)
+    )
 
     # Interest ranker is experimental so gets priority over contexual ranker
     if use_interest_ranker:
-        has_interest_non_zero_scores = False
+        no_interests = False
         if personal_interests and personal_interests.scores:
             for key, score in personal_interests.scores.items():
                 if score > 0 and key != TIME_ZONE_OFFSET_INFERRED_KEY:
-                    has_interest_non_zero_scores = True
-        if not has_interest_non_zero_scores and personal_interests:
-            personal_interests.scores.update(DEFAULT_TOPIC_INTERESTS)
+                    no_interests = True
+            if not no_interests:
+                personal_interests.scores.update(DEFAULT_TOPIC_INTERESTS)
         ranker = InterestRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
