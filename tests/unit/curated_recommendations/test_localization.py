@@ -17,20 +17,17 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
         (SurfaceId.NEW_TAB_ES_XA, "Tendencias"),
         (SurfaceId.NEW_TAB_FR_FR, "Tendances du jour"),
         (SurfaceId.NEW_TAB_PL_PL, "Przegląd dnia"),
-        (SurfaceId.NEW_TAB_ES_ES, "Tendencias"),
-        (SurfaceId.NEW_TAB_IT_IT, "I più letti"),
     ],
-    ids=["en_us", "en_ca", "en_ie", "en_xe", "de_de", "es_xa", "fr_fr", "pl_pl", "es_es", "it_it"],
+    ids=["en_us", "en_ca", "en_ie", "en_xe", "de_de", "es_xa", "fr_fr", "pl_pl"],
 )
 def test_get_translation_top_stories(surface_id: SurfaceId, expected_title: str):
     """Test that each supported surface returns its localized top-stories title."""
-    result = get_translation(surface_id, "top-stories", "Default")
-    assert result == expected_title
+    assert get_translation(surface_id, "top-stories", "Default") == expected_title
 
 
 def test_get_translation_non_existing_locale(caplog):
     """Test logs error and falls back to default when locale translations do not exist."""
-    result = get_translation(SurfaceId.NEW_TAB_EN_INTL, "business", "Default")
+    result = get_translation(SurfaceId.NEW_TAB_IT_IT, "business", "Default")
     assert result == "Default"
 
     errors = [r for r in caplog.records if r.levelname == "ERROR"]

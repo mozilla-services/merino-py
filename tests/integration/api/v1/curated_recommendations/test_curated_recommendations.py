@@ -443,12 +443,12 @@ def fetch_en_us(client: TestClient) -> Response:
     )
 
 
-def fetch_pl_pl(client: TestClient) -> Response:
-    """Make a curated recommendations request with pl-PL locale (uses scheduled_surface backend)"""
+def fetch_es_es(client: TestClient) -> Response:
+    """Make a curated recommendations request with es-ES locale (uses scheduled_surface backend)"""
     return cast(
         Response,
         client.post(
-            "/api/v1/curated-recommendations", json={"locale": "pl-PL", "topics": [Topic.FOOD]}
+            "/api/v1/curated-recommendations", json={"locale": "es-ES", "topics": [Topic.FOOD]}
         ),
     )
 
@@ -522,9 +522,9 @@ class TestLegacyEndpoints:
     """
 
     # Locales that use the sections backend (rolled-out section surfaces)
-    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA", "en-GB", "de-DE", "fr-FR", "es-ES", "it-IT"]
+    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA", "en-GB", "de-DE", "fr-FR"]
     # Locales that use the scheduler backend (non-rolled-out)
-    SCHEDULER_BACKEND_LOCALES = ["pl-PL"]
+    SCHEDULER_BACKEND_LOCALES = ["es-ES", "it-IT"]
 
     @pytest.mark.parametrize(
         "locale",
@@ -1104,12 +1104,12 @@ class TestCuratedRecommendationsRequestParameters:
     ):
         """Test non-sections requests boost preferred topics to top positions.
 
-        Uses pl-PL locale (scheduler backend path) which supports topic boosting.
+        Uses es-ES locale (scheduler backend path) which supports topic boosting.
         Note: en-US non-sections requests intentionally do NOT apply topic boosting.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": "pl-PL", "topics": preferred_topics},
+            json={"locale": "es-ES", "topics": preferred_topics},
         )
         data = response.json()
         corpus_items = data["data"]
@@ -1174,7 +1174,7 @@ class TestCuratedRecommendationsRequestParameters:
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
-        Uses pl-PL locale to test scheduled_surface backend behavior.
+        Uses es-ES locale to test scheduled_surface backend behavior.
         """
         caplog.set_level(logging.WARN)
         scheduled_surface_http_client.post.return_value = Response(
@@ -1183,7 +1183,7 @@ class TestCuratedRecommendationsRequestParameters:
             request=fixture_request_data,
         )
         response = client.post(
-            "/api/v1/curated-recommendations", json={"locale": "pl-PL", "topics": topics}
+            "/api/v1/curated-recommendations", json={"locale": "es-ES", "topics": topics}
         )
         data = response.json()
         corpus_items = data["data"]
@@ -1208,7 +1208,7 @@ class TestCuratedRecommendationsRequestParameters:
 
 class TestCorpusApiCaching:
     """Tests covering the caching behavior of the Corpus backend.
-    Uses pl-PL locale to test scheduled_surface backend caching (en-US uses sections backend).
+    Uses es-ES locale to test scheduled_surface backend caching (en-US uses sections backend).
     """
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
@@ -1217,7 +1217,7 @@ class TestCorpusApiCaching:
     ):
         """Test that only a single request is made to the curated-corpus-api."""
         # Gather multiple fetch calls
-        results = [fetch_pl_pl(client) for _ in range(3)]
+        results = [fetch_es_es(client) for _ in range(3)]
         # Assert that recommendations were returned in each response.
         assert all(len(result.json()["data"]) > 0 for result in results)
 
@@ -1281,7 +1281,7 @@ class TestCorpusApiCaching:
         # Hit the endpoint until a 200 response is received or until timeout.
         while datetime.now() < start_time + timedelta(seconds=1):
             try:
-                result = fetch_pl_pl(client)
+                result = fetch_es_es(client)
                 if result.status_code == 200:
                     break
             except HTTPStatusError:
@@ -1305,11 +1305,11 @@ class TestCorpusApiCaching:
         client: TestClient,
     ):
         """Test that the cache expires, and subsequent requests return new data.
-        Uses pl-PL locale to test scheduled_surface backend caching.
+        Uses es-ES locale to test scheduled_surface backend caching.
         """
         with freezegun.freeze_time(tick=True) as frozen_datetime:
             # First fetch to populate cache
-            initial_response = fetch_pl_pl(client)
+            initial_response = fetch_es_es(client)
             initial_data = initial_response.json()
 
             for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
@@ -1325,11 +1325,11 @@ class TestCorpusApiCaching:
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
             # When the cache is expired, the first fetch may return stale data.
-            fetch_pl_pl(client)
+            fetch_es_es(client)
             await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
 
             # Next fetch should get the new data
-            new_response = fetch_pl_pl(client)
+            new_response = fetch_es_es(client)
             assert scheduled_surface_http_client.post.call_count == 2
             new_data = new_response.json()
             assert new_data["recommendedAt"] > initial_data["recommendedAt"]
@@ -1340,7 +1340,7 @@ class TestCorpusApiCaching:
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         # First fetch to populate cache with good data
-        initial_response = fetch_pl_pl(client)
+        initial_response = fetch_es_es(client)
         initial_data = initial_response.json()
         assert initial_response.status_code == 200
         assert scheduled_surface_http_client.post.call_count == 1
@@ -1352,7 +1352,7 @@ class TestCorpusApiCaching:
         )
 
         # Try to fetch data when cache expired
-        new_response = fetch_pl_pl(client)
+        new_response = fetch_es_es(client)
         new_data = new_response.json()
 
         assert new_response.status_code == 200
@@ -1362,14 +1362,14 @@ class TestCorpusApiCaching:
 
 class TestCuratedRecommendationsMetrics:
     """Tests that the right metrics are recorded for curated-recommendations requests.
-    Uses pl-PL locale to test scheduled_surface backend metrics.
+    Uses es-ES locale to test scheduled_surface backend metrics.
     """
 
     def test_metrics_cache_miss(self, mocker: MockerFixture, client: TestClient) -> None:
         """Test that metrics are recorded when corpus api items are not yet cached."""
         report = mocker.patch.object(aiodogstatsd.Client, "_report")
 
-        fetch_pl_pl(client)
+        fetch_es_es(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -1405,7 +1405,7 @@ class TestCuratedRecommendationsMetrics:
 
         scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
-        fetch_pl_pl(client)
+        fetch_es_es(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
@@ -2903,7 +2903,7 @@ def test_curated_recommendations_enriched_with_icons(
     client: TestClient,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url.
-    Uses pl-PL locale to test scheduled_surface backend icon enrichment.
+    Uses es-ES locale to test scheduled_surface backend icon enrichment.
     """
     # Set up the manifest data first
     manifest_provider.manifest_data.domains = [
@@ -2927,7 +2927,7 @@ def test_curated_recommendations_enriched_with_icons(
                         "id": "scheduledSurfaceItemId-ABC",
                         "corpusItem": {
                             "id": "corpusItemId-XYZ",
-                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-pl-pl",
+                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-es-es",
                             "title": "Some MS Article",
                             "excerpt": "All about Microsoft something",
                             "topic": "tech",
@@ -2948,7 +2948,7 @@ def test_curated_recommendations_enriched_with_icons(
 
     response = client.post(
         "/api/v1/curated-recommendations",
-        json={"locale": "pl-PL"},
+        json={"locale": "es-ES"},
     )
     assert response.status_code == 200
 
@@ -2957,7 +2957,7 @@ def test_curated_recommendations_enriched_with_icons(
     assert len(items) == 1
 
     item = items[0]
-    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-pl-pl"
+    assert item["url"] == "https://www.microsoft.com/some-article?utm_source=firefox-newtab-es-es"
 
     assert "iconUrl" in item
     assert (
