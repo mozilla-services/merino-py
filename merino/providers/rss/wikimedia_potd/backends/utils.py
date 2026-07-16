@@ -7,7 +7,6 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
     WikimediaPotdError,
 )
-from merino.utils.gcs.models import Image
 
 # This is needed to prevent Wikimedia from blocking our requests as bot requests.
 WIKIMEDIA_REQUEST_HEADERS = {
@@ -34,7 +33,7 @@ def parse_potd(data: dict) -> PictureOfTheDay:
     today = datetime.now(timezone.utc)
     description = image.get("description", {})
     # this field gets mapped to "author"
-    artist = image.get("artist", {})
+    artist = image.get("artist", {}).get("text", "")
     lic = image.get("license", {})
     file_page = image.get("file_page")
 
@@ -44,29 +43,19 @@ def parse_potd(data: dict) -> PictureOfTheDay:
         thumbnail_image_url=HttpUrl(thumbnail_url),
         high_res_image_url=HttpUrl(high_res_url),
         description=description.get("text", ""),
-        author=artist.get("text", ""),
+        # truncate author name if more than 50 chars
+        author=artist[0:50] + "..." if len(artist) > 50 else artist,
         file_page=HttpUrl(file_page) if file_page else None,
         license_label=lic.get("type", ""),
         license_link=HttpUrl(lic["url"]) if lic.get("url") else None,
     )
 
 
-def build_potd_image_path(image: Image, is_thumbnail: bool) -> str:
-    """Build the name string for a potd and prepend the bucket directory path to it."""
+def build_potd_bucket_directory_path() -> str:
+    """Build the dated gcs bucket directory path where today's potd assets are stored."""
     # YYYY-MM-DD format
     date_time = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-    # Under the bucket merino-images-prod, potd images are stored in the following directory.
-    dir_path_in_bucket = "rss/wikimedia_potd"
-    # append "_thumbnail" to the object name if it is a thumbnail image
-    suffix = "thumbnail" if is_thumbnail else "hi_res"
-
-    # extract image extension since the image.content_type has the format image/jpeg
-    extension = image.content_type.split("/")[-1]
-
-    # the path in the gcs bucket directory for the image would look like:
-    # "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
-    return f"{dir_path_in_bucket}/POTD_{date_time}_{suffix}.{extension}"
+    return f"wikimedia_potd/{date_time}/"
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:

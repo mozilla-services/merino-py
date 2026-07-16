@@ -15,9 +15,8 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     is_valid_potd_image_url,
     parse_potd,
-    build_potd_image_path,
+    build_potd_bucket_directory_path,
 )
-from merino.utils.gcs.models import Image
 
 THUMBNAIL_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Test.jpg/320px-Test.jpg"
 HIGH_RES_URL = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Test.jpg"
@@ -32,7 +31,10 @@ def _make_featured(**image_overrides: object) -> dict:
         "thumbnail": {"source": THUMBNAIL_URL},
         "image": {"source": HIGH_RES_URL},
         "description": {"text": "Test description.", "html": "<p>Test description.</p>"},
-        "artist": {"text": "Test Artist", "html": "<bdi>Test Artist</bdi>"},
+        "artist": {
+            "text": "Test Artist Really long name which is more than fifty characters",
+            "html": "<bdi>Test Artist</bdi>",
+        },
         "license": {"type": "CC BY-SA 4.0", "url": LICENSE_URL},
         "file_page": FILE_PAGE_URL,
     }
@@ -57,6 +59,10 @@ def test_parse_potd_returns_picture_of_the_day(featured: dict) -> None:
     assert result.description == "Test description."
     assert str(result.thumbnail_image_url) == THUMBNAIL_URL
     assert str(result.high_res_image_url) == HIGH_RES_URL
+    assert result.author == result.author[0:50] + "..."
+    assert str(result.file_page) == FILE_PAGE_URL
+    assert result.license_label == "CC BY-SA 4.0"
+    assert str(result.license_link) == LICENSE_URL
 
 
 @freezegun.freeze_time("2026-04-13")
@@ -69,17 +75,6 @@ def test_parse_potd_returns_empty_description_when_no_description(featured: dict
     assert result is not None
     assert result.description == ""
     assert isinstance(result.thumbnail_image_url, HttpUrl)
-
-
-@freezegun.freeze_time("2026-04-13")
-def test_parse_potd_maps_metadata_fields(featured: dict) -> None:
-    """Maps the Featured API metadata: artist, attribution, and license."""
-    result = parse_potd(featured)
-
-    assert result.author == "Test Artist"
-    assert str(result.file_page) == FILE_PAGE_URL
-    assert result.license_label == "CC BY-SA 4.0"
-    assert str(result.license_link) == LICENSE_URL
 
 
 @freezegun.freeze_time("2026-04-13")
@@ -148,15 +143,6 @@ def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
 
 
 @freezegun.freeze_time("2026-06-07")
-def test_build_potd_path() -> None:
-    """Test build_potd_path returns correct path for thumbnail and hi-res urls."""
-    image = Image(content=b"255", content_type="Image/jpeg")
-
-    expected_thumbnail_path = "rss/wikimedia_potd/POTD_2026-06-07_thumbnail.jpeg"
-    expected_hires_path = "rss/wikimedia_potd/POTD_2026-06-07_hi_res.jpeg"
-
-    actual_thumbnail_path = build_potd_image_path(image=image, is_thumbnail=True)
-    actual_hires_path = build_potd_image_path(image=image, is_thumbnail=False)
-
-    assert actual_thumbnail_path == expected_thumbnail_path
-    assert actual_hires_path == expected_hires_path
+def test_build_potd_bucket_directory_path() -> None:
+    """Test build_potd_bucket_directory_path returns the dated gcs bucket directory path."""
+    assert build_potd_bucket_directory_path() == "wikimedia_potd/2026-06-07/"

@@ -671,6 +671,7 @@ async def get_hourly_forecasts(
 )
 async def get_picture_of_the_day(
     request: Request,
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
 ) -> Response:  # pragma: no cover
     """Get the picture of the day."""
@@ -680,7 +681,6 @@ async def get_picture_of_the_day(
     except Exception as ex:
         logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
 
-    # TTL will be dynamically calculated in follow up work.
     return JSONResponse(
         content=jsonable_encoder(potd),
     )

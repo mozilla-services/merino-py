@@ -320,7 +320,7 @@ class TestGcsUploadVerification:
         """Raises when the image is absent from the bucket after a (swallowed) failed upload."""
         # upload_image still returns a public url even though the write failed and was swallowed.
         backend.gcs_uploader.upload_image.return_value = (  # type: ignore[attr-defined]
-            "https://cdn/rss/wikimedia_potd/image.png"
+            "https://cdn/wikimedia_potd/image.png"
         )
         # the object is not actually present in the bucket.
         backend.gcs_uploader.get_file_by_name.return_value = None  # type: ignore[attr-defined]
@@ -335,7 +335,7 @@ class TestGcsUploadVerification:
     ) -> None:
         """Forwards the configured cache_control setting to gcs_uploader.upload_image."""
         backend.gcs_uploader.upload_image.return_value = (  # type: ignore[attr-defined]
-            "https://cdn/rss/wikimedia_potd/image.png"
+            "https://cdn/wikimedia_potd/image.png"
         )
         # the object is present in the bucket so the upload does not raise.
         backend.gcs_uploader.get_file_by_name.return_value = MagicMock()  # type: ignore[attr-defined]
