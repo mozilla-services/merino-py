@@ -96,6 +96,9 @@ MAX_SECTIONS_PER_RESPONSE = 20
 
 SECTION_ITEM_RANKING_TOP_N = 4
 
+# Users with no topic interests will be assigned this default topic interest.
+DEFAULT_TOPIC_INTERESTS: dict[str, float] = {"arts": 1.1, "government": 1.1}
+
 
 def map_section_item_to_recommendation(
     item: CorpusItem,
@@ -895,17 +898,17 @@ async def get_sections(
         and ml_backend.is_valid(surface_id)
     )
     # Use InterestRanker when the per-surface LinTS bundle is loaded and the request has interests.
-    has_interest_non_zero_scores = False
-    if personal_interests is not None and personal_interests.scores:
-        for key, score in personal_interests.scores.items():
-            if score > 0 and key != TIME_ZONE_OFFSET_INFERRED_KEY:
-                has_interest_non_zero_scores = True
-    use_interest_ranker = (
-        lints_interest_backend.is_valid(surface_id) and has_interest_non_zero_scores
-    )
+    use_interest_ranker = lints_interest_backend.is_valid(surface_id) and personal_interests is not None
 
     # Interest ranker is experimental so gets priority over contexual ranker
     if use_interest_ranker:
+        has_interest_non_zero_scores = False
+        if personal_interests and personal_interests.scores:
+            for key, score in personal_interests.scores.items():
+                if score > 0 and key != TIME_ZONE_OFFSET_INFERRED_KEY:
+                    has_interest_non_zero_scores = True
+        if not has_interest_non_zero_scores and personal_interests:
+            personal_interests.scores.update(DEFAULT_TOPIC_INTERESTS)
         ranker = InterestRanker(
             engagement_backend=engagement_backend,
             prior_backend=prior_backend,
