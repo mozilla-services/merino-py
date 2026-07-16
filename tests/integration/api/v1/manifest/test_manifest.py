@@ -1,9 +1,12 @@
 """Integration tests for the /manifest endpoint using testcontainers"""
 
 import asyncio
+import logging
+
 import orjson
 import pytest
 
+from merino.configs import settings
 from merino.main import app
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.manifest.provider import Provider
@@ -115,3 +118,55 @@ async def test_get_manifest_returns_404_when_not_loaded(client, cleanup):
     assert response.json() == {"detail": "Manifest not found"}
     assert "Cache-Control" not in response.headers
     assert "ETag" not in response.headers
+
+
+async def _prime_empty_manifest(cleanup) -> Provider:
+    """Initialize the provider with nothing in GCS so the manifest stays empty."""
+    await init_provider()
+    app.include_router(router, prefix="/api/v1")
+
+    provider = get_provider()
+    await provider.data_fetched_event.wait()
+    cleanup(provider)
+    return provider
+
+
+@pytest.mark.asyncio
+async def test_missing_manifest_is_silent_when_gcs_disabled(client, cleanup, caplog):
+    """When GCS is disabled an empty manifest is the configured state, so the 404 must not
+    emit any log record (and therefore no Sentry issue).
+
+    The testing env is non-production, which is the branch this exercises.
+    """
+    await _prime_empty_manifest(cleanup)
+
+    with caplog.at_level(logging.INFO, logger="merino.web.api_v1"):
+        response = client.get("/api/v1/manifest")
+
+    assert response.status_code == 404
+    # The handler still logs an INFO "Attempting to get manifest"; what matters is that
+    # nothing at WARNING or above is emitted, since that is what reaches Sentry.
+    noisy_records = [
+        r for r in caplog.records if r.name == "merino.web.api_v1" and r.levelno >= logging.WARNING
+    ]
+    assert noisy_records == []
+
+
+@pytest.mark.asyncio
+async def test_missing_manifest_logs_error_in_production(client, cleanup, monkeypatch, caplog):
+    """In production a missing manifest is a genuine failure, so the 404 must emit an error
+    log for Sentry to surface as an issue.
+    """
+    await _prime_empty_manifest(cleanup)
+    # current_env is a computed Dynaconf property; FORCE_ENV_FOR_DYNACONF is the supported
+    # override knob and monkeypatch restores it after the test.
+    monkeypatch.setattr(settings, "FORCE_ENV_FOR_DYNACONF", "production")
+
+    with caplog.at_level(logging.ERROR, logger="merino.web.api_v1"):
+        response = client.get("/api/v1/manifest")
+
+    assert response.status_code == 404
+    error_records = [
+        r for r in caplog.records if r.name == "merino.web.api_v1" and r.levelno >= logging.ERROR
+    ]
+    assert [r.message for r in error_records] == ["Manifest file not found"]

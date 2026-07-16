@@ -581,7 +581,12 @@ async def get_manifest(
             )
 
         metrics_client.increment("manifest.request.error")
-        logger.error("Manifest file not found")
+        # Sentry's logging integration turns logger.error into an issue, so only log an
+        # error when GCS is enabled and a manifest is therefore expected. When GCS is
+        # disabled (stage/dev) an empty manifest is the configured state, not a failure,
+        # so stay silent and let the 404 speak for itself.
+        if settings.current_env.lower() == "production":
+            logger.error("Manifest file not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Manifest not found",
