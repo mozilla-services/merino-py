@@ -147,17 +147,21 @@ providers = ["adm"]
 [production.query_pattern_matching]
 # MERINO_QUERY_PATTERN_MATCHING__ENABLED
 # Master switch. When false the matcher is never built and the hot path is a no-op.
-enabled = false
+enabled = true
 
 # MERINO_QUERY_PATTERN_MATCHING__SAMPLE_RATE
 # Fraction of suggest requests to evaluate, 0.0–1.0. 0.0 disables evaluation.
-sample_rate = 0.0
+sample_rate = 0.1
 
 # MERINO_QUERY_PATTERN_MATCHING__PATTERNS
 # List of { id = "...", regex = "..." }. `id` is a low-cardinality metric label
 # (^[a-z][a-z0-9_]{0,63}$); `regex` is matched case-insensitively. Invalid
 # entries are skipped at build time rather than failing startup.
-patterns = []
+# NOTE: temporary measurement patterns for flight numbers and stock tickers.
+patterns = [
+    { id = "flight_numbers_v1", regex = '(?:\b[A-Za-z]{1,3}\s*\d{1,5}\b)|(?:\b\d\s*[A-Za-z]\s*\d{1,4}\b)' },
+    { id = "stocks_v1", regex = '\b(aapl|msft|amzn|nvda|googl|goog|meta|tsla|nflx|amd)\b' },
+]
 
 [production.ml_recommendations.gcs]
 # MERINO__ML_RECOMMENDATIONS__GCS__GCP_PROJECT
