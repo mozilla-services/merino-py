@@ -15,14 +15,12 @@ from merino.curated_recommendations.protocol import (
 # the scheduled-surface backend.
 ROLLED_OUT_SECTION_SURFACES: frozenset[SurfaceId] = frozenset(
     {
-        SurfaceId.NEW_TAB_DE_DE,
-        SurfaceId.NEW_TAB_EN_CA,
-        SurfaceId.NEW_TAB_EN_GB,
-        SurfaceId.NEW_TAB_EN_IE,
         SurfaceId.NEW_TAB_EN_US,
-        SurfaceId.NEW_TAB_ES_ES,
+        SurfaceId.NEW_TAB_EN_GB,
+        SurfaceId.NEW_TAB_EN_CA,
+        SurfaceId.NEW_TAB_EN_IE,
+        SurfaceId.NEW_TAB_DE_DE,
         SurfaceId.NEW_TAB_FR_FR,
-        SurfaceId.NEW_TAB_IT_IT,
     }
 )
 
