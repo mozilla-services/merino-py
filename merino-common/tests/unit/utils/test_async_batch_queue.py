@@ -150,11 +150,12 @@ async def test_put_after_shutdown_is_rejected() -> None:
 
 
 @pytest.mark.asyncio
-async def test_shutdown_deadline_drops_and_logs_unflushable_items(
+async def test_shutdown_deadline_drops_and_logs_and_metrics_unflushable_items(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """A hung callback must not hold shutdown past the deadline: the deadline
-    bounds the whole graceful shutdown, drops what it can't flush, and logs it.
+    bounds the whole graceful shutdown, drops what it can't flush, logs it,
+    and emits dropped metric.
     """
     started = asyncio.Event()
 
@@ -162,12 +163,14 @@ async def test_shutdown_deadline_drops_and_logs_unflushable_items(
         started.set()
         await asyncio.sleep(3600)  # hang "forever"
 
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
     batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
         on_batch=on_batch,
         max_batch_size=1,
         collection_delay_s=LONG_COLLECTION_DELAY_S,
         shutdown_deadline_s=0.1,
-        meter_provider=None,
+        meter_provider=provider,
     )
     await batcher.start()
     for i in range(5):
@@ -183,6 +186,8 @@ async def test_shutdown_deadline_drops_and_logs_unflushable_items(
     assert any("Shutdown deadline exceeded" in r.message for r in caplog.records), (
         "expected a warning logging the dropped items"
     )
+    dropped = _number_points(reader, "async_batch_queue.dropped.count")
+    assert sum(point.value for point in dropped) == 5
 
 
 @pytest.mark.asyncio
@@ -437,11 +442,51 @@ async def test_error_callback_invoked_on_failure_batch_callback_on_success() -> 
 
 
 @pytest.mark.asyncio
+async def test_error_callback_raise_does_not_block_batch() -> None:
+    """on_batch is called for every ready batch; when it raises, on_error is
+    called with that batch and the exception.
+    """
+    calls: list[list[int]] = []
+
+    async def on_batch(batch: list[int]) -> None:
+        calls.append(list(batch))
+        if 67 in batch:
+            raise ValueError("🫲 🫴")
+
+    async def on_error(batch: list[int], exc: Exception) -> None:
+        raise ValueError("🕴️")
+
+    batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
+        on_batch=on_batch,
+        on_error=on_error,
+        max_batch_size=1,  # one item per batch
+        collection_delay_s=0.02,
+        meter_provider=None,
+    )
+    await batcher.start()
+    batcher.put(1)  # succeeds
+    batcher.put(67)  # raises -> on_error
+    batcher.put(2)  # succeeds
+
+    # Repeatedly check for a short time
+    async def all_seen() -> None:
+        while len(calls) < 3:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(all_seen(), timeout=2.0)
+    await batcher.stop(force=True)
+
+    # batch callback invoked after error callback raised,
+    # and error callback failure batch not retried
+    assert calls == [[1], [67], [2]]
+
+
+@pytest.mark.asyncio
 async def test_put_raises_queue_full_when_at_capacity() -> None:
     """put() past max_queue_size raises QueueFullException."""
     batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
         on_batch=on_batch_noop,
-        max_batch_size=10,
+        max_batch_size=3,
         collection_delay_s=LONG_COLLECTION_DELAY_S,
         max_queue_size=3,
         meter_provider=None,
@@ -485,6 +530,21 @@ def _number_points(reader: InMemoryMetricReader, name: str) -> list[NumberDataPo
                 if metric.name == name and isinstance(metric.data, (Sum, Gauge)):
                     points.extend(metric.data.data_points)
     return points
+
+
+def _find_point(
+    reader: InMemoryMetricReader, name: str, **match: object
+) -> NumberDataPoint | None:
+    """Return the single data point for `name` whose attributes match all of `match`.
+
+    Data point order is not guaranteed, so tests select by attributes rather than
+    index.
+    """
+    for point in _number_points(reader, name):
+        attributes = point.attributes or {}
+        if all(attributes.get(key) == value for key, value in match.items()):
+            return point
+    return None
 
 
 @pytest.mark.asyncio
@@ -571,7 +631,7 @@ async def test_rejected_metric_counts_queue_full_rejections() -> None:
     provider = MeterProvider(metric_readers=[reader])
     batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
         on_batch=on_batch_noop,
-        max_batch_size=10,
+        max_batch_size=2,
         collection_delay_s=LONG_COLLECTION_DELAY_S,
         max_queue_size=2,
         meter_provider=provider,
@@ -591,3 +651,93 @@ async def test_rejected_metric_counts_queue_full_rejections() -> None:
     attributes = points[0].attributes
     assert attributes is not None
     assert attributes["error.type"] == "queue_full"
+
+
+@pytest.mark.asyncio
+async def test_error_callback_metric_records_successful_error_callback() -> None:
+    """When on_batch fails but on_error recovers, the on_batch failure lands on
+    processed.count and the fallback success lands on error_callback.count -- so a
+    healthy fallback path is a distinct metric from the failure it handled.
+    """
+
+    async def on_batch(batch: list[int]) -> None:
+        raise ValueError("boom")
+
+    async def on_error(batch: list[int], exc: Exception) -> None:
+        pass  # fallback handles the batch cleanly
+
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
+        on_batch=on_batch,
+        on_error=on_error,
+        max_batch_size=1,
+        collection_delay_s=0.02,
+        meter_provider=provider,
+    )
+    await batcher.start()
+    batcher.put(1)
+
+    # error_callback.count is recorded after processed.count, so waiting on it
+    # guarantees both are present.
+    async def error_callback_recorded() -> None:
+        while _find_point(reader, "async_batch_queue.error_callback.count") is None:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(error_callback_recorded(), timeout=5.0)
+    await batcher.stop(force=True)
+
+    processed_point = _find_point(reader, "async_batch_queue.processed.count", outcome="error")
+    assert processed_point is not None
+    assert processed_point.value == 1
+    attributes = processed_point.attributes
+    assert attributes is not None
+    assert attributes["error.type"] == "ValueError"
+
+    error_point = _find_point(reader, "async_batch_queue.error_callback.count", outcome="success")
+    assert error_point is not None
+    assert error_point.value == 1
+    attributes = error_point.attributes
+    assert attributes is not None
+    assert "error.type" not in attributes
+
+
+@pytest.mark.asyncio
+async def test_error_callback_metric_records_failed_error_callback() -> None:
+    """When on_error itself raises, error_callback.count records an error outcome
+    tagged with the error callback's own exception type -- surfacing the silent
+    data loss that occurs when both the primary and fallback paths fail.
+    """
+
+    async def on_batch(batch: list[int]) -> None:
+        raise ValueError("boom")
+
+    async def on_error(batch: list[int], exc: Exception) -> None:
+        raise RuntimeError("fallback down")
+
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
+        on_batch=on_batch,
+        on_error=on_error,
+        max_batch_size=1,
+        collection_delay_s=0.02,
+        meter_provider=provider,
+    )
+    await batcher.start()
+    batcher.put(1)
+
+    async def error_callback_recorded() -> None:
+        while _find_point(reader, "async_batch_queue.error_callback.count") is None:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(error_callback_recorded(), timeout=5.0)
+    await batcher.stop(force=True)
+
+    error_point = _find_point(reader, "async_batch_queue.error_callback.count", outcome="error")
+    assert error_point is not None
+    assert error_point.value == 1
+    attributes = error_point.attributes
+    assert attributes is not None
+    # error.type reflects the error callback's own exception, not on_batch's.
+    assert attributes["error.type"] == "RuntimeError"
