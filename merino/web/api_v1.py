@@ -675,7 +675,7 @@ async def get_hourly_forecasts(
 
 
 @router.get(
-    "/picture-of-the-day",
+    "rss/picture-of-the-day",
     tags=["rss"],
     summary="Get picture of the day",
     response_model=PictureOfTheDay,
