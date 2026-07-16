@@ -6,14 +6,35 @@ import asyncio
 import logging
 from timeit import default_timer as timer
 
+from opentelemetry import metrics as otel_metrics
+
 from merino.providers.suggest.base import BaseProvider
 from merino.providers.suggest.manager import load_providers
-from merino.utils import metrics
+from merino.utils import task_runner
 
 providers: dict[str, BaseProvider] = {}
 default_providers: list[BaseProvider] = []
 
 logger = logging.getLogger(__name__)
+
+_meter = otel_metrics.get_meter("merino.providers.suggest")
+_provider_initialize_duration = _meter.create_histogram(
+    "merino_providers_initialize_duration",
+    unit="ms",
+    description="Duration of suggest provider initialization",
+)
+
+
+async def _initialize_provider(provider_name: str, provider: BaseProvider) -> None:
+    """Initialize a provider and record its initialization duration."""
+    start = timer()
+    try:
+        await provider.initialize()
+    finally:
+        _provider_initialize_duration.record(
+            (timer() - start) * 1000,
+            {"provider": provider_name},
+        )
 
 
 async def init_providers() -> None:
@@ -29,18 +50,32 @@ async def init_providers() -> None:
     providers.update(load_providers(disabled_providers_list=settings.runtime.disabled_providers))
 
     # initialize providers and record time
-    init_metric = "providers.initialize"
-    client = metrics.get_metrics_client()
-    with client.timeit(init_metric):
+    initialization_start = timer()
+    try:
         wrapped_tasks = [
-            client.timeit_task(p.initialize(), f"{init_metric}.{provider_name}")
-            for provider_name, p in providers.items()
+            asyncio.create_task(
+                _initialize_provider(provider_name, provider),
+                name=provider_name,
+            )
+            for provider_name, provider in providers.items()
         ]
-        await asyncio.gather(*wrapped_tasks)
+        await task_runner.gather(wrapped_tasks)
+
+        exceptions = [
+            exception for task in wrapped_tasks if (exception := task.exception()) is not None
+        ]
+        if exceptions:
+            raise exceptions[0]
+
         default_providers.extend([p for p in providers.values() if p.enabled_by_default])
         logger.info(
             "Provider initialization completed",
             extra={"providers": [*providers.keys()], "elapsed": timer() - start},
+        )
+    finally:
+        _provider_initialize_duration.record(
+            (timer() - initialization_start) * 1000,
+            {"provider": "__ALL__"},
         )
 
     # init query normalization pipeline

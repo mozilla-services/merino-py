@@ -741,6 +741,22 @@ merino-fleece/pii:
       The "api/v1/pii" API endpoint of "merino-fleece".
     alert_policy: []
 
+providers/suggest:
+  merino_providers_initialize_duration:
+    description: |
+      An OpenTelemetry histogram recording the wall-clock duration, in
+      milliseconds, of each suggest provider's initialization.
+    type: histogram
+    labels:
+      - name: provider
+        description: |
+          The configured suggest provider name (e.g. "adm" or "accuweather"),
+          or "__ALL__" for the total wall-clock duration of initializing all
+          configured providers concurrently.
+    scope: |
+      Suggest provider initialization during application startup.
+    alert_policy: []
+
 middleware/metrics:
   http_request_duration:
     description: |

@@ -15,6 +15,7 @@ from pytest_mock import MockerFixture
 from merino.configs import settings
 from merino.exceptions import InvalidProviderError
 from merino.providers.suggest import (
+    _initialize_provider,
     get_providers,
     init_providers,
     load_providers,
@@ -61,6 +62,51 @@ async def test_init_providers() -> None:
     assert {provider.name for provider in default_providers} == {
         provider.name for provider in providers.values() if provider.enabled_by_default
     }
+
+
+@pytest.mark.asyncio
+async def test_initialize_provider_records_otel_duration(mocker: MockerFixture) -> None:
+    """Test provider initialization duration is recorded with a provider attribute."""
+    provider = mocker.AsyncMock()
+    histogram = mocker.patch("merino.providers.suggest._provider_initialize_duration")
+    mocker.patch("merino.providers.suggest.timer", side_effect=[10.0, 10.125])
+
+    await _initialize_provider("adm", provider)
+
+    provider.initialize.assert_awaited_once_with()
+    histogram.record.assert_called_once_with(125.0, {"provider": "adm"})
+
+
+@pytest.mark.asyncio
+async def test_initialize_provider_records_duration_on_error(mocker: MockerFixture) -> None:
+    """Test failed initialization is timed and its error is propagated."""
+    provider = mocker.AsyncMock()
+    provider.initialize.side_effect = RuntimeError("initialization failed")
+    histogram = mocker.patch("merino.providers.suggest._provider_initialize_duration")
+    mocker.patch("merino.providers.suggest.timer", side_effect=[20.0, 20.25])
+
+    with pytest.raises(RuntimeError, match="initialization failed"):
+        await _initialize_provider("accuweather", provider)
+
+    histogram.record.assert_called_once_with(250.0, {"provider": "accuweather"})
+
+
+@pytest.mark.asyncio
+async def test_init_providers_propagates_initialization_error(mocker: MockerFixture) -> None:
+    """Test initialization errors propagate and both provider durations are recorded."""
+    provider = mocker.AsyncMock()
+    provider.initialize.side_effect = RuntimeError("initialization failed")
+    mocker.patch("merino.providers.suggest.load_providers", return_value={"adm": provider})
+    mocker.patch.dict("merino.providers.suggest.providers", {}, clear=True)
+    histogram = mocker.patch("merino.providers.suggest._provider_initialize_duration")
+
+    with pytest.raises(RuntimeError, match="initialization failed"):
+        await init_providers()
+
+    assert [call.args[1] for call in histogram.record.call_args_list] == [
+        {"provider": "adm"},
+        {"provider": "__ALL__"},
+    ]
 
 
 @pytest.mark.parametrize("provider", ["adm", "amo", "top_picks", "wikipedia"])

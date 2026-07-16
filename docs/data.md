@@ -92,15 +92,6 @@ log inspection interfaces.
 > appended to their name, to mark the units used (since we shouldn't put the
 > proper unit μs in metric names).
 
-- `merino.providers.initialize` - A timer to measure the overall initialization
-  duration (in ms) for _all_ providers.
-
-- `merino.providers.initialize.<provider>` - A timer to measure the initialization
-  duration (in ms) for the given `<provider>`.
-
-  **Example**:
-  `merino.providers.initialize.adm`
-
 - `merino.<http_method>.<url_path>.status_codes.<status_code>` - A counter to measure
   the status codes of an HTTP method for the `<url_path>`.
 
