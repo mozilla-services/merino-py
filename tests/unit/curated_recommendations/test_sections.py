@@ -6,6 +6,7 @@ import random
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+import numpy as np
 import pytest
 from pydantic import HttpUrl
 
@@ -22,6 +23,10 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     CreateSource,
 )
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
+from merino.curated_recommendations.ml_backends.protocol import (
+    TIME_ZONE_OFFSET_INFERRED_KEY,
+    MLRecsBackend,
+)
 from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_6_tiles,
@@ -44,6 +49,9 @@ from merino.curated_recommendations.protocol import (
     DailyBriefingBranch,
     CuratedRecommendation,
     RankingData,
+    CuratedRecommendationsRequest,
+    Locale,
+    ProcessedInterests,
 )
 from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 from merino.curated_recommendations.sections import (
@@ -72,6 +80,8 @@ from merino.curated_recommendations.sections import (
     resolve_section_experiment,
     split_daily_briefing_section,
     dedupe_recommendations_across_sections,
+    get_sections,
+    DEFAULT_TOPIC_INTERESTS,
 )
 from tests.unit.curated_recommendations.fixtures import (
     generate_recommendations,
@@ -1940,3 +1950,86 @@ class TestGetCorpusSections:
         assert raw_briefing.externalId == DAILY_BRIEFING_SECTION_KEY
         assert set(sections.keys()) == {"government"}
         assert len(sections["government"].recommendations) == 2
+
+
+class _FakeLinTSBackend:
+    """Minimal stand-in for the LinTS interest backend used by get_sections.
+
+    Reports valid so ``get_sections`` selects the InterestRanker, and returns
+    neutral scores so the surrounding ranking pipeline runs without needing a
+    real safetensors bundle.
+    """
+
+    def is_valid(self, surface_id: SurfaceId) -> bool:
+        """Report valid, forcing the interest-ranker branch."""
+        return True
+
+    def has_item(self, surface_id: SurfaceId, corpus_item_id: str) -> bool:
+        """No item is known to the model, so ranking falls back to Beta sampling."""
+        return False
+
+    def score_request(self, surface_id, strengths, candidate_item_ids, rng):
+        """Return a zero score per candidate; values are irrelevant to this test."""
+        return np.zeros(len(candidate_item_ids), dtype=np.float32)
+
+
+class _StubEngagementBackend:
+    """Engagement backend that reports no engagement for any item."""
+
+    def get(self, corpus_item_id, region=None):
+        """Return None — no engagement data."""
+        return None
+
+    @property
+    def update_count(self) -> int:
+        """Stub — never updates."""
+        return 0
+
+
+class TestGetSectionsForcedInterests:
+    """Covers the forced-default-interests logic in get_sections' InterestRanker branch."""
+
+    @pytest.fixture
+    def sections_backend(self):
+        """Fake SectionsProtocol returning three well-populated ML sections."""
+        mock_backend = MagicMock(spec=SectionsProtocol)
+        mock_backend.fetch = AsyncMock(
+            return_value=[generate_corpus_section(sec_id, count=12) for sec_id in ("a", "b", "c")]
+        )
+        return mock_backend
+
+    @pytest.mark.parametrize(
+        "scores, expect_forced",
+        [
+            # Only the inferred time-zone offset is positive -> treated as no interests.
+            ({TIME_ZONE_OFFSET_INFERRED_KEY: 3.0}, True),
+            # All interest scores are zero -> no meaningful interests.
+            ({"sports": 0.0, "tech": 0.0}, True),
+            # A genuine positive interest exists -> defaults are NOT forced.
+            ({"sports": 0.9, TIME_ZONE_OFFSET_INFERRED_KEY: 3.0}, False),
+        ],
+        ids=["only-timezone", "all-zero", "has-real-interest"],
+    )
+    @pytest.mark.asyncio
+    async def test_forced_default_interests_applied(self, sections_backend, scores, expect_forced):
+        """Users with no meaningful interests get DEFAULT_TOPIC_INTERESTS seeded in place."""
+        personal_interests = ProcessedInterests(scores=dict(scores))
+        request = CuratedRecommendationsRequest(locale=Locale.EN_US)
+
+        await get_sections(
+            request=request,
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            sections_backend=sections_backend,
+            ml_backend=MagicMock(spec=MLRecsBackend),
+            engagement_backend=_StubEngagementBackend(),
+            prior_backend=ConstantPrior(),
+            lints_interest_backend=_FakeLinTSBackend(),
+            personal_interests=personal_interests,
+            region="US",
+        )
+
+        if expect_forced:
+            for topic, value in DEFAULT_TOPIC_INTERESTS.items():
+                assert personal_interests.scores[topic] == value
+        else:
+            assert not any(topic in personal_interests.scores for topic in DEFAULT_TOPIC_INTERESTS)
