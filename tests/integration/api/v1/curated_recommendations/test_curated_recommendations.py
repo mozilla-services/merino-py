@@ -517,12 +517,23 @@ class TestLegacyEndpoints:
     """Test the legacy curated recommendations endpoints (fx114 and fx115-129).
 
     These endpoints have two code paths:
-    - Rolled-out section surfaces (en-US, en-CA, en-GB, de-DE, fr-FR): use sections backend via get_legacy_recommendations_from_sections
-    - Other locales (es-ES, it-IT, etc.): use scheduler backend via CuratedRecommendationsProvider
+    - Rolled-out section surfaces (en-US, en-CA, en-GB, de-DE, fr-FR, es-ES, it-IT, de-AT, de-CH, fr-BE): use sections backend via get_legacy_recommendations_from_sections
+    - Other locales (pl-PL, etc.): use scheduler backend via CuratedRecommendationsProvider
     """
 
     # Locales that use the sections backend (rolled-out section surfaces)
-    SECTIONS_BACKEND_LOCALES = ["en-US", "en-CA", "en-GB", "de-DE", "fr-FR", "es-ES", "it-IT"]
+    SECTIONS_BACKEND_LOCALES = [
+        "de-AT",
+        "de-CH",
+        "de-DE",
+        "en-CA",
+        "en-GB",
+        "en-US",
+        "es-ES",
+        "fr-BE",
+        "fr-FR",
+        "it-IT",
+    ]
     # Locales that use the scheduler backend (non-rolled-out)
     SCHEDULER_BACKEND_LOCALES = ["pl-PL"]
 
@@ -763,9 +774,10 @@ class TestCuratedRecommendationsRequestParameters:
             (Locale.EN_GB, SurfaceId.NEW_TAB_EN_GB),
             (Locale.DE, SurfaceId.NEW_TAB_DE_DE),
             (Locale.DE_DE, SurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_AT, SurfaceId.NEW_TAB_DE_DE),
-            (Locale.DE_CH, SurfaceId.NEW_TAB_DE_DE),
+            (Locale.DE_AT, SurfaceId.NEW_TAB_DE_AT),
+            (Locale.DE_CH, SurfaceId.NEW_TAB_DE_CH),
             (Locale.FR, SurfaceId.NEW_TAB_FR_FR),
+            (Locale.FR_BE, SurfaceId.NEW_TAB_FR_BE),
             (Locale.FR_FR, SurfaceId.NEW_TAB_FR_FR),
             (Locale.ES, SurfaceId.NEW_TAB_ES_ES),
             (Locale.ES_ES, SurfaceId.NEW_TAB_ES_ES),

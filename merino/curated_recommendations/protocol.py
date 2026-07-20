@@ -48,6 +48,7 @@ class Locale(str, Enum):
     """Supported locales for curated recommendations on New Tab"""
 
     FR = ("fr",)
+    FR_BE = ("fr-BE",)
     FR_FR = ("fr-FR",)
     ES = ("es",)
     ES_ES = ("es-ES",)
