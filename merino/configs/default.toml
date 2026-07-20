@@ -234,7 +234,7 @@ countries = ["US"]
 # MERINO_MARS__FORM_FACTORS
 # Form factors to fetch suggestions for from the MARS API.
 form_factors = ["desktop"]
- 
+
 [default.fleece]
 # MERINO_FLEECE__URL_BASE
 # Base URL of the merino-fleece service. Empty by default.
@@ -576,7 +576,7 @@ retry_factor_sec=0.5
 [default.providers.sports.sportsdata.WCS]
 # MERINO_PROVIDERS__SPORTS__SPORTSDATA__WCS__GAMES_BY_DATE_TTL_SEC
 # Local-disk cache lifetime (seconds) for live `GamesByDate` score responses
-# before refetching from SportsData.io. 
+# before refetching from SportsData.io.
 games_by_date_ttl_sec = 5
 
 [default.providers.wcs]
@@ -1222,6 +1222,20 @@ connect_timeout_sec = 3.0
 # A float (in seconds) indicating the maximum waiting period when querying for POTD data.
 query_timeout_sec = 1.0
 
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__RETRY_COUNT
+# Maximum number of attempts for a Wikimedia Featured API fetch before giving up, so a
+# transient failure (e.g. a read timeout) does not lose the whole day's picture.
+retry_count = 3
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__RETRY_WAIT_INITIAL_SECONDS
+# Initial backoff before the first retry of a Wikimedia Featured API fetch. The wait grows
+# exponentially on each subsequent attempt.
+retry_wait_initial_seconds = 0.5
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__RETRY_WAIT_JITTER_SECONDS
+# Random jitter (in seconds) added to each backoff wait between fetch retries.
+retry_wait_jitter_seconds = 0.2
+
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
 # Base URL for the Wikimedia Featured API; the backend appends /{yyyy}/{mm}/{dd}.
 feed_url = "https://api.wikimedia.org/feed/v1/wikipedia/en/featured"
@@ -1512,7 +1526,7 @@ force_upload = false
 # Minimum width of the domain favicon required for it to be a part of domain metadata
 min_favicon_width = 48
 
-# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__CACHE_CONTROL  
+# MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__CACHE_CONTROL
 # cache control headers for uploaded favicons (12 hrs)
 cache_control = "public, max-age=43200"
 

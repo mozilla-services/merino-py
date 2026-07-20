@@ -184,3 +184,9 @@ gcp_project = "test-project"
 # Tests sleep for a shorter duration than defautl to make them execute more quickly.
 retry_wait_initial_seconds = 0.05
 retry_wait_jitter_seconds = 0.02
+
+[testing.rss_providers.wikimedia_potd]
+
+# Tests use near-zero backoff so retry paths execute quickly.
+retry_wait_initial_seconds = 0.0
+retry_wait_jitter_seconds = 0.0

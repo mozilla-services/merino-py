@@ -4,7 +4,14 @@ import logging
 import aiodogstatsd
 from datetime import datetime, timezone
 from pydantic import HttpUrl
-from httpx import AsyncClient, Response
+from httpx import AsyncClient, HTTPError, Response
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 
 from merino.configs import settings
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
@@ -93,8 +100,23 @@ class WikimediaPictureOfTheDayBackend:
 
         return (HttpUrl(thumbnail_cdn_url), HttpUrl(hires_cdn_url))
 
+    @retry(
+        wait=wait_exponential_jitter(
+            initial=settings.rss_providers.wikimedia_potd.retry_wait_initial_seconds,
+            jitter=settings.rss_providers.wikimedia_potd.retry_wait_jitter_seconds,
+        ),
+        stop=stop_after_attempt(settings.rss_providers.wikimedia_potd.retry_count),
+        # retry on read/connect timeouts, connection resets, 5xx,
+        # all HTTPError, empty/invalid-body responses that may recover
+        retry=retry_if_exception_type((HTTPError, WikimediaPotdError)),
+        reraise=True,
+        before_sleep=before_sleep_log(logger, logging.INFO),
+    )
     async def fetch_picture_of_the_day(self) -> dict:
         """Fetch the Wikimedia Featured API picture of the day for today.
+
+        Retries transient failures with exponential backoff before giving up; the final
+        failure is re-raised so the upload job's error boundary reports it once.
 
         Returns:
             The parsed JSON response as a dict. Raises WikimediaPotdError on failure.
