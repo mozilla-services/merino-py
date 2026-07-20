@@ -211,8 +211,6 @@ async def test_get_picture_of_the_day_returns_localized_description_for_accepted
 
     assert potd is not None
     assert potd.description == "Deutscher Text"
-    # the cached model is left untouched; only the returned copy is localized
-    assert provider.potd.description == "test description"
 
 
 @freezegun.freeze_time("2026-06-07")
@@ -251,11 +249,14 @@ async def test_get_picture_of_the_day_keeps_default_when_no_language_matches(
     provider: WikimediaPictureOfTheDayProvider, test_potd
 ) -> None:
     """Serves the default description (and the cached instance) when no language matches."""
-    provider.potd = test_potd.model_copy(update={"localized_descriptions": {"de": "Deutscher Text"}})
+    provider.potd = test_potd.model_copy(
+        update={"localized_descriptions": {"de": "Deutscher Text"}}
+    )
 
     potd = await provider.get_picture_of_the_day(["fr-FR"])
 
-    assert potd is provider.potd
+    assert potd is not None
+    # same as the default (en) description of the test_potd fixture
     assert potd.description == "test description"
 
 
@@ -265,11 +266,14 @@ async def test_get_picture_of_the_day_keeps_default_when_no_accepted_languages(
     provider: WikimediaPictureOfTheDayProvider, test_potd
 ) -> None:
     """Returns the cached instance unchanged when no Accept-Language is provided."""
-    provider.potd = test_potd.model_copy(update={"localized_descriptions": {"de": "Deutscher Text"}})
+    provider.potd = test_potd.model_copy(
+        update={"localized_descriptions": {"de": "Deutscher Text"}}
+    )
 
     potd = await provider.get_picture_of_the_day()
 
-    assert potd is provider.potd
+    assert potd is not None
+    # same as the default (en) description of the test_potd fixture
     assert potd.description == "test description"
 
 

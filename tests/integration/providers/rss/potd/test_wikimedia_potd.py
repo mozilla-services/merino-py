@@ -118,8 +118,6 @@ class TestUploadPictureOfTheDayMethod:
     async def test_upload_picture_of_the_day_stores_localized_descriptions(
         self,
         backend: WikimediaPictureOfTheDayBackend,
-        gcs_storage_client,
-        gcs_storage_bucket,
         mocker: MockerFixture,
     ) -> None:
         """Discovers languages, keeps localized descriptions, and drops English fallbacks."""
@@ -137,12 +135,13 @@ class TestUploadPictureOfTheDayMethod:
             },
             request=Request(method="GET", url=FEED_URL),
         )
-        # de has an authored description; fr does not, so the API returns the English fallback.
+
         de_response = Response(
             status_code=200,
             json={"image": {"description": {"lang": "de", "text": "Deutscher Text"}}},
             request=Request(method="GET", url=FEED_URL),
         )
+        # fr does not have a description so the API returns the English fallback.
         fr_fallback_response = Response(
             status_code=200,
             json={"image": {"description": {"lang": "en", "text": "English fallback"}}},
@@ -155,16 +154,17 @@ class TestUploadPictureOfTheDayMethod:
         )
 
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-        # order: discover (commons), fetch en (base), then localized de + fr fetches
+
+        # side effect values set in order of requests
         client_mock.get.side_effect = [
             commons_response,
             en_response,
             de_response,
             fr_fallback_response,
         ]
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/png"
-        )
+
+        backend_download_method_mock = mocker.patch.object(backend, "download_potd_image")
+        backend_download_method_mock.return_value = Image(content=b"255", content_type="Image/png")
 
         result = await backend.upload_picture_of_the_day()
         assert result is True
@@ -175,8 +175,8 @@ class TestUploadPictureOfTheDayMethod:
         # "en" stays on potd.description and is never duplicated into localized_descriptions
         assert potd_manifest.description == "The Milky Way over the Sagittarius region."
         assert potd_manifest.localized_descriptions == {"de": "Deutscher Text"}
-        # the image is downloaded once and shared across languages
-        assert backend.download_potd_image.call_count == 2  # thumbnail + hi-res, once each
+        # assert that image download is only called twice (thumbnail and hi-res)
+        assert backend_download_method_mock.call_count == 2
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio

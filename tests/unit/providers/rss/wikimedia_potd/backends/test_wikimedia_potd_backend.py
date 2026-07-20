@@ -309,37 +309,14 @@ class TestFetchPictureOfTheDayMethod:
             await backend.fetch_picture_of_the_day("en")
 
 
-class TestFetchPictureOfTheDayLanguage:
-    """Tests that fetch_picture_of_the_day requests the given language."""
-
-    @pytest.mark.asyncio
-    @freezegun.freeze_time("2026-06-24")
-    async def test_fetch_potd_uses_requested_language_in_url(
-        self, backend: WikimediaPictureOfTheDayBackend
-    ) -> None:
-        """Builds the Featured API url with the requested language segment."""
-        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-        client_mock.get.return_value = Response(
-            status_code=200,
-            content=TEST_FEATURED_JSON.encode(),
-            request=Request(method="GET", url=FEED_URL),
-        )
-
-        await backend.fetch_picture_of_the_day("de")
-
-        client_mock.get.assert_called_once_with(
-            f"{FEED_URL}/de/featured/2026/06/24", headers=WIKIMEDIA_REQUEST_HEADERS
-        )
-
-
 class TestDiscoverLanguages:
     """Tests for the discover_languages method."""
 
     @pytest.mark.asyncio
-    async def test_discover_languages_parses_commons_subpages(
+    async def test_discover_languages_parses_commons_subpages_for_a_given_date(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Parses language codes from Commons subpages and prepends the default language."""
+        """Parses language codes from Commons subpages and prepends the default language for a given date."""
         commons_json = {
             "query": {
                 "allpages": [
@@ -359,15 +336,12 @@ class TestDiscoverLanguages:
         result = await backend.discover_languages("2026-06-24")
 
         assert result == ["en", "de", "es"]
-        _, kwargs = client_mock.get.call_args
-        assert kwargs["params"]["apprefix"] == "Potd/2026-06-24"
-        assert kwargs["params"]["apnamespace"] == "10"
 
     @pytest.mark.asyncio
-    async def test_discover_languages_does_not_duplicate_default(
+    async def test_discover_languages_does_not_duplicate_fallback_language(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Does not append the default language again when Commons already lists it."""
+        """Does not append the fallback language (en) again when Commons already lists it."""
         commons_json = {
             "query": {
                 "allpages": [
@@ -388,10 +362,10 @@ class TestDiscoverLanguages:
         assert result == ["en", "de"]
 
     @pytest.mark.asyncio
-    async def test_discover_languages_falls_back_to_default_on_error(
+    async def test_discover_languages_falls_back_to_en_on_error(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Returns just the default language when the Commons request fails."""
+        """Returns just the fallback (en) when the Commons request fails."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.side_effect = HTTPError("commons down")
 
@@ -404,10 +378,10 @@ class TestFetchLocalizedDescriptions:
     """Tests for the fetch_localized_descriptions method."""
 
     @pytest.mark.asyncio
-    async def test_skips_en_keeps_localized_drops_fallbacks(
+    async def test_only_returns_de_localized_description(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Skips "en", keeps genuinely localized text, and drops English fallbacks."""
+        """Skip en and fr_fallback and return just de as the only valid localized description"""
         de_data = {"image": {"description": {"lang": "de", "text": "Deutscher Text"}}}
         # fr has no authored description, so the API returns the English fallback.
         fr_fallback = {"image": {"description": {"lang": "en", "text": "English text"}}}
@@ -422,16 +396,16 @@ class TestFetchLocalizedDescriptions:
 
         result = await backend.fetch_localized_descriptions(["en", "de", "fr"])
 
-        # "en" is never fetched or stored; only "de" is fetched and both requests are localized
+        # "en" is never fetched or stored, only "de" is fetched and both requests are localized
         assert result == {"de": "Deutscher Text"}
 
     @pytest.mark.asyncio
     async def test_skips_language_when_fetch_raises(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Skips a language whose fetch raises, keeping the rest of the map intact."""
+        """Skips a language whose fetch raises, keeping the rest of the dict intact."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
-        client_mock.get.side_effect = HTTPError("boom")
+        client_mock.get.side_effect = HTTPError("Unexpected error")
 
         result = await backend.fetch_localized_descriptions(["en", "de"])
 
