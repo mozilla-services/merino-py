@@ -673,7 +673,7 @@ async def get_picture_of_the_day(
     request: Request,
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
-) -> Response:  # pragma: no cover
+) -> Response:
     """Get the picture of the day, localized to the client's Accept-Language when available."""
     potd = None
     try:
@@ -682,8 +682,11 @@ async def get_picture_of_the_day(
     except Exception as ex:
         logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
 
+    # localized_descriptions is a server-side selection map used to swap `description` into
+    # the client's language; it is not part of the client-facing contract, so exclude it here
+    # (but keep it on the model and in the GCS manifest, which localization reads back from).
     return JSONResponse(
-        content=jsonable_encoder(potd),
+        content=jsonable_encoder(potd, exclude={"localized_descriptions"}),
     )
 
 

@@ -21,10 +21,16 @@ class PictureOfTheDay(BaseModel):
         description="High resolution URL of the picture of the day image."
     )
     published_date: str = Field(description="Date when the image was published.")
-    description: str = Field(description="Description of the image in the default language.")
+    description: str = Field(
+        description="Description of the image in the default (en) or the requested language."
+    )
     localized_descriptions: dict[str, str] = Field(
         default_factory=dict,
-        description="Localized descriptions keyed by language code (e.g. 'de', 'es').",
+        description=(
+            "Localized descriptions keyed by language code (e.g. 'de', 'es'). Server-side "
+            "NOTE: only used to localize `description` for the client's Accept-Language and is "
+            "omitted from the API response."
+        ),
     )
     author: str = Field(default="", description="Name of the image's artist.")
     file_page: HttpUrl | None = Field(default=None, description="Commons file page URL.")
