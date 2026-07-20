@@ -51,6 +51,11 @@ class Locale(str, Enum):
     FR_FR = ("fr-FR",)
     ES = ("es",)
     ES_ES = ("es-ES",)
+    # Global Spanish markets (Firefox's Latin-American Spanish builds). Combined with the
+    # sections-in-global-spanish experiment, these route to NEW_TAB_ES_XA (see utils.py).
+    ES_AR = ("es-AR",)
+    ES_CL = ("es-CL",)
+    ES_MX = ("es-MX",)
     IT = ("it",)
     IT_IT = ("it-IT",)
     EN = ("en",)
