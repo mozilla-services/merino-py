@@ -9,23 +9,39 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 @pytest.mark.parametrize(
     ("surface_id", "expected_title"),
     [
-        (SurfaceId.NEW_TAB_EN_US, "Popular Today"),
+        (SurfaceId.NEW_TAB_DE_AT, "Meistgelesen"),
+        (SurfaceId.NEW_TAB_DE_CH, "Meistgelesen"),
+        (SurfaceId.NEW_TAB_DE_DE, "Meistgelesen"),
         (SurfaceId.NEW_TAB_EN_CA, "Popular Today"),
         (SurfaceId.NEW_TAB_EN_IE, "Popular Today"),
+        (SurfaceId.NEW_TAB_EN_US, "Popular Today"),
         (SurfaceId.NEW_TAB_EN_XE, "Popular Today"),
-        (SurfaceId.NEW_TAB_DE_DE, "Meistgelesen"),
-        (SurfaceId.NEW_TAB_ES_XA, "Tendencias"),
-        (SurfaceId.NEW_TAB_FR_FR, "Tendances du jour"),
-        (SurfaceId.NEW_TAB_PL_PL, "Przegląd dnia"),
         (SurfaceId.NEW_TAB_ES_ES, "Tendencias"),
+        (SurfaceId.NEW_TAB_ES_XA, "Tendencias"),
+        (SurfaceId.NEW_TAB_FR_BE, "Tendances du jour"),
+        (SurfaceId.NEW_TAB_FR_FR, "Tendances du jour"),
         (SurfaceId.NEW_TAB_IT_IT, "I più letti"),
+        (SurfaceId.NEW_TAB_PL_PL, "Przegląd dnia"),
     ],
-    ids=["en_us", "en_ca", "en_ie", "en_xe", "de_de", "es_xa", "fr_fr", "pl_pl", "es_es", "it_it"],
+    ids=[
+        "de_at",
+        "de_ch",
+        "de_de",
+        "en_ca",
+        "en_ie",
+        "en_us",
+        "en_xe",
+        "es_es",
+        "es_xa",
+        "fr_be",
+        "fr_fr",
+        "it_it",
+        "pl_pl",
+    ],
 )
 def test_get_translation_top_stories(surface_id: SurfaceId, expected_title: str):
     """Test that each supported surface returns its localized top-stories title."""
-    result = get_translation(surface_id, "top-stories", "Default")
-    assert result == expected_title
+    assert expected_title == get_translation(surface_id, "top-stories", "Default")
 
 
 def test_get_translation_non_existing_locale(caplog):

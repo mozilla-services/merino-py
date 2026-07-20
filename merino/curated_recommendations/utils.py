@@ -15,12 +15,15 @@ from merino.curated_recommendations.protocol import (
 # the scheduled-surface backend.
 ROLLED_OUT_SECTION_SURFACES: frozenset[SurfaceId] = frozenset(
     {
+        SurfaceId.NEW_TAB_DE_AT,
+        SurfaceId.NEW_TAB_DE_CH,
         SurfaceId.NEW_TAB_DE_DE,
         SurfaceId.NEW_TAB_EN_CA,
         SurfaceId.NEW_TAB_EN_GB,
         SurfaceId.NEW_TAB_EN_IE,
         SurfaceId.NEW_TAB_EN_US,
         SurfaceId.NEW_TAB_ES_ES,
+        SurfaceId.NEW_TAB_FR_BE,
         SurfaceId.NEW_TAB_FR_FR,
         SurfaceId.NEW_TAB_IT_IT,
     }
@@ -55,7 +58,13 @@ def get_recommendation_surface_id(
     derived_region = derive_region(locale, region)
 
     if language == "de":
-        return SurfaceId.NEW_TAB_DE_DE
+        match derived_region:
+            case "AT":  # austria
+                return SurfaceId.NEW_TAB_DE_AT
+            case "CH":  # switzerland
+                return SurfaceId.NEW_TAB_DE_CH
+            case _:  # fall back to germany
+                return SurfaceId.NEW_TAB_DE_DE
     elif language == "pl":
         return SurfaceId.NEW_TAB_PL_PL
     elif language == "es":
@@ -74,7 +83,11 @@ def get_recommendation_surface_id(
             return SurfaceId.NEW_TAB_ES_XA
         return SurfaceId.NEW_TAB_ES_ES
     elif language == "fr":
-        return SurfaceId.NEW_TAB_FR_FR
+        match derived_region:
+            case "BE":  # belgium
+                return SurfaceId.NEW_TAB_FR_BE
+            case _:  # fall back to france
+                return SurfaceId.NEW_TAB_FR_FR
     elif language == "it":
         return SurfaceId.NEW_TAB_IT_IT
     else:

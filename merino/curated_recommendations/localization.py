@@ -13,19 +13,25 @@ LocalizedTopicSectionTitles = dict[SurfaceId, dict[str, str]]
 # This dict also acts as a gating mechanism - only surfaces listed here can
 # receive sections.
 LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
+    SurfaceId.NEW_TAB_DE_AT: {
+        "top-stories": "Meistgelesen",
+    },
+    SurfaceId.NEW_TAB_DE_CH: {
+        "top-stories": "Meistgelesen",
+    },
     SurfaceId.NEW_TAB_DE_DE: {
         "top-stories": "Meistgelesen",
     },
-    SurfaceId.NEW_TAB_EN_US: {
+    SurfaceId.NEW_TAB_EN_CA: {
         "top-stories": "Popular Today",
     },
     SurfaceId.NEW_TAB_EN_GB: {
         "top-stories": "Popular Today",
     },
-    SurfaceId.NEW_TAB_EN_CA: {
+    SurfaceId.NEW_TAB_EN_IE: {
         "top-stories": "Popular Today",
     },
-    SurfaceId.NEW_TAB_EN_IE: {
+    SurfaceId.NEW_TAB_EN_US: {
         "top-stories": "Popular Today",
     },
     SurfaceId.NEW_TAB_EN_XE: {
@@ -34,6 +40,9 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
     SurfaceId.NEW_TAB_ES_ES: {"top-stories": "Tendencias"},
     SurfaceId.NEW_TAB_ES_XA: {
         "top-stories": "Tendencias",
+    },
+    SurfaceId.NEW_TAB_FR_BE: {
+        "top-stories": "Tendances du jour",
     },
     SurfaceId.NEW_TAB_FR_FR: {
         "top-stories": "Tendances du jour",

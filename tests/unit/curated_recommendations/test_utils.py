@@ -117,7 +117,7 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
         "locale,region,recommendation_surface_id",
         [
             # Test cases below are from the Newtab locales/region documentation maintained by the Firefox integration
-            # team: https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit Ref:
+            # team: https://mozilla-hub.atlassian.net/wiki/spaces/FPS/pages/80448805/Homepage+New+Tab+i18n+Regional+Differences+HNT Ref:
             # https://github.com/Pocket/recommendation-api/blob/c0fe2d1cab7ec7931c3c8c2e8e3d82908801ab00/tests/unit
             # /data_providers/test_new_tab_dispatch.py#L7 # noqa
             ("en-CA", "US", SurfaceId.NEW_TAB_EN_US),
@@ -129,12 +129,15 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("de", "DE", SurfaceId.NEW_TAB_DE_DE),
             ("de-AT", "DE", SurfaceId.NEW_TAB_DE_DE),
             ("de-CH", "DE", SurfaceId.NEW_TAB_DE_DE),
+            ("de-AT", "AT", SurfaceId.NEW_TAB_DE_AT),
+            ("de-CH", "CH", SurfaceId.NEW_TAB_DE_CH),
             ("en-CA", "GB", SurfaceId.NEW_TAB_EN_GB),
             ("en-GB", "GB", SurfaceId.NEW_TAB_EN_GB),
             ("en-US", "GB", SurfaceId.NEW_TAB_EN_GB),
             ("en-CA", "IE", SurfaceId.NEW_TAB_EN_IE),
             ("en-GB", "IE", SurfaceId.NEW_TAB_EN_IE),
             ("en-US", "IE", SurfaceId.NEW_TAB_EN_IE),
+            ("fr", "BE", SurfaceId.NEW_TAB_FR_BE),
             ("fr", "FR", SurfaceId.NEW_TAB_FR_FR),
             ("it", "IT", SurfaceId.NEW_TAB_IT_IT),
             ("es", "ES", SurfaceId.NEW_TAB_ES_ES),
@@ -146,8 +149,8 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("en-CA", "IN", SurfaceId.NEW_TAB_EN_INTL),
             ("en-GB", "IN", SurfaceId.NEW_TAB_EN_INTL),
             ("en-US", "IN", SurfaceId.NEW_TAB_EN_INTL),
-            ("de", "CH", SurfaceId.NEW_TAB_DE_DE),
-            ("de", "AT", SurfaceId.NEW_TAB_DE_DE),
+            ("de", "CH", SurfaceId.NEW_TAB_DE_CH),
+            ("de", "AT", SurfaceId.NEW_TAB_DE_AT),
             ("de", "BE", SurfaceId.NEW_TAB_DE_DE),
             # Locale can be a main language only.
             ("en", "CA", SurfaceId.NEW_TAB_EN_CA),

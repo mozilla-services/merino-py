@@ -40,20 +40,21 @@ class Topic(str, Enum):
 class SurfaceId(str, Enum):
     """Defines the possible recommendation surfaces."""
 
-    NEW_TAB_EN_US = "NEW_TAB_EN_US"
-    NEW_TAB_EN_GB = "NEW_TAB_EN_GB"
-    NEW_TAB_EN_CA = "NEW_TAB_EN_CA"
-    NEW_TAB_EN_IE = "NEW_TAB_EN_IE"
-    NEW_TAB_EN_INTL = "NEW_TAB_EN_INTL"
-    # Cross-Europe English surface for English-speaking users in continental Europe.
-    NEW_TAB_EN_XE = "NEW_TAB_EN_XE"
-    NEW_TAB_DE_DE = "NEW_TAB_DE_DE"
-    NEW_TAB_ES_ES = "NEW_TAB_ES_ES"
-    # Global Spanish surface for Spanish-speaking users regardless of country.
-    NEW_TAB_ES_XA = "NEW_TAB_ES_XA"
-    NEW_TAB_FR_FR = "NEW_TAB_FR_FR"
-    NEW_TAB_IT_IT = "NEW_TAB_IT_IT"
-    NEW_TAB_PL_PL = "NEW_TAB_PL_PL"
+    NEW_TAB_DE_AT = "NEW_TAB_DE_AT"  # austria
+    NEW_TAB_DE_CH = "NEW_TAB_DE_CH"  # switzerland
+    NEW_TAB_DE_DE = "NEW_TAB_DE_DE"  # germany
+    NEW_TAB_EN_CA = "NEW_TAB_EN_CA"  # canada
+    NEW_TAB_EN_GB = "NEW_TAB_EN_GB"  # great britain
+    NEW_TAB_EN_IE = "NEW_TAB_EN_IE"  # irelane
+    NEW_TAB_EN_INTL = "NEW_TAB_EN_INTL"  # india(?)
+    NEW_TAB_EN_US = "NEW_TAB_EN_US"  # united states
+    NEW_TAB_EN_XE = "NEW_TAB_EN_XE"  # cross-europe english
+    NEW_TAB_ES_ES = "NEW_TAB_ES_ES"  # spain
+    NEW_TAB_ES_XA = "NEW_TAB_ES_XA"  # global spanish (non-country specific)
+    NEW_TAB_FR_BE = "NEW_TAB_FR_BE"  # belgium
+    NEW_TAB_FR_FR = "NEW_TAB_FR_FR"  # france
+    NEW_TAB_IT_IT = "NEW_TAB_IT_IT"  # italy
+    NEW_TAB_PL_PL = "NEW_TAB_PL_PL"  # poland
 
 
 class CreateSource(str, Enum):
