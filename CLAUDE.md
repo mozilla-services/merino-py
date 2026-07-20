@@ -2,7 +2,10 @@
 
 Mozilla's suggestion service for Firefox. Privacy-preserving buffer between Firefox's address bar and third-party providers.
 
-Three subsystems: **Suggest API** (FastAPI, `merino/providers/suggest/`), **Curated Recommendations** (NewTab, `merino/curated_recommendations/`), **Jobs** (Airflow pipelines, `merino/jobs/`).
+This project is structured as a monorepo via uv workspaces with three member packages:
+- **merino**, located in @merino/, a FastAPI application and various jobs for Firefox Suggest and the NewTab page.
+- **merino-fleece**, located in @merino-fleece/, a FastAPI application providing various supporting functionalities for **merino**.
+- **merino-common**, located in @merino-common/, a set of common modules shared across other member packages.
 
 ## Commands
 
@@ -10,6 +13,8 @@ Three subsystems: **Suggest API** (FastAPI, `merino/providers/suggest/`), **Cura
 make install              # Install deps (uv sync --all-groups)
 make dev                  # FastAPI dev server with hot-reload
 make test                 # Unit + integration tests (95% coverage enforced)
+make unit-tests           # Unit tests
+make integration-tests    # Integration tests
 make lint                 # ruff + bandit + mypy
 make format               # Auto-format with ruff
 make docker-compose-up    # Start local services (Redis, fake-GCS)
@@ -42,10 +47,16 @@ Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexe
 
 ## Configuration
 
-Dynaconf with TOML files in `merino/configs/`. Switched by `MERINO_ENV` (development/testing/ci/stage/production).
+Merino-py uses Dynaconf for configuration management. All the packages follow the same configuration convention as documented in @docs/operations/configs.md.
 
-Env var overrides: `MERINO_{SECTION}__{KEY}=value` (double underscore for nesting).
+Configuration TOML files are stored in `{package_name}/configs/` (e.g. `merino/configs` or `merino-fleece/merino_fleece/configs`). Switched by `MERINO_ENV` for **merino** or `MERINO_FLEECE_ENV` for **merino-fleece** (development/testing/ci/stage/production.toml).
 
-Access in code: `from merino.configs import settings`
+Env var overrides: `{PACKAGE_NAME}_{SECTION}__{KEY}=value` (double underscore for nesting).
+
+Access in code: `from merino.configs import settings` or `from merino_fleece.configs import settings`.
 
 No `.env` files exist. All config is TOML + env vars.
+
+## Architecture Decision Records
+
+The ADRs (Architecture Decision Records) for this project, located in @docs/adr/, should be referenced as the design and implementation guidance.
