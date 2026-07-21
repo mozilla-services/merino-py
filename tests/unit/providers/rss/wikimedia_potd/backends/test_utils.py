@@ -15,6 +15,8 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     is_valid_potd_image_url,
     parse_potd,
+    extract_image_description_with_lang_code,
+    parse_discovered_languages,
     build_potd_bucket_directory_path,
 )
 
@@ -146,3 +148,45 @@ def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
 def test_build_potd_bucket_directory_path() -> None:
     """Test build_potd_bucket_directory_path returns the dated gcs bucket directory path."""
     assert build_potd_bucket_directory_path() == "wikimedia_potd/2026-06-07/"
+
+
+def test_extract_image_description_with_lang_code_returns_lang_and_text(featured: dict) -> None:
+    """Returns the description language and text from a Featured API response."""
+    featured["image"]["description"] = {"lang": "de", "text": "Deutscher Text"}
+
+    assert extract_image_description_with_lang_code(featured) == ("de", "Deutscher Text")
+
+
+@pytest.mark.parametrize(
+    ["data"],
+    [
+        ({"image": {"description": {}}},),
+        ({"image": {}},),
+        ({},),
+    ],
+    ids=["empty-description", "no-description", "no-image"],
+)
+def test_extract_image_description_with_lang_code_defaults_to_empty(data: dict) -> None:
+    """Returns empty strings when the description or image is absent."""
+    assert extract_image_description_with_lang_code(data) == ("", "")
+
+
+def test_parse_discovered_languages_extracts_codes() -> None:
+    """Extracts language codes and skips the bare file-selector subpage."""
+    commons_data = {
+        "query": {
+            "allpages": [
+                {"title": "Template:Potd/2026-07-14"},
+                {"title": "Template:Potd/2026-07-14 (de)"},
+                {"title": "Template:Potd/2026-07-14 (es)"},
+                {"title": "Template:Potd/2026-07-14 (zh-hans)"},
+            ]
+        }
+    }
+
+    assert parse_discovered_languages(commons_data) == ["de", "es", "zh-hans"]
+
+
+def test_parse_discovered_languages_returns_empty_when_no_pages() -> None:
+    """Returns an empty list when the Commons response has no allpages."""
+    assert parse_discovered_languages({}) == []

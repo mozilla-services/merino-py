@@ -674,10 +674,11 @@ async def get_picture_of_the_day(
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: WikimediaPictureOfTheDayProvider = Depends(get_wikimedia_potd_provider),
 ) -> Response:  # pragma: no cover
-    """Get the picture of the day."""
+    """Get the picture of the day, localized to the client's Accept-Language when available."""
     potd = None
     try:
-        potd = await provider.get_picture_of_the_day()
+        languages = get_accepted_languages(accept_language)
+        potd = await provider.get_picture_of_the_day(languages)
     except Exception as ex:
         logger.info(f"Something went wrong when fetching potd: {ex.__class__.__name__}")
 

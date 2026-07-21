@@ -21,7 +21,11 @@ class PictureOfTheDay(BaseModel):
         description="High resolution URL of the picture of the day image."
     )
     published_date: str = Field(description="Date when the image was published.")
-    description: str = Field(description="Description of the image.")
+    description: str = Field(description="Description of the image in the default language.")
+    localized_descriptions: dict[str, str] = Field(
+        default_factory=dict,
+        description="Localized descriptions keyed by language code (e.g. 'de', 'es').",
+    )
     author: str = Field(default="", description="Name of the image's artist.")
     file_page: HttpUrl | None = Field(default=None, description="Commons file page URL.")
     license_label: str = Field(default="", description="License type, e.g. 'CC BY-SA 4.0'.")
@@ -50,13 +54,19 @@ class WikimediaPictureOfTheDayBackend(Protocol):
         """
         ...
 
-    async def fetch_picture_of_the_day(
-        self,
-    ) -> dict:  # pragma: no cover
-        """Fetch the Wikimedia Featured API picture of the day for today.
+    async def fetch_picture_of_the_day(self, lang: str) -> dict:  # pragma: no cover
+        """Fetch the Wikimedia Featured API picture of the day for today in `lang`.
 
         Returns:
             The parsed JSON response as a dict. Raises WikimediaPotdError on failure.
+        """
+        ...
+
+    async def discover_languages(self, date_str: str) -> list[str]:  # pragma: no cover
+        """Discover the languages that have an authored POTD description for `date_str`.
+
+        Returns:
+            A list of language codes, always including the default language.
         """
         ...
 

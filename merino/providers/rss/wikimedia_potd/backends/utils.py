@@ -1,5 +1,6 @@
 """Utility functions for parsing Wikimedia Featured API picture of the day data."""
 
+import re
 from datetime import datetime, timezone
 from pydantic import HttpUrl
 
@@ -12,6 +13,11 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
 WIKIMEDIA_REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; Merino/1.0; +https://github.com/mozilla-services/merino-py)"
 }
+
+# Commons stores each language's POTD description on its own template subpage titled
+# "Template:Potd/{date} ({lang})", so the trailing parenthesized code is the language.
+# The bare "Template:Potd/{date}" page (the file selector) has no suffix and is ignored.
+POTD_DESCRIPTION_LANG_RE = re.compile(r"\(([\w-]+)\)$")
 
 
 def parse_potd(data: dict) -> PictureOfTheDay:
@@ -49,6 +55,33 @@ def parse_potd(data: dict) -> PictureOfTheDay:
         license_label=lic.get("type", ""),
         license_link=HttpUrl(lic["url"]) if lic.get("url") else None,
     )
+
+
+def extract_image_description_with_lang_code(data: dict) -> tuple[str, str]:
+    """Extract the image description language and text from a Wikimedia Featured API response.
+
+    Returns:
+        A (lang, text) tuple. Both are empty strings when the description is absent.
+    """
+    description = data.get("image", {}).get("description", {})
+    return description.get("lang", ""), description.get("text", "")
+
+
+def parse_discovered_languages(commons_data: dict) -> list[str]:
+    """Extract POTD description language codes from a Commons allpages response.
+
+    Returns:
+        The list of discovered language codes, in the order returned by the API.
+    """
+    pages = commons_data.get("query", {}).get("allpages", [])
+
+    discovered_languages = []
+    for page in pages:
+        match = POTD_DESCRIPTION_LANG_RE.search(page.get("title", ""))
+        if match:
+            discovered_languages.append(match.group(1))
+
+    return discovered_languages
 
 
 def build_potd_bucket_directory_path() -> str:

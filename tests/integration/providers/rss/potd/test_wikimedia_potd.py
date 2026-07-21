@@ -44,7 +44,8 @@ def fixture_backend(
     return WikimediaPictureOfTheDayBackend(
         metrics_client=statsd_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
-        feed_url="https://example.com/feed",
+        featured_api_base="https://example.com/feed",
+        commons_api_url="https://commons.example.com/w/api.php",
         gcs_uploader=GcsUploader(
             destination_gcp_project=gcs_storage_client.project,
             destination_bucket_name=gcs_storage_bucket.name,
@@ -111,6 +112,71 @@ class TestUploadPictureOfTheDayMethod:
         assert potd_blobs[0].name == "wikimedia_potd/2026-06-24/hi_res.png"
         assert potd_blobs[1].name == "wikimedia_potd/2026-06-24/potd.json"
         assert potd_blobs[2].name == "wikimedia_potd/2026-06-24/thumbnail.png"
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_stores_localized_descriptions(
+        self,
+        backend: WikimediaPictureOfTheDayBackend,
+        gcs_storage_client,
+        gcs_storage_bucket,
+        mocker: MockerFixture,
+    ) -> None:
+        """Discovers languages, keeps localized descriptions, and drops English fallbacks."""
+        commons_response = Response(
+            status_code=200,
+            json={
+                "query": {
+                    "allpages": [
+                        {"title": "Template:Potd/2026-06-24"},
+                        {"title": "Template:Potd/2026-06-24 (en)"},
+                        {"title": "Template:Potd/2026-06-24 (de)"},
+                        {"title": "Template:Potd/2026-06-24 (fr)"},
+                    ]
+                }
+            },
+            request=Request(method="GET", url=FEED_URL),
+        )
+        # de has an authored description; fr does not, so the API returns the English fallback.
+        de_response = Response(
+            status_code=200,
+            json={"image": {"description": {"lang": "de", "text": "Deutscher Text"}}},
+            request=Request(method="GET", url=FEED_URL),
+        )
+        fr_fallback_response = Response(
+            status_code=200,
+            json={"image": {"description": {"lang": "en", "text": "English fallback"}}},
+            request=Request(method="GET", url=FEED_URL),
+        )
+        en_response = Response(
+            status_code=200,
+            content=TEST_FEATURED_JSON,
+            request=Request(method="GET", url=FEED_URL),
+        )
+
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        # order: discover (commons), fetch en (base), then localized de + fr fetches
+        client_mock.get.side_effect = [
+            commons_response,
+            en_response,
+            de_response,
+            fr_fallback_response,
+        ]
+        mocker.patch.object(backend, "download_potd_image").return_value = Image(
+            content=b"255", content_type="Image/png"
+        )
+
+        result = await backend.upload_picture_of_the_day()
+        assert result is True
+
+        potd_manifest = backend.fetch_potd_from_gcs_bucket()
+
+        assert potd_manifest is not None
+        # "en" stays on potd.description and is never duplicated into localized_descriptions
+        assert potd_manifest.description == "The Milky Way over the Sagittarius region."
+        assert potd_manifest.localized_descriptions == {"de": "Deutscher Text"}
+        # the image is downloaded once and shared across languages
+        assert backend.download_potd_image.call_count == 2  # thumbnail + hi-res, once each
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
@@ -257,7 +323,7 @@ class TestFetchPictureOfTheDayMethod:
         )
 
         with pytest.raises(WikimediaPotdError):
-            await backend.fetch_picture_of_the_day()
+            await backend.fetch_picture_of_the_day("en")
 
 
 class TestUploadImageMethod:
