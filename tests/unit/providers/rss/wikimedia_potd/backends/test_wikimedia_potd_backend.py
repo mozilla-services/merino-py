@@ -11,7 +11,7 @@ import freezegun
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 from pydantic import HttpUrl
-from httpx import AsyncClient, HTTPError, Request, Response
+from httpx import AsyncClient, HTTPError, ReadTimeout, Request, Response
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
@@ -305,6 +305,44 @@ class TestFetchPictureOfTheDayMethod:
 
         with pytest.raises(HTTPError):
             await backend.fetch_picture_of_the_day()
+
+    @pytest.mark.asyncio
+    @freezegun.freeze_time("2026-06-24")
+    async def test_fetch_potd_retries_transient_error_then_succeeds(
+        self,
+        backend: WikimediaPictureOfTheDayBackend,
+    ) -> None:
+        """Retries a transient read timeout and returns the response once the fetch succeeds."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.side_effect = [
+            ReadTimeout("transient"),
+            ReadTimeout("transient"),
+            Response(
+                status_code=200,
+                content=TEST_FEATURED_JSON.encode(),
+                request=Request(method="GET", url=FEED_URL),
+            ),
+        ]
+
+        result = await backend.fetch_picture_of_the_day()
+
+        assert result["image"]["title"] == "File:Milky Way over Sagittarius.jpg"
+        assert client_mock.get.call_count == 3
+
+    @pytest.mark.asyncio
+    @freezegun.freeze_time("2026-06-24")
+    async def test_fetch_potd_reraises_after_exhausting_retries(
+        self,
+        backend: WikimediaPictureOfTheDayBackend,
+    ) -> None:
+        """Reraises the underlying error after exhausting the configured attempts."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.side_effect = ReadTimeout("always down")
+
+        with pytest.raises(ReadTimeout):
+            await backend.fetch_picture_of_the_day()
+
+        assert client_mock.get.call_count == settings.rss_providers.wikimedia_potd.retry_count
 
 
 class TestGcsUploadVerification:
