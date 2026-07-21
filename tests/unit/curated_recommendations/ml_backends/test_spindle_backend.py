@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock
 
 import aiodogstatsd
@@ -74,14 +75,62 @@ class TestSimilarStoriesInfo:
 class TestSpindleBackendRefresh:
     """Behavior of refresh_duplicate_item_info."""
 
-    @pytest.mark.asyncio
-    async def test_unsupported_surface_skips_http(self):
-        """A surface with no language mapping should not hit the network."""
+    @pytest.mark.parametrize(
+        ("surface", "expected_language"),
+        [
+            (SurfaceId.NEW_TAB_EN_US, "en"),
+            (SurfaceId.NEW_TAB_EN_GB, "en"),
+            (SurfaceId.NEW_TAB_EN_CA, "en"),
+            (SurfaceId.NEW_TAB_EN_IE, "en"),
+            (SurfaceId.NEW_TAB_EN_INTL, "en"),
+            (SurfaceId.NEW_TAB_EN_XE, "en"),
+            (SurfaceId.NEW_TAB_DE_DE, "de"),
+            (SurfaceId.NEW_TAB_ES_ES, "es"),
+            (SurfaceId.NEW_TAB_ES_XA, "es"),
+            (SurfaceId.NEW_TAB_FR_FR, "fr"),
+            (SurfaceId.NEW_TAB_IT_IT, "it"),
+            (SurfaceId.NEW_TAB_PL_PL, "pl"),
+        ],
+    )
+    def test_language_is_derived_from_surface(
+        self, surface: SurfaceId, expected_language: str
+    ) -> None:
+        """Every current surface should map to its language prefix."""
         http_client = MagicMock(spec=AsyncClient)
-        http_client.post = AsyncMock()
         backend = _make_backend(http_client)
-        await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_FR_FR)
-        http_client.post.assert_not_called()
+
+        assert backend._language_for_surface(surface) == expected_language
+
+    def test_malformed_surface_has_no_language(self) -> None:
+        """A malformed future surface should not produce a Spindle language."""
+
+        class _MalformedSurface:
+            value = "BAD"
+
+        http_client = MagicMock(spec=AsyncClient)
+        backend = _make_backend(http_client)
+
+        assert backend._language_for_surface(cast(SurfaceId, _MalformedSurface())) is None
+
+    @pytest.mark.asyncio
+    async def test_non_english_surface_posts_with_derived_language(self):
+        """A formerly gated surface should call Spindle with its language."""
+        http_client = MagicMock(spec=AsyncClient)
+        response_body = {
+            "similar": {},
+            "model_version": "text-v1",
+            "threshold": 0.7,
+            "language": "pl",
+            "num_items": 1,
+            "num_pairs": 0,
+        }
+        http_client.post = AsyncMock(return_value=_ok_response(response_body))
+        backend = _make_backend(http_client)
+
+        await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_PL_PL)
+
+        http_client.post.assert_awaited_once()
+        assert http_client.post.call_args.kwargs["json"]["language"] == "pl"
 
     @pytest.mark.asyncio
     async def test_empty_items_skips_http(self):
@@ -151,6 +200,97 @@ class TestSpindleBackendRefresh:
         assert "recommendation.spindle.text.timing" in timing_calls
         # Enable once images are enabled
         # assert "recommendation.spindle.image.timing" in timing_calls
+
+    @pytest.mark.asyncio
+    async def test_unchanged_content_ids_skip_refresh(self):
+        """The same content ids for a surface reuse cached similarity info."""
+        http_client = MagicMock(spec=AsyncClient)
+        response_body = {
+            "similar": {"a": ["b"]},
+            "model_version": "text-v1",
+            "threshold": 0.7,
+            "language": "en",
+            "num_items": 2,
+            "num_pairs": 1,
+        }
+        http_client.post = AsyncMock(return_value=_ok_response(response_body))
+        backend = _make_backend(http_client)
+
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+        )
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+        )
+
+        http_client.post.assert_awaited_once()
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        assert text_info is not None
+        assert text_info.neighbors("a") == ["b"]
+
+    @pytest.mark.asyncio
+    async def test_changed_content_ids_refresh_again(self):
+        """A changed content id set triggers a new Spindle request."""
+        http_client = MagicMock(spec=AsyncClient)
+        first_response = {
+            "similar": {"a": ["b"]},
+            "model_version": "text-v1",
+            "threshold": 0.7,
+            "language": "en",
+            "num_items": 2,
+            "num_pairs": 1,
+        }
+        second_response = {
+            "similar": {"a": ["c"]},
+            "model_version": "text-v1",
+            "threshold": 0.7,
+            "language": "en",
+            "num_items": 2,
+            "num_pairs": 1,
+        }
+        http_client.post = AsyncMock(
+            side_effect=[_ok_response(first_response), _ok_response(second_response)]
+        )
+        backend = _make_backend(http_client)
+
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+        )
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("c")], SurfaceId.NEW_TAB_EN_US
+        )
+
+        assert http_client.post.await_count == 2
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        assert text_info is not None
+        assert text_info.neighbors("a") == ["c"]
+
+    @pytest.mark.asyncio
+    async def test_failed_refresh_does_not_cache_content_ids(self):
+        """A failed refresh should retry the same content ids next time."""
+        http_client = MagicMock(spec=AsyncClient)
+        response_body = {
+            "similar": {"a": ["b"]},
+            "model_version": "text-v1",
+            "threshold": 0.7,
+            "language": "en",
+            "num_items": 2,
+            "num_pairs": 1,
+        }
+        http_client.post = AsyncMock(side_effect=[HTTPError("boom"), _ok_response(response_body)])
+        backend = _make_backend(http_client)
+
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+        )
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+        )
+
+        assert http_client.post.await_count == 2
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        assert text_info is not None
+        assert text_info.neighbors("a") == ["b"]
 
     @pytest.mark.asyncio
     async def test_http_error_does_not_raise_and_leaves_cache_alone(self):
