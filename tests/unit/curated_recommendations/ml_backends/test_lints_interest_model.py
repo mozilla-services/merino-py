@@ -361,7 +361,7 @@ def test_score_matches_reference_implementation() -> None:
     backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
 
     items = list(expected["item_to_idx"].keys())
-    strengths = {DEFAULT_SYNTHETIC_TOPIC_NAMES[t]: (0.5 if t < 3 else 0.0) for t in range(7)}
+    strengths = {DEFAULT_SYNTHETIC_TOPIC_NAMES[t]: (1.5 if t < 3 else 0.0) for t in range(7)}
 
     # Reference: reconstruct dense L, run solve_triangular with the SAME ε
     # the backend will draw, then score every item by the score formula in
@@ -402,7 +402,7 @@ def test_unknown_item_gets_bias_plus_topic_main_only() -> None:
     backend._fetch_callback(blob, surface_id=SurfaceId.NEW_TAB_EN_US)
 
     # Use the same rng for both calls so the θ̃ draw is identical.
-    strengths = {DEFAULT_SYNTHETIC_TOPIC_NAMES[t]: (0.5 if t < 3 else 0.0) for t in range(7)}
+    strengths = {DEFAULT_SYNTHETIC_TOPIC_NAMES[t]: (1.5 if t < 3 else 0.0) for t in range(7)}
     rng_known = np.random.default_rng(7)
     rng_unknown = np.random.default_rng(7)
 

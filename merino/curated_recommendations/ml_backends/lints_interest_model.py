@@ -37,6 +37,15 @@ L_FORMAT_LAPACK_LOWER_PACKED = "lapack_lower_packed"
 VALIDITY_PERIOD_MINUTES = 60
 
 
+def remap_interests_for_real_world_strengths(val: float | None):
+    """Remap ~1.1 and below to 0.87 reflecting analysis.
+    See content-ml-services/jobs/metaflow/prospecting/inferred_tuning for details
+    """
+    if val is not None and val <= 1.1:
+        return val * 0.87 / 1.1
+    return val
+
+
 class LinTSInterestBackend:
     """Per-surface backend that loads the LinTS-interest safetensors bundle and
     samples θ̃ per request via packed-triangular solve.
@@ -275,6 +284,9 @@ class LinTSInterestBackend:
                 f"LinTSInterestBackend.score_request called for {surface_id} "
                 f"without a valid bundle"
             )
+        strengths_adjusted = {
+            key: remap_interests_for_real_world_strengths(val) for key, val in strengths.items()
+        }
         d = self._dim[surface_id]
         bias_idx = self._bias_idx[surface_id]
         v = self._v[surface_id]
@@ -298,7 +310,7 @@ class LinTSInterestBackend:
         # 2) Constant-across-candidates terms: bias + Σ_t strength_t · θ̃[topic_main(t)]
         strength_vec = np.zeros(n_topics, dtype=np.float32)
         for t, name in enumerate(topic_names):
-            sv = strengths.get(name)
+            sv = strengths_adjusted.get(name)
             if isinstance(sv, (int, float)):
                 strength_vec[t] = float(sv)
         topic_main_indices = np.array(
