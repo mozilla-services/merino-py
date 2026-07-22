@@ -184,9 +184,9 @@ def test_parse_discovered_languages_extracts_codes() -> None:
         }
     }
 
-    assert parse_discovered_languages(commons_data) == ["de", "es", "zh-hans"]
+    assert parse_discovered_languages(commons_data) == {"de", "es", "zh-hans"}
 
 
 def test_parse_discovered_languages_returns_empty_when_no_pages() -> None:
-    """Returns an empty list when the Commons response has no allpages."""
-    assert parse_discovered_languages({}) == []
+    """Returns an empty set when the Commons response has no allpages."""
+    assert parse_discovered_languages({}) == set()

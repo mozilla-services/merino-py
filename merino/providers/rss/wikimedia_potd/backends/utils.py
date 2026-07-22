@@ -67,19 +67,20 @@ def extract_image_description_with_lang_code(data: dict) -> tuple[str, str]:
     return description.get("lang", ""), description.get("text", "")
 
 
-def parse_discovered_languages(commons_data: dict) -> list[str]:
+def parse_discovered_languages(commons_data: dict) -> set[str]:
     """Extract POTD description language codes from a Commons allpages response.
 
     Returns:
-        The list of discovered language codes, in the order returned by the API.
+        A set of discovered language codes, in the order returned by the API.
     """
     pages = commons_data.get("query", {}).get("allpages", [])
 
-    discovered_languages = []
+    discovered_languages: set[str] = set()
+
     for page in pages:
         match = POTD_DESCRIPTION_LANG_RE.search(page.get("title", ""))
         if match:
-            discovered_languages.append(match.group(1))
+            discovered_languages.add(match.group(1))
 
     return discovered_languages
 

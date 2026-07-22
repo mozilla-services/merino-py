@@ -316,7 +316,7 @@ class TestDiscoverLanguages:
     async def test_discover_languages_parses_commons_subpages_for_a_given_date(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Parses language codes from Commons subpages and prepends the default language for a given date."""
+        """Parses language codes from Commons subpages for a given date."""
         commons_json = {
             "query": {
                 "allpages": [
@@ -335,13 +335,13 @@ class TestDiscoverLanguages:
 
         result = await backend.discover_languages("2026-06-24")
 
-        assert result == ["en", "de", "es"]
+        assert result == {"de", "es"}
 
     @pytest.mark.asyncio
-    async def test_discover_languages_does_not_duplicate_fallback_language(
+    async def test_discover_languages_excludes_en(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Does not append the fallback language (en) again when Commons already lists it."""
+        """Excludes "en" from the discovered set since it is already the default description."""
         commons_json = {
             "query": {
                 "allpages": [
@@ -359,19 +359,19 @@ class TestDiscoverLanguages:
 
         result = await backend.discover_languages("2026-06-24")
 
-        assert result == ["en", "de"]
+        assert result == {"de"}
 
     @pytest.mark.asyncio
-    async def test_discover_languages_falls_back_to_en_on_error(
+    async def test_discover_languages_returns_empty_set_on_error(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Returns just the fallback (en) when the Commons request fails."""
+        """Returns an empty set when the Commons request fails."""
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.side_effect = HTTPError("commons down")
 
         result = await backend.discover_languages("2026-06-24")
 
-        assert result == ["en"]
+        assert result == set()
 
 
 class TestFetchLocalizedDescriptions:
@@ -381,7 +381,7 @@ class TestFetchLocalizedDescriptions:
     async def test_only_returns_de_localized_description(
         self, backend: WikimediaPictureOfTheDayBackend
     ) -> None:
-        """Skip en and fr_fallback and return just de as the only valid localized description"""
+        """Keeps a genuinely localized description (de) and drops the English fallback (fr)."""
         de_data = {"image": {"description": {"lang": "de", "text": "Deutscher Text"}}}
         # fr has no authored description, so the API returns the English fallback.
         fr_fallback = {"image": {"description": {"lang": "en", "text": "English text"}}}
@@ -394,9 +394,9 @@ class TestFetchLocalizedDescriptions:
             ),
         ]
 
-        result = await backend.fetch_localized_descriptions(["en", "de", "fr"])
+        result = await backend.fetch_localized_descriptions({"de", "fr"})
 
-        # "en" is never fetched or stored, only "de" is fetched and both requests are localized
+        # de is kept; the fr response came back as an "en" fallback, so it is dropped
         assert result == {"de": "Deutscher Text"}
 
     @pytest.mark.asyncio
@@ -407,7 +407,7 @@ class TestFetchLocalizedDescriptions:
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.side_effect = HTTPError("Unexpected error")
 
-        result = await backend.fetch_localized_descriptions(["en", "de"])
+        result = await backend.fetch_localized_descriptions({"de"})
 
         assert result == {}
 
@@ -423,7 +423,7 @@ class TestFetchLocalizedDescriptions:
             status_code=200, json=de_empty, request=Request(method="GET", url=FEED_URL)
         )
 
-        result = await backend.fetch_localized_descriptions(["en", "de"])
+        result = await backend.fetch_localized_descriptions({"de"})
 
         assert result == {}
 
@@ -445,7 +445,7 @@ class TestFetchLocalizedDescriptions:
             ),
         ]
 
-        result = await backend.fetch_picture_of_the_day()
+        result = await backend.fetch_picture_of_the_day("en")
 
         assert result["image"]["title"] == "File:Milky Way over Sagittarius.jpg"
         assert client_mock.get.call_count == 3
@@ -461,7 +461,7 @@ class TestFetchLocalizedDescriptions:
         client_mock.get.side_effect = ReadTimeout("always down")
 
         with pytest.raises(ReadTimeout):
-            await backend.fetch_picture_of_the_day()
+            await backend.fetch_picture_of_the_day("en")
 
         assert client_mock.get.call_count == settings.rss_providers.wikimedia_potd.retry_count
 

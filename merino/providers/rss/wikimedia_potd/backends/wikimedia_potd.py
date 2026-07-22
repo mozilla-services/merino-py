@@ -77,8 +77,9 @@ class WikimediaPictureOfTheDayBackend:
             # parse the response to extract a PictureOfTheDay instance
             potd = parse_potd(potd_en)
 
-            # collect localized image descriptions keyed by language ("en" is skipped since it
-            # is already the default description, so an en-only discovery yields an empty map)
+            # collect localized image descriptions keyed by language; "en" is already excluded
+            # during discovery (it is the default description), so this maps only non-English
+            # languages and is empty when no localized descriptions exist
             localized_descriptions = await self.fetch_localized_descriptions(languages)
 
             # download thumbnail and high resolution images and get the respective cdn urls
@@ -99,15 +100,16 @@ class WikimediaPictureOfTheDayBackend:
             sentry_sdk.capture_exception(ex)
             return False
 
-    async def discover_languages(self, date_str: str) -> list[str]:
+    async def discover_languages(self, date_str: str) -> set[str]:
         """Discover the languages with an authored POTD description for `date_str`.
 
         Queries the Wikimedia Commons allpages API for the "Template:Potd/{date} ({lang})"
-        subpages that exist for the day. Discovery failures fallback to just the default
-        language (en) rather than failing the upload, and the default language is always included.
+        subpages that exist for the day. The default language (en) is excluded because it is
+        already the default description on the potd. A discovery failure degrades to an empty
+        set (logged, not raised) rather than failing the upload.
 
         Returns:
-            A list of language codes, always containing the default language.
+            A set of language codes with an authored description, excluding en.
         """
         params = {
             "action": "query",
@@ -118,22 +120,17 @@ class WikimediaPictureOfTheDayBackend:
             "aplimit": "500",
         }
 
-        # make sure "en" is in the list as a default
-        languages = ["en"]
+        discovered_languages: set[str] = set()
 
         try:
             response: Response = await self.http_client.get(
                 self.commons_api_url, params=params, headers=WIKIMEDIA_REQUEST_HEADERS
             )
             response.raise_for_status()
-            discovered_languages = parse_discovered_languages(response.json())
+            discovered_languages.update(parse_discovered_languages(response.json()))
 
-            # make sure we don't include a duplicate "en"
-            if "en" in discovered_languages:
-                discovered_languages.remove("en")
-
-            # append the list with discovered languages
-            languages.extend(discovered_languages)
+            # "en" is the default description already on the potd, so never fetch it again
+            discovered_languages.discard("en")
 
         except Exception as ex:
             logger.warning(
@@ -141,15 +138,15 @@ class WikimediaPictureOfTheDayBackend:
                 extra={"error": str(ex), "date": date_str},
             )
 
-        return languages
+        return discovered_languages
 
-    async def fetch_localized_descriptions(self, languages: list[str]) -> dict[str, str]:
+    async def fetch_localized_descriptions(self, languages: set[str]) -> dict[str, str]:
         """Fetch a description for each language, keeping only genuinely localized text.
 
-        "en" is skipped because its description is already the default on the potd object.
-        For every other language the Featured API silently returns the English description
-        when no localization exists, so a response whose description comes back as "en" is
-        dropped rather than stored as a duplicate.
+        "en" is excluded upstream by `discover_languages` because its description is already
+        the default on the potd object. For every other language the Featured API silently
+        returns the English description when no localization exists, so a response whose
+        description comes back as "en" is dropped rather than stored as a duplicate.
 
         Returns:
             A mapping of language code to localized description text.
@@ -157,9 +154,6 @@ class WikimediaPictureOfTheDayBackend:
         localized_descriptions: dict[str, str] = {}
 
         for lang in languages:
-            # we already have the default (en) description on the potd object
-            if lang == "en":
-                continue
             try:
                 potd_in_lang = await self.fetch_picture_of_the_day(lang)
                 lang_code, description = extract_image_description_with_lang_code(potd_in_lang)

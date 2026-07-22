@@ -68,11 +68,12 @@ class WikimediaPictureOfTheDayBackend(Protocol):
         """
         ...
 
-    async def discover_languages(self, date_str: str) -> list[str]:  # pragma: no cover
+    async def discover_languages(self, date_str: str) -> set[str]:  # pragma: no cover
         """Discover the languages that have an authored POTD description for `date_str`.
 
         Returns:
-            A list of language codes, always including the default language.
+            A set of language codes with an authored description, excluding the default
+            language (en).
         """
         ...
 
