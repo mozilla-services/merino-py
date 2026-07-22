@@ -37,3 +37,9 @@ class SuggestLogDataModel(LogDataModel):
     browser: str
     os_family: str
     form_factor: str
+
+
+class SearchTermsSubmission(BaseModel):
+    """Request body for submitting search terms for sanitization."""
+
+    search_terms: list[SuggestLogDataModel]
