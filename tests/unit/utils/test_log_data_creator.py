@@ -4,22 +4,17 @@
 
 """Unit tests for the log_data_creator.py utility module."""
 
-from datetime import datetime, timezone
-from typing import Any
+from datetime import datetime
 
 import pytest
-from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.types import Message
 
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
-from merino.utils.log_data_creators import (
-    LogDataModel,
-    SuggestLogDataModel,
-    create_suggest_log_data,
-)
+from merino.utils.log_data_creators import create_suggest_log_data
+from merino_common.models.suggest_logging import SuggestLogDataModel
 
 
 @pytest.mark.parametrize(
@@ -124,42 +119,3 @@ def test_create_suggest_log_data(
     log_data: SuggestLogDataModel = create_suggest_log_data(request, message, dt)
 
     assert log_data == expected_log_data
-
-
-@pytest.mark.parametrize(
-    "time_input",
-    ["not a datetime string", {"not", "a", "datetime", "object"}],
-    ids=["invalid_string", "invalid_object_type"],
-)
-def test_create_log_object_fails_on_invalid_time(time_input: Any):
-    """Test that `time` fails validation on invalid time input."""
-    with pytest.raises(ValidationError):
-        LogDataModel(
-            errno=0,
-            time=time_input,
-            path="/",
-            method="GET",
-        )
-
-
-@pytest.mark.parametrize("expected_time", ["2022-12-18T15:58:41+00:00"])
-@pytest.mark.parametrize(
-    "datetime_rep",
-    [
-        datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=timezone.utc),
-    ],
-    ids=["datetime_obj"],
-)
-def test_create_log_object_can_convert_time_to_isoformat(
-    datetime_rep: datetime, expected_time: str
-):
-    """Ensure that `time` field correctly validates datetime inputs
-    and outputs ISO format string.
-    """
-    log_data = LogDataModel(
-        errno=0,
-        time=datetime_rep,
-        path="/",
-        method="GET",
-    )
-    assert log_data.model_dump().get("time") == expected_time

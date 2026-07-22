@@ -16,7 +16,7 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
-from merino.utils.log_data_creators import SuggestLogDataModel
+from merino_common.models.suggest_logging import SuggestLogDataModel
 from merino.utils.query_processing.query_patterns import build_query_pattern_matcher
 from tests.integration.api.v1.fake_providers import FakeProviderFactory
 from tests.integration.api.v1.types import Providers
