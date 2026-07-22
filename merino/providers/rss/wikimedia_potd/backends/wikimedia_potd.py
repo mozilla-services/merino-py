@@ -77,9 +77,9 @@ class WikimediaPictureOfTheDayBackend:
             # parse the response to extract a PictureOfTheDay instance
             potd = parse_potd(potd_en)
 
-            # collect localized image descriptions keyed by language; "en" is already excluded
-            # during discovery (it is the default description), so this maps only non-English
-            # languages and is empty when no localized descriptions exist
+            # collect localized image descriptions keyed by language, "en" is already excluded
+            # during discovery (it is the default description). This maps only non-English
+            # languages and is empty when no localized descriptions exist.
             localized_descriptions = await self.fetch_localized_descriptions(languages)
 
             # download thumbnail and high resolution images and get the respective cdn urls
