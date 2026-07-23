@@ -27,6 +27,7 @@ from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
 from merino.utils.gcs.models import Image
 
 FEED_URL = "https://example.com/feed"
+COMMONS_API_URL = "https://commons.example.com/w/api.php"
 
 # The sample response is stored verbatim as JSON so the fixture matches the Featured API payload.
 TEST_FEATURED_JSON = Path("tests/data/rss/wikimedia_potd/potd_featured.json").read_text(
@@ -51,7 +52,8 @@ def fixture_backend(
     return WikimediaPictureOfTheDayBackend(
         metrics_client=statsd_mock,
         http_client=mocker.AsyncMock(spec=AsyncClient),
-        feed_url=FEED_URL,
+        featured_api_base=FEED_URL,
+        commons_api_url=COMMONS_API_URL,
         gcs_uploader=gcs_uploader_mock,
     )
 
@@ -267,12 +269,12 @@ class TestFetchPictureOfTheDayMethod:
             request=Request(method="GET", url=FEED_URL),
         )
 
-        result = await backend.fetch_picture_of_the_day()
+        result = await backend.fetch_picture_of_the_day("en")
 
         assert result is not None
         assert result["image"]["title"] == "File:Milky Way over Sagittarius.jpg"
         client_mock.get.assert_called_once_with(
-            f"{FEED_URL}/2026/06/24", headers=WIKIMEDIA_REQUEST_HEADERS
+            f"{FEED_URL}/en/featured/2026/06/24", headers=WIKIMEDIA_REQUEST_HEADERS
         )
 
     @pytest.mark.asyncio
@@ -289,7 +291,7 @@ class TestFetchPictureOfTheDayMethod:
         )
 
         with pytest.raises(WikimediaPotdError):
-            await backend.fetch_picture_of_the_day()
+            await backend.fetch_picture_of_the_day("en")
 
     @pytest.mark.asyncio
     async def test_fetch_potd_propagates_http_error(
@@ -304,7 +306,126 @@ class TestFetchPictureOfTheDayMethod:
         )
 
         with pytest.raises(HTTPError):
-            await backend.fetch_picture_of_the_day()
+            await backend.fetch_picture_of_the_day("en")
+
+
+class TestDiscoverLanguages:
+    """Tests for the discover_languages method."""
+
+    @pytest.mark.asyncio
+    async def test_discover_languages_parses_commons_subpages_for_a_given_date(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Parses language codes from Commons subpages for a given date."""
+        commons_json = {
+            "query": {
+                "allpages": [
+                    {"title": "Template:Potd/2026-06-24"},
+                    {"title": "Template:Potd/2026-06-24 (de)"},
+                    {"title": "Template:Potd/2026-06-24 (es)"},
+                ]
+            }
+        }
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            json=commons_json,
+            request=Request(method="GET", url=COMMONS_API_URL),
+        )
+
+        result = await backend.discover_languages("2026-06-24")
+
+        assert result == {"de", "es"}
+
+    @pytest.mark.asyncio
+    async def test_discover_languages_excludes_en(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Excludes "en" from the discovered set since it is already the default description."""
+        commons_json = {
+            "query": {
+                "allpages": [
+                    {"title": "Template:Potd/2026-06-24 (en)"},
+                    {"title": "Template:Potd/2026-06-24 (de)"},
+                ]
+            }
+        }
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            json=commons_json,
+            request=Request(method="GET", url=COMMONS_API_URL),
+        )
+
+        result = await backend.discover_languages("2026-06-24")
+
+        assert result == {"de"}
+
+    @pytest.mark.asyncio
+    async def test_discover_languages_returns_empty_set_on_error(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Returns an empty set when the Commons request fails."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.side_effect = HTTPError("commons down")
+
+        result = await backend.discover_languages("2026-06-24")
+
+        assert result == set()
+
+
+class TestFetchLocalizedDescriptions:
+    """Tests for the fetch_localized_descriptions method."""
+
+    @pytest.mark.asyncio
+    async def test_only_returns_de_localized_description(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Keeps a genuinely localized description (de) and drops the English fallback (fr)."""
+        de_data = {"image": {"description": {"lang": "de", "text": "Deutscher Text"}}}
+        # fr has no authored description, so the API returns the English fallback.
+        fr_fallback = {"image": {"description": {"lang": "en", "text": "English text"}}}
+
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.side_effect = [
+            Response(status_code=200, json=de_data, request=Request(method="GET", url=FEED_URL)),
+            Response(
+                status_code=200, json=fr_fallback, request=Request(method="GET", url=FEED_URL)
+            ),
+        ]
+
+        result = await backend.fetch_localized_descriptions({"de", "fr"})
+
+        # de is kept; the fr response came back as an "en" fallback, so it is dropped
+        assert result == {"de": "Deutscher Text"}
+
+    @pytest.mark.asyncio
+    async def test_skips_language_when_fetch_raises(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Skips a language whose fetch raises, keeping the rest of the dict intact."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.side_effect = HTTPError("Unexpected error")
+
+        result = await backend.fetch_localized_descriptions({"de"})
+
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_drops_language_with_empty_description_text(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Does not store a language whose description text is empty."""
+        de_empty = {"image": {"description": {"lang": "de", "text": ""}}}
+
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200, json=de_empty, request=Request(method="GET", url=FEED_URL)
+        )
+
+        result = await backend.fetch_localized_descriptions({"de"})
+
+        assert result == {}
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2026-06-24")
@@ -324,7 +445,7 @@ class TestFetchPictureOfTheDayMethod:
             ),
         ]
 
-        result = await backend.fetch_picture_of_the_day()
+        result = await backend.fetch_picture_of_the_day("en")
 
         assert result["image"]["title"] == "File:Milky Way over Sagittarius.jpg"
         assert client_mock.get.call_count == 3
@@ -340,7 +461,7 @@ class TestFetchPictureOfTheDayMethod:
         client_mock.get.side_effect = ReadTimeout("always down")
 
         with pytest.raises(ReadTimeout):
-            await backend.fetch_picture_of_the_day()
+            await backend.fetch_picture_of_the_day("en")
 
         assert client_mock.get.call_count == settings.rss_providers.wikimedia_potd.retry_count
 

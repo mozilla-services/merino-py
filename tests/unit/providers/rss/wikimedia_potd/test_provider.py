@@ -197,6 +197,86 @@ async def test_get_picture_of_the_day_serves_stale_potd_when_refetch_misses(
     assert potd is test_potd
 
 
+@freezegun.freeze_time("2026-06-07")
+@pytest.mark.asyncio
+async def test_get_picture_of_the_day_returns_localized_description_for_accepted_language(
+    provider: WikimediaPictureOfTheDayProvider, test_potd
+) -> None:
+    """Swaps in the localized description matching the client's Accept-Language."""
+    provider.potd = test_potd.model_copy(
+        update={"localized_descriptions": {"de": "Deutscher Text"}}
+    )
+
+    potd = await provider.get_picture_of_the_day(["de-DE", "en-US"])
+
+    assert potd is not None
+    assert potd.description == "Deutscher Text"
+
+
+@freezegun.freeze_time("2026-06-07")
+@pytest.mark.asyncio
+async def test_get_picture_of_the_day_matches_base_subtag(
+    provider: WikimediaPictureOfTheDayProvider, test_potd
+) -> None:
+    """Falls back to the base language subtag when the full code has no description."""
+    provider.potd = test_potd.model_copy(update={"localized_descriptions": {"pt": "Português"}})
+
+    potd = await provider.get_picture_of_the_day(["pt-BR"])
+
+    assert potd is not None
+    assert potd.description == "Português"
+
+
+@freezegun.freeze_time("2026-06-07")
+@pytest.mark.asyncio
+async def test_get_picture_of_the_day_prefers_exact_code_over_base_subtag(
+    provider: WikimediaPictureOfTheDayProvider, test_potd
+) -> None:
+    """Prefers an exact language-code match over the base subtag match."""
+    provider.potd = test_potd.model_copy(
+        update={"localized_descriptions": {"pt": "Português", "pt-br": "Português brasileiro"}}
+    )
+
+    potd = await provider.get_picture_of_the_day(["pt-BR"])
+
+    assert potd is not None
+    assert potd.description == "Português brasileiro"
+
+
+@freezegun.freeze_time("2026-06-07")
+@pytest.mark.asyncio
+async def test_get_picture_of_the_day_keeps_default_when_no_language_matches(
+    provider: WikimediaPictureOfTheDayProvider, test_potd
+) -> None:
+    """Serves the default description (and the cached instance) when no language matches."""
+    provider.potd = test_potd.model_copy(
+        update={"localized_descriptions": {"de": "Deutscher Text"}}
+    )
+
+    potd = await provider.get_picture_of_the_day(["fr-FR"])
+
+    assert potd is not None
+    # same as the default (en) description of the test_potd fixture
+    assert potd.description == "test description"
+
+
+@freezegun.freeze_time("2026-06-07")
+@pytest.mark.asyncio
+async def test_get_picture_of_the_day_keeps_default_when_no_accepted_languages(
+    provider: WikimediaPictureOfTheDayProvider, test_potd
+) -> None:
+    """Returns the cached instance unchanged when no Accept-Language is provided."""
+    provider.potd = test_potd.model_copy(
+        update={"localized_descriptions": {"de": "Deutscher Text"}}
+    )
+
+    potd = await provider.get_picture_of_the_day()
+
+    assert potd is not None
+    # same as the default (en) description of the test_potd fixture
+    assert potd.description == "test description"
+
+
 @freezegun.freeze_time("2026-06-08")
 @pytest.mark.asyncio
 async def test_get_picture_of_the_day_refetches_on_every_miss(

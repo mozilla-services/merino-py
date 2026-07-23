@@ -31,13 +31,15 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseRssProvider:
     match setting.type:
         case RssProviderType.WIKIMEDIA_POTD:
             http_client = create_http_client(
-                base_url=settings.rss_providers.wikimedia_potd.feed_url,
+                base_url=settings.rss_providers.wikimedia_potd.featured_api_base,
                 connect_timeout=settings.rss_providers.wikimedia_potd.connect_timeout_sec,
+                request_timeout=settings.rss_providers.wikimedia_potd.request_timeout_sec,
             )
 
             return WikimediaPictureOfTheDayProvider(
                 backend=WikimediaPictureOfTheDayBackend(
-                    feed_url=setting.feed_url,
+                    featured_api_base=setting.featured_api_base,
+                    commons_api_url=setting.commons_api_url,
                     http_client=http_client,
                     metrics_client=get_metrics_client(),
                     gcs_uploader=GcsUploader(

@@ -1218,6 +1218,10 @@ enabled_by_default = false
 # Timeout in seconds for establishing a connection to the Wikimedia Featured API endpoint.
 connect_timeout_sec = 3.0
 
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__REQUEST_TIMEOUT_SEC
+# Timeout in seconds for reading/writing a single request to the Wikimedia APIs.
+request_timeout_sec = 5.0
+
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__QUERY_TIMEOUT_SEC
 # A float (in seconds) indicating the maximum waiting period when querying for POTD data.
 query_timeout_sec = 1.0
@@ -1239,6 +1243,15 @@ retry_wait_jitter_seconds = 0.2
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEED_URL
 # Base URL for the Wikimedia Featured API; the backend appends /{yyyy}/{mm}/{dd}.
 feed_url = "https://api.wikimedia.org/feed/v1/wikipedia/en/featured"
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__FEATURED_API_BASE
+# Base URL for the Wikimedia Featured API; the backend appends
+# /{lang}/featured/{yyyy}/{mm}/{dd} to fetch a language's picture of the day.
+featured_api_base = "https://api.wikimedia.org/feed/v1/wikipedia"
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__COMMONS_API_URL
+# Wikimedia Commons Action API, used to discover which languages have an authored
+# picture of the day description for a given day (Template:Potd/{date} (xx) subpages).
+commons_api_url = "https://commons.wikimedia.org/w/api.php"
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CACHE_CONTROL
 # Cache control headers for stored images in the bucket (1hr)

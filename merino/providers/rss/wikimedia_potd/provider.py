@@ -67,12 +67,39 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
 
         await self._refresh_potd()
 
-    async def get_picture_of_the_day(self) -> PictureOfTheDay | None:
+    @staticmethod
+    def _select_description(
+        potd: PictureOfTheDay, accepted_languages: list[str] | None
+    ) -> str | None:
+        """Return the best localized description for `accepted_languages`, or None.
+
+        Each accepted language is matched against the potd's localized descriptions, trying
+        the full code first (e.g. "pt-br") then the base subtag (e.g. "pt"), in the client's
+        order of preference. Returns None when no localized description matches, so callers
+        keep the default-language description already on the model.
+        """
+        if not accepted_languages or len(potd.localized_descriptions) == 0:
+            return None
+
+        for language in accepted_languages:
+            code = language.lower()
+            if code in potd.localized_descriptions:
+                return potd.localized_descriptions[code]
+            base = code.split("-")[0]
+            if base in potd.localized_descriptions:
+                return potd.localized_descriptions[base]
+
+        return None
+
+    async def get_picture_of_the_day(
+        self, accepted_languages: list[str] | None = None
+    ) -> PictureOfTheDay | None:
         """Return the Wikimedia Picture of the Day, or None if none has ever been cached.
 
         Re-fetches when the cached potd is missing or from a previous day. When today's
         potd isn't available yet we serve the previous day's cached potd rather than
-        nothing.
+        nothing. When `accepted_languages` matches a localized description, the returned
+        potd's `description` is swapped for it; otherwise the default description is kept.
         """
         if not self._is_todays_potd(self.potd):
             await self._refresh_potd()
@@ -80,6 +107,14 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         # TODO @herraj jira: [HNT-2162]
         # add a metric to track when we serve a stale (previous-day) potd here
         # because today's picture isn't yet available in the gcs bucket.
+        if self.potd is None:
+            return None
+
+        localized = self._select_description(self.potd, accepted_languages)
+
+        if localized is not None:
+            return self.potd.model_copy(update={"description": localized})
+
         return self.potd
 
     async def upload_picture_of_the_day(self) -> bool:

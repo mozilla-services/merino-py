@@ -23,6 +23,8 @@ from merino.utils.gcs.models import Image
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     WIKIMEDIA_REQUEST_HEADERS,
     parse_potd,
+    extract_image_description_with_lang_code,
+    parse_discovered_languages,
     build_potd_bucket_directory_path,
     is_valid_potd_image_url,
 )
@@ -42,11 +44,13 @@ class WikimediaPictureOfTheDayBackend:
         self,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
-        feed_url: str,
+        featured_api_base: str,
+        commons_api_url: str,
         gcs_uploader: GcsUploader,
     ) -> None:
-        """Initialize the backend with the Featured API base url."""
-        self.feed_url = feed_url
+        """Initialize the backend with the Featured API base url and Commons discovery url."""
+        self.featured_api_base = featured_api_base
+        self.commons_api_url = commons_api_url
         self.metrics_client = metrics_client
         self.http_client = http_client
         self.gcs_uploader = gcs_uploader
@@ -62,17 +66,31 @@ class WikimediaPictureOfTheDayBackend:
         # This is the single error boundary for the upload job: every helper below either
         # returns a value or raises, and any failure is reported to Sentry once here.
         try:
-            # fetch today's Wikimedia Featured API response
-            data = await self.fetch_picture_of_the_day()
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+            # discover which languages have an authored description for today's picture
+            languages = await self.discover_languages(today)
+
+            # fetch the default (en) response for the image urls and base metadata
+            potd_en = await self.fetch_picture_of_the_day("en")
 
             # parse the response to extract a PictureOfTheDay instance
-            potd = parse_potd(data)
+            potd = parse_potd(potd_en)
+
+            # collect localized image descriptions keyed by language, "en" is already excluded
+            # during discovery (it is the default description). This maps only non-English
+            # languages and is empty when no localized descriptions exist.
+            localized_descriptions = await self.fetch_localized_descriptions(languages)
 
             # download thumbnail and high resolution images and get the respective cdn urls
             thumbnail_url, hi_res_url = await self.download_and_upload_potd_images(potd)
 
             potd_to_upload = potd.model_copy(
-                update={"thumbnail_image_url": thumbnail_url, "high_res_image_url": hi_res_url}
+                update={
+                    "thumbnail_image_url": thumbnail_url,
+                    "high_res_image_url": hi_res_url,
+                    "localized_descriptions": localized_descriptions,
+                }
             )
 
             self.upload_potd_manifest(potd_to_upload)
@@ -81,6 +99,80 @@ class WikimediaPictureOfTheDayBackend:
         except Exception as ex:
             sentry_sdk.capture_exception(ex)
             return False
+
+    async def discover_languages(self, date_str: str) -> set[str]:
+        """Discover the languages with an authored POTD description for `date_str`.
+
+        Queries the Wikimedia Commons allpages API for the "Template:Potd/{date} ({lang})"
+        subpages that exist for the day. The default language (en) is excluded because it is
+        already the default description on the potd. A discovery failure degrades to an empty
+        set (logged, not raised) rather than failing the upload.
+
+        Returns:
+            A set of language codes with an authored description, excluding en.
+        """
+        params = {
+            "action": "query",
+            "format": "json",
+            "list": "allpages",
+            "apprefix": f"Potd/{date_str}",
+            "apnamespace": "10",
+            "aplimit": "500",
+        }
+
+        discovered_languages: set[str] = set()
+
+        try:
+            response: Response = await self.http_client.get(
+                self.commons_api_url, params=params, headers=WIKIMEDIA_REQUEST_HEADERS
+            )
+            response.raise_for_status()
+            discovered_languages.update(parse_discovered_languages(response.json()))
+
+            # "en" is the default description already on the potd, so never fetch it again
+            discovered_languages.discard("en")
+
+        except Exception as ex:
+            logger.warning(
+                "Failed to discover POTD description languages",
+                extra={"error": str(ex), "date": date_str},
+            )
+
+        return discovered_languages
+
+    async def fetch_localized_descriptions(self, languages: set[str]) -> dict[str, str]:
+        """Fetch a description for each language, keeping only genuinely localized text.
+
+        "en" is excluded upstream by `discover_languages` because its description is already
+        the default on the potd object. For every other language the Featured API silently
+        returns the English description when no localization exists, so a response whose
+        description comes back as "en" is dropped rather than stored as a duplicate.
+
+        Returns:
+            A mapping of language code to localized description text.
+        """
+        localized_descriptions: dict[str, str] = {}
+
+        for lang in languages:
+            try:
+                potd_in_lang = await self.fetch_picture_of_the_day(lang)
+                lang_code, description = extract_image_description_with_lang_code(potd_in_lang)
+            except Exception as ex:
+                logger.warning(
+                    "Failed to fetch localized POTD description",
+                    extra={"error": str(ex), "lang": lang},
+                )
+                continue
+
+            # wikimedia featured api call returns English description as a fallback,
+            # making sure not to add duplicate English descriptions as we have it on the default potd already.
+            # so a call for potd to the Featured API, in Italian ("it"),
+            # could return the fall back "en" version even if the language discovery call returned with "it"
+            # as one of the supported languages for this potd.
+            if description and lang_code != "en":
+                localized_descriptions[lang_code] = description
+
+        return localized_descriptions
 
     async def download_and_upload_potd_images(
         self, potd: PictureOfTheDay
@@ -112,8 +204,8 @@ class WikimediaPictureOfTheDayBackend:
         reraise=True,
         before_sleep=before_sleep_log(logger, logging.INFO),
     )
-    async def fetch_picture_of_the_day(self) -> dict:
-        """Fetch the Wikimedia Featured API picture of the day for today.
+    async def fetch_picture_of_the_day(self, lang: str) -> dict:
+        """Fetch the Wikimedia Featured API picture of the day for today in `lang`.
 
         Retries transient failures with exponential backoff before giving up; the final
         failure is re-raised so the upload job's error boundary reports it once.
@@ -124,8 +216,8 @@ class WikimediaPictureOfTheDayBackend:
         # setting the format to YYYY/MM/DD which is accepted as the url param
         today = datetime.now(timezone.utc).strftime("%Y/%m/%d")
 
-        # the Featured API expects the date in the url path: .../en/featured/{yyyy}/{mm}/{dd}
-        url = f"{self.feed_url}/{today}"
+        # the Featured API expects lang and date in the url path: .../{lang}/featured/{yyyy}/{mm}/{dd}
+        url = f"{self.featured_api_base}/{lang}/featured/{today}"
 
         response: Response = await self.http_client.get(url, headers=WIKIMEDIA_REQUEST_HEADERS)
 
