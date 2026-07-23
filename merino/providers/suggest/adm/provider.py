@@ -76,6 +76,7 @@ class SponsoredSuggestion(BaseSuggestion):
     advertiser: str
     impression_url: HttpUrl
     click_url: HttpUrl
+    suggestion_id: str
 
 
 class NonsponsoredSuggestion(BaseSuggestion):
@@ -90,6 +91,7 @@ class NonsponsoredSuggestion(BaseSuggestion):
     advertiser: str
     impression_url: HttpUrl | None = None
     click_url: HttpUrl | None = None
+    suggestion_id: str
 
 
 class Provider(BaseProvider):
@@ -401,6 +403,7 @@ class Provider(BaseProvider):
                 "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
                 "score": self.score,
                 "is_top_pick": is_top_pick,
+                "suggestion_id": res.suggestion_id,
             }
             return [
                 (

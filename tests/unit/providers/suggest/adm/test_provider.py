@@ -157,6 +157,7 @@ async def test_query_fuzzy_rescues_typo_for_treatment(
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            suggestion_id="11111111-1111-1111-1111-111111111111",
         )
     ]
 
@@ -343,8 +344,26 @@ async def test_query_success(
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            suggestion_id="11111111-1111-1111-1111-111111111111",
         )
     ]
+
+
+@pytest.mark.parametrize("query", ["firefox"])
+@pytest.mark.asyncio
+async def test_query_missing_suggestion_id_defaults_to_nil_uuid(
+    srequest: SuggestionRequestFixture,
+    adm_no_suggestion_id: Provider,
+    query: str,
+) -> None:
+    """A record without `suggestion_id` defaults to the nil UUID (rollout case)."""
+    await adm_no_suggestion_id.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+    res = await adm_no_suggestion_id.query(srequest(query, geolocation, user_agent, None))
+    assert len(res) == 1
+    assert isinstance(res[0], NonsponsoredSuggestion)
+    assert res[0].suggestion_id == "00000000-0000-0000-0000-000000000000"
 
 
 @pytest.mark.parametrize("query", ["firefox"])
@@ -373,6 +392,7 @@ async def test_query_with_missing_key(
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            suggestion_id="11111111-1111-1111-1111-111111111111",
         )
     ]
 
