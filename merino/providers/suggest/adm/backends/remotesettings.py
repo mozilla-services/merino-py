@@ -44,6 +44,8 @@ class KintoSuggestion(BaseModel):
     keywords: list[str] = []
     title: str
     url: str
+    header_text: str | None = None
+    suggestion_id: str | None = None
 
 
 class RemoteSettingsError(BackendError):
