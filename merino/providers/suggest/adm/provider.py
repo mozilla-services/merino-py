@@ -374,9 +374,9 @@ class Provider(BaseProvider):
             # opted into `top_pick_promotion` and the record's `top_pick_prefix`
             # appears in the query.
             is_top_pick = None
-            if TOP_PICK_PROMOTION in client_variants:
-                is_top_pick = res.top_pick_prefix is not None and q.startswith(res.top_pick_prefix)
-                if is_top_pick and res.top_pick_prefix:
+            if TOP_PICK_PROMOTION in client_variants and res.top_pick_prefix is not None:
+                is_top_pick = q.startswith(res.top_pick_prefix)
+                if is_top_pick:
                     self.metrics_client.increment(
                         "providers.adm.top_pick_promotion",
                         tags={
