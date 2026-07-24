@@ -464,6 +464,25 @@ async def test_top_pick_promotion_metric_not_emitted(
     adm_top_pick.metrics_client.increment.assert_not_called()  # type: ignore[attr-defined]
 
 
+@pytest.mark.asyncio
+async def test_query_is_top_pick_none_when_record_has_no_prefix(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+) -> None:
+    """`is_top_pick` is None when the client opts into
+    `top_pick_promotion` but the matched record has no `top_pick_prefix`.
+    """
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    res = await adm.query(srequest("firefox", geolocation, user_agent, ["top_pick_promotion"]))
+
+    assert len(res) == 1
+    assert res[0].is_top_pick is None
+    adm.metrics_client.increment.assert_not_called()  # type: ignore[attr-defined]
+
+
 SAMPLE_ENGAGEMENT_DATA = EngagementData(
     amp={
         "mozilla/firefox": KeywordEntry(
