@@ -14,6 +14,13 @@ dependencies = [
     "opentelemetry-api>=1.42.1,<2",
 ]
 
+[project.optional-dependencies]
+# Required by the merino_common.testing.metrics helpers (InMemoryMetricReader).
+# Test-only; not needed at runtime.
+testing = [
+    "opentelemetry-sdk>=1.42.1,<2",
+]
+
 [tool.uv.build-backend]
 module-name = "merino_common"
 # Opt for the flat structure "merino_commont" over "src/merino_common"

@@ -10,10 +10,8 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from merino.middleware import ScopeKey
-from merino.utils.log_data_creators import (
-    SuggestLogDataModel,
-    create_suggest_log_data,
-)
+from merino.utils.log_data_creators import create_suggest_log_data
+from merino_common.models.suggest_logging import SuggestLogDataModel
 from merino.configs import settings
 from merino.utils.query_processing.pii_detect import PIIType
 

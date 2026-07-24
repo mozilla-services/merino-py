@@ -1784,14 +1784,21 @@ dependencies = [
     { name = "sentry-sdk", extra = ["fastapi"] },
 ]
 
+[package.optional-dependencies]
+testing = [
+    { name = "opentelemetry-sdk" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "dockerflow", specifier = ">=2026.3.4,<2027" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.135.0,<1" },
     { name = "opentelemetry-api", specifier = ">=1.42.1,<2" },
+    { name = "opentelemetry-sdk", marker = "extra == 'testing'", specifier = ">=1.42.1,<2" },
     { name = "pydantic", specifier = ">=2.13.0,<3" },
     { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.13.0,<3" },
 ]
+provides-extras = ["testing"]
 
 [[package]]
 name = "merino-fleece"
@@ -3391,13 +3398,13 @@ resolution-markers = [
     "sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", marker = "sys_platform == 'darwin'" },
-    { name = "fsspec", marker = "sys_platform == 'darwin'" },
-    { name = "jinja2", marker = "sys_platform == 'darwin'" },
-    { name = "networkx", marker = "sys_platform == 'darwin'" },
-    { name = "setuptools", marker = "sys_platform == 'darwin'" },
-    { name = "sympy", marker = "sys_platform == 'darwin'" },
-    { name = "typing-extensions", marker = "sys_platform == 'darwin'" },
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx" },
+    { name = "setuptools" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.12.1-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:e9b6f7d2dd66ea87a3ae620069d31335d594c06effb1a383bdd21cfe61e44ece", upload-time = "2026-06-17T15:44:16Z" },
@@ -3412,13 +3419,13 @@ resolution-markers = [
     "sys_platform != 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", marker = "sys_platform != 'darwin'" },
-    { name = "fsspec", marker = "sys_platform != 'darwin'" },
-    { name = "jinja2", marker = "sys_platform != 'darwin'" },
-    { name = "networkx", marker = "sys_platform != 'darwin'" },
-    { name = "setuptools", marker = "sys_platform != 'darwin'" },
-    { name = "sympy", marker = "sys_platform != 'darwin'" },
-    { name = "typing-extensions", marker = "sys_platform != 'darwin'" },
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx" },
+    { name = "setuptools" },
+    { name = "sympy" },
+    { name = "typing-extensions" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.12.1%2Bcpu-cp314-cp314-linux_s390x.whl", hash = "sha256:ef228ec70f5e73762c213f145c0fdb672e5770a6de760801c58b933b0d5b6957", upload-time = "2026-06-18T01:58:09Z" },
