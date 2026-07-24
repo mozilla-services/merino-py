@@ -11,8 +11,8 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from starlette.types import Receive, Scope, Send
 
-from merino.utils.log_data_creators import SuggestLogDataModel
 from merino.middleware.logging import LoggingMiddleware
+from merino_common.models.suggest_logging import SuggestLogDataModel
 from merino.configs import settings
 
 

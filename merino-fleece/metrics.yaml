@@ -1,0 +1,26 @@
+version: 1.0
+
+service: Merino-fleece
+
+search-terms:
+  api.search_terms.receive.count:
+    description: |
+      A counter recording the number of search terms received in each submission
+      to the search-terms endpoint. Incremented once per request by the size of
+      the submitted batch.
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/search-terms" API endpoint of "merino-fleece".
+    alert_policy: []
+
+pii:
+  pii.detect_duration:
+    description: |
+      A timer instrumenting the duration of each PII detection call, emitted
+      via the aiodogstatsd metrics client (namespace "merino.fleece").
+    type: timing
+    labels: []
+    scope: |
+      The "api/v1/pii" API endpoint of "merino-fleece".
+    alert_policy: []

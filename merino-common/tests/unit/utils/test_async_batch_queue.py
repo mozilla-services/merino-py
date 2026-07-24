@@ -10,8 +10,9 @@ import signal
 
 import pytest
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import Gauge, InMemoryMetricReader, NumberDataPoint, Sum
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
+from merino_common.testing.metrics import collect_metrics, find_point, number_points
 from merino_common.utils.async_batch_queue import (
     AsyncBatchQueue,
     QueueFullException,
@@ -186,7 +187,7 @@ async def test_shutdown_deadline_drops_and_logs_and_metrics_unflushable_items(
     assert any("Shutdown deadline exceeded" in r.message for r in caplog.records), (
         "expected a warning logging the dropped items"
     )
-    dropped = _number_points(reader, "async_batch_queue.dropped.count")
+    dropped = number_points(reader, "async_batch_queue.dropped.count")
     assert sum(point.value for point in dropped) == 5
 
 
@@ -502,51 +503,6 @@ async def test_put_raises_queue_full_when_at_capacity() -> None:
     await batcher.stop(force=True)
 
 
-def _collect_metrics(reader: InMemoryMetricReader) -> dict[str, float]:
-    """Collect metrics into a {name: summed-value} dict."""
-    values: dict[str, float] = {}
-    data = reader.get_metrics_data()
-    if data is None:
-        return values
-    for resource_metric in data.resource_metrics:
-        for scope_metric in resource_metric.scope_metrics:
-            for metric in scope_metric.metrics:
-                metric_data = metric.data
-                # Only Sum/Gauge carry NumberDataPoints with a `.value`.
-                if isinstance(metric_data, (Sum, Gauge)):
-                    values[metric.name] = sum((p.value for p in metric_data.data_points), 0.0)
-    return values
-
-
-def _number_points(reader: InMemoryMetricReader, name: str) -> list[NumberDataPoint]:
-    """Return the NumberDataPoints for the named Sum/Gauge metric."""
-    points: list[NumberDataPoint] = []
-    data = reader.get_metrics_data()
-    if data is None:
-        return points
-    for resource_metric in data.resource_metrics:
-        for scope_metric in resource_metric.scope_metrics:
-            for metric in scope_metric.metrics:
-                if metric.name == name and isinstance(metric.data, (Sum, Gauge)):
-                    points.extend(metric.data.data_points)
-    return points
-
-
-def _find_point(
-    reader: InMemoryMetricReader, name: str, **match: object
-) -> NumberDataPoint | None:
-    """Return the single data point for `name` whose attributes match all of `match`.
-
-    Data point order is not guaranteed, so tests select by attributes rather than
-    index.
-    """
-    for point in _number_points(reader, name):
-        attributes = point.attributes or {}
-        if all(attributes.get(key) == value for key, value in match.items()):
-            return point
-    return None
-
-
 @pytest.mark.asyncio
 async def test_metrics_report_queue_size_capacity_and_processed() -> None:
     """A meter_provider gets queue.size, queue.capacity, and processed.count."""
@@ -569,7 +525,7 @@ async def test_metrics_report_queue_size_capacity_and_processed() -> None:
     # Enqueue without yielding: run() hasn't executed, so all 6 are still queued.
     for i in range(6):
         batcher.put(i)
-    before = _collect_metrics(reader)
+    before = collect_metrics(reader)
     assert before["async_batch_queue.queue.capacity"] == 100
     assert before["async_batch_queue.queue.size"] == 6
     assert before.get("async_batch_queue.processed.count", 0) == 0
@@ -582,7 +538,7 @@ async def test_metrics_report_queue_size_capacity_and_processed() -> None:
     await asyncio.wait_for(all_processed(), timeout=5.0)
     await batcher.stop(force=True)
 
-    after = _collect_metrics(reader)
+    after = collect_metrics(reader)
     assert after["async_batch_queue.queue.size"] == 0
     assert after["async_batch_queue.processed.count"] == 6
 
@@ -606,14 +562,14 @@ async def test_processed_metric_labels_failures() -> None:
     batcher.put(1)
 
     async def one_processed() -> None:
-        while _collect_metrics(reader).get("async_batch_queue.processed.count", 0) < 1:
+        while collect_metrics(reader).get("async_batch_queue.processed.count", 0) < 1:
             await asyncio.sleep(0.005)
 
     await asyncio.wait_for(one_processed(), timeout=5.0)
     await batcher.stop(force=True)
 
     # Find the processed-count data point and check its error attributes.
-    points = _number_points(reader, "async_batch_queue.processed.count")
+    points = number_points(reader, "async_batch_queue.processed.count")
     assert len(points) == 1
     assert points[0].value == 1
     attributes = points[0].attributes
@@ -645,7 +601,7 @@ async def test_rejected_metric_counts_queue_full_rejections() -> None:
 
     await batcher.stop(force=True)
 
-    points = _number_points(reader, "async_batch_queue.rejected.count")
+    points = number_points(reader, "async_batch_queue.rejected.count")
     assert len(points) == 1
     assert points[0].value == 2  # both overflowing puts counted
     attributes = points[0].attributes
@@ -681,20 +637,20 @@ async def test_error_callback_metric_records_successful_error_callback() -> None
     # error_callback.count is recorded after processed.count, so waiting on it
     # guarantees both are present.
     async def error_callback_recorded() -> None:
-        while _find_point(reader, "async_batch_queue.error_callback.count") is None:
+        while find_point(reader, "async_batch_queue.error_callback.count") is None:
             await asyncio.sleep(0.005)
 
     await asyncio.wait_for(error_callback_recorded(), timeout=5.0)
     await batcher.stop(force=True)
 
-    processed_point = _find_point(reader, "async_batch_queue.processed.count", outcome="error")
+    processed_point = find_point(reader, "async_batch_queue.processed.count", outcome="error")
     assert processed_point is not None
     assert processed_point.value == 1
     attributes = processed_point.attributes
     assert attributes is not None
     assert attributes["error.type"] == "ValueError"
 
-    error_point = _find_point(reader, "async_batch_queue.error_callback.count", outcome="success")
+    error_point = find_point(reader, "async_batch_queue.error_callback.count", outcome="success")
     assert error_point is not None
     assert error_point.value == 1
     attributes = error_point.attributes
@@ -728,13 +684,13 @@ async def test_error_callback_metric_records_failed_error_callback() -> None:
     batcher.put(1)
 
     async def error_callback_recorded() -> None:
-        while _find_point(reader, "async_batch_queue.error_callback.count") is None:
+        while find_point(reader, "async_batch_queue.error_callback.count") is None:
             await asyncio.sleep(0.005)
 
     await asyncio.wait_for(error_callback_recorded(), timeout=5.0)
     await batcher.stop(force=True)
 
-    error_point = _find_point(reader, "async_batch_queue.error_callback.count", outcome="error")
+    error_point = find_point(reader, "async_batch_queue.error_callback.count", outcome="error")
     assert error_point is not None
     assert error_point.value == 1
     attributes = error_point.attributes

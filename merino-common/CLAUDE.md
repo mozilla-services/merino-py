@@ -7,6 +7,7 @@ A package for common reusable modules of **merino-py**.
 - **app_configs**, located in @merino-common/merino_common/app_configs/, provide various common application configurations.
 - **routers**, located in @merino-common/merino_common/routers/, common FastAPI routers such as DockerFlow for **merino** and **merino-fleece**.
 - **utils**, located in @merino-common/merino_common/utils/, common utilities for **merino-py**.
+- **testing**, located in @merino-common/merino_common/testings/, common utilities for testing.
 
 ## Package Dependencies
 

@@ -2,7 +2,6 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, field_serializer
 from starlette.datastructures import Headers
 from starlette.requests import Request
 from starlette.types import Message
@@ -10,40 +9,11 @@ from starlette.types import Message
 from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
-
-
-class LogDataModel(BaseModel):
-    """Shared generic log data model."""
-
-    errno: int
-    time: datetime
-    path: str
-    method: str
-
-    @field_serializer("time")
-    def serialize_time(self, v: datetime, **kwargs):
-        """Return a datetime value as an iso formatted str."""
-        return v.isoformat()
-
-
-class SuggestLogDataModel(LogDataModel):
-    """Log metadata specific to Suggest logs."""
-
-    sensitive: bool
-    query: str | None = None
-    code: int
-    rid: str  # Provided by the asgi-correlation-id middleware.
-    session_id: str | None = None
-    sequence_no: int | None = None
-    client_variants: str
-    requested_providers: str
-    country: str | None = None
-    region: str | None = None
-    city: str | None = None
-    dma: int | None = None
-    browser: str
-    os_family: str
-    form_factor: str
+from merino_common.models.suggest_logging import (
+    MozlogDataModel,
+    SuggestLogDataModel,
+    SuggestRequestParams,
+)
 
 
 def create_suggest_log_data(
@@ -54,29 +24,35 @@ def create_suggest_log_data(
     user_agent: UserAgent = request.scope[ScopeKey.USER_AGENT]
 
     return SuggestLogDataModel(
-        # General Data
         sensitive=True,
-        errno=0,
-        time=dt,
-        # Request Data
-        path=request.url.path,
-        method=request.method,
-        query=request.query_params.get("q"),
-        code=message["status"],
-        rid=Headers(scope=message)["X-Request-ID"],
-        session_id=request.query_params.get("sid"),
-        sequence_no=(
-            int(seq) if (seq := request.query_params.get("seq", "")) and seq.isdecimal() else None
+        mozlog=MozlogDataModel(
+            # General Data
+            errno=0,
+            time=dt,
+            # Request Data
+            path=request.url.path,
+            method=request.method,
         ),
-        client_variants=request.query_params.get("client_variants", ""),
-        requested_providers=request.query_params.get("providers", ""),
-        # Location Data
-        country=location.country,
-        region=location.regions[0] if location.regions else None,
-        city=location.city,
-        dma=location.dma,
-        # User Agent Data
-        browser=user_agent.browser,
-        os_family=user_agent.os_family,
-        form_factor=user_agent.form_factor,
+        request_params=SuggestRequestParams(
+            query=request.query_params.get("q"),
+            code=message["status"],
+            rid=Headers(scope=message)["X-Request-ID"],
+            session_id=request.query_params.get("sid"),
+            sequence_no=(
+                int(seq)
+                if (seq := request.query_params.get("seq", "")) and seq.isdecimal()
+                else None
+            ),
+            client_variants=request.query_params.get("client_variants", ""),
+            requested_providers=request.query_params.get("providers", ""),
+            # Location Data
+            country=location.country,
+            region=location.regions[0] if location.regions else None,
+            city=location.city,
+            dma=location.dma,
+            # User Agent Data
+            browser=user_agent.browser,
+            os_family=user_agent.os_family,
+            form_factor=user_agent.form_factor,
+        ),
     )

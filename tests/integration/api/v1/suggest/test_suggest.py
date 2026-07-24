@@ -16,7 +16,11 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
-from merino.utils.log_data_creators import SuggestLogDataModel
+from merino_common.models.suggest_logging import (
+    MozlogDataModel,
+    SuggestLogDataModel,
+    SuggestRequestParams,
+)
 from merino.utils.query_processing.query_patterns import build_query_pattern_matcher
 from tests.integration.api.v1.fake_providers import FakeProviderFactory
 from tests.integration.api.v1.types import Providers
@@ -261,34 +265,38 @@ def test_suggest_request_log_data(
 
     expected_log_data: SuggestLogDataModel = SuggestLogDataModel(
         sensitive=True,
-        errno=0,
-        time=datetime(1998, 3, 31),
-        path="/api/v1/suggest",
-        method="GET",
-        query="nope",
-        code=200,
-        rid="1b11844c52b34c33a6ad54b7bc2eb7c7",
-        session_id="deadbeef-0000-1111-2222-333344445555",
-        sequence_no=0,
-        client_variants="foo,bar",
-        requested_providers="pro,vider",
-        country="US",
-        region="WA",
-        city="Milton",
-        dma=819,
-        browser="Firefox(103.0)",
-        os_family="macos",
-        form_factor="desktop",
+        mozlog=MozlogDataModel(
+            errno=0,
+            time=datetime(1998, 3, 31),
+            path="/api/v1/suggest",
+            method="GET",
+        ),
+        request_params=SuggestRequestParams(
+            query="nope",
+            code=200,
+            rid="1b11844c52b34c33a6ad54b7bc2eb7c7",
+            session_id="deadbeef-0000-1111-2222-333344445555",
+            sequence_no=0,
+            client_variants="foo,bar",
+            requested_providers="pro,vider",
+            country="US",
+            region="WA",
+            city="Milton",
+            dma=819,
+            browser="Firefox(103.0)",
+            os_family="macos",
+            form_factor="desktop",
+        ),
     )
 
     client.get(
-        url=expected_log_data.path,
+        url=expected_log_data.mozlog.path,
         params={
-            "q": expected_log_data.query,
-            "sid": expected_log_data.session_id,
-            "seq": expected_log_data.sequence_no,
-            "client_variants": expected_log_data.client_variants,
-            "providers": expected_log_data.requested_providers,
+            "q": expected_log_data.request_params.query,
+            "sid": expected_log_data.request_params.session_id,
+            "seq": expected_log_data.request_params.sequence_no,
+            "client_variants": expected_log_data.request_params.client_variants,
+            "providers": expected_log_data.request_params.requested_providers,
         },
         headers={
             "User-Agent": (
@@ -305,24 +313,28 @@ def test_suggest_request_log_data(
     record = records[0]
     log_data: SuggestLogDataModel = SuggestLogDataModel(
         sensitive=record.__dict__["sensitive"],
-        errno=record.__dict__["errno"],
-        time=record.__dict__["time"],
-        path=record.__dict__["path"],
-        method=record.__dict__["method"],
-        query=record.__dict__["query"],
-        code=record.__dict__["code"],
-        rid=record.__dict__["rid"],
-        session_id=record.__dict__["session_id"],
-        sequence_no=record.__dict__["sequence_no"],
-        client_variants=record.__dict__["client_variants"],
-        requested_providers=record.__dict__["requested_providers"],
-        country=record.__dict__["country"],
-        region=record.__dict__["region"],
-        city=record.__dict__["city"],
-        dma=record.__dict__["dma"],
-        browser=record.__dict__["browser"],
-        os_family=record.__dict__["os_family"],
-        form_factor=record.__dict__["form_factor"],
+        mozlog=MozlogDataModel(
+            errno=record.__dict__["errno"],
+            time=record.__dict__["time"],
+            path=record.__dict__["path"],
+            method=record.__dict__["method"],
+        ),
+        request_params=SuggestRequestParams(
+            query=record.__dict__["query"],
+            code=record.__dict__["code"],
+            rid=record.__dict__["rid"],
+            session_id=record.__dict__["session_id"],
+            sequence_no=record.__dict__["sequence_no"],
+            client_variants=record.__dict__["client_variants"],
+            requested_providers=record.__dict__["requested_providers"],
+            country=record.__dict__["country"],
+            region=record.__dict__["region"],
+            city=record.__dict__["city"],
+            dma=record.__dict__["dma"],
+            browser=record.__dict__["browser"],
+            os_family=record.__dict__["os_family"],
+            form_factor=record.__dict__["form_factor"],
+        ),
     )
 
     assert log_data == expected_log_data
