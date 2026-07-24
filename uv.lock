@@ -1844,7 +1844,6 @@ name = "merino-fleece"
 version = "0.1.0"
 source = { editable = "merino-fleece" }
 dependencies = [
-    { name = "aiodogstatsd" },
     { name = "dynaconf" },
     { name = "en-core-web-sm" },
     { name = "fastapi", extra = ["standard"] },
@@ -1857,7 +1856,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiodogstatsd", specifier = ">=0.16.0,<0.17" },
     { name = "dynaconf", specifier = ">=3.2.4,<4" },
     { name = "en-core-web-sm", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.135.0,<1" },

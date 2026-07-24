@@ -4,8 +4,26 @@ import logging
 import os
 
 import pytest
+from opentelemetry import metrics
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 os.environ.setdefault("MERINO_FLEECE_ENV", "testing")
+
+
+@pytest.fixture(scope="session")
+def metric_reader() -> InMemoryMetricReader:
+    """Install a process-global MeterProvider once and expose its reader.
+
+    OpenTelemetry only honors the first `set_meter_provider()` call per process, so
+    the provider must be configured a single time and shared across tests. The proxy
+    instruments created at import time rebind to this provider on the first set, so
+    reading the same reader works regardless of test ordering. Metrics accumulate
+    across the session; assert on deltas rather than absolute values.
+    """
+    reader = InMemoryMetricReader()
+    metrics.set_meter_provider(MeterProvider(metric_readers=[reader]))
+    return reader
 
 
 @pytest.fixture(autouse=True)

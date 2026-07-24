@@ -16,12 +16,11 @@ from merino_fleece.pii import (
     shutdown_detector,
     shutdown_executor,
 )
-from merino_fleece.utils.metrics import configure_metrics
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Initialize logging, Sentry, metrics, the SpaCy model, and the PII detection thread pool."""
+    """Initialize logging, Sentry, the SpaCy model, and the PII detection thread pool."""
     configure_logging(
         log_format=settings.logging.format,
         level=settings.logging.level,
@@ -35,7 +34,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         env=settings.sentry.env,
         traces_sample_rate=settings.sentry.traces_sample_rate,
     )
-    await configure_metrics()
     init_detector()
     init_executor()
     try:

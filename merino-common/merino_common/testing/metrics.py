@@ -9,6 +9,7 @@ from collections.abc import Iterator
 
 from opentelemetry.sdk.metrics.export import (
     Gauge,
+    Histogram,
     InMemoryMetricReader,
     Metric,
     NumberDataPoint,
@@ -60,3 +61,12 @@ def find_point(reader: InMemoryMetricReader, name: str, **match: object) -> Numb
 def counter_value(reader: InMemoryMetricReader, name: str) -> float:
     """Sum the data points of the named counter metric collected by the reader."""
     return sum((point.value for point in number_points(reader, name)), 0.0)
+
+
+def histogram_count(reader: InMemoryMetricReader, name: str) -> int:
+    """Total number of observations recorded by the named histogram metric."""
+    total = 0
+    for metric in _iter_metrics(reader):
+        if metric.name == name and isinstance(metric.data, Histogram):
+            total += sum(point.count for point in metric.data.data_points)
+    return total

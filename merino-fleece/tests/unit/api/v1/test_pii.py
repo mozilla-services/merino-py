@@ -4,12 +4,12 @@ from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
-from pytest_mock import MockerFixture
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
-import aiodogstatsd
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from merino_common.testing.metrics import histogram_count
 from merino_fleece.app import create_app
 from merino_fleece.pii import get_detector, get_executor
 
@@ -78,15 +78,17 @@ def test_query_too_long(make_client) -> None:
     assert resp.status_code == 422
 
 
-def test_pii_metrics(
-    make_client,
-    mocker: MockerFixture,
-) -> None:
-    """Metrics should be recorded for the 'pii' endpoint"""
-    report = mocker.patch.object(aiodogstatsd.Client, "_report")
+def test_pii_metrics(make_client, metric_reader: InMemoryMetricReader) -> None:
+    """The detect-duration histogram records an observation via a real OpenTelemetry reader.
+
+    The endpoint's histogram is created against the global (proxy) meter at import
+    time; the shared `metric_reader` fixture installs a MeterProvider so that proxy
+    forwards to a real instrument we can read back.
+    """
+    before = histogram_count(metric_reader, "api.pii.detect_duration")
 
     client = make_client(True)
-    client.post("/api/v1/pii", json={"q": "Alice Bob"})
+    resp = client.post("/api/v1/pii", json={"q": "Alice Bob"})
 
-    report.assert_called_once()
-    assert report.call_args[0][0] == "pii.detect_duration"
+    assert resp.status_code == 200
+    assert histogram_count(metric_reader, "api.pii.detect_duration") - before == 1
