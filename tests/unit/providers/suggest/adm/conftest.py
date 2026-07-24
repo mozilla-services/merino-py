@@ -66,6 +66,7 @@ def fixture_rs_attachment_raw_us() -> str:
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
+                "header_text": "Example.org header text",
                 "suggestion_id": "11111111-1111-1111-1111-111111111111",
             }
         ]
@@ -101,6 +102,8 @@ def fixture_rs_attachment_raw_de() -> str:
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://de.example.org/target/mozfirefoxaccounts",
+                "header_text": "de.Example.org header text",
+                "suggestion_id": "22222222-2222-2222-2222-222222222222",
             }
         ]
     )
@@ -124,13 +127,15 @@ def fixture_rs_attachment_raw_top_pick() -> str:
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
                 "top_pick_prefix": "fire",
+                "header_text": "Example.org header text",
+                "suggestion_id": "22222222-2222-2222-2222-222222222222",
             }
         ]
     )
 
 
-@pytest.fixture(name="rs_attachment_raw_no_suggestion_id")
-def fixture_rs_attachment_raw_no_suggestion_id() -> str:
+@pytest.fixture(name="rs_attachment_raw_no_custom_details_values")
+def fixture_rs_attachment_raw_no_custom_details_values() -> str:
     """Raw attachment data for a record that lacks a `suggestion_id` (rollout case)."""
     return json.dumps(
         [
@@ -159,14 +164,16 @@ def fixture_rs_attachment_raw_no_suggestion_id() -> str:
     )
 
 
-@pytest.fixture(name="backend_mock_no_suggestion_id")
-def fixture_backend_mock_no_suggestion_id(
-    mocker: MockerFixture, rs_attachment_raw_no_suggestion_id: str
+@pytest.fixture(name="backend_mock_no_custom_details")
+def fixture_backend_mock_no_custom_details(
+    mocker: MockerFixture, rs_attachment_raw_no_custom_details_values: str
 ) -> Any:
     """AdmBackend mock whose attachment record lacks a `suggestion_id`."""
     backend_mock: Any = mocker.AsyncMock(spec=AdmBackend)
     index_manager = AmpIndexManager()  # type: ignore[no-untyped-call]
-    index_manager.build(f"US/({FormFactor.DESKTOP.value},)", rs_attachment_raw_no_suggestion_id)
+    index_manager.build(
+        f"US/({FormFactor.DESKTOP.value},)", rs_attachment_raw_no_custom_details_values
+    )
     backend_mock.fetch.return_value = SuggestionContent(
         index_manager=index_manager,
         icons={"01": "attachment-host/main-workspace/quicksuggest/icon-01"},
@@ -174,13 +181,13 @@ def fixture_backend_mock_no_suggestion_id(
     return backend_mock
 
 
-@pytest.fixture(name="adm_no_suggestion_id")
-def fixture_adm_no_suggestion_id(
-    backend_mock_no_suggestion_id: Any, adm_parameters: dict[str, Any], statsd_mock: Any
+@pytest.fixture(name="adm_no_custom_details")
+def fixture_adm_no_custom_details(
+    backend_mock_no_custom_details: Any, adm_parameters: dict[str, Any], statsd_mock: Any
 ) -> Provider:
     """AdM Provider backed by a single entry that lacks a `suggestion_id`."""
     return Provider(
-        backend=backend_mock_no_suggestion_id, metrics_client=statsd_mock, **adm_parameters
+        backend=backend_mock_no_custom_details, metrics_client=statsd_mock, **adm_parameters
     )
 
 
@@ -212,6 +219,7 @@ def fixture_rs_attachment_raw_thompson() -> str:
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
+                "header_text": "Example.org header text",
                 "suggestion_id": "22222222-2222-2222-2222-222222222222",
             },
             {
@@ -230,6 +238,7 @@ def fixture_rs_attachment_raw_thompson() -> str:
                 ],
                 "title": "Low Engagement Suggestion",
                 "url": "https://example.org/target/lowengagement",
+                "header_text": "LowEngagement header text",
                 "suggestion_id": "33333333-3333-3333-3333-333333333333",
             },
         ]

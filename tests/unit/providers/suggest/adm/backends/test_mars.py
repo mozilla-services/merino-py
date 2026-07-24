@@ -80,6 +80,8 @@ def fixture_suggestion_array_json() -> str:
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
+                "header_text": "Example.org header text",
+                "suggestion_id": "22222222-2222-2222-2222-222222222222",
             }
         ]
     )
@@ -224,6 +226,8 @@ async def test_fetch_partial_update(
                     "keywords": ["berlin"],
                     "title": "Berlin Guide",
                     "url": "https://de.example.org/target/berlin",
+                    "header_text": "DE-Example.org header text",
+                    "suggestion_id": "22222222-2222-2222-2222-222222222222",
                 }
             ]
         }
