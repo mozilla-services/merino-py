@@ -14,7 +14,11 @@ from merino.middleware import ScopeKey
 from merino.middleware.geolocation import Location
 from merino.middleware.user_agent import UserAgent
 from merino.utils.log_data_creators import create_suggest_log_data
-from merino_common.models.suggest_logging import SuggestLogDataModel
+from merino_common.models.suggest_logging import (
+    MozlogDataModel,
+    SuggestLogDataModel,
+    SuggestRequestParams,
+)
 
 
 @pytest.mark.parametrize(
@@ -73,24 +77,28 @@ def test_create_suggest_log_data(
     )
     expected_log_data: SuggestLogDataModel = SuggestLogDataModel(
         sensitive=True,
-        errno=0,
-        time=datetime(1998, 3, 31),
-        path="/api/v1/suggest",
-        method="GET",
-        query=expected_query,
-        code=200,
-        rid="1b11844c52b34c33a6ad54b7bc2eb7c7",
-        session_id=expected_sid,
-        sequence_no=expected_seq,
-        client_variants=expected_client_variants,
-        requested_providers=expected_providers,
-        country=location.country,
-        region=location.regions[0] if location.regions else None,
-        city=location.city,
-        dma=location.dma,
-        browser=user_agent.browser,
-        os_family=user_agent.os_family,
-        form_factor=user_agent.form_factor,
+        mozlog=MozlogDataModel(
+            errno=0,
+            time=datetime(1998, 3, 31),
+            path="/api/v1/suggest",
+            method="GET",
+        ),
+        request_params=SuggestRequestParams(
+            query=expected_query,
+            code=200,
+            rid="1b11844c52b34c33a6ad54b7bc2eb7c7",
+            session_id=expected_sid,
+            sequence_no=expected_seq,
+            client_variants=expected_client_variants,
+            requested_providers=expected_providers,
+            country=location.country,
+            region=location.regions[0] if location.regions else None,
+            city=location.city,
+            dma=location.dma,
+            browser=user_agent.browser,
+            os_family=user_agent.os_family,
+            form_factor=user_agent.form_factor,
+        ),
     )
 
     request: Request = Request(

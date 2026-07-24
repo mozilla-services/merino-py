@@ -24,13 +24,8 @@ def client() -> TestClient:
 
 
 def _search_term(**overrides: Any) -> dict[str, Any]:
-    """Build a valid SuggestLogDataModel payload, applying any field overrides."""
+    """Build a valid SuggestRequestParams payload, applying any field overrides."""
     payload: dict[str, Any] = {
-        "sensitive": True,
-        "errno": 0,
-        "time": "1998-03-31T00:00:00",
-        "path": "/api/v1/suggest",
-        "method": "GET",
         "code": 200,
         "rid": "1b11844c52b34c33a6ad54b7bc2eb7c7",
         "client_variants": "",
