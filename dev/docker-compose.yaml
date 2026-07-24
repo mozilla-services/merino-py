@@ -38,6 +38,25 @@ services:
   # Adapted from https://github.com/elastic/elasticsearch/blob/main/docs/reference/setup/install/docker/docker-compose.yml
   # Removed auth and certs, disabled ml, running in single-node rather than cluster mode
   # And using custom image to install plugins
+
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:577.0.0-emulators
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        bash /pubsub/setup_pubsub.sh ${PUBSUB_HOST:-localhost} ${PUBSUB_PORT:-8085} ${GCP_PUBSUB_PROJECT_ID:?error_message}
+    ports:
+      - "${PUBSUB_PORT:-8085}:${PUBSUB_PORT:-8085}"
+    volumes:
+      - "./local_setup/pubsub:/pubsub:delegated"
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/startup.done"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+      start_interval: 10s
+
   es01:
     build:
       context: ./local_setup/elasticsearch

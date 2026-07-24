@@ -89,6 +89,16 @@ dev-otel: $(INSTALL_STAMP)  ##  Run merino locally with OTEL auto-instrumentatio
 run: $(INSTALL_STAMP)  ##  Run merino locally
 	$(UV) run fastapi run $(APP_DIR)/main.py
 
+.PHONY: dev-fleece-worker
+dev-fleece-worker: $(INSTALL_STAMP)  ##  Run fleece worker locally (does not reload)
+	PUBSUB_EMULATOR_HOST=localhost:8085 $(UV) run $(FLEECE_PACKAGE_DIR)/worker/main.py
+
+
+.PHONY: dev-fleece-worker-otel
+dev-fleece-worker-otel: $(INSTALL_STAMP)  ##  Run fleece worker locally with OTEL auto-instrumentation (mimics k8s operator)
+	PUBSUB_EMULATOR_HOST=localhost:8085 OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run opentelemetry-instrument $(UV) run $(FLEECE_PACKAGE_DIR)/worker/main.py
+
+
 .PHONY: test
 test: unit-tests integration-tests test-coverage-check  ##  Run unit and integration tests and evaluate combined coverage
 

@@ -1,0 +1,16 @@
+# Configurations for stage. Configurations defined here will override the
+# counterparts in `default.toml`.
+#
+# Switch to this environment via: MERINO_FLEECE_ENV=stage
+
+[stage]
+dynaconf_merge = true
+
+[stage.logging]
+level = "DEBUG"
+format = "mozlog"
+
+[stage.pubsub]
+# MERINO_FLEECE_PUBSUB__SUBSCRIPTION
+# Subscription for the backup PubSub topic.
+subscription = "projects/moz-fx-merino-nonprod-db57/subscriptions/merino-fleece-sanitization-stage"
