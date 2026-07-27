@@ -12,6 +12,8 @@ Search term sanitization looks for most commonly occurring personally identifiab
 
 ## Running locally
 
+### FastAPI App
+
 From the repo root:
 
 ```bash
@@ -20,6 +22,49 @@ MERINO_FLEECE_ENV=development uv run merino-fleece
 ```
 
 The SpaCy NLP model (default `en_core_web_sm`) is downloaded automatically on first startup via `spacy.cli.download`. The download is cached on disk; subsequent starts skip it.
+
+### Queue Worker
+
+A pubsub topic is used for submission if the application API is down, with a workload that scales up and down based on number of messages in the subscription. This can also be run locally, using pubsub emulator.
+
+From the repo root:
+
+```bash
+# Set up service dependencies (note: these are all merino dependencies,
+# not just fleece)
+make docker-compose-up-daemon
+make dev-fleece-worker  # or `make dev-fleece-worker-otel` to test otel integration
+```
+
+In a new terminal, you can directly submit an valid (or invalid) message to the topic, e.g.:
+
+```bash
+PROJECT=merino-local
+TOPIC=merino-fleece-sanitization-local
+HOST=localhost:8085
+
+PAYLOAD='{
+  "search_terms": [
+    {
+      "query": "how to test pubsub",
+      "code": 200,
+      "rid": "test-rid-123",
+      "client_variants": "",
+      "requested_providers": "",
+      "browser": "Firefox 140",
+      "os_family": "macos",
+      "form_factor": "desktop"
+    }
+  ]
+}'
+
+DATA=$(printf '%s' "$PAYLOAD" | base64)
+
+curl -s -X POST \
+  "http://${HOST}/v1/projects/${PROJECT}/topics/${TOPIC}:publish" \
+  -H "Content-Type: application/json" \
+  -d "{\"messages\":[{\"data\":\"${DATA}\"}]}"
+```
 
 ## Configuration
 

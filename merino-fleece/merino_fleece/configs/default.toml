@@ -68,3 +68,17 @@ host = "localhost"
 # MERINO_FLEECE_METRICS__PORT
 # The port to send metrics to over UDP. Defaults to 8092.
 port = 8092
+
+[default.pubsub]
+# MERINO_FLEECE_PUBSUB__SUBSCRIPTION
+# Subscription for the backup PubSub topic.
+subscription = "projects/merino-local/subscriptions/merino-fleece-sanitization-local"
+
+# MERINO_FLEECE_PUBSUB__RESTART_STREAM
+# Whether to restart pubsub subscription on stream errors
+restart_stream = true
+
+# MERINO_FLEECE_PUBSUB__RESTART_BACKOFF
+# How long to wait before restarting stream after stream error
+# Only applicable if `restart_stream` is true
+restart_backoff = 10  # seconds

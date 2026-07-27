@@ -17,6 +17,7 @@ dependencies = [
     # to fetch model wheels. uv-managed venvs don't ship pip by default.
     "pip>=24",
     "aiodogstatsd>=0.16.0,<0.17",
+    "google-cloud-pubsub>=2.39.0",
 ]
 
 [tool.uv.sources]
