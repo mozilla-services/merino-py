@@ -1,6 +1,6 @@
 """Sanitization utilities for search term submissions."""
 
-from merino_fleece.models import SanitizedSuggestRequest
+from merino_fleece.sanitize.models import SanitizedSuggestRequest
 
 from merino_common.models.suggest_logging import SuggestRequestParams
 

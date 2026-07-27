@@ -1,6 +1,6 @@
 """Emission utilities for search term submissions."""
 
-from merino_fleece.models import SanitizedSuggestRequest
+from merino_fleece.sanitize.models import SanitizedSuggestRequest
 
 
 def emit_sanitized_query(submission: SanitizedSuggestRequest) -> None:

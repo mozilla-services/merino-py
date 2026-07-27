@@ -9,8 +9,8 @@ from google.cloud.pubsub_v1.types import SubscriberOptions
 from merino_common.models.suggest_logging import SearchTermsSubmission
 from pydantic import ValidationError
 
-from merino_fleece.emitter import emit_sanitized_query
-from merino_fleece.sanitizer import sanitize_query
+from merino_fleece.sanitize.emitter import emit_sanitized_query
+from merino_fleece.sanitize.sanitizer import sanitize_query
 
 logger = logging.getLogger(__name__)
 

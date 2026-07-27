@@ -3,7 +3,7 @@
 import signal
 import logging
 
-from merino_fleece.worker.worker import FleeceQueueWorker
+from merino_fleece.sanitize.worker.worker import FleeceQueueWorker
 from merino_fleece.configs import settings
 
 subscription = settings.pubsub.subscription
