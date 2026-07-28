@@ -25,7 +25,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     CorpusSection,
     SurfaceId,
-    CreateSource
+    CreateSource,
 )
 from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
@@ -181,8 +181,9 @@ class SectionsBackend(SectionsProtocol):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
-            external_id, variant = parse_section_variant(raw_external_id= section["externalId"],
-                                                         source= section["createSource"])
+            external_id, variant = parse_section_variant(
+                raw_external_id=section["externalId"], source=section["createSource"]
+            )
 
             section_obj = CorpusSection(
                 externalId=external_id,
@@ -203,10 +204,11 @@ class SectionsBackend(SectionsProtocol):
                 ],
             )
             parsed_sections.append(section_obj)
-    
 
         base_sections = [s for s in parsed_sections if s.variantId not in EXPERIMENT_VARIANT_IDS]
-        experimental_sections = [s for s in parsed_sections if s.variantId in EXPERIMENT_VARIANT_IDS]
+        experimental_sections = [
+            s for s in parsed_sections if s.variantId in EXPERIMENT_VARIANT_IDS
+        ]
 
         base_sections_by_id: dict[str, CorpusSection] = {s.externalId: s for s in base_sections}
 
