@@ -621,13 +621,18 @@ def rank_sections(
     Returns:
         The same `sections` dict, with each Section’s `receivedFeedRank` updated to the new order.
     """
+    ranker_region = region if isinstance(ranker, ThompsonSamplingRanker) else None
+    ranker_engagement_region = (
+        engagement_region if isinstance(ranker, ThompsonSamplingRanker) else None
+    )
+
     # 4th priority: reorder for exploration via Thompson sampling on engagement
     sections = ranker.rank_sections(
         sections,
         rescaler=engagement_rescaler,
         top_n=SECTION_ITEM_RANKING_TOP_N,
-        region=region,
-        engagement_region=engagement_region,
+        region=ranker_region,
+        engagement_region=ranker_engagement_region,
     )
 
     # 3rd priority: reorder based on inferred interest vector
@@ -949,12 +954,15 @@ async def get_sections(
         ranker = ThompsonSamplingRanker(
             engagement_backend=engagement_backend, prior_backend=prior_backend
         )
+    ranker_engagement_region = (
+        engagement_region if isinstance(ranker, ThompsonSamplingRanker) else None
+    )
 
     # 7. Rank all corpus recommendations globally by engagement
     all_ranked_corpus_recommendations = ranker.rank_items(
         all_remaining_corpus_recommendations,
         region=region,
-        engagement_region=engagement_region,
+        engagement_region=ranker_engagement_region,
         rescaler=rescaler,
         personal_interests=personal_interests,
     )
@@ -966,7 +974,7 @@ async def get_sections(
     if is_contextual_ads_experiment(request):
         popular_today_layout = layout_4_large
 
-    prior = ranker.get_regional_prior(region, engagement_region)
+    prior = ranker.get_regional_prior(region, ranker_engagement_region)
     top_stories = get_top_story_list(
         all_ranked_corpus_recommendations,
         top_stories_count,
@@ -1040,6 +1048,16 @@ async def get_sections(
     sections = get_sections_with_enough_items(sections)
 
     # 16. Rank the sections according to follows and engagement. 'Top Stories' goes at the top.
+    section_rank_region = (
+        region
+        if ranker_engagement_region is not None and ranker_engagement_region != region
+        else None
+    )
+    section_rank_engagement_region = (
+        ranker_engagement_region
+        if ranker_engagement_region is not None and ranker_engagement_region != region
+        else None
+    )
     sections = rank_sections(
         sections,
         request.sections,
@@ -1050,8 +1068,8 @@ async def get_sections(
             use_contexual_ranker or use_interest_ranker
         ),  # Contextual + Interest rankers already re-rank sections implicitly
         include_daily_briefing_section=include_daily_briefing_section,
-        region=region if engagement_region != region else None,
-        engagement_region=engagement_region if engagement_region != region else None,
+        region=section_rank_region,
+        engagement_region=section_rank_engagement_region,
     )
 
     # 16. Apply cross-section deduplication, preserving higher-priority sections

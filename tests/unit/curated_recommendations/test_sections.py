@@ -1976,14 +1976,30 @@ class _FakeLinTSBackend:
 class _StubEngagementBackend:
     """Engagement backend that reports no engagement for any item."""
 
+    def __init__(self):
+        self.calls = []
+
     def get(self, corpus_item_id, region=None):
         """Return None — no engagement data."""
+        self.calls.append((corpus_item_id, region))
         return None
 
     @property
     def update_count(self) -> int:
         """Stub — never updates."""
         return 0
+
+
+class _TrackingPriorBackend(ConstantPrior):
+    """Constant prior backend that records region lookups."""
+
+    def __init__(self):
+        self.calls = []
+
+    def get(self, region: str | None = None) -> Prior:
+        """Record the requested region and return the constant prior."""
+        self.calls.append(region)
+        return super().get(region)
 
 
 class TestGetSectionsForcedInterests:
@@ -2033,3 +2049,29 @@ class TestGetSectionsForcedInterests:
                 assert personal_interests.scores[topic] == value
         else:
             assert not any(topic in personal_interests.scores for topic in DEFAULT_TOPIC_INTERESTS)
+
+    @pytest.mark.asyncio
+    async def test_interest_ranker_ignores_branch_engagement_region(self, sections_backend):
+        """Branch-specific engagement and priors should stay scoped to Thompson sampling."""
+        branch_region = "DE-publisher-constraint-in-germany-treatment"
+        engagement_backend = _StubEngagementBackend()
+        prior_backend = _TrackingPriorBackend()
+        personal_interests = ProcessedInterests(scores={"sports": 0.9})
+
+        await get_sections(
+            request=CuratedRecommendationsRequest(locale=Locale.EN_US),
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            sections_backend=sections_backend,
+            ml_backend=MagicMock(spec=MLRecsBackend),
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            lints_interest_backend=_FakeLinTSBackend(),
+            personal_interests=personal_interests,
+            region="DE",
+            engagement_region=branch_region,
+        )
+
+        assert branch_region not in {region for _, region in engagement_backend.calls}
+        assert branch_region not in prior_backend.calls
+        assert "DE" in {region for _, region in engagement_backend.calls}
+        assert "DE" in prior_backend.calls
