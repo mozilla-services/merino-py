@@ -36,13 +36,17 @@ class Ranker:
 
     def get_opens_no_opens(
         self, rec: CuratedRecommendation, region_query: str | None = None
-    ) -> tuple[float, float]:
+    ) -> tuple[float, float, bool]:
         """Get opens and no-opens counts for a recommendation, optionally in a region."""
         engagement = self.engagement_backend.get(rec.corpusItemId, region_query)
         if engagement:
-            return engagement.click_count, engagement.impression_count - engagement.click_count
+            return (
+                engagement.click_count,
+                engagement.impression_count - engagement.click_count,
+                True,
+            )
         else:
-            return 0, 0
+            return 0, 0, False
 
     def compute_interactions(
         self,
@@ -53,10 +57,17 @@ class Ranker:
         blend_region_with_global=True,
     ) -> tuple[float, float, float, float, float]:
         """Compute opens, no_opens, a_prior, b_prior, non_rescaled_b_prior for a recommendation."""
-        opens, no_opens = self.get_opens_no_opens(rec)
-        region_opens, region_no_opens = self.get_opens_no_opens(
-            rec, region_query=engagement_region if engagement_region is not None else region
+        opens, no_opens, _ = self.get_opens_no_opens(rec)
+        region_query = engagement_region if engagement_region is not None else region
+        region_opens, region_no_opens, found_region_engagement = self.get_opens_no_opens(
+            rec, region_query=region_query
         )
+        if (
+            not found_region_engagement
+            and engagement_region is not None
+            and engagement_region != region
+        ):
+            region_opens, region_no_opens, _ = self.get_opens_no_opens(rec, region_query=region)
 
         prior: Prior = self.prior_backend.get() or ConstantPrior().get()
         a_prior = float(prior.alpha)

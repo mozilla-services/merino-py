@@ -404,6 +404,43 @@ class TestThompsonSampling:
         assert ranked[0].ranking_data.alpha == pytest.approx(48.05)
         assert ranked[0].ranking_data.beta == pytest.approx(162.0)
 
+    def test_rank_items_falls_back_to_country_engagement_when_branch_missing(self, monkeypatch):
+        """Missing branch-specific engagement should fall back to country engagement."""
+        recs = generate_recommendations(
+            item_ids=["item"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        prior_backend = StubPriorBackend(
+            Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000)
+        )
+        engagement_backend = RegionAwareStubEngagementBackend(
+            {
+                ("item", None): (1, 101),
+                ("item", "DE"): (20, 100),
+            }
+        )
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(
+            recs,
+            region="DE",
+            engagement_region="DE-publisher-constraint-in-germany-treatment",
+        )
+
+        assert engagement_backend.calls == [
+            ("item", None),
+            ("item", "DE-publisher-constraint-in-germany-treatment"),
+            ("item", "DE"),
+        ]
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.alpha == pytest.approx(29.05)
+        assert ranked[0].ranking_data.beta == pytest.approx(181.0)
+
     def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
         """Ranking data should be populated and fresh items flagged when using DefaultRescaler."""
         recs = generate_recommendations(
