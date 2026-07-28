@@ -681,6 +681,7 @@ class TestMapCorpusSectionToSection:
             assert rec.receivedRank == idx
             assert rec.features == features_compare
             assert rec.variantId == 5050
+            assert rec.sourceSectionId == cs.externalId
 
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
@@ -913,10 +914,12 @@ class TestGetTopStoryList:
         )
         for item, variant_id in zip(items, [2, 5050, 0, 2, 0]):
             item.variantId = variant_id
+            item.sourceSectionId = f"source-{variant_id}"
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
         assert [i.variantId for i in result] == [2, 5050, 0]
+        assert [i.sourceSectionId for i in result] == ["source-2", "source-5050", "source-0"]
 
     def test_basic_topic_limiting(self):
         """Extra items should be chosen without repeating topics from top_count items."""
