@@ -3,8 +3,9 @@
 import pytest
 
 from merino.curated_recommendations.corpus_backends.sections_backend import (
-    parse_section_external_id,
+    parse_section_variant,
 )
+from merino.curated_recommendations.corpus_backends.protocol import CreateSource
 
 
 class TestParseSectionExternalId:
@@ -26,4 +27,4 @@ class TestParseSectionExternalId:
     )
     def test_parse_section_external_id(self, raw_external_id: str, expected: tuple[str, int]):
         """Parser should strip locale suffixes and drop malformed experiment variants."""
-        assert parse_section_external_id(raw_external_id) == expected
+        assert parse_section_variant(raw_external_id, CreateSource.ML) == expected
