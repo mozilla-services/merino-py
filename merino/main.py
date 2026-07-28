@@ -24,7 +24,13 @@ from merino.configs import settings
 from merino_common.app_configs.config_logging import configure_logging
 from merino_common.app_configs.config_sentry import configure_sentry
 from merino.utils.metrics import configure_metrics, get_metrics_client
-from merino.middleware import featureflags, geolocation, logging as mw_logging, metrics, user_agent
+from merino.middleware import (
+    featureflags,
+    geolocation,
+    logging as mw_logging,
+    metrics,
+    user_agent,
+)
 from merino_common.routers import dockerflow
 
 tags_metadata = [
@@ -120,7 +126,7 @@ def create_lifespan(mode: RuntimeMode | str):
 
 async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> None:
     """Initialize regular Merino services and register cleanup callbacks."""
-    from merino import curated_recommendations
+    from merino import curated_recommendations, message_handler
     from merino.providers import games, manifest, rss, suggest
 
     await suggest.init_providers()
@@ -133,6 +139,9 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
 
     curated_recommendations.init_provider()
     await games.init_providers()
+
+    await message_handler.start()
+    cleanup_callbacks.append(message_handler.stop)
 
 
 async def _start_wcs_services(cleanup_callbacks: list[CleanupCallback]) -> None:

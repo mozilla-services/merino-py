@@ -244,6 +244,10 @@ url_base = ""
 # Path of the merino-fleece PII detection endpoint.
 pii_path = "/api/v1/pii"
 
+# MERINO_FLEECE__SEARCH_TERMS_PATH
+# Path of the merino-fleece search terms submission endpoint.
+search_terms_path = "/api/v1/search-terms"
+
 # MERINO_FLEECE__CONNECT_TIMEOUT_SEC
 # Timeout in seconds for establishing a connection to merino-fleece.
 connect_timeout_sec = 0.5
@@ -251,6 +255,26 @@ connect_timeout_sec = 0.5
 # MERINO_FLEECE__REQUEST_TIMEOUT_SEC
 # Timeout in seconds for a request to merino-fleece.
 request_timeout_sec = 0.5
+
+# Settings for the asynchronous search term submission message handler.
+[default.message_handler]
+# MERINO_MESSAGE_HANDLER__MAX_BATCH_SIZE
+# Max number of queued search terms to process in a single batch.
+max_batch_size = 512
+
+# MERINO_MESSAGE_HANDLER__COLLECTION_DELAY_SEC
+# Max seconds to wait for a batch to fill before processing a partial batch.
+collection_delay_sec = 5.0
+
+# MERINO_MESSAGE_HANDLER__SHUTDOWN_DEADLINE_SEC
+# Max seconds to spend draining the queue during graceful shutdown before any
+# remaining items are dropped.
+shutdown_deadline_sec = 30.0
+
+# MERINO_MESSAGE_HANDLER__MAX_QUEUE_SIZE
+# Max number of search terms to buffer in the queue. Producers are rejected once
+# this capacity is reached.
+max_queue_size = 10000
 
 # GCP metadata
 [default.gcp]
