@@ -303,7 +303,11 @@ class SuperInferredModel(LocalModelBackend):
     @staticmethod
     def _get_time_zone(small_population=False) -> InterestVectorConfig:
         """Time zone key has special functionality in Firefox, but we must specifiy threshols here
-        based on UTC offset +24 (positive values). These thresholds support the 4 continental US zones
+        based on UTC offset +24 (positive values). These thresholds originally supported 4 time zones, but
+        what we are finding is that a lot of users have 0 offset, due to either a privacy blocker or some
+        OS issue. Therefore we segment users with offset below pacific (hawaii, and all users with no privacy set)
+        into the 0 bucket. The following bucket is pacific and mountain combined, then we continue with central
+        and eastern time.
         """
         now: datetime = datetime.now(ZoneInfo("America/Los_Angeles"))
         offset: timedelta = now.utcoffset() or timedelta(0)
@@ -311,14 +315,14 @@ class SuperInferredModel(LocalModelBackend):
         if small_population:
             return InterestVectorConfig(
                 features={},
-                thresholds=[pacific_bucket + 1.1],  # split west from east
+                thresholds=[pacific_bucket + 2.1],  # split west from east
                 diff_p=MODEL_P_VALUE_SMALL_POPULATION,
                 diff_q=MODEL_Q_VALUE_SMALL_POPULATION,
             )
         else:
             return InterestVectorConfig(
                 features={},
-                thresholds=[pacific_bucket + 0.1, pacific_bucket + 1.1, pacific_bucket + 2.1],
+                thresholds=[pacific_bucket - 2, pacific_bucket + 1.1, pacific_bucket + 2.1],
                 diff_p=MODEL_P_VALUE,
                 diff_q=MODEL_Q_VALUE,
             )
