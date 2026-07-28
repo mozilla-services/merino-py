@@ -131,6 +131,7 @@ def map_section_item_to_recommendation(
         features=features,
         experiment_flags=experiment_flags,
         variantId=variant_id,
+        sourceSectionId=section_id,
     )
 
 
