@@ -2033,3 +2033,41 @@ class TestGetSectionsForcedInterests:
                 assert personal_interests.scores[topic] == value
         else:
             assert not any(topic in personal_interests.scores for topic in DEFAULT_TOPIC_INTERESTS)
+
+    @pytest.mark.asyncio
+    async def test_get_sections_passes_request_to_top_stories_balancer_config(
+        self, sections_backend, monkeypatch
+    ):
+        """Top Stories config selection should be able to inspect experiment enrollment."""
+        captured = {}
+
+        def capture_config(surface_id, request=None):
+            captured["surface_id"] = surface_id
+            captured["request"] = request
+            return DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.sections.get_top_stories_article_balancer_config",
+            capture_config,
+        )
+        ml_backend = MagicMock(spec=MLRecsBackend)
+        ml_backend.is_valid.return_value = False
+        request = CuratedRecommendationsRequest(
+            locale=Locale.DE_DE,
+            region="DE",
+            experimentName=ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
+            experimentBranch="treatment",
+        )
+
+        await get_sections(
+            request=request,
+            surface_id=SurfaceId.NEW_TAB_DE_DE,
+            sections_backend=sections_backend,
+            ml_backend=ml_backend,
+            engagement_backend=_StubEngagementBackend(),
+            prior_backend=ConstantPrior(),
+            lints_interest_backend=_FakeLinTSBackend(),
+            region="DE",
+        )
+
+        assert captured == {"surface_id": SurfaceId.NEW_TAB_DE_DE, "request": request}

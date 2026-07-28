@@ -976,7 +976,7 @@ async def get_sections(
         prior=prior,
         spindle_backend=spindle_backend,
         surface_id=surface_id,
-        article_balancer_config=get_top_stories_article_balancer_config(surface_id),
+        article_balancer_config=get_top_stories_article_balancer_config(surface_id, request),
     )
 
     # 9. Create a global rank lookup from the already-ranked recommendations
