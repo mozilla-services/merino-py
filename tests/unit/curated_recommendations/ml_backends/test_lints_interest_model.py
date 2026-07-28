@@ -169,7 +169,7 @@ def _build_synthetic_bundle(
         tensors["tz_preds"] = tz_pred_values
         metadata["tz_pred_idx"] = str(tz_pred_idx)
         metadata["tz_baseline_idx"] = str(tz_baseline_idx)
-        metadata["tz_labels"] = json.dumps(["PT", "MT", "CT", "ET"][:n_tz_labels])
+        metadata["tz_labels"] = json.dumps(["UNK", "PT_MT", "CT", "ET"][:n_tz_labels])
         metadata["tz_pred_item_to_idx"] = json.dumps(tz_pred_item_to_idx)
 
     blob = save(tensors, metadata=metadata)
