@@ -966,7 +966,7 @@ async def get_sections(
     if is_contextual_ads_experiment(request):
         popular_today_layout = layout_4_large
 
-    prior = prior_backend.get(region)
+    prior = ranker.get_regional_prior(region, engagement_region)
     top_stories = get_top_story_list(
         all_ranked_corpus_recommendations,
         top_stories_count,

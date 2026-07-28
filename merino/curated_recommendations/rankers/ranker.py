@@ -48,31 +48,64 @@ class Ranker:
         else:
             return 0, 0, False
 
+    def resolve_engagement_region(
+        self,
+        recs: list[CuratedRecommendation],
+        region: str | None = None,
+        engagement_region: str | None = None,
+    ) -> str | None:
+        """Return the engagement region to use for the full candidate list.
+
+        Branch-specific engagement regions should be all-or-nothing for a ranking pass:
+        use the branch region if any candidate has branch engagement, otherwise fall back
+        to the base country region.
+        """
+        if engagement_region is None or engagement_region == region:
+            return engagement_region
+
+        for rec in recs:
+            if self.engagement_backend.get(rec.corpusItemId, engagement_region) is not None:
+                return engagement_region
+
+        return region
+
+    def get_regional_prior(
+        self,
+        region: str | None = None,
+        prior_region: str | None = None,
+    ) -> Prior | None:
+        """Return the prior for a branch region, falling back to the base region.
+
+        Branch-specific priors are request-level artifacts. If a branch prior exists,
+        use it for the full ranking pass; otherwise fall back to the base country prior.
+        """
+        if prior_region is not None and prior_region != region:
+            prior = self.prior_backend.get(prior_region)
+            if prior is not None:
+                return prior
+
+        return self.prior_backend.get(region)
+
     def compute_interactions(
         self,
         rec: CuratedRecommendation,
         rescaler: EngagementRescaler | None = None,
         region: str | None = None,
         engagement_region: str | None = None,
+        regional_prior: Prior | None = None,
         blend_region_with_global=True,
     ) -> tuple[float, float, float, float, float]:
         """Compute opens, no_opens, a_prior, b_prior, non_rescaled_b_prior for a recommendation."""
         opens, no_opens, _ = self.get_opens_no_opens(rec)
         region_query = engagement_region if engagement_region is not None else region
-        region_opens, region_no_opens, found_region_engagement = self.get_opens_no_opens(
-            rec, region_query=region_query
-        )
-        if (
-            not found_region_engagement
-            and engagement_region is not None
-            and engagement_region != region
-        ):
-            region_opens, region_no_opens, _ = self.get_opens_no_opens(rec, region_query=region)
+        region_opens, region_no_opens, _ = self.get_opens_no_opens(rec, region_query=region_query)
 
         prior: Prior = self.prior_backend.get() or ConstantPrior().get()
         a_prior = float(prior.alpha)
         b_prior = float(prior.beta)
-        region_prior = self.prior_backend.get(region)
+        region_prior = (
+            regional_prior if regional_prior is not None else self.prior_backend.get(region)
+        )
 
         if region_no_opens and region_prior:
             # Weighted average of regional and global engagement

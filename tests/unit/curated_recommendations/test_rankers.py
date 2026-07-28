@@ -196,6 +196,24 @@ class StubPriorBackend(PriorBackend):
         return 0
 
 
+class RegionAwareStubPriorBackend(PriorBackend):
+    """Prior backend returning priors keyed by exact region."""
+
+    def __init__(self, priors: dict[str | None, Prior]):
+        self._priors = priors
+        self.calls: list[str | None] = []
+
+    def get(self, region: str | None = None) -> Prior | None:
+        """Return prior for the exact region key."""
+        self.calls.append(region)
+        return self._priors.get(region)
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
+
+
 class StubEngagementBackend(EngagementBackend):
     """Engagement backend returning pre-set click and impression tuples."""
 
@@ -368,8 +386,8 @@ class TestFilterFreshItemsWithProbability:
 class TestThompsonSampling:
     """Tests for the thompson_sampling ranker."""
 
-    def test_rank_items_can_use_branch_engagement_with_country_prior(self, monkeypatch):
-        """Branch-specific engagement should be blended with the country-level prior."""
+    def test_rank_items_can_use_branch_engagement_with_fixed_prior(self, monkeypatch):
+        """Branch-specific engagement should be blended with the configured prior."""
         recs = generate_recommendations(
             item_ids=["item"],
             topics=[Topic.BUSINESS.value],
@@ -404,8 +422,88 @@ class TestThompsonSampling:
         assert ranked[0].ranking_data.alpha == pytest.approx(48.05)
         assert ranked[0].ranking_data.beta == pytest.approx(162.0)
 
+    def test_rank_items_can_use_branch_prior(self, monkeypatch):
+        """Branch-specific priors should be blended with the global prior when present."""
+        recs = generate_recommendations(
+            item_ids=["item"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        prior_backend = RegionAwareStubPriorBackend(
+            {
+                None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
+                "DE": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
+                "DE-publisher-constraint-in-germany-treatment": Prior(
+                    alpha=30,
+                    beta=300,
+                    total_impressions_per_day=1_000_000,
+                ),
+            }
+        )
+        engagement_backend = RegionAwareStubEngagementBackend(
+            {
+                ("item", None): (1, 101),
+                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+            }
+        )
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(
+            recs,
+            region="DE",
+            engagement_region="DE-publisher-constraint-in-germany-treatment",
+        )
+
+        assert "DE-publisher-constraint-in-germany-treatment" in prior_backend.calls
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.alpha == pytest.approx(67.05)
+        assert ranked[0].ranking_data.beta == pytest.approx(352.0)
+
+    def test_rank_items_falls_back_to_country_prior_when_branch_prior_missing(self, monkeypatch):
+        """Missing branch-specific priors should fall back to the base country prior."""
+        recs = generate_recommendations(
+            item_ids=["item"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        prior_backend = RegionAwareStubPriorBackend(
+            {
+                None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
+                "DE": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
+            }
+        )
+        engagement_backend = RegionAwareStubEngagementBackend(
+            {
+                ("item", None): (1, 101),
+                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+            }
+        )
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(
+            recs,
+            region="DE",
+            engagement_region="DE-publisher-constraint-in-germany-treatment",
+        )
+
+        assert prior_backend.calls[:2] == [
+            "DE-publisher-constraint-in-germany-treatment",
+            "DE",
+        ]
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.alpha == pytest.approx(57.55)
+        assert ranked[0].ranking_data.beta == pytest.approx(257.0)
+
     def test_rank_items_falls_back_to_country_engagement_when_branch_missing(self, monkeypatch):
-        """Missing branch-specific engagement should fall back to country engagement."""
+        """Missing branch-specific engagement for the whole list should fall back to country engagement."""
         recs = generate_recommendations(
             item_ids=["item"],
             topics=[Topic.BUSINESS.value],
@@ -433,13 +531,55 @@ class TestThompsonSampling:
         )
 
         assert engagement_backend.calls == [
-            ("item", None),
             ("item", "DE-publisher-constraint-in-germany-treatment"),
+            ("item", None),
             ("item", "DE"),
         ]
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(29.05)
         assert ranked[0].ranking_data.beta == pytest.approx(181.0)
+
+    def test_rank_items_uses_branch_engagement_for_whole_list_when_any_branch_exists(
+        self, monkeypatch
+    ):
+        """One branch engagement row should make the full ranking list use branch engagement."""
+        recs = generate_recommendations(
+            item_ids=["branch-item", "base-only-item"],
+            topics=[Topic.BUSINESS.value, Topic.SCIENCE.value],
+            time_sensitive_count=0,
+        )
+        prior_backend = StubPriorBackend(
+            Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000)
+        )
+        engagement_backend = RegionAwareStubEngagementBackend(
+            {
+                ("branch-item", None): (1, 101),
+                ("base-only-item", None): (2, 102),
+                ("branch-item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("base-only-item", "DE"): (20, 100),
+            }
+        )
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(
+            recs,
+            region="DE",
+            engagement_region="DE-publisher-constraint-in-germany-treatment",
+        )
+
+        assert (
+            "base-only-item",
+            "DE-publisher-constraint-in-germany-treatment",
+        ) in engagement_backend.calls
+        assert ("base-only-item", "DE") not in engagement_backend.calls
+        by_id = {rec.corpusItemId: rec for rec in ranked}
+        assert by_id["base-only-item"].ranking_data is not None
+        assert by_id["base-only-item"].ranking_data.alpha == pytest.approx(12)
+        assert by_id["base-only-item"].ranking_data.beta == pytest.approx(200)
 
     def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
         """Ranking data should be populated and fresh items flagged when using DefaultRescaler."""

@@ -59,6 +59,8 @@ class ThompsonSamplingRanker(Ranker):
 
         [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
         """
+        regional_prior = self.get_regional_prior(region, engagement_region)
+        engagement_region = self.resolve_engagement_region(recs, region, engagement_region)
         fresh_items_max: int = rescaler.fresh_items_max if rescaler else 0
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
@@ -81,7 +83,11 @@ class ThompsonSamplingRanker(Ranker):
         def compute_ranking_scores(rec: CuratedRecommendation):
             """Sample beta distributed from weighted regional/global engagement for a recommendation."""
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
-                rec, rescaler, region, engagement_region=engagement_region
+                rec,
+                rescaler,
+                region,
+                engagement_region=engagement_region,
+                regional_prior=regional_prior,
             )
             # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
             alpha_val = opens + max(a_prior, 1e-18)
@@ -129,6 +135,12 @@ class ThompsonSamplingRanker(Ranker):
 
         [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
         """
+        regional_prior = self.get_regional_prior(region, engagement_region)
+        engagement_region = self.resolve_engagement_region(
+            [rec for sec in sections.values() for rec in sec.recommendations],
+            region,
+            engagement_region,
+        )
 
         def sample_score(section_id: str, sec: Section) -> float:
             """Sample beta distribution for the combined engagement of the top _n_ items."""
@@ -159,6 +171,7 @@ class ThompsonSamplingRanker(Ranker):
                         rescaler,
                         region,
                         engagement_region=engagement_region,
+                        regional_prior=regional_prior,
                     )
                 )
                 total_clicks += opens

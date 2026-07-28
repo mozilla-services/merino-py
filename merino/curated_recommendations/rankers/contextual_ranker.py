@@ -78,6 +78,8 @@ class ContextualRanker(Ranker):
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region.
         """
+        regional_prior = self.get_regional_prior(region, engagement_region)
+        engagement_region = self.resolve_engagement_region(recs, region, engagement_region)
 
         def boost_interest(rec: CuratedRecommendation) -> float:
             if personal_interests is None or rec.topic is None:
@@ -117,6 +119,7 @@ class ContextualRanker(Ranker):
                 rescaler,
                 region,
                 engagement_region=engagement_region,
+                regional_prior=regional_prior,
                 blend_region_with_global=False,
             )
             is_fresh = False
