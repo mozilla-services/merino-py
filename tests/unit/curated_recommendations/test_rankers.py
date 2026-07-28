@@ -222,6 +222,34 @@ class StubEngagementBackend(EngagementBackend):
         return 0
 
 
+class RegionAwareStubEngagementBackend(EngagementBackend):
+    """Engagement backend returning click/impression tuples keyed by item and region."""
+
+    def __init__(self, metrics: dict[tuple[str, str | None], tuple[int, int]]):
+        """Create engagement with per-region metrics."""
+        self._metrics = metrics
+        self.calls: list[tuple[str, str | None]] = []
+
+    def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
+        """Return engagement for a corpus item and exact region key."""
+        self.calls.append((corpus_item_id, region))
+        if (corpus_item_id, region) not in self._metrics:
+            return None
+        clicks, impressions = self._metrics[(corpus_item_id, region)]
+        return Engagement(
+            corpus_item_id=corpus_item_id,
+            region=region,
+            click_count=clicks,
+            impression_count=impressions,
+            report_count=0,
+        )
+
+    @property
+    def update_count(self) -> int:
+        """Update count stub"""
+        return 0
+
+
 class TestRenumberRecommendations:
     """Tests for the renumber_recommendations function."""
 
@@ -339,6 +367,42 @@ class TestFilterFreshItemsWithProbability:
 
 class TestThompsonSampling:
     """Tests for the thompson_sampling ranker."""
+
+    def test_rank_items_can_use_branch_engagement_with_country_prior(self, monkeypatch):
+        """Branch-specific engagement should be blended with the country-level prior."""
+        recs = generate_recommendations(
+            item_ids=["item"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        prior_backend = StubPriorBackend(
+            Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000)
+        )
+        engagement_backend = RegionAwareStubEngagementBackend(
+            {
+                ("item", None): (1, 101),
+                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+            }
+        )
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        ranked = ranker.rank_items(
+            recs,
+            region="DE",
+            engagement_region="DE-publisher-constraint-in-germany-treatment",
+        )
+
+        assert ("item", "DE-publisher-constraint-in-germany-treatment") in (
+            engagement_backend.calls
+        )
+        assert ("item", "DE") not in engagement_backend.calls
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.alpha == pytest.approx(48.05)
+        assert ranked[0].ranking_data.beta == pytest.approx(162.0)
 
     def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
         """Ranking data should be populated and fresh items flagged when using DefaultRescaler."""

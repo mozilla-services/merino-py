@@ -595,6 +595,8 @@ def rank_sections(
     engagement_rescaler: EngagementRescaler | None,
     do_section_personalization_reranking: bool = True,
     include_daily_briefing_section: bool = False,
+    region: str | None = None,
+    engagement_region: str | None = None,
 ) -> dict[str, Section]:
     """Apply a series of stable ranking passes to the sections feed, in order of priority.
 
@@ -621,7 +623,11 @@ def rank_sections(
     """
     # 4th priority: reorder for exploration via Thompson sampling on engagement
     sections = ranker.rank_sections(
-        sections, rescaler=engagement_rescaler, top_n=SECTION_ITEM_RANKING_TOP_N
+        sections,
+        rescaler=engagement_rescaler,
+        top_n=SECTION_ITEM_RANKING_TOP_N,
+        region=region,
+        engagement_region=engagement_region,
     )
 
     # 3rd priority: reorder based on inferred interest vector
@@ -823,6 +829,7 @@ async def get_sections(
     lints_interest_backend: LinTSInterestBackend | EmptyLinTSInterestBackend,
     personal_interests: ProcessedInterests | None = None,
     region: str | None = None,
+    engagement_region: str | None = None,
     spindle_backend: SpindleBackendProtocol | None = None,
 ) -> dict[str, Section]:
     """Build, rank, and layout recommendation sections for a "sections" experiment.
@@ -838,6 +845,8 @@ async def get_sections(
     Returns:
         A dict mapping section IDs to fully-configured Section models.
     """
+    engagement_region = region if engagement_region is None else engagement_region
+
     # Determine if we should include subtopics based on experiments
     include_subtopics = is_subtopics_experiment(request)
 
@@ -945,6 +954,7 @@ async def get_sections(
     all_ranked_corpus_recommendations = ranker.rank_items(
         all_remaining_corpus_recommendations,
         region=region,
+        engagement_region=engagement_region,
         rescaler=rescaler,
         personal_interests=personal_interests,
     )
@@ -1040,6 +1050,8 @@ async def get_sections(
             use_contexual_ranker or use_interest_ranker
         ),  # Contextual + Interest rankers already re-rank sections implicitly
         include_daily_briefing_section=include_daily_briefing_section,
+        region=region if engagement_region != region else None,
+        engagement_region=engagement_region if engagement_region != region else None,
     )
 
     # 16. Apply cross-section deduplication, preserving higher-priority sections

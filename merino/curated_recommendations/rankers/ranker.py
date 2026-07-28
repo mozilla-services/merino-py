@@ -49,11 +49,14 @@ class Ranker:
         rec: CuratedRecommendation,
         rescaler: EngagementRescaler | None = None,
         region: str | None = None,
+        engagement_region: str | None = None,
         blend_region_with_global=True,
     ) -> tuple[float, float, float, float, float]:
         """Compute opens, no_opens, a_prior, b_prior, non_rescaled_b_prior for a recommendation."""
         opens, no_opens = self.get_opens_no_opens(rec)
-        region_opens, region_no_opens = self.get_opens_no_opens(rec, region_query=region)
+        region_opens, region_no_opens = self.get_opens_no_opens(
+            rec, region_query=engagement_region if engagement_region is not None else region
+        )
 
         prior: Prior = self.prior_backend.get() or ConstantPrior().get()
         a_prior = float(prior.alpha)
@@ -101,6 +104,7 @@ class Ranker:
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
         region: str | None = None,
+        engagement_region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Rank items according to some criteria."""
         # Placeholder implementation: sort by title alphabetically
@@ -111,6 +115,8 @@ class Ranker:
         sections: dict[str, Section],
         top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
+        region: str | None = None,
+        engagement_region: str | None = None,
     ) -> dict[str, Section]:
         """Rank sections."""
         return sections

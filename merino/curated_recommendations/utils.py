@@ -35,6 +35,10 @@ ROLLED_OUT_SECTION_SURFACES: frozenset[SurfaceId] = frozenset(
 # IN) take priority, so this only applies to regions not handled above.
 EN_XE_REGIONS: frozenset[str] = frozenset({"DE", "FR", "AT", "CH", "BE", "IT", "ES", "PL"})
 
+PUBLISHER_CONSTRAINT_IN_GERMANY_REGION = "DE"
+PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES: frozenset[str] = frozenset({"control", "treatment"})
+PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX = "DE-publisher-constraint-in-germany"
+
 
 def get_recommendation_surface_id(
     locale: Locale,
@@ -147,6 +151,31 @@ def derive_region(locale: Locale, region: str | None = None) -> str | None:
         return m2.group(1).upper()
     else:
         return None
+
+
+def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | None:
+    """Derive the engagement lookup region for a curated recommendations request.
+
+    Most requests use the country-level region. The publisher constraint experiment in Germany
+    writes branch-specific engagement rows while preserving the existing artifact schema by
+    encoding the branch in the region field.
+    """
+    region = derive_region(request.locale, request.region)
+    branch = request.experimentBranch
+
+    if (
+        region == PUBLISHER_CONSTRAINT_IN_GERMANY_REGION
+        and branch is not None
+        and branch in PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES
+        and is_enrolled_in_experiment(
+            request,
+            ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
+            branch,
+        )
+    ):
+        return f"{PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX}-{branch}"
+
+    return region
 
 
 def is_enrolled_in_experiment(

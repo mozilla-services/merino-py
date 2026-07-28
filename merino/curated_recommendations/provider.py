@@ -45,6 +45,7 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
     ROLLED_OUT_SECTION_SURFACES,
+    derive_engagement_region,
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
     derive_region,
@@ -116,13 +117,16 @@ class CuratedRecommendationsProvider:
         @param request: The full API request with all the data
         @return: A re-ranked list of curated recommendations
         """
+        region = derive_region(request.locale, request.region)
+        engagement_region = derive_engagement_region(request)
         ranker = ThompsonSamplingRanker(
             engagement_backend=self.engagement_backend,
             prior_backend=self.prior_backend,
         )
         recommendations = ranker.rank_items(
             recommendations,
-            region=derive_region(request.locale, request.region),
+            region=region,
+            engagement_region=engagement_region,
         )
 
         # 2. Perform publisher spread on the recommendation set
@@ -147,6 +151,8 @@ class CuratedRecommendationsProvider:
         surface_id = get_recommendation_surface_id(
             locale=request.locale, region=request.region, request=request
         )
+        region = derive_region(request.locale, request.region)
+        engagement_region = derive_engagement_region(request)
 
         sections_feeds = None
         general_feed: list[CuratedRecommendation] = []
@@ -172,7 +178,8 @@ class CuratedRecommendationsProvider:
                 sections_backend=self.sections_backend,
                 ml_backend=self.ml_recommendations_backend,
                 lints_interest_backend=self.lints_interest_backend,
-                region=derive_region(request.locale, request.region),
+                region=region,
+                engagement_region=engagement_region,
                 spindle_backend=self.spindle_backend,
             )
         elif surface_id in ROLLED_OUT_SECTION_SURFACES:
@@ -184,7 +191,8 @@ class CuratedRecommendationsProvider:
                 prior_backend=self.prior_backend,
                 surface_id=surface_id,
                 count=request.count,
-                region=derive_region(request.locale, request.region),
+                region=region,
+                engagement_region=engagement_region,
                 rescaler=rescaler,
             )
         else:

@@ -71,6 +71,7 @@ class InterestRanker(Ranker):
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
         region: str | None = None,
+        engagement_region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Score and sort recommendations using the LinTS-interest model.
 
@@ -106,7 +107,11 @@ class InterestRanker(Ranker):
 
         for r, rec in enumerate(recs):
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
-                rec, rescaler, region, blend_region_with_global=False
+                rec,
+                rescaler,
+                region,
+                engagement_region=engagement_region,
+                blend_region_with_global=False,
             )
 
             # Two conditions must hold to use the LinTS score:
@@ -154,6 +159,8 @@ class InterestRanker(Ranker):
         sections: dict[str, Section],
         top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
+        region: str | None = None,
+        engagement_region: str | None = None,
     ) -> dict[str, Section]:
         """Rank sections by mean score of their top items."""
 

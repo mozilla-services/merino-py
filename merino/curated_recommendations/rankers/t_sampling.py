@@ -42,6 +42,7 @@ class ThompsonSamplingRanker(Ranker):
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
         region: str | None = None,
+        engagement_region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
         CTR with exploration of new items using a prior.
@@ -80,7 +81,7 @@ class ThompsonSamplingRanker(Ranker):
         def compute_ranking_scores(rec: CuratedRecommendation):
             """Sample beta distributed from weighted regional/global engagement for a recommendation."""
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
-                rec, rescaler, region
+                rec, rescaler, region, engagement_region=engagement_region
             )
             # Add priors and ensure opens and no_opens are > 0, which is required by beta.rvs.
             alpha_val = opens + max(a_prior, 1e-18)
@@ -114,6 +115,8 @@ class ThompsonSamplingRanker(Ranker):
         sections: dict[str, Section],
         top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
+        region: str | None = None,
+        engagement_region: str | None = None,
     ) -> dict[str, Section]:
         """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
 
@@ -151,7 +154,12 @@ class ThompsonSamplingRanker(Ranker):
 
             for rec in recs:
                 opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = (
-                    self.compute_interactions(rec, rescaler, "??")
+                    self.compute_interactions(
+                        rec,
+                        rescaler,
+                        region,
+                        engagement_region=engagement_region,
+                    )
                 )
                 total_clicks += opens
                 total_imps += no_opens
