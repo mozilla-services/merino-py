@@ -190,6 +190,7 @@ def map_corpus_section_to_section(
         layout=deepcopy(layout),
         followable=corpus_section.followable,
         allowAds=corpus_section.allowAds,
+        variant=corpus_section.variant
     )
 
 

@@ -25,6 +25,7 @@ from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
     CorpusSection,
     SurfaceId,
+    CreateSource
 )
 from merino.curated_recommendations.corpus_backends.utils import (
     get_utm_source,
@@ -38,9 +39,16 @@ from merino.providers.manifest import Provider as ManifestProvider
 
 logger = logging.getLogger(__name__)
 
+variant_id_map = {"base":0,
+                  CreateSource.MANUAL:2,
+                  "exp5050":5050}
+experiment_id_set = {5050}
 
-def parse_section_external_id(raw_external_id: str) -> tuple[str, int]:
+
+def parse_section_variant(raw_external_id: str, source: str) -> tuple[str, int]:
     """Normalize a raw section ID into its canonical ID and experiment variant."""
+    if source == CreateSource.MANUAL:
+        return variant_id_map[CreateSource.MANUAL]
     # Strip any locale suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present.
     external_id = raw_external_id.split("__l", 1)[0]
 
@@ -173,7 +181,8 @@ class SectionsBackend(SectionsProtocol):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")
                 continue
 
-            external_id, experiment_variant = parse_section_external_id(section["externalId"])
+            external_id, variant = parse_section_variant(raw_external_id= section["externalId"],
+                                                         source= section["createSource"])
 
             section_obj = CorpusSection(
                 externalId=external_id,
@@ -183,7 +192,7 @@ class SectionsBackend(SectionsProtocol):
                 heroSubtitle=section.get("heroDescription"),
                 iab=section["iab"],
                 createSource=section["createSource"],
-                experimentVariant=experiment_variant,
+                variantId=variant,
                 followable=section["followable"],
                 allowAds=section["allowAds"],
                 sectionItems=[
@@ -194,9 +203,10 @@ class SectionsBackend(SectionsProtocol):
                 ],
             )
             parsed_sections.append(section_obj)
+    
 
-        base_sections = [s for s in parsed_sections if s.experimentVariant == 0]
-        experimental_sections = [s for s in parsed_sections if s.experimentVariant != 0]
+        base_sections = [s for s in parsed_sections if variant_id_map.get(s.experimentVariant, 0) not in experiment_id_set]
+        experimental_sections = [s for s in parsed_sections if variant_id_map.get(s.experimentVariant) in experiment_id_set]
 
         base_sections_by_id: dict[str, CorpusSection] = {s.externalId: s for s in base_sections}
 
