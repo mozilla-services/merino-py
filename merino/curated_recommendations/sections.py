@@ -106,6 +106,7 @@ def map_section_item_to_recommendation(
     section_id: str,
     experiment_flags: set[str] | None = None,
     is_manual_section: bool = False,
+    variant_id: int | None = None,
 ) -> CuratedRecommendation:
     """Map a CorpusItem to a CuratedRecommendation.
 
@@ -129,6 +130,7 @@ def map_section_item_to_recommendation(
         # coarse interest vector. See also https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
         features=features,
         experiment_flags=experiment_flags,
+        variantId=variant_id,
     )
 
 
@@ -176,6 +178,7 @@ def map_corpus_section_to_section(
             corpus_section.externalId,
             experiment_flags=item_flags,
             is_manual_section=is_manual_section,
+            variant_id=corpus_section.variantId,
         )
         for rank, item in enumerate(section_items)
     ]
@@ -709,6 +712,13 @@ def get_top_story_list(
 ) -> list[CuratedRecommendation]:
     """Build a top story list of top_count items from a full list. Adds some extra items from further down
     in the list of recs with some care to not use the same topic more than once.
+
+    items is expected to already be sorted by score. If a corpusItemId appears multiple
+    times in this list, each occurrence may have a different score because most rankers
+    draw independently per occurrence. InterestRanker is the exception here: this repo
+    delegates known-item scoring to the LinTS backend, so duplicate scoring behavior is
+    defined by that backend. The implication is its possible for InterestRanker to choose
+    one variant of an item over another deterministically.
 
     Depending on the rescaler settings, there may be a target limit percentage of items that
     are 'fresh' (i.e have small number of impressions) to balance the initial list.

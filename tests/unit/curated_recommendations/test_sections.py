@@ -673,11 +673,13 @@ class TestMapCorpusSectionToSection:
     def test_basic_mapping(self, sample_backend_data):
         """Map CorpusSection into Section with correct feed rank and recs."""
         cs = sample_backend_data[1]
+        cs.variantId = 5050
         sec = map_corpus_section_to_section(cs, 5)
         assert sec.receivedFeedRank == 5
         assert sec.title == cs.title
         assert sec.layout == layout_6_tiles
         assert sec.iab == cs.iab
+        assert sec.variantId == 5050
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
             features_compare = {f"s_{cs.externalId}": 1.0}
@@ -685,6 +687,7 @@ class TestMapCorpusSectionToSection:
                 features_compare[f"t_{rec.topic.value}"] = 1.0
             assert rec.receivedRank == idx
             assert rec.features == features_compare
+            assert rec.variantId == 5050
 
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
@@ -915,9 +918,12 @@ class TestGetTopStoryList:
             item_ids=["a", "b", "c", "d", "e"],
             topics=["arts", "business", "food", "government", "food"],
         )
+        for item, variant_id in zip(items, [2, 5050, 0, 2, 0]):
+            item.variantId = variant_id
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
+        assert [i.variantId for i in result] == [2, 5050, 0]
 
     def test_basic_topic_limiting(self):
         """Extra items should be chosen without repeating topics from top_count items."""
