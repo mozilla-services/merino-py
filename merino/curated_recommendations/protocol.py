@@ -487,6 +487,7 @@ class Section(BaseModel):
     allowAds: bool = Field(
         default=True, description="Whether ads can be displayed in this section."
     )
+    variant: int | None = 0
 
 
 class InterestPickerSection(BaseModel):
