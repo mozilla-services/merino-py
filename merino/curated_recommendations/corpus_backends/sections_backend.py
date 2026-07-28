@@ -36,30 +36,30 @@ from merino.providers.manifest import Provider as ManifestProvider
 
 logger = logging.getLogger(__name__)
 
-variant_id_map = {"base":0,
-                  CreateSource.MANUAL:2,
-                  "exp5050":5050}
-experiment_id_set = {5050}
+BASE_SECTION_VARIANT_ID = 0
+MANUAL_SECTION_VARIANT_ID = 1
+FIFTY_FIFTY_EXPERIMENT_VARIANT_ID = 5050
+EXPERIMENT_VARIANT_IDS = {FIFTY_FIFTY_EXPERIMENT_VARIANT_ID}
 
 
 def parse_section_variant(raw_external_id: str, source: str) -> tuple[str, int]:
     """Normalize a raw section ID into its canonical ID and experiment variant."""
     if source == CreateSource.MANUAL:
-        return raw_external_id, variant_id_map[CreateSource.MANUAL]
+        return raw_external_id, MANUAL_SECTION_VARIANT_ID
     # Strip any locale suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present.
     external_id = raw_external_id.split("__l", 1)[0]
 
     marker = "__exp"
     idx = external_id.rfind(marker)
     if idx <= 0:
-        return external_id.split("__", 1)[0], 0
+        return external_id.split("__", 1)[0], BASE_SECTION_VARIANT_ID
 
     base_id = external_id[:idx]
     variant_id = external_id[idx + len(marker) :]
     if variant_id.isdigit():
         return base_id, int(variant_id)
 
-    return external_id.split("__", 1)[0], 0
+    return external_id.split("__", 1)[0], BASE_SECTION_VARIANT_ID
 
 
 class SectionsBackend(SectionsProtocol):
@@ -189,8 +189,8 @@ class SectionsBackend(SectionsProtocol):
             parsed_sections.append(section_obj)
     
 
-        base_sections = [s for s in parsed_sections if s.variantId not in experiment_id_set]
-        experimental_sections = [s for s in parsed_sections if s.variantId in experiment_id_set]
+        base_sections = [s for s in parsed_sections if s.variantId not in EXPERIMENT_VARIANT_IDS]
+        experimental_sections = [s for s in parsed_sections if s.variantId in EXPERIMENT_VARIANT_IDS]
 
         base_sections_by_id: dict[str, CorpusSection] = {s.externalId: s for s in base_sections}
 
