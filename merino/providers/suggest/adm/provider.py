@@ -30,6 +30,7 @@ from merino.providers.suggest.base import (
     BaseSuggestion,
     SuggestionRequest,
 )
+from merino.providers.suggest.custom_details import AmpDetails, CustomDetails
 
 logger = logging.getLogger(__name__)
 
@@ -401,6 +402,14 @@ class Provider(BaseProvider):
                 "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
                 "score": self.score,
                 "is_top_pick": is_top_pick,
+                "custom_details": CustomDetails(
+                    amp=AmpDetails(
+                        header_text=res.header_text,
+                        suggestion_id=res.suggestion_id,
+                    )
+                )
+                if res.header_text is not None or res.suggestion_id is not None
+                else None,
             }
             return [
                 (

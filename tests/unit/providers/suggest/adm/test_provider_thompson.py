@@ -19,6 +19,7 @@ from merino.providers.suggest.adm.backends.protocol import (
     KeywordMetrics,
 )
 from merino.providers.suggest.adm.provider import NonsponsoredSuggestion, Provider
+from merino.providers.suggest.custom_details import AmpDetails, CustomDetails
 
 from tests.unit.types import SuggestionRequestFixture
 
@@ -61,6 +62,12 @@ async def test_query_with_thompson_returns_suggestion(
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="22222222-2222-2222-2222-222222222222",
+                )
+            ),
         )
     ]
     statsd_mock.increment.assert_called_once_with(
@@ -147,6 +154,12 @@ async def test_query_with_thompson_min_attempted_count_returns_suggestion(
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="22222222-2222-2222-2222-222222222222",
+                )
+            ),
         )
     ]
 
@@ -180,6 +193,12 @@ async def test_query_with_thompson_single_candidate_below_threshold_returns_sugg
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="11111111-1111-1111-1111-111111111111",
+                )
+            ),
         )
     ]
     statsd_mock.increment.assert_called_once_with(
@@ -214,6 +233,12 @@ async def test_query_with_thompson_without_engagement_data_skips_sampling(
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="22222222-2222-2222-2222-222222222222",
+                )
+            ),
         )
     ]
     statsd_mock.increment.assert_not_called()
@@ -245,6 +270,12 @@ async def test_query_with_thompson_returns_fallback_when_fallback_enabled(
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="22222222-2222-2222-2222-222222222222",
+                )
+            ),
         )
     ]
     statsd_mock.increment.assert_called_once_with(
@@ -284,6 +315,12 @@ async def test_query_with_thompson_dummy_return_suggestion_when_fallback_enabled
             is_sponsored=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="22222222-2222-2222-2222-222222222222",
+                )
+            ),
         )
     ]
     statsd_mock.increment.assert_called_once_with(

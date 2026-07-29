@@ -185,6 +185,8 @@ def fixture_rs_attachment() -> KintoSuggestion:
         ],
         title="Mozilla Firefox Accounts",
         url="https://example.org/target/mozfirefoxaccounts",
+        header_text="Example.org header text",
+        suggestion_id="11111111-1111-1111-1111-111111111111",
     )
 
 
@@ -548,6 +550,8 @@ async def test_get_suggestions(
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
+                "header_text": "Example.org header text",
+                "suggestion_id": "11111111-1111-1111-1111-111111111111",
             }
         ],
         indent=None,
