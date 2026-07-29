@@ -26,8 +26,13 @@ def query_contains_numeric(query: str) -> bool:
     return bool(NUMERIC_PATTERN.search(query))
 
 
-def pii_inspect(query: str) -> PIIType:
-    """Determine if query contains a PII type."""
+def basic_detect(query: str) -> PIIType:
+    """Determine if query contains a PII type using basic pattern matching only.
+
+    This performs lightweight inspection for an `@` sign or a digit. It does not
+    perform heavier detection such as NER / PERSON entity recognition, which is
+    done by `merino-fleece`.
+    """
     if query_contains_email(query):
         return PIIType.EMAIL
     elif query_contains_numeric(query):

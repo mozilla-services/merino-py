@@ -13,7 +13,7 @@ from merino.middleware import ScopeKey
 from merino.utils.log_data_creators import create_suggest_log_data
 from merino_common.models.suggest_logging import SuggestLogDataModel
 from merino.configs import settings
-from merino.utils.query_processing.pii_detect import PIIType
+from merino_common.utils.query_processing.pii_detect import PIIType
 
 # web.suggest.request is used for logs coming from the /suggest endpoint
 suggest_request_logger = logging.getLogger("web.suggest.request")
