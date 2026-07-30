@@ -11,10 +11,16 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from merino.middleware import ScopeKey
-from merino.message_handler import get_message_handler
+from merino.message_handlers.search_terms import get_message_handler
 from merino.utils.log_data_creators import create_suggest_log_data
-from merino_common.models.suggest_logging import SuggestLogDataModel, SuggestRequestParams
-from merino_common.utils.async_batch_queue import AsyncBatchException
+from merino_common.models.suggest_logging import (
+    SuggestLogDataModel,
+    SuggestRequestParams,
+)
+from merino_common.utils.async_batch_queue import (
+    QueueFullException,
+    QueueShutDownException,
+)
 from merino.configs import settings
 from merino.utils.query_processing.pii_detect import PIIType
 
@@ -47,7 +53,7 @@ def _submit_search_term(request_params: SuggestRequestParams) -> None:
     """Enqueue a search term for asynchronous submission, without failing the request."""
     try:
         get_message_handler().put(request_params)
-    except (AsyncBatchException, RuntimeError) as ex:
+    except (QueueFullException, QueueShutDownException) as ex:
         _enqueue_counter.add(1, {"outcome": "error", "error.type": type(ex).__name__})
         logger.warning("Failed to enqueue search term for submission", exc_info=True)
     else:
@@ -77,12 +83,14 @@ class LoggingMiddleware:
                     and PATTERN.match(request.url.path)
                     and request.query_params.get("providers", "").strip().lower()
                     not in EXCLUDED_PROVIDERS
-                    and request.scope.get(ScopeKey.PII_DETECTION) == PIIType.NON_PII
                 ):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt
                     )
-                    if LOG_SUGGEST_REQUEST:
+                    if (
+                        LOG_SUGGEST_REQUEST
+                        and request.scope.get(ScopeKey.PII_DETECTION) == PIIType.NON_PII
+                    ):
                         suggest_request_logger.info("", extra=suggest_log_data.model_dump())
                     if SUBMIT_SEARCH_TERMS:
                         _submit_search_term(suggest_log_data.request_params)

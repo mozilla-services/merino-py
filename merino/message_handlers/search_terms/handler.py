@@ -3,7 +3,7 @@
 from collections.abc import Awaitable, Callable
 
 from merino.configs import settings
-from merino.message_handler.fleece import FleeceClient
+from merino.message_handlers.search_terms.fleece import FleeceClient
 from merino.utils.http_client import create_http_client
 from merino_common.models.suggest_logging import SuggestRequestParams
 from merino_common.utils.async_batch_queue import AsyncBatchQueue
@@ -37,8 +37,8 @@ class MessageHandler:
             self._client = FleeceClient(
                 http_client=create_http_client(
                     base_url=settings.fleece.url_base,
-                    connect_timeout=settings.fleece.connect_timeout_sec,
-                    request_timeout=settings.fleece.request_timeout_sec,
+                    connect_timeout=settings.message_handler.connect_timeout_sec,
+                    request_timeout=settings.message_handler.collection_delay_sec / 2,
                 )
             )
             on_batch = self._client.submit
@@ -59,10 +59,9 @@ class MessageHandler:
         Buffered terms are processed before the client closes (bounded by the shutdown
         deadline).
         """
-        if self._queue is None:
-            return
-        await self._queue.stop()
-        self._queue = None
+        if self._queue is not None:
+            await self._queue.stop()
+            self._queue = None
         if self._client is not None:
             await self._client.close()
             self._client = None

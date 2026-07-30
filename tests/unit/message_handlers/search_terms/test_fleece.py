@@ -4,39 +4,29 @@
 
 """Unit tests for the merino-fleece search terms client."""
 
+from collections.abc import Callable
+
 import httpx
 import pytest
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
-from merino.message_handler.errors import FleeceError
-from merino.message_handler.fleece import FleeceClient
+from merino.message_handlers.search_terms.errors import FleeceError
+from merino.message_handlers.search_terms.fleece import FleeceClient
 from merino_common.models.suggest_logging import SuggestRequestParams
 
-
-def _params(query: str) -> SuggestRequestParams:
-    """Build a minimal SuggestRequestParams for a given query."""
-    return SuggestRequestParams(
-        query=query,
-        code=200,
-        rid="rid",
-        client_variants="",
-        requested_providers="",
-        browser="Firefox",
-        os_family="macos",
-        form_factor="desktop",
-    )
+Params = Callable[[str], SuggestRequestParams]
 
 
 @pytest.mark.asyncio
-async def test_submit_posts_batch_as_submission(mocker: MockerFixture) -> None:
+async def test_submit_posts_batch_as_submission(mocker: MockerFixture, params: Params) -> None:
     """Test that a successful submit POSTs the batch to the search terms endpoint."""
     request = httpx.Request("POST", "http://fleece/api/v1/search-terms")
     http_client = mocker.AsyncMock(spec=httpx.AsyncClient)
     http_client.post.return_value = httpx.Response(201, request=request)
 
     client = FleeceClient(http_client=http_client)
-    await client.submit([_params("apple"), _params("orange")])
+    await client.submit([params("apple"), params("orange")])
 
     http_client.post.assert_awaited_once()
     args, kwargs = http_client.post.call_args
@@ -45,7 +35,9 @@ async def test_submit_posts_batch_as_submission(mocker: MockerFixture) -> None:
 
 
 @pytest.mark.asyncio
-async def test_submit_raises_fleece_error_on_bad_status(mocker: MockerFixture) -> None:
+async def test_submit_raises_fleece_error_on_bad_status(
+    mocker: MockerFixture, params: Params
+) -> None:
     """Test that a non-2xx response is wrapped in a FleeceError."""
     request = httpx.Request("POST", "http://fleece/api/v1/search-terms")
     http_client = mocker.AsyncMock(spec=httpx.AsyncClient)
@@ -53,18 +45,20 @@ async def test_submit_raises_fleece_error_on_bad_status(mocker: MockerFixture) -
 
     client = FleeceClient(http_client=http_client)
     with pytest.raises(FleeceError, match="unexpected status 500"):
-        await client.submit([_params("apple")])
+        await client.submit([params("apple")])
 
 
 @pytest.mark.asyncio
-async def test_submit_raises_fleece_error_on_transport_error(mocker: MockerFixture) -> None:
+async def test_submit_raises_fleece_error_on_transport_error(
+    mocker: MockerFixture, params: Params
+) -> None:
     """Test that a transport error (e.g. timeout/connection failure) is wrapped in a FleeceError."""
     http_client = mocker.AsyncMock(spec=httpx.AsyncClient)
     http_client.post.side_effect = httpx.ConnectError("connection refused")
 
     client = FleeceClient(http_client=http_client)
     with pytest.raises(FleeceError, match="Failed to submit search terms"):
-        await client.submit([_params("apple")])
+        await client.submit([params("apple")])
 
 
 @pytest.mark.asyncio

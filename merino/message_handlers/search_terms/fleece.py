@@ -1,31 +1,18 @@
 """HTTP client for submitting search terms to merino-fleece for sanitization."""
 
-import logging
 import time
 
 from httpx import AsyncClient, HTTPError, HTTPStatusError
 from opentelemetry import metrics
 
 from merino.configs import settings
-from merino.message_handler.errors import FleeceError
+from merino.message_handlers.search_terms.errors import FleeceError
 from merino_common.models.suggest_logging import (
     SearchTermsSubmission,
     SuggestRequestParams,
 )
 
-logger = logging.getLogger(__name__)
-
-_meter = metrics.get_meter("merino.message_handler.fleece")
-_submit_success_counter = _meter.create_counter(
-    name="fleece.submit.success",
-    unit="{search_term}",
-    description="Number of search terms successfully submitted to merino-fleece.",
-)
-_submit_failure_counter = _meter.create_counter(
-    name="fleece.submit.failure",
-    unit="{search_term}",
-    description="Number of search terms that failed to submit to merino-fleece.",
-)
+_meter = metrics.get_meter("merino.message_handlers.search_terms.fleece")
 _submit_duration_histogram = _meter.create_histogram(
     name="fleece.submit.duration",
     unit="s",
@@ -57,15 +44,15 @@ class FleeceClient:
             FleeceError: If the request fails (transport error, timeout, or non-2xx status).
         """
         submission = SearchTermsSubmission(search_terms=search_terms)
-        count = len(search_terms)
         start = time.perf_counter()
+        outcome = "success"
         try:
             response = await self.http_client.post(
                 self.search_terms_path, json=submission.model_dump()
             )
             response.raise_for_status()
         except HTTPError as ex:
-            _submit_failure_counter.add(count)
+            outcome = "error"
             if isinstance(ex, HTTPStatusError):
                 raise FleeceError(
                     "Fleece returned an unexpected status "
@@ -73,8 +60,7 @@ class FleeceClient:
                 ) from ex
             raise FleeceError(f"Failed to submit search terms to Fleece: {ex}") from ex
         finally:
-            _submit_duration_histogram.record(time.perf_counter() - start)
-        _submit_success_counter.add(count)
+            _submit_duration_histogram.record(time.perf_counter() - start, {"outcome": outcome})
 
     async def close(self) -> None:
         """Close the underlying HTTP client connections."""

@@ -4,28 +4,19 @@
 
 """Unit tests for the search term submission message handler."""
 
+from collections.abc import Callable
+
 import httpx
 import pytest
 from pytest_mock import MockerFixture
 
-from merino import message_handler as message_handler_module
-from merino.message_handler import MessageHandler, get_message_handler
-from merino.message_handler.fleece import FleeceClient
+from merino.configs import settings
+from merino.message_handlers import search_terms
+from merino.message_handlers.search_terms import MessageHandler, get_message_handler
+from merino.message_handlers.search_terms.fleece import FleeceClient
 from merino_common.models.suggest_logging import SuggestRequestParams
 
-
-def _params(query: str) -> SuggestRequestParams:
-    """Build a minimal SuggestRequestParams for a given query."""
-    return SuggestRequestParams(
-        query=query,
-        code=200,
-        rid="rid",
-        client_variants="",
-        requested_providers="",
-        browser="Firefox",
-        os_family="macos",
-        form_factor="desktop",
-    )
+Params = Callable[[str], SuggestRequestParams]
 
 
 async def _noop(batch: list[SuggestRequestParams]) -> None:
@@ -67,15 +58,15 @@ async def test_stop_without_start_is_noop() -> None:
 
 
 @pytest.mark.asyncio
-async def test_put_before_start_raises() -> None:
+async def test_put_before_start_raises(params: Params) -> None:
     """Test that enqueuing before start raises a clear error."""
     handler = MessageHandler(on_batch=_noop)
     with pytest.raises(RuntimeError, match="not running"):
-        handler.put(_params("firefox"))
+        handler.put(params("firefox"))
 
 
 @pytest.mark.asyncio
-async def test_queued_items_are_drained_on_shutdown() -> None:
+async def test_queued_items_are_drained_on_shutdown(params: Params) -> None:
     """Test that buffered search terms are processed before the handler stops."""
     processed: list[SuggestRequestParams] = []
 
@@ -85,12 +76,12 @@ async def test_queued_items_are_drained_on_shutdown() -> None:
     handler = MessageHandler(on_batch=capture)
     await handler.start()
 
-    handler.put(_params("apple"))
-    handler.put(_params("orange"))
+    handler.put(params("apple"))
+    handler.put(params("orange"))
 
     await handler.stop()
 
-    assert {params.query for params in processed} == {"apple", "orange"}
+    assert {p.query for p in processed} == {"apple", "orange"}
 
 
 @pytest.mark.asyncio
@@ -98,7 +89,8 @@ async def test_default_sink_creates_and_closes_fleece_client(mocker: MockerFixtu
     """Test that with no override, the handler creates a FleeceClient and closes it on stop."""
     http_client = mocker.AsyncMock(spec=httpx.AsyncClient)
     create_http_client = mocker.patch(
-        "merino.message_handler.handler.create_http_client", return_value=http_client
+        "merino.message_handlers.search_terms.handler.create_http_client",
+        return_value=http_client,
     )
 
     handler = MessageHandler()
@@ -121,32 +113,53 @@ async def test_default_sink_creates_and_closes_fleece_client(mocker: MockerFixtu
 async def test_module_start_stop_manage_singleton(mocker: MockerFixture) -> None:
     """Test that the module-level wrappers start and stop the shared singleton."""
     mocker.patch(
-        "merino.message_handler.handler.create_http_client",
+        "merino.message_handlers.search_terms.handler.create_http_client",
         return_value=mocker.AsyncMock(spec=httpx.AsyncClient),
     )
-    assert get_message_handler() is message_handler_module.message_handler
+    assert get_message_handler() is search_terms.message_handler
 
-    await message_handler_module.start()
-    assert message_handler_module.message_handler.is_running()
+    await search_terms.start()
+    assert search_terms.message_handler.is_running()
 
-    await message_handler_module.stop()
-    assert not message_handler_module.message_handler.is_running()
+    await search_terms.stop()
+    assert not search_terms.message_handler.is_running()
 
 
 @pytest.mark.asyncio
 async def test_start_regular_services_wires_message_handler(mocker: MockerFixture) -> None:
-    """Test that regular service startup starts the message handler and registers its drain."""
+    """Test that regular startup starts the handler and registers its drain when enabled."""
     import merino.main as main
 
+    mocker.patch.object(settings.message_handler, "enabled", True)
     mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
     mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
     mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
     mocker.patch("merino.curated_recommendations.init_provider", new=mocker.MagicMock())
     mocker.patch("merino.providers.games.init_providers", new=mocker.AsyncMock())
-    start_mock = mocker.patch.object(message_handler_module, "start", new=mocker.AsyncMock())
+    start_mock = mocker.patch.object(search_terms, "start", new=mocker.AsyncMock())
 
     cleanup_callbacks: list = []
     await main._start_regular_services(cleanup_callbacks)
 
     start_mock.assert_awaited_once()
-    assert message_handler_module.stop in cleanup_callbacks
+    assert search_terms.stop in cleanup_callbacks
+
+
+@pytest.mark.asyncio
+async def test_start_regular_services_skips_handler_when_disabled(mocker: MockerFixture) -> None:
+    """Test that the handler is not started when submission is disabled."""
+    import merino.main as main
+
+    mocker.patch.object(settings.message_handler, "enabled", False)
+    mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
+    mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
+    mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
+    mocker.patch("merino.curated_recommendations.init_provider", new=mocker.MagicMock())
+    mocker.patch("merino.providers.games.init_providers", new=mocker.AsyncMock())
+    start_mock = mocker.patch.object(search_terms, "start", new=mocker.AsyncMock())
+
+    cleanup_callbacks: list = []
+    await main._start_regular_services(cleanup_callbacks)
+
+    start_mock.assert_not_awaited()
+    assert search_terms.stop not in cleanup_callbacks

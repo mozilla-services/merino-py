@@ -1,9 +1,9 @@
 """Public interface for the search term submission message handler.
 
-Exposes the process-wide ``MessageHandler`` singleton and its lifecycle functions:
+Exposes the process-wide ``MessageHandler`` singleton and its lifecycle functions
 """
 
-from merino.message_handler.handler import MessageHandler
+from merino.message_handlers.search_terms.handler import MessageHandler
 
 __all__ = ["MessageHandler", "message_handler", "start", "stop", "get_message_handler"]
 

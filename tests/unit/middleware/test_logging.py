@@ -207,28 +207,27 @@ async def test_submit_failure_does_not_break_request(
 
 
 @pytest.mark.asyncio
-async def test_submit_when_handler_not_running_does_not_break_request(
+async def test_submits_regardless_of_pii_flag(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
     receive_mock: Receive,
     send_mock: Send,
 ) -> None:
-    """Test that a not-running handler (RuntimeError) is swallowed and does not fail the request."""
-    mocker.patch(
-        "merino.middleware.logging.create_suggest_log_data",
-        return_value=mocker.MagicMock(),
-    )
+    """Test that a PII-flagged term is still submitted to fleece but not logged locally."""
+    log_data = mocker.MagicMock()
+    mocker.patch("merino.middleware.logging.create_suggest_log_data", return_value=log_data)
     mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
-    mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", False)
+    mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", True)
     handler = mocker.MagicMock()
-    handler.put.side_effect = RuntimeError("The message handler is not running")
     mocker.patch("merino.middleware.logging.get_message_handler", return_value=handler)
 
-    caplog.set_level(logging.WARNING)
+    caplog.set_level(logging.INFO)
+    scope = _suggest_scope()
+    scope["merino_pii_detection"] = "email"
     logging_middleware: LoggingMiddleware = LoggingMiddleware(app)
 
-    # Should not raise despite the handler not running.
-    await logging_middleware(_suggest_scope(), receive_mock, send_mock)
+    await logging_middleware(scope, receive_mock, send_mock)
 
-    handler.put.assert_called_once()
-    assert any("Failed to enqueue" in message for message in caplog.messages)
+    handler.put.assert_called_once_with(log_data.request_params)
+
+    assert not any(record.name == "web.suggest.request" for record in caplog.records)

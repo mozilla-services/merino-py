@@ -262,6 +262,10 @@ request_timeout_sec = 0.5
 # Whether the suggest handler submits search terms to merino-fleece.
 enabled = false
 
+# MERINO_MESSAGE_HANDLER__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to merino-fleece for search term submissions.
+connect_timeout_sec = 2.0
+
 # MERINO_MESSAGE_HANDLER__MAX_BATCH_SIZE
 # Max number of queued search terms to process in a single batch.
 max_batch_size = 512
