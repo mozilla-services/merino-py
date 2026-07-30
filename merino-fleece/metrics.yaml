@@ -15,7 +15,7 @@ search-terms:
     alert_policy: []
 
 pii:
-  api.pii.detect_duration:
+  api.pii_detect.duration:
     description: |
       A histogram recording the duration, in milliseconds, of each PII detection
       call, emitted via OpenTelemetry Metrics (meter "fleece").

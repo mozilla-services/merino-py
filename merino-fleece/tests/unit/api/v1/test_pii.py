@@ -85,10 +85,10 @@ def test_pii_metrics(make_client, metric_reader: InMemoryMetricReader) -> None:
     time; the shared `metric_reader` fixture installs a MeterProvider so that proxy
     forwards to a real instrument we can read back.
     """
-    before = histogram_count(metric_reader, "api.pii.detect_duration")
+    before = histogram_count(metric_reader, "api.pii_detect.duration")
 
     client = make_client(True)
     resp = client.post("/api/v1/pii", json={"q": "Alice Bob"})
 
     assert resp.status_code == 200
-    assert histogram_count(metric_reader, "api.pii.detect_duration") - before == 1
+    assert histogram_count(metric_reader, "api.pii_detect.duration") - before == 1

@@ -16,7 +16,7 @@ QUERY_CHARACTER_MAX = settings.pii.query_character_max
 
 _meter = metrics.get_meter("fleece")
 _pii_detect_duration = _meter.create_histogram(
-    name="api.pii.detect_duration",
+    name="api.pii_detect.duration",
     unit="ms",
     description="Duration of PII PERSON detection in milliseconds.",
 )
