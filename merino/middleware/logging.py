@@ -22,7 +22,7 @@ from merino_common.utils.async_batch_queue import (
     QueueShutDownException,
 )
 from merino.configs import settings
-from merino.utils.query_processing.pii_detect import PIIType
+from merino_common.utils.query_processing.pii_detect import PIIType
 
 logger = logging.getLogger(__name__)
 

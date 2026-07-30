@@ -76,7 +76,7 @@ from merino.utils.query_processing.query_patterns import (
     build_query_pattern_matcher,
     emit_query_pattern_metrics,
 )
-from merino.utils.query_processing.pii_detect import pii_inspect, PIIType
+from merino_common.utils.query_processing.pii_detect import basic_detect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
     refine_geolocation_for_suggestion,
@@ -274,7 +274,7 @@ async def suggest(
     else:
         search_from = default_providers
 
-    pii_type = pii_inspect(q)
+    pii_type = basic_detect(q)
     request.scope[ScopeKey.PII_DETECTION] = pii_type
     is_soft_pii = False
 
