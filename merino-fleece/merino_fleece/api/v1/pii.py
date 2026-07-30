@@ -5,14 +5,21 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from opentelemetry import metrics
 from pydantic import BaseModel, Field
 
 from merino_fleece.configs import settings
 from merino_fleece.pii import get_detector, get_executor
 from merino_fleece.pii.detector import PiiDetector
-from merino_fleece.utils.metrics import get_metrics_client
 
 QUERY_CHARACTER_MAX = settings.pii.query_character_max
+
+_meter = metrics.get_meter("fleece")
+_pii_detect_duration = _meter.create_histogram(
+    name="api.pii_detect.duration",
+    unit="ms",
+    description="Duration of PII PERSON detection in milliseconds.",
+)
 
 router = APIRouter(tags=["pii"])
 
@@ -38,8 +45,11 @@ async def _detect_pii(q: str, detector: PiiDetector, executor: ThreadPoolExecuto
     it does not block the event loop and stall other concurrent requests.
     """
     loop = asyncio.get_running_loop()
-    with get_metrics_client().timeit("pii.detect_duration"):
+    started_at = loop.time()
+    try:
         pii = await loop.run_in_executor(executor, detector.is_person, q)
+    finally:
+        _pii_detect_duration.record((loop.time() - started_at) * 1000)
     return PiiResponse(pii=pii)
 
 

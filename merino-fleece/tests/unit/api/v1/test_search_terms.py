@@ -3,8 +3,6 @@
 from typing import Any
 
 import pytest
-from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 from fastapi.testclient import TestClient
@@ -65,18 +63,17 @@ def test_malformed_search_term(client: TestClient) -> None:
     assert resp.status_code == 422
 
 
-def test_search_terms_metrics(client: TestClient) -> None:
+def test_search_terms_metrics(client: TestClient, metric_reader: InMemoryMetricReader) -> None:
     """The receive counter records the batch size via a real OpenTelemetry reader.
 
     The endpoint's counter is created against the global (proxy) meter at import
-    time; installing a MeterProvider with an InMemoryMetricReader makes that
-    proxy forward to a real instrument we can read back.
+    time; the shared `metric_reader` fixture installs a MeterProvider so that proxy
+    forwards to a real instrument we can read back.
     """
-    reader = InMemoryMetricReader()
-    metrics.set_meter_provider(MeterProvider(metric_readers=[reader]))
+    before = counter_value(metric_reader, "api.search_terms.receive.count")
 
     body = {"search_terms": [_search_term(), _search_term(), _search_term()]}
     resp = client.post("/api/v1/search-terms", json=body)
 
     assert resp.status_code == 201
-    assert counter_value(reader, "api.search_terms.receive.count") == 3
+    assert counter_value(metric_reader, "api.search_terms.receive.count") - before == 3

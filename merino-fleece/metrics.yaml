@@ -15,11 +15,11 @@ search-terms:
     alert_policy: []
 
 pii:
-  pii.detect_duration:
+  api.pii_detect.duration:
     description: |
-      A timer instrumenting the duration of each PII detection call, emitted
-      via the aiodogstatsd metrics client (namespace "merino.fleece").
-    type: timing
+      A histogram recording the duration, in milliseconds, of each PII detection
+      call, emitted via OpenTelemetry Metrics (meter "fleece").
+    type: histogram
     labels: []
     scope: |
       The "api/v1/pii" API endpoint of "merino-fleece".
