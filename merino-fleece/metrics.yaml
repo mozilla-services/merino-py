@@ -14,13 +14,51 @@ search-terms:
       The "api/v1/search-terms" API endpoint of "merino-fleece".
     alert_policy: []
 
-pii:
-  api.pii_detect.duration:
+  api.search_terms.reject.count:
     description: |
-      A histogram recording the duration, in milliseconds, of each PII detection
-      call, emitted via OpenTelemetry Metrics (meter "fleece").
+      A counter recording the number of search terms rejected because they could
+      not be queued for sanitization, either because the queue lacked capacity for
+      the whole submission or because it was unavailable. Rejections counted here
+      never reach the queue, so they do not appear in
+      "async_batch_queue.rejected.count".
+    type: counter
+    labels: []
+    scope: |
+      The "api/v1/search-terms" API endpoint of "merino-fleece".
+    alert_policy: []
+
+  search_terms.sanitize:
+    description: |
+      A counter recording the number of search terms sanitized, labeled by the PII
+      type detected in each. Incremented by the background sanitization handler,
+      once per term per batch.
+    type: counter
+    labels:
+      - type: |
+          The detected PII type: one of "email", "numeric", "person", or "non_pii".
+    scope: |
+      The background search term sanitization handler of "merino-fleece".
+    alert_policy: []
+
+pii:
+  pii.ner_detect.duration:
+    description: |
+      A histogram recording the duration, in milliseconds, of each single-query PII
+      detection call, emitted via OpenTelemetry Metrics (meter "fleece").
     type: histogram
     labels: []
     scope: |
       The "api/v1/pii" API endpoint of "merino-fleece".
+    alert_policy: []
+
+  pii.ner_batch_detect.duration:
+    description: |
+      A histogram recording the duration, in milliseconds, of each batched PII
+      detection call. Kept separate from "pii.ner_detect.duration" because a batch
+      of many queries and a single query are different units of work, and mixing
+      them would distort the single-query latency distribution.
+    type: histogram
+    labels: []
+    scope: |
+      The background search term sanitization handler of "merino-fleece".
     alert_policy: []
