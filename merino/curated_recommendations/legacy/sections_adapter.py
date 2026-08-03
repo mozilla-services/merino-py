@@ -59,7 +59,6 @@ async def get_legacy_recommendations_from_sections(
     surface_id: SurfaceId,
     count: int,
     region: str | None = None,
-    engagement_region: str | None = None,
     rescaler: EngagementRescaler | None = None,
 ) -> list[CuratedRecommendation]:
     """Fetch section items and return as a flat list for non-sections clients.
@@ -71,15 +70,12 @@ async def get_legacy_recommendations_from_sections(
         surface_id: Surface identifier (e.g. NEW_TAB_EN_US, NEW_TAB_EN_GB)
         count: Maximum number of recommendations to return
         region: Optional region for engagement filtering (e.g., 'US', 'CA')
-        engagement_region: Optional engagement lookup region. Defaults to region.
         rescaler: Optional rescaler for Thompson sampling (applies pessimistic priors
             and scales engagement metrics for gaming/hobbies content)
 
     Returns:
         Ranked list of CuratedRecommendation objects
     """
-    engagement_region = region if engagement_region is None else engagement_region
-
     # 1. Fetch corpus sections (headlines section discarded; only used in sections feed)
     _, corpus_sections = await get_corpus_sections(
         sections_backend=sections_backend,
@@ -118,7 +114,6 @@ async def get_legacy_recommendations_from_sections(
     recommendations = ranker.rank_items(
         recommendations,
         region=region,
-        engagement_region=engagement_region,
         rescaler=rescaler,
     )
 
