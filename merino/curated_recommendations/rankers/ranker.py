@@ -37,7 +37,7 @@ class Ranker:
     def get_opens_no_opens(
         self, rec: CuratedRecommendation, region_query: str | None = None
     ) -> tuple[float, float, bool]:
-        """Get opens and no-opens counts for a recommendation, optionally in a region."""
+        """Get opens, no-opens, and whether engagement exists for a recommendation."""
         engagement = self.engagement_backend.get(rec.corpusItemId, region_query)
         if engagement:
             return (

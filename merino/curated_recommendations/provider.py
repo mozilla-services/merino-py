@@ -192,7 +192,6 @@ class CuratedRecommendationsProvider:
                 surface_id=surface_id,
                 count=request.count,
                 region=region,
-                engagement_region=engagement_region,
                 rescaler=rescaler,
             )
         else:

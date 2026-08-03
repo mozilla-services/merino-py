@@ -78,8 +78,8 @@ class InterestRanker(Ranker):
         Falls back to vanilla Thompson sampling for items the model doesn't
         know, and for the whole list if ``personal_interests`` is missing.
         """
-        regional_prior = self.get_regional_prior(region, engagement_region)
-        engagement_region = self.resolve_engagement_region(recs, region, engagement_region)
+        # LinTS artifacts are not branch-engagement-aware yet, so keep engagement_region
+        # as a no-op for this ranker until the model path explicitly supports it.
         rng = np.random.default_rng()
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
@@ -112,8 +112,6 @@ class InterestRanker(Ranker):
                 rec,
                 rescaler,
                 region,
-                engagement_region=engagement_region,
-                regional_prior=regional_prior,
                 blend_region_with_global=False,
             )
 
