@@ -273,11 +273,11 @@ def test_heartbeat_loop_skips_when_not_running(
 
 
 def test_start_spawns_heartbeat_thread_when_configured(
-    subscriber_mock: MagicMock, mocker: MockerFixture
+    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
 ) -> None:
     """start() launches the heartbeat daemon thread only when a path is configured."""
     thread_cls = mocker.patch("merino_fleece.sanitize.worker.worker.threading.Thread")
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path="/tmp/heartbeat")
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(tmp_path / "heartbeat"))
 
     worker.start()
 
@@ -299,9 +299,9 @@ def test_start_no_heartbeat_thread_when_unconfigured(
     thread_cls.assert_not_called()
 
 
-def test_stop_signals_heartbeat_thread(subscriber_mock: MagicMock) -> None:
+def test_stop_signals_heartbeat_thread(subscriber_mock: MagicMock, tmp_path: Path) -> None:
     """stop() sets the heartbeat stop event so the daemon thread exits promptly."""
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path="/tmp/heartbeat")
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(tmp_path / "heartbeat"))
 
     worker.stop()
 
