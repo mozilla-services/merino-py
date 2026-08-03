@@ -1,5 +1,6 @@
 """Unit tests for merino_fleece.sanitize.worker.worker."""
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -176,3 +177,132 @@ def test_restart_ignored_while_subscriber_open(
 
     subscriber_mock.subscribe.assert_not_called()
     assert "Ignored attempt to restart open subscription" in caplog.text
+
+
+def test_write_heartbeat_writes_epoch(subscriber_mock: MagicMock, tmp_path: Path) -> None:
+    """_write_heartbeat atomically writes the current epoch seconds to the file."""
+    path = tmp_path / "heartbeat"
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
+
+    worker._write_heartbeat()
+
+    contents = path.read_text()
+    assert contents.isdigit()
+    assert int(contents) > 0
+    # No leftover temp file from the atomic rename
+    assert not (tmp_path / "heartbeat.tmp").exists()
+
+
+def test_heartbeat_loop_writes_while_running(
+    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Each tick writes a fresh timestamp to the real file while the pull is running."""
+    path = tmp_path / "heartbeat"
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
+    subscriber_mock.subscribe.return_value.running.return_value = True
+    # One working tick (False), then stop (True) -- exercises the real _write_heartbeat.
+    mocker.patch.object(worker._heartbeat_stop, "wait", side_effect=[False, True])
+
+    worker._heartbeat_loop()
+
+    contents = path.read_text()
+    assert contents.isdigit()
+    assert int(contents) > 0
+    assert not (tmp_path / "heartbeat.tmp").exists()  # no leftover tmp file
+
+
+def test_write_heartbeat_creates_missing_parent_dirs(
+    subscriber_mock: MagicMock, tmp_path: Path
+) -> None:
+    """_write_heartbeat creates the parent directory instead of failing on a missing one."""
+    path = tmp_path / "nested" / "dir" / "heartbeat"
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
+
+    worker._write_heartbeat()
+
+    assert path.read_text().isdigit()
+
+
+def test_heartbeat_loop_writes_before_first_tick(
+    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """The file exists as soon as the loop starts, before the first interval elapses."""
+    path = tmp_path / "heartbeat"
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
+    subscriber_mock.subscribe.return_value.running.return_value = True
+    # Stop on the very first wait, so only the pre-loop write can have happened.
+    mocker.patch.object(worker._heartbeat_stop, "wait", return_value=True)
+
+    worker._heartbeat_loop()
+
+    assert path.read_text().isdigit()
+
+
+def test_heartbeat_loop_survives_write_failure(
+    subscriber_mock: MagicMock, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A failed write is logged and the loop keeps ticking rather than killing the thread."""
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path="/heartbeat")
+    subscriber_mock.subscribe.return_value.running.return_value = True
+    write_mock = mocker.patch.object(
+        worker, "_write_heartbeat", side_effect=OSError("read-only file system")
+    )
+    mocker.patch.object(worker._heartbeat_stop, "wait", side_effect=[False, True])
+
+    with caplog.at_level("ERROR", logger="merino_fleece.sanitize.worker.worker"):
+        worker._heartbeat_loop()
+
+    # Pre-loop write plus one tick: the first failure did not abort the loop.
+    assert write_mock.call_count == 2
+    assert "Failed to refresh heartbeat file" in caplog.text
+
+
+def test_heartbeat_loop_skips_when_not_running(
+    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """A tick leaves the file untouched when the pull is not running."""
+    path = tmp_path / "heartbeat"
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
+    # e.g. mid-reconnect or a stuck stream: the file must be allowed to go stale.
+    subscriber_mock.subscribe.return_value.running.return_value = False
+    mocker.patch.object(worker._heartbeat_stop, "wait", side_effect=[False, True])
+
+    worker._heartbeat_loop()
+
+    assert not path.exists()
+
+
+def test_start_spawns_heartbeat_thread_when_configured(
+    subscriber_mock: MagicMock, mocker: MockerFixture
+) -> None:
+    """start() launches the heartbeat daemon thread only when a path is configured."""
+    thread_cls = mocker.patch("merino_fleece.sanitize.worker.worker.threading.Thread")
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path="/tmp/heartbeat")
+
+    worker.start()
+
+    thread_cls.assert_called_once_with(
+        target=worker._heartbeat_loop, name="fleece-heartbeat", daemon=True
+    )
+    thread_cls.return_value.start.assert_called_once_with()
+
+
+def test_start_no_heartbeat_thread_when_unconfigured(
+    subscriber_mock: MagicMock, mocker: MockerFixture
+) -> None:
+    """start() does not spawn a heartbeat thread when no path is configured."""
+    thread_cls = mocker.patch("merino_fleece.sanitize.worker.worker.threading.Thread")
+    worker = FleeceQueueWorker("my-subscription")
+
+    worker.start()
+
+    thread_cls.assert_not_called()
+
+
+def test_stop_signals_heartbeat_thread(subscriber_mock: MagicMock) -> None:
+    """stop() sets the heartbeat stop event so the daemon thread exits promptly."""
+    worker = FleeceQueueWorker("my-subscription", heartbeat_path="/tmp/heartbeat")
+
+    worker.stop()
+
+    assert worker._heartbeat_stop.is_set()

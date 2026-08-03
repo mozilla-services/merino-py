@@ -66,3 +66,15 @@ restart_stream = true
 # How long to wait before restarting stream after stream error
 # Only applicable if `restart_stream` is true
 restart_backoff = 10  # seconds
+
+# MERINO_FLEECE_PUBSUB__HEARTBEAT_PATH
+# Filesystem path the worker refreshes while the streaming pull is running, for an
+# external liveness probe (e.g. a Kubernetes exec probe). Parent directories are created
+# on demand. Must be writable by the container's unprivileged `app` user (uid 10001)
+# Empty disables the heartbeat.
+heartbeat_path = ""
+
+# MERINO_FLEECE_PUBSUB__HEARTBEAT_INTERVAL
+# How often to refresh the heartbeat file. Keep the probe's staleness threshold
+# comfortably above `heartbeat_interval + restart_backoff`.
+heartbeat_interval = 10  # seconds
