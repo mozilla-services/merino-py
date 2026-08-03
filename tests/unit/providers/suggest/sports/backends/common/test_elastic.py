@@ -567,6 +567,42 @@ async def test_sports_search_previous_uses_game_date_over_late_update(
     assert result["all"]["previous"]["away_score"] == 6
 
 
+@freezegun.freeze_time("2026-05-13T13:30:00Z")
+@pytest.mark.asyncio
+async def test_sports_skip_filtered_games(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+) -> None:
+    """Do not return sports that are not active and not in the filter."""
+    hits = [
+        {
+            "_score": 1.0,
+            "_source": {
+                "event": json.dumps(
+                    {
+                        "sport": "NFL",
+                        "id": 77896,
+                        "status": "Final",
+                        "label": "may-11-game",
+                        "date": "2026-05-12T02:10:00+00:00",
+                        "updated": "2026-05-13T11:58:54+00:00",
+                        "home_score": 3,
+                        "away_score": 9,
+                    }
+                )
+            },
+        },
+    ]
+    es_client.search.return_value = {"hits": {"total": {"value": 1}, "hits": hits}}
+
+    result = await sport_data_store.search_events(
+        q="los angeles", language_code="en", mix_sports=True, filter=["NFL", "WCS"]
+    )
+    assert result["all"]["previous"]["label"] == "may-11-game"
+    assert result["all"]["previous"]["home_score"] == 3
+    assert result["all"]["previous"]["away_score"] == 9
+
+
 def test_choose_previous_ignores_final_when_current_exists() -> None:
     """Final events should not be selected when a current game already exists."""
     selected_events = {

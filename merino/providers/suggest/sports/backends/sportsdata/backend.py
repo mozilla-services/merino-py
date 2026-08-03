@@ -62,7 +62,10 @@ class SportsDataBackend(SportsDataProtocol):
             # should mix events for sports
             # (e.g. prior NHL, current MLB, future NFL)
             events = await self.data_store.search_events(
-                q=query_string, language_code=language_code, mix_sports=self.mix_sports
+                q=query_string,
+                language_code=language_code,
+                mix_sports=self.mix_sports,
+                filter=self.settings.get("sports"),
             )
             suggestions: list[SportSummary] = []
             for sport, events in events.items():
