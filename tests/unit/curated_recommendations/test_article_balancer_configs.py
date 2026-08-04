@@ -9,7 +9,22 @@ from merino.curated_recommendations.article_balancer_configs import (
     get_top_stories_article_balancer_config,
 )
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, Topic
+from merino.curated_recommendations.protocol import (
+    CuratedRecommendationsRequest,
+    ExperimentName,
+    Locale,
+)
 from tests.unit.curated_recommendations.fixtures import generate_recommendations
+
+
+def _publisher_constraint_request(branch: str) -> CuratedRecommendationsRequest:
+    """Build a request enrolled in the Germany publisher constraint experiment."""
+    return CuratedRecommendationsRequest(
+        locale=Locale.DE_DE,
+        region="DE",
+        experimentName=ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
+        experimentBranch=branch,
+    )
 
 
 def test_get_top_stories_article_balancer_config_returns_surface_config():
@@ -34,6 +49,32 @@ def test_get_top_stories_article_balancer_config_falls_back_to_default():
 
     assert config is DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG
     assert config.max_per_publisher == 100
+    assert config.publisher_enforcement_likelyhood == 0.0
+
+
+def test_germany_publisher_constraint_control_uses_surface_config():
+    """Control branch keeps the existing Germany publisher constraint."""
+    config = get_top_stories_article_balancer_config(
+        SurfaceId.NEW_TAB_DE_DE, request=_publisher_constraint_request("control")
+    )
+
+    assert config is TOP_STORIES_BALANCER_CONFIG_BY_SURFACE[SurfaceId.NEW_TAB_DE_DE]
+    assert config.max_per_publisher == 1
+    assert config.publisher_enforcement_likelyhood == 0.85
+
+
+def test_germany_publisher_constraint_treatment_disables_publisher_limit():
+    """Treatment branch disables only the Germany publisher constraint."""
+    config = get_top_stories_article_balancer_config(
+        SurfaceId.NEW_TAB_DE_DE, request=_publisher_constraint_request("treatment")
+    )
+
+    assert config is not TOP_STORIES_BALANCER_CONFIG_BY_SURFACE[SurfaceId.NEW_TAB_DE_DE]
+    assert config.min_per_topic_limit == 2
+    assert config.government_max_override == 3
+    assert (
+        config.max_per_publisher == DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG.max_per_publisher
+    )
     assert config.publisher_enforcement_likelyhood == 0.0
 
 

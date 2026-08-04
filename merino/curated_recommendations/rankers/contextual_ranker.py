@@ -73,10 +73,13 @@ class ContextualRanker(Ranker):
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
         region: str | None = None,
+        engagement_region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Pull out scores that were previously computed from the contextual ranker
         data artifact. We need to look up the items in the ml backend using region.
         """
+        regional_prior = self.get_regional_prior(region, engagement_region)
+        engagement_region = self.resolve_engagement_region(recs, region, engagement_region)
 
         def boost_interest(rec: CuratedRecommendation) -> float:
             if personal_interests is None or rec.topic is None:
@@ -112,7 +115,12 @@ class ContextualRanker(Ranker):
         rng = np.random.default_rng()
         for rec in recs:
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
-                rec, rescaler, region, blend_region_with_global=False
+                rec,
+                rescaler,
+                region,
+                engagement_region=engagement_region,
+                regional_prior=regional_prior,
+                blend_region_with_global=False,
             )
             is_fresh = False
             # add random value between 0 and 1 to break ties randomly
@@ -166,6 +174,8 @@ class ContextualRanker(Ranker):
         sections: dict[str, Section],
         top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
+        region: str | None = None,
+        engagement_region: str | None = None,
     ) -> dict[str, Section]:
         """Re-rank sections using average score of top items."""
 

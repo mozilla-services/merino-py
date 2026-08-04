@@ -71,12 +71,15 @@ class InterestRanker(Ranker):
         rescaler: EngagementRescaler | None = None,
         personal_interests: ProcessedInterests | None = None,
         region: str | None = None,
+        engagement_region: str | None = None,
     ) -> list[CuratedRecommendation]:
         """Score and sort recommendations using the LinTS-interest model.
 
         Falls back to vanilla Thompson sampling for items the model doesn't
         know, and for the whole list if ``personal_interests`` is missing.
         """
+        # LinTS artifacts are not branch-engagement-aware yet, so keep engagement_region
+        # as a no-op for this ranker until the model path explicitly supports it.
         rng = np.random.default_rng()
         fresh_items_limit_prior_threshold_multiplier: float = (
             rescaler.fresh_items_limit_prior_threshold_multiplier if rescaler else 0
@@ -106,7 +109,10 @@ class InterestRanker(Ranker):
 
         for r, rec in enumerate(recs):
             opens, no_opens, a_prior, b_prior, non_rescaled_b_prior = self.compute_interactions(
-                rec, rescaler, region, blend_region_with_global=False
+                rec,
+                rescaler,
+                region,
+                blend_region_with_global=False,
             )
 
             # Two conditions must hold to use the LinTS score:
@@ -154,6 +160,8 @@ class InterestRanker(Ranker):
         sections: dict[str, Section],
         top_n: int = 4,
         rescaler: EngagementRescaler | None = None,
+        region: str | None = None,
+        engagement_region: str | None = None,
     ) -> dict[str, Section]:
         """Rank sections by mean score of their top items."""
 
