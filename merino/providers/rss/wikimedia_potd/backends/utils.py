@@ -19,6 +19,9 @@ WIKIMEDIA_REQUEST_HEADERS = {
 # The bare "Template:Potd/{date}" page (the file selector) has no suffix and is ignored.
 POTD_DESCRIPTION_LANG_RE = re.compile(r"\(([\w-]+)\)$")
 
+# Image file extensions we accept for POTD assets.
+POTD_IMAGE_EXTENSIONS = frozenset({"jpg", "jpeg", "png", "webp"})
+
 
 def parse_potd(data: dict) -> PictureOfTheDay:
     """Parse the Wikimedia Featured API response into a PictureOfTheDay.
@@ -93,5 +96,8 @@ def build_potd_bucket_directory_path() -> str:
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:
-    """Validate url is an image url."""
-    return bool(str(url).split(".")[-1] in ["jpg", "jpeg", "png", "webp"])
+    """Validate url is an image url. Only the url path is inspected, so thumbnail urls carrying a query string or fragment
+    (e.g. the utm_* tracking params Wikimedia appends) are still recognized as images.
+    """
+    path = url.path or ""
+    return path.rsplit(".", 1)[-1].lower() in POTD_IMAGE_EXTENSIONS

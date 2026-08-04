@@ -135,9 +135,39 @@ def test_parse_potd_uses_full_res_image_source_directly(featured: dict) -> None:
         (HttpUrl("http://www.test-image.com/image.jpg"), True),
         (HttpUrl("http://www.test-image.com/image.png"), True),
         (HttpUrl("http://www.test-image.com/image.webp"), True),
+        (HttpUrl("http://www.test-image.com/image.JPG"), True),
         (HttpUrl("http://www.test-image.com/image.text"), False),
+        (HttpUrl("http://www.test-image.com/image"), False),
+        (HttpUrl("http://www.test-image.com/"), False),
+        (HttpUrl("http://www.test-image.com/image.jpg?width=960"), True),
+        (HttpUrl("http://www.test-image.com/image.text?foo=image.jpg"), False),
+        (HttpUrl("http://www.test-image.com/image.png#fragment"), True),
+        (
+            HttpUrl(
+                "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/"
+                "Rom_%28IT%29%2C_Br%C3%BCcke_%E2%80%9EPonte_Vittorio_Emanuele_II%E2%80%9C"
+                "_--_2024_--_0732.jpg/960px-Rom_%28IT%29%2C_Br%C3%BCcke_"
+                "%E2%80%9EPonte_Vittorio_Emanuele_II%E2%80%9C_--_2024_--_0732.jpg"
+                "?utm_source=commons.wikimedia.org&utm_campaign=imageinfo"
+                "&utm_content=thumbnail"
+            ),
+            True,
+        ),
     ],
-    ids=["jpeg", "jpg", "png", "webp", "text"],
+    ids=[
+        "jpeg",
+        "jpg",
+        "png",
+        "webp",
+        "uppercase_extension",
+        "text",
+        "no_extension",
+        "no_path",
+        "query_string",
+        "non_image_with_image_in_query",
+        "fragment",
+        "wikimedia_thumbnail_with_utm_params",
+    ],
 )
 def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
     """Test is_valid_potd_image_url for each supported image extension."""
