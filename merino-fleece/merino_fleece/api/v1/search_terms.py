@@ -48,8 +48,10 @@ async def submit_search_terms(
     accepted for processing, not that they have been sanitized.
 
     Raises:
-        HTTPException: 503 when the terms cannot be queued, so the submitter can
-            back off rather than have its data silently dropped.
+        - HTTPException: 503 when the terms cannot be queued, normally indicating
+          the service is overloaded and unable to accept more submissions, so the
+          submitter can retry via other means such as the backup Pub/Sub channel
+          rather than have its data silently dropped.
     """
     count = len(body.search_terms)
     _search_terms_received_counter.add(count)
