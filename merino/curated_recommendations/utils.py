@@ -38,6 +38,7 @@ EN_XE_REGIONS: frozenset[str] = frozenset({"DE", "FR", "AT", "CH", "BE", "IT", "
 PUBLISHER_CONSTRAINT_IN_GERMANY_REGION = "DE"
 PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES: frozenset[str] = frozenset({"control", "treatment"})
 PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX = "DE-publisher-constraint-in-germany"
+PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED = False
 
 
 def get_recommendation_surface_id(
@@ -164,7 +165,8 @@ def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | No
     branch = request.experimentBranch
 
     if (
-        region == PUBLISHER_CONSTRAINT_IN_GERMANY_REGION
+        PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED
+        and region == PUBLISHER_CONSTRAINT_IN_GERMANY_REGION
         and branch is not None
         and branch in PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES
         and is_enrolled_in_experiment(

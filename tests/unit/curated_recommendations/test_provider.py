@@ -150,6 +150,11 @@ class TestRankRecommendationsEngagementRegion:
             return recommendations
 
         monkeypatch.setattr(ThompsonSamplingRanker, "rank_items", fake_rank_items)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.utils."
+            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
+            True,
+        )
         provider = CuratedRecommendationsProvider.__new__(CuratedRecommendationsProvider)
         provider.engagement_backend = object()
         provider.prior_backend = object()

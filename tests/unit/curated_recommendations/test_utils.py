@@ -115,6 +115,17 @@ class TestCuratedRecommendationsProviderDeriveRegion:
 class TestCuratedRecommendationsProviderDeriveEngagementRegion:
     """Unit tests for derive_engagement_region."""
 
+    def test_germany_publisher_constraint_uses_country_region_by_default(self):
+        """Germany publisher constraint branches use country-level engagement by default."""
+        request = CuratedRecommendationsRequest(
+            locale=Locale.DE_DE,
+            region="DE",
+            experimentName=_GERMANY_PUBLISHER_CONSTRAINT,
+            experimentBranch="treatment",
+        )
+
+        assert derive_engagement_region(request) == "DE"
+
     @pytest.mark.parametrize(
         "branch, expected",
         [
@@ -123,9 +134,14 @@ class TestCuratedRecommendationsProviderDeriveEngagementRegion:
         ],
     )
     def test_germany_publisher_constraint_branches_use_branch_region(
-        self, branch: str, expected: str
+        self, monkeypatch, branch: str, expected: str
     ):
         """Germany publisher constraint branches use branch-specific engagement keys."""
+        monkeypatch.setattr(
+            "merino.curated_recommendations.utils."
+            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
+            True,
+        )
         request = CuratedRecommendationsRequest(
             locale=Locale.DE_DE,
             region="DE",
@@ -135,8 +151,13 @@ class TestCuratedRecommendationsProviderDeriveEngagementRegion:
 
         assert derive_engagement_region(request) == expected
 
-    def test_optin_germany_publisher_constraint_uses_branch_region(self):
+    def test_optin_germany_publisher_constraint_uses_branch_region(self, monkeypatch):
         """Opt-in experiment enrollment follows the same branch-specific routing."""
+        monkeypatch.setattr(
+            "merino.curated_recommendations.utils."
+            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
+            True,
+        )
         request = CuratedRecommendationsRequest(
             locale=Locale.DE_DE,
             region="DE",
