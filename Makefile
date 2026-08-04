@@ -10,6 +10,7 @@ COMMON_PACKAGE_DIR := merino-common/merino_common
 COMMON_TEST_DIR := merino-common/tests
 FLEECE_PACKAGE_DIR := merino-fleece/merino_fleece
 FLEECE_TEST_DIR := merino-fleece/tests
+FLEECE_WORKER_MAIN := $(FLEECE_PACKAGE_DIR)/sanitize/worker/main.py
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 COMMON_UNIT_TEST_DIR := $(COMMON_TEST_DIR)/unit
 FLEECE_UNIT_TEST_DIR := $(FLEECE_TEST_DIR)/unit
@@ -91,12 +92,12 @@ run: $(INSTALL_STAMP)  ##  Run merino locally
 
 .PHONY: dev-fleece-worker
 dev-fleece-worker: $(INSTALL_STAMP)  ##  Run fleece worker locally (does not reload)
-	PUBSUB_EMULATOR_HOST=localhost:8085 $(UV) run $(FLEECE_PACKAGE_DIR)/worker/main.py
+	PUBSUB_EMULATOR_HOST=localhost:8085 $(UV) run $(FLEECE_WORKER_MAIN)
 
 
 .PHONY: dev-fleece-worker-otel
 dev-fleece-worker-otel: $(INSTALL_STAMP)  ##  Run fleece worker locally with OTEL auto-instrumentation (mimics k8s operator)
-	PUBSUB_EMULATOR_HOST=localhost:8085 OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run opentelemetry-instrument $(UV) run $(FLEECE_PACKAGE_DIR)/worker/main.py
+	PUBSUB_EMULATOR_HOST=localhost:8085 OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run opentelemetry-instrument $(UV) run $(FLEECE_WORKER_MAIN)
 
 
 .PHONY: test

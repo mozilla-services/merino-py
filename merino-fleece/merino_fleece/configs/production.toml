@@ -14,3 +14,9 @@ format = "mozlog"
 # MERINO_FLEECE_PUBSUB__SUBSCRIPTION
 # Subscription for the backup PubSub topic.
 subscription = "projects/moz-fx-merino-prod-5de4/subscriptions/merino-fleece-sanitization-prod"
+
+# MERINO_FLEECE_PUBSUB__HEARTBEAT_PATH
+# Filesystem path the worker refreshes while the streaming pull is running, for an
+# external liveness probe (e.g. a Kubernetes exec probe). Empty disables the heartbeat.
+# Must be writable by the container's unprivileged `app` user (uid 10001)
+heartbeat_path = "/tmp/fleece/heartbeat"
