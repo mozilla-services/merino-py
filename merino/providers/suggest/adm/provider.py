@@ -58,9 +58,7 @@ FORM_FACTORS_FALLBACK_MAPPING = {
 
 FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
-CLIENT_VARIANTS_ALLOW_LIST = frozenset(settings.web.api.v1.client_variant_allow_list)
 TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
-TOP_PICK_PROMOTION: str = "top_pick_promotion"
 # Experiment treatment variant that opts a request into the ED1 fuzzy fallback.
 AMP_FUZZY_VARIANT: str = "amp-fuzzy-matching-treatment"
 # toggle fuzzy matching for AMP suggestions
@@ -371,11 +369,10 @@ class Provider(BaseProvider):
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
 
-            # A suggestion gets the "top pick" UI treatment when the request
-            # opted into `top_pick_promotion` and the record's `top_pick_prefix`
-            # appears in the query.
+            # A suggestion gets the "top pick" UI treatment when the query starts with
+            # `top_pick_prefix` if specified by MARS.
             is_top_pick = None
-            if TOP_PICK_PROMOTION in client_variants and res.top_pick_prefix is not None:
+            if res.top_pick_prefix is not None:
                 is_top_pick = q.startswith(res.top_pick_prefix)
                 if is_top_pick:
                     self.metrics_client.increment(
