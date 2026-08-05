@@ -198,6 +198,10 @@ class AsyncBatchQueue(Generic[T]):
         """Return the number of items currently buffered in the queue."""
         return self._queue.qsize()
 
+    def remaining_capacity(self) -> int:
+        """Return how many more items the queue can accept before it is full."""
+        return max(0, self._max_queue_size - self._queue.qsize())
+
     def _collect_batch_sync(self) -> list[T]:
         """Pull up to ``max_batch_size`` items off the queue without waiting."""
         batch: list[T] = []

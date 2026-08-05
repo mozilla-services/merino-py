@@ -23,6 +23,37 @@ query_character_max = 500
 # bounded pool avoids GIL thrashing under load.
 executor_max_workers = 1
 
+[default.sanitize]
+# Queue settings for background search term sanitization. The queue tunables below
+# mirror merino's `[default.message_handler]` so producer and consumer batch at the
+# same cadence.
+
+# MERINO_FLEECE_SANITIZE__MAX_BATCH_SIZE
+# Max number of queued search terms to sanitize in a single batch.
+max_batch_size = 512
+
+# MERINO_FLEECE_SANITIZE__COLLECTION_DELAY_SEC
+# Max seconds to wait for a batch to fill before sanitizing a partial batch.
+collection_delay_sec = 5.0
+
+# MERINO_FLEECE_SANITIZE__SHUTDOWN_DEADLINE_SEC
+# Max seconds to spend draining the queue during graceful shutdown before any
+# remaining search terms are dropped.
+shutdown_deadline_sec = 30.0
+
+# MERINO_FLEECE_SANITIZE__MAX_QUEUE_SIZE
+# Max number of search terms to buffer in the queue. Submissions are rejected with
+# a 503 once this capacity is reached.
+max_queue_size = 10000
+
+# MERINO_FLEECE_SANITIZE__NER_CHUNK_SIZE
+# Number of queries handed to SpaCy's `nlp.pipe()` per thread pool hop. Larger
+# values amortize the model's per-call overhead further; smaller values release the
+# shared NER thread more often, so concurrent `/pii` requests are not stuck waiting
+# behind a long batch. Unrelated to `max_batch_size`: a 512-term batch becomes at
+# most 8 hops at the default.
+ner_chunk_size = 64
+
 [default.sentry]
 # MERINO_FLEECE_SENTRY__MODE
 # One of "disabled", "release", "debug". When "disabled", no Sentry client is initialized.

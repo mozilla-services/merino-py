@@ -35,6 +35,24 @@ class PiiDetector:
         doc = self.nlp(text)
         return any(ent.label_ == PERSON_LABEL for ent in doc.ents)
 
+    def is_person_batch(self, texts: list[str]) -> list[bool]:
+        """Return, for each text, whether it contains a PERSON named entity.
+
+        Batches the model's forward pass via SpaCy's ``nlp.pipe``, which is
+        considerably cheaper than calling :meth:`is_person` once per text. Verdicts
+        are returned in input order, as ``nlp.pipe`` preserves it.
+
+        ``n_process`` is left at its default of 1: callers already run this in a
+        worker thread and share a single loaded model, so forking processes would
+        duplicate the model for no gain.
+        """
+        if not texts:
+            return []
+        return [
+            any(ent.label_ == PERSON_LABEL for ent in doc.ents)
+            for doc in self.nlp.pipe(texts, batch_size=len(texts))
+        ]
+
 
 def build_detector(settings) -> PiiDetector:
     """Construct a PiiDetector from the merino-fleece Dynaconf settings."""
