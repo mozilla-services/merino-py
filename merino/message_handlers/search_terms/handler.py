@@ -2,11 +2,27 @@
 
 from collections.abc import Awaitable, Callable
 
+from opentelemetry import metrics
+
 from merino.configs import settings
 from merino.message_handlers.search_terms.fleece import FleeceClient
+from merino.message_handlers.search_terms.pubsub import (
+    PubSubClient,
+    create_publisher_client,
+)
 from merino.utils.http_client import create_http_client
 from merino_common.models.suggest_logging import SuggestRequestParams
 from merino_common.utils.async_batch_queue import AsyncBatchQueue
+
+_meter = metrics.get_meter("merino.message_handlers.search_terms.handler")
+_fallback_counter = _meter.create_counter(
+    name="search_term.submission.fallback",
+    unit="{search_term}",
+    description=(
+        "Search terms that fell back to the Pub/Sub backup channel after a failed direct "
+        "submission, labeled by the triggering error type."
+    ),
+)
 
 # identifier used to tag the queue's metrics.
 QUEUE_ID = "search_term_submission"
@@ -26,6 +42,7 @@ class MessageHandler:
     ) -> None:
         self._on_batch = on_batch
         self._client: FleeceClient | None = None
+        self._pubsub: PubSubClient | None = None
         self._queue: AsyncBatchQueue[SuggestRequestParams] | None = None
 
     async def start(self) -> None:
@@ -33,6 +50,9 @@ class MessageHandler:
         if self._queue is not None:
             return
         on_batch = self._on_batch
+        on_error: Callable[[list[SuggestRequestParams], Exception], Awaitable[object]] | None = (
+            None
+        )
         if on_batch is None:
             self._client = FleeceClient(
                 http_client=create_http_client(
@@ -42,8 +62,16 @@ class MessageHandler:
                 )
             )
             on_batch = self._client.submit
+            # fall back to the Pub/Sub backup channel on submission failure when configured.
+            if settings.message_handler.pubsub_topic:
+                self._pubsub = PubSubClient(
+                    publisher=create_publisher_client(),
+                    topic=settings.message_handler.pubsub_topic,
+                )
+                on_error = self._backup
         queue: AsyncBatchQueue[SuggestRequestParams] = AsyncBatchQueue(
             on_batch=on_batch,
+            on_error=on_error,
             queue_id=QUEUE_ID,
             max_batch_size=settings.message_handler.max_batch_size,
             collection_delay_s=settings.message_handler.collection_delay_sec,
@@ -65,6 +93,15 @@ class MessageHandler:
         if self._client is not None:
             await self._client.close()
             self._client = None
+        if self._pubsub is not None:
+            self._pubsub.close()
+            self._pubsub = None
+
+    async def _backup(self, batch: list[SuggestRequestParams], exc: Exception) -> None:
+        """Publish a failed batch to the Pub/Sub backup channel (the queue's error path)."""
+        _fallback_counter.add(len(batch), {"error.type": type(exc).__name__})
+        if self._pubsub is not None:
+            await self._pubsub.publish(batch)
 
     def put(self, message: SuggestRequestParams) -> None:
         """Enqueue a search term for asynchronous processing.
