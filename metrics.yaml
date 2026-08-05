@@ -486,7 +486,7 @@ providers/manifest:
     alert_policy: []
 
 providers/rss/wikimedia_potd:
-  potd.upload.timing:
+  potd.provider.upload.timing:
     description: |
       A timer covering a full run of the Wikimedia picture of the day updater job.
     type: timing

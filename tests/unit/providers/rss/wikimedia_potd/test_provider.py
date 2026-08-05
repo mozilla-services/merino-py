@@ -119,7 +119,7 @@ async def test_upload_picture_of_the_day_delegates_to_backend(
     assert result is True
     backend_mock.upload_picture_of_the_day.assert_awaited_once()
     # the whole job run is timed
-    statsd_mock.timeit.assert_called_once_with("potd.upload.timing")
+    statsd_mock.timeit.assert_called_once_with("potd.provider.upload.timing")
 
 
 @freezegun.freeze_time("2026-06-07")
