@@ -16,7 +16,6 @@ from merino.optimizers.thompson import ThompsonSampler
 from merino.providers.suggest.adm.backends.fake_backends import FakeAdmBackend
 from merino.providers.suggest.adm.backends.mars import MarsBackend
 from merino.providers.suggest.adm.backends.protocol import AdmBackend
-from merino.providers.suggest.adm.backends.remotesettings import RemoteSettingsBackend
 from merino.providers.suggest.adm.provider import Provider as AdmProvider
 from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS as ADDON_KEYWORDS
 from merino.providers.suggest.amo.backends.dynamic import DynamicAmoBackend
@@ -163,14 +162,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                 ),
             )
             backend: AdmBackend
-            if setting.backend == "remote-settings":
-                backend = RemoteSettingsBackend(
-                    server=settings.remote_settings.server,
-                    collection=settings.remote_settings.collection_amp,
-                    bucket=settings.remote_settings.bucket,
-                    icon_processor=icon_processor,
-                )
-            elif setting.backend == "mars":
+            if setting.backend == "mars":
                 backend = MarsBackend(
                     base_url=settings.mars.base_url,
                     icon_processor=icon_processor,
