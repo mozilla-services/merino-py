@@ -24,6 +24,15 @@ from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.provider import Provider
 
 
+@pytest.fixture(autouse=True)
+def mock_engagement_storage_client(mocker: MockerFixture) -> None:
+    """Stub the GCS client so initialize() skips the ~11s metadata-auth hang building a real Storage()."""
+    mocker.patch(
+        "merino.utils.gcs.engagement.filemanager.get_storage_client",
+        return_value=mocker.MagicMock(),
+    )
+
+
 @pytest.fixture(name="adm_parameters")
 def fixture_adm_parameters() -> dict[str, Any]:
     """Define provider parameters for test."""
