@@ -485,6 +485,26 @@ providers/manifest:
       Any provider that uses the shared manifest metrics namespace.
     alert_policy: []
 
+providers/rss/wikimedia_potd:
+  potd.upload.timing:
+    description: |
+      A timer covering a full run of the Wikimedia picture of the day updater job.
+    type: timing
+    labels: [] # no labels
+    scope: |
+      The "picture_of_the_day update-wikimedia-potd" job.
+    alert_policy: []
+
+  potd.provider.cached.none:
+    description: |
+      A counter incremented when the provider has no picture of the day to serve at
+      all.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/rss/picture-of-the-day" API endpoint.
+    alert_policy: []
+
 utils/synced_gcs_blob_v2:
   gcs.sync.data.not_ready:
     description: |
