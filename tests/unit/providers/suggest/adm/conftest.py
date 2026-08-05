@@ -24,6 +24,22 @@ from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.provider import Provider
 
 
+@pytest.fixture(autouse=True)
+def mock_engagement_storage_client(mocker: MockerFixture) -> None:
+    """Keep initialize() from building a real gcloud-aio Storage client.
+
+    tests/conftest.py autouse-resets the shared storage client every test, so each
+    initialize() -> _fetch_engagement_data() -> get_storage_client() rebuilds
+    Storage() and hangs ~11s on the GCE metadata-server auth lookup. Stubbing it
+    avoids the network call; the engagement fetch itself is covered explicitly in
+    the test_fetch_engagement_data_* tests, which patch get_file directly.
+    """
+    mocker.patch(
+        "merino.utils.gcs.engagement.filemanager.get_storage_client",
+        return_value=mocker.MagicMock(),
+    )
+
+
 @pytest.fixture(name="adm_parameters")
 def fixture_adm_parameters() -> dict[str, Any]:
     """Define provider parameters for test."""
