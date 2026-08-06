@@ -104,10 +104,8 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         if not self._is_todays_potd(self.potd):
             await self._refresh_potd()
 
-        # TODO @herraj jira: [HNT-2162]
-        # add a metric to track when we serve a stale (previous-day) potd here
-        # because today's picture isn't yet available in the gcs bucket.
         if self.potd is None:
+            self.metrics_client.increment("potd.provider.cached.none")
             return None
 
         localized = self._select_description(self.potd, accepted_languages)
@@ -119,7 +117,8 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
 
     async def upload_picture_of_the_day(self) -> bool:
         """Execute the upload flow. This method is called by the job cli command only."""
-        return await self.backend.upload_picture_of_the_day()
+        with self.metrics_client.timeit("potd.provider.upload.timing"):
+            return await self.backend.upload_picture_of_the_day()
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
