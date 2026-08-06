@@ -48,24 +48,14 @@ MIN_KEYWORD_LEN = 2
 # URL prefix for Wikipedia
 URL_PREFIX = "https://{language}.wikipedia.org/wiki/"
 
-# Prefix of the output file
-OUTPUT_PREFIX = "./rs-data/data-wikipedia"
-
 # The hardcoded icon ID on Remote Settings
 ICON_ID = "161351842074695"
-
-# Max # of suggestions for a Remote Settings attachment
-RS_CHUNK_SIZE = 200
 
 # A set to store all the keywords observed thus far.
 SEEN_KEYWORDS: Set[str] = set([])
 
 # The leading words to be skipped
 SKIP_WORDS: Pattern = re.compile(r"(\d+|the|an|a)$")
-
-
-# A set to store all the inflight sponsored keywords
-SPONSORED_KEYWORDS: Set[str] = set()
 
 
 def make_keywords(words: List[str]):
@@ -77,7 +67,7 @@ def make_keywords(words: List[str]):
     partials = [unwords[:i] for i in range(begin, len(unwords) + 1)]
     return list(
         islice(
-            filterfalse(lambda x: x in SEEN_KEYWORDS or x in SPONSORED_KEYWORDS, partials),
+            filterfalse(lambda x: x in SEEN_KEYWORDS, partials),
             MAX_KEYWORDS,
         )
     )
