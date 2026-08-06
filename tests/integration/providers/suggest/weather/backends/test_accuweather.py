@@ -8,7 +8,7 @@ import datetime
 import json
 import logging
 from logging import ERROR, LogRecord
-from typing import Any, Optional, cast, AsyncGenerator
+from typing import Any, Optional, cast, AsyncGenerator, Generator
 from unittest.mock import AsyncMock
 
 import pytest
@@ -19,7 +19,7 @@ from pydantic import HttpUrl
 from pytest_mock import MockerFixture
 from redis.asyncio import Redis
 from testcontainers.core.wait_strategies import LogMessageWaitStrategy
-from testcontainers.redis import AsyncRedisContainer
+from testcontainers.community.redis import AsyncRedisContainer
 
 from tests.types import FilterCaplogFixture
 from collections import namedtuple
@@ -367,7 +367,7 @@ def fixture_accuweather_cached_hourly_forecasts(
 
 
 @pytest.fixture(scope="module")
-def redis_container() -> AsyncRedisContainer:
+def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     """Create and return a docker container for Redis. Tear it down after all the tests have
     finished running
     """

@@ -5,7 +5,7 @@
 """Integration tests for WCS against a real Redis instance."""
 
 import logging
-from typing import AsyncGenerator, cast
+from typing import AsyncGenerator, Generator, cast
 
 import pytest
 import pytest_asyncio
@@ -13,7 +13,7 @@ from httpx import AsyncClient
 from pytest_mock import MockerFixture
 from redis.asyncio import Redis
 from testcontainers.core.wait_strategies import LogMessageWaitStrategy
-from testcontainers.redis import AsyncRedisContainer
+from testcontainers.community.redis import AsyncRedisContainer
 
 from merino.cache.redis import RedisAdapter
 from merino.configs import settings
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def redis_container() -> AsyncRedisContainer:
+def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     """Spin up a Redis container for the duration of this test module."""
     logger.info("Starting up redis container")
     container = (
