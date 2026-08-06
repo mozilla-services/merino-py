@@ -975,21 +975,6 @@ message_handlers/search_terms:
       during application shutdown.
     alert_policy: []
 
-  search_term.submission.fallback:
-    description: |
-      A counter of search terms that fell back to the Pub/Sub backup channel after
-      a failed direct submission to merino-fleece.
-    type: counter
-    labels:
-      - name: error.type
-        description: |
-          The class name of the error that triggered the fallback (e.g.
-          "FleeceError").
-    scope: |
-      The search term submission message handler's error path, when a direct
-      submission to merino-fleece fails and a Pub/Sub topic is configured.
-    alert_policy: []
-
   pubsub.publish.count:
     description: |
       A counter of search terms published to the Pub/Sub backup channel, labeled by

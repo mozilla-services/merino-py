@@ -2,8 +2,6 @@
 
 from collections.abc import Awaitable, Callable
 
-from opentelemetry import metrics
-
 from merino.configs import settings
 from merino.message_handlers.search_terms.fleece import FleeceClient
 from merino.message_handlers.search_terms.pubsub import (
@@ -13,16 +11,6 @@ from merino.message_handlers.search_terms.pubsub import (
 from merino.utils.http_client import create_http_client
 from merino_common.models.suggest_logging import SuggestRequestParams
 from merino_common.utils.async_batch_queue import AsyncBatchQueue
-
-_meter = metrics.get_meter("merino.message_handlers.search_terms.handler")
-_fallback_counter = _meter.create_counter(
-    name="search_term.submission.fallback",
-    unit="{search_term}",
-    description=(
-        "Search terms that fell back to the Pub/Sub backup channel after a failed direct "
-        "submission, labeled by the triggering error type."
-    ),
-)
 
 # identifier used to tag the queue's metrics.
 QUEUE_ID = "search_term_submission"
@@ -99,7 +87,6 @@ class MessageHandler:
 
     async def _backup(self, batch: list[SuggestRequestParams], exc: Exception) -> None:
         """Publish a failed batch to the Pub/Sub backup channel (the queue's error path)."""
-        _fallback_counter.add(len(batch), {"error.type": type(exc).__name__})
         if self._pubsub is not None:
             await self._pubsub.publish(batch)
 

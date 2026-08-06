@@ -60,10 +60,9 @@ class PubSubClient:
             return
 
         data = SearchTermsSubmission(search_terms=sanitized).model_dump_json().encode("utf-8")
-        loop = asyncio.get_running_loop()
         try:
             future = self.publisher.publish(self.topic, data)
-            await loop.run_in_executor(None, future.result)
+            await asyncio.to_thread(future.result)
         except Exception:
             _publish_counter.add(len(sanitized), {"outcome": "error"})
             raise
