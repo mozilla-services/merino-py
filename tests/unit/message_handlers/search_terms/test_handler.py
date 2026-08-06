@@ -13,8 +13,10 @@ from pytest_mock import MockerFixture
 from merino.configs import settings
 from merino.message_handlers import search_terms
 from merino.message_handlers.search_terms import MessageHandler, get_message_handler
+from merino.message_handlers.search_terms.errors import FleeceError
 from merino.message_handlers.search_terms.fleece import FleeceClient
-from merino_common.models.suggest_logging import SuggestRequestParams
+from merino.message_handlers.search_terms.pubsub import PubSubClient
+from merino_common.models.suggest_logging import SearchTermsSubmission, SuggestRequestParams
 
 Params = Callable[[str], SuggestRequestParams]
 
@@ -107,6 +109,79 @@ async def test_default_sink_creates_and_closes_fleece_client(mocker: MockerFixtu
     http_client.aclose.assert_awaited_once()
     assert handler._client is None
     assert not handler.is_running()
+
+
+@pytest.mark.asyncio
+async def test_start_skips_pubsub_when_topic_unset(mocker: MockerFixture) -> None:
+    """Test that no Pub/Sub client is built when no backup topic is configured."""
+    mocker.patch(
+        "merino.message_handlers.search_terms.handler.create_http_client",
+        return_value=mocker.AsyncMock(spec=httpx.AsyncClient),
+    )
+    mocker.patch.object(settings.message_handler, "pubsub_topic", "")
+
+    handler = MessageHandler()
+    await handler.start()
+
+    assert handler._pubsub is None
+    await handler.stop()
+
+
+@pytest.mark.asyncio
+async def test_backup_publishes_batch_to_pubsub(mocker: MockerFixture, params: Params) -> None:
+    """Test that the error-path adapter forwards the failed batch to the Pub/Sub client."""
+    handler = MessageHandler()
+    pubsub = mocker.AsyncMock(spec=PubSubClient)
+    handler._pubsub = pubsub
+
+    batch = [params("apple")]
+    await handler._backup(batch, FleeceError("boom"))
+
+    pubsub.publish.assert_awaited_once_with(batch)
+
+
+@pytest.mark.asyncio
+async def test_failed_submission_falls_back_to_pubsub(
+    mocker: MockerFixture, params: Params
+) -> None:
+    """Test that a failed direct submission routes the batch to the Pub/Sub backup channel."""
+    http_client = mocker.AsyncMock(spec=httpx.AsyncClient)
+    http_client.post.side_effect = httpx.ConnectError("fleece down")
+    mocker.patch(
+        "merino.message_handlers.search_terms.handler.create_http_client",
+        return_value=http_client,
+    )
+    publisher = mocker.MagicMock()
+    publisher.publish.return_value.result.return_value = "message-id"
+    mocker.patch(
+        "merino.message_handlers.search_terms.handler.create_publisher_client",
+        return_value=publisher,
+    )
+    mocker.patch.object(settings.message_handler, "pubsub_topic", "projects/p/topics/t")
+
+    handler = MessageHandler()
+    await handler.start()
+    handler.put(params("apple"))
+    await handler.stop()
+
+    publisher.publish.assert_called_once()
+    topic, data = publisher.publish.call_args.args
+    assert topic == "projects/p/topics/t"
+    submission = SearchTermsSubmission.model_validate_json(data)
+    assert [term.query for term in submission.search_terms] == ["apple"]
+
+
+@pytest.mark.asyncio
+async def test_stop_closes_pubsub_client(mocker: MockerFixture) -> None:
+    """Test that stopping the handler closes the Pub/Sub client."""
+    handler = MessageHandler()
+    pubsub = mocker.MagicMock(spec=PubSubClient)
+    handler._pubsub = pubsub
+
+    await handler.stop()
+
+    pubsub.close.assert_called_once()
+    assert handler._pubsub is None
 
 
 @pytest.mark.asyncio

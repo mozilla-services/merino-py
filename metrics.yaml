@@ -994,3 +994,28 @@ message_handlers/search_terms:
       The AsyncBatchQueue backing the search term submission message handler,
       during application shutdown.
     alert_policy: []
+
+  pubsub.publish.count:
+    description: |
+      A counter of search terms published to the Pub/Sub backup channel, labeled by
+      outcome. An "error" outcome indicates the backup publish failed and those
+      search terms were lost.
+    type: counter
+    labels:
+      - name: outcome
+        description: |
+          Whether the publish succeeded ("success") or failed ("error").
+    scope: |
+      The Pub/Sub backup channel used by the search term submission message handler.
+    alert_policy: []
+
+  pubsub.filtered.count:
+    description: |
+      A counter of search terms dropped by basic sanitization (email and numeric
+      queries) before publishing to the Pub/Sub backup channel, so no highly
+      sensitive data is persisted in the queue.
+    type: counter
+    labels: []
+    scope: |
+      The Pub/Sub backup channel used by the search term submission message handler.
+    alert_policy: []

@@ -284,6 +284,12 @@ shutdown_deadline_sec = 30.0
 # this capacity is reached.
 max_queue_size = 10000
 
+# MERINO_MESSAGE_HANDLER__PUBSUB_TOPIC
+# Pub/Sub topic for the backup channel: when a direct HTTP submission
+# to merino-fleece fails, the affected search terms are published here instead so
+# fleece can process them once it recovers. Empty disables the backup channel.
+pubsub_topic = ""
+
 # GCP metadata
 [default.gcp]
 # MERINO_GCP__REGION
