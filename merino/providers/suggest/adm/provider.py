@@ -371,7 +371,7 @@ class Provider(BaseProvider):
 
             # A suggestion gets the "top pick" UI treatment when the query starts with
             # `top_pick_prefix` if specified by MARS.
-            is_top_pick = None
+            is_top_pick = False
             if res.top_pick_prefix is not None:
                 is_top_pick = q.startswith(res.top_pick_prefix)
                 if is_top_pick:
