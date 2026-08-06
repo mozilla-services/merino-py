@@ -1,37 +1,17 @@
-"""This script extracts the top "N" viewed pages from the most recent daily top
-viewed pages fetched from Wikipedia PageView API. It does so by accumulating
-page views from all the daily inputs in the `wikipedia-top-pages` directory.
+"""Extract the top "N" viewed pages from daily Wikipedia PageView API dumps.
 
-Note:
-    * Before using this script, you should prepare the raw input files by using
-      the script `fetch-wikipedia-top-pages.sh`. Make sure the raw pages are
-      stored in the `wikipedia-top-pages` directory
-    * It prints the extracted pages to stdout
-    * The output is in JSON structured as:
-        [
-            {
-                "title": "example_0",
-                "rank": 1,
-                "views": 100000
-            },
-            {
-                "title": "example_1",
-                "rank": 2,
-                "views": 99999
-            },
-            ...
-        ]
-    * The output is sorted by the number of page views in descending order
-    * It might return fewer than the requested N paged if there are not enough
-      in the input files
+`get_top_n_frequency()` accumulates page views across all daily input JSON files
+in the given temp directory and returns the top N pages sorted by total views
+in descending order. Internal pages and entries listed in
+`page_ignore.csv` / `dynamic_wikipedia_blocklist.csv` are excluded. Fewer than
+N entries may be returned if there aren't enough input pages.
 
-Usage:
-
-    # Extract the top 1000 viewed pages.
-    $ python top_n_by_frequency.py
-
-    # Extract the top N viewed pages, e.g. top 5000
-    $ python top_n_by_frequency.py 5000
+Output shape:
+    [
+        {"title": "example_0", "rank": 1, "views": 100000},
+        {"title": "example_1", "rank": 2, "views": 99999},
+        ...
+    ]
 """
 
 import base64

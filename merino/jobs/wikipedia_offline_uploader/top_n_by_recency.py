@@ -1,28 +1,17 @@
-"""This extracts the top "N" viewed pages from the most recent daily top
-viewed pages fetched from Wikipedia PageView API. It does so by traversing from
-the most recent pages to the least recent ones and terminates as soon as N
-unique pages are extracted.
+"""Extract the top "N" viewed pages by recency from daily Wikipedia PageView dumps.
 
-Note:
-    * It prints the extracted pages to stdout
-    * The output is in JSON structured as:
-        [
-            {
-                "title": "example_0",
-                "rank": 1,
-                "views": 100000
-            },
-            {
-                "title": "example_1",
-                "rank": 2,
-                "views": 99999
-            },
-            ...
-        ]
-    * The output is sorted by the number of page views in descending order
-    * It might return fewer than the requested N paged if there are not enough
-      in the input files
+`get_top_n_recency()` traverses daily input JSON files from most recent to least
+recent and stops as soon as N unique pages have been collected. Internal pages and entries listed in `page_ignore.csv` /
+`dynamic_wikipedia_blocklist.csv` are excluded. Fewer than N entries may be
+returned if there aren't enough input pages. Results are sorted by view count
+in descending order.
 
+Output shape:
+    [
+        {"title": "example_0", "rank": 1, "views": 100000},
+        {"title": "example_1", "rank": 2, "views": 99999},
+        ...
+    ]
 """
 
 import csv
