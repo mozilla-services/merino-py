@@ -60,6 +60,7 @@ async def test_query_with_thompson_returns_suggestion(
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
             custom_details=CustomDetails(
@@ -152,6 +153,7 @@ async def test_query_with_thompson_min_attempted_count_returns_suggestion(
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
             custom_details=CustomDetails(
@@ -191,6 +193,7 @@ async def test_query_with_thompson_single_candidate_below_threshold_returns_sugg
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
             custom_details=CustomDetails(
@@ -231,6 +234,7 @@ async def test_query_with_thompson_without_engagement_data_skips_sampling(
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
             custom_details=CustomDetails(
@@ -268,6 +272,7 @@ async def test_query_with_thompson_returns_fallback_when_fallback_enabled(
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
             custom_details=CustomDetails(
@@ -313,6 +318,7 @@ async def test_query_with_thompson_dummy_return_suggestion_when_fallback_enabled
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
             custom_details=CustomDetails(
