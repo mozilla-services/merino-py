@@ -1,18 +1,12 @@
 """Unit tests for the IconProcessor utility."""
 
 import hashlib
-import json
 from unittest.mock import MagicMock, patch, AsyncMock
-from urllib.parse import urljoin
 
 import pytest
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
-from merino.providers.suggest.adm.backends.remotesettings import (
-    RemoteSettingsBackend,
-    FormFactor,
-)
 from merino.utils.gcs.models import Image
 from merino.utils.icon_processor import IconProcessor
 
@@ -449,101 +443,3 @@ def test_custom_favicons_root(icon_processor, mock_image, mocker):
 
     # Should use custom root
     assert dest_path == f"custom_icons/{content_hex}_{content_len}.png"
-
-
-@pytest.mark.asyncio
-async def test_fetch_with_icon_processing_errors():
-    """Test handling of exceptions during icon processing."""
-    # Mock data
-    mock_records = [
-        {
-            "id": "suggestion-record",
-            "type": "amp",
-            "attachment": {"location": "/path/to/suggestions.json"},
-            "country": "US",
-            "form_factor": "desktop",
-            "last_modified": 123,
-        },
-        {
-            "id": "icon-123",
-            "type": "icon",
-            "attachment": {"location": "/path/to/icon1.png"},
-            "last_modified": 123,
-        },
-        {
-            "id": "icon-456",
-            "type": "icon",
-            "attachment": {"location": "/path/to/icon2.png"},
-            "last_modified": 123,
-        },
-        {
-            "id": "icon-789",
-            "type": "icon",
-            "attachment": {"location": "/path/to/icon3.png"},
-            "last_modified": 123,
-        },
-    ]
-    mock_attachment = json.dumps(
-        [
-            {
-                "id": id,
-                "advertiser": "Example.org",
-                "click_url": "test",
-                "full_keywords": [],
-                "iab_category": "5 - Education",
-                "icon": icon_id,
-                "impression_url": "test",
-                "serp_categories": [],
-                "keywords": [],
-                "title": "Test Suggestion",
-                "url": "https://example.org/test",
-            }
-            for id, icon_id in enumerate(["123", "456", "789"])
-        ]
-    )
-
-    attachment_host = "https://example.com"
-
-    # Create instance with mock icon processor
-    icon_processor_mock = MagicMock(spec=IconProcessor)
-    backend = RemoteSettingsBackend(
-        "server",
-        "collection",
-        "bucket",
-        icon_processor_mock,
-    )
-
-    # Mock the methods directly on the instance
-    backend.get_records = AsyncMock(return_value=mock_records)
-    backend.get_attachment_host = AsyncMock(return_value=attachment_host)
-    backend.get_attachment_raw = AsyncMock(return_value=mock_attachment.encode("utf-8"))
-
-    # Mock icon processor's process_icon_url method with different behaviors
-    async def mock_process_side_effect(url):
-        if "icon1" in url:
-            return "https://processed.example.com/icon1.png"
-        elif "icon2" in url:
-            raise ValueError("Processing failed")
-        elif "icon3" in url:
-            raise Exception("Connection error")
-
-    backend.icon_processor.process_icon_url = AsyncMock(side_effect=mock_process_side_effect)
-
-    # Call the method we're testing
-    result = await backend.fetch()
-
-    result_icons = result.index_manager.list_icons(f"US/({FormFactor.DESKTOP.value},)")
-    # Assertions
-    assert "123" in result_icons
-    assert "456" in result_icons
-    assert "789" in result_icons
-
-    # Check successful processing
-    assert result.icons["123"] == "https://processed.example.com/icon1.png"
-
-    # Check fallback URLs for failed processing
-    expected_fallback_url = urljoin(base=attachment_host, url="/path/to/icon2.png")
-    assert result.icons["456"] == expected_fallback_url
-
-    expected_fallback_url = urljoin(base=attachment_host, url="/path/to/icon3.png")
-    assert result.icons["789"] == expected_fallback_url

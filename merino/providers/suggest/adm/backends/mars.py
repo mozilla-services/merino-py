@@ -92,11 +92,7 @@ class MarsBackend:
             self.metrics_client.gauge(f"amp.index.{key}", value=value, tags=tags)
 
     def get_segment(self, form_factor_str: str) -> SegmentType:
-        """Compose segment from a form factor string.
-
-        Mirrors ``RemoteSettingsBackend.get_segment`` which reads the form
-        factor from a Kinto record.
-        """
+        """Compose segment from a form factor string."""
         return (FormFactor[form_factor_str.upper()].value,)
 
     async def fetch(self) -> SuggestionContent:

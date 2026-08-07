@@ -33,11 +33,7 @@ spec:
             - name: LOAD_TESTS__LOGGING_LEVEL
               # The logging level value 20 defines the 'info' level
               value: "20"
-            - name: MERINO_REMOTE_SETTINGS__COLLECTION
-              value:
-            - name: MERINO_REMOTE_SETTINGS__BUCKET
-              value:
-            - name: MERINO_REMOTE_SETTINGS__SERVER
+            - name: MERINO_MARS__BASE_URL
               value:
             - name: MERINO_PROVIDERS__TOP_PICKS__TOP_PICKS_FILE_PATH
               value:
