@@ -498,8 +498,7 @@ async def test_query_is_top_pick_false_when_record_has_no_prefix(
     srequest: SuggestionRequestFixture,
     adm: Provider,
 ) -> None:
-    """`is_top_pick` is False when matched record has no `top_pick_prefix`.
-    """
+    """`is_top_pick` is False when matched record has no `top_pick_prefix`."""
     await adm.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
