@@ -21,7 +21,7 @@ from merino.providers.suggest.flightaware.backends.protocol import (
 from merino.providers.suggest.flightaware.backends.utils import (
     get_flight_number_from_query_if_valid,
 )
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.configs import settings
 
 logger = logging.getLogger(__name__)

@@ -75,7 +75,7 @@ Review each of these areas and report findings. For each area, state PASS, WARN,
 - [ ] Tests use fixtures from conftest, not inline setup
 
 ### Data Refresh (if applicable)
-- [ ] Uses `merino/utils/cron.py` `Job` class for periodic refresh
+- [ ] Uses `merino-common/merino_common/utils/cron.py` `Job` class for periodic refresh
 - [ ] Cron task created with `asyncio.create_task()` in `initialize()`
 - [ ] Has a `_should_fetch()` condition function
 - [ ] Handles fetch failures gracefully (logs, doesn't crash)

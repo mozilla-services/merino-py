@@ -8,7 +8,7 @@ import aiodogstatsd
 import tldextract
 from pydantic import HttpUrl, ValidationError
 
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.utils.metrics import get_metrics_client
 
 from merino.providers.manifest.backends.protocol import (

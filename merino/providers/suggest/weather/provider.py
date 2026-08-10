@@ -12,7 +12,7 @@ from merino.providers.suggest.weather.backends.accuweather.errors import (
     MissingLocationKeyError,
 )
 from merino.governance.circuitbreakers import WeatherCircuitBreaker, hourly_forecasts_fallback
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.middleware.geolocation import Location
 from merino.providers.suggest.base import (
     BaseProvider,
