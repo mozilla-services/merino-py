@@ -2,6 +2,7 @@
 
 import logging
 import os
+from typing import Generator
 
 import pytest
 from google.auth.credentials import AnonymousCredentials
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-def gcs_storage_container() -> DockerContainer:
+def gcs_storage_container() -> Generator[DockerContainer, None, None]:
     """Create and return a docker container for google cloud storage entities. Tear it down
     after all the tests have finished running
     """

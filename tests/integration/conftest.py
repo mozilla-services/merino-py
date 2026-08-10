@@ -8,7 +8,7 @@ import requests
 import pytest
 import pytest_asyncio
 
-from testcontainers.elasticsearch import ElasticSearchContainer
+from testcontainers.community.elasticsearch import ElasticSearchContainer
 from elasticsearch import AsyncElasticsearch
 
 ES_IMAGE = os.environ.get("ES_IMAGE", "merino-elasticsearch:local")
