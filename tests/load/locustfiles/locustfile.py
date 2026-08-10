@@ -42,7 +42,7 @@ from merino.providers.suggest.top_picks.backends.top_picks import (
 )
 from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse, TeamsResponse
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
 from merino.utils.metrics import get_metrics_client
 from merino_common.utils.version import Version

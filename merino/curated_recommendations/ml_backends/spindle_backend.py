@@ -16,7 +16,7 @@ from merino.curated_recommendations.ml_backends.protocol import (
     SimilarStoriesProtocol,
     SpindleBackendProtocol,
 )
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 
 logger = logging.getLogger(__name__)
 

@@ -1312,10 +1312,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/unit/utils/test_icon_processor.py",
         ],
     },
-    "merino/utils/http_client.py": {
-        "direct": [],
-        "indirect": [],
-    },
     "merino/utils/icon_processor.py": {
         "direct": ["tests/unit/utils/test_icon_processor.py"],
         "indirect": [

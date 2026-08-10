@@ -57,7 +57,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     WCS,
     # EPL,
 )
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.utils.metrics import get_metrics_client
 
 

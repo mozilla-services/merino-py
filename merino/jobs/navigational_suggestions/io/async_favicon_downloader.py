@@ -8,7 +8,7 @@ import httpx
 
 from merino.jobs.navigational_suggestions.constants import REQUEST_HEADERS, TIMEOUT
 from merino.utils.gcs.models import Image
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ from merino.providers.suggest.finance.backends.protocol import FinanceBackend
 from merino.providers.suggest.finance.provider import Provider
 from merino.configs import settings
 from merino.utils.metrics import get_metrics_client
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.utils.gcs.gcs_uploader import GcsUploader
 
 setting = settings.providers.polygon

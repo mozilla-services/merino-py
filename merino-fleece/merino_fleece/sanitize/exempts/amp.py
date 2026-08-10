@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 
 import httpx
 from merino_common.utils import cron
+from merino_common.utils.http_client import create_http_client
 from opentelemetry import metrics
 
 logger = logging.getLogger(__name__)
@@ -73,8 +74,9 @@ class AmpExempt:
         self.form_factors = list(dict.fromkeys(form_factors))
         self.resync_interval_sec = resync_interval_sec
         self.cron_interval_sec = cron_interval_sec
-        self.http_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(request_timeout_sec, connect=connect_timeout_sec),
+        self.http_client = create_http_client(
+            connect_timeout=connect_timeout_sec,
+            request_timeout=request_timeout_sec,
         )
         # Keywords are held per segment rather than as one flat set because a refresh can
         # return fresh data for one segment and a 304 for another. Rebuilding the flat set

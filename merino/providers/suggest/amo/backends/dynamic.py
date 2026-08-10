@@ -10,7 +10,7 @@ from httpx import AsyncClient
 
 from merino.providers.suggest.amo.addons_data import ADDON_DATA, SupportedAddon
 from merino.providers.suggest.amo.backends.protocol import Addon, AmoBackendError
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 
 AMO_CONNECT_TIMEOUT: float = 10.0
 

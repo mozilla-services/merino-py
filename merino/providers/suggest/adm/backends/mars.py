@@ -19,7 +19,7 @@ from merino.providers.suggest.adm.backends.protocol import (
     SegmentType,
     SuggestionContent,
 )
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
 
 logger = logging.getLogger(__name__)

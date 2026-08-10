@@ -32,7 +32,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     FORCE_IMPORT,
 )
 from merino.utils.metrics import get_metrics_client
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 
 # fool ruff into understanding that we really are importing this package.
 _ = FORCE_IMPORT
