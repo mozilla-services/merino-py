@@ -31,7 +31,9 @@ search-terms:
     description: |
       A counter recording the number of search terms sanitized, labeled by the PII
       type detected in each. Incremented by the background sanitization handler,
-      once per term per batch.
+      once per term per batch. Terms covered by a sanitization exempt skip detection
+      entirely and are counted as "non_pii", so this counter does not distinguish
+      them from terms that were checked and found to hold no PII.
     type: counter
     labels:
       - type: |
@@ -61,4 +63,40 @@ pii:
     labels: []
     scope: |
       The background search term sanitization handler of "merino-fleece".
+    alert_policy: []
+
+sanitize-exempts:
+  sanitize.exempts.amp.fetch:
+    description: |
+      A counter recording the number of MARS fetches for AMP keywords, labeled by
+      the segment fetched and the outcome. Incremented once per segment per fetch,
+      both by the initial fetch at startup and by every cron-driven refresh.
+      A steady stream of "not_modified" is the healthy resting state: it means the
+      ETag matched and MARS has no new dataset.
+    type: counter
+    labels:
+      - country: |
+          The country code of the fetched segment, e.g. "US".
+      - form_factor: |
+          The form factor of the fetched segment, e.g. "desktop".
+      - status: |
+          The outcome of the fetch: one of "success" (a new dataset was applied),
+          "not_modified" (a 304, so the segment's existing keywords were kept),
+          "empty_response" (MARS returned zero suggestions), or "error" (the request
+          failed or the payload could not be parsed). Only "error" holds back the
+          resync timestamp, causing a retry on the next cron tick.
+    scope: |
+      The AMP search term sanitization exempt of "merino-fleece".
+    alert_policy: []
+
+  sanitize.exempts.amp.keywords:
+    description: |
+      A gauge recording the number of distinct AMP keywords currently exempt from
+      sanitization, across all fetched segments. Set after every fetch, including
+      ones where no segment returned new data. A drop to zero means no exempt data
+      is available, in which case every search term is sanitized as non-exempt.
+    type: gauge
+    labels: []
+    scope: |
+      The AMP search term sanitization exempt of "merino-fleece".
     alert_policy: []

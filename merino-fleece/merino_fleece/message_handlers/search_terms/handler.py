@@ -12,6 +12,7 @@ from opentelemetry import metrics
 from merino_fleece.configs import settings
 from merino_fleece.pii import detect_person_batch, get_detector, get_executor
 from merino_fleece.utils.log_data_creator import create_search_term_log
+from merino_fleece.sanitize import exempts
 
 # identifier used to tag the queue's metrics.
 QUEUE_ID = "search_term_sanitization"
@@ -106,10 +107,12 @@ class MessageHandler:
     async def sanitize_batch(self, batch: list[SuggestRequestParams]) -> None:
         """Classify the PII type of every search term in the batch and record it in metrics.
 
-        Cheap pattern matching runs over every query first; only the queries it
-        clears reach SpaCy NER, which is batched via ``detect_person_batch``. The NER
-        pass is chunked so the shared thread pool is released between chunks and
-        concurrent `/pii` requests are not stuck behind one long batch.
+        Queries covered by a registered sanitization exempt short-circuit to
+        ``NON_PII`` before any detection runs. Of the rest, cheap pattern matching runs
+        over every query first; only the queries it clears reach SpaCy NER, which is
+        batched via ``detect_person_batch``. The NER pass is chunked so the shared thread
+        pool is released between chunks and concurrent `/pii` requests are not stuck
+        behind one long batch.
 
         Exceptions are left to propagate: ``AsyncBatchQueue`` logs them and counts the
         batch as failed, which drops one batch rather than stopping the run loop.
@@ -125,6 +128,12 @@ class MessageHandler:
 
         for term in batch:
             query = (term.query or "")[:QUERY_CHARACTER_MAX]
+
+            # Exemption wins over detection by definition, and is the cheaper check.
+            if query and exempts.is_exempt(query):
+                types.append(PIIType.NON_PII)
+                continue
+
             pii_type = basic_detect(query)
             if pii_type is PIIType.NON_PII and query:
                 candidate_indices.append(len(types))

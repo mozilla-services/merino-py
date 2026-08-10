@@ -8,6 +8,7 @@ readme = "README.md"
 dependencies = [
     "merino-common",
     "fastapi[standard]>=0.135.0,<1",
+    "httpx>=0.28.0,<1",
     "dynaconf>=3.2.4,<4",
     "pydantic>=2.13.0,<3",
     "spacy>=3.7,<4",

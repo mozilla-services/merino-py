@@ -1,5 +1,6 @@
 """Tests for the merino-fleece app factory and lifespan."""
 
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import pytest
@@ -12,6 +13,7 @@ from merino_fleece import app as app_module
 from merino_fleece import pii
 from merino_fleece.app import create_app
 from merino_fleece.message_handlers import search_terms
+from merino_fleece.sanitize import exempts
 
 
 @pytest.fixture(autouse=True)
@@ -78,3 +80,65 @@ def test_lifespan_initializes_and_tears_down_dependencies(
     assert counter_value(metric_reader, "search_terms.sanitize") - before == 2, (
         "queued terms must be sanitized during the shutdown drain"
     )
+
+
+class StubExempt:
+    """Exempt stub recording when it was shut down relative to the handler."""
+
+    def __init__(self, term: str) -> None:
+        """Store the term this exempt covers and init the call log."""
+        self.term = term
+        self.checked: list[str] = []
+        self.running_at_shutdown: bool | None = None
+
+    async def initialize(self) -> None:
+        """Nothing to bootstrap; the term is fixed at construction."""
+
+    async def shutdown(self) -> None:
+        """Record whether the sanitization handler was still up when this ran."""
+        self.running_at_shutdown = search_terms.get_message_handler().is_running()
+
+    def is_exempt(self, search_term: str) -> bool:
+        """Record the lookup and report whether the term is this stub's."""
+        self.checked.append(search_term)
+        return search_term == self.term
+
+
+def test_lifespan_exempts_outlive_the_sanitization_drain(
+    monkeypatch: pytest.MonkeyPatch, metric_reader: InMemoryMetricReader
+) -> None:
+    """Exempts are consulted by the shutdown drain and torn down only after it.
+
+    This pins the teardown ordering. A submission held by the queue's collection delay is
+    sanitized during the drain, and that pass calls `is_exempt` -- so shutting the exempts
+    down before the handler drains would sanitize those terms against an empty registry.
+    """
+    exempt = StubExempt("firefox accounts")
+    monkeypatch.setattr(exempts, "initialize", _register(exempt))
+    before = counter_value(metric_reader, "search_terms.sanitize")
+
+    app = create_app()
+    with TestClient(app) as client:
+        resp = client.post(
+            "/api/v1/search-terms",
+            json={"search_terms": [_search_term("firefox accounts")]},
+        )
+        assert resp.status_code == 201
+
+    assert exempt.checked == ["firefox accounts"], "the drain must consult the exempts"
+    assert exempt.running_at_shutdown is False, "exempts must be torn down after the drain"
+    assert exempts._exempts == []
+    assert counter_value(metric_reader, "search_terms.sanitize") - before == 1
+
+
+def _register(exempt: StubExempt) -> Callable[[], Awaitable[None]]:
+    """Return a stand-in for `exempts.initialize` that registers `exempt`.
+
+    Registering through the real `register()` keeps the teardown path under test: the
+    lifespan's `shutdown()` is the thing that has to find and clear it.
+    """
+
+    async def _initialize() -> None:
+        exempts.register(exempt)
+
+    return _initialize
