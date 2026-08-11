@@ -229,17 +229,19 @@ layout_8_tiles_2_ads = Layout(
             ],
         ),
         # Two full rows of medium tiles, then positions 6 and 7 spill into a third row that
-        # the client hides. Small tiles would divide evenly here, but they would demote the
-        # second and third stories to half-height tiles, so mediums are kept instead.
+        # the client hides. Small tiles would divide evenly here, but only two of the four
+        # mediums would be left for stories once the ads take theirs, so the rest would drop
+        # to half height. This keeps the tile order of layout_7_tiles_2_ads, which leaves
+        # both ads in the grid cells they occupy today: row 1 column 3, and row 2 column 2.
         ResponsiveLayout(
             columnCount=3,
             tiles=[
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=7, hasAd=False, hasExcerpt=True),
             ],

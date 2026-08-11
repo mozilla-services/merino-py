@@ -256,9 +256,9 @@ class TestLayout8Tiles2Ads:
     def test_three_column_keeps_mediums_and_hides_the_last_row(self) -> None:
         """At 3 columns all tiles are medium, and the last two spill into a hidden row.
 
-        Four small tiles would divide evenly into two rows, but that demotes the second and
-        third stories to half-height tiles. Keeping mediums costs the two lowest-ranked tiles
-        at this breakpoint instead, which the client hides.
+        Four small tiles would divide evenly into two rows, but once the two ads take their
+        mediums only two would be left for stories, dropping the rest to half height. Keeping
+        mediums costs the two lowest-ranked tiles at this breakpoint instead.
         """
         three_columns = next(
             responsive_layout
@@ -268,4 +268,26 @@ class TestLayout8Tiles2Ads:
         assert all(tile.size is TileSize.MEDIUM for tile in three_columns.tiles)
         hidden = hidden_tiles(three_columns.tiles, 3)
         assert {three_columns.tiles[index].position for index in hidden} == {6, 7}
-        assert [tile.position for tile in visible_tiles(three_columns)] == [0, 1, 2, 3, 4, 5]
+        assert {tile.position for tile in visible_tiles(three_columns)} == {0, 1, 2, 3, 4, 5}
+
+    def test_three_column_ads_keep_the_cells_they_occupy_today(self) -> None:
+        """At 3 columns both ads render in the same grid cells as the layout being replaced.
+
+        The tile order is chosen so that swapping the large tile out does not also move the
+        ads, which would confound the experiment.
+        """
+
+        def ad_cells(layout: Layout) -> set[tuple[int, int]]:
+            three_columns = next(
+                responsive_layout
+                for responsive_layout in layout.responsiveLayouts
+                if responsive_layout.columnCount == 3
+            )
+            occupied, _ = place_tiles(three_columns.tiles, 3)
+            return {
+                cell
+                for cell, index in occupied.items()
+                if three_columns.tiles[index].hasAd
+            }
+
+        assert ad_cells(layout_8_tiles_2_ads) == ad_cells(layout_7_tiles_2_ads)
