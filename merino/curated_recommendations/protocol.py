@@ -109,6 +109,9 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-release"
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
+    # Experiment to remove the large tile from Popular Today, so the 2-column layout shows an
+    # ad in its first row instead of a full-width large tile (HNT-2920).
+    NO_LARGE_CARD_EXPERIMENT = "new-tab-2-column-no-large-card"
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
     # Experiment to measure the impact of editorial sections by hiding them in the treatment branch
     EDITORIAL_SECTIONS_EXPERIMENT = "editorial-sections-experiment"

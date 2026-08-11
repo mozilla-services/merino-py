@@ -200,3 +200,72 @@ layout_7_tiles_2_ads = Layout(
         ),
     ],
 )
+
+# Layout 5: layout_7_tiles_2_ads with the large tile removed, for HNT-2920.
+#
+# The tile count goes from 7 to 8 because a large tile is 2 columns wide, and that width is
+# what lets 7 tiles fill every row. Swapping it for a medium leaves a partial final row at 4
+# and 2 columns; with only medium and small tiles the counts that fill all breakpoints are
+# 4, 6, 8, 9, ... Small tiles are used at 3 columns so 8 tiles still divide evenly.
+#
+# The client splices ads into the recommendation list at the ad positions of the 1-column
+# layout only, so ads are at positions 1 and 5 in every responsive layout. At 4 columns
+# position 1 is deliberately rendered last in the first row, which puts the ad in the 4th
+# column there while the same list keeps it in the first row at 2 columns.
+layout_8_tiles_2_ads = Layout(
+    name="8-double-row-2-ad",
+    responsiveLayouts=[
+        ResponsiveLayout(
+            columnCount=4,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=7, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=3,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
+                Tile(size=TileSize.SMALL, position=2, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.SMALL, position=3, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.SMALL, position=6, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.SMALL, position=7, hasAd=False, hasExcerpt=False),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=2,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=7, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+        ResponsiveLayout(
+            columnCount=1,
+            tiles=[
+                Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=7, hasAd=False, hasExcerpt=True),
+            ],
+        ),
+    ],
+)
