@@ -206,7 +206,7 @@ layout_7_tiles_2_ads = Layout(
 # The tile count goes from 7 to 8 because a large tile is 2 columns wide, and that width is
 # what lets 7 tiles fill both rows at 4 columns. Swapped for a medium, 7 mediums leave a
 # partial row there, and the client hides a trailing partial row, so 3 of the 7 would not
-# render. Eight fills 4, 2 and 1 columns exactly, and spills two hidden tiles at 3 columns.
+# render. Eight fills 4, 2 and 1 columns exactly, and spills one hidden tile at 3 columns.
 #
 # The client splices ads into the recommendation list at the ad positions of the 1-column
 # layout only, so ads are at positions 1 and 5 in every responsive layout. At 4 columns
