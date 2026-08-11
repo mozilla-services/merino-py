@@ -170,13 +170,18 @@ class TestLayoutInvariants:
         ]
         assert column_counts == [4, 3, 2, 1], f"{layout.name} is ordered {column_counts}"
 
-    def test_ad_count_matches_across_breakpoints(self, layout: Layout) -> None:
-        """Every breakpoint defines the same number of ad tiles."""
-        counts = {
-            responsive_layout.columnCount: len(ad_positions(responsive_layout))
+    def test_ad_positions_match_across_breakpoints(self, layout: Layout) -> None:
+        """Every breakpoint flags the same positions as ads.
+
+        Ads are spliced into the recommendation list using the 1-column positions only, so a
+        breakpoint that flags a different position marks a tile as an ad while it actually
+        receives an organic story, and leaves the real ad tile unflagged.
+        """
+        flagged = {
+            responsive_layout.columnCount: frozenset(ad_positions(responsive_layout))
             for responsive_layout in layout.responsiveLayouts
         }
-        assert len(set(counts.values())) == 1, f"{layout.name} ad counts differ: {counts}"
+        assert len(set(flagged.values())) == 1, f"{layout.name} ad positions differ: {flagged}"
 
 
 class TestLayout8Tiles2Ads:
