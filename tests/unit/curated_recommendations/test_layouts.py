@@ -1,7 +1,15 @@
 """Unit tests for section layouts, covering the invariants that the New Tab client relies on.
 
-None of these are enforced by the Pydantic models, and breaking one degrades rendering rather
-than raising, so they are asserted here for every layout in the module.
+None of these are enforced by the Pydantic models, and breaking one degrades or crashes
+rendering rather than raising here, so they are asserted for every layout in the module.
+
+The client rules modelled below, for reference:
+  * Placement follows CSS `grid-auto-flow: row` (sparse): the cursor only moves forward, so a
+    hole left behind it is never backfilled.
+  * Tiles in a trailing incomplete row are hidden, so a layout may intentionally define more
+    tiles than a breakpoint can show.
+  * Visual order comes from the tiles array, not from `position`, which is an index into the
+    list after ads have been spliced in.
 """
 
 import pytest
@@ -13,7 +21,7 @@ from merino.curated_recommendations.layouts import (
     layout_7_tiles_2_ads,
     layout_8_tiles_2_ads,
 )
-from merino.curated_recommendations.protocol import Layout, ResponsiveLayout, TileSize
+from merino.curated_recommendations.protocol import Layout, ResponsiveLayout, Tile, TileSize
 
 ALL_LAYOUTS = [
     layout_4_medium,
@@ -23,65 +31,85 @@ ALL_LAYOUTS = [
     layout_8_tiles_2_ads,
 ]
 
-# Grid footprint of each tile size as (rows, columns), in half-row units. Mirrors CARD_SIZE in
-# CardSections.jsx, where a small is half the height of a medium and a large is twice its width.
-TILE_FOOTPRINT: dict[TileSize, tuple[int, int]] = {
-    TileSize.SMALL: (1, 1),
-    TileSize.MEDIUM: (2, 1),
-    TileSize.LARGE: (2, 2),
-}
+
+def footprint(size: TileSize, columns: int) -> tuple[int, int]:
+    """Return the grid footprint (rows, columns) of a tile size at a breakpoint.
+
+    A large spans two columns, except at one column where it is rendered as a medium.
+    """
+    if size is TileSize.SMALL:
+        return 1, 1
+    if size is TileSize.LARGE:
+        return (2, 1) if columns == 1 else (2, 2)
+    return 2, 1
 
 
-def place_tiles(responsive_layout: ResponsiveLayout) -> tuple[dict[tuple[int, int], int], int]:
-    """Place tiles first-fit, as CSS grid auto-placement does.
+def place_tiles(tiles: list[Tile], columns: int) -> tuple[dict[tuple[int, int], int], int]:
+    """Place tiles as CSS `grid-auto-flow: row` does, with a cursor that only moves forward.
 
     Returns a map of (row, column) to tile index, and the number of rows used.
     """
-    columns = responsive_layout.columnCount
     occupied: dict[tuple[int, int], int] = {}
-    max_row = 0
+    max_row, cursor_row, cursor_col = 0, 0, 0
 
-    for index, tile in enumerate(responsive_layout.tiles):
-        rows, cols = TILE_FOOTPRINT[tile.size]
-        # Every tile fits within twice the tile count in rows, so this bound is never hit.
-        for row in range(2 * len(responsive_layout.tiles) + 2):
-            for col in range(columns - cols + 1):
-                cells = [(r, c) for r in range(row, row + rows) for c in range(col, col + cols)]
-                if all(cell not in occupied for cell in cells):
-                    occupied.update(dict.fromkeys(cells, index))
-                    max_row = max(max_row, row + rows)
-                    break
-            else:
+    for index, tile in enumerate(tiles):
+        rows, cols = footprint(tile.size, columns)
+        row, col = cursor_row, cursor_col
+        while True:
+            if col + cols > columns:
+                row, col = row + 1, 0
                 continue
-            break
+            cells = [(r, c) for r in range(row, row + rows) for c in range(col, col + cols)]
+            if all(cell not in occupied for cell in cells):
+                occupied.update(dict.fromkeys(cells, index))
+                max_row = max(max_row, row + rows)
+                cursor_row, cursor_col = row, col + cols
+                break
+            col += 1
 
     return occupied, max_row
 
 
-def find_empty_cells(responsive_layout: ResponsiveLayout) -> list[tuple[int, int]]:
-    """Return grid cells that no tile covers.
-
-    An empty cell is a visible hole: either a partial final row, or the gap left by a small
-    tile with no sibling stacked beneath it.
-    """
-    occupied, max_row = place_tiles(responsive_layout)
+def find_empty_cells(tiles: list[Tile], columns: int) -> list[tuple[int, int]]:
+    """Return grid cells that no tile covers."""
+    occupied, max_row = place_tiles(tiles, columns)
     return [
         (row, col)
         for row in range(max_row)
-        for col in range(responsive_layout.columnCount)
+        for col in range(columns)
         if (row, col) not in occupied
     ]
 
 
-def first_row_tiles(responsive_layout: ResponsiveLayout) -> list[int]:
-    """Return the indexes of tiles covering the top grid row, in column order."""
-    occupied, _ = place_tiles(responsive_layout)
-    indexes: list[int] = []
-    for col in range(responsive_layout.columnCount):
-        index = occupied.get((0, col))
-        if index is not None and index not in indexes:
-            indexes.append(index)
-    return indexes
+def hidden_tiles(tiles: list[Tile], columns: int) -> set[int]:
+    """Return the indexes of tiles in a trailing incomplete row, which the client hides.
+
+    Ported from getOrphanTileIndexes. Widths are in half-columns so that a small, which is
+    half the height of a medium, can be accounted for as it stacks.
+    """
+    span = {TileSize.SMALL: (2, 1), TileSize.MEDIUM: (2, 2), TileSize.LARGE: (4, 2)}
+    row_width = columns * 2
+    current: list[int] = []
+    filled = carry = 0
+
+    for index, tile in enumerate(tiles):
+        width, height = span[tile.size]
+        current.append(index)
+        filled += width
+        if height > 1:
+            carry += width
+        if filled >= row_width:
+            current, filled, carry = [], carry, 0
+            if filled >= row_width:
+                filled = 0
+
+    return set(current)
+
+
+def visible_tiles(responsive_layout: ResponsiveLayout) -> list[Tile]:
+    """Return the tiles a user actually sees at this breakpoint."""
+    hidden = hidden_tiles(responsive_layout.tiles, responsive_layout.columnCount)
+    return [tile for index, tile in enumerate(responsive_layout.tiles) if index not in hidden]
 
 
 def ad_positions(responsive_layout: ResponsiveLayout) -> set[int]:
@@ -93,24 +121,27 @@ def ad_positions(responsive_layout: ResponsiveLayout) -> set[int]:
 class TestLayoutInvariants:
     """Invariants that must hold for every layout Merino serves."""
 
-    def test_every_row_is_full(self, layout: Layout) -> None:
-        """No breakpoint leaves an empty grid cell.
+    def test_visible_grid_has_no_holes(self, layout: Layout) -> None:
+        """What the user sees fills its rows at every breakpoint.
 
-        Firefox 154+ hides tiles in a partial final row; older clients render the hole. Either
-        way the layout loses a tile, so layouts must fill their rows by construction.
+        A trailing incomplete row is fine because the client hides it. A hole *behind* the
+        placement cursor is not: nothing cleans it up, because sparse auto-placement never
+        backfills. The commonest cause is a small tile with no sibling stacked beneath it.
         """
         empty = {
-            responsive_layout.columnCount: find_empty_cells(responsive_layout)
+            responsive_layout.columnCount: find_empty_cells(
+                visible_tiles(responsive_layout), responsive_layout.columnCount
+            )
             for responsive_layout in layout.responsiveLayouts
         }
-        assert not any(empty.values()), f"{layout.name} has empty cells: {empty}"
+        assert not any(empty.values()), f"{layout.name} has holes when rendered: {empty}"
 
     def test_tile_count_matches_across_breakpoints(self, layout: Layout) -> None:
         """Every breakpoint defines the same number of tiles.
 
-        The client renders max(tiles) cards at every breakpoint and only styles a card when the
-        active breakpoint defines a tile with its position, so a position that is missing from a
-        narrower layout renders unstyled and visible.
+        The client renders max(tiles) cards and looks up each card's image size by the active
+        breakpoint. A position defined at one breakpoint but missing at another dereferences
+        an undefined entry and throws, taking out the section.
         """
         counts = {
             responsive_layout.columnCount: len(responsive_layout.tiles)
@@ -118,11 +149,21 @@ class TestLayoutInvariants:
         }
         assert len(set(counts.values())) == 1, f"{layout.name} tile counts differ: {counts}"
 
+    def test_position_sets_match_across_breakpoints(self, layout: Layout) -> None:
+        """Every breakpoint defines the same set of positions, for the same reason."""
+        position_sets = {
+            responsive_layout.columnCount: frozenset(
+                tile.position for tile in responsive_layout.tiles
+            )
+            for responsive_layout in layout.responsiveLayouts
+        }
+        assert len(set(position_sets.values())) == 1, f"{layout.name}: {position_sets}"
+
     def test_responsive_layouts_are_ordered_widest_first(self, layout: Layout) -> None:
         """Responsive layouts are ordered 4 to 1 columns.
 
-        DiscoveryStreamFeed sizes the ad request from responsiveLayouts[0], so the widest layout
-        has to come first. The Layout validator only checks that all four are present.
+        The ad request reads responsiveLayouts[0] by array index, so the widest layout has to
+        come first. The Layout validator only checks that all four are present.
         """
         column_counts = [
             responsive_layout.columnCount for responsive_layout in layout.responsiveLayouts
@@ -130,11 +171,7 @@ class TestLayoutInvariants:
         assert column_counts == [4, 3, 2, 1], f"{layout.name} is ordered {column_counts}"
 
     def test_ad_count_matches_across_breakpoints(self, layout: Layout) -> None:
-        """Every breakpoint defines the same number of ad tiles.
-
-        The count of ads requested comes from the 4-column layout while their placement comes
-        from the 1-column layout, so a mismatch either wastes a request or leaves a gap.
-        """
+        """Every breakpoint defines the same number of ad tiles."""
         counts = {
             responsive_layout.columnCount: len(ad_positions(responsive_layout))
             for responsive_layout in layout.responsiveLayouts
@@ -155,7 +192,7 @@ class TestLayout8Tiles2Ads:
         assert TileSize.LARGE not in sizes
 
     def test_has_eight_tiles_at_every_breakpoint(self) -> None:
-        """Eight tiles is the smallest count above seven that fills rows without a large tile."""
+        """Eight tiles fill both rows at 4 columns, which seven cannot without a large tile."""
         assert layout_8_tiles_2_ads.max_tile_count == 8
         for responsive_layout in layout_8_tiles_2_ads.responsiveLayouts:
             assert len(responsive_layout.tiles) == 8
@@ -163,14 +200,22 @@ class TestLayout8Tiles2Ads:
     def test_ad_positions_match_across_breakpoints(self) -> None:
         """Ads sit at the same content positions everywhere.
 
-        The client splices ads into the recommendation list using the 1-column positions only,
-        so a breakpoint that flags different positions would mark a tile as an ad that receives
-        an organic story instead.
+        Ads are spliced into the recommendation list using the 1-column positions only, so a
+        breakpoint flagging different positions would mark a tile as an ad that receives an
+        organic story instead.
         """
         for responsive_layout in layout_8_tiles_2_ads.responsiveLayouts:
             assert ad_positions(responsive_layout) == {1, 5}, (
                 f"{responsive_layout.columnCount} columns has ads at "
                 f"{ad_positions(responsive_layout)}"
+            )
+
+    def test_every_ad_is_visible(self) -> None:
+        """No ad tile falls into the hidden trailing row at any breakpoint."""
+        for responsive_layout in layout_8_tiles_2_ads.responsiveLayouts:
+            visible = {tile.position for tile in visible_tiles(responsive_layout) if tile.hasAd}
+            assert visible == {1, 5}, (
+                f"{responsive_layout.columnCount} columns only shows ads at {visible}"
             )
 
     def test_two_column_first_row_is_organic_then_ad(self) -> None:
@@ -187,7 +232,6 @@ class TestLayout8Tiles2Ads:
         first_row = two_columns.tiles[:2]
         assert [tile.position for tile in first_row] == [0, 1]
         assert [tile.hasAd for tile in first_row] == [False, True]
-        assert all(tile.size is TileSize.MEDIUM for tile in first_row)
 
     def test_four_column_first_row_is_three_organic_then_ad(self) -> None:
         """At 4 columns the first row holds three organic tiles then the ad (HNT-2920 P1).
@@ -204,12 +248,19 @@ class TestLayout8Tiles2Ads:
         assert [tile.hasAd for tile in first_row] == [False, False, False, True]
         assert first_row[-1].position == 1
 
-    def test_first_row_tiles_have_no_excerpt(self) -> None:
-        """First-row tiles drop the excerpt, replacing the large tile's excerpt treatment."""
-        for responsive_layout in layout_8_tiles_2_ads.responsiveLayouts:
-            for index in first_row_tiles(responsive_layout):
-                tile = responsive_layout.tiles[index]
-                assert not tile.hasExcerpt, (
-                    f"{responsive_layout.columnCount} columns: position {tile.position} "
-                    f"in the first row has an excerpt"
-                )
+    def test_three_column_keeps_mediums_and_hides_the_last_row(self) -> None:
+        """At 3 columns all tiles are medium, and the last two spill into a hidden row.
+
+        Four small tiles would divide evenly into two rows, but that demotes the second and
+        third stories to half-height tiles. Keeping mediums costs the two lowest-ranked tiles
+        at this breakpoint instead, which the client hides.
+        """
+        three_columns = next(
+            responsive_layout
+            for responsive_layout in layout_8_tiles_2_ads.responsiveLayouts
+            if responsive_layout.columnCount == 3
+        )
+        assert all(tile.size is TileSize.MEDIUM for tile in three_columns.tiles)
+        hidden = hidden_tiles(three_columns.tiles, 3)
+        assert {three_columns.tiles[index].position for index in hidden} == {6, 7}
+        assert [tile.position for tile in visible_tiles(three_columns)] == [0, 1, 2, 3, 4, 5]
