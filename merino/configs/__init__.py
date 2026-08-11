@@ -41,7 +41,6 @@ _validators = [
     Validator("fleece.search_terms_path", is_type_of=str),
     Validator("fleece.connect_timeout_sec", is_type_of=float, gt=0),
     Validator("fleece.request_timeout_sec", is_type_of=float, gt=0),
-    Validator("message_handler.enabled", is_type_of=bool),
     Validator("message_handler.connect_timeout_sec", is_type_of=float, gt=0),
     Validator("message_handler.pubsub_topic", is_type_of=str),
     Validator("message_handler.max_batch_size", is_type_of=int, gt=0),

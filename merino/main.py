@@ -133,7 +133,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
 
-    if settings.message_handler.enabled:
+    if search_terms.SUBMISSION_ENABLED:
         await search_terms.start()
         cleanup_callbacks.append(search_terms.stop)
 

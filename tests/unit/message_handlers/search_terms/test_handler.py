@@ -205,7 +205,7 @@ async def test_start_regular_services_wires_message_handler(mocker: MockerFixtur
     """Test that regular startup starts the handler and registers its drain when enabled."""
     import merino.main as main
 
-    mocker.patch.object(settings.message_handler, "enabled", True)
+    mocker.patch.object(search_terms, "SUBMISSION_ENABLED", True)
     mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
     mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
     mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
@@ -225,7 +225,7 @@ async def test_start_regular_services_skips_handler_when_disabled(mocker: Mocker
     """Test that the handler is not started when submission is disabled."""
     import merino.main as main
 
-    mocker.patch.object(settings.message_handler, "enabled", False)
+    mocker.patch.object(search_terms, "SUBMISSION_ENABLED", False)
     mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
     mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
     mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
