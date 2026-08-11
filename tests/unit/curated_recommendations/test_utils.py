@@ -115,8 +115,13 @@ class TestCuratedRecommendationsProviderDeriveRegion:
 class TestCuratedRecommendationsProviderDeriveEngagementRegion:
     """Unit tests for derive_engagement_region."""
 
-    def test_germany_publisher_constraint_uses_country_region_by_default(self):
-        """Germany publisher constraint branches use country-level engagement by default."""
+    def test_germany_publisher_constraint_uses_country_region_when_disabled(self, monkeypatch):
+        """Germany publisher constraint branches use country-level engagement when disabled."""
+        monkeypatch.setattr(
+            "merino.curated_recommendations.utils."
+            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
+            False,
+        )
         request = CuratedRecommendationsRequest(
             locale=Locale.DE_DE,
             region="DE",
