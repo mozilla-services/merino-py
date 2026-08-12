@@ -14,6 +14,7 @@ import httpx
 from merino_common.utils import cron
 from merino_common.utils.http_client import create_http_client
 from opentelemetry import metrics
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,27 @@ _keywords_gauge = _meter.create_gauge(
 # `errored` separates a failure from the other two, since only a failure should hold back
 # `last_fetch_at` and so trigger an early retry.
 SegmentResult = tuple[set[str] | None, bool]
+
+
+class MarsSuggestion(BaseModel):
+    """One MARS suggestion record, narrowed to the only field this exempt reads.
+
+    MARS serves several fields per record, all but `keywords` irrelevant here. They are left
+    undeclared rather than declared and unused.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    # Defaulted, not required: a record that omits `keywords` contributes nothing and is
+    # tolerated. A record that sets it to a non-list is not -- a scalar string would
+    # otherwise be iterated per character, seeding the set with single letters.
+    keywords: list[str] = Field(default_factory=list)
+
+
+class MarsSuggestData(BaseModel):
+    """The MARS `/suggest/data` response."""
+
+    suggestions: list[MarsSuggestion]
 
 
 class AmpExempt:
@@ -128,10 +150,10 @@ class AmpExempt:
     def is_exempt(self, search_term: str) -> bool:
         """Return whether the search term matches an AMP keyword.
 
-        MARS keywords are lowercase, so the term is normalized the same way merino's adm
-        provider normalizes queries before looking them up.
+        Only leading whitespace is trimmed as a MARS keyword can end in a significant
+        trailing space.
         """
-        return search_term.strip().lower() in self.keywords
+        return search_term.lstrip().lower() in self.keywords
 
     def _should_fetch(self) -> bool:
         """Check if it should fetch keyword data from MARS."""
@@ -198,17 +220,19 @@ class AmpExempt:
 
             response.raise_for_status()
 
-            suggestions = response.json()["suggestions"]
-            if not suggestions:
+            # Parsed straight from bytes: Pydantic's parser skips the ignored fields instead
+            # of materializing them, which costs a fraction of the time and memory that
+            # `response.json()` does on a payload of this size.
+            data = MarsSuggestData.model_validate_json(response.content)
+            if not data.suggestions:
                 logger.warning(f"MARS returned empty suggestions for {segment}")
                 _fetch_counter.add(1, {**tags, "status": "empty_response"})
                 return None, False
 
+            # Stored verbatim. MARS already lowercases keywords, and a trailing space is
+            # meaningful rather than noise, so normalizing here would discard information.
             keywords = {
-                normalized
-                for suggestion in suggestions
-                for keyword in suggestion.get("keywords") or ()
-                if (normalized := keyword.strip().lower())
+                keyword for suggestion in data.suggestions for keyword in suggestion.keywords
             }
         except httpx.HTTPError as error:
             logger.warning(
@@ -217,8 +241,8 @@ class AmpExempt:
             )
             _fetch_counter.add(1, {**tags, "status": "error"})
             return None, True
-        except (AttributeError, KeyError, TypeError, ValueError) as error:
-            # The payload was not JSON, was missing `suggestions`, or had an unexpected shape.
+        except ValidationError as error:
+            # The payload was not JSON, or did not match the MARS contract.
             logger.warning(
                 f"Malformed MARS response for {segment}",
                 extra={"error message": f"{error}"},

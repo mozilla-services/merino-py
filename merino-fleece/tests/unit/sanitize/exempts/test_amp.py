@@ -120,7 +120,7 @@ async def test_fetch_populates_keywords(exempt: AmpExempt, mocker: MockerFixture
     "search_term",
     [
         pytest.param("Firefox Account", id="uppercase"),
-        pytest.param("  firefox account  ", id="surrounding_whitespace"),
+        pytest.param("  firefox account", id="leading_whitespace"),
         pytest.param(" FIREFOX Account", id="both"),
     ],
 )
@@ -128,10 +128,11 @@ async def test_fetch_populates_keywords(exempt: AmpExempt, mocker: MockerFixture
 async def test_is_exempt_normalizes_the_search_term(
     exempt: AmpExempt, mocker: MockerFixture, search_term: str
 ) -> None:
-    """Lookups are case- and surrounding-whitespace-insensitive.
+    """Lookups are case- and leading-whitespace-insensitive.
 
     MARS keywords are lowercase, so a submitted term is normalized the same way merino's
-    adm provider normalizes a query before looking it up.
+    adm provider normalizes a query before looking it up. Trailing whitespace is left
+    alone -- see `test_a_trailing_space_is_significant`.
     """
     install(mocker, {"US/desktop": [ok(suggestion("firefox account"))]})
 
@@ -141,13 +142,23 @@ async def test_is_exempt_normalizes_the_search_term(
 
 
 @pytest.mark.asyncio
-async def test_stored_keywords_are_normalized(exempt: AmpExempt, mocker: MockerFixture) -> None:
-    """Keywords are normalized on the way in, and blank ones are dropped."""
-    install(mocker, {"US/desktop": [ok(suggestion("  Firefox  ", "", "   "))]})
+async def test_a_trailing_space_is_significant(mocker: MockerFixture) -> None:
+    """A term matches only the spacing MARS actually published.
 
-    await exempt._fetch()
+    MARS serves AMP prefix states, so `'my '` (the user typed a space) and `'my'` are
+    distinct keywords. Stripping the term would conflate them and exempt a term MARS never
+    published a keyword for.
+    """
+    spaced, bare = build_exempt(), build_exempt()
+    install(mocker, {"US/desktop": [ok(suggestion("my "))]})
+    await spaced._fetch()
+    install(mocker, {"US/desktop": [ok(suggestion("my"))]})
+    await bare._fetch()
 
-    assert exempt.keywords == frozenset({"firefox"})
+    assert spaced.is_exempt("my ") is True
+    assert spaced.is_exempt("my") is False
+    assert bare.is_exempt("my") is True
+    assert bare.is_exempt("my ") is False
 
 
 @pytest.mark.asyncio
@@ -316,6 +327,17 @@ async def test_no_data_means_nothing_is_exempt(exempt: AmpExempt, mocker: Mocker
             httpx.Response(200, json={"suggestions": [{"keywords": [42]}]}, request=REQUEST),
             id="keyword_not_a_string",
         ),
+        pytest.param(
+            # The reason this exempt validates at all: iterated as a sequence, a scalar
+            # string would seed the keyword set with its own single characters, exempting
+            # real search terms from sanitization.
+            httpx.Response(200, json={"suggestions": [{"keywords": "firefox"}]}, request=REQUEST),
+            id="keywords_scalar_string",
+        ),
+        pytest.param(
+            httpx.Response(200, json={"suggestions": [{"keywords": None}]}, request=REQUEST),
+            id="keywords_null",
+        ),
         pytest.param(httpx.Response(500, request=REQUEST), id="server_error"),
         pytest.param(httpx.Response(404, request=REQUEST), id="not_found"),
     ],
@@ -363,15 +385,13 @@ async def test_empty_suggestions_keep_the_previous_keywords(
 async def test_records_without_keywords_are_skipped(
     exempt: AmpExempt, mocker: MockerFixture
 ) -> None:
-    """Records carrying no usable `keywords` contribute nothing and break nothing."""
-    install(
-        mocker,
-        {
-            "US/desktop": [
-                ok({"advertiser": "Example.org"}, {"keywords": None}, suggestion("firefox"))
-            ]
-        },
-    )
+    """A record omitting `keywords` contributes nothing and breaks nothing.
+
+    Omission is tolerated because it costs nothing to tolerate. A `keywords` present but of
+    the wrong type is not -- that is a contract violation, covered by
+    `test_unusable_responses_keep_the_previous_keywords`.
+    """
+    install(mocker, {"US/desktop": [ok({"advertiser": "Example.org"}, suggestion("firefox"))]})
 
     await exempt._fetch()
 
