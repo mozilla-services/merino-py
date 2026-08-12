@@ -1483,7 +1483,22 @@ retry_wait_initial_seconds = 0.5
 
 # MERINO__CURATED_RECOMMENDATIONS__CORPUS_API__RETRY_WAIT_JITTER_SECONDS
 # Uniformly random time in seconds to add to the wait time before retrying corpus api requests.
-retry_wait_jitter_seconds = 0.2
+# This value should be higher than retry_wait_initial_seconds to provide
+# meaningful variance in retry attempts (to help avoid a thundering herd problem).
+retry_wait_jitter_seconds = 1.0
+
+# MERINO__CURATED_RECOMMENDATIONS_CORPUS_API__CACHE_TTL_MIN
+# Minimum number of seconds to cache results of a corpus API call.
+cache_ttl_min = 110
+
+# MERINO__CURATED_RECOMMENDATIONS_CORPUS_API__CACHE_TTL_MAX
+# Maximum number of seconds to cache results of a corpus API call.
+# We want to keep a balance of data freshness (e.g. to allow editorial fixes to
+# surface quickly) and expiration variance (to avoid overly synchronous cache
+# expiry, which exacerbates load problems, particularly during a deploy/cold
+# start).
+# The values here will give an average of 140s cache TTL.
+cache_ttl_max = 170
 
 
 [default.jobs.wikipedia_indexer]
