@@ -26,7 +26,7 @@ services:
     ports:
       - 8081:8081
   fake-gcs:
-    image: fsouza/fake-gcs-server
+    image: fsouza/fake-gcs-server:1.55.1
     container_name: fake-gcs-server
     restart: always
     ports:
