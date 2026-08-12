@@ -1326,6 +1326,7 @@ class TestCorpusApiCaching:
 
             for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
                 item["corpusItem"]["title"] += " (NEW)"  # Change all the titles
+
             scheduled_surface_http_client.post.return_value = Response(
                 status_code=200,
                 json=scheduled_surface_response_data,
@@ -1340,10 +1341,13 @@ class TestCorpusApiCaching:
             fetch_pl_pl(client)
             await asyncio.sleep(0.01)  # Allow asyncio background task to make an API request
 
-            # Next fetch should get the new data
+            # Next fetch should get the new data from the cache
             new_response = fetch_pl_pl(client)
+
             assert scheduled_surface_http_client.post.call_count == 2
+
             new_data = new_response.json()
+
             assert new_data["recommendedAt"] > initial_data["recommendedAt"]
             assert all("NEW" in item["title"] for item in new_data["data"])
 
@@ -1775,9 +1779,6 @@ class TestSections:
     def test_sections_inferred_contextual_ranking_result_for_cohort(
         self,
         ml_recommendations_backend,
-        engagement_backend,
-        sections_backend,
-        cohort_model_backend,
         client: TestClient,
     ):
         """Test end to end content ranking based on cohort and tz offset. Note that engagement_backend is required
@@ -2194,7 +2195,7 @@ class TestSections:
         assert sections["top_stories_section"]["receivedFeedRank"] == 0
 
     def test_curated_recommendations_with_sections_feed_removes_blocked_topics(
-        self, caplog, client: TestClient
+        self, client: TestClient
     ):
         """Test that when topic sections are blocked, those recommendations don't show up, not even
         in other sections like Popular Today.

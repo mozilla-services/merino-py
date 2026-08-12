@@ -33,6 +33,10 @@ from merino.curated_recommendations.corpus_backends.utils import (
 from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
 from merino.providers.manifest import Provider as ManifestProvider
 
+from merino.curated_recommendations.corpus_backends.circuitbreaker import (
+    CuratedRecommendationsCircuitBreaker,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,13 +61,19 @@ def parse_section_external_id(raw_external_id: str) -> tuple[str, int]:
 class SectionsBackend(SectionsProtocol):
     """Backend for fetching corpus sections using the getSections query."""
 
-    http_client: AsyncClient
-    graph_config: CorpusApiGraphConfig
-    metrics_client: aiodogstatsd.Client
-    manifest_provider: ManifestProvider
-
-    _cache: dict
     _background_tasks: set[asyncio.Task]
+    _cache: dict
+    cache_time_to_live_max = timedelta(
+        seconds=settings.curated_recommendations.corpus_api.cache_ttl_max
+    )
+    cache_time_to_live_min = timedelta(
+        seconds=settings.curated_recommendations.corpus_api.cache_ttl_min
+    )
+    graph_config: CorpusApiGraphConfig
+    http_client: AsyncClient
+    manifest_provider: ManifestProvider
+    metrics_client: aiodogstatsd.Client
+    retry_count = settings.curated_recommendations.corpus_api.retry_count
 
     def __init__(
         self,
@@ -83,20 +93,18 @@ class SectionsBackend(SectionsProtocol):
         self._background_tasks = set()
 
     @stale_while_revalidate(
-        wait_expiration=WaitRandomExpiration(
-            timedelta(seconds=settings.curated_recommendations.corpus_api.cache_ttl_min),
-            timedelta(seconds=settings.curated_recommendations.corpus_api.cache_ttl_max),
-        ),
+        wait_expiration=WaitRandomExpiration(cache_time_to_live_min, cache_time_to_live_max),
         cache=lambda self: self._cache,
         jobs=lambda self: self._background_tasks,
     )
+    @CuratedRecommendationsCircuitBreaker(name="curated_recommendations_sections_circuit_breaker")
     @retry(
         wait=wait_exponential_jitter(
             initial=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
             jitter=settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds,
         ),
-        stop=stop_after_attempt(settings.curated_recommendations.corpus_api.retry_count),
-        retry=retry_if_exception_type((CorpusGraphQLError, HTTPError, ValueError)),
+        stop=stop_after_attempt(retry_count),
+        retry=retry_if_exception_type((CorpusGraphQLError, HTTPError)),
         reraise=True,
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
@@ -138,6 +146,7 @@ class SectionsBackend(SectionsProtocol):
             }
         """
         variables = {"filters": {"scheduledSurfaceGuid": surface_id}}
+
         with self.metrics_client.timeit("corpus_api.get_sections.timing"):
             res = await self.http_client.post(
                 self.graph_config.endpoint,
@@ -147,14 +156,19 @@ class SectionsBackend(SectionsProtocol):
 
         # Error handling for HTTP and GraphQL errors
         self.metrics_client.increment(f"corpus_api.get_sections.status_codes.{res.status_code}")
+
         res.raise_for_status()
+
         data = res.json()
+
         if "errors" in data:
             self.metrics_client.increment("corpus_api.get_sections.graphql_error")
             raise CorpusGraphQLError(f"Sections API returned GraphQL errors {data['errors']}")
 
         utm_source = get_utm_source(surface_id)
+
         parsed_sections = []
+
         for section in data["data"]["getSections"]:
             if not section.get("active") or section.get("externalId", "").endswith("_crawl"):
                 logger.info(f"Skipping inactive section {section['externalId']} for {surface_id}")

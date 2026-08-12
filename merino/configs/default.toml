@@ -1502,6 +1502,18 @@ cache_ttl_min = 110
 # The values here will give an average of 140s cache TTL.
 cache_ttl_max = 170
 
+# MERINO__CURATED_RECOMMENDATIONS_CORPUS_API__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The circuit breaker will open when the failure is over this threshold.
+# Note that Corpus calls are behind a tenacity retry decorator, which only
+# returns one failure per retry set - we want the circuit breaker to open if
+# only one retry cycle fails - if all retries fail, we can assume the service
+# is down and shouldn't be hit until the circuit breaker times out.
+circuit_breaker_failure_threshold = 1
+
+# MERINO__CURATED_RECOMMENDATIONS_CORPUS_API__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# The circuit breaker will stay open for this period of time until the next recovery attempt.
+circuit_breaker_recover_timeout_sec = 30
+
 
 [default.jobs.wikipedia_indexer]
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_URL
