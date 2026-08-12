@@ -26,7 +26,9 @@ async def fetch_url(url, output_path) -> None:
         f.write(json.dumps(response.json()))
 
 
-async def get_wiki_suggestions(language: str, relevance_type: str, access_type: str, days: int):
+async def get_wiki_suggestions(
+    language: str, relevance_type: str, access_type: str, days: int, score: float
+):
     """Get Wikipedia page view data and process them into suggestions."""
     results = {}
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -58,6 +60,6 @@ async def get_wiki_suggestions(language: str, relevance_type: str, access_type: 
 
             else:
                 data = get_top_n_recency(language, TOP_N + 1000, tmpdir)
-            suggestions = make_suggestions(language, TOP_N, data)
+            suggestions = make_suggestions(language, TOP_N, data, score)
             results[language] = suggestions
     return results
