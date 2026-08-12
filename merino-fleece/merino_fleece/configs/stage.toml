@@ -10,6 +10,12 @@ dynaconf_merge = true
 level = "DEBUG"
 format = "mozlog"
 
+[stage.sanitize]
+# MERINO_FLEECE_SANITIZE__LOG_SEARCH_TERMS
+# Exercise the `web.suggest.sanitized` data log end to end in stage before it is
+# enabled in production.
+log_search_terms = true
+
 [stage.pubsub]
 # MERINO_FLEECE_PUBSUB__SUBSCRIPTION
 # Subscription for the backup PubSub topic.

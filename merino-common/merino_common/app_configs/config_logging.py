@@ -80,6 +80,11 @@ def configure_logging(
                     "level": level,
                     "propagate": can_propagate,
                 },
+                "web.suggest.sanitized": {
+                    "handlers": handler,
+                    "level": level,
+                    "propagate": can_propagate,
+                },
                 "uvicorn.error": {
                     "handlers": ["uvicorn-error-handler"],
                     "level": "ERROR",

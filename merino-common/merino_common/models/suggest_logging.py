@@ -63,3 +63,27 @@ class SearchTermsSubmission(BaseModel):
     """Request body for submitting search terms for sanitization."""
 
     search_terms: list[SuggestRequestParams]
+
+
+class SanitizedSearchTermLog(BaseModel):
+    """Model for logging a sanitized search term.
+
+    A subset of `SuggestRequestParams`, populated for search terms that
+    merino-fleece's sanitization pass clears as non-PII.
+    """
+
+    # Always true: the record carries a raw user query, so it must be routed away
+    # from the generally accessible log-inspection interfaces. Unrelated to the
+    # search term sanitization verdict, which is NON_PII for every logged record.
+    sensitive: bool = True
+    query: str
+    request_id: str  # Maps to `SuggestRequestParams.rid`.
+    session_id: str | None = None
+    sequence_no: int | None = None
+    country: str | None = None
+    region: str | None = None
+    city: str | None = None
+    dma: int | None = None
+    browser: str | None = None
+    os_family: str | None = None
+    form_factor: str | None = None

@@ -1,5 +1,6 @@
 """Unit tests for the search term sanitization message handler."""
 
+import logging
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 
@@ -15,6 +16,8 @@ from merino_fleece.message_handlers.search_terms.handler import MessageHandler
 ParamsFactory = Callable[[str | None], SuggestRequestParams]
 
 SANITIZE_METRIC = "search_terms.sanitize"
+
+SANITIZED_LOGGER = "web.suggest.sanitized"
 
 
 @pytest.fixture(name="params")
@@ -89,6 +92,27 @@ def counter_by_type(reader: InMemoryMetricReader) -> dict[str, float]:
 def delta(before: dict[str, float], after: dict[str, float], pii_type: str) -> float:
     """Return how much the counter for `pii_type` grew between two snapshots."""
     return after.get(pii_type, 0.0) - before.get(pii_type, 0.0)
+
+
+@pytest.fixture
+def log_search_terms(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    """Turn the sanitized search term data log on and capture it at INFO.
+
+    The handler reads the toggle once at import, mirroring merino's logging
+    middleware, so tests flip the module attribute rather than the setting.
+    """
+    monkeypatch.setattr(handler_module, "LOG_SEARCH_TERMS", True)
+    caplog.set_level(logging.INFO, logger=SANITIZED_LOGGER)
+
+
+def sanitized_records(caplog: pytest.LogCaptureFixture) -> list[logging.LogRecord]:
+    """Return the records emitted to the sanitized search term data log."""
+    return [record for record in caplog.records if record.name == SANITIZED_LOGGER]
+
+
+def logged_queries(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """Return the query of every sanitized search term logged, in emission order."""
+    return [str(record.query) for record in sanitized_records(caplog)]  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
@@ -309,3 +333,130 @@ async def test_queue_full_rejects_puts(
             handler.put(params("pizza"))
     finally:
         await handler.stop()
+
+
+@pytest.mark.usefixtures("log_search_terms")
+@pytest.mark.asyncio
+async def test_only_non_pii_terms_are_logged(
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Only the terms sanitization clears reach the data log.
+
+    This is the privacy-critical assertion: anything the pass flags as PII of any
+    kind must never be written out, so the mixed batch covers every detected type.
+    """
+    detector.verdicts["charlie chaplin"] = True
+    batch = [
+        params("the weather today"),  # non_pii
+        params("alice@example.com"),  # email
+        params("iphone 15"),  # numeric
+        params("charlie chaplin"),  # person
+        params(None),  # non_pii, but no query
+        params("best pizza"),  # non_pii
+    ]
+
+    await MessageHandler().sanitize_batch(batch)
+
+    assert logged_queries(caplog) == ["the weather today", "best pizza"]
+
+
+@pytest.mark.usefixtures("log_search_terms")
+@pytest.mark.asyncio
+async def test_ner_flagged_person_is_not_logged(
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A term only NER catches stays out of the log.
+
+    `basic_detect` clears a plain name, so this term is a NON_PII candidate right up
+    until the NER pass upgrades it. Logging any earlier than that would leak it.
+    """
+    detector.verdicts["barack obama"] = True
+
+    await MessageHandler().sanitize_batch([params("barack obama")])
+
+    assert sanitized_records(caplog) == []
+
+
+@pytest.mark.asyncio
+async def test_logging_is_off_by_default(
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """With the toggle off, even a cleared term is not logged."""
+    caplog.set_level(logging.INFO, logger=SANITIZED_LOGGER)
+
+    await MessageHandler().sanitize_batch([params("the weather today")])
+
+    assert sanitized_records(caplog) == []
+
+
+@pytest.mark.usefixtures("log_search_terms")
+@pytest.mark.parametrize("query", [None, ""], ids=["none", "empty"])
+@pytest.mark.asyncio
+async def test_queryless_terms_are_skipped_but_still_counted(
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    metric_reader: InMemoryMetricReader,
+    caplog: pytest.LogCaptureFixture,
+    query: str | None,
+) -> None:
+    """A term without a query is counted as non_pii but has nothing to log."""
+    before = counter_by_type(metric_reader)
+
+    await MessageHandler().sanitize_batch([params(query)])
+
+    after = counter_by_type(metric_reader)
+    assert delta(before, after, "non_pii") == 1
+    assert sanitized_records(caplog) == []
+
+
+@pytest.mark.usefixtures("log_search_terms")
+@pytest.mark.asyncio
+async def test_log_record_shape(
+    detector: RecordingDetector, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The emitted record carries the expected name, level, and request fields.
+
+    `sensitive` is asserted on the record rather than on the model, so the flag is
+    proven to survive the `model_dump()` hop into `extra=`. Without it the record
+    would flow to the generally accessible log inspection interfaces.
+    """
+    term = SuggestRequestParams(
+        query="the weather today",
+        code=200,
+        rid="request-id",
+        session_id="session-id",
+        sequence_no=3,
+        client_variants="variant",
+        requested_providers="adm",
+        country="US",
+        region="CA",
+        city="San Francisco",
+        dma=807,
+        browser="Firefox(120)",
+        os_family="macos",
+        form_factor="desktop",
+    )
+
+    await MessageHandler().sanitize_batch([term])
+
+    [record] = sanitized_records(caplog)
+    assert record.levelno == logging.INFO
+    assert record.message == ""
+    assert record.sensitive is True  # type: ignore[attr-defined]
+    assert record.query == "the weather today"  # type: ignore[attr-defined]
+    assert record.request_id == "request-id"  # type: ignore[attr-defined]
+    assert record.session_id == "session-id"  # type: ignore[attr-defined]
+    assert record.sequence_no == 3  # type: ignore[attr-defined]
+    assert record.country == "US"  # type: ignore[attr-defined]
+    assert record.region == "CA"  # type: ignore[attr-defined]
+    assert record.city == "San Francisco"  # type: ignore[attr-defined]
+    assert record.dma == 807  # type: ignore[attr-defined]
+    assert record.browser == "Firefox(120)"  # type: ignore[attr-defined]
+    assert record.os_family == "macos"  # type: ignore[attr-defined]
+    assert record.form_factor == "desktop"  # type: ignore[attr-defined]

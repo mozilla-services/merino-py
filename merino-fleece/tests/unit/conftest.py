@@ -28,12 +28,14 @@ def metric_reader() -> InMemoryMetricReader:
 
 @pytest.fixture(autouse=True)
 def _propagate_merino_fleece_logger(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Force the `merino_fleece` logger to propagate so pytest's `caplog` can capture records.
+    """Force the merino-fleece loggers to propagate so pytest's `caplog` can capture records.
 
     Other tests in the session (notably the `configure_logging` unit tests) call
-    `configure_logging(..., can_propagate=False)` against the `merino_fleece` logger, which
-    persists in the global `logging` state and silently blocks records from reaching the root
-    logger where `caplog` listens. Restoring propagation per-test keeps log assertions robust
-    regardless of test ordering.
+    `configure_logging(..., can_propagate=False)`, which turns propagation off for every logger
+    it configures. That persists in the global `logging` state and silently blocks records from
+    reaching the root logger where `caplog` listens. Restoring propagation per-test keeps log
+    assertions robust regardless of test ordering. `web.suggest.sanitized` is configured by name
+    rather than as a child of `merino_fleece`, so it needs restoring separately.
     """
-    monkeypatch.setattr(logging.getLogger("merino_fleece"), "propagate", True)
+    for name in ("merino_fleece", "web.suggest.sanitized"):
+        monkeypatch.setattr(logging.getLogger(name), "propagate", True)
