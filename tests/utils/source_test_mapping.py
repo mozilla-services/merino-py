@@ -156,7 +156,7 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "indirect": [],
     },
     "merino/curated_recommendations/layouts.py": {
-        "direct": ["tests/unit/curated_recommendations/test_layouts.py"],
+        "direct": [],
         "indirect": [
             "tests/unit/curated_recommendations/legacy/test_sections_adapter.py",
             "tests/unit/curated_recommendations/test_interest_picker.py",

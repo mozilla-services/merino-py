@@ -17,9 +17,9 @@ layout_4_medium = Layout(
             columnCount=4,
             tiles=[
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
             ],
         ),
         ResponsiveLayout(
@@ -114,9 +114,9 @@ layout_6_tiles = Layout(
             columnCount=3,
             tiles=[
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=3, hasAd=True, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=5, hasAd=False, hasExcerpt=True),
             ],
@@ -157,8 +157,8 @@ layout_7_tiles_2_ads = Layout(
                 Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
-                Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=4, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=5, hasAd=False, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=4, hasAd=True, hasExcerpt=True),
                 Tile(size=TileSize.MEDIUM, position=6, hasAd=False, hasExcerpt=True),
             ],
         ),
@@ -166,8 +166,8 @@ layout_7_tiles_2_ads = Layout(
             columnCount=3,
             tiles=[
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=True),
-                Tile(size=TileSize.MEDIUM, position=1, hasAd=True, hasExcerpt=False),
+                Tile(size=TileSize.MEDIUM, position=2, hasAd=True, hasExcerpt=True),
+                Tile(size=TileSize.MEDIUM, position=1, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=5, hasAd=True, hasExcerpt=True),
                 Tile(size=TileSize.SMALL, position=4, hasAd=False, hasExcerpt=False),
@@ -218,7 +218,7 @@ layout_8_tiles_2_ads = Layout(
                 Tile(size=TileSize.MEDIUM, position=7, hasAd=False, hasExcerpt=True),
             ],
         ),
-        # Unchanged from layout 4, plus an 8th tile that lands in a row the client hides.
+        # Renders as layout 4 does, plus an 8th tile that lands in a row the client hides.
         ResponsiveLayout(
             columnCount=3,
             tiles=[
