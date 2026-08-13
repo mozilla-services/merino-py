@@ -50,8 +50,12 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
     # Time-to-live was chosen because 2 minutes (+/- 10 s) is short enough that updates by curators
     # such as breaking news or editorial corrections propagate fast enough, and that the request
     # rate to the scheduledSurface query stays close to the historic rate of ~100 requests/minute.
-    cache_time_to_live_min = timedelta(seconds=110)
-    cache_time_to_live_max = timedelta(seconds=130)
+    cache_time_to_live_min = timedelta(
+        seconds=settings.curated_recommendations.corpus_api.cache_ttl_min
+    )
+    cache_time_to_live_max = timedelta(
+        seconds=settings.curated_recommendations.corpus_api.cache_ttl_max
+    )
     _cache: dict
     _background_tasks: set[asyncio.Task]
 
