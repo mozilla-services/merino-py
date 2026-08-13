@@ -74,8 +74,8 @@ def make_keywords(words: List[str]):
 
 
 def scan(
-    language, data
-) -> Generator[dict[str, str | list[str] | list[list[int]] | int], Any, None]:
+    language, data, score
+) -> Generator[dict[str, str | list[str] | list[list[int]] | int | float], Any, None]:
     """Generate Suggestion."""
     for article in data:
         title = article["title"]
@@ -95,12 +95,15 @@ def scan(
                 "title": f"{wiki_title_string} - {title_string}",
                 "keywords": keywords,
                 "full_keywords": [[title_string, len(keywords)]],
+                "score": score,
             }
 
 
-def make_suggestions(language, want, data) -> list:
+def make_suggestions(language, want, data, score) -> list:
     """Construct Suggestions and write to json files."""
-    gen = scan(language, data)
+    # SEEN_KEYWORDS is module-global; reset per language
+    SEEN_KEYWORDS.clear()
+    gen = scan(language, data, score)
     results = list(islice(gen, want))
     print(f"Total suggestions: {len(results)}\nTotal keywords: {len(SEEN_KEYWORDS)}")
     return results

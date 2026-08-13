@@ -63,7 +63,7 @@ def test_scan(mocker):
     language = "en"
     data = [{"title": "test wiki"}]
 
-    suggestions = list(scan(language, data))
+    suggestions = list(scan(language, data, 0.25))
     assert suggestions == [
         {
             "advertiser": "Wikipedia",
@@ -74,6 +74,7 @@ def test_scan(mocker):
             "keywords": {"te", "tes", "test", "test w", "test wi", "test wik", "test wiki"},
             "title": "Wikipedia - test wiki",
             "url": "https://en.wikipedia.org/wiki/test%20wiki",
+            "score": 0.25,
         },
     ]
 
@@ -100,7 +101,7 @@ def test_make_suggestions_return_correct_num_of_suggestions(mocker):
     language = "en"
     data = [{"title": f"Title_{i}"} for i in range(10)]
 
-    results = make_suggestions(language, 3, data)
+    results = make_suggestions(language, 3, data, 0.25)
     assert len(results) == 3
 
 
@@ -132,7 +133,7 @@ async def test_get_wiki_suggestions(mocker):
         "merino.jobs.wikipedia_offline_uploader.downloader.requests.get",
         return_value=mock_response,
     )
-    await get_wiki_suggestions("en", "frequency", "all-access", 2)
+    await get_wiki_suggestions("en", "frequency", "all-access", 2, 0.25)
 
     assert mock_fetch.call_count == 2
 
@@ -165,6 +166,6 @@ async def test_get_wiki_suggestions_multi_lang(mocker):
         "merino.jobs.wikipedia_offline_uploader.downloader.requests.get",
         return_value=mock_response,
     )
-    await get_wiki_suggestions("en,fr", "recency", "all-access", 3)
+    await get_wiki_suggestions("en,fr", "recency", "all-access", 3, 0.25)
 
     assert mock_fetch.call_count == 6
