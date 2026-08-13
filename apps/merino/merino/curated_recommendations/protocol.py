@@ -285,8 +285,8 @@ class CuratedRecommendation(CorpusItem):
     ranking_data: Annotated[RankingData | None, Field(exclude=True)] = None
     tileId: Annotated[int | None, Field(strict=True, ge=MIN_TILE_ID, le=MAX_TILE_ID)] = None
     receivedRank: int
-    variantId: int | None = None
-    sourceSectionId: str | None = None
+    variantId: int = Field(default=0, exclude_if=lambda v: v == 0)
+    sourceSectionId: str | None = Field(default=None, exclude_if=lambda v: v is None)
     serverScore: float | None = None
     features: dict[str, float] = Field(
         default_factory=dict,
@@ -490,7 +490,7 @@ class Section(BaseModel):
     allowAds: bool = Field(
         default=True, description="Whether ads can be displayed in this section."
     )
-    variantId: int | None = None
+    variantId: int = Field(default=0, exclude_if=lambda v: v == 0)
 
 
 class InterestPickerSection(BaseModel):
