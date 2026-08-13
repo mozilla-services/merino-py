@@ -2924,7 +2924,7 @@ def test_curated_recommendations_enriched_with_icons(
             title="Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
             url="https://www.microsoft.com",
             domain="microsoft",
-            icon="https://merino-images.services.mozilla.com/favicons/microsoft-icon.png",
+            icon="https://prod-images.merino.prod.webservices.mozgcp.net/favicons/microsoft-icon.png",
             categories=["Business", "Information Technology"],
             serp_categories=[0],
         )
@@ -2973,7 +2973,8 @@ def test_curated_recommendations_enriched_with_icons(
 
     assert "iconUrl" in item
     assert (
-        item["iconUrl"] == "https://merino-images.services.mozilla.com/favicons/microsoft-icon.png"
+        item["iconUrl"]
+        == "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/microsoft-icon.png"
     )
 
     # Clean up

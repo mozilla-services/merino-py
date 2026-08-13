@@ -34,11 +34,15 @@ async def test_domain_lookup_table_initialization(
 
 
 MS_ICON = HttpUrl(
-    "https://merino-images.services.mozilla.com/favicons/"
+    "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/"
     "90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct"
 )
-BBC_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/bbciconhash_12345.png")
-CNN_ICON = HttpUrl("https://merino-images.services.mozilla.com/favicons/cnniconhash_98765.png")
+BBC_ICON = HttpUrl(
+    "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/bbciconhash_12345.png"
+)
+CNN_ICON = HttpUrl(
+    "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/cnniconhash_98765.png"
+)
 
 
 @pytest.mark.asyncio

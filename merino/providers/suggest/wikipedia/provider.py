@@ -24,11 +24,11 @@ from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
 from merino.utils import cron
 
-# The Wikipedia icon backed by Merino's image CDN.
+# The Wikipedia icon backed by Merino's image CDN. The blob name is a content
+# hash, so it is identical in every bucket; only the CDN host differs.
 # TODO: Use a better way to fetch this icon URL instead of hardcoding it here.
 ICON: Final[str] = (
-    "https://merino-images.services.mozilla.com/favicons/"
-    "4c8bf96d667fa2e9f072bdd8e9f25c8ba6ba2ad55df1af7d9ea0dd575c12abee_1313.png"
+    "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/4c8bf96d667fa2e9f072bdd8e9f25c8ba6ba2ad55df1af7d9ea0dd575c12abee_1313.png"
 )
 ADVERTISER: Final[str] = "dynamic-wikipedia"
 BLOCK_ID: Final[int] = 0
