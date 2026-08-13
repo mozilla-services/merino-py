@@ -106,7 +106,7 @@ def map_section_item_to_recommendation(
     section_id: str,
     experiment_flags: set[str] | None = None,
     is_manual_section: bool = False,
-    variant_id: int | None = None,
+    variant_id: int = 0,
 ) -> CuratedRecommendation:
     """Map a CorpusItem to a CuratedRecommendation.
 
