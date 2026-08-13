@@ -1,7 +1,9 @@
 """Unit tests for the query normalization pipeline."""
 
 import pytest
+from pytest_mock import MockerFixture
 
+import merino.utils.query_processing.normalization.pipeline as pipeline_mod
 from merino.utils.query_processing.normalization.pipeline import (
     BM25Index,
     NormalizePipeline,
@@ -358,6 +360,27 @@ def test_pipeline_prefix_then_bm25_reorder() -> None:
 def test_pipeline_long_query_skips_split(pipeline: NormalizePipeline) -> None:
     """Queries with more than 2 tokens should skip split step."""
     assert pipeline.normalize("this is a long query") == "this is a long query"
+
+
+@pytest.mark.parametrize(
+    "length, expect_called",
+    [
+        (pipeline_mod._MAX_SEGMENT_TOKEN_LEN, True),
+        (pipeline_mod._MAX_SEGMENT_TOKEN_LEN + 1, False),
+    ],
+    ids=["at-cap-processed", "over-cap-skipped"],
+)
+def test_overlong_token_skips_segmentation(
+    mocker: MockerFixture, pipeline: NormalizePipeline, length: int, expect_called: bool
+) -> None:
+    """DoS guard: tokens over the length cap bypass the super-linear segmentation steps."""
+    ws_spy = mocker.spy(pipeline_mod, "_ws_segment")
+    split_spy = mocker.spy(pipeline_mod, "_try_split_token")
+
+    pipeline.normalize("z" * length)
+
+    assert ws_spy.called is expect_called
+    assert split_spy.called is expect_called
 
 
 # update_mars_terms

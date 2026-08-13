@@ -12,7 +12,6 @@ import logging
 import os
 import socket
 import struct
-from collections import defaultdict
 from importlib import resources
 from itertools import chain
 from random import choice, randint, sample
@@ -33,11 +32,8 @@ from merino.curated_recommendations.protocol import (
     Locale,
 )
 from merino.providers.manifest.backends.protocol import ManifestData
-from merino.providers.suggest.adm.backends.protocol import SegmentType
-from merino.providers.suggest.adm.backends.remotesettings import (
-    RemoteSettingsBackend,
-    RemoteSettingsError,
-)
+from merino.exceptions import BackendError
+from merino.providers.suggest.adm.backends.mars import MarsBackend
 from merino.providers.suggest.amo.addons_data import ADDON_KEYWORDS
 from merino.providers.suggest.top_picks.backends.filemanager import GetFileResultCode
 from merino.providers.suggest.top_picks.backends.top_picks import (
@@ -48,12 +44,12 @@ from merino.providers.wcs.protocol import LiveMatchesResponse, MatchesResponse, 
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST
 from merino.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
+from merino.utils.metrics import get_metrics_client
 from merino_common.utils.version import Version
 from merino.web.models_v1 import SuggestResponse
 from tests.load.common.client_info import DESKTOP_FIREFOX, LOCALES, MOBILE_FIREFOX
 
 # Type definitions
-KintoRecords = list[dict[str, Any]]
 QueriesList = list[list[str]]
 IpRangeList = list[tuple[str, str]]
 
@@ -101,15 +97,6 @@ MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY: str | None = os.getenv(
 )
 MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX: str | None = os.getenv(
     "MERINO_PROVIDERS__WIKIPEDIA__ES_INDEX"
-)
-MERINO_REMOTE_SETTINGS__SERVER: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__SERVER", os.getenv("KINTO__SERVER_URL")
-)
-MERINO_REMOTE_SETTINGS__BUCKET: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__BUCKET", os.getenv("KINTO__BUCKET")
-)
-MERINO_REMOTE_SETTINGS__COLLECTION: str | None = os.getenv(
-    "MERINO_REMOTE_SETTINGS__COLLECTION", os.getenv("KINTO__COLLECTION")
 )
 
 
@@ -226,9 +213,9 @@ async def on_locust_test_start(environment, **kwargs) -> None:
     query_data: QueryData = QueryData()
     try:
         query_data.adm = await get_adm_queries(
-            server=MERINO_REMOTE_SETTINGS__SERVER,
-            collection=MERINO_REMOTE_SETTINGS__COLLECTION,
-            bucket=MERINO_REMOTE_SETTINGS__BUCKET,
+            base_url=settings.mars.base_url,
+            countries=list(settings.mars.countries),
+            form_factors=list(settings.mars.form_factors),
         )
 
         logger.info(f"Download {len(query_data.adm)} queries for AdM")
@@ -261,9 +248,9 @@ async def on_locust_test_start(environment, **kwargs) -> None:
         logger.info(f"Download {len(query_data.ip_ranges)} IP ranges for X-Forward-For headers")
     except (
         ApiError,
+        BackendError,
         ElasticsearchWarning,
         OSError,
-        RemoteSettingsError,
         TopPicksError,
         TransportError,
         ValueError,
@@ -276,52 +263,50 @@ async def on_locust_test_start(environment, **kwargs) -> None:
 
 
 async def get_adm_queries(
-    server: str | None, collection: str | None, bucket: str | None
+    base_url: str,
+    countries: list[str],
+    form_factors: list[str],
 ) -> QueriesList:
     """Get query strings for use in testing the AdM Provider.
 
     Args:
-        server: Server URL of the Kinto instance containing suggestions
-        collection: Kinto bucket with the suggestions
-        bucket: Kinto collection with the suggestions
+        base_url: Base URL of the MARS API.
+        countries: Countries to fetch suggestions for.
+        form_factors: Form factors to fetch suggestions for.
     Returns:
         QueriesList: List of queries to use with the ADM provider
     Raises:
-        ValueError: If 'server', 'collection' or 'bucket' parameters are None or
-                    empty.
-        BackendError: Failed request to Remote Settings.
+        ValueError: If `base_url` is empty.
+        BackendError: Failed request to MARS.
     """
-    # Create HTTP client for IconProcessor
     http_client = create_http_client(
         request_timeout=settings.icon.http_timeout,
     )
-
     icon_processor = IconProcessor(
         gcs_project=settings.image_gcs.gcs_project,
         gcs_bucket=settings.image_gcs.gcs_bucket,
         cdn_hostname=settings.image_gcs.cdn_hostname,
         http_client=http_client,
     )
-    backend: RemoteSettingsBackend = RemoteSettingsBackend(
-        server=server,
-        collection=collection,
-        bucket=bucket,
+    backend = MarsBackend(
+        base_url=base_url,
         icon_processor=icon_processor,
+        metrics_client=get_metrics_client(),
+        connect_timeout=settings.mars.connect_timeout_sec,
+        request_timeout=settings.mars.request_timeout_sec,
+        suggestion_url_path=settings.mars.suggestion_url_path,
     )
-    records: list[dict[str, Any]] = await backend.get_records()
-    amp_records: list[dict[str, Any]] = backend.filter_records("amp", records)
-    attachment_host: str = await backend.get_attachment_host()
-    rs_suggestions: defaultdict[
-        str, defaultdict[SegmentType, str]
-    ] = await backend.get_suggestions(attachment_host, amp_records)
 
-    keywords = []
-    for country, c_suggestions in rs_suggestions.items():
-        for segment, raw_suggestions in c_suggestions.items():
-            suggestions = json.loads(raw_suggestions)
-            for suggestion in suggestions:
+    keywords: QueriesList = []
+    for country in countries:
+        for form_factor in form_factors:
+            raw = await backend.get_suggestion_data(
+                country, form_factor, f"{country}/{form_factor}"
+            )
+            if raw is None:
+                continue
+            for suggestion in json.loads(raw):
                 keywords.extend(suggestion.get("keywords", []))
-
     return keywords
 
 

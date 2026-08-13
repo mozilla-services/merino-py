@@ -697,3 +697,69 @@ async def test_error_callback_metric_records_failed_error_callback() -> None:
     assert attributes is not None
     # error.type reflects the error callback's own exception, not on_batch's.
     assert attributes["error.type"] == "RuntimeError"
+
+
+@pytest.mark.asyncio
+async def test_remaining_capacity_tracks_queue_headroom() -> None:
+    """`remaining_capacity` reports headroom, shrinking as items are queued and
+    never dropping below zero once the queue is full.
+
+    The batcher is deliberately not started, so nothing drains the queue and the
+    reported headroom is attributable solely to the puts.
+    """
+    batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
+        on_batch=on_batch_noop,
+        max_batch_size=2,
+        max_queue_size=3,
+        collection_delay_s=LONG_COLLECTION_DELAY_S,
+        meter_provider=None,
+    )
+
+    assert batcher.remaining_capacity() == 3, "a fresh queue has its full capacity"
+
+    batcher.put(1)
+    assert batcher.remaining_capacity() == 2
+
+    batcher.put(2)
+    batcher.put(3)
+    assert batcher.remaining_capacity() == 0, "a full queue reports no headroom"
+
+    # The queue is full, so the next put is rejected rather than making the
+    # remaining capacity go negative.
+    with pytest.raises(QueueFullException):
+        batcher.put(4)
+    assert batcher.remaining_capacity() == 0
+
+
+@pytest.mark.asyncio
+async def test_remaining_capacity_recovers_as_batches_are_collected() -> None:
+    """Headroom is returned once queued items are collected into a batch, so a
+    producer that backs off on a full queue can make progress again.
+    """
+    processed: list[int] = []
+
+    async def on_batch(batch: list[int]) -> None:
+        processed.extend(batch)
+
+    batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
+        on_batch=on_batch,
+        max_batch_size=2,
+        max_queue_size=2,
+        collection_delay_s=0.02,
+        meter_provider=None,
+    )
+    await batcher.start()
+
+    batcher.put(1)
+    batcher.put(2)
+    assert batcher.remaining_capacity() == 0
+
+    async def batch_collected() -> None:
+        while batcher.remaining_capacity() < 2:
+            await asyncio.sleep(0.005)
+
+    await asyncio.wait_for(batch_collected(), timeout=5.0)
+    await batcher.stop()
+
+    assert processed == [1, 2]
+    assert batcher.remaining_capacity() == 2

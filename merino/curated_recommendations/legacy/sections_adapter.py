@@ -111,7 +111,11 @@ async def get_legacy_recommendations_from_sections(
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
     )
-    recommendations = ranker.rank_items(recommendations, region=region, rescaler=rescaler)
+    recommendations = ranker.rank_items(
+        recommendations,
+        region=region,
+        rescaler=rescaler,
+    )
 
     # 7. Apply publisher spread
     recommendations = spread_publishers(recommendations, spread_distance=3)

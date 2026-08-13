@@ -263,6 +263,8 @@ class WikipediaSuggestionChunkRemoteSettingsUploader(ChunkedRemoteSettingsSugges
     def delete_records(self) -> None:
         """Delete records of the same language and id."""
         logger.info(f"Deleting records with type: {self.record_type}")
+        if self.client.dry_run:  # pragma: no cover
+            return
         for record in self.client.get_records():
             if record.get("type") == self.record_type and self.language in record["id"]:
                 self.client.delete_record(record["id"])

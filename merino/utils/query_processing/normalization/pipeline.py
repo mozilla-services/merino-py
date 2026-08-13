@@ -99,6 +99,9 @@ def _try_join_normalize(tokens: list[str], canonical: set[str]) -> str | None:
 # Step 4: segment query into tokens with wordsegment
 _WORDSEGMENT_CACHE_SIZE: int = settings.query_normalization.wordsegment_cache_size
 
+# Cap token length for the super-linear segmentation steps (DoS guard).
+_MAX_SEGMENT_TOKEN_LEN: int = 20
+
 
 @functools.lru_cache(maxsize=_WORDSEGMENT_CACHE_SIZE)
 def _ws_segment(tok: str) -> str:
@@ -113,7 +116,7 @@ def _try_wordsegment(tokens: list[str], canonical: set[str]) -> str | None:
     portion alone is in canonical.
     """
     for i, tok in enumerate(tokens):
-        if len(tok) < 5 or tok in canonical:
+        if len(tok) < 5 or len(tok) > _MAX_SEGMENT_TOKEN_LEN or tok in canonical:
             continue
         segmented = _ws_segment(tok)
         if segmented == tok:
@@ -163,7 +166,7 @@ def _try_split_token(token: str, canonical: set[str], max_splits: int = 4) -> st
 def _try_split_normalize(tokens: list[str], canonical: set[str]) -> str | None:
     """Split each fused token; return canonical hit."""
     for i, tok in enumerate(tokens):
-        if len(tok) < 5 or tok in canonical:
+        if len(tok) < 5 or len(tok) > _MAX_SEGMENT_TOKEN_LEN or tok in canonical:
             continue
 
         split = _try_split_token(tok, canonical)

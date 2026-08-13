@@ -2,10 +2,10 @@
 
 import pytest
 
-from merino.utils.query_processing.pii_detect import (
+from merino_common.utils.query_processing.pii_detect import (
     query_contains_email,
     query_contains_numeric,
-    pii_inspect,
+    basic_detect,
     PIIType,
 )
 
@@ -46,4 +46,4 @@ def test_query_contains_numeric(query, expected):
 )
 def test_query_contains_pii(query, expected):
     """Test that the query does not contain a PII."""
-    assert pii_inspect(query) == expected
+    assert basic_detect(query) == expected

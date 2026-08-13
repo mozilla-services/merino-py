@@ -9,7 +9,7 @@ import orjson
 import logging
 
 from logging import LogRecord
-from typing import Any, AsyncGenerator, cast
+from typing import Any, AsyncGenerator, Generator, cast
 from unittest.mock import AsyncMock
 
 import pytest
@@ -23,7 +23,7 @@ from merino.cache.redis import RedisAdapter
 from merino.exceptions import CacheAdapterError
 
 from testcontainers.core.wait_strategies import LogMessageWaitStrategy
-from testcontainers.redis import AsyncRedisContainer
+from testcontainers.community.redis import AsyncRedisContainer
 
 from tests.types import FilterCaplogFixture
 
@@ -57,7 +57,7 @@ def fixture_yelp_backend(yelp_parameters) -> YelpBackend:
 
 
 @pytest.fixture(scope="module")
-def redis_container() -> AsyncRedisContainer:
+def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     """Create and return a docker container for Redis. Tear it down after all the tests have
     finished running
     """

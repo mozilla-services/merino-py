@@ -629,10 +629,10 @@ docker compose -f dev/docker-compose.yaml down fake-gcs
 **Source Priority:**
 ```python
 {
-    "link": 1,      # Highest
+    "link": 1,  # Highest
     "meta": 2,
     "manifest": 3,
-    "default": 4    # Lowest
+    "default": 4,  # Lowest
 }
 ```
 

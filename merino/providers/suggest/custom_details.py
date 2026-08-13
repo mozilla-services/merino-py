@@ -20,6 +20,13 @@ class AmoDetails(BaseModel):
     guid: str
 
 
+class AmpDetails(BaseModel):
+    """AMP specific fields."""
+
+    header_text: str | None = None
+    suggestion_id: str | None = None
+
+
 class GeolocationDetails(BaseModel):
     """Geolocation specific fields."""
 
@@ -62,6 +69,7 @@ class CustomDetails(BaseModel, arbitrary_types_allowed=False):
     """
 
     amo: AmoDetails | None = None
+    amp: AmpDetails | None = None
     geolocation: GeolocationDetails | None = None
     weather: WeatherDetails | None = None
     polygon: PolygonDetails | None = None

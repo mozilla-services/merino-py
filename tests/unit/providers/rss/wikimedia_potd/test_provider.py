@@ -109,7 +109,7 @@ async def test_shutdown(provider: WikimediaPictureOfTheDayProvider) -> None:
 
 @pytest.mark.asyncio
 async def test_upload_picture_of_the_day_delegates_to_backend(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock
+    provider: WikimediaPictureOfTheDayProvider, backend_mock, statsd_mock
 ) -> None:
     """Test that upload_picture_of_the_day delegates to the backend and returns its result."""
     backend_mock.upload_picture_of_the_day.return_value = True
@@ -118,6 +118,8 @@ async def test_upload_picture_of_the_day_delegates_to_backend(
 
     assert result is True
     backend_mock.upload_picture_of_the_day.assert_awaited_once()
+    # the whole job run is timed
+    statsd_mock.timeit.assert_called_once_with("potd.provider.upload.timing")
 
 
 @freezegun.freeze_time("2026-06-07")
@@ -184,7 +186,7 @@ async def test_get_picture_of_the_day_refetches_when_cached_potd_is_stale(
 @freezegun.freeze_time("2026-06-08")
 @pytest.mark.asyncio
 async def test_get_picture_of_the_day_serves_stale_potd_when_refetch_misses(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock, test_potd
+    provider: WikimediaPictureOfTheDayProvider, backend_mock, statsd_mock, test_potd
 ) -> None:
     """Test that a stale cached potd is served when today's potd cannot be fetched."""
     # cached test_potd is published 2026-06-07, a day old compared to the freeze time
@@ -195,6 +197,7 @@ async def test_get_picture_of_the_day_serves_stale_potd_when_refetch_misses(
 
     backend_mock.fetch_potd_from_gcs_bucket.assert_called_once()
     assert potd is test_potd
+    statsd_mock.increment.assert_not_called()
 
 
 @freezegun.freeze_time("2026-06-07")
@@ -280,7 +283,7 @@ async def test_get_picture_of_the_day_keeps_default_when_no_accepted_languages(
 @freezegun.freeze_time("2026-06-08")
 @pytest.mark.asyncio
 async def test_get_picture_of_the_day_refetches_on_every_miss(
-    provider: WikimediaPictureOfTheDayProvider, backend_mock
+    provider: WikimediaPictureOfTheDayProvider, backend_mock, statsd_mock
 ) -> None:
     """Test that each request re-fetches while nothing is cached and no potd is available."""
     backend_mock.fetch_potd_from_gcs_bucket.return_value = None
@@ -290,3 +293,6 @@ async def test_get_picture_of_the_day_refetches_on_every_miss(
 
     # No throttling: the re-fetch is attempted on every request.
     assert backend_mock.fetch_potd_from_gcs_bucket.call_count == 2
+    # every request that serves nothing is counted
+    assert statsd_mock.increment.call_count == 2
+    statsd_mock.increment.assert_called_with("potd.provider.cached.none")

@@ -205,6 +205,33 @@ async def test_gcs_engagement_fetches_region_data(
 
 
 @pytest.mark.asyncio
+async def test_gcs_engagement_fetches_branch_region_data(
+    gcs_storage_client, gcs_bucket, metrics_client
+):
+    """Test that branch-specific synthetic region strings load without schema changes."""
+    create_blob(
+        gcs_bucket,
+        [
+            {
+                "corpus_item_id": "DE1",
+                "region": "DE-publisher-constraint-in-germany-treatment",
+                "click_count": 7,
+                "impression_count": 70,
+            }
+        ],
+    )
+    gcs_engagement = create_gcs_engagement(gcs_storage_client, gcs_bucket, metrics_client)
+    await wait_until_engagement_is_updated(gcs_engagement)
+
+    assert gcs_engagement.get("DE1", "DE-publisher-constraint-in-germany-treatment") == Engagement(
+        corpus_item_id="DE1",
+        region="DE-publisher-constraint-in-germany-treatment",
+        click_count=7,
+        impression_count=70,
+    )
+
+
+@pytest.mark.asyncio
 async def test_gcs_engagement_logs_error_for_large_blob(
     gcs_storage_client, gcs_bucket, metrics_client, large_blob, caplog
 ):

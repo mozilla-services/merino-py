@@ -54,7 +54,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/integration/api/v1/suggest/test_suggest_top_picks.py",
             "tests/integration/api/v1/suggest/test_suggest_weather.py",
             "tests/integration/api/v1/suggest/test_suggest_wikipedia.py",
-            "tests/integration/providers/suggest/adm/backends/test_remotesettings_icon.py",
             "tests/integration/providers/suggest/finance/backends/test_polygon.py",
             "tests/integration/providers/suggest/sports/backends/test_sportsdata.py",
             "tests/integration/test_setup.py",
@@ -305,7 +304,7 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/integration/providers/suggest/weather/backends/test_accuweather.py",
             "tests/integration/providers/suggest/yelp/backends/test_yelp.py",
             "tests/integration/test_setup.py",
-            "tests/unit/providers/suggest/adm/backends/test_remotesettings.py",
+            "tests/unit/providers/suggest/adm/backends/test_mars.py",
             "tests/unit/providers/suggest/flightaware/backend/test_cache.py",
             "tests/unit/providers/suggest/flightaware/backend/test_errors.py",
             "tests/unit/providers/suggest/sports/backends/common/test_elastic.py",
@@ -809,19 +808,16 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": [],
         "indirect": [],
     },
+    "merino/providers/suggest/adm/backends/mars.py": {
+        "direct": ["tests/unit/providers/suggest/adm/backends/test_mars.py"],
+        "indirect": [
+            "tests/unit/providers/suggest/adm/test_provider.py",
+        ],
+    },
     "merino/providers/suggest/adm/backends/protocol.py": {
         "direct": [],
         "indirect": [
-            "tests/integration/providers/suggest/adm/backends/test_remotesettings_icon.py",
-            "tests/unit/providers/suggest/adm/backends/test_remotesettings.py",
-        ],
-    },
-    "merino/providers/suggest/adm/backends/remotesettings.py": {
-        "direct": ["tests/unit/providers/suggest/adm/backends/test_remotesettings.py"],
-        "indirect": [
-            "tests/integration/providers/suggest/adm/backends/test_remotesettings_icon.py",
-            "tests/unit/providers/suggest/adm/test_provider.py",
-            "tests/unit/utils/test_icon_processor.py",
+            "tests/unit/providers/suggest/adm/backends/test_mars.py",
         ],
     },
     "merino/providers/suggest/adm/provider.py": {
@@ -1310,12 +1306,12 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/integration/jobs/navigational_suggestions/test_domain_metadata_uploader.py",
             "tests/integration/jobs/navigational_suggestions/test_domain_processing_integration.py",
             "tests/integration/jobs/navigational_suggestions/test_favicon_pipeline_integration.py",
-            "tests/integration/providers/suggest/adm/backends/test_remotesettings_icon.py",
             "tests/unit/content_handler/test_gcp_uploader.py",
             "tests/unit/jobs/navigational_suggestions/test_domain_metadata_uploader.py",
             "tests/unit/jobs/navigational_suggestions/test_domain_metadata_uploader_error.py",
             "tests/unit/jobs/navigational_suggestions/test_favicon_processor.py",
             "tests/unit/jobs/navigational_suggestions/test_navigational_suggestions_utils.py",
+            "tests/unit/providers/suggest/adm/backends/test_mars.py",
             "tests/unit/providers/suggest/finance/backends/test_polygon.py",
             "tests/unit/utils/test_icon_processor.py",
         ],
@@ -1327,8 +1323,7 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
     "merino/utils/icon_processor.py": {
         "direct": ["tests/unit/utils/test_icon_processor.py"],
         "indirect": [
-            "tests/integration/providers/suggest/adm/backends/test_remotesettings_icon.py",
-            "tests/unit/providers/suggest/adm/backends/test_remotesettings.py",
+            "tests/unit/providers/suggest/adm/backends/test_mars.py",
         ],
     },
     "merino/utils/log_data_creators.py": {

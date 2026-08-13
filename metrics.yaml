@@ -485,6 +485,26 @@ providers/manifest:
       Any provider that uses the shared manifest metrics namespace.
     alert_policy: []
 
+providers/rss/wikimedia_potd:
+  potd.provider.upload.timing:
+    description: |
+      A timer covering a full run of the Wikimedia picture of the day updater job.
+    type: timing
+    labels: [] # no labels
+    scope: |
+      The "picture_of_the_day update-wikimedia-potd" job.
+    alert_policy: []
+
+  potd.provider.cached.none:
+    description: |
+      A counter incremented when the provider has no picture of the day to serve at
+      all.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/rss/picture-of-the-day" API endpoint.
+    alert_policy: []
+
 utils/synced_gcs_blob_v2:
   gcs.sync.data.not_ready:
     description: |
@@ -731,16 +751,6 @@ curated_recommendations/spindle:
       The Spindle ML server "/find_similar_images" endpoint.
     alert_policy: []
 
-merino-fleece/pii:
-  pii_detect_duration:
-    description: |
-      A summary to instrument the duration of each PII detection call.
-    type: timing
-    labels: []
-    scope: |
-      The "api/v1/pii" API endpoint of "merino-fleece".
-    alert_policy: []
-
 providers/suggest:
   merino_providers_initialize_duration:
     description: |
@@ -850,4 +860,162 @@ utils/query_processing/fleece:
     scope: |
       The "api/v1/suggest" API endpoint, when the `fleece-pii-detection`
       feature flag routes a query through merino-fleece.
+    alert_policy: []
+
+message_handlers/search_terms:
+  fleece.submit.duration:
+    description: |
+      A histogram recording the duration, in seconds, of each search
+      term submission request to merino-fleece.
+    type: histogram
+    labels:
+      - name: outcome
+        description: |
+          Whether the submission request succeeded ("success") or failed
+          ("error", i.e. a transport error, timeout, or non-2xx response).
+    scope: |
+      The FleeceClient used by the search term submission message handler when
+      posting batches to the merino-fleece "search-terms" endpoint.
+    alert_policy: []
+
+  search_term.enqueue.count:
+    description: |
+      A counter incremented once per search term handed to the submission
+      message handler from the "/api/v1/suggest" request path.
+    type: counter
+    labels:
+      - name: outcome
+        description: |
+          Whether the term was enqueued ("success") or rejected ("error").
+      - name: error.type
+        description: |
+          On failure, the rejecting exception class name ("QueueFullException"
+          or "QueueShutDownException"). Absent on success.
+    scope: |
+      LoggingMiddleware, when search term submission is enabled
+      (message_handler.enabled) for a qualifying "/api/v1/suggest" request.
+    alert_policy: []
+
+  async_batch_queue.queue.size:
+    description: |
+      A gauge reporting the number of search terms currently buffered in the
+      submission queue, awaiting batching.
+    type: gauge
+    labels:
+      - name: queue_id
+        description: |
+          Identifier of the queue instance ("search_term_submission").
+    scope: |
+      The AsyncBatchQueue backing the search term submission message handler.
+    alert_policy: []
+
+  async_batch_queue.queue.capacity:
+    description: |
+      A gauge reporting the configured maximum size of the submission queue
+      (message_handler.max_queue_size).
+    type: gauge
+    labels:
+      - name: queue_id
+        description: |
+          Identifier of the queue instance ("search_term_submission").
+    scope: |
+      The AsyncBatchQueue backing the search term submission message handler.
+    alert_policy: []
+
+  async_batch_queue.processed.count:
+    description: |
+      A counter of search terms handed to the batch callback (i.e. submitted to
+      merino-fleece); its sum is total throughput.
+    type: counter
+    labels:
+      - name: queue_id
+        description: |
+          Identifier of the queue instance ("search_term_submission").
+      - name: outcome
+        description: |
+          Whether the batch callback succeeded ("success") or raised ("error").
+      - name: error.type
+        description: |
+          On failure, the exception class name raised by the batch callback
+          (e.g. "FleeceError"). Absent on success.
+    scope: |
+      The AsyncBatchQueue backing the search term submission message handler.
+    alert_policy: []
+
+  async_batch_queue.error_callback.count:
+    description: |
+      A counter of search terms handed to the queue's error callback (the subset
+      whose batch callback raised).
+    type: counter
+    labels:
+      - name: queue_id
+        description: |
+          Identifier of the queue instance ("search_term_submission").
+      - name: outcome
+        description: |
+          Whether the error callback succeeded ("success") or itself raised
+          ("error", i.e. both the primary and fallback paths failed).
+      - name: error.type
+        description: |
+          On failure, the exception class name raised by the error callback.
+          Absent on success.
+    scope: |
+      The AsyncBatchQueue backing the search term submission message handler.
+    alert_policy: []
+
+  async_batch_queue.rejected.count:
+    description: |
+      A counter of search terms rejected by the queue's put() and never
+      enqueued.
+    type: counter
+    labels:
+      - name: queue_id
+        description: |
+          Identifier of the queue instance ("search_term_submission").
+      - name: error.type
+        description: |
+          The rejection reason: "queue_full" (at capacity) or "shutdown"
+          (put attempted after the queue was stopped).
+    scope: |
+      The AsyncBatchQueue backing the search term submission message handler.
+    alert_policy: []
+
+  async_batch_queue.dropped.count:
+    description: |
+      A counter of search terms dropped because they could not be flushed before
+      the graceful-shutdown deadline (message_handler.shutdown_deadline_sec)
+      elapsed.
+    type: counter
+    labels:
+      - name: queue_id
+        description: |
+          Identifier of the queue instance ("search_term_submission").
+    scope: |
+      The AsyncBatchQueue backing the search term submission message handler,
+      during application shutdown.
+    alert_policy: []
+
+  pubsub.publish.count:
+    description: |
+      A counter of search terms published to the Pub/Sub backup channel, labeled by
+      outcome. An "error" outcome indicates the backup publish failed and those
+      search terms were lost.
+    type: counter
+    labels:
+      - name: outcome
+        description: |
+          Whether the publish succeeded ("success") or failed ("error").
+    scope: |
+      The Pub/Sub backup channel used by the search term submission message handler.
+    alert_policy: []
+
+  pubsub.filtered.count:
+    description: |
+      A counter of search terms dropped by basic sanitization (email and numeric
+      queries) before publishing to the Pub/Sub backup channel, so no highly
+      sensitive data is persisted in the queue.
+    type: counter
+    labels: []
+    scope: |
+      The Pub/Sub backup channel used by the search term submission message handler.
     alert_policy: []

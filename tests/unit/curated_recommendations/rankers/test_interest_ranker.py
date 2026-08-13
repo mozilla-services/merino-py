@@ -64,9 +64,11 @@ class StubEngagementBackend(EngagementBackend):
     def __init__(self, metrics: dict[str, tuple[int, int]]) -> None:
         # corpusItemId → (clicks, impressions)
         self._metrics = metrics
+        self.calls: list[tuple[str, str | None]] = []
 
     def get(self, corpus_item_id: str, region: str | None = None) -> Engagement | None:
         """Return the engagement, or None if no record."""
+        self.calls.append((corpus_item_id, region))
         if corpus_item_id not in self._metrics:
             return None
         clicks, impressions = self._metrics[corpus_item_id]
@@ -260,6 +262,27 @@ def test_personal_interests_none() -> None:
     assert [r.corpusItemId for r in ranked] == ["B", "A"]
     # Backend was still called — with an empty strength dict.
     assert backend.last_strengths == {}
+
+
+def test_engagement_region_is_ignored_for_lints_ranker() -> None:
+    """LinTS does not support branch engagement regions yet, so use the base region."""
+    recs = generate_recommendations(item_ids=["A"], time_sensitive_count=0)
+    backend = FakeLinTSBackend(known_items={"A"}, item_scores={"A": 0.2})
+    engagement_backend = StubEngagementBackend({"A": (10, 100)})
+    ranker = InterestRanker(
+        engagement_backend=engagement_backend,
+        prior_backend=StubPriorBackend(),
+        surface_id=SurfaceId.NEW_TAB_EN_US,
+        lints_backend=backend,  # type: ignore[arg-type]
+    )
+
+    ranker.rank_items(
+        recs,
+        region="DE",
+        engagement_region="DE-publisher-constraint-in-germany-treatment",
+    )
+
+    assert engagement_backend.calls == [("A", None), ("A", "DE")]
 
 
 def test_strict_score_descending_order() -> None:

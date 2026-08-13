@@ -24,6 +24,15 @@ from merino.providers.suggest.adm.backends.protocol import FormFactor
 from merino.providers.suggest.adm.provider import Provider
 
 
+@pytest.fixture(autouse=True)
+def mock_engagement_storage_client(mocker: MockerFixture) -> None:
+    """Stub the GCS client so initialize() skips the ~11s metadata-auth hang building a real Storage()."""
+    mocker.patch(
+        "merino.utils.gcs.engagement.filemanager.get_storage_client",
+        return_value=mocker.MagicMock(),
+    )
+
+
 @pytest.fixture(name="adm_parameters")
 def fixture_adm_parameters() -> dict[str, Any]:
     """Define provider parameters for test."""
@@ -66,6 +75,8 @@ def fixture_rs_attachment_raw_us() -> str:
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
+                "header_text": "Example.org header text",
+                "suggestion_id": "11111111-1111-1111-1111-111111111111",
             }
         ]
     )
@@ -100,6 +111,8 @@ def fixture_rs_attachment_raw_de() -> str:
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://de.example.org/target/mozfirefoxaccounts",
+                "header_text": "de.Example.org header text",
+                "suggestion_id": "22222222-2222-2222-2222-222222222222",
             }
         ]
     )
@@ -123,8 +136,67 @@ def fixture_rs_attachment_raw_top_pick() -> str:
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
                 "top_pick_prefix": "fire",
+                "header_text": "Example.org header text",
+                "suggestion_id": "22222222-2222-2222-2222-222222222222",
             }
         ]
+    )
+
+
+@pytest.fixture(name="rs_attachment_raw_no_custom_details_values")
+def fixture_rs_attachment_raw_no_custom_details_values() -> str:
+    """Raw attachment data for a record that lacks a `suggestion_id` (rollout case)."""
+    return json.dumps(
+        [
+            {
+                "id": 2,
+                "advertiser": "Example.org",
+                "click_url": "https://example.org/click/mozilla",
+                "impression_url": "https://example.org/impression/mozilla",
+                "full_keywords": [["firefox accounts", 3], ["mozilla firefox accounts", 4]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": [
+                    "firefox",
+                    "firefox account",
+                    "firefox accounts",
+                    "mozilla",
+                    "mozilla firefox",
+                    "mozilla firefox account",
+                    "mozilla firefox accounts",
+                ],
+                "title": "Mozilla Firefox Accounts",
+                "url": "https://example.org/target/mozfirefoxaccounts",
+            }
+        ]
+    )
+
+
+@pytest.fixture(name="backend_mock_no_custom_details")
+def fixture_backend_mock_no_custom_details(
+    mocker: MockerFixture, rs_attachment_raw_no_custom_details_values: str
+) -> Any:
+    """AdmBackend mock whose attachment record lacks a `suggestion_id`."""
+    backend_mock: Any = mocker.AsyncMock(spec=AdmBackend)
+    index_manager = AmpIndexManager()  # type: ignore[no-untyped-call]
+    index_manager.build(
+        f"US/({FormFactor.DESKTOP.value},)", rs_attachment_raw_no_custom_details_values
+    )
+    backend_mock.fetch.return_value = SuggestionContent(
+        index_manager=index_manager,
+        icons={"01": "attachment-host/main-workspace/quicksuggest/icon-01"},
+    )
+    return backend_mock
+
+
+@pytest.fixture(name="adm_no_custom_details")
+def fixture_adm_no_custom_details(
+    backend_mock_no_custom_details: Any, adm_parameters: dict[str, Any], statsd_mock: Any
+) -> Provider:
+    """AdM Provider backed by a single entry that lacks a `suggestion_id`."""
+    return Provider(
+        backend=backend_mock_no_custom_details, metrics_client=statsd_mock, **adm_parameters
     )
 
 
@@ -156,6 +228,8 @@ def fixture_rs_attachment_raw_thompson() -> str:
                 ],
                 "title": "Mozilla Firefox Accounts",
                 "url": "https://example.org/target/mozfirefoxaccounts",
+                "header_text": "Example.org header text",
+                "suggestion_id": "22222222-2222-2222-2222-222222222222",
             },
             {
                 "id": 2,
@@ -173,6 +247,8 @@ def fixture_rs_attachment_raw_thompson() -> str:
                 ],
                 "title": "Low Engagement Suggestion",
                 "url": "https://example.org/target/lowengagement",
+                "header_text": "LowEngagement header text",
+                "suggestion_id": "33333333-3333-3333-3333-333333333333",
             },
         ]
     )

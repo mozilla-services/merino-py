@@ -115,7 +115,7 @@ client_variant_character_max = 100
 
 # MERINO_WEB__API__V1__CLIENT_VARIANT_ALLOW_LIST
 # list of client variants the merino will be aware about
-client_variant_allow_list = ["engagement_guided_suggestions", "query_norm_treatment", "top_pick_promotion", "amp-fuzzy-matching-treatment"]
+client_variant_allow_list = ["engagement_guided_suggestions", "query_norm_treatment", "amp-fuzzy-matching-treatment"]
 
 # MERINO_WEB__API__V1__HEADER_CHARACTER_MAX
 # A non-negative integer that limits the string character length of a given header string,
@@ -179,10 +179,6 @@ bucket = "main"
 # The remote settings collection that contains data other than AMP.
 collection = "quicksuggest-other"
 
-# MERINO_REMOTE_SETTINGS__COLLECTION_AMP
-# The remote settings collection that contains AMP data.
-collection_amp = "quicksuggest-amp"
-
 # MERINO_REMOTE_SETTINGS__AUTH
 # Authorization token when uploading suggestions.
 auth = ""
@@ -198,13 +194,6 @@ dry_run = false
 # MERINO_REMOTE_SETTINGS__SCORE
 # Default score to set in suggestions uploaded to remote settings.
 score = 0.25
-
-# MERINO_REMOTE_SETTINGS__COUNTRIES
-# Default countries used to filter out records from remote settings.
-countries = ["US"]
-
-# MERINO_REMOTE_SETTINGS__FORM_FACTORS
-form_factors = ["desktop"]
 
 [default.mars]
 # MERINO_MARS__BASE_URL
@@ -244,6 +233,10 @@ url_base = ""
 # Path of the merino-fleece PII detection endpoint.
 pii_path = "/api/v1/pii"
 
+# MERINO_FLEECE__SEARCH_TERMS_PATH
+# Path of the merino-fleece search terms submission endpoint.
+search_terms_path = "/api/v1/search-terms"
+
 # MERINO_FLEECE__CONNECT_TIMEOUT_SEC
 # Timeout in seconds for establishing a connection to merino-fleece.
 connect_timeout_sec = 0.5
@@ -251,6 +244,40 @@ connect_timeout_sec = 0.5
 # MERINO_FLEECE__REQUEST_TIMEOUT_SEC
 # Timeout in seconds for a request to merino-fleece.
 request_timeout_sec = 0.5
+
+# Settings for the asynchronous search term submission message handler.
+[default.message_handler]
+# MERINO_MESSAGE_HANDLER__ENABLED
+# Whether the suggest handler submits search terms to merino-fleece.
+enabled = false
+
+# MERINO_MESSAGE_HANDLER__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to merino-fleece for search term submissions.
+connect_timeout_sec = 2.0
+
+# MERINO_MESSAGE_HANDLER__MAX_BATCH_SIZE
+# Max number of queued search terms to process in a single batch.
+max_batch_size = 512
+
+# MERINO_MESSAGE_HANDLER__COLLECTION_DELAY_SEC
+# Max seconds to wait for a batch to fill before processing a partial batch.
+collection_delay_sec = 5.0
+
+# MERINO_MESSAGE_HANDLER__SHUTDOWN_DEADLINE_SEC
+# Max seconds to spend draining the queue during graceful shutdown before any
+# remaining items are dropped.
+shutdown_deadline_sec = 30.0
+
+# MERINO_MESSAGE_HANDLER__MAX_QUEUE_SIZE
+# Max number of search terms to buffer in the queue. Producers are rejected once
+# this capacity is reached.
+max_queue_size = 10000
+
+# MERINO_MESSAGE_HANDLER__PUBSUB_TOPIC
+# Pub/Sub topic for the backup channel: when a direct HTTP submission
+# to merino-fleece fails, the affected search terms are published here instead so
+# fleece can process them once it recovers. Empty disables the backup channel.
+pubsub_topic = ""
 
 # GCP metadata
 [default.gcp]
@@ -744,7 +771,7 @@ type = "adm"
 enabled_by_default = true
 
 # MERINO_PROVIDERS__ADM__BACKEND
-# The backend of the provider. Either "remote-settings", "mars", or "test".
+# The backend of the provider. Either "mars" or "test".
 backend = "mars"
 
 # MERINO_PROVIDERS__ADM__CRON_INTERVAL_SEC

@@ -10,7 +10,7 @@ import pytest_asyncio
 
 from logging import LogRecord, ERROR
 from pytest import LogCaptureFixture
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Generator
 from merino.configs import settings
 from tests.types import FilterCaplogFixture
 from httpx import AsyncClient
@@ -18,7 +18,7 @@ from pytest_mock import MockerFixture
 from unittest.mock import AsyncMock
 from redis.asyncio import Redis
 from testcontainers.core.wait_strategies import LogMessageWaitStrategy
-from testcontainers.redis import AsyncRedisContainer
+from testcontainers.community.redis import AsyncRedisContainer
 
 from merino.cache.redis import RedisAdapter
 from merino.exceptions import CacheAdapterError
@@ -34,7 +34,7 @@ TICKER_TTL_SEC = settings.providers.polygon.cache_ttls.ticker_ttl_sec
 
 
 @pytest.fixture(scope="module")
-def redis_container() -> AsyncRedisContainer:
+def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     """Create and return a docker container for Redis. Tear it down after all the tests have
     finished running
     """

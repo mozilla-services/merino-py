@@ -26,6 +26,7 @@ from merino.providers.suggest.adm.provider import (
     NonsponsoredSuggestion,
     Provider,
 )
+from merino.providers.suggest.custom_details import AmpDetails, CustomDetails
 
 from tests.types import FilterCaplogFixture
 from tests.unit.types import SuggestionRequestFixture
@@ -155,8 +156,15 @@ async def test_query_fuzzy_rescues_typo_for_treatment(
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="11111111-1111-1111-1111-111111111111",
+                )
+            ),
         )
     ]
 
@@ -341,10 +349,34 @@ async def test_query_success(
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="11111111-1111-1111-1111-111111111111",
+                )
+            ),
         )
     ]
+
+
+@pytest.mark.parametrize("query", ["firefox"])
+@pytest.mark.asyncio
+async def test_query_missing_fields_omits_custom_details(
+    srequest: SuggestionRequestFixture,
+    adm_no_custom_details: Provider,
+    query: str,
+) -> None:
+    """A record without `suggestion_id` or `header_text` omits the AMP custom_details block."""
+    await adm_no_custom_details.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+    res = await adm_no_custom_details.query(srequest(query, geolocation, user_agent, None))
+    assert len(res) == 1
+    assert isinstance(res[0], NonsponsoredSuggestion)
+    assert res[0].custom_details is None
 
 
 @pytest.mark.parametrize("query", ["firefox"])
@@ -371,25 +403,28 @@ async def test_query_with_missing_key(
             provider="adm",
             advertiser="Example.org",
             is_sponsored=False,
+            is_top_pick=False,
             icon="attachment-host/main-workspace/quicksuggest/icon-01",
             score=adm_parameters["score"],
+            custom_details=CustomDetails(
+                amp=AmpDetails(
+                    header_text="Example.org header text",
+                    suggestion_id="11111111-1111-1111-1111-111111111111",
+                )
+            ),
         )
     ]
 
 
 @pytest.mark.parametrize(
-    ("query", "client_variants", "expected_is_top_pick"),
+    ("query", "expected_is_top_pick"),
     [
-        ("firefox", ["top_pick_promotion"], True),
-        ("mozilla", ["top_pick_promotion"], False),
-        ("firefox", [], None),
-        ("firefox", ["some_other_variant"], None),
+        ("firefox", True),
+        ("mozilla", False),
     ],
     ids=[
-        "opted-in-prefix-in-query",
-        "opted-in-prefix-not-in-query",
-        "opted-out-no-variants",
-        "opted-out-other-variant",
+        "prefix-in-query",
+        "prefix-not-in-query",
     ],
 )
 @pytest.mark.asyncio
@@ -397,17 +432,14 @@ async def test_query_is_top_pick(
     srequest: SuggestionRequestFixture,
     adm_top_pick: Provider,
     query: str,
-    client_variants: list[str],
     expected_is_top_pick: bool,
 ) -> None:
-    """`is_top_pick` is True only when the request opts into `top_pick_promotion`
-    AND the record's `top_pick_prefix` is a substring of the query.
-    """
+    """`is_top_pick` is True only when `top_pick_prefix` is a prefix of the query."""
     await adm_top_pick.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
 
-    res = await adm_top_pick.query(srequest(query, geolocation, user_agent, client_variants))
+    res = await adm_top_pick.query(srequest(query, geolocation, user_agent, None))
 
     assert len(res) == 1
     assert res[0].is_top_pick is expected_is_top_pick
@@ -425,7 +457,7 @@ async def test_top_pick_promotion_metric_emitted_on_match(
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
 
-    await adm_top_pick.query(srequest("firefox", geolocation, user_agent, ["top_pick_promotion"]))
+    await adm_top_pick.query(srequest("firefox", geolocation, user_agent, None))
 
     adm_top_pick.metrics_client.increment.assert_called_once_with(  # type: ignore[attr-defined]
         "providers.adm.top_pick_promotion",
@@ -437,49 +469,44 @@ async def test_top_pick_promotion_metric_emitted_on_match(
 
 
 @pytest.mark.parametrize(
-    ("query", "client_variants"),
+    ("query",),
     [
-        ("mozilla", ["top_pick_promotion"]),
-        ("firefox", []),
-        ("firefox", ["some_other_variant"]),
+        ("mozilla",),
     ],
-    ids=["opted-in-prefix-not-in-query", "opted-out-no-variants", "opted-out-other-variant"],
+    ids=[
+        "prefix-not-in-query",
+    ],
 )
 @pytest.mark.asyncio
 async def test_top_pick_promotion_metric_not_emitted(
     srequest: SuggestionRequestFixture,
     adm_top_pick: Provider,
     query: str,
-    client_variants: list[str],
 ) -> None:
-    """The `top_pick_promotion` counter is not emitted when the prefix doesn't match
-    or the client did not opt in.
-    """
+    """The `top_pick_promotion` counter is not emitted when the prefix doesn't match."""
     await adm_top_pick.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
 
-    await adm_top_pick.query(srequest(query, geolocation, user_agent, client_variants))
+    await adm_top_pick.query(srequest(query, geolocation, user_agent, None))
 
     adm_top_pick.metrics_client.increment.assert_not_called()  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
-async def test_query_is_top_pick_none_when_record_has_no_prefix(
+async def test_query_is_top_pick_false_when_record_has_no_prefix(
     srequest: SuggestionRequestFixture,
     adm: Provider,
 ) -> None:
-    """`is_top_pick` is None when the client opts into
-    `top_pick_promotion` but the matched record has no `top_pick_prefix`.
-    """
+    """`is_top_pick` is False when matched record has no `top_pick_prefix`."""
     await adm.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
 
-    res = await adm.query(srequest("firefox", geolocation, user_agent, ["top_pick_promotion"]))
+    res = await adm.query(srequest("firefox", geolocation, user_agent, []))
 
     assert len(res) == 1
-    assert res[0].is_top_pick is None
+    assert res[0].is_top_pick is False
     adm.metrics_client.increment.assert_not_called()  # type: ignore[attr-defined]
 
 
