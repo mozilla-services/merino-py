@@ -38,7 +38,7 @@ The `/manifest` endpoint returns a curated list of websites with associated meta
       ],
       "url": "https://www.microsoft.com/",
       "title": "Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
-      "icon": "https://merino-images.services.mozilla.com/favicons/90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct"
+      "icon": "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct"
     }
   ]
 }

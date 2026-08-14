@@ -22,10 +22,10 @@ url_base = "https://api.accuweather.com"
 
 [stage.image_gcs]
 # MERINO_IMAGE_GCS__GCS_PROJECT
-gcs_project = "moz-fx-merino-nonprod-ee93"
+gcs_project = "moz-fx-merino-nonprod-db57"
 
 # MERINO_IMAGE_GCS__GCS_BUCKET
-gcs_bucket = "merino-images-stagepy"
+gcs_bucket = "merino-images-stage"
 
 # MERINO_IMAGE_GCS__ENABLED
 # Whether to enable fetching from GCS.
@@ -79,11 +79,11 @@ domain_data_source = "remote"
 [stage.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains aggregate engagement and prior data
-bucket_name = "merino-airflow-data-stagepy"
+bucket_name = "merino-airflow-data-stage"
 
 # MERINO__CURATED_RECOMMENDATIONS__GCS__GCP_PROJECT
 # GCP project name where the GCS bucket lives.
-gcp_project = "moz-fx-merino-nonprod-ee93"
+gcp_project = "moz-fx-merino-nonprod-db57"
 
 [stage.ml_recommendations.gcs]
 # MERINO__ML_RECOMMENDATIONS__GCS__GCP_PROJECT

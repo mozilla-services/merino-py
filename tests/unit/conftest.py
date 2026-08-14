@@ -100,7 +100,7 @@ def fixture_blob_json() -> str:
                     "serp_categories": [0],
                     "url": "https://www.microsoft.com/",
                     "title": "Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
-                    "icon": "https://merino-images.services.mozilla.com/favicons"
+                    "icon": "https://prod-images.merino.prod.webservices.mozgcp.net/favicons"
                     "/90cdaf487716184e4034000935c605d1633926d348116d198f355a98b8c6cd21_17174.oct",
                 },
                 {
@@ -110,7 +110,7 @@ def fixture_blob_json() -> str:
                     "serp_categories": [0],
                     "url": "https://www.facebook.com/",
                     "title": "Log in to Facebook",
-                    "icon": "https://merino-images.services.mozilla.com/favicons"
+                    "icon": "https://prod-images.merino.prod.webservices.mozgcp.net/favicons"
                     "/e673f8818103a583c9a98ee38aa7892d58969ec2a8387deaa46ef6d94e8a3796_4535.png",
                 },
                 {
@@ -120,7 +120,7 @@ def fixture_blob_json() -> str:
                     "serp_categories": [0],
                     "url": "https://www.bbc.co.uk/",
                     "title": "BBC Home - Breaking News",
-                    "icon": "https://merino-images.services.mozilla.com/favicons/bbciconhash_12345.png",
+                    "icon": "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/bbciconhash_12345.png",
                 },
                 {
                     "rank": 5,
@@ -129,7 +129,7 @@ def fixture_blob_json() -> str:
                     "serp_categories": [0],
                     "url": "https://edition.cnn.com/2025/04/09/entertainment/aimee-lou-wood-teeth-talk-intl-scli/index.html",
                     "title": "‘White Lotus’ star Aimee Lou Wood doesn’t love all the talk about her teeth | CNN",
-                    "icon": "https://merino-images.services.mozilla.com/favicons/cnniconhash_98765.png",
+                    "icon": "https://prod-images.merino.prod.webservices.mozgcp.net/favicons/cnniconhash_98765.png",
                 },
             ],
             "partners": [],

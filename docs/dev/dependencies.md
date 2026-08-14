@@ -106,8 +106,8 @@ $ STORAGE_EMULATOR_HOST=http://localhost:4443 make run
 
 Optionally, you can create a GCS bucket and preload data into it. The preloaded
 data is located in `dev/local_setup/gcs/`. Say if you want to preload
-a JSON file `top_picks_latest.json` into a bucket `merino-images-prodpy`, you
-can create a new sub-directory `merino-images-prody` in `gcs` and then
+a JSON file `top_picks_latest.json` into a bucket `merino-images-prod`, you
+can create a new sub-directory `merino-images-prod` in `gcs` and then
 create or copy `top_picks_latest.json` into it. Then you can set Merino's
 configurations to use those artifacts in the GCS emulator.
 
@@ -116,7 +116,7 @@ configurations to use those artifacts in the GCS emulator.
 
 dev/local_setup
 └── gcs
-    └── merino-images-prodpy  <- GCS Bucket ID
+    └── merino-images-prod  <- GCS Bucket ID
         └── top_picks_latest.json  <- A preloaded GCS blob
 ```
 
