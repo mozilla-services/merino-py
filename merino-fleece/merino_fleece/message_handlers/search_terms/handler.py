@@ -11,6 +11,7 @@ from opentelemetry import metrics
 
 from merino_fleece.configs import settings
 from merino_fleece.pii import detect_person_batch, get_detector, get_executor
+from merino_fleece.utils.log_data_creator import create_search_term_log
 
 # identifier used to tag the queue's metrics.
 QUEUE_ID = "search_term_sanitization"
@@ -19,7 +20,13 @@ QUEUE_ID = "search_term_sanitization"
 # /pii endpoint's are, so they are truncated before detection.
 QUERY_CHARACTER_MAX = settings.pii.query_character_max
 
+# Whether to log `web.suggest.sanitized`.
+LOG_SEARCH_TERMS: bool = settings.sanitize.log_search_terms
+
 logger = logging.getLogger(__name__)
+
+# web.suggest.sanitized is used for search terms that sanitization clears as NON_PII.
+sanitized_term_logger = logging.getLogger("web.suggest.sanitized")
 
 _meter = metrics.get_meter("fleece")
 _sanitize_counter = _meter.create_counter(
@@ -107,8 +114,9 @@ class MessageHandler:
         Exceptions are left to propagate: ``AsyncBatchQueue`` logs them and counts the
         batch as failed, which drops one batch rather than stopping the run loop.
 
-        Logging the sanitized search terms is left out for now, will implement
-        it in a followup.
+        When ``sanitize.log_search_terms`` is enabled, every term the pass clears as
+        ``PIIType.NON_PII`` is emitted to ``web.suggest.sanitized``. Terms of any other
+        PII type are never logged, nor are terms without a query.
         """
         types: list[PIIType] = []
         # Queries still needing NER, and their positions in `types`.
@@ -143,3 +151,10 @@ class MessageHandler:
         # distinct PII type rather than one per term.
         for type_name, count in Counter(pii_type.name.lower() for pii_type in types).items():
             _sanitize_counter.add(count, {"type": type_name})
+
+        # Log _only_ the sanitized search terms (i.e. those of PIIType.NON_PII)
+        if LOG_SEARCH_TERMS:
+            for term, pii_type in zip(batch, types, strict=True):
+                if pii_type is PIIType.NON_PII and term.query:
+                    log_data = create_search_term_log(term)
+                    sanitized_term_logger.info("", extra=log_data.model_dump())

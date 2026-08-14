@@ -54,6 +54,12 @@ max_queue_size = 10000
 # most 8 hops at the default.
 ner_chunk_size = 64
 
+# MERINO_FLEECE_SANITIZE__LOG_SEARCH_TERMS
+# Whether to emit the `web.suggest.sanitized` data log for search terms that
+# sanitization clears as NON_PII. Terms flagged as any other PII type are never
+# logged. Off by default; enabled per environment once the log sink is in place.
+log_search_terms = false
+
 [default.sentry]
 # MERINO_FLEECE_SENTRY__MODE
 # One of "disabled", "release", "debug". When "disabled", no Sentry client is initialized.
