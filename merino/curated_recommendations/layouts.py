@@ -208,6 +208,8 @@ layout_8_tiles_2_ads = Layout(
         ResponsiveLayout(
             columnCount=4,
             tiles=[
+                # Listed in horizontal stacking order, so the ad at position 1 comes 4th here.
+                # Ad position can't vary across column counts: it must match the 1-column layout.
                 Tile(size=TileSize.MEDIUM, position=0, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=2, hasAd=False, hasExcerpt=False),
                 Tile(size=TileSize.MEDIUM, position=3, hasAd=False, hasExcerpt=False),
