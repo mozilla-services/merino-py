@@ -17,9 +17,11 @@ def restore_logger_disabled_state() -> Any:
     """Restore each logger's ``disabled`` flag after the test.
 
     ``configure_logging`` calls ``logging.config.dictConfig``, which defaults to
-    ``disable_existing_loggers=True``. Without this fixture, configuring one logger here
-    silently disables loggers created elsewhere (e.g. ``merino_common.routers.dockerflow``
-    imported during collection) and breaks unrelated tests that rely on caplog.
+    ``disable_existing_loggers=True``. Without this fixture, configuring logging here
+    silently disables loggers created elsewhere during collection and breaks unrelated
+    tests that rely on caplog. The config names ``merino_common``, so the shared modules
+    are safe; anything outside the configured namespaces (third-party loggers, test
+    modules) is not.
     """
     logger_dict = logging.root.manager.loggerDict
     snapshot = {
@@ -76,6 +78,75 @@ def test_configure_log_handler_assigned(log_format: str, expected_handler: str) 
     log_manager: Any = logging.root.manager
     handler_name: Any = log_manager.loggerDict["merino"].handlers[0].name
     assert handler_name == expected_handler
+
+
+@pytest.mark.parametrize("logger_name", ["merino", "merino_fleece"], ids=["merino", "fleece"])
+@pytest.mark.parametrize(
+    "shared_logger",
+    [
+        "merino_common.utils.cron",
+        "merino_common.utils.async_batch_queue",
+        "merino_common.routers.dockerflow",
+        "merino_common.app_configs.config_sentry",
+    ],
+)
+def test_shared_loggers_survive_configuration(shared_logger: str, logger_name: str) -> None:
+    """A `merino_common.*` logger created before configuration is not disabled by it.
+
+    `merino_common` is a sibling namespace of both apps' `logger_name`, and every shared
+    module binds its logger at import time -- which happens before the app lifespan calls
+    this function. `dictConfig` disables pre-existing loggers it is not told about, so
+    without a `merino_common` entry these all go silent in production while still passing
+    every test that does not configure logging.
+    """
+    logging.getLogger(shared_logger)
+
+    configure_logging(
+        log_format="mozlog",
+        level="INFO",
+        can_propagate=False,
+        current_env="development",
+        logger_name=logger_name,
+    )
+
+    assert logging.getLogger(shared_logger).disabled is False
+    assert logging.getLogger(shared_logger).isEnabledFor(logging.INFO)
+
+
+def test_shared_logger_records_reach_the_configured_handler() -> None:
+    """A record emitted by a shared module lands on the app's own log handler.
+
+    Guards the routing as well as the `disabled` flag: being enabled is worthless if the
+    record has no handler to reach.
+    """
+    cron_logger = logging.getLogger("merino_common.utils.cron")
+
+    configure_logging(
+        log_format="mozlog",
+        level="INFO",
+        can_propagate=False,
+        current_env="development",
+        logger_name="merino_fleece",
+    )
+
+    records: list[logging.LogRecord] = []
+
+    class Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    parent = logging.getLogger("merino_common")
+    assert parent.handlers[0].name == "console-mozlog", "shared loggers must route to MozLog"
+    capture = Capture()
+    parent.addHandler(capture)
+    try:
+        cron_logger.info("Cron: successfully ran task refresh_amp")
+    finally:
+        parent.removeHandler(capture)
+
+    assert [record.getMessage() for record in records] == [
+        "Cron: successfully ran task refresh_amp"
+    ]
 
 
 def test_configure_logging_uses_provided_logger_name() -> None:

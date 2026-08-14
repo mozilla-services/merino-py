@@ -75,6 +75,18 @@ def configure_logging(
                     "level": level,
                     "propagate": can_propagate,
                 },
+                # Modules shared through merino-common log under `merino_common.*`, which is
+                # a sibling of `logger_name` rather than a child of it. This entry is what
+                # keeps them alive: `dictConfig` defaults to `disable_existing_loggers=True`,
+                # and every one of them is created at import time -- long before this function
+                # runs from the app lifespan -- so without it they are all silently disabled.
+                # Children of a configured logger are reset instead of disabled, which is why
+                # naming the parent is enough.
+                "merino_common": {
+                    "handlers": handler,
+                    "level": level,
+                    "propagate": can_propagate,
+                },
                 "web.suggest.request": {
                     "handlers": handler,
                     "level": level,
