@@ -1633,24 +1633,14 @@ class TestSections:
         legacy_sections_present = [sid for sid in sections if sid in legacy_topics]
         assert len(legacy_sections_present) > 0, "Should have at least some legacy topic sections"
 
-    @pytest.mark.parametrize(
-        "experiment_payload",
-        [
-            {},  # No experiment
-            {
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-        ],
-    )
-    def test_sections_feed_content(self, experiment_payload, caplog, client: TestClient):
+    def test_sections_feed_content(self, caplog, client: TestClient):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale.
         """
         locale = "en-US"
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": locale, "feeds": ["sections"]} | experiment_payload,
+            json={"locale": locale, "feeds": ["sections"]},
         )
         data = response.json()
 
@@ -1869,10 +1859,6 @@ class TestSections:
         [
             {},  # No experiment
             {
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "control",
-            },
-            {
                 "experimentName": ExperimentName.CONTEXTUAL_AD_NIGHTLY_EXPERIMENT.value,
                 "experimentBranch": "treatment",
             },
@@ -1938,7 +1924,6 @@ class TestSections:
             assert first_section["layout"]["name"] == "8-double-row-2-ad"
         elif experiment_name in (
             None,
-            ExperimentName.ML_SECTIONS_EXPERIMENT.value,
             ExperimentName.NO_LARGE_CARD_EXPERIMENT.value,
         ):
             assert first_section["layout"]["name"] == "7-double-row-2-ad"
@@ -2440,45 +2425,6 @@ class TestSections:
         assert top_stories_section is not None
         assert top_stories_section["receivedFeedRank"] == 0
 
-    @pytest.mark.parametrize("enable_interest_picker", [True, False])
-    def test_sections_interest_picker_ml_sections(
-        self, enable_interest_picker, monkeypatch, client: TestClient
-    ):
-        """Test the curated recommendations endpoint returns expected response when an
-        interest picker & ML sections enabled
-        """
-        # The fixture data doesn't have enough sections for the interest picker to show up, so lower
-        # the minimum number of sections that it needs to have to 1.
-        monkeypatch.setattr(interest_picker, "MIN_INTEREST_PICKER_COUNT", 1)
-
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "experimentName": "optin-new-tab-ml-sections",
-                "experimentBranch": "treatment",
-                "utc_offset": 17,
-                "coarse_os": "win",
-                "surface_id": "",
-                "locale": "en-US",
-                "region": "US",
-                "enableInterestPicker": enable_interest_picker,
-                "feeds": ["sections"],
-            },
-        )
-        data = response.json()
-        interest_picker_response = data["interestPicker"]
-        if enable_interest_picker:
-            assert interest_picker_response is not None
-            assert (
-                interest_picker_response["title"] == "Follow topics to fine-tune your experience"
-            )
-        else:
-            assert interest_picker_response is None
-        # Ensure top_stories_section always has receivedFeedRank == 0
-        top_stories_section = data["feeds"].get("top_stories_section")
-        assert top_stories_section is not None
-        assert top_stories_section["receivedFeedRank"] == 0
-
     @pytest.mark.parametrize(
         "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
         range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
@@ -2488,8 +2434,6 @@ class TestSections:
         payload = {
             "locale": "en-US",
             "feeds": ["sections"],
-            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-            "experimentBranch": "treatment",
         }
         seed_response = client.post("/api/v1/curated-recommendations", json=payload)
         assert seed_response.status_code == 200
@@ -2645,8 +2589,6 @@ class TestSections:
         payload = {
             "locale": "en-US",
             "feeds": ["sections"],
-            "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-            "experimentBranch": "treatment",
         }
         seed_response = client.post("/api/v1/curated-recommendations", json=payload)
         assert seed_response.status_code == 200
@@ -2707,8 +2649,6 @@ class TestSections:
                 "locale": locale,
                 "region": region,
                 "feeds": ["sections"],
-                "experimentName": ExperimentName.ML_SECTIONS_EXPERIMENT.value,
-                "experimentBranch": "treatment",
             },
         )
 

@@ -407,13 +407,6 @@ def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> 
     )
 
 
-def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if subtopics should be included based on experiments.
-    Previously this was an experiment. This function should be refactored out.
-    """
-    return True
-
-
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if in scheduler holdback expereiment."""
     return is_enrolled_in_experiment(
@@ -858,16 +851,13 @@ async def get_sections(
     """
     engagement_region = region if engagement_region is None else engagement_region
 
-    # Determine if we should include subtopics based on experiments
-    include_subtopics = is_subtopics_experiment(request)
-
     rescaler = get_ranking_rescaler_for_branch(request, surface_id)
 
     raw_daily_briefing, corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=1,
-        include_subtopics=include_subtopics,
+        include_subtopics=True,
         exclude_editorial_sections=should_exclude_editorial_sections(request),
     )
 

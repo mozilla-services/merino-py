@@ -58,7 +58,6 @@ from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
-    is_subtopics_experiment,
     is_daily_briefing_experiment,
     is_no_large_card_experiment,
     should_exclude_editorial_sections,
@@ -352,28 +351,6 @@ class TestRawSectionExperimentResolution:
         result = dedupe_experiment_sections([localized, sports])
 
         assert [section.externalId for section in result] == ["education", "sports"]
-
-
-class TestMlSectionsExperiment:
-    """Tests covering is_subtopics_experiment"""
-
-    @pytest.mark.parametrize(
-        "name,branch,region,expected",
-        [
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control", "US", True),
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", True),
-            ("other", "treatment", "US", True),
-            ("other", "treatment", "DE", True),
-            ("other", "treatment", "ZZ", True),
-        ],
-    )
-    def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
-        """Test that experiment flag logic matches expected behavior for ML sections"""
-        req = SimpleNamespace(
-            experimentName=name, experimentBranch=branch, region=region, inferredInterests=None
-        )
-        assert is_subtopics_experiment(req) is expected
 
 
 class TestDailyBriefingExperiment:
