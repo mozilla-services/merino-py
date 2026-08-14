@@ -19,6 +19,7 @@ from merino.curated_recommendations.layouts import (
     layout_4_large,
     layout_6_tiles,
     layout_7_tiles_2_ads,
+    layout_8_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
 from merino.curated_recommendations.ml_backends.protocol import (
@@ -362,6 +363,16 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
     )
 
 
+def is_no_large_card_experiment(request: CuratedRecommendationsRequest) -> bool:
+    """Return True if Popular Today should drop its large tile (HNT-2920).
+
+    Gated on an internal experiment so the layout can be QA'd before it reaches users.
+    """
+    return is_enrolled_in_experiment(
+        request, ExperimentName.NO_LARGE_CARD_EXPERIMENT.value, "treatment"
+    )
+
+
 def is_daily_briefing_experiment(request: CuratedRecommendationsRequest) -> bool:
     """Return True if the Daily Briefing Section experiment is enabled (either branch)."""
     experiment_name = ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
@@ -394,13 +405,6 @@ def is_inferred_time_zone_experiment(request: CuratedRecommendationsRequest) -> 
         ExperimentName.INFERRED_TIME_ZONE_EXPERIMENT.value,
         CONTEXTUAL_RANKING_TREATMENT_TZ,
     )
-
-
-def is_subtopics_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if subtopics should be included based on experiments.
-    Previously this was an experiment. This function should be refactored out.
-    """
-    return True
 
 
 def is_scheduler_holdback_experiment(request: CuratedRecommendationsRequest) -> bool:
@@ -847,16 +851,13 @@ async def get_sections(
     """
     engagement_region = region if engagement_region is None else engagement_region
 
-    # Determine if we should include subtopics based on experiments
-    include_subtopics = is_subtopics_experiment(request)
-
     rescaler = get_ranking_rescaler_for_branch(request, surface_id)
 
     raw_daily_briefing, corpus_sections_all = await get_corpus_sections(
         sections_backend=sections_backend,
         surface_id=surface_id,
         min_feed_rank=1,
-        include_subtopics=include_subtopics,
+        include_subtopics=True,
         exclude_editorial_sections=should_exclude_editorial_sections(request),
     )
 
@@ -963,7 +964,9 @@ async def get_sections(
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
     popular_today_layout = layout_7_tiles_2_ads
 
-    if is_contextual_ads_experiment(request):
+    if is_no_large_card_experiment(request):
+        popular_today_layout = layout_8_tiles_2_ads
+    elif is_contextual_ads_experiment(request):
         popular_today_layout = layout_4_large
 
     prior = ranker.get_regional_prior(region, engagement_region)

@@ -58,8 +58,8 @@ from merino.curated_recommendations.sections import (
     adjust_ads_in_sections,
     dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
-    is_subtopics_experiment,
     is_daily_briefing_experiment,
+    is_no_large_card_experiment,
     should_exclude_editorial_sections,
     should_show_popular_today_with_daily_briefing,
     update_received_feed_rank,
@@ -353,28 +353,6 @@ class TestRawSectionExperimentResolution:
         assert [section.externalId for section in result] == ["education", "sports"]
 
 
-class TestMlSectionsExperiment:
-    """Tests covering is_subtopics_experiment"""
-
-    @pytest.mark.parametrize(
-        "name,branch,region,expected",
-        [
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "control", "US", True),
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "US", True),
-            (ExperimentName.SCHEDULER_HOLDBACK_EXPERIMENT.value, "other", "CA", True),
-            ("other", "treatment", "US", True),
-            ("other", "treatment", "DE", True),
-            ("other", "treatment", "ZZ", True),
-        ],
-    )
-    def test_flag_subtopics_experiment_logic(self, name, branch, region, expected):
-        """Test that experiment flag logic matches expected behavior for ML sections"""
-        req = SimpleNamespace(
-            experimentName=name, experimentBranch=branch, region=region, inferredInterests=None
-        )
-        assert is_subtopics_experiment(req) is expected
-
-
 class TestDailyBriefingExperiment:
     """Tests covering is_daily_briefing_experiment and should_show_popular_today_with_daily_briefing"""
 
@@ -431,6 +409,28 @@ class TestDailyBriefingExperiment:
         """Test that should_show_popular_today_with_daily_briefing returns True only for briefing-with-popular."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert should_show_popular_today_with_daily_briefing(req) is expected
+
+
+class TestNoLargeCardExperiment:
+    """Tests covering is_no_large_card_experiment (HNT-2920)."""
+
+    @pytest.mark.parametrize(
+        "name,branch,expected",
+        [
+            # treatment branch drops the large tile from Popular Today
+            (ExperimentName.NO_LARGE_CARD_EXPERIMENT.value, "treatment", True),
+            # control branch keeps the current layout
+            (ExperimentName.NO_LARGE_CARD_EXPERIMENT.value, "control", False),
+            # other experiment does not affect this
+            ("other-experiment", "treatment", False),
+            # no experiment keeps the current layout
+            (None, None, False),
+        ],
+    )
+    def test_is_no_large_card_experiment(self, name, branch, expected):
+        """Test that is_no_large_card_experiment returns True only for the treatment branch."""
+        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
+        assert is_no_large_card_experiment(req) is expected
 
 
 class TestEditorialSectionsExperiment:
