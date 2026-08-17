@@ -1,6 +1,7 @@
 """Tests for the FastAPI /api/v1/search-terms endpoint."""
 
 from collections.abc import Callable, Iterator
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -101,6 +102,35 @@ def test_submit_search_terms(make_client: ClientFactory) -> None:
     assert resp.status_code == 201
     assert resp.json() == {"submitted": 2}
     assert [term.query for term in handler.puts] == ["foo", "bar"]
+
+
+def test_submit_search_terms_with_timestamp(make_client: ClientFactory) -> None:
+    """A submitted term's timestamp is parsed and reaches the queue as an aware datetime."""
+    handler = FakeHandler()
+    client = make_client(handler)
+
+    body = {"search_terms": [_search_term(query="foo", submitted_at="2022-12-18T15:58:41+00:00")]}
+    resp = client.post("/api/v1/search-terms", json=body)
+
+    assert resp.status_code == 201
+    assert handler.puts[0].submitted_at == datetime(
+        2022, 12, 18, hour=15, minute=58, second=41, tzinfo=UTC
+    )
+
+
+def test_submit_search_terms_without_timestamp(make_client: ClientFactory) -> None:
+    """A term omitting the timestamp is still accepted.
+
+    Merino and merino-fleece deploy independently, so merino-fleece must not reject a
+    batch from a Merino that predates the field.
+    """
+    handler = FakeHandler()
+    client = make_client(handler)
+
+    resp = client.post("/api/v1/search-terms", json={"search_terms": [_search_term(query="foo")]})
+
+    assert resp.status_code == 201
+    assert handler.puts[0].submitted_at is None
 
 
 def test_submit_empty_search_terms(client: TestClient) -> None:

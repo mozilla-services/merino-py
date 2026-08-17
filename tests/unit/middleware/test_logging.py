@@ -5,6 +5,7 @@
 """Unit tests for the middleware logging module."""
 
 import logging
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from pytest import LogCaptureFixture
@@ -13,7 +14,11 @@ from starlette.types import Receive, Scope, Send
 
 from merino.middleware.logging import LoggingMiddleware
 from merino.utils.featureflags import FeatureFlags
-from merino_common.models.suggest_logging import SuggestLogDataModel
+from merino_common.models.suggest_logging import (
+    MozlogDataModel,
+    SuggestLogDataModel,
+    SuggestRequestParams,
+)
 from merino_common.utils.async_batch_queue import QueueFullException
 from merino.configs import settings
 
@@ -257,3 +262,78 @@ async def test_submits_regardless_of_pii_flag(
     handler.put.assert_called_once_with(log_data.request_params)
 
     assert not any(record.name == "web.suggest.request" for record in caplog.records)
+
+
+def _suggest_log_data() -> SuggestLogDataModel:
+    """Return log data carrying real request params, so `submitted_at` is observable."""
+    return SuggestLogDataModel(
+        sensitive=True,
+        mozlog=MozlogDataModel(
+            errno=0,
+            time=datetime(2022, 12, 18, tzinfo=UTC),
+            path="/api/v1/suggest",
+            method="GET",
+        ),
+        request_params=SuggestRequestParams(
+            query="apple",
+            code=200,
+            rid="rid",
+            client_variants="",
+            requested_providers="wikipedia",
+            browser="Firefox",
+            os_family="macos",
+            form_factor="desktop",
+        ),
+    )
+
+
+@pytest.mark.asyncio
+async def test_submitted_term_is_stamped_with_utc_timestamp(
+    mocker: MockerFixture,
+    receive_mock: Receive,
+    send_mock: Send,
+) -> None:
+    """Test that an enqueued search term carries the UTC instant it was submitted."""
+    log_data = _suggest_log_data()
+    mocker.patch("merino.middleware.logging.create_suggest_log_data", return_value=log_data)
+    mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
+    mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", False)
+    handler = mocker.MagicMock()
+    mocker.patch("merino.middleware.logging.get_message_handler", return_value=handler)
+
+    before = datetime.now(UTC)
+    logging_middleware: LoggingMiddleware = LoggingMiddleware(app)
+    await logging_middleware(_suggest_scope(), receive_mock, send_mock)
+
+    submitted_at = handler.put.call_args.args[0].submitted_at
+    assert submitted_at is not None
+    assert submitted_at.tzinfo is not None
+    assert submitted_at.utcoffset() == timedelta(0)
+    assert before <= submitted_at <= datetime.now(UTC)
+
+
+@pytest.mark.asyncio
+async def test_no_timestamp_when_term_is_not_submitted(
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    receive_mock: Receive,
+    send_mock: Send,
+) -> None:
+    """Test that the log-only path neither stamps nor logs a submission timestamp.
+
+    The timestamp describes a submission to merino-fleece, so a request that is only
+    logged has none, and the suggest request record never carries the field either way.
+    """
+    log_data = _suggest_log_data()
+    mocker.patch("merino.middleware.logging.create_suggest_log_data", return_value=log_data)
+    mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", False)
+    mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", True)
+
+    caplog.set_level(logging.INFO)
+    logging_middleware: LoggingMiddleware = LoggingMiddleware(app)
+    await logging_middleware(_suggest_scope(), receive_mock, send_mock)
+
+    assert log_data.request_params.submitted_at is None
+    records = [record for record in caplog.records if record.name == "web.suggest.request"]
+    assert len(records) == 1
+    assert not hasattr(records[0], "submitted_at")

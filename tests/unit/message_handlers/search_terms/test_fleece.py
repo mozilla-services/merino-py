@@ -4,6 +4,7 @@
 
 """Unit tests for the merino-fleece search terms client."""
 
+import json
 from collections.abc import Callable
 
 import httpx
@@ -14,6 +15,7 @@ from merino.configs import settings
 from merino.message_handlers.search_terms.errors import FleeceError
 from merino.message_handlers.search_terms.fleece import FleeceClient
 from merino_common.models.suggest_logging import SuggestRequestParams
+from tests.unit.message_handlers.search_terms.conftest import SUBMITTED_AT_ISO
 
 Params = Callable[[str], SuggestRequestParams]
 
@@ -32,6 +34,27 @@ async def test_submit_posts_batch_as_submission(mocker: MockerFixture, params: P
     args, kwargs = http_client.post.call_args
     assert args[0] == settings.fleece.search_terms_path
     assert [term["query"] for term in kwargs["json"]["search_terms"]] == ["apple", "orange"]
+
+
+@pytest.mark.asyncio
+async def test_submit_posts_submitted_at_as_json_encodable_string(
+    mocker: MockerFixture, params: Params
+) -> None:
+    """Test that the submission timestamp is posted as a UTC ISO string.
+
+    The body must be JSON-encodable as dumped: httpx encodes the `json=` kwarg itself
+    and raises TypeError on a raw datetime, which the model's field serializer prevents.
+    """
+    request = httpx.Request("POST", "http://fleece/api/v1/search-terms")
+    http_client = mocker.AsyncMock(spec=httpx.AsyncClient)
+    http_client.post.return_value = httpx.Response(201, request=request)
+
+    client = FleeceClient(http_client=http_client)
+    await client.submit([params("apple")])
+
+    body = http_client.post.call_args.kwargs["json"]
+    assert body["search_terms"][0]["submitted_at"] == SUBMITTED_AT_ISO
+    json.dumps(body)  # raises TypeError if any value is not JSON-encodable
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,21 @@
 """Shared log data models for Suggest logging."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, field_serializer, model_serializer
+
+
+def serialize_utc_iso(value: datetime | None) -> str | None:
+    """Serialize a datetime as a UTC ISO-8601 str that BigQuery parses as a `TIMESTAMP`.
+
+    Naive values are read as UTC rather than rejected, so a submission from an older
+    client still lands as a usable timestamp.
+    """
+    if value is None:
+        return None
+    aware = value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+    return aware.astimezone(UTC).isoformat()
 
 
 class MozlogDataModel(BaseModel):
@@ -37,6 +49,14 @@ class SuggestRequestParams(BaseModel):
     browser: str
     os_family: str
     form_factor: str
+    # Stamped by Merino when the search term submission is created, and deliberately kept
+    # out of the `web.suggest.request` record -- see `SuggestLogDataModel.serialize_flat`.
+    submitted_at: datetime | None = None
+
+    @field_serializer("submitted_at")
+    def serialize_submitted_at(self, v: datetime | None, **kwargs) -> str | None:
+        """Return the submission timestamp as a UTC ISO formatted str."""
+        return serialize_utc_iso(v)
 
 
 class SuggestLogDataModel(BaseModel):
@@ -55,7 +75,9 @@ class SuggestLogDataModel(BaseModel):
         return {
             "sensitive": self.sensitive,
             **self.mozlog.model_dump(),
-            **self.request_params.model_dump(),
+            # `submitted_at` belongs to the search term submission path only. This record
+            # has a fixed downstream schema, and `mozlog.time` already timestamps it.
+            **self.request_params.model_dump(exclude={"submitted_at"}),
         }
 
 
@@ -78,6 +100,9 @@ class SanitizedSearchTermLog(BaseModel):
     sensitive: bool = True
     query: str
     request_id: str  # Maps to `SuggestRequestParams.rid`.
+    # Maps to `SuggestRequestParams.submitted_at`, renamed to the name the search terms
+    # BigQuery dataset expects. Null for submissions that predate the field.
+    timestamp: datetime | None = None
     session_id: str | None = None
     sequence_no: int | None = None
     country: str | None = None
@@ -87,3 +112,8 @@ class SanitizedSearchTermLog(BaseModel):
     browser: str | None = None
     os_family: str | None = None
     form_factor: str | None = None
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, v: datetime | None, **kwargs) -> str | None:
+        """Return the submission timestamp as a UTC ISO formatted str."""
+        return serialize_utc_iso(v)

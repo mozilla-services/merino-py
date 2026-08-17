@@ -3,7 +3,7 @@
 import logging
 import re
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Pattern
 
 from opentelemetry import metrics
@@ -51,7 +51,14 @@ _enqueue_counter = _meter.create_counter(
 
 
 def _submit_search_term(request_params: SuggestRequestParams) -> None:
-    """Enqueue a search term for asynchronous submission, without failing the request."""
+    """Enqueue a search term for asynchronous submission, without failing the request.
+
+    The submission timestamp is stamped here rather than where the params are built, so
+    it is only set on terms that are actually submitted. Mutating the params in place is
+    safe: the suggest request log is written before this runs, and it excludes the field
+    in any case.
+    """
+    request_params.submitted_at = datetime.now(UTC)
     try:
         get_message_handler().put(request_params)
     except (QueueFullException, QueueShutDownException) as ex:

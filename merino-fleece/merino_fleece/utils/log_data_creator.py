@@ -11,6 +11,7 @@ def create_search_term_log(params: SuggestRequestParams) -> SanitizedSearchTermL
     return SanitizedSearchTermLog(
         query=params.query or "",
         request_id=params.rid,
+        timestamp=params.submitted_at,
         session_id=params.session_id,
         sequence_no=params.sequence_no,
         country=params.country,

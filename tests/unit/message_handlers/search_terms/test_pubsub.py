@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 from merino.configs import settings
 from merino.message_handlers.search_terms.pubsub import PubSubClient, create_publisher_client
 from merino_common.models.suggest_logging import SearchTermsSubmission, SuggestRequestParams
+from tests.unit.message_handlers.search_terms.conftest import SUBMITTED_AT
 
 Params = Callable[[str], SuggestRequestParams]
 
@@ -50,6 +51,9 @@ async def test_publish_sends_sanitized_submission(mocker: MockerFixture, params:
     assert topic == "projects/p/topics/t"
     submission = SearchTermsSubmission.model_validate_json(data)
     assert [term.query for term in submission.search_terms] == ["apple", "orange"]
+    # The backup channel must carry the submission timestamp too, since a replayed
+    # message is sanitized and logged long after it was published.
+    assert [term.submitted_at for term in submission.search_terms] == [SUBMITTED_AT, SUBMITTED_AT]
 
 
 @pytest.mark.asyncio

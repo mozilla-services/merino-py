@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 
 import pytest
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
@@ -556,6 +557,10 @@ async def test_log_record_shape(
     `sensitive` is asserted on the record rather than on the model, so the flag is
     proven to survive the `model_dump()` hop into `extra=`. Without it the record
     would flow to the generally accessible log inspection interfaces.
+
+    `timestamp` is asserted here for the same reason: it is the name the BigQuery
+    dataset reads, it must arrive as a str rather than a datetime, and `extra=` rejects
+    keys that collide with reserved `LogRecord` attributes.
     """
     term = SuggestRequestParams(
         query="the weather today",
@@ -572,6 +577,7 @@ async def test_log_record_shape(
         browser="Firefox(120)",
         os_family="macos",
         form_factor="desktop",
+        submitted_at=datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=UTC),
     )
 
     await MessageHandler().sanitize_batch([term])
@@ -582,6 +588,8 @@ async def test_log_record_shape(
     assert record.sensitive is True  # type: ignore[attr-defined]
     assert record.query == "the weather today"  # type: ignore[attr-defined]
     assert record.request_id == "request-id"  # type: ignore[attr-defined]
+    assert record.timestamp == "2022-12-18T15:58:41+00:00"  # type: ignore[attr-defined]
+    assert not hasattr(record, "submitted_at")  # renamed at the log boundary
     assert record.session_id == "session-id"  # type: ignore[attr-defined]
     assert record.sequence_no == 3  # type: ignore[attr-defined]
     assert record.country == "US"  # type: ignore[attr-defined]
