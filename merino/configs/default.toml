@@ -248,7 +248,8 @@ request_timeout_sec = 0.5
 # Settings for the asynchronous search term submission message handler.
 [default.message_handler]
 # MERINO_MESSAGE_HANDLER__ENABLED
-# Whether the suggest handler submits search terms to merino-fleece.
+# Reserved on/off toggle, retained for future use. Submission is currently
+# gated by the `search-term-submission` feature flag (configs/flags/), not this key.
 enabled = false
 
 # MERINO_MESSAGE_HANDLER__CONNECT_TIMEOUT_SEC

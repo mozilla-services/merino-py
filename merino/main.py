@@ -129,11 +129,13 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     from merino import curated_recommendations
     from merino.message_handlers import search_terms
     from merino.providers import games, manifest, rss, suggest
+    from merino.utils.featureflags import FeatureFlags
+    from merino.message_handlers.search_terms import SUBMISSION_FLAG
 
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
 
-    if settings.message_handler.enabled:
+    if FeatureFlags().is_enabled(SUBMISSION_FLAG):
         await search_terms.start()
         cleanup_callbacks.append(search_terms.stop)
 

@@ -1,2 +1,6 @@
 [stage]
 dynaconf_merge = true
+
+# Search term submission to merino-fleece is enabled by default in staging.
+[stage.flags.search-term-submission]
+enabled = 1

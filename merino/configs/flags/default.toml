@@ -14,3 +14,9 @@
 #   the flag is 'off' (meaning that a check for the flag will return False 100%
 #   of the time) and a value of 1 indicates that the flag is 'on' for all.
 # enabled=0.5
+
+# Gates search term submission to merino-fleece: both starting the message handler
+# and the per-request enqueue.
+[default.flags.search-term-submission]
+scheme = "random"
+enabled = 0

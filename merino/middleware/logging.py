@@ -11,7 +11,8 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from merino.middleware import ScopeKey
-from merino.message_handlers.search_terms import get_message_handler
+from merino.message_handlers.search_terms import SUBMISSION_FLAG, get_message_handler
+from merino.utils.featureflags import FeatureFlags
 from merino.utils.log_data_creators import create_suggest_log_data
 from merino_common.models.suggest_logging import (
     SuggestLogDataModel,
@@ -36,7 +37,7 @@ PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
 LOG_SUGGEST_REQUEST: bool = settings.logging.log_suggest_request
 
 # Whether to submit search terms to merino-fleece for sanitization.
-SUBMIT_SEARCH_TERMS: bool = settings.message_handler.enabled
+SUBMIT_SEARCH_TERMS: bool = FeatureFlags().is_enabled(SUBMISSION_FLAG)
 
 # Excluded providers for logging
 EXCLUDED_PROVIDERS: frozenset[str] = frozenset(settings.logging.excluded_providers)
