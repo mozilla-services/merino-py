@@ -9,11 +9,6 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
     WikimediaPotdError,
 )
 
-# This is needed to prevent Wikimedia from blocking our requests as bot requests.
-WIKIMEDIA_REQUEST_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (compatible; Merino/1.0; +https://github.com/mozilla-services/merino-py)"
-}
-
 # Commons stores each language's POTD description on its own template subpage titled
 # "Template:Potd/{date} ({lang})", so the trailing parenthesized code is the language.
 # The bare "Template:Potd/{date}" page (the file selector) has no suffix and is ignored.
