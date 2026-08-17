@@ -4,12 +4,10 @@ Exposes the process-wide ``MessageHandler`` singleton and its lifecycle function
 """
 
 from merino.message_handlers.search_terms.handler import MessageHandler
-from merino.utils.featureflags import FeatureFlags
 
 __all__ = [
     "MessageHandler",
     "SUBMISSION_FLAG",
-    "SUBMISSION_ENABLED",
     "message_handler",
     "start",
     "stop",
@@ -17,7 +15,6 @@ __all__ = [
 ]
 
 SUBMISSION_FLAG = "search-term-submission"
-SUBMISSION_ENABLED: bool = FeatureFlags().is_enabled(SUBMISSION_FLAG)
 
 # The message handler singleton. Use `start()` and `stop()` to interact with it.
 message_handler: MessageHandler = MessageHandler()
