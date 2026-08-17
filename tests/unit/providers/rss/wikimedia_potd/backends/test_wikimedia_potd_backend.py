@@ -20,7 +20,7 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
     WikimediaPotdError,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
-from merino.providers.rss.wikimedia_potd.backends.utils import WIKIMEDIA_REQUEST_HEADERS
+from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPictureOfTheDayBackend,
 )

@@ -11,16 +11,14 @@ import requests
 from merino.jobs.wikipedia_offline_uploader.make_suggestions import make_suggestions
 from merino.jobs.wikipedia_offline_uploader.top_n_by_frequency import get_top_n_frequency
 from merino.jobs.wikipedia_offline_uploader.top_n_by_recency import get_top_n_recency
+from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 
 TOP_N = 7000
 
 
 async def fetch_url(url, output_path) -> None:
     """Make a request to the specified URL and save the response."""
-    # wikimedia asks to have a unique user agent https://www.mediawiki.org/wiki/Wikimedia_REST_API
-    response = requests.get(
-        url, headers={"User-Agent": "Mozilla/5.0 disco-team@mozilla.com"}, timeout=5
-    )
+    response = requests.get(url, headers=WIKIMEDIA_REQUEST_HEADERS, timeout=5)
     response.raise_for_status()
     with open(output_path, "w") as f:
         f.write(json.dumps(response.json()))

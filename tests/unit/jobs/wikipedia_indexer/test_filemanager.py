@@ -13,6 +13,7 @@ from merino.jobs.wikipedia_indexer.filemanager import (
     FileManager,
     WikipediaFilemanagerError,
 )
+from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 
 
 def test_get_latest_gcs_returns_latest_blob():
@@ -151,7 +152,9 @@ def test_stream_dump_to_gcs_success(mock_get):
     assert mock_writer.write.call_count == 2
     mock_blob.open.assert_called_once()
     mock_get.assert_called_once_with(
-        "http://mock-url/frwiki-20240501-cirrussearch-content.json.gz", stream=True
+        "http://mock-url/frwiki-20240501-cirrussearch-content.json.gz",
+        stream=True,
+        headers=WIKIMEDIA_REQUEST_HEADERS,
     )
 
 

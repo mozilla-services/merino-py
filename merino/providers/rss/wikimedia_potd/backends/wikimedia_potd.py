@@ -20,8 +20,8 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
+from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 from merino.providers.rss.wikimedia_potd.backends.utils import (
-    WIKIMEDIA_REQUEST_HEADERS,
     parse_potd,
     extract_image_description_with_lang_code,
     parse_discovered_languages,

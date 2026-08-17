@@ -16,6 +16,7 @@ from google.cloud.storage.fileio import BlobReader, BlobWriter
 
 from merino.exceptions import FilemanagerError
 from merino.jobs.wikipedia_indexer.utils import ProgressReporter
+from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 from google.api_core.exceptions import GoogleAPIError
 
 
@@ -85,7 +86,7 @@ class FileManager:
 
         # 1. Try current/
         try:
-            resp = requests.get(self.base_url)  # nosec
+            resp = requests.get(self.base_url, headers=WIKIMEDIA_REQUEST_HEADERS)  # nosec
             parser = DirectoryParser(self.file_pattern)
             parser.feed(str(resp.content))
             links = parser.file_paths
@@ -101,7 +102,7 @@ class FileManager:
         # 2. Fallback to dated directory (bandaid)
         fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20251229/"
         try:
-            resp = requests.get(fallback_url)  # nosec
+            resp = requests.get(fallback_url, headers=WIKIMEDIA_REQUEST_HEADERS)  # nosec
             parser = DirectoryParser(self.file_pattern)
             parser.feed(str(resp.content))
             links = parser.file_paths
@@ -172,7 +173,7 @@ class FileManager:
         name = "{}/{}".format(self.object_prefix, dump_url.split("/")[-1])
         blob = self.client.bucket(self.gcs_bucket).blob(name, chunk_size=chunk_size)
         try:
-            with requests.get(dump_url, stream=True) as resp:  # nosec
+            with requests.get(dump_url, stream=True, headers=WIKIMEDIA_REQUEST_HEADERS) as resp:  # nosec
                 content_len = int(resp.headers.get("Content-Length", 0))
                 resp.raise_for_status()
                 logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
