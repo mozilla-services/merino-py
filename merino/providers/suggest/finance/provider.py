@@ -27,7 +27,7 @@ from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mappin
 from merino.providers.suggest.finance.backends.polygon.utils import (
     get_tickers_for_query,
 )
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.configs import settings
 
 logger = logging.getLogger(__name__)

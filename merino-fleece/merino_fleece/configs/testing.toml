@@ -8,3 +8,9 @@ dynaconf_merge = true
 level = "DEBUG"
 format = "pretty"
 can_propagate = true
+
+[testing.mars]
+# Keep the AMP exempt off by default so the app lifespan never reaches out to MARS.
+# Tests that exercise `AmpExempt` construct it directly.
+enabled = false
+base_url = "http://test-mars-api"

@@ -22,7 +22,7 @@ from merino.providers.suggest.wikipedia.backends.protocol import (
 )
 from merino.utils.gcs.engagement.filemanager import EngagementFilemanager
 from merino.providers.suggest.wikipedia.backends.utils import get_language_code
-from merino.utils import cron
+from merino_common.utils import cron
 
 # The Wikipedia icon backed by Merino's image CDN. The blob name is a content
 # hash, so it is identical in every bucket; only the CDN host differs.

@@ -14,7 +14,7 @@ from warnings import deprecated
 from google.cloud.storage import Client
 from aiodogstatsd import Client as StatsdClient
 
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.configs import settings
 
 logger = logging.getLogger(__name__)

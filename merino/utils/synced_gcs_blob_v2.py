@@ -18,7 +18,7 @@ from aiodogstatsd.typedefs import MTags
 from gcloud.aio.storage import Blob, Bucket, Storage
 from pydantic import BaseModel, ValidationError
 
-from merino.utils import cron
+from merino_common.utils import cron
 
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ from merino.providers.games.particle.backends.particle import ParticleBackend
 from merino.providers.games.particle.provider import Provider
 
 from merino.utils.gcs.gcs_uploader import GcsUploader
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.utils.metrics import get_metrics_client
 
 # get the application working directory to retrieve local manifest schema file

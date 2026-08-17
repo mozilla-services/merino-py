@@ -21,7 +21,7 @@ from merino.providers.suggest.adm.backends.protocol import (
 from merino.utils.gcs.engagement.filemanager import (
     EngagementFilemanager,
 )
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.utils.query_processing.normalization import get_pipeline
 from merino.providers.suggest.adm.backends.protocol import AdmBackend, SuggestionContent
 from merino.providers.suggest.adm.fuzzy import rejection_reason

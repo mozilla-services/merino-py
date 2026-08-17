@@ -16,6 +16,10 @@ format = "mozlog"
 # enabled in production.
 log_search_terms = true
 
+[stage.mars]
+# MERINO_FLEECE_MARS__BASE_URL
+base_url = "https://ads.allizom.org/v1/suggest/"
+
 [stage.pubsub]
 # MERINO_FLEECE_PUBSUB__SUBSCRIPTION
 # Subscription for the backup PubSub topic.

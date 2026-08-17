@@ -17,15 +17,18 @@ from merino_fleece.pii import (
     shutdown_detector,
     shutdown_executor,
 )
+from merino_fleece.sanitize import exempts
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Initialize logging, Sentry, the SpaCy model, the PII detection thread pool, and
-    the background search term sanitization handler.
+    """Initialize logging, Sentry, the SpaCy model, the PII detection thread pool, the
+    sanitization exempts, and the background search term sanitization handler.
 
-    Shutdown order matters: the handler drains before the thread pool closes, since a
-    batch sanitized during the drain still offloads NER to that pool.
+    Order matters at both ends. The exempts are populated before the handler starts
+    consuming, and torn down only after it has drained, since a batch sanitized during
+    the drain still consults them. Likewise the handler drains before the thread pool
+    closes, since such a batch still offloads NER to that pool.
     """
     configure_logging(
         log_format=settings.logging.format,
@@ -42,11 +45,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     init_detector()
     init_executor()
+    await exempts.initialize()
     await search_terms.start()
     try:
         yield
     finally:
         await search_terms.stop()
+        # sanitization exempts are torn down after the sanitization handler as
+        # the latter could still use the former inside of its `stop()`.
+        await exempts.shutdown()
         shutdown_executor()
         shutdown_detector()
 

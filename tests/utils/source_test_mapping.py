@@ -1257,10 +1257,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
         "direct": [],
         "indirect": [],
     },
-    "merino/utils/cron.py": {
-        "direct": ["tests/unit/utils/test_cron.py"],
-        "indirect": [],
-    },
     "merino/utils/domain_categories/__init__.py": {
         "direct": [],
         "indirect": [],
@@ -1315,10 +1311,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "tests/unit/providers/suggest/finance/backends/test_polygon.py",
             "tests/unit/utils/test_icon_processor.py",
         ],
-    },
-    "merino/utils/http_client.py": {
-        "direct": [],
-        "indirect": [],
     },
     "merino/utils/icon_processor.py": {
         "direct": ["tests/unit/utils/test_icon_processor.py"],

@@ -5,7 +5,7 @@ from enum import Enum, unique
 from dynaconf.base import Settings
 
 from merino.configs import settings
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.providers.rss.base import BaseRssProvider
 from merino.providers.rss.wikimedia_potd.backends.wikimedia_potd import (
     WikimediaPictureOfTheDayBackend,

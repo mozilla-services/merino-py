@@ -48,7 +48,7 @@ from merino.curated_recommendations.prior_backends.protocol import PriorBackend
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
 from merino.curated_recommendations.legacy.provider import LegacyCuratedRecommendationsProvider
 from merino.utils.metrics import get_metrics_client
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.utils.synced_gcs_blob import SyncedGcsBlob
 
 from merino.providers.manifest import get_provider as get_manifest_provider

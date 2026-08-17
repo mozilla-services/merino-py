@@ -10,7 +10,7 @@ import time
 from collections import defaultdict
 from typing import Any
 
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.base import (

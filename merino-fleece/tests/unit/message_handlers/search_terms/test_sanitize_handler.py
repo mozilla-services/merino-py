@@ -6,12 +6,14 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+from pytest_mock import MockerFixture
 
 from merino_common.models.suggest_logging import SuggestRequestParams
 from merino_common.testing.metrics import number_points
 from merino_common.utils.async_batch_queue import QueueFullException
 from merino_fleece.message_handlers.search_terms import handler as handler_module
 from merino_fleece.message_handlers.search_terms.handler import MessageHandler
+from merino_fleece.sanitize import exempts
 
 ParamsFactory = Callable[[str | None], SuggestRequestParams]
 
@@ -64,6 +66,39 @@ class RecordingDetector:
     def seen_queries(self) -> list[str]:
         """Every query handed to the detector, flattened across chunks."""
         return [query for call in self.batch_calls for query in call]
+
+
+class StubExempt:
+    """Exempt stub covering a fixed set of search terms."""
+
+    def __init__(self, *terms: str) -> None:
+        """Store the terms this exempt covers."""
+        self.terms = set(terms)
+
+    async def initialize(self) -> None:
+        """Nothing to bootstrap; the terms are fixed at construction."""
+
+    async def shutdown(self) -> None:
+        """Nothing to tear down."""
+
+    def is_exempt(self, search_term: str) -> bool:
+        """Return whether the term is one of this stub's."""
+        return search_term in self.terms
+
+
+@pytest.fixture(name="register_exempt")
+def fixture_register_exempt() -> Iterator[Callable[..., None]]:
+    """Return a helper that registers an exempt for the duration of a test.
+
+    The registry is process-wide, so it is cleared afterwards to keep exemptions from
+    leaking into the tests that follow.
+    """
+
+    def _register(*terms: str) -> None:
+        exempts.register(StubExempt(*terms))
+
+    yield _register
+    exempts._exempts.clear()
 
 
 @pytest.fixture
@@ -231,6 +266,102 @@ async def test_mixed_batch_maps_verdicts_to_the_right_terms(
     assert delta(before, after, "person") == 1
     assert delta(before, after, "non_pii") == 3
     assert detector.seen_queries == ["the weather today", "charlie chaplin", "best pizza"]
+
+
+@pytest.mark.asyncio
+async def test_exempt_terms_skip_detection(
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    metric_reader: InMemoryMetricReader,
+    register_exempt: Callable[..., None],
+    mocker: MockerFixture,
+) -> None:
+    """An exempt term is counted `non_pii` without any detection running.
+
+    Skipping the work is the whole point of an exemption, so both the cheap pattern pass
+    and NER are asserted to be bypassed -- a term that merely happens to be classified
+    `non_pii` would not prove anything.
+    """
+    register_exempt("firefox accounts")
+    basic_detect = mocker.spy(handler_module, "basic_detect")
+    before = counter_by_type(metric_reader)
+
+    await MessageHandler().sanitize_batch([params("firefox accounts")])
+
+    after = counter_by_type(metric_reader)
+    assert delta(before, after, "non_pii") == 1
+    assert basic_detect.call_count == 0
+    assert detector.seen_queries == []
+
+
+@pytest.mark.asyncio
+async def test_exemption_wins_over_detection(
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    metric_reader: InMemoryMetricReader,
+    register_exempt: Callable[..., None],
+) -> None:
+    """An exempt term that looks like PII is still exempt.
+
+    Exemption is an assertion that the term is safe by provenance, so it takes precedence
+    over what the detectors would have made of it.
+    """
+    register_exempt("iphone 15")
+    before = counter_by_type(metric_reader)
+
+    await MessageHandler().sanitize_batch([params("iphone 15")])
+
+    after = counter_by_type(metric_reader)
+    assert delta(before, after, "numeric") == 0
+    assert delta(before, after, "non_pii") == 1
+
+
+@pytest.mark.asyncio
+async def test_non_exempt_terms_in_a_mixed_batch_are_still_sanitized(
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    metric_reader: InMemoryMetricReader,
+    register_exempt: Callable[..., None],
+) -> None:
+    """Exempting some terms does not disturb the classification of the rest.
+
+    Exempt terms are dropped from the NER candidate list, so this also guards the index
+    mapping between candidates and their positions in the batch.
+    """
+    register_exempt("firefox accounts", "thunderbird")
+    detector.verdicts["charlie chaplin"] = True
+    batch = [
+        params("firefox accounts"),  # exempt
+        params("alice@example.com"),  # email, skips NER
+        params("thunderbird"),  # exempt
+        params("charlie chaplin"),  # person, goes to NER
+        params("best pizza"),  # non_pii, goes to NER
+    ]
+    before = counter_by_type(metric_reader)
+
+    await MessageHandler().sanitize_batch(batch)
+
+    after = counter_by_type(metric_reader)
+    assert delta(before, after, "email") == 1
+    assert delta(before, after, "person") == 1
+    assert delta(before, after, "non_pii") == 3  # two exempt plus `best pizza`
+    assert detector.seen_queries == ["charlie chaplin", "best pizza"]
+
+
+@pytest.mark.asyncio
+async def test_exemption_is_checked_against_the_truncated_query(
+    monkeypatch: pytest.MonkeyPatch,
+    detector: RecordingDetector,
+    params: ParamsFactory,
+    register_exempt: Callable[..., None],
+) -> None:
+    """Exemption sees the same truncated query the detectors would have seen."""
+    monkeypatch.setattr(handler_module, "QUERY_CHARACTER_MAX", 5)
+    register_exempt("abcde")
+
+    await MessageHandler().sanitize_batch([params("abcdefghij")])
+
+    assert detector.seen_queries == []
 
 
 @pytest.mark.asyncio

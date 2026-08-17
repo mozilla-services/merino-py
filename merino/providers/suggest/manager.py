@@ -55,7 +55,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
 )
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
 from merino.utils.blocklists import TOP_PICKS_BLOCKLIST, WIKIPEDIA_TITLE_BLOCKLIST
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino.utils.icon_processor import IconProcessor
 
 

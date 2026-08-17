@@ -60,6 +60,49 @@ ner_chunk_size = 64
 # logged. Off by default; enabled per environment once the log sink is in place.
 log_search_terms = false
 
+[default.mars]
+# Settings for the MARS API, the source of the AMP search term sanitization exempt.
+# Mirrors merino's `[default.mars]` so both services' MARS settings read the same.
+
+# MERINO_FLEECE_MARS__ENABLED
+# Whether the AMP sanitization exempt fetches keywords from MARS. When false, no
+# `AmpExempt` is registered and every search term is sanitized normally.
+enabled = true
+
+# MERINO_FLEECE_MARS__BASE_URL
+# The base URL for the MARS API.
+base_url = "https://ads.mozilla.org/v1/suggest/"
+
+# MERINO_FLEECE_MARS__SUGGESTION_URL_PATH
+# The URL path for fetching suggestions from the MARS API.
+suggestion_url_path = "data"
+
+# MERINO_FLEECE_MARS__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to the MARS API.
+connect_timeout_sec = 5.0
+
+# MERINO_FLEECE_MARS__REQUEST_TIMEOUT_SEC
+# Timeout in seconds for a request to the MARS API.
+request_timeout_sec = 10.0
+
+# MERINO_FLEECE_MARS__COUNTRIES
+# Countries to fetch AMP keywords for. The keywords of every `country x form_factor`
+# segment are unioned into a single exempt set, so this scales the memory footprint.
+countries = ["US"]
+
+# MERINO_FLEECE_MARS__FORM_FACTORS
+# Form factors to fetch AMP keywords for.
+form_factors = ["desktop"]
+
+# MERINO_FLEECE_MARS__RESYNC_INTERVAL_SEC
+# Time between re-syncs of AMP keywords from MARS, in seconds. Defaults to 1 hour.
+resync_interval_sec = 3600
+
+# MERINO_FLEECE_MARS__CRON_INTERVAL_SEC
+# The interval of the MARS resync cron job, in seconds. The cron job should tick more
+# frequently than `resync_interval_sec` so that a resync failure can be retried soon.
+cron_interval_sec = 60
+
 [default.sentry]
 # MERINO_FLEECE_SENTRY__MODE
 # One of "disabled", "release", "debug". When "disabled", no Sentry client is initialized.

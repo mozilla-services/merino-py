@@ -6,7 +6,7 @@ import aiodogstatsd
 
 from circuitbreaker import CircuitBreakerMonitor
 
-from merino.utils import cron
+from merino_common.utils import cron
 from merino.configs import settings
 from merino.utils.metrics import get_metrics_client
 

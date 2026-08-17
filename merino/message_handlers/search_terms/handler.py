@@ -8,7 +8,7 @@ from merino.message_handlers.search_terms.pubsub import (
     PubSubClient,
     create_publisher_client,
 )
-from merino.utils.http_client import create_http_client
+from merino_common.utils.http_client import create_http_client
 from merino_common.models.suggest_logging import SuggestRequestParams
 from merino_common.utils.async_batch_queue import AsyncBatchQueue
 
