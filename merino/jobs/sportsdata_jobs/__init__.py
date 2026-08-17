@@ -45,9 +45,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
     SportsDataStore,
     ElasticCredentials,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common._metrics import (
-    wcs_job_state_counter,
-)
 from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NFL,
     NBA,
@@ -283,7 +280,7 @@ class SportDataUpdater:
         Intended for a long-lived pod rather than a k8s CronJob: the store, cache,
         and HTTP clients built in `__init__` are reused across every iteration
         instead of being recreated per run. Each iteration is wrapped so a
-        transient provider error is logged and counted but does not stop the loop
+        transient provider error is logged but does not stop the loop
         (which would otherwise crash the pod). The loop exits cleanly once
         `stop_event` is set, so callers can wire it to SIGTERM for rolling restarts.
         """
@@ -294,16 +291,13 @@ class SportDataUpdater:
         try:
             while not stop_event.is_set():
                 started = monotonic()
-                wcs_job_state_counter.add(1, {"job_state": "started"})
                 try:
                     # Widget data must be refreshed before event data; see the
                     # ordering note on `update_and_cache_wcs`.
                     await self.update_widget()
                     await self.update_data()
-                    wcs_job_state_counter.add(1, {"job_state": "succeeded"})
                 except Exception as ex:
                     logger.error(f"{LOGGING_TAG} WCS loop iteration failed: {ex}")
-                    wcs_job_state_counter.add(1, {"job_state": "failed"})
                 finally:
                     logger.info(
                         "wcs loop iteration finished",

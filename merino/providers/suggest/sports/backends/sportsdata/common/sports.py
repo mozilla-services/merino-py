@@ -34,7 +34,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     SPORTSDATA_UTC,
     sportsdata_day_slug,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common._metrics import last_synced_at
 from merino.providers.suggest.sports.backends.sportsdata.common.wcs_elimination import (
     TBD_TEAM_KEY,
     eliminated_team_keys,
@@ -744,7 +743,6 @@ class WCS(Sport):
                 SportTerms.COLOR4: "ClubColor4",
             }
         )
-        self.default_metric_attributes = {"sport": self.__class__.__name__}
 
     @staticmethod
     def _clock_or_penalty_hint(clock: Any, period: Any, status: GameStatus) -> str | None:
@@ -875,8 +873,6 @@ class WCS(Sport):
             }
             # cache this for later, we're gonna need them for teams.
             await self.cache.hset(f"{self.cache_prefix}:area:{area['AreaId']}", country_data)
-        now = datetime.now().timestamp()
-        last_synced_at.set(now, {"component": "areas", **self.default_metric_attributes})
 
     async def load_rounds(self, client) -> None:
         """Fetch and load the round info to the cache
@@ -934,10 +930,6 @@ class WCS(Sport):
                                 await self.cache.set(
                                     f"{self.cache_prefix}:rounds",
                                     orjson.dumps(self.rounds, option=orjson.OPT_NON_STR_KEYS),
-                                )
-                                now = datetime.now().timestamp()
-                                last_synced_at.set(
-                                    now, {"component": "rounds", **self.default_metric_attributes}
                                 )
                                 return
 
@@ -1122,8 +1114,6 @@ class WCS(Sport):
         )
         async with self._lock:
             await self.async_load_teams_from_source(response)
-        now = datetime.now().timestamp()
-        last_synced_at.set(now, {"component": "teams", **self.default_metric_attributes})
 
     def team_as_serialized(self, team: Team) -> bytes:  # pragma: no cover "widget"
         """Serialize a team as a dictionary for the widget"""
@@ -1273,8 +1263,6 @@ class WCS(Sport):
             )
 
         await self.cache_events()
-        now = datetime.now().timestamp()
-        last_synced_at.set(now, {"component": "events", **self.default_metric_attributes})
 
     def _games_by_date_slugs_to_refresh(
         self, events: Iterable[Event], event_timezone: ZoneInfo

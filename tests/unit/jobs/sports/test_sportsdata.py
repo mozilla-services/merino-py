@@ -174,15 +174,11 @@ async def test_run_wcs_loop_runs_until_stopped(
         stop_event.set()
 
     cast(Any, updater).update_data = mocker.AsyncMock(side_effect=_update_data)
-    counter = mocker.patch("merino.jobs.sportsdata_jobs.wcs_job_state_counter")
-
     await updater.run_wcs_loop(interval_sec=0, stop_event=stop_event)
 
     startup.assert_awaited_once()
     cast(Any, updater).update_widget.assert_awaited_once()
     cast(Any, updater).update_data.assert_awaited_once()
-    counter.add.assert_any_call(1, {"job_state": "started"})
-    counter.add.assert_any_call(1, {"job_state": "succeeded"})
     shutdown.assert_awaited_once()
 
 
@@ -206,10 +202,9 @@ async def test_run_wcs_loop_isolates_iteration_errors(
 
     cast(Any, updater).update_widget = mocker.AsyncMock(side_effect=_update_widget)
     cast(Any, updater).update_data = mocker.AsyncMock(side_effect=SportsDataError("provider down"))
-    counter = mocker.patch("merino.jobs.sportsdata_jobs.wcs_job_state_counter")
-
     # Must not raise despite the iteration failing.
     await updater.run_wcs_loop(interval_sec=0, stop_event=stop_event)
 
-    counter.add.assert_any_call(1, {"job_state": "failed"})
+    cast(Any, updater).update_widget.assert_awaited_once()
+    cast(Any, updater).update_data.assert_awaited_once()
     shutdown.assert_awaited_once()
