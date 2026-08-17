@@ -23,9 +23,10 @@ def gcs_storage_container() -> Generator[DockerContainer, None, None]:
     os.environ.setdefault("STORAGE_EMULATOR_HOST", "http://localhost:4443")
 
     # create a docker container using the `fake-gcs-server` image, waiting for it
-    # to emit its startup log line before the fixture proceeds
+    # to emit its startup log line before the fixture proceeds. The tag is pinned so
+    # that a stale locally-cached `latest` can't drift from what CI pulls.
     container = (
-        DockerContainer("fsouza/fake-gcs-server")
+        DockerContainer("fsouza/fake-gcs-server:1.55.1")
         .with_command("-scheme http")
         .with_bind_ports(4443, 4443)
         .waiting_for(LogMessageWaitStrategy("server started at"))
