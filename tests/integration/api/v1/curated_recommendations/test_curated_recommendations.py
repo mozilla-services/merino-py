@@ -1570,7 +1570,7 @@ class TestSections:
 
         # the first layouts for the subtopic sections should be a double-row layout, after which it should cycle.
         layout_names = [sec["layout"]["name"] for sec in sections.values()]
-        assert layout_names[0] == "7-double-row-2-ad"  # top_stories double‐row layout
+        assert layout_names[0] == "8-double-row-2-ad"  # top_stories double‐row layout
         assert layout_names[1] == "6-small-medium-1-ad"  # first ML section
         assert layout_names[2] == "4-large-small-medium-1-ad"  # second ML section
 
@@ -1882,14 +1882,6 @@ class TestSections:
                 "experimentName": ExperimentName.CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT.value,
                 "experimentBranch": "treatment",
             },
-            {
-                "experimentName": ExperimentName.NO_LARGE_CARD_EXPERIMENT.value,
-                "experimentBranch": "treatment",
-            },
-            {
-                "experimentName": ExperimentName.NO_LARGE_CARD_EXPERIMENT.value,
-                "experimentBranch": "control",
-            },
         ],
     )
     def test_sections_layouts(self, sections_payload, experiment_payload, client: TestClient):
@@ -1914,19 +1906,9 @@ class TestSections:
 
         # Assert layout of the first section (Popular Today).
         assert first_section["title"] == "Popular Today"
-        experiment_name = experiment_payload.get("experimentName")
-        experiment_branch = experiment_payload.get("experimentBranch")
-        if (
-            experiment_name == ExperimentName.NO_LARGE_CARD_EXPERIMENT.value
-            and experiment_branch == "treatment"
-        ):
-            # HNT-2920: Popular Today drops its large tile in the treatment branch
+        if experiment_payload.get("experimentName") is None:
+            # HNT-2920: Popular Today has no large tile
             assert first_section["layout"]["name"] == "8-double-row-2-ad"
-        elif experiment_name in (
-            None,
-            ExperimentName.NO_LARGE_CARD_EXPERIMENT.value,
-        ):
-            assert first_section["layout"]["name"] == "7-double-row-2-ad"
         else:
             # If contextual ads experiment, Popular Today should be 1 row
             assert first_section["layout"]["name"] == "4-large-small-medium-1-ad"

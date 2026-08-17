@@ -59,7 +59,6 @@ from merino.curated_recommendations.sections import (
     dedupe_experiment_sections,
     exclude_recommendations_from_blocked_sections,
     is_daily_briefing_experiment,
-    is_no_large_card_experiment,
     should_exclude_editorial_sections,
     should_show_popular_today_with_daily_briefing,
     update_received_feed_rank,
@@ -409,28 +408,6 @@ class TestDailyBriefingExperiment:
         """Test that should_show_popular_today_with_daily_briefing returns True only for briefing-with-popular."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert should_show_popular_today_with_daily_briefing(req) is expected
-
-
-class TestNoLargeCardExperiment:
-    """Tests covering is_no_large_card_experiment (HNT-2920)."""
-
-    @pytest.mark.parametrize(
-        "name,branch,expected",
-        [
-            # treatment branch drops the large tile from Popular Today
-            (ExperimentName.NO_LARGE_CARD_EXPERIMENT.value, "treatment", True),
-            # control branch keeps the current layout
-            (ExperimentName.NO_LARGE_CARD_EXPERIMENT.value, "control", False),
-            # other experiment does not affect this
-            ("other-experiment", "treatment", False),
-            # no experiment keeps the current layout
-            (None, None, False),
-        ],
-    )
-    def test_is_no_large_card_experiment(self, name, branch, expected):
-        """Test that is_no_large_card_experiment returns True only for the treatment branch."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
-        assert is_no_large_card_experiment(req) is expected
 
 
 class TestEditorialSectionsExperiment:
