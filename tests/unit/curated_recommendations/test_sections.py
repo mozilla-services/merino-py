@@ -275,7 +275,7 @@ class TestRawSectionExperimentResolution:
         monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
         base = generate_corpus_section("government", count=1)
         alternate = generate_corpus_section("government", count=2)
-        alternate.experimentVariant = 5050
+        alternate.variantId = 5050
 
         assert resolve_5050(base, alternate) is alternate
 
@@ -283,7 +283,7 @@ class TestRawSectionExperimentResolution:
         """Unsupported experiment types should keep the base section."""
         base = generate_corpus_section("government", count=1)
         alternate = generate_corpus_section("government", count=2)
-        alternate.experimentVariant = 9999
+        alternate.variantId = 9999
         base.alternateSection = alternate
 
         assert resolve_section_experiment(base) is base
@@ -293,7 +293,7 @@ class TestRawSectionExperimentResolution:
         monkeypatch.setattr(random, "sample", lambda seq, _: [seq[0]])
         base = generate_corpus_section("government", count=1)
         exp = generate_corpus_section("government", count=2)
-        exp.experimentVariant = 5050
+        exp.variantId = 5050
         base.alternateSection = exp
 
         result = dedupe_experiment_sections([base])
@@ -307,7 +307,7 @@ class TestRawSectionExperimentResolution:
         monkeypatch.setattr(random, "sample", lambda seq, _: [seq[1]])
         base = generate_corpus_section("government", count=1)
         exp = generate_corpus_section("government", count=2)
-        exp.experimentVariant = 5050
+        exp.variantId = 5050
         base.alternateSection = exp
 
         result = dedupe_experiment_sections([base])
@@ -324,7 +324,7 @@ class TestRawSectionExperimentResolution:
         base = generate_corpus_section("government")
         tech = generate_corpus_section("tech")
         exp = generate_corpus_section("government")
-        exp.experimentVariant = 5050
+        exp.variantId = 5050
         base.alternateSection = exp
 
         result = dedupe_experiment_sections([sports, base, tech])
@@ -335,7 +335,7 @@ class TestRawSectionExperimentResolution:
         """Unsupported experimental variants should be dropped while the base remains."""
         base = generate_corpus_section("government", count=1)
         exp = generate_corpus_section("government", count=2)
-        exp.experimentVariant = 9999
+        exp.variantId = 9999
         base.alternateSection = exp
 
         result = dedupe_experiment_sections([base])
@@ -673,11 +673,13 @@ class TestMapCorpusSectionToSection:
     def test_basic_mapping(self, sample_backend_data):
         """Map CorpusSection into Section with correct feed rank and recs."""
         cs = sample_backend_data[1]
+        cs.variantId = 5050
         sec = map_corpus_section_to_section(cs, 5)
         assert sec.receivedFeedRank == 5
         assert sec.title == cs.title
         assert sec.layout == layout_6_tiles
         assert sec.iab == cs.iab
+        assert sec.variantId == 5050
         assert len(sec.recommendations) == len(cs.sectionItems)
         for idx, rec in enumerate(sec.recommendations):
             features_compare = {f"s_{cs.externalId}": 1.0}
@@ -685,6 +687,8 @@ class TestMapCorpusSectionToSection:
                 features_compare[f"t_{rec.topic.value}"] = 1.0
             assert rec.receivedRank == idx
             assert rec.features == features_compare
+            assert rec.variantId == 5050
+            assert rec.sourceSectionId == cs.externalId
 
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
@@ -915,9 +919,14 @@ class TestGetTopStoryList:
             item_ids=["a", "b", "c", "d", "e"],
             topics=["arts", "business", "food", "government", "food"],
         )
+        for item, variant_id in zip(items, [2, 5050, 0, 2, 0]):
+            item.variantId = variant_id
+            item.sourceSectionId = f"source-{variant_id}"
         result = get_top_story_list(items, top_count=3, extra_count=0)
         assert len(result) == 3
         assert [i.corpusItemId for i in result] == ["a", "b", "c"]
+        assert [i.variantId for i in result] == [2, 5050, 0]
+        assert [i.sourceSectionId for i in result] == ["source-2", "source-5050", "source-0"]
 
     def test_basic_topic_limiting(self):
         """Extra items should be chosen without repeating topics from top_count items."""
@@ -1693,6 +1702,7 @@ class TestGetCorpusSections:
         sports.sectionItems = []
         sports.iab = None
         sports.createSource = CreateSource.ML
+        sports.variantId = 0
 
         daily_briefing = MagicMock()
         daily_briefing.externalId = DAILY_BRIEFING_SECTION_KEY
@@ -1703,6 +1713,7 @@ class TestGetCorpusSections:
         daily_briefing.sectionItems = []
         daily_briefing.iab = {"taxonomy": "IAB-3.0", "categories": ["386"]}
         daily_briefing.createSource = CreateSource.ML
+        daily_briefing.variantId = 0
 
         headlines = MagicMock()
         headlines.externalId = HEADLINES_SECTION_KEY
@@ -1713,6 +1724,7 @@ class TestGetCorpusSections:
         headlines.sectionItems = []
         headlines.iab = {"taxonomy": "IAB-3.0", "categories": ["386"]}
         headlines.createSource = CreateSource.ML
+        headlines.variantId = 0
 
         mock_backend.fetch = AsyncMock(return_value=[sports, daily_briefing, headlines])
         return mock_backend
@@ -1731,6 +1743,7 @@ class TestGetCorpusSections:
         ml_section.heroSubtitle = None
         ml_section.iab = None
         ml_section.createSource = CreateSource.ML
+        ml_section.variantId = 0
 
         manual_one = MagicMock()
         manual_one.externalId = "custom-section-1"
@@ -1741,6 +1754,7 @@ class TestGetCorpusSections:
         manual_one.heroSubtitle = None
         manual_one.iab = None
         manual_one.createSource = CreateSource.MANUAL
+        manual_one.variantId = 2
 
         manual_two = MagicMock()
         manual_two.externalId = "custom-section-2"
@@ -1751,6 +1765,7 @@ class TestGetCorpusSections:
         manual_two.heroSubtitle = None
         manual_two.iab = None
         manual_two.createSource = CreateSource.MANUAL
+        manual_two.variantId = 2
 
         mock_backend.fetch = AsyncMock(return_value=[ml_section, manual_one, manual_two])
         return mock_backend
@@ -1768,7 +1783,7 @@ class TestGetCorpusSections:
         mock_backend = MagicMock(spec=SectionsProtocol)
         government = generate_corpus_section("government", count=1)
         government_alternate = generate_corpus_section("government", count=2)
-        government_alternate.experimentVariant = 5050
+        government_alternate.variantId = 5050
         government.alternateSection = government_alternate
         mock_backend.fetch = AsyncMock(
             return_value=[
@@ -1784,7 +1799,7 @@ class TestGetCorpusSections:
         mock_backend = MagicMock(spec=SectionsProtocol)
         government = generate_corpus_section("government", count=1)
         government_alternate = generate_corpus_section("government", count=2)
-        government_alternate.experimentVariant = 5050
+        government_alternate.variantId = 5050
         government.alternateSection = government_alternate
         mock_backend.fetch = AsyncMock(
             return_value=[
