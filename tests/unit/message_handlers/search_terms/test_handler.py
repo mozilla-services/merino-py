@@ -16,7 +16,6 @@ from merino.message_handlers.search_terms import MessageHandler, get_message_han
 from merino.message_handlers.search_terms.errors import FleeceError
 from merino.message_handlers.search_terms.fleece import FleeceClient
 from merino.message_handlers.search_terms.pubsub import PubSubClient
-from merino.utils.featureflags import FeatureFlags
 from merino_common.models.suggest_logging import SearchTermsSubmission, SuggestRequestParams
 
 Params = Callable[[str], SuggestRequestParams]
@@ -206,7 +205,7 @@ async def test_start_regular_services_wires_message_handler(mocker: MockerFixtur
     """Test that regular startup starts the handler and registers its drain when enabled."""
     import merino.main as main
 
-    mocker.patch.object(FeatureFlags, "is_enabled", return_value=True)
+    mocker.patch.object(settings.message_handler, "enabled", True)
     mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
     mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
     mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
@@ -226,7 +225,7 @@ async def test_start_regular_services_skips_handler_when_disabled(mocker: Mocker
     """Test that the handler is not started when submission is disabled."""
     import merino.main as main
 
-    mocker.patch.object(FeatureFlags, "is_enabled", return_value=False)
+    mocker.patch.object(settings.message_handler, "enabled", False)
     mocker.patch("merino.providers.suggest.init_providers", new=mocker.AsyncMock())
     mocker.patch("merino.providers.manifest.init_provider", new=mocker.AsyncMock())
     mocker.patch("merino.providers.rss.init_providers", new=mocker.AsyncMock())
