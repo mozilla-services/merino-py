@@ -18,7 +18,6 @@ from merino.curated_recommendations.layouts import (
     layout_4_medium,
     layout_4_large,
     layout_6_tiles,
-    layout_7_tiles_2_ads,
     layout_8_tiles_2_ads,
 )
 from merino.curated_recommendations.localization import get_translation
@@ -360,16 +359,6 @@ def is_contextual_ads_experiment(request: CuratedRecommendationsRequest) -> bool
     return any(
         is_enrolled_in_experiment(request, exp_name, "treatment")
         for exp_name in contextual_ads_experiments
-    )
-
-
-def is_no_large_card_experiment(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if Popular Today should drop its large tile (HNT-2920).
-
-    Gated on an internal experiment so the layout can be QA'd before it reaches users.
-    """
-    return is_enrolled_in_experiment(
-        request, ExperimentName.NO_LARGE_CARD_EXPERIMENT.value, "treatment"
     )
 
 
@@ -962,11 +951,9 @@ async def get_sections(
     # 8. Split top stories from the globally ranked recommendations
     # Use 2-row layout as default for Popular Today
     top_stories_count = DOUBLE_ROW_TOP_STORIES_COUNT
-    popular_today_layout = layout_7_tiles_2_ads
+    popular_today_layout = layout_8_tiles_2_ads
 
-    if is_no_large_card_experiment(request):
-        popular_today_layout = layout_8_tiles_2_ads
-    elif is_contextual_ads_experiment(request):
+    if is_contextual_ads_experiment(request):
         popular_today_layout = layout_4_large
 
     prior = ranker.get_regional_prior(region, engagement_region)
