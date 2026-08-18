@@ -37,7 +37,7 @@ PATTERN: Pattern = re.compile(r"/api/v[1-9]\d*/suggest$")
 LOG_SUGGEST_REQUEST: bool = settings.logging.log_suggest_request
 
 # Whether to submit search terms to merino-fleece for sanitization.
-SUBMIT_SEARCH_TERMS: bool = FeatureFlags().is_enabled(SUBMISSION_FLAG)
+SUBMIT_SEARCH_TERMS: bool = settings.message_handler.enabled
 
 # Excluded providers for logging
 EXCLUDED_PROVIDERS: frozenset[str] = frozenset(settings.logging.excluded_providers)
@@ -93,7 +93,7 @@ class LoggingMiddleware:
                         and request.scope.get(ScopeKey.PII_DETECTION) == PIIType.NON_PII
                     ):
                         suggest_request_logger.info("", extra=suggest_log_data.model_dump())
-                    if SUBMIT_SEARCH_TERMS:
+                    if SUBMIT_SEARCH_TERMS and FeatureFlags().is_enabled(SUBMISSION_FLAG):
                         _submit_search_term(suggest_log_data.request_params)
 
             await send(message)

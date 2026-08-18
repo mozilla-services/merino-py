@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 from starlette.types import Receive, Scope, Send
 
 from merino.middleware.logging import LoggingMiddleware
+from merino.utils.featureflags import FeatureFlags
 from merino_common.models.suggest_logging import SuggestLogDataModel
 from merino_common.utils.async_batch_queue import QueueFullException
 from merino.configs import settings
@@ -147,6 +148,7 @@ async def test_submits_search_term_when_enabled(
     log_data = mocker.MagicMock()
     mocker.patch("merino.middleware.logging.create_suggest_log_data", return_value=log_data)
     mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
+    mocker.patch.object(FeatureFlags, "is_enabled", return_value=True)
     mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", False)
     handler = mocker.MagicMock()
     mocker.patch("merino.middleware.logging.get_message_handler", return_value=handler)
@@ -179,6 +181,28 @@ async def test_no_submission_when_disabled(
 
 
 @pytest.mark.asyncio
+async def test_no_submission_when_feature_flag_disabled(
+    mocker: MockerFixture,
+    receive_mock: Receive,
+    send_mock: Send,
+) -> None:
+    """Test that no search term is enqueued when the feature flag buckets out the request."""
+    mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
+    mocker.patch.object(FeatureFlags, "is_enabled", return_value=False)
+    mocker.patch(
+        "merino.middleware.logging.create_suggest_log_data",
+        return_value=mocker.MagicMock(),
+    )
+    handler = mocker.MagicMock()
+    mocker.patch("merino.middleware.logging.get_message_handler", return_value=handler)
+
+    logging_middleware: LoggingMiddleware = LoggingMiddleware(app)
+    await logging_middleware(_suggest_scope(), receive_mock, send_mock)
+
+    handler.put.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_submit_failure_does_not_break_request(
     mocker: MockerFixture,
     caplog: LogCaptureFixture,
@@ -191,6 +215,7 @@ async def test_submit_failure_does_not_break_request(
         return_value=mocker.MagicMock(),
     )
     mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
+    mocker.patch.object(FeatureFlags, "is_enabled", return_value=True)
     mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", False)
     handler = mocker.MagicMock()
     handler.put.side_effect = QueueFullException("full")
@@ -217,6 +242,7 @@ async def test_submits_regardless_of_pii_flag(
     log_data = mocker.MagicMock()
     mocker.patch("merino.middleware.logging.create_suggest_log_data", return_value=log_data)
     mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
+    mocker.patch.object(FeatureFlags, "is_enabled", return_value=True)
     mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", True)
     handler = mocker.MagicMock()
     mocker.patch("merino.middleware.logging.get_message_handler", return_value=handler)

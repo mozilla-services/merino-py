@@ -15,8 +15,9 @@
 #   of the time) and a value of 1 indicates that the flag is 'on' for all.
 # enabled=0.5
 
-# Gates search term submission to merino-fleece: both starting the message handler
-# and the per-request enqueue.
+# Gates the per-request enqueue of search terms for submission to merino-fleece,
+# on top of the `message_handler.enabled` toggle. Temporary: it lets us dispatch a
+# portion of production traffic to merino-fleece to validate the integration.
 [default.flags.search-term-submission]
 scheme = "random"
 enabled = 0
