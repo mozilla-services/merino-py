@@ -11,6 +11,9 @@ from merino.providers.suggest.weather.backends.protocol import WeatherContext
 MaybeStr = Optional[str]
 
 LOCALITY_SUFFIX_PATTERN: re.Pattern = re.compile(r"\s+(city|municipality|town)$", re.IGNORECASE)
+
+# Cap on how many regions the fallback path tries
+MAX_FALLBACK_REGIONS: int = 5
 SUCCESSFUL_REGIONS_MAPPING: dict[tuple[str, str], str | None] = {
     ("AR", "El Sombrero"): None,
     ("BR", "Barcellos"): None,
@@ -578,9 +581,11 @@ CITY_NAME_NORMALIZERS: list[Callable[[str], str]] = [
 
 
 def compass(location: Location) -> Generator[MaybeStr, None, None]:
-    """Generate all the regions based on a `Location`.
+    """Generate candidate regions based on a `Location`.
 
     It will generate ones that are more likely to produce a valid result based on heuristics.
+    For countries without a known region heuristic, at most `MAX_FALLBACK_REGIONS` regions are
+    tried (most specific first), followed by `None`.
 
     Params:
       - location {Location}: a location object.
@@ -606,8 +611,8 @@ def compass(location: Location) -> Generator[MaybeStr, None, None]:
                 yield regions[0]
             case (country_code, _) if country_code in KNOWN_REGION_COUNTRIES:
                 yield regions[-1]  # use the least specific region
-            case _:  # Fall back to try all regions
-                regions_to_try = [*regions, None]
+            case _:  # Fall back to MAX_FALLBACK num of regions, then no region at all
+                regions_to_try = [*regions[:MAX_FALLBACK_REGIONS], None]
                 for region in regions_to_try:
                     yield region
     else:
