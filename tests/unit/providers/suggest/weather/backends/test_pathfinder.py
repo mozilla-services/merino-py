@@ -117,7 +117,7 @@ def test_compass(location: Location, expected_region_and_city: str) -> None:
                 ),
                 languages=["en-US"],
             ),
-            5,
+            6,
         ),
     ],
 )
