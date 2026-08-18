@@ -297,6 +297,7 @@ async def test_submitted_term_is_stamped_with_utc_timestamp(
     log_data = _suggest_log_data()
     mocker.patch("merino.middleware.logging.create_suggest_log_data", return_value=log_data)
     mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
+    mocker.patch.object(FeatureFlags, "is_enabled", return_value=True)
     mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", False)
     handler = mocker.MagicMock()
     mocker.patch("merino.middleware.logging.get_message_handler", return_value=handler)
