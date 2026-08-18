@@ -1,5 +1,7 @@
 """Unit tests for the sanitized search term log data creator."""
 
+from datetime import UTC, datetime
+
 from merino_common.models.suggest_logging import (
     SanitizedSearchTermLog,
     SuggestRequestParams,
@@ -7,12 +9,14 @@ from merino_common.models.suggest_logging import (
 
 from merino_fleece.utils.log_data_creator import create_search_term_log
 
+SUBMITTED_AT = datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=UTC)
+
 
 def test_every_field_maps_across() -> None:
     """Each logged field is taken from its `SuggestRequestParams` counterpart.
 
-    `rid` is renamed to `request_id` on the way out, which is the one mapping a
-    field-for-field copy would not catch.
+    `rid` is renamed to `request_id` and `submitted_at` to `timestamp` on the way out,
+    which are the mappings a field-for-field copy would not catch.
     """
     params = SuggestRequestParams(
         query="the weather today",
@@ -29,6 +33,7 @@ def test_every_field_maps_across() -> None:
         browser="Firefox(120)",
         os_family="macos",
         form_factor="desktop",
+        submitted_at=SUBMITTED_AT,
     )
 
     log_data = create_search_term_log(params)
@@ -36,6 +41,7 @@ def test_every_field_maps_across() -> None:
     assert log_data == SanitizedSearchTermLog(
         query="the weather today",
         request_id="request-id",
+        timestamp=SUBMITTED_AT,
         session_id="session-id",
         sequence_no=3,
         country="US",
@@ -109,6 +115,25 @@ def test_optional_fields_default_to_none() -> None:
     assert log_data.region is None
     assert log_data.city is None
     assert log_data.dma is None
+    # A submission from a Merino that predates the field, or a Pub/Sub replay of one.
+    assert log_data.timestamp is None
+
+
+def test_timestamp_is_logged_as_a_utc_iso_string() -> None:
+    """The timestamp is rendered as a UTC ISO string, not as a datetime."""
+    params = SuggestRequestParams(
+        query="the weather today",
+        code=200,
+        rid="request-id",
+        client_variants="",
+        requested_providers="",
+        browser="Firefox",
+        os_family="macos",
+        form_factor="desktop",
+        submitted_at=SUBMITTED_AT,
+    )
+
+    assert create_search_term_log(params).model_dump()["timestamp"] == "2022-12-18T15:58:41+00:00"
 
 
 def test_missing_query_becomes_empty_string() -> None:
