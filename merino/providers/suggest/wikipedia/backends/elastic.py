@@ -110,7 +110,9 @@ class ElasticBackend:
             raise BackendError(
                 f"Failed to search from Elasticsearch for {language_code}: {e}"
             ) from e
-
+        self._metrics_client.increment(
+            f"{ES_SEARCH_METRIC_NAME}.count", tags={"index": index_id}
+        )
         if "suggest" in res:
             return [
                 self.build_article(q, doc, language_code)

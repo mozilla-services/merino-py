@@ -306,6 +306,23 @@ async def test_es_backend_search_error_metric_on_exception(
 
 
 @pytest.mark.asyncio
+async def test_es_backend_search_count_metric_on_success(
+    mocker: MockerFixture,
+    es_backend: ElasticBackend,
+    statsd_mock: Any,
+) -> None:
+    """Test that a successful search increments the count metric."""
+    async_mock = AsyncMock(return_value={"suggest": {SUGGEST_ID: [{"options": []}]}})
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
+
+    await es_backend.search("foo", "en")
+
+    statsd_mock.increment.assert_called_once_with(
+        "es.search.count", tags={"index": INDICES["en"]}
+    )
+
+
+@pytest.mark.asyncio
 async def test_es_backend_shutdown(mocker: MockerFixture, es_backend: ElasticBackend) -> None:
     """Test the shutdown method of the ES backend."""
     spy = mocker.spy(AsyncElasticSearchAdapter, "shutdown")
