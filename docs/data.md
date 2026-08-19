@@ -91,8 +91,10 @@ log inspection interfaces.
 
   - `sensitive` - Always set to true to ensure proper routing. Not a statement
     about the sanitization verdict, which is `NON_PII` for every logged record.
-  - `query` - The text the user typed, in full. Sanitization truncates the query
-    before running detection over it, but the untruncated term is logged.
+  - `query` - The text the user typed, in full. Sanitization detects over the query
+    as submitted. Merino prefilters its submissions, so empty (or whitespace-only)
+    queries and queries longer than `web.api.v1.query_character_max` -- which the
+    suggest endpoint rejects with HTTP 400 anyway -- never reach sanitization.
   - `request_id` - The request ID of the originating suggest request.
   - `timestamp` - The UTC instant Merino submitted the search term to merino-fleece,
     not when merino-fleece sanitized or logged it. An ISO-8601 string with a `+00:00`

@@ -350,22 +350,6 @@ async def test_non_exempt_terms_in_a_mixed_batch_are_still_sanitized(
 
 
 @pytest.mark.asyncio
-async def test_exemption_is_checked_against_the_truncated_query(
-    monkeypatch: pytest.MonkeyPatch,
-    detector: RecordingDetector,
-    params: ParamsFactory,
-    register_exempt: Callable[..., None],
-) -> None:
-    """Exemption sees the same truncated query the detectors would have seen."""
-    monkeypatch.setattr(handler_module, "QUERY_CHARACTER_MAX", 5)
-    register_exempt("abcde")
-
-    await MessageHandler().sanitize_batch([params("abcdefghij")])
-
-    assert detector.seen_queries == []
-
-
-@pytest.mark.asyncio
 async def test_ner_is_chunked(
     monkeypatch: pytest.MonkeyPatch,
     detector: RecordingDetector,
@@ -390,24 +374,6 @@ async def test_ner_is_chunked(
     after = counter_by_type(metric_reader)
     assert delta(before, after, "person") == 1
     assert delta(before, after, "non_pii") == 4
-
-
-@pytest.mark.asyncio
-async def test_long_query_is_truncated(
-    monkeypatch: pytest.MonkeyPatch,
-    detector: RecordingDetector,
-    params: ParamsFactory,
-) -> None:
-    """Overlong queries are truncated before detection.
-
-    Nothing on the queue path bounds query length the way the /pii request model
-    does, and one pathological query would otherwise slow its whole NER chunk.
-    """
-    monkeypatch.setattr(handler_module, "QUERY_CHARACTER_MAX", 5)
-
-    await MessageHandler().sanitize_batch([params("abcdefghij")])
-
-    assert detector.seen_queries == ["abcde"]
 
 
 @pytest.mark.asyncio

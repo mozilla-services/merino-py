@@ -12,7 +12,8 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from starlette.types import Receive, Scope, Send
 
-from merino.middleware.logging import LoggingMiddleware
+from merino.middleware import logging as middleware_logging
+from merino.middleware.logging import QUERY_CHARACTER_MAX, LoggingMiddleware
 from merino.utils.featureflags import FeatureFlags
 from merino_common.models.suggest_logging import (
     MozlogDataModel,
@@ -264,7 +265,7 @@ async def test_submits_regardless_of_pii_flag(
     assert not any(record.name == "web.suggest.request" for record in caplog.records)
 
 
-def _suggest_log_data() -> SuggestLogDataModel:
+def _suggest_log_data(query: str | None = "apple") -> SuggestLogDataModel:
     """Return log data carrying real request params, so `submitted_at` is observable."""
     return SuggestLogDataModel(
         sensitive=True,
@@ -275,7 +276,7 @@ def _suggest_log_data() -> SuggestLogDataModel:
             method="GET",
         ),
         request_params=SuggestRequestParams(
-            query="apple",
+            query=query,
             code=200,
             rid="rid",
             client_variants="",
@@ -338,3 +339,44 @@ async def test_no_timestamp_when_term_is_not_submitted(
     records = [record for record in caplog.records if record.name == "web.suggest.request"]
     assert len(records) == 1
     assert not hasattr(records[0], "submitted_at")
+
+
+@pytest.mark.parametrize(
+    ("query", "reason"),
+    [
+        (None, "empty"),
+        ("", "empty"),
+        ("   ", "empty"),
+        ("a" * (QUERY_CHARACTER_MAX + 1), "too_long"),
+    ],
+    ids=["missing", "empty", "whitespace-only", "too-long"],
+)
+@pytest.mark.asyncio
+async def test_no_submission_for_prefiltered_query(
+    mocker: MockerFixture,
+    receive_mock: Receive,
+    send_mock: Send,
+    query: str | None,
+    reason: str,
+) -> None:
+    """Test that terms without a usable query are not submitted, and the skip is counted.
+
+    Overlong queries are rejected by the suggest endpoint with HTTP 400, so submitting
+    them would only add data Merino never served a suggestion for.
+    """
+    log_data = _suggest_log_data(query)
+    mocker.patch("merino.middleware.logging.create_suggest_log_data", return_value=log_data)
+    mocker.patch("merino.middleware.logging.SUBMIT_SEARCH_TERMS", True)
+    mocker.patch.object(FeatureFlags, "is_enabled", return_value=True)
+    mocker.patch("merino.middleware.logging.LOG_SUGGEST_REQUEST", False)
+    handler = mocker.MagicMock()
+    mocker.patch("merino.middleware.logging.get_message_handler", return_value=handler)
+    add = mocker.patch.object(middleware_logging._enqueue_counter, "add")
+
+    logging_middleware: LoggingMiddleware = LoggingMiddleware(app)
+    await logging_middleware(_suggest_scope(), receive_mock, send_mock)
+
+    handler.put.assert_not_called()
+    add.assert_called_once_with(1, {"outcome": "skipped", "reason": reason})
+    # The timestamp describes a submission, so a prefiltered term never carries one.
+    assert log_data.request_params.submitted_at is None
