@@ -48,12 +48,13 @@ jobs:
           path: ${{ inputs.source }}
       - name: Upload Artifacts to GCS
         run: |
-          FILES="${{ inputs.source }}/*"
+          shopt -s nullglob
+          files=("${{ inputs.source }}"/*)
           if [ -n "${{ inputs.extension }}" ]; then
-            FILES="${{ inputs.source }}/*.${{ inputs.extension }}"
+            files=("${{ inputs.source }}"/*."${{ inputs.extension }}")
           fi
-          if ! ls -1 $FILES >/dev/null 2>&1; then
+          if [ "${#files[@]}" -eq 0 ]; then
             echo "No ${{ inputs.extension }} files found in ${{ inputs.source }}/"
             exit 1
           fi
-          gcloud storage cp $FILES ${{ inputs.destination }}/
+          gcloud storage cp "${files[@]}" "${{ inputs.destination }}/"

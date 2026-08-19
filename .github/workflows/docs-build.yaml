@@ -11,7 +11,7 @@ jobs:
       - name: Setup Build docs
         run: |
           mkdir -p bin
-          echo "PATH=$(pwd)/bin:$PATH" >> $GITHUB_ENV
+          echo "PATH=$(pwd)/bin:$PATH" >> "$GITHUB_ENV"
           curl -sSL \
             https://github.com/rust-lang/mdBook/releases/download/v0.4.24/mdbook-v0.4.24-x86_64-unknown-linux-gnu.tar.gz \
             | tar -xz --directory=bin
