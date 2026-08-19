@@ -61,7 +61,7 @@ def test_lifespan_initializes_and_tears_down_dependencies(
 
     app = create_app()
     with TestClient(app) as client:
-        assert search_terms.get_message_handler().is_running() is True
+        assert search_terms.is_running() is True
         assert pii.get_detector() is not None
         assert pii.get_executor() is not None
 
@@ -71,7 +71,7 @@ def test_lifespan_initializes_and_tears_down_dependencies(
         )
         assert resp.status_code == 201
 
-    assert search_terms.get_message_handler().is_running() is False
+    assert search_terms.is_running() is False
     with pytest.raises(RuntimeError):
         pii.get_detector()
     with pytest.raises(RuntimeError):
@@ -83,7 +83,7 @@ def test_lifespan_initializes_and_tears_down_dependencies(
 
 
 class StubExempt:
-    """Exempt stub recording when it was shut down relative to the handler."""
+    """Exempt stub recording when it was shut down relative to the queue."""
 
     def __init__(self, term: str) -> None:
         """Store the term this exempt covers and init the call log."""
@@ -95,8 +95,8 @@ class StubExempt:
         """Nothing to bootstrap; the term is fixed at construction."""
 
     async def shutdown(self) -> None:
-        """Record whether the sanitization handler was still up when this ran."""
-        self.running_at_shutdown = search_terms.get_message_handler().is_running()
+        """Record whether the sanitization queue was still up when this ran."""
+        self.running_at_shutdown = search_terms.is_running()
 
     def is_exempt(self, search_term: str) -> bool:
         """Record the lookup and report whether the term is this stub's."""

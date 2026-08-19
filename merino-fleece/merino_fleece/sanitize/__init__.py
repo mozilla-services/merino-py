@@ -1,1 +1,1 @@
-"""Search term sanitization: models, sanitizer, emitter, and the queue worker."""
+"""Search term sanitization: the sanitization pass, its exempts, and the queue worker."""
