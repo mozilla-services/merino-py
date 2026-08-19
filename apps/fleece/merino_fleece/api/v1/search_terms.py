@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from opentelemetry import metrics
 from pydantic import BaseModel
 
-from merino_common.models.suggest_logging import SearchTermsSubmission
-from merino_common.utils.async_batch_queue import AsyncBatchException
-from merino_fleece.message_handlers.search_terms import MessageHandler, get_message_handler
+from merino_common.models.suggest_logging import SearchTermsSubmission, SuggestRequestParams
+from merino_common.utils.async_batch_queue import AsyncBatchException, AsyncBatchQueue
+from merino_fleece.message_handlers.search_terms import get_queue
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class SearchTermsResponse(BaseModel):
 )
 async def submit_search_terms(
     body: SearchTermsSubmission,
-    handler: MessageHandler = Depends(get_message_handler),
+    queue: AsyncBatchQueue[SuggestRequestParams] | None = Depends(get_queue),
 ) -> SearchTermsResponse:
     """Accept a batch of search terms and queue them for background sanitization.
 
@@ -58,9 +58,11 @@ async def submit_search_terms(
 
     # Admit the whole submission or none of it. Enqueuing term by term and failing
     # partway would leave some terms queued while the submitter sees an error and
-    # drops the batch, so neither side's accounting would be right.
-    capacity = handler.remaining_capacity()
-    if capacity < count:
+    # drops the batch, so neither side's accounting would be right. A missing queue
+    # means background sanitization is not running at all, which is reported the same
+    # way: no headroom, so the submitter falls back to the Pub/Sub backup channel.
+    capacity = queue.remaining_capacity() if queue is not None else 0
+    if queue is None or capacity < count:
         _search_terms_rejected_counter.add(count)
         logger.warning(
             "Rejected search term submission: insufficient queue capacity",
@@ -70,8 +72,8 @@ async def submit_search_terms(
 
     for index, term in enumerate(body.search_terms):
         try:
-            handler.put(term)
-        except (AsyncBatchException, RuntimeError) as ex:
+            queue.put(term)
+        except AsyncBatchException as ex:
             # The capacity check above is exact for this request -- there is no await
             # between it and these puts -- but concurrent requests can pass it and
             # then compete for the same slots. Degrade to a partial enqueue rather

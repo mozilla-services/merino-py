@@ -14,13 +14,13 @@ from merino_common.models.suggest_logging import SuggestRequestParams
 from merino_common.testing.metrics import counter_value
 from merino_common.utils.async_batch_queue import QueueFullException
 from merino_fleece.app import create_app
-from merino_fleece.message_handlers.search_terms import get_message_handler
+from merino_fleece.message_handlers.search_terms import get_queue
 
 LOGGER_NAME = "merino_fleece.api.v1.search_terms"
 
 
-class FakeHandler:
-    """Message handler stub recording enqueued terms, with injectable failures.
+class FakeQueue:
+    """Batch queue stub recording enqueued terms, with injectable failures.
 
     Args:
         capacity: value reported by `remaining_capacity`.
@@ -45,22 +45,22 @@ class FakeHandler:
         self.puts.append(message)
 
 
-# Factory yielded by `make_client`: builds a TestClient bound to a given handler.
-ClientFactory = Callable[[FakeHandler], TestClient]
+# Factory yielded by `make_client`: builds a TestClient bound to a given queue.
+ClientFactory = Callable[[FakeQueue | None], TestClient]
 
 
 @pytest.fixture
 def make_client() -> Iterator[ClientFactory]:
-    """Yield a factory building a TestClient with the message handler overridden.
+    """Yield a factory building a TestClient with the sanitization queue overridden.
 
-    No lifespan is run: the override supplies the handler, so the route never
-    touches app state or the real queue.
+    No lifespan is run: the override supplies the queue, so the route never touches app
+    state or the real one. `None` models the queue not running.
     """
     apps: list[FastAPI] = []
 
-    def _factory(handler: FakeHandler) -> TestClient:
+    def _factory(queue: FakeQueue | None) -> TestClient:
         app = create_app()
-        app.dependency_overrides[get_message_handler] = lambda: handler
+        app.dependency_overrides[get_queue] = lambda: queue
         apps.append(app)
         return TestClient(app)
 
@@ -72,8 +72,8 @@ def make_client() -> Iterator[ClientFactory]:
 
 @pytest.fixture
 def client(make_client: ClientFactory) -> TestClient:
-    """Yield a TestClient backed by a handler with ample capacity."""
-    return make_client(FakeHandler())
+    """Yield a TestClient backed by a queue with ample capacity."""
+    return make_client(FakeQueue())
 
 
 def _search_term(**overrides: Any) -> dict[str, Any]:
@@ -93,27 +93,27 @@ def _search_term(**overrides: Any) -> dict[str, Any]:
 
 def test_submit_search_terms(make_client: ClientFactory) -> None:
     """A valid batch returns 201, the submitted count, and reaches the queue."""
-    handler = FakeHandler()
-    client = make_client(handler)
+    queue = FakeQueue()
+    client = make_client(queue)
 
     body = {"search_terms": [_search_term(query="foo"), _search_term(query="bar")]}
     resp = client.post("/api/v1/search-terms", json=body)
 
     assert resp.status_code == 201
     assert resp.json() == {"submitted": 2}
-    assert [term.query for term in handler.puts] == ["foo", "bar"]
+    assert [term.query for term in queue.puts] == ["foo", "bar"]
 
 
 def test_submit_search_terms_with_timestamp(make_client: ClientFactory) -> None:
     """A submitted term's timestamp is parsed and reaches the queue as an aware datetime."""
-    handler = FakeHandler()
-    client = make_client(handler)
+    queue = FakeQueue()
+    client = make_client(queue)
 
     body = {"search_terms": [_search_term(query="foo", submitted_at="2022-12-18T15:58:41+00:00")]}
     resp = client.post("/api/v1/search-terms", json=body)
 
     assert resp.status_code == 201
-    assert handler.puts[0].submitted_at == datetime(
+    assert queue.puts[0].submitted_at == datetime(
         2022, 12, 18, hour=15, minute=58, second=41, tzinfo=UTC
     )
 
@@ -124,13 +124,13 @@ def test_submit_search_terms_without_timestamp(make_client: ClientFactory) -> No
     Merino and merino-fleece deploy independently, so merino-fleece must not reject a
     batch from a Merino that predates the field.
     """
-    handler = FakeHandler()
-    client = make_client(handler)
+    queue = FakeQueue()
+    client = make_client(queue)
 
     resp = client.post("/api/v1/search-terms", json={"search_terms": [_search_term(query="foo")]})
 
     assert resp.status_code == 201
-    assert handler.puts[0].submitted_at is None
+    assert queue.puts[0].submitted_at is None
 
 
 def test_submit_empty_search_terms(client: TestClient) -> None:
@@ -160,26 +160,35 @@ def test_insufficient_capacity_enqueues_nothing(
     Nothing may be enqueued: partially accepting a batch the submitter then treats
     as failed would leave the two sides disagreeing about what was processed.
     """
-    handler = FakeHandler(capacity=2)
-    client = make_client(handler)
+    queue = FakeQueue(capacity=2)
+    client = make_client(queue)
 
     body = {"search_terms": [_search_term(query=f"q{i}") for i in range(3)]}
     resp = client.post("/api/v1/search-terms", json=body)
 
     assert resp.status_code == 503
-    assert handler.puts == [], "no term may be queued when the submission is rejected"
+    assert queue.puts == [], "no term may be queued when the submission is rejected"
     assert any(record.name == LOGGER_NAME for record in caplog.records)
 
 
-def test_handler_not_running_is_rejected(make_client: ClientFactory) -> None:
-    """A handler reporting no capacity (e.g. not started) rejects submissions."""
-    handler = FakeHandler(capacity=0)
-    client = make_client(handler)
+def test_queue_not_running_is_rejected(make_client: ClientFactory) -> None:
+    """With no queue at all, submissions are rejected rather than silently dropped."""
+    client = make_client(None)
+
+    response = client.post("/api/v1/search-terms", json={"search_terms": [_search_term()]})
+
+    assert response.status_code == 503
+
+
+def test_zero_capacity_is_rejected(make_client: ClientFactory) -> None:
+    """A queue reporting no capacity rejects submissions."""
+    queue = FakeQueue(capacity=0)
+    client = make_client(queue)
 
     resp = client.post("/api/v1/search-terms", json={"search_terms": [_search_term(query="foo")]})
 
     assert resp.status_code == 503
-    assert handler.puts == []
+    assert queue.puts == []
 
 
 def test_queue_full_midway_is_rejected(
@@ -190,14 +199,14 @@ def test_queue_full_midway_is_rejected(
     Concurrent submissions can both clear the capacity check and then compete for
     the same slots, so the per-put guard has to hold.
     """
-    handler = FakeHandler(capacity=1000, raise_on_put=2)
-    client = make_client(handler)
+    queue = FakeQueue(capacity=1000, raise_on_put=2)
+    client = make_client(queue)
 
     body = {"search_terms": [_search_term(query=f"q{i}") for i in range(4)]}
     resp = client.post("/api/v1/search-terms", json=body)
 
     assert resp.status_code == 503
-    assert [term.query for term in handler.puts] == ["q0", "q1"]
+    assert [term.query for term in queue.puts] == ["q0", "q1"]
     records = [record for record in caplog.records if record.name == LOGGER_NAME]
     assert records, "the partial enqueue must be logged"
     assert getattr(records[0], "accepted_count") == 2
@@ -213,7 +222,7 @@ def test_search_terms_metrics(
     forwards to a real instrument we can read back.
     """
     before = counter_value(metric_reader, "api.search_terms.receive.count")
-    client = make_client(FakeHandler())
+    client = make_client(FakeQueue())
 
     body = {"search_terms": [_search_term(), _search_term(), _search_term()]}
     resp = client.post("/api/v1/search-terms", json=body)
@@ -230,7 +239,7 @@ def test_rejected_metric(make_client: ClientFactory, metric_reader: InMemoryMetr
     received terms and queue throughput.
     """
     before = counter_value(metric_reader, "api.search_terms.reject.count")
-    client = make_client(FakeHandler(capacity=0))
+    client = make_client(FakeQueue(capacity=0))
 
     body = {"search_terms": [_search_term(), _search_term()]}
     resp = client.post("/api/v1/search-terms", json=body)
