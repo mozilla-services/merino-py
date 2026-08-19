@@ -17,10 +17,6 @@ from merino_fleece.sanitize import exempts
 # identifier used to tag the queue's metrics.
 QUEUE_ID = "search_term_sanitization"
 
-# Queries reaching the queue are not length-bounded by a request model the way the
-# /pii endpoint's are, so they are truncated before detection.
-QUERY_CHARACTER_MAX = settings.pii.query_character_max
-
 # Whether to log `web.suggest.sanitized`.
 LOG_SEARCH_TERMS: bool = settings.sanitize.log_search_terms
 
@@ -114,6 +110,9 @@ class MessageHandler:
         pool is released between chunks and concurrent `/pii` requests are not stuck
         behind one long batch.
 
+        Queries are detected over as submitted; bounding their length is the submitter's
+        responsibility (Merino prefilters empty and overlong queries before submitting).
+
         Exceptions are left to propagate: ``AsyncBatchQueue`` logs them and counts the
         batch as failed, which drops one batch rather than stopping the run loop.
 
@@ -127,7 +126,7 @@ class MessageHandler:
         candidate_indices: list[int] = []
 
         for term in batch:
-            query = (term.query or "")[:QUERY_CHARACTER_MAX]
+            query = term.query or ""
 
             # Exemption wins over detection by definition, and is the cheaper check.
             if query and exempts.is_exempt(query):

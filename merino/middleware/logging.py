@@ -42,12 +42,32 @@ SUBMIT_SEARCH_TERMS: bool = settings.message_handler.enabled
 # Excluded providers for logging
 EXCLUDED_PROVIDERS: frozenset[str] = frozenset(settings.logging.excluded_providers)
 
+# Queries longer than this are rejected by the suggest endpoint with HTTP 400, so they
+# are never worth submitting.
+QUERY_CHARACTER_MAX: int = settings.web.api.v1.query_character_max
+
 _meter = metrics.get_meter("merino.middleware.logging")
 _enqueue_counter = _meter.create_counter(
     name="search_term.enqueue.count",
     unit="{search_term}",
-    description="Search terms enqueued for submission to merino-fleece, labeled by outcome.",
+    description=(
+        "Search terms enqueued for submission to merino-fleece, labeled by outcome: "
+        "`success`, `error` (the queue rejected it) or `skipped` (prefiltered out)."
+    ),
 )
+
+
+def _skip_reason(query: str | None) -> str | None:
+    """Return why a search term should not be submitted, or None to submit it.
+
+    Terms without a usable query carry no analytical value, and overlong ones only reach
+    here on requests the suggest endpoint has already rejected with HTTP 400.
+    """
+    if query is None or not query.strip():
+        return "empty"
+    if len(query) > QUERY_CHARACTER_MAX:
+        return "too_long"
+    return None
 
 
 def _submit_search_term(request_params: SuggestRequestParams) -> None:
@@ -101,7 +121,14 @@ class LoggingMiddleware:
                     ):
                         suggest_request_logger.info("", extra=suggest_log_data.model_dump())
                     if SUBMIT_SEARCH_TERMS and FeatureFlags().is_enabled(SUBMISSION_FLAG):
-                        _submit_search_term(suggest_log_data.request_params)
+                        request_params = suggest_log_data.request_params
+                        # Prefilter after the gate above, so skips are only counted for
+                        # terms that would otherwise have been submitted.
+                        reason = _skip_reason(request_params.query)
+                        if reason is None:
+                            _submit_search_term(request_params)
+                        else:
+                            _enqueue_counter.add(1, {"outcome": "skipped", "reason": reason})
 
             await send(message)
 
