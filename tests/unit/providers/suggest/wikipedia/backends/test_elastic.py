@@ -317,9 +317,7 @@ async def test_es_backend_search_count_metric_on_success(
 
     await es_backend.search("foo", "en")
 
-    statsd_mock.increment.assert_called_once_with(
-        "es.search.count", tags={"index": INDICES["en"]}
-    )
+    statsd_mock.increment.assert_called_once_with("es.search.count", tags={"index": INDICES["en"]})
 
 
 @pytest.mark.asyncio
