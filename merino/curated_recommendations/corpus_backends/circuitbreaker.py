@@ -13,7 +13,7 @@ from merino.exceptions import BackendError
 from httpx import HTTPError
 
 
-async def curated_recommendations_circuitbreaker(*args, **kwargs) -> None:  # pragma: no cover
+async def curated_recommendations_circuitbreaker(*args, **kwargs) -> None:
     """Raise a generic BackendError while the circuit breaker is open."""
     raise BackendError("Corpus backend circuitbreaker")
 

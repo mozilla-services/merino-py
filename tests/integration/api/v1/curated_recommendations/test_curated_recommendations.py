@@ -1240,7 +1240,7 @@ class TestCorpusApiCaching:
     @pytest.mark.parametrize(
         "error_type, expected_warning",
         [
-            # ("graphql", 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'),
+            ("graphql", 'Could not find Scheduled Surface with id of "NEW_TAB_EN_UX".'),
             ("http", "'503 Service Unavailable' for url 'https://client-api.getpocket.com'"),
         ],
     )
