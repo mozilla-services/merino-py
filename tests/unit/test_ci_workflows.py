@@ -175,7 +175,7 @@ def test_dockerhub_build_generates_versioned_artifact_for_publishing() -> None:
 
 
 def test_checks_run_pinned_actionlint() -> None:
-    """Validate workflow syntax and expressions with a reproducible actionlint version."""
+    """Validate workflows with a pinned, checksum-verified actionlint binary."""
     workflow = _load_workflow("checks.yaml")
     jobs = cast(dict[str, dict[str, Any]], workflow["jobs"])
     steps = cast(list[dict[str, Any]], jobs["checks"]["steps"])
@@ -183,5 +183,11 @@ def test_checks_run_pinned_actionlint() -> None:
         step for step in steps if step.get("name") == "Lint GitHub Actions workflows"
     )
 
-    assert actionlint_step["uses"] == "docker://rhysd/actionlint:1.7.12"
-    assert actionlint_step["with"] == {"args": "-color"}
+    assert actionlint_step["env"] == {
+        "ACTIONLINT_VERSION": "1.7.12",
+        "ACTIONLINT_SHA256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+    }
+    actionlint_script = cast(str, actionlint_step["run"])
+    assert "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" in actionlint_script
+    assert "sha256sum --check --strict" in actionlint_script
+    assert '"$RUNNER_TEMP/actionlint" -color' in actionlint_script
