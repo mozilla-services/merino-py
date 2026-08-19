@@ -4,8 +4,6 @@
 
 """Unit tests for fetch_schedules.py module."""
 
-import asyncio
-from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from typing import Any, cast
 from unittest.mock import MagicMock
@@ -26,7 +24,6 @@ from merino.providers.suggest.sports.backends.sportsdata.common.data import (
     Sport,
     Event,
 )
-from merino.providers.suggest.sports.backends.sportsdata.common.error import SportsDataError
 
 
 @pytest.fixture(name="httpx_client")
@@ -129,82 +126,3 @@ async def test_updater(
     await updater.quick_update()
     assert not mock_sport.update_teams.called
     assert mock_sport.update_events.called
-
-
-@pytest.mark.asyncio
-async def test_update_and_cache_wcs_closes_store_on_error(
-    sport_data_store: SportsDataStore,
-    mocker: MockerFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """WCS cache updates should close the datastore when refresh work fails."""
-    monkeypatch.setattr(settings.providers.sports, "sports", ["WCS"])
-    updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
-    shutdown = mocker.AsyncMock()
-    cast(Any, updater.store).startup = mocker.AsyncMock()
-    cast(Any, updater.store).shutdown = shutdown
-    cast(Any, updater).update_widget = mocker.AsyncMock()
-    cast(Any, updater).update_data = mocker.AsyncMock(side_effect=SportsDataError("provider down"))
-    mocker.patch("merino.jobs.sportsdata_jobs.monitor", return_value=nullcontext())
-
-    with pytest.raises(SportsDataError):
-        await updater.update_and_cache_wcs()
-
-    shutdown.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_run_wcs_loop_runs_until_stopped(
-    sport_data_store: SportsDataStore,
-    mocker: MockerFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The WCS loop refreshes widget then event data once per iteration."""
-    monkeypatch.setattr(settings.providers.sports, "sports", ["WCS"])
-    updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
-    stop_event = asyncio.Event()
-    startup = mocker.AsyncMock()
-    shutdown = mocker.AsyncMock()
-    cast(Any, updater.store).startup = startup
-    cast(Any, updater.store).shutdown = shutdown
-    cast(Any, updater).update_widget = mocker.AsyncMock()
-
-    # Stop the loop as part of the first iteration so it runs exactly once.
-    async def _update_data(*args: Any, **kwargs: Any) -> None:
-        stop_event.set()
-
-    cast(Any, updater).update_data = mocker.AsyncMock(side_effect=_update_data)
-    await updater.run_wcs_loop(interval_sec=0, stop_event=stop_event)
-
-    startup.assert_awaited_once()
-    cast(Any, updater).update_widget.assert_awaited_once()
-    cast(Any, updater).update_data.assert_awaited_once()
-    shutdown.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_run_wcs_loop_isolates_iteration_errors(
-    sport_data_store: SportsDataStore,
-    mocker: MockerFixture,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A failing iteration is logged/counted but does not stop the loop or raise."""
-    monkeypatch.setattr(settings.providers.sports, "sports", ["WCS"])
-    updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
-    stop_event = asyncio.Event()
-    shutdown = mocker.AsyncMock()
-    cast(Any, updater.store).startup = mocker.AsyncMock()
-    cast(Any, updater.store).shutdown = shutdown
-
-    # update_widget runs first; use it to stop the loop after one failing iteration.
-    async def _update_widget(*args: Any, **kwargs: Any) -> None:
-        stop_event.set()
-
-    cast(Any, updater).update_widget = mocker.AsyncMock(side_effect=_update_widget)
-    cast(Any, updater).update_data = mocker.AsyncMock(side_effect=SportsDataError("provider down"))
-    # Must not raise despite the iteration failing.
-    await updater.run_wcs_loop(interval_sec=0, stop_event=stop_event)
-
-    cast(Any, updater).update_widget.assert_awaited_once()
-    cast(Any, updater).update_data.assert_awaited_once()
-    shutdown.assert_awaited_once()

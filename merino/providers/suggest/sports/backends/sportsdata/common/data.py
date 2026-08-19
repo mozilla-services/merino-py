@@ -23,8 +23,6 @@ from merino.providers.suggest.sports import (
     utc_time_from_now,
 )
 
-from merino.cache.redis import RedisAdapter
-from merino.cache.none import NoCacheAdapter
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
 from merino.providers.suggest.sports.backends.sportsdata.common.error import (
     SportsDataError,
@@ -97,8 +95,6 @@ class Team(BaseModel):
     updated: datetime
     # Team Data expiration date:
     expiry: datetime
-    # Country / Area
-    country: str | None
 
     @classmethod
     def from_data(
@@ -107,7 +103,6 @@ class Team(BaseModel):
         term_filter: list[str],
         team_ttl: timedelta,
         normalized_terms: dict,
-        areas: dict[int, Any] | None = None,
     ):
         """Convert the rich SportsData.io information set to the reduced info we need."""
         # build the list of terms we want to search:
@@ -137,16 +132,10 @@ class Team(BaseModel):
             raise SportsDataError(
                 f"No {normalized_terms[SportTerms.TEAM_ID]} found for {fullname}"
             )
-        # WCS Find the country
-        country = None
-        if areas:
-            country = areas.get(team_data.get(normalized_terms.get("AreaId", "AreaId"), 9999))
         raw_key = team_data.get("Key")
         if not isinstance(raw_key, str) or not raw_key:
             logger.warning(f"{LOGGING_TAG}: No valid key found for team {team_data}")
             raise SportsDataError(f"No Key found for {fullname}")
-        if country and country.get("aliases"):
-            terms.add(country.get("aliases"))
         return cls(
             terms=" ".join(terms),
             key=_TEAM_KEY_OVERRIDES.get((raw_key, name), raw_key),
@@ -179,7 +168,6 @@ class Team(BaseModel):
                     ],
                 )
             ),
-            country=country,
         )
 
     def minimal(self) -> dict[str, Any]:
@@ -214,24 +202,6 @@ class Event(BaseModel):
     expiry: datetime
     # UTC of last event update
     updated: datetime | None
-    # Final period of the game: "Regular", "ExtraTime", "PenaltyShootout", etc.
-    period: str | None = None
-    # Points scored in extra play
-    home_extra: int | None = None
-    away_extra: int | None = None
-    # Points scored in penalty play
-    home_penalty: int | None = None
-    away_penalty: int | None = None
-    # Play time, with additions when provided by the feed.
-    clock: str | None = None
-    # Optional stage, e.g. "Group", "Round of 32"
-    stage: str | None = None
-    # Tournament metadata used by WCS widget team state.
-    round_id: int | None = None
-    season_type: int | None = None
-    group: str | None = None
-    winner: str | None = None
-    is_closed: bool | None = None
 
     def key(self) -> str:
         """Generate semi-unique key for this event"""
@@ -250,24 +220,6 @@ class Event(BaseModel):
             "date": self.date.isoformat(),
             "expiry": self.expiry.isoformat(),
         }
-        optional_fields = (
-            "period",
-            "home_extra",
-            "away_extra",
-            "home_penalty",
-            "away_penalty",
-            "clock",
-            "stage",
-            "round_id",
-            "season_type",
-            "group",
-            "winner",
-            "is_closed",
-        )
-        for field_name in optional_fields:
-            value = getattr(self, field_name)
-            if value is not None:
-                result[field_name] = value
         # This may be a quick_update, meaning these values could be blank
         # Do not destructively overwrite them!
         if self.terms:
@@ -410,7 +362,6 @@ class Sport:
     # and ownership reasons.
     term_filter: list[str] = []
     cache_dir: str | None
-    cache: RedisAdapter | NoCacheAdapter
     # Each sport may use a different term for these values.
     # You should prefer to use the `Global*` version when possible, but not all sports
     # provide that value, nor do all returned data sets.
@@ -423,7 +374,6 @@ class Sport:
         base_url: str,
         name: str,
         cache_dir: str | None = None,
-        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         api_key: str | None = None,
         event_ttl: timedelta | None = None,
         team_ttl: timedelta | None = None,
@@ -451,7 +401,6 @@ class Sport:
         self.team_ttl = team_ttl or timedelta(weeks=settings.get("team_ttl_weeks", TEAM_TTL_WEEKS))
         self.term_filter = term_filter
         self.cache_dir = cache_dir
-        self.cache = cache
         self.normalized_terms = SportNormalizedTerms.copy()
 
     def api_headers(self) -> dict[str, str]:
@@ -589,7 +538,6 @@ class Sport:
             status=row.status,
             expiry=utc_time_from_now(self.event_ttl),
             updated=row.updated,
-            **self.event_details(row.raw),
         )
 
     def row_in_event_window(self, row: SportsDataEventRow) -> bool:
@@ -628,21 +576,9 @@ class Sport:
         event.away_score = row.away_score
         event.status = row.status
         event.updated = row.updated
-        for field, value in self.event_details(row.raw).items():
-            # Skip Nones so partial score payloads do not clobber schedule details.
-            if value is not None:
-                setattr(event, field, value)
 
     def updated_at(
         self, event_description: dict[str, Any], event_timezone: ZoneInfo
     ) -> datetime | None:
         """Return the event update timestamp, preferring the UTC field when available."""
         return SportsDataEventRow._updated_at(event_description, event_timezone)
-
-    def event_details(self, event_description: dict[str, Any]) -> dict[str, Any]:
-        """Return optional fields to merge into an `Event`.
-
-        Most sports only need the common score fields. Subclasses can override this
-        when a feed exposes widget-specific details, such as WCS clock and penalty data.
-        """
-        return {}

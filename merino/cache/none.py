@@ -98,61 +98,6 @@ class NoCacheAdapter:  # pragma: no cover
         """Set field for a hash key if not already present"""
         return 0
 
-    # == Sorted Set functions
-    async def zadd(
-        self,
-        key: str,
-        mapping: dict[Any, int],
-        nx: bool = False,
-        xx: bool = False,
-        gt: bool = False,
-        lt: bool = False,
-    ) -> int:
-        """Set scored values (identified as a dict where the key is the name and the value is the score)
-
-        an example of the mapping might be:
-        {f"fifa:event:{eventId}": int(time.time())}
-
-        flags:
-            `nx`: if Not eXists
-            `xx`: only if eXists
-            `gt`: if provided value is Greater Than
-            `lt`: if provided value is Less Than
-        """
-        return 0
-
-    async def zrange(
-        self,
-        key: str,
-        min: int,
-        max: int,
-        byScore: bool = True,
-        limit: int | None = None,
-        offset: int | None = None,
-        rev: bool = False,
-        withScores: bool = False,
-    ) -> list[Any]:
-        """Return values (with optional scores) that fall between the min and max inclusively"""
-        return []
-
-    async def zrem(
-        self,
-        key: str,
-        *field: str,
-    ) -> int:
-        """Remove a field from a zrange key"""
-        return 0
-
-    async def zremrangebyscore(
-        self,
-        key: str,
-        min: int,
-        max: int,
-    ) -> int:
-        """Remove any values that fall between the min and max inclusively"""
-        return 0
-
-    # ==
     async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
         """Scan keys for matching values. NOTE: This is VERY slow and should be avoided."""
         return []

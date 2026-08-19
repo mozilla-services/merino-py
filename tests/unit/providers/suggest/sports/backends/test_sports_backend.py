@@ -3,7 +3,7 @@
 import hashlib
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -37,7 +37,7 @@ from merino.providers.suggest.sports.backends.sportsdata.protocol import (
     SportSummary,
     build_query,
 )
-from merino.utils.logos import Logo, LogoCategory, LogoManifest
+from merino.utils.logos import LogoCategory
 
 
 VALID_TEST_RESPONSE: dict = {}
@@ -461,12 +461,9 @@ async def test_sports_backend_startup(sport_data_store: SportsDataStore, mocker:
         ("NBA", SportCategory.Basketball),
         ("UCL", SportCategory.Soccer),
         ("MLB", SportCategory.Baseball),
-        ("WCS", SportCategory.Soccer),
-        ("WORLD CUP", SportCategory.Soccer),
-        ("FIFA", SportCategory.Soccer),
         ("Warhammer40k", SportCategory.Misc),
     ],
-    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "WCS", "WORLD CUP", "FIFA", "miscellaneous"],
+    ids=["NFL", "NHL", "NBA", "UCL", "MLB", "miscellaneous"],
 )
 def test_sport_event_detail_category(sport: str, expected_category: SportCategory) -> None:
     """Test sport name mapping and fallback behavior"""
@@ -485,36 +482,12 @@ def test_sport_event_detail_category(sport: str, expected_category: SportCategor
     assert result.sport_category == expected_category
 
 
-def test_sport_event_detail_remap() -> None:  # WCS, Widget
-    """Test sport name mapping and fallback behavior"""
-    event: dict = {
-        "sport": "fifa",
-        "date": "2025-10-01T00:00:00+00:00",
-        "event_status": GameStatus.Scheduled,
-        "home_team": {"key": "HOM", "name": "Home Team", "colors": ["000000"]},
-        "away_team": {"key": "AWY", "name": "Away Team", "colors": ["FFFFFF"]},
-        "home_score": None,
-        "away_score": None,
-        "touched": "2025-10-01T00:00:00+00:00",
-    }
-
-    result = SportEventDetail.from_event_dict(event)
-    assert result.sport == "World Cup"
-    assert result.query == "Home Team vs Away Team World Cup 2026"
-    assert result.sport_category == SportCategory.Soccer
-
-
 @pytest.mark.parametrize(
     "home_team_name,away_team_name,sport,stage,expected",
     [
         ("Home Team", "Away Team", "NFL", None, "NFL Home Team vs Away Team 01 October 2025"),
-        ("Switzerland", "Germany", "FIFA", "Group", "Switzerland vs Germany World Cup 2026"),
-        ("Japan", None, "FIFA", "Round of 16", "Round of 16 World Cup 2026"),
-        (None, None, "FIFA", "Round of 32", "Round of 32 World Cup 2026"),
-        ("South Korea", "TBD", "FIFA", "Semi-Finals", "Semi-Finals World Cup 2026"),
-        ("TBD", "TBD", "FIFA", "3rd Place", "3rd Place World Cup 2026"),
     ],
-    ids=["NFL", "WCS", "WCS: None (one)", "WCS: None (both)", "WCS: TBD (one)", "WCS: TBD (both)"],
+    ids=["NFL"],
 )
 def test_build_query(home_team_name, away_team_name, sport, stage, expected) -> None:
     """build_query produces a 'sport away vs home date' string."""
@@ -646,35 +619,6 @@ def test_sport_event_detail_icon_none_for_unknown_sport() -> None:
     assert result.away_team.icon is None
 
 
-def test_sport_event_detail_icon_set_for_fifa_uses_nations_logos(
-    mocker: MockerFixture, make_manifest
-) -> None:
-    """FIFA events resolve to LogoCategory.Nations via SportLogoCategoryMap."""
-    mocker.patch(
-        "merino.utils.logos.load_manifest",
-        return_value=make_manifest(
-            (LogoCategory.Nations, "usa"),
-            (LogoCategory.Nations, "can"),
-        ),
-    )
-
-    event = {
-        "date": "2026-06-15T00:00:00+00:00",
-        "sport": "FIFA",
-        "event_status": GameStatus.Scheduled,
-        "home_team": {"key": "USA", "name": "United States", "colors": ["B22234"]},
-        "away_team": {"key": "CAN", "name": "Canada", "colors": ["FF0000"]},
-        "home_score": None,
-        "away_score": None,
-        "touched": "2026-06-15T00:00:00+00:00",
-    }
-    result = SportEventDetail.from_event_dict(event)
-
-    host = f"https://{settings.image_gcs_v2.cdn_hostname}"
-    assert str(result.home_team.icon) == f"{host}/logos/nations/nations_usa.png"
-    assert str(result.away_team.icon) == f"{host}/logos/nations/nations_can.png"
-
-
 def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
     """Icons are None when the team key is absent from the manifest."""
     event = {
@@ -691,42 +635,3 @@ def test_sport_event_detail_icon_none_when_team_not_in_manifest() -> None:
 
     assert result.home_team.icon is None
     assert result.away_team.icon is None
-
-
-def test_sport_event_detail_fifa_icon_is_png_and_not_svg(
-    mocker: MockerFixture,
-) -> None:
-    """The suggest request should return PNG icon instead of SVG."""
-    manifest = LogoManifest(
-        generated_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-        lookups={
-            LogoCategory.Nations: {
-                "BRA": Logo(
-                    name="BRA",
-                    url="logos/nations/nations_br.png",
-                    svg="logos/nations/svg/BRA.svg",
-                ),
-                "ARG": Logo(
-                    name="ARG",
-                    url="logos/nations/nations_ar.png",
-                    svg="logos/nations/svg/ARG.svg",
-                ),
-            }
-        },
-    )
-    mocker.patch("merino.utils.logos.load_manifest", return_value=manifest)
-
-    event = {
-        "date": "2026-06-15T00:00:00+00:00",
-        "sport": "FIFA",
-        "event_status": GameStatus.Scheduled,
-        "home_team": {"key": "BRA", "name": "Brazil", "colors": ["#FFD600"]},
-        "away_team": {"key": "ARG", "name": "Argentina", "colors": ["#74ACDF"]},
-        "home_score": None,
-        "away_score": None,
-        "touched": "2026-06-15T00:00:00+00:00",
-    }
-    result = SportEventDetail.from_event_dict(event)
-
-    assert str(result.home_team.icon).endswith("/logos/nations/nations_br.png")
-    assert str(result.away_team.icon).endswith("/logos/nations/nations_ar.png")

@@ -115,7 +115,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
 uv run opentelemetry-instrument merino-jobs \
 # replace below with whichever job you want to run
-fetch_sports update-and-cache-wcs
+fetch_sports update
 ```
 
 ### Viewing traces and metrics

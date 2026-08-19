@@ -1,1 +1,0 @@
-"""Shared WCS test helpers."""

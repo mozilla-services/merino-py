@@ -5,7 +5,7 @@ from functools import partial, update_wrapper
 from dynaconf import Dynaconf, Validator
 
 # Validators for Merino settings.
-_RUNTIME_MODE_VALUES = ["ALL", "REGULAR", "WIDGET"]
+_RUNTIME_MODE_VALUES = ["ALL", "REGULAR"]
 
 _validators = [
     Validator(
@@ -191,16 +191,6 @@ _validators = [
     Validator("providers.sports.max_suggestions", is_type_of=int, gte=1, required=True),
     Validator("providers.sports.event_ttl_weeks", is_type_of=int, gte=1, required=False),
     Validator("providers.sports.intent_words", is_type_of=list),
-    Validator("providers.wcs.live_data_enabled", is_type_of=bool),
-    Validator(
-        "providers.wcs.circuit_breaker_failure_threshold", is_type_of=int, gte=1, required=True
-    ),
-    Validator(
-        "providers.wcs.circuit_breaker_recover_timeout_sec", is_type_of=int, gte=1, required=True
-    ),
-    Validator(
-        "providers.wcs.circuit_breaker_retry_after_sec", is_type_of=int, gte=1, required=True
-    ),
     # TODO: Break these out into a generic "elastic search" set?
     Validator("providers.sports.es.dsn", is_type_of=str, required=True),
     Validator("providers.sports.es.api_key", is_type_of=str, required=True),

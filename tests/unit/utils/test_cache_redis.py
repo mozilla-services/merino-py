@@ -91,10 +91,6 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     mredis.hdel.side_effect = RedisError
     mredis.hmset.side_effect = RedisError
     mredis.hsetnx.side_effect = RedisError
-    mredis.zadd.side_effect = RedisError
-    mredis.zrange.side_effect = RedisError
-    mredis.zrem.side_effect = RedisError
-    mredis.zremrangebyscore.side_effect = RedisError
     mredis.scan_iter.side_effect = RedisError
 
     expy = timedelta(seconds=30)
@@ -128,14 +124,6 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
         await adapter.hmget("key", ["field"])
     with pytest.raises(CacheAdapterError):
         await adapter.hsetnx("key", "field", "value")
-    with pytest.raises(CacheAdapterError):
-        await adapter.zadd("key", {"field": 123}, nx=True)
-    with pytest.raises(CacheAdapterError):
-        await adapter.zrange("key", min=0, max=200)
-    with pytest.raises(CacheAdapterError):
-        await adapter.zrem("key", "field")
-    with pytest.raises(CacheAdapterError):
-        await adapter.zremrangebyscore("key", min=0, max=200)
     with pytest.raises(CacheAdapterError):
         await adapter.scan("key")
     with pytest.raises(CacheAdapterError):
