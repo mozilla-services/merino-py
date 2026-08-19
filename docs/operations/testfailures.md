@@ -1,7 +1,7 @@
 # What to do with test failures in CI?
 
 1. Investigate the cause of the test failure
-    - For unit or integration, logs can be found on [CircleCI][circleci]
+    - For unit or integration, logs can be found in [GitHub Actions][github_actions]
     - For performance tests (load), insights can be found on [Grafana][merino_app_info] and in the
       Locust logs. To access the Locust logs see the [Distributed GCP Exection - CI Trigger][load_tests]
       section of the load test documentation.
@@ -16,10 +16,10 @@
       ```
 3. Re-Deploy
     - A fix or mitigation will most likely require a PR merge to the `main` branch that will
-      automatically trigger the deployment process. If this is not possible, a re-deployment can be
-      initiated manually by triggering the CI pipeline in [CircleCI][circleci].
+      automatically trigger the deployment process. This repository does not expose a manual
+      deployment workflow; if a merge is not possible, coordinate recovery with the service owners.
 
-[circleci]: https://app.circleci.com/pipelines/github/mozilla-services/merino-py
+[github_actions]: https://github.com/mozilla-services/merino-py/actions
 [merino_app_info]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/wip-merino-py-application-and-infrastructure?orgId=1&from=now-24h&to=now&var-environment=prodpy&refresh=1m
 [merino_gcp_stage]: https://console.cloud.google.com/kubernetes/list/overview?project=moz-fx-merino-nonprod-ee93
 [pytest_xfail]: https://docs.pytest.org/en/latest/how-to/skipping.html

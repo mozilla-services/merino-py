@@ -2,25 +2,27 @@ name: build-dockerhub-app-image
 
 on:
   workflow_call:
-    inputs:
-      image_tag:
-        required: true
-        type: string
-    secrets:
-      DOCKERHUB_REPO:
-        required: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
+      - name: Create version.json
+        run: |
+          printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
+          "$GITHUB_SHA" \
+          "$GITHUB_REF_NAME" \
+          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
+      - name: Output version.json
+        run: cat version.json
       - name: Build Merino app image
         run: make docker-build
-      - name: Tag image for Docker Hub
-        run: docker tag app:build ${{ secrets.DOCKERHUB_REPO }}:${{ inputs.image_tag }}
       - name: Save image artifact
-        run: docker save ${{ secrets.DOCKERHUB_REPO }}:${{ inputs.image_tag }} | gzip > merino-app.tar.gz
+        run: docker save app:build | gzip > merino-app.tar.gz
       - name: Upload image artifact
         uses: actions/upload-artifact@v6
         with:

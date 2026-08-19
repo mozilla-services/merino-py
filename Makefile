@@ -72,6 +72,17 @@ mypy: $(INSTALL_STAMP)  ##  Run mypy
 .PHONY: lint
 lint: $(INSTALL_STAMP) ruff-lint ruff-fmt bandit mypy ##  Run various linters
 
+.PHONY: actionlint
+actionlint:  ##  Validate GitHub Actions workflow syntax and expressions
+	./scripts/actionlint.sh
+
+.PHONY: gha-policy-lint
+gha-policy-lint:  ##  Validate release-critical GitHub Actions policies
+	$(UV) run --script scripts/gha_policy_lint.py
+
+.PHONY: gha-lint
+gha-lint: actionlint gha-policy-lint  ##  Run all GitHub Actions validation
+
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
 	$(UV) run ruff check --fix $(APP_AND_TEST_DIRS)

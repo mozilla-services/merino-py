@@ -258,6 +258,8 @@ Ensure that the following pass without error:
 - `make lint` -- General formatting and checks to the code.
 - `make unit-tests` -- validate the code operation (note: adding `-sx` to the `Makefile` `pytest` line will cause tests to fail on first error. While this is useful for local testing, it should NOT be included in commits.)
 - `make integration-tests` -- Contract tests for the API.
+- `make gha-lint` -- when changing files under `.github/`, validate workflow syntax and the
+  release-critical CI policies.
 
 Merino has a Code Coverage requirement of 95% coverage (including Unit and Integration Tests).
 

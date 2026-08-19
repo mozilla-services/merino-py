@@ -18,6 +18,8 @@ jobs:
   publish:
     environment: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
 
@@ -28,8 +30,6 @@ jobs:
           path: .
       - name: Load Docker image
         run: gunzip -c merino-app.tar.gz | docker load
-      - name: Re-tag image as app:build
-        run: docker tag ${{ secrets.DOCKERHUB_REPO }}:${{ inputs.image_tag }} app:build
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -41,11 +41,11 @@ jobs:
           msg=$(git log -1 --pretty=%B)
           echo "msg=$msg"
           if echo "$msg" | grep -q '\[load test: abort\]'; then
-            echo "tag=stage-loadtest-abort-${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+            echo "tag=stage-loadtest-abort-${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
           elif echo "$msg" | grep -q '\[load test: skip\]'; then
-            echo "tag=stage-${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+            echo "tag=stage-${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=stage-loadtest-warn-${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+            echo "tag=stage-loadtest-warn-${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
           fi
       - name: Tag and push to Docker Hub
         run: |
