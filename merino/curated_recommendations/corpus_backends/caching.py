@@ -165,11 +165,6 @@ async def _get_or_update_cache(
         cache_obj[key] = entry
 
         async with entry.lock:
-            if datetime.now() < entry.expiration and entry.value is not None:
-                # The entry is specifically given a value of None above - so
-                # will this return ever happen? Can we drop this if block?
-                return entry.value
-
             return await _fetch_and_store(func, entry, args, kwargs, wait_expiration)
 
 
