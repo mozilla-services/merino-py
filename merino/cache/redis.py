@@ -239,6 +239,89 @@ class RedisAdapter:
         except RedisError as exc:
             raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
 
+    # == Sorted Set functions
+    async def zadd(
+        self,
+        key: str,
+        mapping: dict[Any, int],
+        nx: bool = False,
+        xx: bool = False,
+        gt: bool = False,
+        lt: bool = False,
+    ) -> int:
+        """Set scored values (identified as a dict where the key is the name and the value is the score)
+
+        an example of the mapping might be:
+        {f"event:{event_id}": int(time.time())}
+
+        flags:
+            `nx`: if Not eXists
+            `xx`: only if eXists
+            `gt`: if provided value is Greater Than
+            `lt`: if provided value is Less Than
+        """
+        try:
+            return await self.primary.zadd(key, mapping, nx=nx, xx=xx, gt=gt, lt=lt)
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
+
+    async def zrange(
+        self,
+        key: str,
+        min: int,
+        max: int,
+        byScore: bool = True,
+        limit: int | None = None,
+        offset: int | None = None,
+        rev: bool = False,
+        withScores: bool = False,
+    ) -> list[Any]:
+        """Return values (with optional scores) that fall between the min and max inclusively"""
+        try:
+            return await self.replica.zrange(
+                key,
+                start=min,
+                end=max,
+                desc=rev,
+                withscores=withScores,
+                byscore=byScore,
+                offset=offset,
+                num=limit,
+            )
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
+
+    async def zrem(
+        self,
+        key: str,
+        *field: str,
+    ) -> int:
+        """Remove a field from a zrange key"""
+        try:
+            return await self.primary.zrem(
+                key,
+                *field,
+            )
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
+
+    async def zremrangebyscore(
+        self,
+        key: str,
+        min: int,
+        max: int,
+    ) -> int:
+        """Remove any values that fall between the min and max inclusively"""
+        try:
+            return await self.primary.zremrangebyscore(
+                name=key,
+                min=min,
+                max=max,
+            )
+        except RedisError as exc:
+            raise CacheAdapterError(f"Failed to cache {key} with error: {exc}") from exc
+
+    # ==
     async def scan(self, pattern: str, limit: int = 100) -> list[Any]:
         """Scan keys for matching values. NOTE: This is VERY slow and should be avoided."""
         items: list[bytes] = []
