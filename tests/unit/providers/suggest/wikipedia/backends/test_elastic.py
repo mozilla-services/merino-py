@@ -264,7 +264,7 @@ async def test_es_backend_search_error_metric_on_api_error(
     es_backend: ElasticBackend,
     statsd_mock: Any,
 ) -> None:
-    """Test that an ApiError increments the error metric with the HTTP status code."""
+    """Test that an ApiError increments both the count and error metrics."""
     api_error = ApiError(
         message="service unavailable",
         meta=ApiResponseMeta(
@@ -281,7 +281,8 @@ async def test_es_backend_search_error_metric_on_api_error(
     with pytest.raises(BackendError):
         await es_backend.search("foo", "en")
 
-    statsd_mock.increment.assert_called_once_with(
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": INDICES["en"]})
+    statsd_mock.increment.assert_any_call(
         "es.search.error", tags={"index": INDICES["en"], "status": 503}
     )
 
@@ -292,7 +293,7 @@ async def test_es_backend_search_error_metric_on_exception(
     es_backend: ElasticBackend,
     statsd_mock: Any,
 ) -> None:
-    """Test that a generic exception increments the error metric with status 'unknown'."""
+    """Test that a generic exception increments both the count and error metrics."""
     mocker.patch.object(
         AsyncElasticSearchAdapter, "search", side_effect=Exception("connection reset")
     )
@@ -300,9 +301,25 @@ async def test_es_backend_search_error_metric_on_exception(
     with pytest.raises(BackendError):
         await es_backend.search("foo", "en")
 
-    statsd_mock.increment.assert_called_once_with(
+    statsd_mock.increment.assert_any_call("es.search.count", tags={"index": INDICES["en"]})
+    statsd_mock.increment.assert_any_call(
         "es.search.error", tags={"index": INDICES["en"], "status": "unknown"}
     )
+
+
+@pytest.mark.asyncio
+async def test_es_backend_search_count_metric_on_success(
+    mocker: MockerFixture,
+    es_backend: ElasticBackend,
+    statsd_mock: Any,
+) -> None:
+    """Test that a successful search increments the count metric."""
+    async_mock = AsyncMock(return_value={"suggest": {SUGGEST_ID: [{"options": []}]}})
+    mocker.patch.object(AsyncElasticSearchAdapter, "search", side_effect=async_mock)
+
+    await es_backend.search("foo", "en")
+
+    statsd_mock.increment.assert_called_once_with("es.search.count", tags={"index": INDICES["en"]})
 
 
 @pytest.mark.asyncio
