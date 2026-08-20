@@ -14,6 +14,19 @@ The reasons to keep the job code close to the application code are:
 If your reason for re-running the job is needing to update the blocklist to avoid certain suggestions from being displayed,
 please see the [wikipedia blocklist runbook][wiki_blocklist_runbook].
 
+## Where the exports come from
+
+The `copy-export` step reads Wikimedia's CirrusSearch index dumps from
+<https://dumps.wikimedia.org/other/cirrus_search_index/>. That listing holds one directory per
+weekly snapshot (`20260816/`), and within each snapshot one directory per index
+(`index_name=enwiki_content/`). Upstream shards each index into many bzip2 files to parallelize
+dump generation, so the job traverses snapshots newest-first and concatenates the shards of the first
+complete one into a single object on GCS, named `<lang>wiki-<date>-cirrussearch-content.json.bz2`.
+bzip2 streams may be concatenated, so no recompression happens during the copy.
+
+A snapshot only counts as complete once Wikimedia writes a `_SUCCESS` marker beside its shards,
+which happens roughly 12 hours after the directory first appears. A snapshot without the marker is skipped in favour of the previous one, so a run logging `Currently up to date` shortly after a new snapshot appears is expected rather than a failure.
+
 ## Running the job in Airflow
 Normally, the job is set as a cron to run at set intervals as a [DAG in Airflow][airflow_docs].
 There may be instances you need to manually re-run the job from the Airflow dashboard.

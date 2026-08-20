@@ -129,7 +129,7 @@ def test_index_from_export_fail_on_existing_index(
 ):
     """Test that Exception is emitted."""
     file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
     )
     es_adapter.index_exists.return_value = False
     es_adapter.create_index.return_value = False
@@ -207,7 +207,7 @@ def test_index_from_export(
 ):
     """Test full index from export flow."""
     file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
     )
 
     es_adapter.bulk.return_value = {
@@ -252,7 +252,7 @@ def test_index_from_export_with_category_blocklist_content_filter(
 ):
     """Test content moderation removes blocked categories from category blocklist."""
     file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
     )
 
     def check_bulk_side_effect(operations):
@@ -319,7 +319,7 @@ def test_index_from_export_with_title_blocklist_content_filter(
     Also verifies that matching results are not case sensitive, given a title.
     """
     file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.gz", "bar"
+        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
     )
 
     def check_bulk_side_effect(operations):

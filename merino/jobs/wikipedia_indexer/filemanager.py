@@ -1,12 +1,12 @@
 """Manage files between Wikimedia exports and gcs bucket"""
 
+import bz2
 import logging
 import re
 from datetime import datetime as dt
-from gzip import GzipFile
 from html.parser import HTMLParser
 from typing import Generator, Optional, Pattern
-from urllib.parse import urljoin
+from urllib.parse import unquote, urljoin
 from merino.configs import settings
 
 
@@ -24,26 +24,34 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_LANGUAGES = set(settings.suggest_supported_languages)
 
+# Dated snapshot directories in the export listing, e.g. "20260816/".
+DATE_DIR_PATTERN = re.compile(r"^(\d{8})/$")
+
+# Wikimedia writes this marker only once every shard of an index has been published.
+# A snapshot directory without it is still being built and must not be ingested.
+SUCCESS_MARKER = "_SUCCESS"
+
+# Timeout for directory listing requests. Dump downloads stream are not bounded here.
+LISTING_TIMEOUT = 60
+
 
 class DirectoryParser(HTMLParser):
-    """Parse the directory listing to find the specified file."""
+    """Collect the percent-decoded hrefs from a directory listing."""
 
-    filter: Pattern[str]
     file_paths: list[str]
 
-    def __init__(self, filter_wildcard: Pattern[str]) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.file_paths = []
-        self.filter = re.compile(filter_wildcard)
-
-    def _is_href(self, k: str, v: str) -> bool:
-        return k == "href" and re.search(self.filter, v) is not None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
-        """When the parser encounters a start tag check for Anchor and push into list."""
+        """When the parser encounters an anchor, push its href into the list."""
         if tag == "a":
-            hrefs = [v for k, v in attrs if v is not None and self._is_href(k, v)]
-            self.file_paths.extend(hrefs)
+            for k, v in attrs:
+                # Listings we read hold plain filenames, but Wikimedia percent-encodes
+                # links to the "index_name=<wiki>_content/" directories, so decode either.
+                if k == "href" and v is not None:
+                    self.file_paths.append(unquote(v))
 
 
 class WikipediaFilemanagerError(FilemanagerError):
@@ -57,6 +65,7 @@ class FileManager:
     gcs_bucket: str
     object_prefix: str
     file_pattern: Pattern
+    shard_pattern: Pattern
     client: Client
     language: str
 
@@ -68,9 +77,13 @@ class FileManager:
                 f"Unsupported language '{language}'. Must be one of: {', '.join(SUPPORTED_LANGUAGES)}"
             )
 
+        # Name of the reassembled dump as we store it on GCS. Upstream ships the export as
+        # many shards, which we concatenate into a single object.
         self.file_pattern = re.compile(
-            rf"(?:.*/|^){language}wiki-(\d+)-cirrussearch-content.json.gz"
+            rf"(?:.*/|^){language}wiki-(\d+)-cirrussearch-content\.json\.bz2$"
         )
+        # An individual upstream shard, e.g. "enwiki_content-20260816-00000.json.bz2".
+        self.shard_pattern = re.compile(rf"^{language}wiki_content-(\d+)-(\d+)\.json\.bz2$")
         self.client = Client(gcs_project)
         self.base_url = export_base_url
         self.language = language
@@ -80,43 +93,71 @@ class FileManager:
             self.gcs_bucket = gcs_bucket
             self.object_prefix = ""
 
-    def get_latest_dump(self, latest_gcs: Optional[Blob]) -> Optional[str]:
-        """Find the latest export that's newer than the latest on GCS (if any)."""
+    def get_latest_dump_shards(self, latest_gcs: Optional[Blob]) -> list[str]:
+        """Find the shards of the latest complete export newer than the latest on GCS.
+
+        Returns the shard URLs in order, or an empty list when GCS is already up to date.
+        """
         last_gcs_date = self._parse_date(str(latest_gcs.name)) if latest_gcs else dt.min
 
-        # 1. Try current/
-        try:
-            resp = requests.get(self.base_url, headers=WIKIMEDIA_REQUEST_HEADERS)  # nosec
-            parser = DirectoryParser(self.file_pattern)
-            parser.feed(str(resp.content))
-            links = parser.file_paths
-            if len(links) == 1:
-                name = links[0]
-                url = urljoin(self.base_url, name)
-                link_date = self._parse_date(name)
-                if link_date > last_gcs_date:
-                    return url
-        except Exception as e:
-            logger.warning(f"Failed to fetch listing from {self.base_url}: {e}")
+        for snapshot_url, snapshot_date in self._list_snapshots():
+            if snapshot_date <= last_gcs_date:
+                # Snapshots are traversed newest first, so nothing older can qualify either.
+                break
+            try:
+                shards = self._list_shards(snapshot_url)
+            except requests.RequestException as e:
+                logger.warning(f"Failed to list shards under {snapshot_url}: {e}")
+                continue
+            if shards:
+                return shards
 
-        # 2. Fallback to dated directory (bandaid)
-        fallback_url = "https://dumps.wikimedia.org/other/cirrussearch/20251229/"
-        try:
-            resp = requests.get(fallback_url, headers=WIKIMEDIA_REQUEST_HEADERS)  # nosec
-            parser = DirectoryParser(self.file_pattern)
-            parser.feed(str(resp.content))
-            links = parser.file_paths
-            if len(links) == 1:
-                name = links[0]
-                url = urljoin(fallback_url, name)
-                link_date = self._parse_date(name)
-                if link_date > last_gcs_date:
-                    logger.info(f"Using bandaid fallback dump from {fallback_url}")
-                    return url
-        except Exception as e:
-            logger.warning(f"Fallback fetch failed: {e}")
+        return []
 
-        return None
+    def _list_snapshots(self) -> list[tuple[str, dt]]:
+        """List the dated snapshot directories in the export listing, newest first."""
+        snapshots: list[tuple[str, dt]] = []
+        for href in self._list_hrefs(self.base_url):
+            match = DATE_DIR_PATTERN.match(href)
+            if not match:
+                continue
+            try:
+                snapshot_date = dt.strptime(match.group(1), "%Y%m%d")
+            except ValueError:
+                logger.warning(f"Skipping unparseable snapshot directory: {href}")
+                continue
+            snapshots.append((urljoin(self.base_url, href), snapshot_date))
+
+        snapshots.sort(key=lambda pair: pair[1], reverse=True)
+        return snapshots
+
+    def _list_shards(self, snapshot_url: str) -> list[str]:
+        """List the ordered shard URLs for this language within a snapshot.
+
+        Returns an empty list if the export is missing or not yet fully published.
+        """
+        index_url = urljoin(snapshot_url, f"index_name={self.language}wiki_content/")
+        hrefs = self._list_hrefs(index_url)
+
+        if SUCCESS_MARKER not in hrefs:
+            logger.warning(
+                "Skipping export without a success marker",
+                extra={"url": index_url, "language": self.language},
+            )
+            return []
+
+        matches = [m for m in (self.shard_pattern.match(h) for h in hrefs) if m]
+
+        matches.sort(key=lambda m: int(m.group(2)))
+        return [urljoin(index_url, m.group(0)) for m in matches]
+
+    def _list_hrefs(self, url: str) -> list[str]:
+        """Fetch a directory listing and return every href it contains."""
+        resp = requests.get(url, timeout=LISTING_TIMEOUT, headers=WIKIMEDIA_REQUEST_HEADERS)  # nosec
+        resp.raise_for_status()
+        parser = DirectoryParser()
+        parser.feed(resp.text)
+        return parser.file_paths
 
     def _parse_date(self, filename: str) -> dt:
         """Parse datestring out of filename"""
@@ -143,7 +184,7 @@ class FileManager:
         blobs.sort(key=lambda b: self._parse_date(str(b.name)))
         return blobs[-1]
 
-    def stream_latest_dump_to_gcs(self, latest_gcs: Optional[Blob] = None) -> Blob:
+    def stream_latest_dump_to_gcs(self, latest_gcs: Optional[Blob] = None) -> Optional[Blob]:
         """Stream the latest Wikimedia dump to GCS"""
         try:
             if not latest_gcs:
@@ -154,10 +195,13 @@ class FileManager:
             )
             latest_gcs = None
 
-        latest_dump_url = self.get_latest_dump(latest_gcs)
-        logger.info("latest_dump_url", extra={"ldurl": latest_dump_url})
-        if latest_dump_url:
-            self._stream_dump_to_gcs(latest_dump_url)
+        shard_urls = self.get_latest_dump_shards(latest_gcs)
+        logger.info(
+            "latest_dump_shards",
+            extra={"shard_count": len(shard_urls), "first_shard": shard_urls[:1]},
+        )
+        if shard_urls:
+            self._stream_dump_to_gcs(shard_urls)
             # Recompute latest_gcs after upload
             latest_gcs = self.get_latest_gcs()
         else:
@@ -165,25 +209,63 @@ class FileManager:
 
         return latest_gcs
 
-    def _stream_dump_to_gcs(self, dump_url: str) -> None:
-        """Write latest to GCS without storing locally"""
+    def _dump_blob_name(self, shard_url: str) -> str:
+        """Build the GCS object name for the reassembled dump from a shard URL."""
+        match = self.shard_pattern.match(shard_url.split("/")[-1])
+        if not match:
+            raise WikipediaFilemanagerError(f"Unrecognized shard name: {shard_url}")
+        return f"{self.language}wiki-{match.group(1)}-cirrussearch-content.json.bz2"
+
+    def _total_shard_size(self, shard_urls: list[str]) -> int:
+        """Sum the sizes of the shards, for progress reporting. Returns 0 if unavailable."""
+        total = 0
+        for url in shard_urls:
+            try:
+                resp = requests.head(
+                    url, timeout=LISTING_TIMEOUT, headers=WIKIMEDIA_REQUEST_HEADERS
+                )  # nosec
+                resp.raise_for_status()
+                total += int(resp.headers.get("Content-Length", 0))
+            except (requests.RequestException, ValueError) as e:
+                logger.warning(f"Could not determine size of {url}: {e}")
+                return 0
+        return total
+
+    def _stream_dump_to_gcs(self, shard_urls: list[str]) -> None:
+        """Concatenate the upstream shards into a single blob on GCS.
+
+        Each shard is an independent bzip2 stream. bzip2 permits streams to be
+        concatenated, so the raw bytes are copied through verbatim and the result reads
+        back as one continuous file. Nothing is decompressed or stored locally here.
+        """
         # 40 MB chunk_size. This is the default Blob chunk size.
         # Having the same size will cause reads and writes to synchronize.
         chunk_size = 40 * 1024 * 1024
-        name = "{}/{}".format(self.object_prefix, dump_url.split("/")[-1])
+        name = "{}/{}".format(self.object_prefix, self._dump_blob_name(shard_urls[0]))
         blob = self.client.bucket(self.gcs_bucket).blob(name, chunk_size=chunk_size)
         try:
-            with requests.get(dump_url, stream=True, headers=WIKIMEDIA_REQUEST_HEADERS) as resp:  # nosec
-                content_len = int(resp.headers.get("Content-Length", 0))
-                resp.raise_for_status()
-                logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
-                logger.info("Total File Size: {}".format(content_len))
-                reporter = ProgressReporter(logger, "Copy", dump_url, name, content_len)
-                writer: BlobWriter
-                with blob.open("wb") as writer:
-                    for chunk in resp.iter_content(chunk_size=chunk_size):
-                        completed = writer.write(chunk)
-                        reporter.report(completed)
+            content_len = self._total_shard_size(shard_urls)
+            logger.info("Writing to GCS: gs://{}/{}".format(self.gcs_bucket, blob.name))
+            logger.info("Total File Size: {}".format(content_len))
+            logger.info("Shard count: {}".format(len(shard_urls)))
+
+            reporter = (
+                ProgressReporter(logger, "Copy", self.base_url, name, content_len)
+                if content_len > 0
+                else None
+            )
+            completed = 0
+            writer: BlobWriter
+            with blob.open("wb") as writer:
+                for shard_url in shard_urls:
+                    with requests.get(  # nosec
+                        shard_url, stream=True, headers=WIKIMEDIA_REQUEST_HEADERS
+                    ) as resp:
+                        resp.raise_for_status()
+                        for chunk in resp.iter_content(chunk_size=chunk_size):
+                            completed += writer.write(chunk)
+                            if reporter:
+                                reporter.report(completed)
 
         except Exception as e:
             logger.error(f"Unexpected error during GCS streaming for {name}: {e}")
@@ -202,6 +284,6 @@ class FileManager:
         """Streaming reader from GCS"""
         reader: BlobReader
         with blob.open("rb") as reader:
-            with GzipFile(fileobj=reader) as gz:
-                for line in gz:
+            with bz2.BZ2File(reader) as stream:
+                for line in stream:
                     yield line

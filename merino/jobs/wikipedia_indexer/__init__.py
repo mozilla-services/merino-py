@@ -97,5 +97,5 @@ def copy_export(
     latest = file_manager.stream_latest_dump_to_gcs()
     if latest is None or not getattr(latest, "name", ""):
         raise RuntimeError(
-            f"No {language} CirrusSearch dump found in current/ or fallback (20251027)."
+            f"No complete {language} CirrusSearch export found under {export_base_url}."
         )

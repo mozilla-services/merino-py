@@ -1564,7 +1564,7 @@ gcp_project = ""
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__EXPORT_BASE_URL
 # Wikipedia export base URL.
-export_base_url = "https://dumps.wikimedia.org/other/cirrussearch/current/"
+export_base_url = "https://dumps.wikimedia.org/other/cirrus_search_index/"
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__BLOCKLIST_FILE_URL
 # Blocklist file as CSV. Contains a list of the categories for articles that we want to block.
