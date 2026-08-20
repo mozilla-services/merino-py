@@ -2,31 +2,29 @@
 
 import asyncio
 import copy
+import freezegun
+import logging
+import pytest
+
+from httpx import AsyncClient, HTTPStatusError, Response
+from pytest_mock import MockerFixture
+from tests.types import FilterCaplogFixture
 from unittest.mock import AsyncMock
 
-import pytest
-from httpx import AsyncClient, Response
+from circuitbreaker import STATE_HALF_OPEN, CircuitBreakerMonitor
 
 from merino.curated_recommendations import SectionsBackend
-from merino.curated_recommendations.corpus_backends.protocol import CreateSource, SurfaceId
-from merino.curated_recommendations.corpus_backends.utils import CorpusApiGraphConfig
-from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
-from merino.utils.metrics import get_metrics_client
-
-import logging
-from datetime import datetime
-from time import monotonic
-
-from circuitbreaker import STATE_HALF_OPEN, CircuitBreakerMonitor
-from httpx import HTTPStatusError
-from pytest_mock import MockerFixture
-
 from merino.curated_recommendations.corpus_backends.circuitbreaker import (
     CuratedRecommendationsCircuitBreaker,
 )
-from merino.curated_recommendations.corpus_backends.utils import CorpusGraphQLError
+from merino.curated_recommendations.corpus_backends.protocol import CreateSource, SurfaceId
+from merino.curated_recommendations.corpus_backends.utils import (
+    CorpusApiGraphConfig,
+    CorpusGraphQLError,
+)
+from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
 from merino.exceptions import BackendError
-from tests.types import FilterCaplogFixture
+from merino.utils.metrics import get_metrics_client
 
 
 @pytest.fixture()
@@ -393,26 +391,39 @@ class TestSectionsCircuitBreaker:
     ):
         """The fallback must raise so @stale_while_revalidate can serve stale data."""
         caplog.set_level(logging.ERROR)
+
         backend = make_sections_backend(sections_http_client)
-        fresh = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
-        assert sections_http_client.post.call_count == 1
 
-        # Expire the cached value, then open the breaker.
-        for entry in backend._cache.values():
-            entry.expiration = datetime.min
-        await trip_breaker(make_sections_backend, fixture_request_data)
+        # control time so we can expire the SWR cache
+        with freezegun.freeze_time(tick=True) as time_gem:
+            # populate the SWR cache
+            cache_fresh = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
-        stale = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
-        assert stale == fresh
+            assert sections_http_client.post.call_count == 1
 
-        # The background revalidation is short-circuited too, so no second API call.
-        await asyncio.gather(*list(backend._background_tasks))
-        assert sections_http_client.post.call_count == 1
+            # fast-forward time so the cache expires
+            time_gem.tick(delta=SectionsBackend.cache_time_to_live_max)
 
-        records = filter_caplog(
-            caplog.records, "merino.curated_recommendations.corpus_backends.caching"
-        )
-        assert any("Returning stale data" in record.message for record in records)
+            # open the circuit breaker
+            await trip_breaker(make_sections_backend, fixture_request_data)
+
+            # with the circuit breaker open, we should get the expired cache
+            cache_stale = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+            assert cache_stale == cache_fresh
+
+            # await the async call spawned by the cache so we can verify if an http
+            # call was made
+            await asyncio.gather(*list(backend._background_tasks))
+
+            # with the breaker open, we should still only have 1 http call
+            # (from the initial successful fetch)
+            assert sections_http_client.post.call_count == 1
+
+            records = filter_caplog(
+                caplog.records, "merino.curated_recommendations.corpus_backends.caching"
+            )
+            assert any("Returning stale data" in record.message for record in records)
 
     @pytest.mark.asyncio
     async def test_breaker_recovers_after_timeout(
@@ -424,17 +435,22 @@ class TestSectionsCircuitBreaker:
         sections_circuit_breaker,
     ):
         """After the recovery timeout the breaker half-opens, then closes on a good fetch."""
-        await trip_breaker(make_sections_backend, fixture_request_data)
-        assert sections_circuit_breaker.opened
+        with freezegun.freeze_time(tick=True) as time_gem:
+            await trip_breaker(make_sections_backend, fixture_request_data)
 
-        # circuitbreaker measures the recovery window with time.monotonic().
-        mocker.patch("circuitbreaker.monotonic", return_value=monotonic() + RECOVERY_TIMEOUT + 1)
-        assert sections_circuit_breaker.state == STATE_HALF_OPEN
+            assert sections_circuit_breaker.opened
 
-        backend = make_sections_backend(sections_http_client)
-        sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+            # advance time so the circuit breaker recovers
+            time_gem.tick(RECOVERY_TIMEOUT + 5)
 
-        assert sections
-        sections_http_client.post.assert_called_once()
-        assert sections_circuit_breaker.closed
-        assert sections_circuit_breaker.failure_count == 0
+            assert sections_circuit_breaker.state == STATE_HALF_OPEN
+
+            backend = make_sections_backend(sections_http_client)
+            sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+            assert sections
+
+            sections_http_client.post.assert_called_once()
+
+            assert sections_circuit_breaker.closed
+            assert sections_circuit_breaker.failure_count == 0
