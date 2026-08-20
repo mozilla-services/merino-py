@@ -168,7 +168,3 @@ base_url = "https://ads.allizom.org/v1/suggest/"
 
 # MERINO_MARS__SEND_TEST_PADDING
 send_test_padding = true
-
-[stage.message_handler]
-# MERINO_MESSAGE_HANDLER__ENABLED
-enabled = true
