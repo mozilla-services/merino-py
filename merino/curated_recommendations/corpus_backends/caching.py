@@ -125,6 +125,12 @@ async def _get_or_update_cache(
     if key in cache_obj:
         entry = cache_obj[key]
         if datetime.now() > entry.expiration and not entry.lock.locked():
+            # If the cache has expired, kick off an async task to update it and
+            # try to return the stale value while the update is in progress.
+            # This is the "stale while revalidate" part.
+            #
+            # If the current cache entry has a value of None (e.g. on a cold
+            # start error), BackendError is raised.
             task = asyncio.create_task(
                 _update_cache(func, key, args, kwargs, wait_expiration, cache_obj)
             )
@@ -142,15 +148,23 @@ async def _get_or_update_cache(
                     # This line is reached if the background task successfully updated the cache.
                     return entry.value  # type: ignore[unreachable]
                 else:
-                    # This line is reached if the update failed, and there was no stale value.
+                    # This line is reached if the update failed OR if the update
+                    # is still in progress, and there was no stale value.
+                    #
+                    # In the case of a cold start with an initial failure (as
+                    # seen during merino deploys, which double pod count), the
+                    # cache key will exist with a value of None (see the `else`
+                    # block below). Subsequent calls to _update_cache (line 132
+                    # above) spawn a background task which is specifically
+                    # *not* awaited. While this background task executes, an
+                    # error will continue to be raised here.
                     raise BackendError(f"Failed to obtain value for {key}")
     else:
         # This is the first request for this cache key, so an entry must be created.
         entry = CacheEntry(value=None, expiration=datetime.min, lock=asyncio.Lock())
         cache_obj[key] = entry
+
         async with entry.lock:
-            if datetime.now() < entry.expiration and entry.value is not None:
-                return entry.value
             return await _fetch_and_store(func, entry, args, kwargs, wait_expiration)
 
 
@@ -173,16 +187,29 @@ async def _update_cache(
         cache_obj: The cache storage.
     """
     entry = cache_obj[key]
+
     async with entry.lock:
+        # If the cache entry hasn't expired and has a value, return it - no
+        # need to make an API call.
         if datetime.now() < entry.expiration and entry.value is not None:
             return
+
         try:
+            # Calls the decorated fetch function and stores the results in the
+            # cache entry.
             await _fetch_and_store(func, entry, args, kwargs, wait_expiration)
         except Exception as e:
+            # If calling the decorated fetch function raises...
+
+            # If we have an existing (albeit expired) value in the cache,
+            # extend its expiration time (stale data is better than no data),
+            # and log the error.
             if entry.value is not None:
                 entry.expiration = wait_expiration()
                 logger.error(f"Error updating cache for key {key}: {e}. Returning stale data.")
             else:
+                # If the stale cache entry is empty, we have nothing to return,
+                # so we need to raise.
                 raise
 
 

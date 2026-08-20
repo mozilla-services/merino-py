@@ -2,16 +2,88 @@
 
 import asyncio
 import copy
+import freezegun
+import logging
+import pytest
+
+from httpx import AsyncClient, HTTPStatusError, Response
+from pytest_mock import MockerFixture
+from tests.types import FilterCaplogFixture
 from unittest.mock import AsyncMock
 
-import pytest
-from httpx import AsyncClient, Response
+from circuitbreaker import STATE_HALF_OPEN, CircuitBreakerMonitor
 
 from merino.curated_recommendations import SectionsBackend
+from merino.curated_recommendations.corpus_backends.circuitbreaker import (
+    CuratedRecommendationsCircuitBreaker,
+)
 from merino.curated_recommendations.corpus_backends.protocol import CreateSource, SurfaceId
-from merino.curated_recommendations.corpus_backends.utils import CorpusApiGraphConfig
+from merino.curated_recommendations.corpus_backends.utils import (
+    CorpusApiGraphConfig,
+    CorpusGraphQLError,
+)
 from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
+from merino.exceptions import BackendError
 from merino.utils.metrics import get_metrics_client
+
+
+@pytest.fixture()
+def make_sections_backend(manifest_provider):
+    """Return a factory for SectionsBackend instances with a given HTTP client.
+
+    Each instance gets its own empty stale-while-revalidate cache, but they all
+    share the class-level circuit breaker.
+    """
+
+    def _make(http_client: AsyncMock) -> SectionsBackend:
+        return SectionsBackend(
+            http_client=http_client,
+            graph_config=CorpusApiGraphConfig(),
+            metrics_client=get_metrics_client(),
+            manifest_provider=manifest_provider,
+        )
+
+    return _make
+
+
+@pytest.fixture()
+def sections_circuit_breaker():
+    """Return the sections circuit breaker, closed before and after the test.
+
+    The breaker decorates SectionsBackend.fetch at class-definition time, so a
+    single instance is shared by every backend instance and every test.
+    """
+    breaker = CircuitBreakerMonitor.get(SECTIONS_BREAKER_NAME)
+
+    breaker.reset()
+
+    yield breaker
+
+    breaker.reset()
+
+
+def make_http_client(
+    response: Response | None = None, error: Exception | None = None
+) -> AsyncMock:
+    """Build a mock HTTP client that returns a fixed response or raises a fixed error."""
+    http_client = AsyncMock(spec=AsyncClient)
+
+    if error is not None:
+        http_client.post.side_effect = error
+    else:
+        http_client.post.return_value = response
+
+    return http_client
+
+
+async def trip_breaker(make_sections_backend, fixture_request_data) -> None:
+    """Drive the shared breaker open through a real fetch against a failing API."""
+    backend = make_sections_backend(
+        make_http_client(Response(status_code=503, request=fixture_request_data))
+    )
+
+    with pytest.raises(HTTPStatusError):
+        await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
 
 @pytest.mark.asyncio
@@ -81,25 +153,22 @@ async def test_fetch_ie_strips_locale_suffix(sections_ie_backend: SectionsBacken
 
 @pytest.mark.asyncio
 async def test_fetch_preserves_experiment_suffix(
-    sections_response_data, fixture_request_data, manifest_provider
+    sections_response_data, fixture_request_data, make_sections_backend
 ):
     """Experiment suffixes should be parsed into a canonical section with an alternate slate."""
     response_data = copy.deepcopy(sections_response_data)
     response_data["data"]["getSections"][0]["externalId"] = "government-test"
     response_data["data"]["getSections"][1]["externalId"] = "government-test__exp5050"
 
-    http_client = AsyncMock(spec=AsyncClient)
-    http_client.post.return_value = Response(
-        status_code=200,
-        json=response_data,
-        request=fixture_request_data,
+    http_client = make_http_client(
+        Response(
+            status_code=200,
+            json=response_data,
+            request=fixture_request_data,
+        )
     )
-    backend = SectionsBackend(
-        http_client=http_client,
-        graph_config=CorpusApiGraphConfig(),
-        metrics_client=get_metrics_client(),
-        manifest_provider=manifest_provider,
-    )
+
+    backend = make_sections_backend(http_client)
 
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
@@ -111,25 +180,22 @@ async def test_fetch_preserves_experiment_suffix(
 
 @pytest.mark.asyncio
 async def test_fetch_strips_locale_suffix_after_experiment_suffix(
-    sections_response_data, fixture_request_data, manifest_provider
+    sections_response_data, fixture_request_data, make_sections_backend
 ):
     """Locale stripping should preserve experiment metadata when linking the alternate slate."""
     response_data = copy.deepcopy(sections_response_data)
     response_data["data"]["getSections"][0]["externalId"] = "government-test"
     response_data["data"]["getSections"][1]["externalId"] = "government-test__exp5050__lDE_DE"
 
-    http_client = AsyncMock(spec=AsyncClient)
-    http_client.post.return_value = Response(
-        status_code=200,
-        json=response_data,
-        request=fixture_request_data,
+    http_client = make_http_client(
+        Response(
+            status_code=200,
+            json=response_data,
+            request=fixture_request_data,
+        )
     )
-    backend = SectionsBackend(
-        http_client=http_client,
-        graph_config=CorpusApiGraphConfig(),
-        metrics_client=get_metrics_client(),
-        manifest_provider=manifest_provider,
-    )
+
+    backend = make_sections_backend(http_client)
 
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
@@ -141,25 +207,22 @@ async def test_fetch_strips_locale_suffix_after_experiment_suffix(
 
 @pytest.mark.asyncio
 async def test_fetch_links_experiment_variant_to_base_section(
-    sections_response_data, fixture_request_data, manifest_provider
+    sections_response_data, fixture_request_data, make_sections_backend
 ):
     """A base/variant pair should be returned as one canonical section with an alternate slate."""
     response_data = copy.deepcopy(sections_response_data)
     response_data["data"]["getSections"][0]["externalId"] = "government-test"
     response_data["data"]["getSections"][1]["externalId"] = "government-test__exp5050"
 
-    http_client = AsyncMock(spec=AsyncClient)
-    http_client.post.return_value = Response(
-        status_code=200,
-        json=response_data,
-        request=fixture_request_data,
+    http_client = make_http_client(
+        Response(
+            status_code=200,
+            json=response_data,
+            request=fixture_request_data,
+        )
     )
-    backend = SectionsBackend(
-        http_client=http_client,
-        graph_config=CorpusApiGraphConfig(),
-        metrics_client=get_metrics_client(),
-        manifest_provider=manifest_provider,
-    )
+
+    backend = make_sections_backend(http_client)
 
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
@@ -197,11 +260,12 @@ async def test_fetch_schedules_spindle_refresh(
     sections_response_data, fixture_request_data, manifest_provider
 ):
     """Sections fetch should fire a background spindle refresh containing all items."""
-    http_client = AsyncMock(spec=AsyncClient)
-    http_client.post.return_value = Response(
-        status_code=200,
-        json=sections_response_data,
-        request=fixture_request_data,
+    http_client = make_http_client(
+        Response(
+            status_code=200,
+            json=sections_response_data,
+            request=fixture_request_data,
+        )
     )
     spindle = _StubSpindle()
     backend = SectionsBackend(
@@ -218,3 +282,175 @@ async def test_fetch_schedules_spindle_refresh(
 
     expected_count = sum(len(s.sectionItems) for s in sections)
     assert spindle.calls == [(expected_count, SurfaceId.NEW_TAB_EN_US)]
+
+
+SECTIONS_BREAKER_NAME = "curated_recommendations_sections_circuit_breaker"
+FAILURE_THRESHOLD = CuratedRecommendationsCircuitBreaker.FAILURE_THRESHOLD
+RECOVERY_TIMEOUT = CuratedRecommendationsCircuitBreaker.RECOVERY_TIMEOUT
+
+
+class TestSectionsCircuitBreaker:
+    """Tests covering the circuit breaker wrapped around SectionsBackend.fetch."""
+
+    @pytest.mark.asyncio
+    async def test_breaker_stays_closed_on_success(
+        self, sections_backend: SectionsBackend, sections_circuit_breaker
+    ):
+        """A successful fetch should leave the breaker closed with no failures recorded."""
+        sections = await sections_backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+        assert sections
+        assert sections_circuit_breaker.closed
+        assert sections_circuit_breaker.failure_count == 0
+
+    @pytest.mark.asyncio
+    async def test_breaker_opens_on_http_error(
+        self, make_sections_backend, fixture_request_data, sections_circuit_breaker
+    ):
+        """An HTTP error should exhaust the retries below the breaker, then open it."""
+        http_client = make_http_client(Response(status_code=503, request=fixture_request_data))
+        backend = make_sections_backend(http_client)
+
+        with pytest.raises(HTTPStatusError):
+            await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+        # @retry is applied below the breaker, so the breaker only sees one
+        # failure once every attempt has been used up.
+        assert http_client.post.call_count == SectionsBackend.retry_count
+        assert sections_circuit_breaker.failure_count == FAILURE_THRESHOLD
+        assert sections_circuit_breaker.opened
+
+    @pytest.mark.asyncio
+    async def test_breaker_opens_on_graphql_error(
+        self,
+        make_sections_backend,
+        fixture_graphql_200ok_with_error_response,
+        fixture_request_data,
+        sections_circuit_breaker,
+    ):
+        """A 200 response carrying GraphQL errors should also open the breaker."""
+        http_client = make_http_client(
+            Response(
+                status_code=200,
+                json=fixture_graphql_200ok_with_error_response,
+                request=fixture_request_data,
+            )
+        )
+        backend = make_sections_backend(http_client)
+
+        with pytest.raises(CorpusGraphQLError):
+            await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+        assert http_client.post.call_count == SectionsBackend.retry_count
+        assert sections_circuit_breaker.opened
+
+    @pytest.mark.asyncio
+    async def test_breaker_ignores_unexpected_exceptions(
+        self, make_sections_backend, sections_circuit_breaker
+    ):
+        """Errors outside EXPECTED_EXCEPTION should neither be retried nor open the breaker."""
+        http_client = make_http_client(error=RuntimeError("not a corpus API error"))
+        backend = make_sections_backend(http_client)
+
+        with pytest.raises(RuntimeError):
+            await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+        assert http_client.post.call_count == 1
+        assert sections_circuit_breaker.failure_count == 0
+        assert sections_circuit_breaker.closed
+
+    @pytest.mark.asyncio
+    async def test_breaker_short_circuits_while_open(
+        self,
+        make_sections_backend,
+        sections_http_client: AsyncMock,
+        fixture_request_data,
+        sections_circuit_breaker,
+    ):
+        """While open, fetch should fail fast with BackendError and skip the API entirely."""
+        await trip_breaker(make_sections_backend, fixture_request_data)
+        assert sections_circuit_breaker.opened
+
+        # A brand new backend with an empty cache and a healthy HTTP client is
+        # still short-circuited: the breaker is shared across all instances.
+        healthy_backend = make_sections_backend(sections_http_client)
+
+        with pytest.raises(BackendError, match="circuitbreaker"):
+            await healthy_backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+        sections_http_client.post.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_open_breaker_serves_stale_cache(
+        self,
+        make_sections_backend,
+        sections_http_client: AsyncMock,
+        fixture_request_data,
+        caplog,
+        filter_caplog: FilterCaplogFixture,
+    ):
+        """The fallback must raise so @stale_while_revalidate can serve stale data."""
+        caplog.set_level(logging.ERROR)
+
+        backend = make_sections_backend(sections_http_client)
+
+        # control time so we can expire the SWR cache
+        with freezegun.freeze_time(tick=True) as time_gem:
+            # populate the SWR cache
+            cache_fresh = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+            assert sections_http_client.post.call_count == 1
+
+            # fast-forward time so the cache expires
+            time_gem.tick(delta=SectionsBackend.cache_time_to_live_max)
+
+            # open the circuit breaker
+            await trip_breaker(make_sections_backend, fixture_request_data)
+
+            # with the circuit breaker open, we should get the expired cache
+            cache_stale = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+            assert cache_stale == cache_fresh
+
+            # await the async call spawned by the cache so we can verify if an http
+            # call was made
+            await asyncio.gather(*list(backend._background_tasks))
+
+            # with the breaker open, we should still only have 1 http call
+            # (from the initial successful fetch)
+            assert sections_http_client.post.call_count == 1
+
+            records = filter_caplog(
+                caplog.records, "merino.curated_recommendations.corpus_backends.caching"
+            )
+            assert any("Returning stale data" in record.message for record in records)
+
+    @pytest.mark.asyncio
+    async def test_breaker_recovers_after_timeout(
+        self,
+        mocker: MockerFixture,
+        make_sections_backend,
+        sections_http_client: AsyncMock,
+        fixture_request_data,
+        sections_circuit_breaker,
+    ):
+        """After the recovery timeout the breaker half-opens, then closes on a good fetch."""
+        with freezegun.freeze_time(tick=True) as time_gem:
+            await trip_breaker(make_sections_backend, fixture_request_data)
+
+            assert sections_circuit_breaker.opened
+
+            # advance time so the circuit breaker recovers
+            time_gem.tick(RECOVERY_TIMEOUT + 5)
+
+            assert sections_circuit_breaker.state == STATE_HALF_OPEN
+
+            backend = make_sections_backend(sections_http_client)
+            sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
+
+            assert sections
+
+            sections_http_client.post.assert_called_once()
+
+            assert sections_circuit_breaker.closed
+            assert sections_circuit_breaker.failure_count == 0
