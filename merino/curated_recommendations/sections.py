@@ -410,17 +410,38 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     )
 
 
-def should_exclude_editorial_sections(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if editorial (manually curated) sections must be hidden (HNT-2182).
+def should_exclude_editorial_sections(
+    request: CuratedRecommendationsRequest,
+    surface_id: SurfaceId | None = None,
+) -> bool:
+    """Return True if editorial (manually curated) sections must be hidden.
 
-    True only for the `no-editorial-sections` branch of the editorial sections experiment.
-    Popular Today and ML sections are unaffected.
+    Two experiments feed into this, with opposite polarity:
+
+    - US (HNT-2182): sections are shown by default and hidden only on the
+      `no-editorial-sections` branch of the editorial sections experiment.
+    - Germany (HNT-2876): editorial sections are a new, experiment-gated feature, so on
+      NEW_TAB_DE_DE they are hidden unless the request is on the `treatment` branch of the
+      German experiment. The 20% holdback and any unenrolled DE client see no editorial
+      sections.
+
+    Popular Today, Daily Briefing and ML sections are unaffected either way.
     """
-    return is_enrolled_in_experiment(
+    if is_enrolled_in_experiment(
         request,
         ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
         EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
-    )
+    ):
+        return True
+
+    if surface_id == SurfaceId.NEW_TAB_DE_DE:
+        return not is_enrolled_in_experiment(
+            request,
+            ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
+            EditorialSectionsBranch.GERMANY_TREATMENT.value,
+        )
+
+    return False
 
 
 def get_ranking_rescaler_for_branch(
@@ -847,7 +868,7 @@ async def get_sections(
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=True,
-        exclude_editorial_sections=should_exclude_editorial_sections(request),
+        exclude_editorial_sections=should_exclude_editorial_sections(request, surface_id),
     )
 
     # Determine if we should include daily briefing based on experiment

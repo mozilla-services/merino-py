@@ -110,6 +110,8 @@ class ExperimentName(str, Enum):
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
     # Experiment to measure the impact of editorial sections by hiding them in the treatment branch
     EDITORIAL_SECTIONS_EXPERIMENT = "editorial-sections-experiment"
+    # Germany rollout of editorial sections: the treatment branch is the one that shows them
+    EDITORIAL_SECTIONS_GERMANY_EXPERIMENT = "editorial-sections-experiment-germany"
     # Experiment to serve the cross-Europe English sections surface (NEW_TAB_EN_XE)
     SECTIONS_IN_EN_EUROPE_EXPERIMENT = "sections-in-en-europe"
     # Experiment to serve the global Spanish sections surface (NEW_TAB_ES_XA)
@@ -134,10 +136,14 @@ class DailyBriefingBranch(str, Enum):
 
 
 class EditorialSectionsBranch(str, Enum):
-    """Treatment branches for the Editorial Sections experiment (HNT-2182)."""
+    """Treatment branches for the Editorial Sections experiments (HNT-2182, HNT-2876)."""
 
-    # Remove editorial (manually curated) sections; keep ML sections + Popular Today.
+    # US (HNT-2182): remove editorial sections; keep ML sections + Popular Today.
     NO_EDITORIAL_SECTIONS = "no-editorial-sections"
+
+    # Germany (HNT-2876): the 80% branch that receives editorial sections. This inverts the US
+    # experiment: in DE editorial sections are hidden unless the user is on this branch.
+    GERMANY_TREATMENT = "treatment"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
