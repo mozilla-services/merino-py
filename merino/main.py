@@ -42,13 +42,8 @@ tags_metadata = [
         "name": "providers",
         "description": "Get a list of Firefox Suggest providers and their availability.",
     },
-    {
-        "name": "wcs",
-        "description": "World Cup Soccer match data for the New Tab widget.",
-    },
 ]
 _REGULAR_API_TAG_NAMES = frozenset({"suggest", "providers"})
-_WCS_API_TAG_NAMES = frozenset({"wcs"})
 
 logger = logging.getLogger(__name__)
 CleanupCallback = Callable[[], object]
@@ -110,11 +105,6 @@ def create_lifespan(mode: RuntimeMode | str):
 
             if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API):
                 await _start_regular_services(cleanup_callbacks)
-
-            if mode_enables(runtime_mode, RuntimeFeature.WCS_API):
-                await _start_wcs_services(cleanup_callbacks)
-
-            if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API):
                 _start_governance(cleanup_callbacks)
 
             yield
@@ -144,14 +134,6 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
 
     curated_recommendations.init_provider()
     await games.init_providers()
-
-
-async def _start_wcs_services(cleanup_callbacks: list[CleanupCallback]) -> None:
-    """Initialize World Cup widget services and register cleanup callbacks."""
-    from merino.providers import wcs
-
-    await wcs.init_provider()
-    cleanup_callbacks.append(wcs.shutdown_provider)
 
 
 def _start_governance(cleanup_callbacks: list[CleanupCallback]) -> None:
@@ -196,9 +178,6 @@ def _get_tags_metadata(mode: RuntimeMode) -> list[dict[str, str]]:
     if mode_enables(mode, RuntimeFeature.REGULAR_API):
         enabled_tag_names.update(_REGULAR_API_TAG_NAMES)
 
-    if mode_enables(mode, RuntimeFeature.WCS_API):
-        enabled_tag_names.update(_WCS_API_TAG_NAMES)
-
     return [tag for tag in tags_metadata if tag["name"] in enabled_tag_names]
 
 
@@ -226,11 +205,6 @@ def _include_routers(app: FastAPI, mode: RuntimeMode) -> None:
         from merino.web import api_v1
 
         app.include_router(api_v1.router, prefix="/api/v1")
-
-    if mode_enables(mode, RuntimeFeature.WCS_API):
-        from merino.web import api_v1_wcs
-
-        app.include_router(api_v1_wcs.router, prefix="/api/v1")
 
 
 app = create_app()

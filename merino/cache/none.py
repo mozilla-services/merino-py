@@ -111,7 +111,7 @@ class NoCacheAdapter:  # pragma: no cover
         """Set scored values (identified as a dict where the key is the name and the value is the score)
 
         an example of the mapping might be:
-        {f"fifa:event:{eventId}": int(time.time())}
+        {f"event:{event_id}": int(time.time())}
 
         flags:
             `nx`: if Not eXists

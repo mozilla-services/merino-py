@@ -8,13 +8,11 @@
 
 3. **Jobs** (`merino/jobs/`) - Airflow data pipelines invoked via `merino-jobs` CLI. Jobs populate data that providers serve.
 
-4. **WCS API** (`merino/providers/wcs/`), the backend of the `api/v1/wcs/*` endpoints defined in @merino/web/api_v1_wcs.py.
+4. **Games API** (`merino/providers/games/`), the backend of the `api/v1/games/*` endpoints defined in @merino/web/api_v1.py.
 
-5. **Games API** (`merino/providers/games/`), the backend of the `api/v1/games/*` endpoints defined in @merino/web/api_v1.py.
+5. **Image Manifest API** (`merino/providers/manifest/`), the backend of the `api/v1/manifest` endpoint defined in @merino/web/api_v1.py.
 
-6. **Image Manifest API** (`merino/providers/manifest/`), the backend of the `api/v1/manifest` endpoint defined in @merino/web/api_v1.py.
-
-7. **RSS API** (`merino/providers/rss/`), the backend of the `api/v1/rss/*` endpoints defined in @merino/web/api_v1.py.
+6. **RSS API** (`merino/providers/rss/`), the backend of the `api/v1/rss/*` endpoints defined in @merino/web/api_v1.py.
 
 ## Job-Provider Relationships
 

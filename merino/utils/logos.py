@@ -31,7 +31,6 @@ class LogoCategory(StrEnum):
     NBA = "nba"
     NFL = "nfl"
     NHL = "nhl"
-    Nations = "nations"
 
 
 class Logo(BaseModel):

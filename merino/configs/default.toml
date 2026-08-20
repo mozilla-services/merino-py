@@ -30,8 +30,8 @@ suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
 [default.runtime]
 # MERINO_RUNTIME__MODE
 # Boot-time feature profile.
-# Allowed values: ALL, REGULAR, WIDGET.
-# Use REGULAR for the main Suggest API, WIDGET for the WCS widget API, and ALL for both.
+# Allowed values: ALL, REGULAR.
+# Both currently serve the main Suggest API.
 mode = "ALL"
 
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
@@ -310,12 +310,6 @@ socket_connect_timeout_sec = 3
 # Timeout to interact with Redis in seconds
 socket_timeout_sec = 3
 
-# MERINO_REDIS__WCS_SERVER - URI to the WCS Redis primary endpoint.
-wcs_server = "redis://localhost:6379"
-
-# MERINO_REDIS__WCS_REPLICA - URI to the WCS Redis replica endpoint.
-wcs_replica = "redis://localhost:6379"
-
 [default.sentry]
 # MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
@@ -475,8 +469,7 @@ patterns = []
 
 # Sections under `[*.providers.<name>]` are loaded by the suggest provider
 # manager only when they expose a `type` field. Sibling subsystem configs can
-# share this namespace without `type` and initialize themselves elsewhere, as
-# `[*.providers.wcs]` does for the World Cup widget API.
+# share this namespace without `type` and initialize themselves elsewhere.
 
 [default.providers.accuweather]
 # MERINO_PROVIDERS__ACCUWEATHER__TYPE
@@ -541,9 +534,7 @@ hourly_forecast_ttl_sec = 1800
 type="sports"
 # MERINO_PROVIDERS__SPORTS__SPORTS
 # e.g. ["NFL","NBA","NHL"]
-sports=["NFL","NBA","NHL","MLB","UCL","WCS"]
-# required for WCS:
-cache="redis"
+sports=["NFL","NBA","NHL","MLB","UCL"]
 # Index names for Elastic Search.
 event_index="sports-{lang}-event"
 team_index="sports-{lang}-team"
@@ -601,33 +592,6 @@ retry_factor_sec=0.5
 # e.g.
 # base_url.nfl="https://api.sportsdata.io/v3/nfl/scores/json"
 # base_url.ucl="https://api.sportsdata.io/v4/soccer/scores/json"
-
-[default.providers.sports.sportsdata.WCS]
-# MERINO_PROVIDERS__SPORTS__SPORTSDATA__WCS__GAMES_BY_DATE_TTL_SEC
-# Local-disk cache lifetime (seconds) for live `GamesByDate` score responses
-# before refetching from SportsData.io.
-games_by_date_ttl_sec = 5
-
-[default.providers.wcs]
-# MERINO_PROVIDERS__WCS__LIVE_DATA_ENABLED
-# Serve Redis-backed in-progress matches for /wcs/live. Set to false to use
-# the static mock response for local widget development.
-live_data_enabled = true
-# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_FAILURE_THRESHOLD
-# The circuit breaker will open when the failure is over this threshold.
-circuit_breaker_failure_threshold = 10
-# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
-# The circuit breaker will stay open for this period of time until the next recovery attempt.
-circuit_breaker_recover_timeout_sec = 30
-# MERINO_PROVIDERS__WCS__WATCH_LINKS_CACHE_CONTROL_TTL
-# TTL value for the cache-control header set on the /wcs/watch-links endpoint response.
-watch_links_cache_control_ttl = 3600 # 1 hour
-# MERINO_PROVIDERS__WCS__DEFAULT_CACHE_CONTROL_TTL
-# TTL value for the cache-control header if cacheable and no other more specific TTL exists
-default_cache_control_ttl = 15 # seconds
-# MERINO_PROVIDERS__WCS__CIRCUIT_BREAKER_RETRY_AFTER_SEC
-# Value for the `Retry-After` header on 503 responses when the breaker is open.
-circuit_breaker_retry_after_sec = 90
 
 [default.manifest]
 # MERINO_PROVIDERS__MANIFEST__CRON_INTERVAL_SEC

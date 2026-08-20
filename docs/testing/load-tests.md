@@ -32,16 +32,11 @@ The following environment variables as well as
 Make sure any required API key is added but then not checked into source control.
 
 **WARNING**: if the `WIKIPEDIA__ES_API_KEY` is missing, the `MerinoUser` load tests will
-not execute. `WcsUser` runs do not require the Suggest bootstrap variables.
+not execute.
 
 | Environment Variable                             | Node(s)         | Description                                                                               |
 |--------------------------------------------------|-----------------|-------------------------------------------------------------------------------------------|
 | LOAD_TESTS__LOGGING_LEVEL                        | master & worker | Level for the logger in the load tests as an int (`10` for `DEBUG`, `20` for `INFO` etc.) |
-| LOAD_TESTS__WCS__HOST                            | master & worker | Default host for WCS-only load tests. Defaults to `https://merino.services.allizom.org`    |
-| LOAD_TESTS__WCS__DESKTOP_WEIGHT                  | master & worker | Relative weight for Firefox desktop User-Agent headers in WCS requests. Defaults to `1`    |
-| LOAD_TESTS__WCS__MOBILE_WEIGHT                   | master & worker | Relative weight for Firefox mobile User-Agent headers in WCS requests. Defaults to `1`     |
-| LOAD_TESTS__WCS__DATES                           | master & worker | Optional comma-separated WCS match dates. Defaults to local WCS schedule data              |
-| LOAD_TESTS__WCS__TEAM_KEYS                       | master & worker | Optional comma-separated WCS team keys. Defaults to local WCS team data                    |
 | MERINO_REMOTE_SETTINGS__SERVER                   | master & worker | Server URL of the Kinto instance containing suggestions                                   |
 | MERINO_REMOTE_SETTINGS__BUCKET                   | master & worker | Kinto bucket with the suggestions                                                         |
 | MERINO_REMOTE_SETTINGS__COLLECTION               | master & worker | Kinto collection with the suggestions                                                     |

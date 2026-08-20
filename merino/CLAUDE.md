@@ -8,7 +8,6 @@ The main domain components are as follows:
 
 - **Suggest API**, located in @merino/providers/suggest/, the backend of the `api/v1/suggest` endpoint defined in @merino/web/api_v1.py.
 - **Curated Recommendations API**, located in @merino/curated_recommendations/, the backend of the `api/v1/curated_recommendations/*` endpoints defined in @merino/web/api_v1.py.
-- **WCS API**, located in @merino/providers/wcs, the backend of the `api/v1/wcs/*` endpoints defined in @merino/web/api_v1_wcs.py.
 - **Games API**, located in @merino/providers/games, the backend of the `api/v1/games/*` endpoints defined in @merino/web/api_v1.py.
 - **Image Manifest API**, located in @merino/providers/manifest, the backend of the `api/v1/manifest` endpoint defined in @merino/web/api_v1.py.
 - **RSS API**, located in @merino/providers/rss, the backend of the `api/v1/rss/*` endpoints defined in @merino/web/api_v1.py.

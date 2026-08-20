@@ -20,25 +20,14 @@ hardcoded in the calling function for now, but is based on the file creation tim
 """
 
 import asyncio
-import copy
 import logging
-import signal
 import typer
 import sys
 from time import monotonic, time
 from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
 from dynaconf.base import LazySettings
-from typing import TYPE_CHECKING
-from sentry_sdk.crons import monitor
-
-if TYPE_CHECKING:
-    from sentry_sdk._types import MonitorConfig
-
 from merino.configs import settings
-from merino.cache.redis import RedisAdapter, create_redis_clients
-from merino.cache.none import NoCacheAdapter
-
 from merino.providers.suggest.sports import LOGGING_TAG, UPDATE_PERIOD_SECS
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Sport
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
@@ -51,29 +40,10 @@ from merino.providers.suggest.sports.backends.sportsdata.common.sports import (
     NHL,
     MLB,
     UCL,
-    WCS,
     # EPL,
 )
 from merino_common.utils.http_client import create_http_client
 from merino.utils.metrics import get_metrics_client
-
-
-# Sentry monitor config for WCS cron jobs
-wcs_monitor_config: "MonitorConfig" = {
-    "schedule": {"type": "crontab", "value": "*/3 * * * *"},
-    # If an expected check-in doesn't come in `checkin_margin`
-    # minutes, it'll be considered missed
-    "checkin_margin": 1,
-    # The check-in is allowed to run for `max_runtime` minutes
-    # before it's considered failed
-    "max_runtime": 3,
-    # It'll take `failure_issue_threshold` consecutive failed
-    # check-ins to create an issue
-    "failure_issue_threshold": 2,
-    # It'll take `recovery_threshold` OK check-ins to resolve
-    # an issue
-    "recovery_threshold": 3,
-}
 
 
 class Options:
@@ -101,7 +71,6 @@ class SportDataUpdater:
     connect_timeout: int
     read_timeout: int
     client: AsyncClient
-    cache: RedisAdapter | NoCacheAdapter
 
     # Copy of the general configuration
     # settings: LazySettings
@@ -112,7 +81,6 @@ class SportDataUpdater:
         store: SportsDataStore,
         connect_timeout: int = 1,
         read_timeout: int = 1,
-        cache: RedisAdapter | NoCacheAdapter = NoCacheAdapter(),
         *args,
         **kwargs,
     ) -> None:
@@ -137,8 +105,6 @@ class SportDataUpdater:
                     sport = UCL(settings)
                 case "MLB":
                     sport = MLB(settings)
-                case "WCS":
-                    sport = WCS(settings, cache=cache)
                 # case "EPL":
                 #    sport = EPL(settings)
                 case _:
@@ -147,7 +113,6 @@ class SportDataUpdater:
             sports[sport_name] = sport
         self.sports = sports
         self.store = store
-        self.cache = cache
         self.connect_timeout = connect_timeout
         self.read_timeout = read_timeout
         self.client = create_http_client(
@@ -244,74 +209,6 @@ class SportDataUpdater:
         await self.update_data()
         await self.store.shutdown()
 
-    async def update_widget(self) -> None:
-        """Fetch widget based info and store into the cache"""
-        # we only deal with WCS for now.
-        sport = self.sports.get("WCS")
-        if sport is None:
-            return
-        await self.store.startup()
-        await sport.init_cache(client=self.client, force=True)  # type: ignore
-        if not sport.teams:
-            await sport.update_teams(client=self.client)
-        await sport.cache_teams()  # type: ignore
-
-    async def update_and_cache_wcs(self) -> None:
-        """Update Elasticsearch data and refresh the widget cache."""
-        sport = self.sports.get("WCS")
-        if sport is None:
-            return
-        with monitor(monitor_slug="wcs-etl", monitor_config=wcs_monitor_config):
-            # TODO: Ensure errors bubble up to caller or are otherwise elevated
-            # so we can track success/fail here
-            await self.store.startup()
-            try:
-                # NOTE: Widget data must be done first, otherwise there may
-                # be missing data like no terms aliases, due to mutable internal
-                # state which depends on ordering of calls in the WCS class
-                await self.update_widget()
-                await self.update_data()
-            finally:
-                await self.store.shutdown()
-
-    async def run_wcs_loop(self, interval_sec: float, stop_event: asyncio.Event) -> None:
-        """Continuously refresh WCS Elasticsearch data and widget cache.
-
-        Intended for a long-lived pod rather than a k8s CronJob: the store, cache,
-        and HTTP clients built in `__init__` are reused across every iteration
-        instead of being recreated per run. Each iteration is wrapped so a
-        transient provider error is logged but does not stop the loop
-        (which would otherwise crash the pod). The loop exits cleanly once
-        `stop_event` is set, so callers can wire it to SIGTERM for rolling restarts.
-        """
-        logger = logging.getLogger(__name__)
-        # `startup()` is idempotent; open the store once and keep it for the
-        # lifetime of the loop rather than reconnecting every iteration.
-        await self.store.startup()
-        try:
-            while not stop_event.is_set():
-                started = monotonic()
-                try:
-                    # Widget data must be refreshed before event data; see the
-                    # ordering note on `update_and_cache_wcs`.
-                    await self.update_widget()
-                    await self.update_data()
-                except Exception as ex:
-                    logger.error(f"{LOGGING_TAG} WCS loop iteration failed: {ex}")
-                finally:
-                    logger.info(
-                        "wcs loop iteration finished",
-                        extra={"elapsed_sec": monotonic() - started},
-                    )
-                # Cancellable sleep: wake immediately if a shutdown signal arrives
-                # mid-gap rather than blocking for the full interval.
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=interval_sec)
-                except asyncio.TimeoutError:
-                    pass
-        finally:
-            await self.store.shutdown()
-
 
 logger = logging.getLogger(__name__)
 sports_settings = settings.providers.sports
@@ -339,23 +236,9 @@ if elastic_credentials.validate():
             index_map={"event": event_map},
             metrics_client=get_metrics_client(),
         )
-        cache = (
-            RedisAdapter(
-                *create_redis_clients(
-                    settings.redis.wcs_server,
-                    settings.redis.wcs_replica,
-                    settings.redis.max_connections,
-                    settings.redis.socket_connect_timeout_sec,
-                    settings.redis.socket_timeout_sec,
-                )
-            )
-            if sports_settings.get("cache") == "redis"
-            else NoCacheAdapter()
-        )
         provider = SportDataUpdater(
             settings=sports_settings,
             store=store,
-            cache=cache,
             connect_timeout=sports_settings.get("connect_timeout"),
             read_timeout=sports_settings.get("read_timeout"),
         )
@@ -394,72 +277,6 @@ def update():  # pragma: no cover
         asyncio.run(provider.update_data())
     else:
         logger.error("Sports provider unavailable.")
-
-
-@cli.command("update-widget")
-def update_widget():  # pragma: no cover
-    """Update widget based info"""
-    if provider:
-        asyncio.run(provider.update_widget())
-    else:
-        logger.error("Sports provider unavailable.")
-
-
-@cli.command("update-and-cache-wcs")
-def update_and_cache_wcs():  # pragma: no cover
-    """Update Elasticsearch data and refresh the widget cache for WCS (only)."""
-    if store and cache:
-        wcs_only_settings = copy.copy(sports_settings)
-        wcs_only_settings.sports = ["WCS"]
-        wcs_provider = SportDataUpdater(
-            settings=wcs_only_settings,
-            store=store,
-            cache=cache,
-            connect_timeout=sports_settings.get("connect_timeout"),
-            read_timeout=sports_settings.get("read_timeout"),
-        )
-        started = monotonic()
-        try:
-            asyncio.run(wcs_provider.update_and_cache_wcs())
-        finally:
-            logger.info(
-                "update-and-cache-wcs finished",
-                extra={"elapsed_sec": monotonic() - started},
-            )
-    else:
-        logger.error("Sports provider unavailable.")
-
-
-@cli.command("run-wcs-loop")
-def run_wcs_loop(interval_sec: float = 60.0):  # pragma: no cover
-    """Continuously refresh WCS data on a long-lived pod (not a CronJob).
-
-    Builds the WCS updater once and loops until SIGTERM/SIGINT. Override the gap
-    between iterations with `--interval-sec`; otherwise `providers.sports.
-    wcs_loop_interval_sec` is used.
-    """
-    if not (store and cache):
-        logger.error("Sports provider unavailable.")
-        raise typer.Exit(code=1)
-    wcs_only_settings = copy.copy(sports_settings)
-    wcs_only_settings.sports = ["WCS"]
-    wcs_provider = SportDataUpdater(
-        settings=wcs_only_settings,
-        store=store,
-        cache=cache,
-        connect_timeout=sports_settings.get("connect_timeout"),
-        read_timeout=sports_settings.get("read_timeout"),
-    )
-
-    async def _main() -> None:
-        stop_event = asyncio.Event()
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(sig, stop_event.set)
-        logger.info("Starting WCS loop", extra={"interval_sec": interval_sec})
-        await wcs_provider.run_wcs_loop(interval_sec=interval_sec, stop_event=stop_event)
-
-    asyncio.run(_main())
 
 
 @cli.command("quick_update")
