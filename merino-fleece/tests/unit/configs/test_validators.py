@@ -18,6 +18,7 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     },
     "LOGGING": {"format": "mozlog", "level": "INFO", "can_propagate": False},
     "SENTRY": {"mode": "disabled", "dsn": "", "env": "dev", "traces_sample_rate": 0.0},
+    "PUBSUB": {"sanitize_timeout_sec": 30.0, "messages_per_ner_worker": 2},
     "MARS": {
         "enabled": True,
         "base_url": "http://test-mars-api",
@@ -50,6 +51,25 @@ def _build(**overrides: dict[str, Any]) -> Dynaconf:
 def test_defaults_are_valid() -> None:
     """The baseline every other test overrides from passes validation."""
     _build().validators.validate()
+
+
+@pytest.mark.parametrize(
+    "pubsub",
+    [
+        pytest.param(
+            {"sanitize_timeout_sec": 0.0, "messages_per_ner_worker": 2}, id="timeout-not-positive"
+        ),
+        pytest.param(
+            {"sanitize_timeout_sec": 30.0, "messages_per_ner_worker": 0},
+            id="messages-per-worker-not-positive",
+        ),
+    ],
+)
+def test_non_positive_pubsub_tunables_rejected(pubsub: dict[str, Any]) -> None:
+    """A non-positive sanitization timeout or per-worker lease ratio fails validation."""
+    instance = _build(PUBSUB=pubsub)
+    with pytest.raises(ValidationError):
+        instance.validators.validate()
 
 
 def test_invalid_model_rejected() -> None:

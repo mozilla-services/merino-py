@@ -158,3 +158,20 @@ heartbeat_path = ""
 # How often to refresh the heartbeat file. Keep the probe's staleness threshold
 # comfortably above `heartbeat_interval + restart_backoff`.
 heartbeat_interval = 10  # seconds
+
+# MERINO_FLEECE_PUBSUB__SANITIZE_TIMEOUT_SEC
+# Max seconds a message callback waits for its search terms to be sanitized before
+# nacking the message for redelivery. Keep comfortably under the subscription's max ack
+# deadline, since a blocked callback holds the message's lease.
+sanitize_timeout_sec = 30.0
+
+# MERINO_FLEECE_PUBSUB__MESSAGES_PER_NER_WORKER
+# Messages leased concurrently per NER thread; the worker multiplies this by
+# `pii.executor_max_workers` to get its Pub/Sub flow-control cap. The streaming pull
+# dispatches callbacks on its own thread pool, but they all funnel into that one NER pool,
+# so the pool size -- not the callback pool -- is what bounds useful concurrency.
+#
+# At 2, one batch per thread is in NER while another is buffered locally, so a thread never
+# waits on the stream between batches. Higher values only add queue depth: more messages
+# holding leases while waiting their turn, and more to redeliver if the pod dies mid-drain.
+messages_per_ner_worker = 2

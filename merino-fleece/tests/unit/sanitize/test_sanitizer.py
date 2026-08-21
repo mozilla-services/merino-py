@@ -1,4 +1,4 @@
-"""Unit tests for the search term sanitization message handler."""
+"""Unit tests for the shared search term sanitization pass."""
 
 import logging
 from collections.abc import Callable, Iterator
@@ -11,10 +11,8 @@ from pytest_mock import MockerFixture
 
 from merino_common.models.suggest_logging import SuggestRequestParams
 from merino_common.testing.metrics import number_points
-from merino_common.utils.async_batch_queue import QueueFullException
-from merino_fleece.message_handlers.search_terms import handler as handler_module
-from merino_fleece.message_handlers.search_terms.handler import MessageHandler
-from merino_fleece.sanitize import exempts
+from merino_fleece.sanitize import exempts, sanitizer
+from merino_fleece.sanitize.sanitizer import sanitize_batch
 
 ParamsFactory = Callable[[str | None], SuggestRequestParams]
 
@@ -104,14 +102,14 @@ def fixture_register_exempt() -> Iterator[Callable[..., None]]:
 
 @pytest.fixture
 def detector(monkeypatch: pytest.MonkeyPatch, executor: ThreadPoolExecutor) -> RecordingDetector:
-    """Install a recording detector and the test pool as the handler's NER singletons.
+    """Install a recording detector and the test pool as the pass's NER singletons.
 
-    The handler looks these up per batch rather than capturing them at start, so
-    patching the module's accessors is enough -- no app lifespan required.
+    The pass looks these up per batch rather than capturing them up front, so patching
+    the module's accessors is enough -- no app lifespan required.
     """
     stub = RecordingDetector()
-    monkeypatch.setattr(handler_module, "get_detector", lambda: stub)
-    monkeypatch.setattr(handler_module, "get_executor", lambda: executor)
+    monkeypatch.setattr(sanitizer, "get_detector", lambda: stub)
+    monkeypatch.setattr(sanitizer, "get_executor", lambda: executor)
     return stub
 
 
@@ -134,10 +132,10 @@ def delta(before: dict[str, float], after: dict[str, float], pii_type: str) -> f
 def log_search_terms(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
     """Turn the sanitized search term data log on and capture it at INFO.
 
-    The handler reads the toggle once at import, mirroring merino's logging
+    The pass reads the toggle once at import, mirroring merino's logging
     middleware, so tests flip the module attribute rather than the setting.
     """
-    monkeypatch.setattr(handler_module, "LOG_SEARCH_TERMS", True)
+    monkeypatch.setattr(sanitizer, "LOG_SEARCH_TERMS", True)
     caplog.set_level(logging.INFO, logger=SANITIZED_LOGGER)
 
 
@@ -149,53 +147,6 @@ def sanitized_records(caplog: pytest.LogCaptureFixture) -> list[logging.LogRecor
 def logged_queries(caplog: pytest.LogCaptureFixture) -> list[str]:
     """Return the query of every sanitized search term logged, in emission order."""
     return [str(record.query) for record in sanitized_records(caplog)]  # type: ignore[attr-defined]
-
-
-@pytest.mark.asyncio
-async def test_lifecycle(detector: RecordingDetector, params: ParamsFactory) -> None:
-    """The handler starts, accepts terms, and stops."""
-    handler = MessageHandler()
-    assert handler.is_running() is False
-
-    await handler.start()
-    await handler.start()  # idempotent
-    assert handler.is_running() is True
-
-    handler.put(params("weather"))
-    await handler.stop()
-    assert handler.is_running() is False
-
-
-@pytest.mark.asyncio
-async def test_put_before_start_raises(params: ParamsFactory) -> None:
-    """Enqueuing before startup is a programming error, not a silent drop."""
-    handler = MessageHandler()
-    with pytest.raises(RuntimeError):
-        handler.put(params("weather"))
-
-
-def test_remaining_capacity_before_start_is_zero() -> None:
-    """A handler that is not running reports no capacity rather than raising."""
-    assert MessageHandler().remaining_capacity() == 0
-
-
-@pytest.mark.asyncio
-async def test_remaining_capacity_tracks_queue(params: ParamsFactory) -> None:
-    """Once started, reported capacity reflects the terms buffered in the queue."""
-    batches: list[list[SuggestRequestParams]] = []
-
-    async def on_batch(batch: list[SuggestRequestParams]) -> None:
-        batches.append(batch)
-
-    handler = MessageHandler(on_batch=on_batch)
-    await handler.start()
-    try:
-        capacity = handler.remaining_capacity()
-        assert capacity > 0
-        handler.put(params("weather"))
-        assert handler.remaining_capacity() == capacity - 1
-    finally:
-        await handler.stop()
 
 
 @pytest.mark.parametrize(
@@ -228,7 +179,7 @@ async def test_classification(
         detector.verdicts[str(query)] = True
     before = counter_by_type(metric_reader)
 
-    await MessageHandler().sanitize_batch([params(query)])
+    await sanitize_batch([params(query)])
 
     after = counter_by_type(metric_reader)
     assert delta(before, after, expected_type) == 1
@@ -259,7 +210,7 @@ async def test_mixed_batch_maps_verdicts_to_the_right_terms(
     ]
     before = counter_by_type(metric_reader)
 
-    await MessageHandler().sanitize_batch(batch)
+    await sanitize_batch(batch)
 
     after = counter_by_type(metric_reader)
     assert delta(before, after, "email") == 1
@@ -284,10 +235,10 @@ async def test_exempt_terms_skip_detection(
     `non_pii` would not prove anything.
     """
     register_exempt("firefox accounts")
-    basic_detect = mocker.spy(handler_module, "basic_detect")
+    basic_detect = mocker.spy(sanitizer, "basic_detect")
     before = counter_by_type(metric_reader)
 
-    await MessageHandler().sanitize_batch([params("firefox accounts")])
+    await sanitize_batch([params("firefox accounts")])
 
     after = counter_by_type(metric_reader)
     assert delta(before, after, "non_pii") == 1
@@ -310,7 +261,7 @@ async def test_exemption_wins_over_detection(
     register_exempt("iphone 15")
     before = counter_by_type(metric_reader)
 
-    await MessageHandler().sanitize_batch([params("iphone 15")])
+    await sanitize_batch([params("iphone 15")])
 
     after = counter_by_type(metric_reader)
     assert delta(before, after, "numeric") == 0
@@ -340,7 +291,7 @@ async def test_non_exempt_terms_in_a_mixed_batch_are_still_sanitized(
     ]
     before = counter_by_type(metric_reader)
 
-    await MessageHandler().sanitize_batch(batch)
+    await sanitize_batch(batch)
 
     after = counter_by_type(metric_reader)
     assert delta(before, after, "email") == 1
@@ -362,12 +313,12 @@ async def test_ner_is_chunked(
     are not stuck behind one long batch. The PERSON hit is in the final, partial chunk
     to prove the index mapping survives chunk boundaries.
     """
-    monkeypatch.setitem(handler_module.settings.sanitize, "ner_chunk_size", 2)
+    monkeypatch.setitem(sanitizer.settings.sanitize, "ner_chunk_size", 2)
     detector.verdicts["ada lovelace"] = True
     queries = ["one", "two", "three", "four", "ada lovelace"]
     before = counter_by_type(metric_reader)
 
-    await MessageHandler().sanitize_batch([params(query) for query in queries])
+    await sanitize_batch([params(query) for query in queries])
 
     assert [len(call) for call in detector.batch_calls] == [2, 2, 1]
     assert detector.seen_queries == queries
@@ -379,58 +330,8 @@ async def test_ner_is_chunked(
 @pytest.mark.asyncio
 async def test_empty_batch_skips_detection(detector: RecordingDetector) -> None:
     """An empty batch does no work and records nothing."""
-    await MessageHandler().sanitize_batch([])
+    await sanitize_batch([])
     assert detector.batch_calls == []
-
-
-@pytest.mark.asyncio
-async def test_sanitization_runs_via_the_queue(
-    detector: RecordingDetector,
-    params: ParamsFactory,
-    metric_reader: InMemoryMetricReader,
-) -> None:
-    """Terms put on the queue are sanitized by the background task.
-
-    Covers the wiring between `start`, `put`, and `sanitize_batch` that the direct
-    `sanitize_batch` tests bypass.
-    """
-    detector.verdicts["barack obama"] = True
-    before = counter_by_type(metric_reader)
-
-    handler = MessageHandler()
-    await handler.start()
-    handler.put(params("barack obama"))
-    handler.put(params("alice@example.com"))
-    await handler.stop()
-
-    after = counter_by_type(metric_reader)
-    assert delta(before, after, "person") == 1
-    assert delta(before, after, "email") == 1
-
-
-@pytest.mark.asyncio
-async def test_queue_full_rejects_puts(
-    monkeypatch: pytest.MonkeyPatch, detector: RecordingDetector, params: ParamsFactory
-) -> None:
-    """A full queue rejects further terms rather than buffering without bound.
-
-    A long collection delay keeps the run loop from draining the single slot before
-    the second put, making the rejection deterministic. `stop()` still returns
-    promptly because the collection wait races against the shutdown event.
-    """
-    monkeypatch.setitem(handler_module.settings.sanitize, "max_queue_size", 1)
-    monkeypatch.setitem(handler_module.settings.sanitize, "max_batch_size", 1)
-    monkeypatch.setitem(handler_module.settings.sanitize, "collection_delay_sec", 30.0)
-
-    handler = MessageHandler()
-    await handler.start()
-    try:
-        handler.put(params("weather"))
-        assert handler.remaining_capacity() == 0
-        with pytest.raises(QueueFullException):
-            handler.put(params("pizza"))
-    finally:
-        await handler.stop()
 
 
 @pytest.mark.usefixtures("log_search_terms")
@@ -455,7 +356,7 @@ async def test_only_non_pii_terms_are_logged(
         params("best pizza"),  # non_pii
     ]
 
-    await MessageHandler().sanitize_batch(batch)
+    await sanitize_batch(batch)
 
     assert logged_queries(caplog) == ["the weather today", "best pizza"]
 
@@ -474,7 +375,7 @@ async def test_ner_flagged_person_is_not_logged(
     """
     detector.verdicts["barack obama"] = True
 
-    await MessageHandler().sanitize_batch([params("barack obama")])
+    await sanitize_batch([params("barack obama")])
 
     assert sanitized_records(caplog) == []
 
@@ -488,7 +389,7 @@ async def test_logging_is_off_by_default(
     """With the toggle off, even a cleared term is not logged."""
     caplog.set_level(logging.INFO, logger=SANITIZED_LOGGER)
 
-    await MessageHandler().sanitize_batch([params("the weather today")])
+    await sanitize_batch([params("the weather today")])
 
     assert sanitized_records(caplog) == []
 
@@ -506,7 +407,7 @@ async def test_queryless_terms_are_skipped_but_still_counted(
     """A term without a query is counted as non_pii but has nothing to log."""
     before = counter_by_type(metric_reader)
 
-    await MessageHandler().sanitize_batch([params(query)])
+    await sanitize_batch([params(query)])
 
     after = counter_by_type(metric_reader)
     assert delta(before, after, "non_pii") == 1
@@ -546,7 +447,7 @@ async def test_log_record_shape(
         submitted_at=datetime(2022, 12, 18, hour=15, minute=58, second=41, tzinfo=UTC),
     )
 
-    await MessageHandler().sanitize_batch([term])
+    await sanitize_batch([term])
 
     [record] = sanitized_records(caplog)
     assert record.levelno == logging.INFO
