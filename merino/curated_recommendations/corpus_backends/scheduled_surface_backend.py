@@ -20,6 +20,9 @@ from merino.curated_recommendations.corpus_backends.caching import (
     stale_while_revalidate,
     WaitRandomExpiration,
 )
+from merino.curated_recommendations.corpus_backends.circuitbreaker import (
+    CuratedRecommendationsCircuitBreaker,
+)
 from merino.curated_recommendations.corpus_backends.protocol import (
     ScheduledSurfaceProtocol,
     CorpusItem,
@@ -42,11 +45,8 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
     Uses an in-memory cache and request coalescing to limit request rate to the backend.
     """
 
-    http_client: AsyncClient
-    graph_config: CorpusApiGraphConfig
-    metrics_client: aiodogstatsd.Client
-    manifest_provider: ManifestProvider
-
+    _background_tasks: set[asyncio.Task]
+    _cache: dict
     # Time-to-live was chosen because 2 minutes and 20 seconds (+/- 30 s) is
     # short enough that updates by curators such as breaking news or editorial
     # corrections propagate fast enough, and that the request rate to the
@@ -58,8 +58,11 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
     cache_time_to_live_max = timedelta(
         seconds=settings.curated_recommendations.corpus_api.cache_ttl_max
     )
-    _cache: dict
-    _background_tasks: set[asyncio.Task]
+    http_client: AsyncClient
+    graph_config: CorpusApiGraphConfig
+    manifest_provider: ManifestProvider
+    metrics_client: aiodogstatsd.Client
+    retry_count = settings.curated_recommendations.corpus_api.retry_count
 
     def __init__(
         self,
@@ -119,13 +122,16 @@ class ScheduledSurfaceBackend(ScheduledSurfaceProtocol):
         cache=lambda self: self._cache,
         jobs=lambda self: self._background_tasks,
     )
+    @CuratedRecommendationsCircuitBreaker(
+        name="curated_recommendations_scheduled_surface_circuit_breaker"
+    )
     @retry(
         wait=wait_exponential_jitter(
             initial=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
             jitter=settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds,
         ),
-        stop=stop_after_attempt(settings.curated_recommendations.corpus_api.retry_count),
-        retry=retry_if_exception_type((CorpusGraphQLError, HTTPError, ValueError)),
+        stop=stop_after_attempt(retry_count),
+        retry=retry_if_exception_type((CorpusGraphQLError, HTTPError)),
         reraise=True,
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
