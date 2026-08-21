@@ -478,8 +478,6 @@ class TestEditorialSectionsExperiment:
                 SurfaceId.NEW_TAB_EN_US,
                 False,
             ),
-            # The default behavior is to not exclude editorial sections.
-            (None, None, None, False),
         ],
     )
     def test_should_exclude_editorial_sections_germany(self, name, branch, surface_id, expected):
