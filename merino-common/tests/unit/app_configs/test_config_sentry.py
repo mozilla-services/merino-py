@@ -6,10 +6,13 @@
 
 import typing
 
+from sentry_sdk.integrations.logging import _IGNORED_LOGGERS, unignore_logger
 from sentry_sdk.types import Event
 
 from merino_common.app_configs.config_sentry import (
     REDACTED_TEXT,
+    SEARCH_TERM_LOGGERS,
+    ignore_search_term_loggers,
     strip_sensitive_data,
 )
 
@@ -267,3 +270,187 @@ def test_strip_sensitive_data_redacts_sportsdata_auth_locals() -> None:
     assert frame_vars["args"]["key"] == REDACTED_TEXT
     assert frame_vars["args"]["league"] == "nfl"
     assert frame_vars["headers"]["Ocp-Apim-Subscription-Key"] == REDACTED_TEXT
+
+
+def test_strip_sensitive_data_redacts_search_term_frame_locals() -> None:
+    """Test search term locals are redacted from every exception value, not just the first."""
+    event: Event = {
+        "exception": {
+            "values": [
+                {
+                    "type": "HTTPStatusError",
+                    "value": "Server error '500 Internal Server Error'",
+                    "stacktrace": {"frames": [{"module": "httpx._client", "vars": {}}]},
+                },
+                {
+                    "type": "FleeceError",
+                    "value": "Fleece returned an unexpected status 500 Internal Server Error",
+                    "stacktrace": {
+                        "frames": [
+                            {
+                                "module": "merino.message_handlers.search_terms.fleece",
+                                "filename": "merino/message_handlers/search_terms/fleece.py",
+                                "vars": {
+                                    "self": "<merino.message_handlers.search_terms."
+                                    "fleece.FleeceClient object at 0x10974cc20>",
+                                    "search_terms": [
+                                        "SuggestRequestParams(query='how to file taxes')"
+                                    ],
+                                    "submission": "SearchTermsSubmission(search_terms=[...])",
+                                    "outcome": "'error'",
+                                    "start": "1234.5",
+                                },
+                            }
+                        ]
+                    },
+                },
+            ]
+        }
+    }
+
+    sanitized_event = typing.cast(Event, strip_sensitive_data(event, mock_sentry_hint))
+
+    # Every local on this path goes, not just the ones known to hold a query.
+    frame_vars = sanitized_event["exception"]["values"][1]["stacktrace"]["frames"][0]["vars"]
+    assert set(frame_vars) == {"self", "search_terms", "submission", "outcome", "start"}
+    assert set(frame_vars.values()) == {REDACTED_TEXT}
+    # A message that carries no payload is left intact for grouping and triage.
+    assert sanitized_event["exception"]["values"][1]["value"].startswith("Fleece returned")
+
+
+def test_strip_sensitive_data_redacts_payload_in_third_party_frame() -> None:
+    """Test a search term payload is redacted from frames outside the search term modules."""
+    event: Event = {
+        "exception": {
+            "values": [
+                {
+                    "stacktrace": {
+                        "frames": [
+                            {
+                                "module": "httpx._content",
+                                "vars": {
+                                    "json": {"search_terms": [{"query": "how to file taxes"}]},
+                                    # A local json.dumps cannot handle: fail closed rather
+                                    # than raise, which would drop the whole event.
+                                    "headers_by_pair": {("accept", "json"): "1"},
+                                    "boundary": "b'a1b2c3'",
+                                },
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+
+    sanitized_event = typing.cast(Event, strip_sensitive_data(event, mock_sentry_hint))
+
+    frame_vars = sanitized_event["exception"]["values"][0]["stacktrace"]["frames"][0]["vars"]
+    assert frame_vars["json"] == REDACTED_TEXT
+    assert frame_vars["headers_by_pair"] == REDACTED_TEXT
+    assert frame_vars["boundary"] == "b'a1b2c3'"
+
+
+def test_strip_sensitive_data_redacts_request_body_extras_and_breadcrumbs() -> None:
+    """Test queries are redacted from the request body, log record extras and breadcrumbs."""
+    event: Event = {
+        "request": {
+            "method": "POST",
+            "url": "http://merino-fleece/api/v1/search-terms",
+            "data": {"search_terms": [{"query": "how to file taxes", "country": "US"}]},
+        },
+        "extra": {"query": "how to file taxes", "submitted_count": 3},
+        "breadcrumbs": {
+            "values": [
+                {
+                    "category": "web.suggest.sanitized",
+                    "data": {
+                        "terms": [{"query": "how to file taxes"}],
+                        "country": "US",
+                    },
+                }
+            ]
+        },
+    }
+
+    sanitized_event = typing.cast(Event, strip_sensitive_data(event, mock_sentry_hint))
+
+    request_data = typing.cast(dict, sanitized_event["request"]["data"])
+    assert request_data["search_terms"] == REDACTED_TEXT
+    assert sanitized_event["extra"]["query"] == REDACTED_TEXT
+    assert sanitized_event["extra"]["submitted_count"] == 3
+    breadcrumbs = typing.cast(dict, sanitized_event["breadcrumbs"])
+    breadcrumb_data = breadcrumbs["values"][0]["data"]
+    assert breadcrumb_data["terms"][0]["query"] == REDACTED_TEXT
+    assert breadcrumb_data["country"] == "US"
+
+
+def test_strip_sensitive_data_redacts_payload_bearing_exception_message() -> None:
+    """Test a validation error message that embeds the submitted query is redacted."""
+    event: Event = {
+        "exception": {
+            "values": [
+                {
+                    "type": "ValidationError",
+                    "value": (
+                        "1 validation error for SearchTermsSubmission\n"
+                        "search_terms.0.code\n  Input should be a valid integer "
+                        "[input_value={'query': 'how to file taxes'}]"
+                    ),
+                }
+            ]
+        }
+    }
+
+    sanitized_event = typing.cast(Event, strip_sensitive_data(event, mock_sentry_hint))
+
+    assert sanitized_event["exception"]["values"][0]["value"] == REDACTED_TEXT
+
+
+def test_strip_sensitive_data_handles_missing_keys_and_thread_frames() -> None:
+    """Test frames without vars are tolerated and thread stacktraces are redacted.
+
+    A raised `before_send` is swallowed by Sentry and drops the whole event, so a frame
+    without `vars` must not be an error.
+    """
+    event: Event = {
+        "exception": {"values": [{"type": "RuntimeError", "value": "boom"}]},
+        "threads": {
+            "values": [
+                {
+                    "stacktrace": {
+                        "frames": [
+                            {"module": "merino_common.utils.async_batch_queue"},
+                            {
+                                "module": "merino_common.utils.async_batch_queue",
+                                "vars": {
+                                    "batch": ["SuggestRequestParams(query='taxes')"],
+                                    "self": "<merino_common.utils.async_batch_queue."
+                                    "AsyncBatchQueue object at 0x104e2b110>",
+                                },
+                            },
+                        ]
+                    }
+                }
+            ]
+        },
+    }
+
+    sanitized_event = typing.cast(Event, strip_sensitive_data(event, mock_sentry_hint))
+
+    frames = sanitized_event["threads"]["values"][0]["stacktrace"]["frames"]
+    assert "vars" not in frames[0]
+    assert frames[1]["vars"]["batch"] == REDACTED_TEXT
+    assert frames[1]["vars"]["self"] == REDACTED_TEXT
+    assert sanitized_event["exception"]["values"][0]["value"] == "boom"
+
+
+def test_ignore_search_term_loggers() -> None:
+    """Test the search term loggers are excluded from Sentry breadcrumbs and events."""
+    try:
+        ignore_search_term_loggers()
+        for name in SEARCH_TERM_LOGGERS:
+            assert name in _IGNORED_LOGGERS
+    finally:
+        for name in SEARCH_TERM_LOGGERS:
+            unignore_logger(name)
