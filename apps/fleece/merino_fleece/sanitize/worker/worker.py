@@ -200,6 +200,7 @@ class FleeceQueueWorker:
             sanitize_batch(submission.search_terms), self.loop
         )
         try:
+            # Time out to avoid a stalled batch blocks the callback thread indefinitely.
             future.result(timeout=self.sanitize_timeout_s)
         except TimeoutError:
             # `result()` timing out does not stop the coroutine; cancel it so a stalled
