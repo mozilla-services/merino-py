@@ -1,26 +1,31 @@
-APP_DIR := merino
+APP_PROJECT_DIR := apps/merino
+APP_DIR := $(APP_PROJECT_DIR)/merino
 ES_IMAGE := merino-elasticsearch:local
-TEST_DIR := tests
+TEST_DIR := $(APP_PROJECT_DIR)/tests
 TEST_RESULTS_DIR ?= "workspace/test-results"
 COV_FAIL_UNDER := 95
 DIFF_COV_FAIL_UNDER := 95
 DIFF_COV_BRANCH ?= origin/main
 COMBINED_COVERAGE_XML := $(TEST_RESULTS_DIR)/coverage.xml
-COMMON_PACKAGE_DIR := merino-common/merino_common
-COMMON_TEST_DIR := merino-common/tests
-FLEECE_PACKAGE_DIR := merino-fleece/merino_fleece
-FLEECE_TEST_DIR := merino-fleece/tests
+COMMON_PROJECT_DIR := packages/merino-common
+COMMON_PACKAGE_DIR := $(COMMON_PROJECT_DIR)/merino_common
+COMMON_TEST_DIR := $(COMMON_PROJECT_DIR)/tests
+FLEECE_PROJECT_DIR := apps/fleece
+FLEECE_PACKAGE_DIR := $(FLEECE_PROJECT_DIR)/merino_fleece
+FLEECE_TEST_DIR := $(FLEECE_PROJECT_DIR)/tests
 FLEECE_WORKER_MAIN := $(FLEECE_PACKAGE_DIR)/sanitize/worker/main.py
 UNIT_TEST_DIR := $(TEST_DIR)/unit
 COMMON_UNIT_TEST_DIR := $(COMMON_TEST_DIR)/unit
 FLEECE_UNIT_TEST_DIR := $(FLEECE_TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
-LOAD_TEST_DIR := $(TEST_DIR)/load
-APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR) $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR)
+LOAD_TEST_DIR := tools/load-tests
+APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR) $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR) $(LOAD_TEST_DIR)
 INSTALL_STAMP := .install.stamp
 UV := $(shell command -v uv 2> /dev/null)
-ALL_TEST_FILES := $(shell $(UV) run python tests/utils/test_probe.py 2> /dev/null)
-DIRECT_TEST_FILES := $(shell $(UV) run python tests/utils/test_probe.py -q 2> /dev/null)
+PROJECT_MANIFESTS := pyproject.toml $(APP_PROJECT_DIR)/pyproject.toml $(FLEECE_PROJECT_DIR)/pyproject.toml $(COMMON_PROJECT_DIR)/pyproject.toml $(LOAD_TEST_DIR)/pyproject.toml
+TEST_PROBE := $(TEST_DIR)/utils/test_probe.py
+ALL_TEST_FILES := $(shell PYTHONPATH=$(APP_PROJECT_DIR) $(UV) run python $(TEST_PROBE) 2> /dev/null)
+DIRECT_TEST_FILES := $(shell PYTHONPATH=$(APP_PROJECT_DIR) $(UV) run python $(TEST_PROBE) -q 2> /dev/null)
 # keyword for test selection, set it to an empty string if undefined
 keyword ?=
 
@@ -44,7 +49,7 @@ NAV_OPTS ?=
 
 .PHONY: install
 install: $(INSTALL_STAMP)  ##  Install dependencies with uv
-$(INSTALL_STAMP): pyproject.toml uv.lock
+$(INSTALL_STAMP): $(PROJECT_MANIFESTS) uv.lock
 	@if [ -z $(UV) ]; then echo "uv could not be found."; exit 2; fi
 	$(UV) sync --all-groups --all-packages
 	touch $(INSTALL_STAMP)
@@ -67,7 +72,14 @@ bandit: $(INSTALL_STAMP)  ##  Run bandit
 
 .PHONY: mypy
 mypy: $(INSTALL_STAMP)  ##  Run mypy
-	$(UV) run mypy $(APP_AND_TEST_DIRS) --config-file="pyproject.toml"
+	MYPYPATH=$(APP_PROJECT_DIR):$(COMMON_PROJECT_DIR) \
+	    $(UV) run mypy $(APP_DIR) $(TEST_DIR) --config-file="pyproject.toml"
+	MYPYPATH=$(COMMON_PROJECT_DIR) \
+	    $(UV) run mypy $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) --config-file="pyproject.toml"
+	MYPYPATH=$(FLEECE_PROJECT_DIR):$(COMMON_PROJECT_DIR) \
+	    $(UV) run mypy $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR) --config-file="pyproject.toml"
+	MYPYPATH=$(APP_PROJECT_DIR):$(COMMON_PROJECT_DIR):$(LOAD_TEST_DIR) \
+	    $(UV) run mypy $(LOAD_TEST_DIR) --config-file="pyproject.toml"
 
 .PHONY: lint
 lint: $(INSTALL_STAMP) ruff-lint ruff-fmt bandit mypy ##  Run various linters
@@ -79,32 +91,32 @@ format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
 
 .PHONY: dev
 dev: $(INSTALL_STAMP)  ##  Run merino locally and reload automatically
-	$(UV) run fastapi dev $(APP_DIR)/main.py --reload
+	$(UV) run --package merino fastapi dev $(APP_DIR)/main.py --reload
 
 .PHONY: dev-otel
 dev-otel: $(INSTALL_STAMP)  ##  Run merino locally with OTEL auto-instrumentation (mimics k8s operator)
-	OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run opentelemetry-instrument fastapi run $(APP_DIR)/main.py --host 0.0.0.0 --port 8000
+	OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run --package merino opentelemetry-instrument fastapi run $(APP_DIR)/main.py --host 0.0.0.0 --port 8000
 
 .PHONY: dev-fleece
 dev-fleece: $(INSTALL_STAMP)  ##  Run fleece locally
-	$(UV) run opentelemetry-instrument fastapi run merino-fleece/merino_fleece/main.py --host 0.0.0.0 --port 8001
+	$(UV) run --package merino-fleece opentelemetry-instrument fastapi run $(FLEECE_PACKAGE_DIR)/main.py --host 0.0.0.0 --port 8001
 
 .PHONY: dev-fleece-otel
 dev-fleece-otel: $(INSTALL_STAMP)  ##  Run fleece locally with OTEL auto-instrumentation (mimics k8s operator)
-	OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run opentelemetry-instrument fastapi run merino-fleece/merino_fleece/main.py --host 0.0.0.0 --port 8001
+	OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run --package merino-fleece opentelemetry-instrument fastapi run $(FLEECE_PACKAGE_DIR)/main.py --host 0.0.0.0 --port 8001
 
 .PHONY: run
 run: $(INSTALL_STAMP)  ##  Run merino locally
-	$(UV) run fastapi run $(APP_DIR)/main.py
+	$(UV) run --package merino fastapi run $(APP_DIR)/main.py
 
 .PHONY: dev-fleece-worker
 dev-fleece-worker: $(INSTALL_STAMP)  ##  Run fleece worker locally (does not reload)
-	PUBSUB_EMULATOR_HOST=localhost:8085 $(UV) run $(FLEECE_WORKER_MAIN)
+	PUBSUB_EMULATOR_HOST=localhost:8085 $(UV) run --package merino-fleece $(FLEECE_WORKER_MAIN)
 
 
 .PHONY: dev-fleece-worker-otel
 dev-fleece-worker-otel: $(INSTALL_STAMP)  ##  Run fleece worker locally with OTEL auto-instrumentation (mimics k8s operator)
-	PUBSUB_EMULATOR_HOST=localhost:8085 OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run opentelemetry-instrument $(UV) run $(FLEECE_WORKER_MAIN)
+	PUBSUB_EMULATOR_HOST=localhost:8085 OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run --package merino-fleece opentelemetry-instrument $(UV) run --package merino-fleece $(FLEECE_WORKER_MAIN)
 
 
 .PHONY: test
@@ -190,15 +202,15 @@ integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integr
 
 .PHONY: docker-build
 docker-build:  ## Build the docker image for Merino named "app:build"
-	docker build -f dockerfiles/Dockerfile -t app:build .
+	docker build -f $(APP_PROJECT_DIR)/Dockerfile -t app:build .
 
 .PHONY: docker-build-jobs
 docker-build-jobs:  ## Build the docker image for Merino job runner named "merino-jobs:build"
-	docker build -f dockerfiles/Dockerfile --target job_runner -t merino-jobs:build .
+	docker build -f $(APP_PROJECT_DIR)/Dockerfile --target job_runner -t merino-jobs:build .
 
 .PHONY: docker-build-fleece
 docker-build-fleece:  ## Build the docker image for Merino named "app:build"
-	docker build -f dockerfiles/Dockerfile-fleece -t app-fleece:build .
+	docker build -f $(FLEECE_PROJECT_DIR)/Dockerfile -t app-fleece:build .
 
 .PHONY: load-tests
 load-tests:  ##  Run local execution of (Locust) load tests
@@ -235,7 +247,7 @@ doc-preview:  ##  Preview Merino docs via the default browser
 .PHONY: profile
 profile:  ## Profile Merino with Scalene
 	MERINO_LOGGING__FORMAT=mozlog MERINO_LOGGING__LEVEL=INFO \
-	$(UV) run python -m scalene merino/main.py
+	$(UV) run python -m scalene $(APP_DIR)/main.py
 
 .PHONY: docker-compose-up
 docker-compose-up:  ## Run `docker-compose up` in `./dev`
@@ -260,7 +272,7 @@ help:
 
 .PHONY: wikipedia-indexer
 wikipedia-indexer:
-	$(UV) run merino-jobs $@ ${job}
+	$(UV) run --package merino merino-jobs $@ ${job}
 
 .PHONY: health-check-prod
 health-check-prod:  ##  Check the production suggest endpoint with some test queries
@@ -300,7 +312,7 @@ nav-suggestions: $(INSTALL_STAMP)  ##  Run navigational suggestions job locally 
 		MONITOR_FLAG="--monitor"; \
 		echo "System monitoring enabled"; \
 	fi; \
-	$(UV) run merino-jobs navigational-suggestions prepare-domain-metadata \
+	$(UV) run --package merino merino-jobs navigational-suggestions prepare-domain-metadata \
 		--local \
 		--sample-size=$(SAMPLE_SIZE) \
 		--metrics-dir=$(METRICS_DIR) \

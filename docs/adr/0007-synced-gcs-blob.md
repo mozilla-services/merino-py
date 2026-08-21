@@ -94,5 +94,5 @@ The callback (`parse_and_cache_provider_data`) is called automatically by `Synce
 
 ## Links
 
-* [`SyncedGcsBlob`](/merino/utils/synced_gcs_blob.py)
+* [`SyncedGcsBlob`](/apps/merino/merino/utils/synced_gcs_blob.py)
 * [ADR 0005 — Asynchronous GCS Client](/docs/adr/0005-asynchronous-gcs-client.md)

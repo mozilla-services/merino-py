@@ -59,7 +59,7 @@ For more detailed information about load testing procedures and conventions, ple
 Logs from load tests executed in continuous deployment are available in the `/data` volume of the
 Locust master kubernetes pod.
 
-[load_test_readme]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/README.md
+[load_test_readme]: https://github.com/mozilla-services/merino-py/blob/main/docs/testing/load-tests.md
 
 ### What to do if production breaks?
 

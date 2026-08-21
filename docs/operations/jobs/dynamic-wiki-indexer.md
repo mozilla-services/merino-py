@@ -55,7 +55,7 @@ To see the code for the `merino_jobs` DAG, visit the [telemetry-airflow repo][me
 To see the Wikipedia Indexer code that is run when the job is invoked, visit [Merino `jobs/wikipedia_indexer`][wini_job_dir].
 
 [wiki_blocklist_runbook]: https://github.com/mozilla-services/merino-py/blob/main/docs/operations/blocklist-wikipedia.md
-[wini_job_dir]: https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/wikipedia_indexer
+[wini_job_dir]: https://github.com/mozilla-services/merino-py/tree/main/apps/merino/merino/jobs/wikipedia_indexer
 [airflow_docs]: https://airflow.apache.org/docs/apache-airflow/stable/public-airflow-interface.html#dags
 [airflow_rerun_dag]: https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html#re-run-dag
 [merino_jobs_repo]: https://github.com/mozilla/telemetry-airflow/blob/main/dags/merino_jobs.py

@@ -20,7 +20,7 @@ $ make profile
 
 # or you can run it directly
 
-$ python -m scalene merino/main.py
+$ python -m scalene apps/merino/merino/main.py
 ```
 
 Then you can send requests to Merino manually or through using other

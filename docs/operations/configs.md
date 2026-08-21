@@ -5,12 +5,12 @@ please view the [default.toml][default.toml] file.
 ## Settings
 
 Merino's settings are managed via [Dynaconf][dynaconf] and can be specified in two ways:
-1. a [TOML file][toml] in the `merino/configs/` [directory][configs_dir].
+1. a [TOML file][toml] in the `apps/merino/merino/configs/` [directory][configs_dir].
 2. via environment variables.
 Environment variables take precedence over the values set in the TOML files.
 Production environment variables are managed by SRE and defined in the relevant merino-py repo.
 TOML files set with the same environment name that is currently activated also automatically override defaults.
-Any config file that is pointed to will override the `merino/configs/default.toml` file.
+Any config file that is pointed to will override the `apps/merino/merino/configs/default.toml` file.
 
 
 ## File organization
@@ -73,9 +73,9 @@ lookups once or twice, it comes a surprisingly high overhead if accessing them
 repeatedly in the hot paths. You can cache those settings somewhere to mitigate
 this issue.
 
-[default.toml]: https://github.com/mozilla-services/merino-py/tree/main/merino/configs/default.toml
+[default.toml]: https://github.com/mozilla-services/merino-py/tree/main/apps/merino/merino/configs/default.toml
 [dynaconf]: https://www.dynaconf.com/
 [toml]: https://toml.io/en/
-[config.py]: https://github.com/mozilla-services/merino-py/blob/main/merino/config.py
-[configs_dir]: https://github.com/mozilla-services/merino-py/tree/main/merino/configs
-[log]: https://github.com/mozilla-services/merino-py/blob/main/merino-common/merino_common/app_configs/config_logging.py
+[config.py]: https://github.com/mozilla-services/merino-py/blob/main/apps/merino/merino/configs/__init__.py
+[configs_dir]: https://github.com/mozilla-services/merino-py/tree/main/apps/merino/merino/configs
+[log]: https://github.com/mozilla-services/merino-py/blob/main/packages/merino-common/merino_common/app_configs/config_logging.py
