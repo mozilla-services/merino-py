@@ -1,4 +1,5 @@
 name: Set Up to Run Merino
+description: Install the pinned Python toolchain and system dependencies for Merino CI
 inputs:
   workspace-path:
     description: "The directory path to store test results"

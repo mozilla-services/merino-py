@@ -2,17 +2,12 @@ name: build-gar-image
 
 on:
   workflow_call:
-    inputs:
-      image_tag:
-        required: true
-        type: string
-    secrets:
-      DOCKER_IMAGE_PATH:
-        required: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v5
       - name: Get info

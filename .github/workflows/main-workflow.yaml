@@ -31,12 +31,8 @@ jobs:
     uses: ./.github/workflows/docs-publish-github-pages.yaml
   run-build-gar-image:
     uses: ./.github/workflows/build-gar-image.yaml
-    with:
-      image_tag: latest
-    secrets:
-      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-publish-gar-image:
-    needs: run-build-gar-image
+    needs: [run-checks, run-tests, run-build-gar-image]
     uses: ./.github/workflows/publish-gar-image.yaml
     with:
       image_tag: latest
@@ -46,12 +42,8 @@ jobs:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-build-gar-image-fleece:
     uses: ./.github/workflows/build-gar-image-fleece.yaml
-    with:
-      image_tag: latest
-    secrets:
-      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-publish-gar-image-fleece:
-    needs: run-build-gar-image-fleece
+    needs: [run-checks, run-tests, run-build-gar-image-fleece]
     uses: ./.github/workflows/publish-gar-image-fleece.yaml
     with:
       image_tag: latest
@@ -61,12 +53,8 @@ jobs:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-build-gar-image-locust:
     uses: ./.github/workflows/build-gar-image-locust.yaml
-    with:
-      image_tag: latest
-    secrets:
-      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-publish-gar-image-locust:
-    needs: run-build-gar-image-locust
+    needs: [run-checks, run-tests, run-build-gar-image-locust]
     uses: ./.github/workflows/publish-gar-image-locust.yaml
     with:
       image_tag: latest
@@ -76,12 +64,8 @@ jobs:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-build-dockerhub-app:
     uses: ./.github/workflows/build-dockerhub-app-image.yaml
-    with:
-      image_tag: ${{ github.sha }}
-    secrets:
-      DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}
   run-publish-dockerhub-app:
-    needs: run-build-dockerhub-app
+    needs: [run-checks, run-tests, run-build-dockerhub-app]
     uses: ./.github/workflows/publish-dockerhub-app-image.yaml
     with:
       image_tag: ${{ github.sha }}
