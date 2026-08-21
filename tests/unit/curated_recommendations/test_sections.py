@@ -411,35 +411,51 @@ class TestDailyBriefingExperiment:
 
 
 class TestEditorialSectionsExperiment:
-    """Tests covering should_exclude_editorial_sections (HNT-2182)."""
+    """Tests covering should_exclude_editorial_sections."""
 
     @pytest.mark.parametrize(
-        "name,branch,expected",
+        "name,branch,surface_id,expected",
         [
-            # Treatment branch hides editorial sections.
+            # DE treatment branch is the only way to see editorial sections in Germany.
             (
-                ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
-                EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
+                ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
+                EditorialSectionsBranch.GERMANY_TREATMENT.value,
+                SurfaceId.NEW_TAB_DE_DE,
+                False,
+            ),
+            # Forced-enrollment (optin-) variant also shows them.
+            (
+                f"optin-{ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value}",
+                EditorialSectionsBranch.GERMANY_TREATMENT.value,
+                SurfaceId.NEW_TAB_DE_DE,
+                False,
+            ),
+            # The 20% holdback sees no editorial sections.
+            (
+                ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
+                "control",
+                SurfaceId.NEW_TAB_DE_DE,
                 True,
             ),
-            # Forced-enrollment (optin-) variant also activates the treatment.
+            # Unenrolled DE clients also see none.
+            (None, None, SurfaceId.NEW_TAB_DE_DE, True),
+            # The DE gate is scoped to Germany: de-AT is unaffected.
+            (None, None, SurfaceId.NEW_TAB_DE_AT, False),
+            # ...and so is de-CH.
+            (None, None, SurfaceId.NEW_TAB_DE_CH, False),
+            # The German experiment does not leak into other surfaces.
             (
-                f"optin-{ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value}",
-                EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
-                True,
+                ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
+                "control",
+                SurfaceId.NEW_TAB_EN_US,
+                False,
             ),
-            # Control branch keeps editorial sections.
-            (ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value, "control", False),
-            # Unrelated experiment does nothing.
-            ("other-experiment", "treatment", False),
-            # No experiment does nothing.
-            (None, None, False),
         ],
     )
-    def test_should_exclude_editorial_sections(self, name, branch, expected):
-        """Editorial sections are only excluded on the no-editorial-sections branch."""
+    def test_should_exclude_editorial_sections(self, name, branch, surface_id, expected):
+        """In DE editorial sections are hidden unless the request is on the treatment branch."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
-        assert should_exclude_editorial_sections(req) is expected
+        assert should_exclude_editorial_sections(req, surface_id) is expected
 
 
 class TestFilterSectionsByExperiment:

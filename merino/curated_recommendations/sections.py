@@ -410,16 +410,26 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     )
 
 
-def should_exclude_editorial_sections(request: CuratedRecommendationsRequest) -> bool:
-    """Return True if editorial (manually curated) sections must be hidden (HNT-2182).
+def should_exclude_editorial_sections(
+    request: CuratedRecommendationsRequest,
+    surface_id: SurfaceId,
+) -> bool:
+    """Return True if editorial (manually curated) sections must be hidden.
 
-    True only for the `no-editorial-sections` branch of the editorial sections experiment.
-    Popular Today and ML sections are unaffected.
+    Editorial sections are being introduced in Germany as an experiment-gated feature, so on
+    NEW_TAB_DE_DE they are hidden unless the request is on the `treatment` branch of the German
+    experiment. The 20% holdback and any unenrolled DE client see no editorial sections. All
+    other surfaces show them unconditionally.
+
+    Popular Today, Daily Briefing and ML sections are unaffected.
     """
-    return is_enrolled_in_experiment(
+    if surface_id != SurfaceId.NEW_TAB_DE_DE:
+        return False
+
+    return not is_enrolled_in_experiment(
         request,
-        ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
-        EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
+        ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
+        EditorialSectionsBranch.GERMANY_TREATMENT.value,
     )
 
 
@@ -847,7 +857,7 @@ async def get_sections(
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=True,
-        exclude_editorial_sections=should_exclude_editorial_sections(request),
+        exclude_editorial_sections=should_exclude_editorial_sections(request, surface_id),
     )
 
     # Determine if we should include daily briefing based on experiment
