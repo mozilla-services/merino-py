@@ -412,36 +412,25 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
 
 def should_exclude_editorial_sections(
     request: CuratedRecommendationsRequest,
-    surface_id: SurfaceId | None = None,
+    surface_id: SurfaceId,
 ) -> bool:
     """Return True if editorial (manually curated) sections must be hidden.
 
-    Two experiments feed into this, with opposite polarity:
+    Editorial sections are being introduced in Germany as an experiment-gated feature, so on
+    NEW_TAB_DE_DE they are hidden unless the request is on the `treatment` branch of the German
+    experiment. The 20% holdback and any unenrolled DE client see no editorial sections. All
+    other surfaces show them unconditionally.
 
-    - US (HNT-2182): sections are shown by default and hidden only on the
-      `no-editorial-sections` branch of the editorial sections experiment.
-    - Germany (HNT-2876): editorial sections are a new, experiment-gated feature, so on
-      NEW_TAB_DE_DE they are hidden unless the request is on the `treatment` branch of the
-      German experiment. The 20% holdback and any unenrolled DE client see no editorial
-      sections.
-
-    Popular Today, Daily Briefing and ML sections are unaffected either way.
+    Popular Today, Daily Briefing and ML sections are unaffected.
     """
-    if is_enrolled_in_experiment(
+    if surface_id != SurfaceId.NEW_TAB_DE_DE:
+        return False
+
+    return not is_enrolled_in_experiment(
         request,
-        ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
-        EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
-    ):
-        return True
-
-    if surface_id == SurfaceId.NEW_TAB_DE_DE:
-        return not is_enrolled_in_experiment(
-            request,
-            ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
-            EditorialSectionsBranch.GERMANY_TREATMENT.value,
-        )
-
-    return False
+        ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
+        EditorialSectionsBranch.GERMANY_TREATMENT.value,
+    )
 
 
 def get_ranking_rescaler_for_branch(

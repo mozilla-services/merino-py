@@ -108,8 +108,6 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
-    # Experiment to measure the impact of editorial sections by hiding them in the treatment branch
-    EDITORIAL_SECTIONS_EXPERIMENT = "editorial-sections-experiment"
     # Germany rollout of editorial sections: the treatment branch is the one that shows them
     EDITORIAL_SECTIONS_GERMANY_EXPERIMENT = "editorial-sections-experiment-germany"
     # Experiment to serve the cross-Europe English sections surface (NEW_TAB_EN_XE)
@@ -136,13 +134,10 @@ class DailyBriefingBranch(str, Enum):
 
 
 class EditorialSectionsBranch(str, Enum):
-    """Treatment branches for the Editorial Sections experiments (HNT-2182, HNT-2876)."""
+    """Treatment branches for the German Editorial Sections experiment."""
 
-    # US (HNT-2182): remove editorial sections; keep ML sections + Popular Today.
-    NO_EDITORIAL_SECTIONS = "no-editorial-sections"
-
-    # Germany (HNT-2876): the 80% branch that receives editorial sections. This inverts the US
-    # experiment: in DE editorial sections are hidden unless the user is on this branch.
+    # The 80% branch that receives editorial sections. Editorial sections are hidden in Germany
+    # unless the user is on this branch.
     GERMANY_TREATMENT = "treatment"
 
 

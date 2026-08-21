@@ -411,35 +411,7 @@ class TestDailyBriefingExperiment:
 
 
 class TestEditorialSectionsExperiment:
-    """Tests covering should_exclude_editorial_sections (HNT-2182, HNT-2876)."""
-
-    @pytest.mark.parametrize(
-        "name,branch,expected",
-        [
-            # Treatment branch hides editorial sections.
-            (
-                ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
-                EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
-                True,
-            ),
-            # Forced-enrollment (optin-) variant also activates the treatment.
-            (
-                f"optin-{ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value}",
-                EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
-                True,
-            ),
-            # Control branch keeps editorial sections.
-            (ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value, "control", False),
-            # Unrelated experiment does nothing.
-            ("other-experiment", "treatment", False),
-            # No experiment does nothing.
-            (None, None, False),
-        ],
-    )
-    def test_should_exclude_editorial_sections(self, name, branch, expected):
-        """Editorial sections are only excluded on the no-editorial-sections branch."""
-        req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
-        assert should_exclude_editorial_sections(req) is expected
+    """Tests covering should_exclude_editorial_sections."""
 
     @pytest.mark.parametrize(
         "name,branch,surface_id,expected",
@@ -480,7 +452,7 @@ class TestEditorialSectionsExperiment:
             ),
         ],
     )
-    def test_should_exclude_editorial_sections_germany(self, name, branch, surface_id, expected):
+    def test_should_exclude_editorial_sections(self, name, branch, surface_id, expected):
         """In DE editorial sections are hidden unless the request is on the treatment branch."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert should_exclude_editorial_sections(req, surface_id) is expected
