@@ -67,11 +67,11 @@ curl -s https://merino.services.mozilla.com/api/v1/manifest | jq '.' > manifest.
 ## Add custom domains
 
 You are also able to add custom domains to this endpoint. We currently run a weekly cron job to collect favicons from the Top 2000 websites. Adding custom domains is handled via this Python file in the Merino codebase:
-https://github.com/mozilla-services/merino-py/blob/main/merino/jobs/navigational_suggestions/custom_domains.py
+https://github.com/mozilla-services/merino-py/blob/main/apps/merino/merino/jobs/navigational_suggestions/enrichments/custom_domains.py
 
 To add yours:
 1. `git clone git@github.com:mozilla-services/merino-py.git`
-2. Add a new entry to the `CUSTOM_DOMAINS` list with `url` and at least one `category`: https://github.com/mozilla-services/merino-py/blob/main/merino/jobs/navigational_suggestions/custom_domains.py
+2. Add a new entry to the `CUSTOM_DOMAINS` list with `url` and at least one `category`: https://github.com/mozilla-services/merino-py/blob/main/apps/merino/merino/jobs/navigational_suggestions/enrichments/custom_domains.py
 3. Create a PR against the `merino-py` repo with your changes
 
 The custom domains will be picked up during the next run (every Wednesday). This job can also be run manually by following instructions [here](https://github.com/mozilla-services/merino-py/blob/main/docs/operations/jobs/navigational_suggestions.md#running-the-job-in-airflow).
@@ -82,7 +82,7 @@ Some websites block automated scrapers or have unreliable favicon detection. For
 
 ### What are custom favicons?
 
-Custom favicons are pre-defined favicon URLs stored in `merino/jobs/navigational_suggestions/enrichments/custom_favicons.py`. When the job processes a domain, it checks this file **first** before attempting to scrape the favicon. This ensures reliable favicon delivery for domains that would otherwise fail.
+Custom favicons are pre-defined favicon URLs stored in `apps/merino/merino/jobs/navigational_suggestions/enrichments/custom_favicons.py`. When the job processes a domain, it checks this file **first** before attempting to scrape the favicon. This ensures reliable favicon delivery for domains that would otherwise fail.
 
 ### Where is this file used?
 
@@ -117,7 +117,7 @@ probe-images example.com mozilla.org github.com --save
 When you run `probe-images` with the `--save` flag, it will:
 1. Scrape the domain and extract all available favicons
 2. Apply the same selection logic used in production to find the best favicon
-3. Automatically update `merino/jobs/navigational_suggestions/enrichments/custom_favicons.py`
+3. Automatically update `apps/merino/merino/jobs/navigational_suggestions/enrichments/custom_favicons.py`
 4. Add the domain (without TLD) as the key and the best favicon URL as the value
 
 **Example output:**
@@ -137,7 +137,7 @@ All favicons found:
 Save Results:
  Saved Domain  mozilla
  Saved URL     https://www.mozilla.org/media/img/favicons/mozilla/favicon-196x196.png
- Save PATH     merino/jobs/navigational_suggestions/enrichments/custom_favicons.py
+ Save PATH     apps/merino/merino/jobs/navigational_suggestions/enrichments/custom_favicons.py
 
 Summary: 1/1 domains processed successfully
 ```
@@ -147,7 +147,7 @@ Summary: 1/1 domains processed successfully
 You can also manually edit the `CUSTOM_FAVICONS` dictionary if you already know the favicon URL:
 
 1. `git clone git@github.com:mozilla-services/merino-py.git`
-2. Edit `merino/jobs/navigational_suggestions/enrichments/custom_favicons.py`
+2. Edit `apps/merino/merino/jobs/navigational_suggestions/enrichments/custom_favicons.py`
 3. Add a new entry to the `CUSTOM_FAVICONS` dictionary:
 
 ```python

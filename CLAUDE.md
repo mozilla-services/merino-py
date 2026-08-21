@@ -3,9 +3,9 @@
 Mozilla's suggestion service for Firefox. Privacy-preserving buffer between Firefox's address bar and third-party providers.
 
 This project is structured as a monorepo via uv workspaces with three member packages:
-- **merino**, located in @merino/, a FastAPI application and various jobs for Firefox Suggest and the NewTab page.
-- **merino-fleece**, located in @merino-fleece/, a FastAPI application providing various supporting functionalities for **merino**.
-- **merino-common**, located in @merino-common/, a set of common modules shared across other member packages.
+- **merino**, located in @apps/merino/merino/, a FastAPI application and various jobs for Firefox Suggest and the NewTab page.
+- **merino-fleece**, located in @apps/fleece/, a FastAPI application providing various supporting functionalities for **merino**.
+- **merino-common**, located in @packages/merino-common/, a set of common modules shared across other member packages.
 
 ## Commands
 
@@ -20,7 +20,7 @@ make format               # Auto-format with ruff
 make docker-compose-up    # Start local services (Redis, fake-GCS)
 ```
 
-Run tests manually: `MERINO_ENV=testing uv run pytest tests/unit/`
+Run tests manually: `MERINO_ENV=testing uv run pytest apps/merino/tests/unit/`
 
 Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexer index`)
 
@@ -39,7 +39,7 @@ Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexe
 ## Coding Conventions (deviations from defaults)
 
 - **Type unions**: `X | None` not `Optional[X]`. `list[str]` not `List[str]`.
-- **Async concurrency**: Use `merino/utils/task_runner.py` (custom gather with timeout), NOT raw `asyncio.gather()`.
+- **Async concurrency**: Use `apps/merino/merino/utils/task_runner.py` (custom gather with timeout), NOT raw `asyncio.gather()`.
 - **Logging**: `logger = logging.getLogger(__name__)`. Use `extra={}` for structured context.
 - **Error handling**: Providers catch `BackendError`, log warning, return `[]`. Never crash the request.
 - **Pydantic fields**: Use `Field(description="...")`. Use `SerializeAsAny[BaseSuggestion]` for polymorphic serialization.
@@ -49,7 +49,7 @@ Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexe
 
 Merino-py uses Dynaconf for configuration management. All the packages follow the same configuration convention as documented in @docs/operations/configs.md.
 
-Configuration TOML files are stored in `{package_name}/configs/` (e.g. `merino/configs` or `merino-fleece/merino_fleece/configs`). Switched by `MERINO_ENV` for **merino** or `MERINO_FLEECE_ENV` for **merino-fleece** (development/testing/ci/stage/production.toml).
+Configuration TOML files are stored in `{package_name}/configs/` (e.g. `apps/merino/merino/configs` or `apps/fleece/merino_fleece/configs`). Switched by `MERINO_ENV` for **merino** or `MERINO_FLEECE_ENV` for **merino-fleece** (development/testing/ci/stage/production.toml).
 
 Env var overrides: `{PACKAGE_NAME}_{SECTION}__{KEY}=value` (double underscore for nesting).
 

@@ -50,7 +50,7 @@ When submitting a PR:
   with the new relevant code.
 
 [developer documentation]: /docs/dev/index.md
-[load_testing_readme]: /tests/load/README.md
+[load_testing_readme]: /docs/testing/load-tests.md
 [release_process]: /docs/dev/release-process.md
 [license]: /LICENSE
 [sign]: https://docs.github.com/en/github/authenticating-to-github/managing-commit-signature-verification/signing-commits

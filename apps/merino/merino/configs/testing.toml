@@ -1,0 +1,181 @@
+# Configurations for testing, should be *only* used for testing.
+# Configurations defined here will override the counterparts in `default.toml`.
+
+[testing]
+debug = true
+# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
+# settings. This enables merge for the entire `testing` environment.
+dynaconf_merge = true
+
+[testing.runtime]
+# Use a larger timeout for testing
+query_timeout_sec = 0.5
+disabled_providers = ["disabled_provider", "amo"]
+
+
+[testing.metrics]
+dev_logger = true
+
+[testing.logging]
+# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+level = "DEBUG"
+format = "pretty"
+can_propagate = true
+
+[testing.image_gcs]
+gcs_project = "test_gcp_uploader_project"
+gcs_bucket = "test_gcp_uploader_bucket"
+cdn_hostname = "test-cdn.mozilla.net"
+
+[testing.image_gcs_v2]
+gcs_project = "test_gcp_uploader_project"
+gcs_bucket = "test_gcp_uploader_bucket"
+cdn_hostname = "test-cdn.mozilla.net"
+
+[testing.web.api.v1]
+# Setting to contol the limit on optional client variants passed
+# to suggest endpoint as part of experiments or rollouts.
+# Smaller max for testing
+client_variant_max = 5
+# Values passed into Query object for FastAPI query parameter validator.
+# Sets limitation on the maximum string length of a query.
+client_variant_character_max = 100
+query_character_max = 500
+
+[testing.accuweather]
+api_key = "test"
+# The URL in `url_base` isn't actually pinged during testing but we set it
+# anyway to make sure the production server isn't accidentally pinged.
+url_base = "test://test"
+partner_code_ffsuggest_value = "test_urlbar"
+partner_code_newtab_value = "test_newtab"
+
+[testing.mars]
+base_url = "http://test-mars-api"
+
+[testing.providers.accuweather]
+enabled_by_default = false
+backend = "test_weather"
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
+
+[testing.providers.sports]
+enabled_by_default = false
+max_suggestions = 5
+score = 0.5
+query_timeout_sec = 100
+api_key = "test"
+kickstart = false
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
+
+[testing.providers.sports.es]
+dsn = "http://localhost:9200"
+request_timeout_ms = 10000
+api_key = "test"
+
+[testing.polygon]
+api_key = "test"
+# The URL in `url_base` isn't actually pinged during testing but we set it
+# anyway to make sure the production server isn't accidentally pinged.
+url_base = "http://test-polygon"
+
+[testing.providers.flightaware]
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
+
+[testing.flightaware]
+api_key = "test"
+
+base_url = "http://test-flightaware.com"
+
+[testing.providers.polygon]
+enabled_by_default = false
+backend = "polygon"
+
+[testing.providers.yelp]
+enabled_by_default = false
+backend = "test"
+
+[testing.providers.adm]
+# Whether or not this provider is enabled by default.
+enabled_by_default = true
+backend = "test"
+
+[testing.providers.adm.thompson]
+# MERINO_PROVIDERS__ADM__THOMPSON__ENABLED
+# Toggle Thompson sampling
+enabled = true
+dry_run = false
+
+[testing.providers.top_picks]
+# Whether or not this provider is enabled by default.
+enabled_by_default = true
+score = 0.25
+query_char_limit = 4
+firefox_char_limit = 2
+top_picks_file_path = "apps/merino/tests/data/top_picks.json"
+
+# GCS-related Remote Domain File Test Settings (Top Picks)
+cron_interval_sec = 60
+resync_interval_sec = 10800
+domain_data_source = "local"
+
+[testing.providers.wikipedia]
+circuit_breaker_failure_threshold = 1
+circuit_breaker_recover_timeout_sec = 3
+# The backend of the provider. Either "elasticsearch" or "test".
+backend = "test"
+
+cron_interval_sec = 60
+resync_interval_sec = 86400
+
+
+[testing.curated_recommendations.gcs]
+bucket_name = "test-bucket"
+gcp_project = "test-project"
+
+[testing.curated_recommendations.rankers.thompson_sampling]
+# MERINO__CURATED_RECOMMENDATIONS__RANKERS__THOMPSON_SAMPLING__TEST_REPEAT_COUNT
+# The number of times that Thompson sampling tests are repeated. When you change how recommendations
+# are ranked, put the config below in configs/testing.local.toml to ensure that tests pass reliably:
+#     ```
+#    [testing]
+#    dynaconf_merge = true
+#
+#    [testing.curated_recommendations.rankers.thompson_sampling]
+#    test_repeat_count = 100
+#    ```
+test_repeat_count = 1
+
+
+[testing.ml_recommendations.gcs]
+bucket_name = "test-bucket"
+gcp_project = "test-project"
+
+[testing.query_normalization]
+enabled = true
+data_source = "local"
+sports_teams_file = "apps/merino/tests/data/query_normalization/sports_teams.json"
+word_freq_file = "apps/merino/tests/data/query_normalization/word_freq.csv"
+finance_tickers_file = "apps/merino/tests/data/query_normalization/finance_tickers.json"
+
+[testing.interest_cohort_model.gcs]
+bucket_name = "test-bucket"
+gcp_project = "test-project"
+
+[testing.contextual_interest.gcs]
+bucket_name = "test-bucket-contextual-interest"
+gcp_project = "test-project"
+
+[testing.curated_recommendations.corpus_api]
+
+# Tests sleep for a shorter duration than defautl to make them execute more quickly.
+retry_wait_initial_seconds = 0.05
+retry_wait_jitter_seconds = 0.02
+
+[testing.rss_providers.wikimedia_potd]
+
+# Tests use near-zero backoff so retry paths execute quickly.
+retry_wait_initial_seconds = 0.0
+retry_wait_jitter_seconds = 0.0

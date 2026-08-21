@@ -26,12 +26,12 @@ See documentation and repositories in each given test area for specific details 
 maintaining tests.
 
 [ete_pipeline]: https://mozilla.github.io/ecosystem-test-scripts/introduction.html
-[integration_tests]: https://github.com/mozilla-services/merino-py/tree/main/tests/integration
+[integration_tests]: https://github.com/mozilla-services/merino-py/tree/main/apps/merino/tests/integration
 [integration_tests_docs]: ./integration-tests.md
-[load_tests]: https://github.com/mozilla-services/merino-py/tree/main/tests/load
+[load_tests]: https://github.com/mozilla-services/merino-py/tree/main/tools/load-tests
 [load_tests_docs]: ./load-tests.md
 [looker_dashboard]: https://mozilla.cloud.looker.com/dashboards/1976?Timestamp+Date=365+day
-[unit_tests]: https://github.com/mozilla-services/merino-py/tree/main/tests/unit
+[unit_tests]: https://github.com/mozilla-services/merino-py/tree/main/apps/merino/tests/unit
 [unit_tests_docs]: ./unit-tests.md
 [test_dir]: https://github.com/mozilla-services/merino-py/tree/main/tests
 [test_docs_dir]: ./index.md

@@ -1,0 +1,19 @@
+[project]
+name = "merino-load-tests"
+version = "0.1.0"
+description = "Load testing tools for Merino"
+requires-python = "~=3.14.0"
+dependencies = [
+  "faker>=20.0.0,<21",
+  "locust>=2.43.0,<3",
+  "merino",
+  "merino-common",
+  "numpy>=2.0.0,<3",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+merino = { workspace = true }
+merino-common = { workspace = true }

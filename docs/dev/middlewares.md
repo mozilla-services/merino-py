@@ -2,7 +2,7 @@
 
 Merino leverages middleware for various functionalities such as logging, metrics,
 parsing for geolocation & user agent, feature flags etc. Middleware is defined
-in the `merino/middleware` directory.
+in the `apps/merino/merino/middleware` directory.
 
 ## Caveat
 
