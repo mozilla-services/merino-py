@@ -56,7 +56,9 @@ async def main() -> None:
         subscription_name=settings.pubsub.subscription,
         loop=loop,
         sanitize_timeout_s=settings.pubsub.sanitize_timeout_sec,
-        max_messages=settings.pubsub.max_messages,
+        # Leasing is bounded by NER capacity, not by Pub/Sub's callback pool, so the
+        # flow-control cap is derived from the thread pool this process actually has.
+        max_messages=(settings.pubsub.messages_per_ner_worker * settings.pii.executor_max_workers),
         restart_stream=settings.pubsub.restart_stream,
         restart_backoff=settings.pubsub.restart_backoff,
         # Normalize to None if path is empty (disabled)
