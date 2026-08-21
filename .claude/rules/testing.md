@@ -1,6 +1,6 @@
 ---
 paths:
-  - "tests/**"
+  - "apps/merino/tests/**"
 ---
 
 # Testing Conventions
@@ -14,15 +14,15 @@ make test                                    # Both + coverage check
 make quick-test keyword=weather              # Tests matching keyword
 
 # Manual pytest runs MUST set MERINO_ENV (Makefile targets do this automatically):
-MERINO_ENV=testing uv run pytest tests/unit/path/to/test.py -v
+MERINO_ENV=testing uv run pytest apps/merino/tests/unit/path/to/test.py -v
 ```
 
 ## Key fixtures
 
-- `statsd_mock` (tests/conftest.py) - Mock StatsD client
-- `srequest` (tests/unit/conftest.py, session scope) - Factory for `SuggestionRequest` objects
-- `gcs_bucket_mock`, `gcs_blob_mock` (tests/unit/conftest.py, **autouse**) - Auto-applied to all unit tests
-- `filter_caplog` (tests/conftest.py) - Filter log records by logger name
+- `statsd_mock` (apps/merino/tests/conftest.py) - Mock StatsD client
+- `srequest` (apps/merino/tests/unit/conftest.py, session scope) - Factory for `SuggestionRequest` objects
+- `gcs_bucket_mock`, `gcs_blob_mock` (apps/merino/tests/unit/conftest.py, **autouse**) - Auto-applied to all unit tests
+- `filter_caplog` (apps/merino/tests/conftest.py) - Filter log records by logger name
 
 ## Mocking patterns
 
@@ -41,7 +41,7 @@ assert len(records) == 1
 
 ## Integration tests
 
-Use `testcontainers` for Docker-based services (Redis, GCS). Fixtures in `tests/integration/fixtures/`. Provider injection in API tests uses FastAPI dependency overrides:
+Use `testcontainers` for Docker-based services (Redis, GCS). Fixtures in `apps/merino/tests/integration/fixtures/`. Provider injection in API tests uses FastAPI dependency overrides:
 
 ```python
 app.dependency_overrides[get_providers] = get_provider_factory(mock_providers)

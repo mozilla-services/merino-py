@@ -5,7 +5,7 @@ Due to their narrow scope, unit tests are fundamental to thorough test coverage.
 
 To execute unit tests, use: `make unit-tests`
 
-Unit tests are written and executed with pytest and are located in the `tests/unit` directory,
+Unit tests are written and executed with pytest and are located in the `apps/merino/tests/unit` directory,
 using the same organizational structure as the source code of the merino service.
 Type aliases dedicated for test should be stored in the `types.py` module.
 The `conftest.py` modules contain common utilities in fixtures.

@@ -5,7 +5,7 @@ with lower development, maintenance and execution costs compared with higher lev
 
 To execute integration tests, make sure you have Docker installed and a docker daemon running. Then use: `make integration-tests`
 
-Integration tests are located in the `tests/integration` directory.
+Integration tests are located in the `apps/merino/tests/integration` directory.
 They use pytest and the FastAPI `TestClient` to send requests to specific merino endpoints and verify responses as well as other outputs, such as logs.
 Tests are organized according to the API path under test.
 Type aliases dedicated for test should be stored in the `types.py` module.
@@ -85,7 +85,7 @@ def teardown(teardown_providers: TeardownProvidersFixture):
 ```
 
 ### TestcontainersFixture
-See `tests/integration/jobs/navigational_suggestions/test_domain_metadata_uploader.py` for a detailed example.
+See `apps/merino/tests/integration/jobs/navigational_suggestions/test_domain_metadata_uploader.py` for a detailed example.
 
 This is a lightweight example on how to set up a docker container for your integration tests.
 

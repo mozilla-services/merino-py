@@ -41,7 +41,7 @@ To see the code for the `merino_jobs` DAG, visit the [telemetry-airflow repo][me
 To see the navigational suggestions code that is run when the job is invoked, visit [Merino `jobs/navigational_suggestions`][nav_sug_dir].
 
 [nav_sug_blocklist_runbook]: https://github.com/mozilla-services/merino-py/blob/main/docs/operations/blocklist-nav-suggestions.md
-[nav_sug_dir]: https://github.com/mozilla-services/merino-py/tree/main/merino/jobs/navigational_suggestions
+[nav_sug_dir]: https://github.com/mozilla-services/merino-py/tree/main/apps/merino/merino/jobs/navigational_suggestions
 [airflow_docs]: https://airflow.apache.org/docs/apache-airflow/stable/public-airflow-interface.html#dags
 [airflow_rerun_dag]: https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dag-run.html#re-run-dag
 [merino_jobs_repo]: https://github.com/mozilla/telemetry-airflow/blob/main/dags/merino_jobs.py
@@ -91,7 +91,7 @@ Summary: 2/2 domains processed successfully
 
 ## Adding new domains
 
-- You can add new domains to the job by adding them to the `/merino/jobs/navigational_suggestions/custom_domains.py` file.
+- You can add new domains to the job by adding them to the `apps/merino/merino/jobs/navigational_suggestions/enrichments/custom_domains.py` file.
 - Either manually, or you can use a script inside the `/scripts` folder.
 - The script is called `import_domains.sh` and it works with a CSV file with a `REGISTERED_DOMAIN` header, and starting from the second row, the firsts column is the domain name (e.g `getpocket.com`)
 

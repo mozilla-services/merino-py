@@ -118,7 +118,7 @@ log inspection interfaces.
 ## Metrics
 
 > [!NOTE]
-> Metric documentation has been moved to [metrics.yaml](../metrics.yaml).
+> Metric documentation has been moved to [metrics.yaml](../apps/merino/metrics.yaml).
 > Please use that to document all the new metrics. This section now serves as
 > the legacy metrics document only.
 
@@ -234,7 +234,7 @@ The following additional metrics are recorded when curated recommendations are r
 Merino calls the Spindle ML server to find near-duplicate stories so the
 article balancer can drop them from Popular Today. Each section fetch triggers
 a background refresh of the per-surface similarity cache; the metrics below
-are emitted from `merino/curated_recommendations/ml_backends/spindle_backend.py`.
+are emitted from `apps/merino/merino/curated_recommendations/ml_backends/spindle_backend.py`.
 
 - `recommendation.spindle.{text | image}.timing` -
  A timer to measure the duration (in ms) of a request to the Spindle

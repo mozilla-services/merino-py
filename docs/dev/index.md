@@ -18,7 +18,7 @@ uv sync --all-groups --all-packages
 Run Merino:
 
 ```
-$ uv run fastapi run merino/main.py --reload
+$ uv run fastapi run apps/merino/merino/main.py --reload
 
 # Or you can use a shortcut
 $ make run
@@ -138,28 +138,29 @@ development configuration, you have two options, listed below.
 ### Update the defaults
 
 Dynaconf is used for all configuration management in Merino, where
-values are specified in the `merino/configs/` directory in `.toml` files. Environment variables
+values are specified in the `apps/merino/merino/configs/` directory in `.toml` files. Environment variables
 are set for each environment as well and can be set when using the cli to launch the
 Merino service.
 Environment variables take precedence over the values set in the `.toml` files, so
 any environment variable set will automatically override defaults. By the same token,
-any config file that is pointed to will override the `merino/configs/default.toml` file.
+any config file that is pointed to will override the `apps/merino/merino/configs/default.toml` file.
 
 If the change you want to make makes the system better for most development
-tasks, consider adding it to `merino/configs/development.toml`, so that other developers
+tasks, consider adding it to `apps/merino/merino/configs/development.toml`, so that other developers
 can take advantage of it. If you do so, you likely want to add validation to those settings
-which needs to be added in `merino/config.py`, where the Dynaconf instance exists along
-with its validators. For examples of the various config settings, look at `configs/default.toml`
-and `merino/config.py` to see an example of the structure.
+which needs to be added in `apps/merino/merino/configs/__init__.py`, where the Dynaconf instance exists along
+with its validators. For examples of the various config settings, look at
+`apps/merino/merino/configs/default.toml`
+and `apps/merino/merino/configs/__init__.py` to see an example of the structure.
 
-It is not advisable to put secrets in `configs/secrets.toml`.
+It is not advisable to put secrets in `apps/merino/merino/configs/secrets.toml`.
 
 ### Create a local override
 
 Dynaconf will use the specified values and environment variables in the
-`merino/configs/default.toml` file. You can change the environment you
+`apps/merino/merino/configs/default.toml` file. You can change the environment you
 want to use as mentioned above, but for local changes to adapt to your
-machine or tastes, you can put the configuration in `merino/configs/development.local.toml`.
+machine or tastes, you can put the configuration in `apps/merino/merino/configs/development.local.toml`.
 This file doesn't exist by default, so you will have to create it.
 Then simply copy from the other config files and make the adjustments
 that you require. These files should however not be checked into source

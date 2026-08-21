@@ -75,22 +75,22 @@ You can use the Merino jobs cli to override the default elasticsearch bootstrapp
 Merino has two ways to provide suggestions, _off-line_ (which uses user agent locally stored data provided by Remote Settings) and _on-line_ (which provides more timely data by providing live responses to queries).
 
 _off-line_ data sets are generally smaller, since we have limited storage capacity available. These may use the
-[`csv_rs_uploader`](../merino/jobs/csv_rs_uploader) command. A good example of this is the
-[`wikipedia_offline_uploader`](../merino/jobs/wikipedia_offline_uploader)
+[`csv_rs_uploader`](../apps/merino/merino/jobs/csv_rs_uploader) command. A good example of this is the
+[`wikipedia_offline_uploader`](../apps/merino/merino/jobs/wikipedia_offline_uploader)
 job.
 
 _on-line_ data do not necessarily have the same size restrictions, but are instead constrained by time. These services should return a response in less than 200ms.
 
 ## Configuration
 
-Configurations for the `jobs` and `suggest` processes are stored under `./merino/configs` and are sets of TOML files. These include:
+Configurations for the `jobs` and `suggest` processes are stored under `apps/merino/merino/configs` and are sets of TOML files. These include:
 
 - `ci.toml` - Continuous Integration configurations (Use only for CI tasks)
 - `default.toml` - Common, core settings. These are over-ridden by the platform specific configurations.
 - `development.toml`, etc. - The platform specific configurations to use. These will eventually be replaced by a single, composed `platform.toml`(name TBD).
 - `default.local.toml` - A locally generated and managed configuration file. This file overrides values stored in `default.toml` and is meant for local dev and testing work, and thus may have key values and other private or specific information. (Do not check in this file. It is inlcuded in `.gitignore` for a reason ;))
 
-Validators for the configuration options are stored in the `./merino/configs/__init__.py` file
+Validators for the configuration options are stored in the `apps/merino/merino/configs/__init__.py` file
 
 ## Running with local otel collector
 
@@ -126,7 +126,7 @@ A basic dashboard is included. Dadshboards can be added or edited by updating th
 
 ## Jobs
 
-`Jobs` are various tasks that can be executed by Merino, and are located in the `./merino/jobs` directory. These jobs are invoked by calling `uv run merino-jobs {job_name}`. Running without a `{job_name}` returns a list of available jobs that can be run. For example:
+`Jobs` are various tasks that can be executed by Merino, and are located in the `apps/merino/merino/jobs` directory. These jobs are invoked by calling `uv run merino-jobs {job_name}`. Running without a `{job_name}` returns a list of available jobs that can be run. For example:
 
 ```bash
 > uv run merino-jobs
@@ -154,7 +154,7 @@ Please note that file paths presume you are in the Project Root directory.
 
 A significant portion of work involves fetching and normalizing data, referred to as "ingestion". Data ingestion often requires extra time and write permissions. These are provided by the AirFlow process currently, which is managed by the Data Engineering team. Changes or work requests should use [the Data Engineering Job Intake form](https://mozilla-hub.atlassian.net/jira/software/c/projects/DENG/form/1610). Be sure to allow for high lead time for any job request.
 
-The ingestion applications are stored under `./merino/jobs/` each provider has it's own application, since each provider is slightly different. For consistency, we use [Typer](https://typer.tiangolo.com/tutorial/) to describe the command.
+The ingestion applications are stored under `apps/merino/merino/jobs/` each provider has it's own application, since each provider is slightly different. For consistency, we use [Typer](https://typer.tiangolo.com/tutorial/) to describe the command.
 
 Airflow uses [DAG](https://airflow.apache.org/docs/apache-airflow/stable/core-concepts/dags.html) definitions to specify job run specifications. Each DAG will invoke a specific merino job. The DAG definitions are stored under `./telemetry-airflow` which links to <https://github.com/mozilla/telemetry-airflow> with merino jobs defined in `merino-jobs.py`. DAGs are python command lines and look like:
 
@@ -196,7 +196,7 @@ AirFlow uses Apache AirFlow. These are run under the [telemetry-airflow](https:/
 
 When creating an AirFlow job:
 
-- Create the job definition in `./merino/jobs` as a python [Typer](https://typer.tiangolo.com/) Command Line Interface(CLI) job.
+- Create the job definition in `apps/merino/merino/jobs` as a python [Typer](https://typer.tiangolo.com/) Command Line Interface(CLI) job.
 - Ensure that each `job` has a distinct command line.
 - Create an SRE ticket requesting GSM storage of any access credentials required by the job. _NOTE_: You should specify the secret identifier for this value, since you will need to refer to it later.
 - Create a sub task ticket for the generation of the Airflow Job for telemetry
@@ -216,9 +216,9 @@ See `merino.providers.suggest.skeleton` for a general use template that modules 
 
 As an example, `curl "http://localhost:8000/api/v1/suggest?q=jets+game&provider=sports"` will return a list of suggestions from the `sports` provider (which noted the team name `jets` and the extra keyword `game`)
 
-The list of Providers is controlled by `./merino/suggest/manager.py`, in the `_create_provider()` method. This is driven by the configuration files. Note that each provider listed in the configuration file _must_ specify a `type` that matches one of the listed `ProviderType` enum. `manager.py` entries return a `Provider`, as well as create the `Backend` and any other initialization. Be aware that any fatal error or unhandled exception at this time can cause Merino to fail to load, and thus bring the system down.
+The list of Providers is controlled by `apps/merino/merino/providers/suggest/manager.py`, in the `_create_provider()` method. This is driven by the configuration files. Note that each provider listed in the configuration file _must_ specify a `type` that matches one of the listed `ProviderType` enum. `manager.py` entries return a `Provider`, as well as create the `Backend` and any other initialization. Be aware that any fatal error or unhandled exception at this time can cause Merino to fail to load, and thus bring the system down.
 
-Each provider is generally described by code stored under `./merino/providers/suggest/{provider_type}`. While the `Provider` should be reasonably generic, it may have one or more `Backends` which are responsible for connecting to the quick response data for this suggestion provider. This may require accessing data storage or proxying calls to an external provider. The `backend` should contain all specialized code for this.
+Each provider is generally described by code stored under `apps/merino/merino/providers/suggest/{provider_type}`. While the `Provider` should be reasonably generic, it may have one or more `Backends` which are responsible for connecting to the quick response data for this suggestion provider. This may require accessing data storage or proxying calls to an external provider. The `backend` should contain all specialized code for this.
 
 <a name="manifest" />
 
