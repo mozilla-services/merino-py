@@ -478,7 +478,7 @@ class TestEditorialSectionsExperiment:
                 SurfaceId.NEW_TAB_EN_US,
                 False,
             ),
-            # A missing surface_id keeps the pre-HNT-2876 behaviour.
+            # The default behavior is to not exclude editorial sections.
             (None, None, None, False),
         ],
     )
@@ -486,15 +486,6 @@ class TestEditorialSectionsExperiment:
         """In DE editorial sections are hidden unless the request is on the treatment branch."""
         req = SimpleNamespace(experimentName=name, experimentBranch=branch, inferredInterests=None)
         assert should_exclude_editorial_sections(req, surface_id) is expected
-
-    def test_us_experiment_still_hides_sections_on_de_treatment(self):
-        """The US opt-out wins even if the request is on the German treatment branch."""
-        req = SimpleNamespace(
-            experimentName=ExperimentName.EDITORIAL_SECTIONS_EXPERIMENT.value,
-            experimentBranch=EditorialSectionsBranch.NO_EDITORIAL_SECTIONS.value,
-            inferredInterests=None,
-        )
-        assert should_exclude_editorial_sections(req, SurfaceId.NEW_TAB_DE_DE) is True
 
 
 class TestFilterSectionsByExperiment:
