@@ -55,15 +55,6 @@ $ make mypy
 # Run all linting checks
 $ make -k lint
 
-# Validate GitHub Actions workflow syntax
-$ make actionlint
-
-# Validate release-critical GitHub Actions policies
-$ make gha-policy-lint
-
-# When changing files under .github/, run both checks
-$ make gha-lint
-
 # Run all formatters
 $ make format
 
