@@ -16,6 +16,7 @@ from merino.curated_recommendations.utils import (
     derive_engagement_region,
     derive_region,
     extract_language_from_locale,
+    get_prior_alpha_multiplier_for_request,
     get_recommendation_surface_id,
     is_enrolled_in_experiment,
     get_millisecond_epoch_time,
@@ -24,6 +25,7 @@ from merino.curated_recommendations.utils import (
 _EN_EUROPE = ExperimentName.SECTIONS_IN_EN_EUROPE_EXPERIMENT.value
 _GLOBAL_SPANISH = ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value
 _GERMANY_PUBLISHER_CONSTRAINT = ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value
+_HOURLY_SEASONALITY = ExperimentName.POPULAR_TODAY_HOURLY_SEASONALITY_EXPERIMENT.value
 
 
 class TestCuratedRecommendationsProviderExtractLanguageFromLocale:
@@ -205,6 +207,59 @@ class TestCuratedRecommendationsProviderDeriveEngagementRegion:
         )
 
         assert derive_engagement_region(request) == region
+
+
+class TestCuratedRecommendationsPriorAlphaMultiplier:
+    """Unit tests for request-gated Thompson sampling prior multipliers."""
+
+    def test_en_gb_hourly_seasonality_treatment_uses_current_utc_bucket(self):
+        """The en-GB treatment should use the copied GB seasonality multiplier."""
+        request = CuratedRecommendationsRequest(
+            locale=Locale.EN_GB,
+            region="GB",
+            experimentName=_HOURLY_SEASONALITY,
+            experimentBranch="treatment",
+        )
+
+        assert get_prior_alpha_multiplier_for_request(
+            request,
+            SurfaceId.NEW_TAB_EN_GB,
+            at=datetime(2026, 8, 24, 6, 34, tzinfo=timezone.utc),
+        ) == pytest.approx(1.5228848698178639)
+
+    @pytest.mark.parametrize(
+        "locale,region,surface_id,experiment_name,branch",
+        [
+            (Locale.EN_GB, "GB", SurfaceId.NEW_TAB_EN_GB, _HOURLY_SEASONALITY, "control"),
+            (Locale.EN_GB, "GB", SurfaceId.NEW_TAB_EN_GB, "other", "treatment"),
+            (Locale.EN_GB, "US", SurfaceId.NEW_TAB_EN_US, _HOURLY_SEASONALITY, "treatment"),
+            (Locale.EN_US, "GB", SurfaceId.NEW_TAB_EN_US, _HOURLY_SEASONALITY, "treatment"),
+        ],
+    )
+    def test_hourly_seasonality_non_matching_requests_use_neutral_multiplier(
+        self,
+        locale: Locale,
+        region: str,
+        surface_id: SurfaceId,
+        experiment_name: str | None,
+        branch: str | None,
+    ):
+        """Requests outside the exact en-GB treatment keep the existing prior."""
+        request = CuratedRecommendationsRequest(
+            locale=locale,
+            region=region,
+            experimentName=experiment_name,
+            experimentBranch=branch,
+        )
+
+        assert (
+            get_prior_alpha_multiplier_for_request(
+                request,
+                surface_id,
+                at=datetime(2026, 8, 24, 6, 34, tzinfo=timezone.utc),
+            )
+            == 1.0
+        )
 
 
 class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:

@@ -29,10 +29,12 @@ class Ranker:
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
         region_weight: float = REGION_ENGAGEMENT_WEIGHT,
+        prior_alpha_multiplier: float = 1.0,
     ) -> None:
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.region_weight = region_weight
+        self.prior_alpha_multiplier = prior_alpha_multiplier
 
     def get_opens_no_opens(
         self, rec: CuratedRecommendation, region_query: str | None = None
@@ -114,6 +116,8 @@ class Ranker:
             no_opens = region_no_opens * region_weight + no_opens * (1 - region_weight)
             a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
             b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
+
+        a_prior *= self.prior_alpha_multiplier
 
         if rescaler is not None:
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)

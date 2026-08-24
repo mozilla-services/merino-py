@@ -60,6 +60,7 @@ async def get_legacy_recommendations_from_sections(
     count: int,
     region: str | None = None,
     rescaler: EngagementRescaler | None = None,
+    prior_alpha_multiplier: float = 1.0,
 ) -> list[CuratedRecommendation]:
     """Fetch section items and return as a flat list for non-sections clients.
 
@@ -72,6 +73,7 @@ async def get_legacy_recommendations_from_sections(
         region: Optional region for engagement filtering (e.g., 'US', 'CA')
         rescaler: Optional rescaler for Thompson sampling (applies pessimistic priors
             and scales engagement metrics for gaming/hobbies content)
+        prior_alpha_multiplier: Multiplier applied to the Thompson sampling click prior.
 
     Returns:
         Ranked list of CuratedRecommendation objects
@@ -110,6 +112,7 @@ async def get_legacy_recommendations_from_sections(
     ranker = ThompsonSamplingRanker(
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
+        prior_alpha_multiplier=prior_alpha_multiplier,
     )
     recommendations = ranker.rank_items(
         recommendations,

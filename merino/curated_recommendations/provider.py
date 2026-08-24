@@ -48,6 +48,7 @@ from merino.curated_recommendations.utils import (
     derive_engagement_region,
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
+    get_prior_alpha_multiplier_for_request,
     derive_region,
 )
 
@@ -106,6 +107,7 @@ class CuratedRecommendationsProvider:
         self,
         recommendations: list[CuratedRecommendation],
         request: CuratedRecommendationsRequest,
+        surface_id: SurfaceId | None = None,
     ) -> list[CuratedRecommendation]:
         """Apply additional processing to the list of recommendations
         received from Curated Corpus API
@@ -117,11 +119,15 @@ class CuratedRecommendationsProvider:
         @param request: The full API request with all the data
         @return: A re-ranked list of curated recommendations
         """
+        surface_id = surface_id or get_recommendation_surface_id(
+            locale=request.locale, region=request.region, request=request
+        )
         region = derive_region(request.locale, request.region)
         engagement_region = derive_engagement_region(request)
         ranker = ThompsonSamplingRanker(
             engagement_backend=self.engagement_backend,
             prior_backend=self.prior_backend,
+            prior_alpha_multiplier=get_prior_alpha_multiplier_for_request(request, surface_id),
         )
         recommendations = ranker.rank_items(
             recommendations,
@@ -193,6 +199,7 @@ class CuratedRecommendationsProvider:
                 count=request.count,
                 region=region,
                 rescaler=rescaler,
+                prior_alpha_multiplier=get_prior_alpha_multiplier_for_request(request, surface_id),
             )
         else:
             # Other markets: fetch from scheduled surface backend
@@ -209,7 +216,7 @@ class CuratedRecommendationsProvider:
                 )
                 for rank, item in enumerate(corpus_items)
             ]
-            general_feed = self.rank_recommendations(recommendations, request)
+            general_feed = self.rank_recommendations(recommendations, request, surface_id)
         local_model = self.local_model_backend.get(
             surface_id,
             experiment_name=request.experimentName,

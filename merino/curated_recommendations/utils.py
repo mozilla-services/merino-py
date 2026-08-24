@@ -1,8 +1,10 @@
 """Utility functions for curated recommendations"""
 
+from datetime import datetime
 import re
 import time
 
+from merino.curated_recommendations.constants import get_en_gb_seasonal_prior_multiplier
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
@@ -39,6 +41,10 @@ PUBLISHER_CONSTRAINT_IN_GERMANY_REGION = "DE"
 PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES: frozenset[str] = frozenset({"control", "treatment"})
 PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX = "DE-publisher-constraint-in-germany"
 PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED = True
+
+POPULAR_TODAY_HOURLY_SEASONALITY_REGION = "GB"
+POPULAR_TODAY_HOURLY_SEASONALITY_BRANCH = "treatment"
+POPULAR_TODAY_HOURLY_SEASONALITY_PRIOR_ENABLED = True
 
 
 def get_recommendation_surface_id(
@@ -178,6 +184,41 @@ def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | No
         return f"{PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX}-{branch}"
 
     return region
+
+
+def should_apply_popular_today_hourly_seasonality(
+    request: CuratedRecommendationsRequest,
+    surface_id: SurfaceId,
+) -> bool:
+    """Return True if GB hourly seasonality should modify the Thompson sampling prior."""
+    region = derive_region(request.locale, request.region)
+    return (
+        POPULAR_TODAY_HOURLY_SEASONALITY_PRIOR_ENABLED
+        and surface_id == SurfaceId.NEW_TAB_EN_GB
+        and region == POPULAR_TODAY_HOURLY_SEASONALITY_REGION
+        and is_enrolled_in_experiment(
+            request,
+            ExperimentName.POPULAR_TODAY_HOURLY_SEASONALITY_EXPERIMENT.value,
+            POPULAR_TODAY_HOURLY_SEASONALITY_BRANCH,
+        )
+    )
+
+
+def get_prior_alpha_multiplier_for_request(
+    request: CuratedRecommendationsRequest,
+    surface_id: SurfaceId | None = None,
+    at: datetime | None = None,
+) -> float:
+    """Return the click-prior multiplier for a curated recommendations request."""
+    surface_id = surface_id or get_recommendation_surface_id(
+        request.locale,
+        request.region,
+        request=request,
+    )
+    if should_apply_popular_today_hourly_seasonality(request, surface_id):
+        return get_en_gb_seasonal_prior_multiplier(at)
+
+    return 1.0
 
 
 def is_enrolled_in_experiment(

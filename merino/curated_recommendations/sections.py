@@ -74,7 +74,10 @@ from merino.curated_recommendations.rankers import (
     TOP_STORIES_SECTION_KEY,
     takedown_reported_recommendations,
 )
-from merino.curated_recommendations.utils import is_enrolled_in_experiment
+from merino.curated_recommendations.utils import (
+    get_prior_alpha_multiplier_for_request,
+    is_enrolled_in_experiment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -947,7 +950,9 @@ async def get_sections(
         )
     else:
         ranker = ThompsonSamplingRanker(
-            engagement_backend=engagement_backend, prior_backend=prior_backend
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            prior_alpha_multiplier=get_prior_alpha_multiplier_for_request(request, surface_id),
         )
 
     # 7. Rank all corpus recommendations globally by engagement

@@ -116,6 +116,8 @@ class ExperimentName(str, Enum):
     SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT = "sections-in-global-spanish"
     # Experiment to apply Germany publisher constraint engagement by branch
     PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT = "publisher-constraint-in-germany"
+    # Experiment to apply GB hourly seasonality to Popular Today Thompson sampling priors
+    POPULAR_TODAY_HOURLY_SEASONALITY_EXPERIMENT = "new-tab-popular-today-hourly-seasonality"
 
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"

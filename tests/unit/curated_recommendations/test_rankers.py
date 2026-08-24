@@ -539,6 +539,33 @@ class TestThompsonSampling:
         assert ranked[0].ranking_data.alpha == pytest.approx(29.05)
         assert ranked[0].ranking_data.beta == pytest.approx(181.0)
 
+    def test_rank_items_applies_prior_alpha_multiplier(self, monkeypatch):
+        """Seasonality should scale the click prior without changing the impression prior."""
+        recs = generate_recommendations(
+            item_ids=["item"],
+            topics=[Topic.BUSINESS.value],
+            time_sensitive_count=0,
+        )
+        prior_backend = StubPriorBackend(
+            Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000)
+        )
+        engagement_backend = StubEngagementBackend({})
+
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker = ThompsonSamplingRanker(
+            engagement_backend,
+            prior_backend,
+            prior_alpha_multiplier=1.5,
+        )
+        ranked = ranker.rank_items(recs)
+
+        assert ranked[0].ranking_data is not None
+        assert ranked[0].ranking_data.alpha == pytest.approx(15)
+        assert ranked[0].ranking_data.beta == pytest.approx(100)
+
     def test_rank_items_uses_branch_engagement_for_whole_list_when_any_branch_exists(
         self, monkeypatch
     ):
