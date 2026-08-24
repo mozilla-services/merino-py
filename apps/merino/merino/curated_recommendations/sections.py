@@ -131,7 +131,6 @@ def map_section_item_to_recommendation(
         features=features,
         experiment_flags=experiment_flags,
         variantId=variant_id,
-        sourceSectionId=section_id,
     )
 
 
@@ -891,6 +890,11 @@ async def get_sections(
     all_corpus_recommendations = [
         rec for section in corpus_sections.values() for rec in section.recommendations
     ]
+    source_section_id_by_rec = {
+        id(rec): section_id
+        for section_id, section in corpus_sections.items()
+        for rec in section.recommendations
+    }
 
     # 5. Remove reported recommendations
     all_remaining_corpus_recommendations = takedown_reported_recommendations(
@@ -990,6 +994,10 @@ async def get_sections(
         surface_id=surface_id,
         article_balancer_config=get_top_stories_article_balancer_config(surface_id, request),
     )
+    top_stories = [
+        rec.model_copy(update={"sourceSectionId": source_section_id_by_rec.get(id(rec))})
+        for rec in top_stories
+    ]
 
     # 9. Create a global rank lookup from the already-ranked recommendations
     # This preserves the Thompson sampling ranking done at step 7 without expensive re-sampling

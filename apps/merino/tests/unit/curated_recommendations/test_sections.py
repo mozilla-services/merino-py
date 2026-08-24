@@ -620,6 +620,7 @@ class TestMapSectionItemToRecommendation:
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
         assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
+        assert rec.sourceSectionId is None
         assert not rec.in_experiment("unknown_experiment")
 
     def test_basic_mapping_manual_section(self):
@@ -681,7 +682,7 @@ class TestMapCorpusSectionToSection:
             assert rec.receivedRank == idx
             assert rec.features == features_compare
             assert rec.variantId == 5050
-            assert rec.sourceSectionId == cs.externalId
+            assert rec.sourceSectionId is None
 
     def test_empty_section_items(self):
         """Empty sectionItems yields empty recommendations."""
@@ -2079,3 +2080,42 @@ class TestGetSectionsForcedInterests:
         )
 
         assert captured == {"surface_id": SurfaceId.NEW_TAB_DE_DE, "request": request}
+
+    @pytest.mark.asyncio
+    async def test_source_section_id_only_on_top_stories(self):
+        """SourceSectionId is only exposed on Popular Today recommendations."""
+        source_variants = {"business": 0, "sports": 5050, "tech": 2}
+        corpus_sections = [
+            generate_corpus_section(section_id, count=20) for section_id in source_variants
+        ]
+        for corpus_section in corpus_sections:
+            corpus_section.variantId = source_variants[corpus_section.externalId]
+
+        sections_backend = MagicMock(spec=SectionsProtocol)
+        sections_backend.fetch = AsyncMock(return_value=corpus_sections)
+        ml_backend = MagicMock(spec=MLRecsBackend)
+        ml_backend.is_valid.return_value = False
+
+        sections = await get_sections(
+            request=CuratedRecommendationsRequest(locale=Locale.EN_US, region="US"),
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            sections_backend=sections_backend,
+            ml_backend=ml_backend,
+            engagement_backend=_StubEngagementBackend(),
+            prior_backend=ConstantPrior(),
+            lints_interest_backend=_FakeLinTSBackend(),
+            region="US",
+        )
+
+        top_stories = sections["top_stories_section"].recommendations
+        assert top_stories
+        for rec in top_stories:
+            assert rec.sourceSectionId is not None
+            assert rec.variantId == source_variants[rec.sourceSectionId]
+
+        for section_id, section in sections.items():
+            if section_id == "top_stories_section":
+                continue
+            for rec in section.recommendations:
+                assert rec.sourceSectionId is None
+                assert rec.variantId == section.variantId
