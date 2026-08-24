@@ -1,10 +1,10 @@
 """Corpus Sections API backend for fetching section recommendations using the getSections GraphQL query."""
 
+import aiodogstatsd
 import asyncio
 import logging
-from datetime import timedelta
 
-import aiodogstatsd
+from datetime import timedelta
 from httpx import AsyncClient, HTTPError
 from tenacity import (
     retry,
@@ -13,11 +13,13 @@ from tenacity import (
     wait_exponential_jitter,
     before_sleep_log,
 )
-
 from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.caching import (
     stale_while_revalidate,
     WaitRandomExpiration,
+)
+from merino.curated_recommendations.corpus_backends.circuitbreaker import (
+    CuratedRecommendationsCircuitBreaker,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
     SectionsProtocol,
@@ -33,9 +35,6 @@ from merino.curated_recommendations.corpus_backends.utils import (
 from merino.curated_recommendations.ml_backends.protocol import SpindleBackendProtocol
 from merino.providers.manifest import Provider as ManifestProvider
 
-from merino.curated_recommendations.corpus_backends.circuitbreaker import (
-    CuratedRecommendationsCircuitBreaker,
-)
 
 logger = logging.getLogger(__name__)
 

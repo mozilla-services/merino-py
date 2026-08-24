@@ -7,7 +7,6 @@ import logging
 import pytest
 
 from httpx import AsyncClient, HTTPStatusError, Response
-from pytest_mock import MockerFixture
 from tests.types import FilterCaplogFixture
 from unittest.mock import AsyncMock
 
@@ -428,7 +427,6 @@ class TestSectionsCircuitBreaker:
     @pytest.mark.asyncio
     async def test_breaker_recovers_after_timeout(
         self,
-        mocker: MockerFixture,
         make_sections_backend,
         sections_http_client: AsyncMock,
         fixture_request_data,
