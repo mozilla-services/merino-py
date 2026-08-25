@@ -1,15 +1,15 @@
 """Entrypoint for the search term sanitization queue consumer.
 
-Runs as its own process consuming the Pub/Sub backup channel Merino falls back
-to when direct submission to merino-fleece fails. It brings up the same
-sanitization dependencies as the fleece app lifespan does, so both paths
-classify and log search terms identically.
+Runs as its own process consuming the Pub/Sub backup channel Merino falls back to when direct
+submission to merino-fleece fails. It brings up the same sanitization dependencies the app
+lifespan does, so both paths classify and log search terms identically.
 """
 
 import asyncio
 import logging
 import signal
 
+from gcloud.aio.pubsub import SubscriberClient, subscribe
 from merino_common.app_configs.config_logging import configure_logging
 from merino_common.app_configs.config_sentry import configure_sentry
 
@@ -21,18 +21,25 @@ from merino_fleece.pii import (
     shutdown_executor,
 )
 from merino_fleece.sanitize import exempts
-from merino_fleece.sanitize.worker.worker import FleeceQueueWorker
+from merino_fleece.sanitize.worker.worker import SubscriberTuning, build_handler, heartbeat
 
-logger = logging.getLogger(__name__)
+# Named explicitly rather than via `__name__`: this module is executed as a script
+# (`uv run python .../sanitize/worker/main.py`), so `__name__` is "__main__" -- a logger
+# outside the `merino_fleece` tree, which `configure_logging`'s `dictConfig` disables
+# along with every other unconfigured logger. Every record from this module would be dropped.
+logger = logging.getLogger("merino_fleece.sanitize.worker.main")
 
 
 async def main() -> None:
     """Bring up the sanitization dependencies, then consume messages until stopped.
 
     Mirrors the FastAPI app's lifespan, including its teardown order: the exempts and the
-    NER thread pool outlive the streaming pull, because the pull is opened with
-    ``await_callbacks_on_shutdown=True`` and so drains in-flight batches -- which still
-    consult both -- before ``start()`` returns.
+    NER thread pool outlive the subscriber, because cancelling it drains the messages
+    already in flight -- and those still consult both.
+
+    `subscribe()` runs until cancelled, or raises if one of its internal workers dies. That
+    exception is left to propagate so the process exits non-zero and Kubernetes restarts
+    the pod, rather than idling in a half-broken state.
     """
     configure_logging(
         log_format=settings.logging.format,
@@ -51,38 +58,71 @@ async def main() -> None:
     init_executor()
     await exempts.initialize()
 
-    loop = asyncio.get_running_loop()
-    worker = FleeceQueueWorker(
-        subscription_name=settings.pubsub.subscription,
-        loop=loop,
-        sanitize_timeout_s=settings.pubsub.sanitize_timeout_sec,
-        # Leasing is bounded by NER capacity, not by Pub/Sub's callback pool, so the
-        # flow-control cap is derived from the thread pool this process actually has.
-        max_messages=(settings.pubsub.messages_per_ner_worker * settings.pii.executor_max_workers),
-        restart_stream=settings.pubsub.restart_stream,
-        restart_backoff=settings.pubsub.restart_backoff,
-        # Normalize to None if path is empty (disabled)
-        heartbeat_path=settings.pubsub.heartbeat_path or None,
-        heartbeat_interval=settings.pubsub.heartbeat_interval,
+    tuning = SubscriberTuning.derive(
+        ack_deadline_s=settings.pubsub.ack_deadline_sec,
+        ner_workers=settings.pii.executor_max_workers,
     )
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        # Handled on the loop rather than by interrupting whichever thread is active.
-        loop.add_signal_handler(sig, _handle_exit, worker, sig)
 
+    tasks: list[asyncio.Task] = []
     try:
-        # The streaming pull is blocking and synchronous, so it gets a thread of its own;
-        # this keeps the loop free to run the sanitization callbacks.
-        await asyncio.to_thread(worker.start)
+        async with SubscriberClient() as client:
+            subscriber = asyncio.create_task(
+                subscribe(
+                    settings.pubsub.subscription,
+                    build_handler(tuning.sanitize_timeout_s),
+                    client,
+                    # Pinned to one; `SubscriberTuning` is only valid for a single
+                    # producer, since each one gets its own queue and consumer.
+                    num_producers=1,
+                    max_messages_per_producer=tuning.max_messages_per_pull,
+                    num_tasks_per_consumer=tuning.concurrency,
+                    ack_deadline=settings.pubsub.ack_deadline_sec,
+                )
+            )
+            tasks.append(subscriber)
+
+            if settings.pubsub.heartbeat_path:
+                tasks.append(
+                    asyncio.create_task(
+                        heartbeat(
+                            settings.pubsub.heartbeat_path,
+                            settings.pubsub.heartbeat_interval,
+                        )
+                    )
+                )
+
+            loop = asyncio.get_running_loop()
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                # Handled on the loop rather than by interrupting an arbitrary frame.
+                loop.add_signal_handler(sig, _handle_exit, subscriber, sig)
+
+            logger.info(
+                "Listening for messages",
+                extra={
+                    "subscription_name": settings.pubsub.subscription,
+                    "concurrency": tuning.concurrency,
+                    "max_messages_per_pull": tuning.max_messages_per_pull,
+                    "sanitize_timeout_s": tuning.sanitize_timeout_s,
+                },
+            )
+            try:
+                await subscriber
+            except asyncio.CancelledError:
+                # Cancelled by the shutdown signal; `subscribe()` has drained by now.
+                logger.info("Subscriber stopped")
     finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         await exempts.shutdown()
         shutdown_executor()
         shutdown_detector()
 
 
-def _handle_exit(worker: FleeceQueueWorker, signum: signal.Signals) -> None:
-    """Stop the streaming pull on SIGTERM/SIGINT, draining in-flight callbacks."""
+def _handle_exit(subscriber: asyncio.Task, signum: signal.Signals) -> None:
+    """Cancel the subscriber on SIGTERM/SIGINT so it drains in-flight messages."""
     logger.info("Received shutdown signal. Stopping queue subscriber...", extra={"signal": signum})
-    worker.stop()
+    subscriber.cancel()
 
 
 if __name__ == "__main__":
