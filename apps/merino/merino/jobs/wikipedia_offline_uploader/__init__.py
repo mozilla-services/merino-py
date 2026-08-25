@@ -15,11 +15,27 @@ logger = logging.getLogger(__name__)
 RECORD_TYPE = "wikipedia"
 
 LOCALES_MAPPING = {
-    "en": ["en-US", "en-CA", "en-GB"],
-    "fr": ["fr", "fr-FR"],
+    "ca": ["ca", "ca-valencia"],
+    "cs": ["cs"],
+    "da": ["da"],
     "de": ["de", "de-DE"],
+    "en": ["en-US", "en-CA", "en-GB"],
+    "es": ["es-ES", "es-MX", "es-AR"],
+    "eu": ["eu"],
+    "fi": ["fi"],
+    "fr": ["fr", "fr-FR"],
+    "ga": ["ga-IE"],
+    "gl": ["gl"],
+    "hu": ["hu"],
     "it": ["it", "it-IT"],
+    "nl": ["nl"],
+    "nn": ["nn-NO"],
+    "no": ["nb-NO"],
     "pl": ["pl", "pl-PL"],
+    "pt": ["pt-PT", "pt-BR"],
+    "rm": ["rm"],
+    "sk": ["sk"],
+    "sv": ["sv-SE"],
 }
 
 DEFAULT_LANGUAGES = ",".join(LOCALES_MAPPING.keys())
