@@ -117,8 +117,7 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
 
     async def upload_picture_of_the_day(self) -> bool:
         """Execute the upload flow. This method is called by the job cli command only."""
-        with self.metrics_client.timeit("potd.provider.upload.timing"):
-            return await self.backend.upload_picture_of_the_day()
+        return await self.backend.upload_picture_of_the_day()
 
     async def shutdown(self) -> None:
         """Shut down the provider."""
