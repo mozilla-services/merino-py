@@ -135,10 +135,10 @@ dmypy.json
 .install.stamp
 
 # Dynaconf secret files
-merino/configs/.secrets.*
+apps/merino/merino/configs/.secrets.*
 
 # Dynaconf local config files
-merino/configs/*.local.*
+apps/merino/merino/configs/*.local.*
 
 # mdBook generated files
 book/

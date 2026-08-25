@@ -16,7 +16,7 @@ Blocklists in Merino filter content at two distinct phases:
 ## Navigational Suggestions / Top Picks
 In the Navigational Suggestions provider, a blocklist is used during data creation to block specific domains of websites that we do not want to suggest.
 
-The blocklist, [`domain_blocklist.json`][1],  is referenced during data generation of the [`top_picks.json`][2] file, which is ingested by the provider backend. This ensures specific domains are not indexed for suggestions. The blocklist is loaded and an exact string comparison is made between all second-level domains and the second-level domains defined in the blocklist.
+The [`TOP_PICKS_BLOCKLIST`][1] is referenced during data generation of the [`top_picks.json`][2] file, which is ingested by the provider backend. This ensures specific domains are not indexed for suggestions. The blocklist is loaded and an exact string comparison is made between all second-level domains and the second-level domains defined in the blocklist.
 
 See [nav-suggestions blocklist runbook][3] for more information.
 
@@ -41,7 +41,7 @@ We have this feature because the indexing job is not run daily. Therefore, we de
 
 See [wikipedia blocklist runbook][4] for more information.
 
-[1]: /merino/jobs/navigational_suggestions/data/domain_blocklist.json
+[1]: /apps/merino/merino/utils/blocklists.py
 [2]: /dev/top_picks.json
 [3]: ../operations/blocklist-nav-suggestions.md
 [4]: ../operations/blocklist-wikipedia.md

@@ -18,7 +18,7 @@ the sheet is a header that names the columns.
 
 If you're uploading a type of suggestion that the uploader already supports,
 skip to [Running the uploader](#running-the-uploader) below. If you're not sure
-whether it's supported, check in the `merino/jobs/csv_rs_uploader/` directory
+whether it's supported, check in the `apps/merino/merino/jobs/csv_rs_uploader/` directory
 for a file named similarly to the type.
 
 To upload a new type of suggestion, follow the steps below. In summary, first
@@ -27,7 +27,7 @@ and then you'll run the uploader.
 
 #### 1. Create a Python model module for the new suggestion type
 
-Add a Python module to `merino/jobs/csv_rs_uploader/`. It's probably easiest to
+Add a Python module to `apps/merino/merino/jobs/csv_rs_uploader/`. It's probably easiest to
 copy an existing model module like `mdn.py`, follow along with the steps here,
 and modify it for the new suggestion type. Name the file according to the
 suggestion type.
@@ -89,7 +89,7 @@ reader.
 
 #### 6. Add a test
 
-Add a test file to `tests/unit/jobs/csv_rs_uploader/`. See `test_mdn.py` as an
+Add a test file to `apps/merino/tests/unit/jobs/csv_rs_uploader/`. See `test_mdn.py` as an
 example. The test should perform a successful upload as well as uploads that
 fail due to validation errors and missing fields (columns) in the input CSV.
 
@@ -108,7 +108,7 @@ fail due to validation errors and missing fields (columns) in the input CSV.
 #### 7. Run the test
 
 ```
-$ MERINO_ENV=testing uv run pytest tests/unit/jobs/csv_rs_uploader/test_foo.py
+$ MERINO_ENV=testing uv run pytest apps/merino/tests/unit/jobs/csv_rs_uploader/test_foo.py
 ```
 
 See also the main Merino development documentation for running unit tests.
@@ -155,7 +155,7 @@ Let's break down each command-line option in this example:
 * `--bucket` - The `main-workspace` bucket will be used
 * `--csv-path` - The CSV input file is `foo.csv`
 * `--model-name` - The model module is named `foo`. Its path within the repo
-  would be `merino/jobs/csv_rs_uploader/foo.py`
+  would be `apps/merino/merino/jobs/csv_rs_uploader/foo.py`
 * `--record-type` - The `type` in the remote settings records created for these
   suggestions will be set to `foo-suggestions`. This argument is optional and
   defaults to `"{model_name}-suggestions"`
@@ -179,7 +179,7 @@ and 1 inclusive.
 
 ### Structure of the remote settings data
 
-The uploader uses `merino/jobs/utils/chunked_rs_uploader.py` to upload the
+The uploader uses `apps/merino/merino/jobs/utils/chunked_rs_uploader.py` to upload the
 output suggestions. In short, suggestions will be chunked, and each chunk will
 have a corresponding remote settings record with an attachment. The record's ID
 will be generated from the `--record-type` option, and its type will be set to

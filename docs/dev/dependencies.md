@@ -40,7 +40,7 @@ $ uv add <package_name>
 After that you should be to run Merino as follows:
 
 ```sh
-$ uv run fastapi run merino/main.py --reload
+$ uv run fastapi run apps/merino/merino/main.py --reload
 ```
 
 ## Moving from the Poetry & Pyenv Set up

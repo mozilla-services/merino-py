@@ -5,7 +5,7 @@ This test framework uses IP2Location LITE data available from https://lite.ip2lo
 
 ## Overview
 
-The tests in the `tests/load` directory spawn multiple HTTP clients that consume Merino's API,
+The tests in the `tools/load-tests` directory spawn multiple HTTP clients that consume Merino's API,
 in order to simulate real-world load on the Merino infrastructure.
 These tests use the Locust framework and are triggered at the discretion of the Merino Engineering Team.
 
@@ -28,7 +28,7 @@ Follow the steps bellow to execute the load tests locally:
 
 The following environment variables as well as
 [Locust environment variables][locust_environment_variables] can be set in
-`tests\load\docker-compose.yml`.
+`tools/load-tests/docker-compose.yml`.
 Make sure any required API key is added but then not checked into source control.
 
 **WARNING**: if the `WIKIPEDIA__ES_API_KEY` is missing, the `MerinoUser` load tests will
@@ -121,14 +121,14 @@ The load tests can be executed from the [contextual-services-test-eng cloud shel
 
 #### 2. Configure the Bash Script
 
-* The `setup_k8s.sh` file, located in the `tests\load` directory, contains shell
+* The `setup_k8s.sh` file, located in the `tools/load-tests` directory, contains shell
 commands to **create** a GKE cluster, **setup** an existing GKE cluster or **delete**
 a GKE cluster
   * Modify the script to include the MERINO_PROVIDERS__WIKIPEDIA__ES_API_KEY
     environment variables
   * Execute the following from the root directory, to make the file executable:
     ```shell
-    chmod +x tests/load/setup_k8s.sh
+    chmod +x tools/load-tests/setup_k8s.sh
     ```
 
 #### 3. Create the GCP Cluster
@@ -138,7 +138,7 @@ a GKE cluster
   building the docker image. Choose smoke or average depending on the type
   of load test required.
   ```shell
-  ./tests/load/setup_k8s.sh create [smoke|average]
+  ./tools/load-tests/setup_k8s.sh create [smoke|average]
   ```
   * Smoke - The smoke load test verifies the system's performance under minimal load. The test is
     run for a short period, possibly in CD, to ensure the system is working correctly.
@@ -240,7 +240,7 @@ will stop automatically.
 
 Execute the `setup_k8s.sh` file and select the **delete** option
 ```shell
-./tests/load/setup_k8s.sh
+./tools/load-tests/setup_k8s.sh
 ```
 
 ## Distributed GCP Execution - CI Trigger
@@ -338,12 +338,12 @@ be cloned locally.
 
 #### 2. Configure the Bash Script
 
-* The `setup_k8s.sh` file, located in the `tests\load` directory, contains
+* The `setup_k8s.sh` file, located in the `tools/load-tests` directory, contains
   shell commands to **create** a GKE cluster, **setup** an existing GKE cluster or
   **delete** a GKE cluster
     * Execute the following from the root directory, to make the file executable:
       ```shell
-      chmod +x tests/load/setup_k8s.sh
+      chmod +x tools/load-tests/setup_k8s.sh
       ```
 
 #### 3. Create the GCP Cluster
@@ -354,7 +354,7 @@ be cloned locally.
   variables and building the docker image. Choose smoke or average depending on the type
   of load test required.
   ```shell
-  ./tests/load/setup_k8s.sh create [smoke|average]
+  ./tools/load-tests/setup_k8s.sh create [smoke|average]
   ```
 * The cluster creation process will take some time. It is considered complete, once
   an external IP is assigned to the `locust_master` node. Monitor the assignment via
@@ -419,8 +419,8 @@ See [Distributed GCP Execution (Manual Trigger) - Analyse Results](#3-analyse-re
 * `WORKER_COUNT = MAX_USERS/USERS_PER_WORKER`
     * If `MAX_USERS` is unknown, calibrate to determine `WORKER_COUNT`
 * Update the `USERS_PER_WORKER` and `WORKER_COUNT` values in the following files:
-    * `\tests\load\locustfiles\smoke_load.py` or `\tests\load\locustfiles\average_load.py`
-    * \tests\load\setup_k8s.sh
+    * `tools/load-tests/locustfiles/smoke_load.py` or `tools/load-tests/locustfiles/average_load.py`
+    * `tools/load-tests/setup_k8s.sh`
 
 ### Clean-up Environment
 
@@ -448,8 +448,8 @@ environment. You can monitor the Merino-py pod counts on [Grafana][grafana].
 #### 1. Update Shape and Script Values
 
 * Update the `WORKER_COUNT` values in the following files:
-    * `\tests\load\locustfiles\smoke_load.py` or `\tests\load\locustfiles\average_load.py`
-    * \tests\load\setup_k8s.sh
+    * `tools/load-tests/locustfiles/smoke_load.py` or `tools/load-tests/locustfiles/average_load.py`
+    * `tools/load-tests/setup_k8s.sh`
 * Using Git, commit the changes locally
 
 #### 2. Start Load Test
@@ -517,21 +517,21 @@ updating the following:
 [cloud]: https://console.cloud.google.com/home/dashboard?q=search&referrer=search&project=spheric-keel-331521&cloudshell=false
 [conserv]: https://drive.google.com/drive/folders/1rvCpmwGuLt4COH6Zw6vSyu_019_sB3Ux
 [docker]: https://docs.docker.com/
-[docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tests/load/docker-compose.yml
-[dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/Dockerfile
+[docker_compose]:https://github.com/mozilla-services/merino-py/blob/main/tools/load-tests/docker-compose.yml
+[dockerfile]: https://github.com/mozilla-services/merino-py/blob/main/tools/load-tests/Dockerfile
 [grafana]: https://earthangel-b40313e5.influxcloud.net/d/rQAfYKIVk/merino-py-application-and-infrastructure?orgId=1&refresh=1m&var-environment=stagepy
 [jenkins_load_test]: https://github.com/mozilla-services/cloudops-infra/blob/master/projects/merino/Jenkinsfile-stage-py
 [kubernetes_panel]: https://console.cloud.google.com/kubernetes/list/overview?cloudshell=false&project=spheric-keel-331521
 [locust_environment_variables]: https://docs.locust.io/en/stable/configuration.html#environment-variables
-[locust_master_controller]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-controller.yml
-[locust_master_service]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-master-service.yml
-[locust_worker_controller]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/kubernetes-config/locust-worker-controller.yml
+[locust_master_controller]: https://github.com/mozilla-services/merino-py/blob/main/tools/load-tests/kubernetes-config/locust-master-controller.yml
+[locust_master_service]: https://github.com/mozilla-services/merino-py/blob/main/tools/load-tests/kubernetes-config/locust-master-service.yml
+[locust_worker_controller]: https://github.com/mozilla-services/merino-py/blob/main/tools/load-tests/kubernetes-config/locust-worker-controller.yml
 [merino_gcp_stage]: https://console.cloud.google.com/kubernetes/list/overview?project=moz-fx-merino-nonprod-ee93
 [merino_history_doc]: https://docs.google.com/document/d/1BGNhKuclUH40Bit9KxYWLiv_N_VnE66uxi9pBFbRWbg/edit
 [merino_spreadsheet]: https://docs.google.com/spreadsheets/d/1SAO3QYIrbxDRxzmYIab-ebZXA1dF06W1lT4I1h2R3a8/edit?usp=sharing
 [merino_test_plan]: https://docs.google.com/document/d/1v7LDXENPZg37KXeNcznEZKNZ8rQlOhNbsHprFyMXHhs/edit?usp=sharing
 [uv]: https://docs.astral.sh/uv/
 [uv_lock]: https://github.com/mozilla-services/merino-py/blob/main/uv.lock
-[pyproject_toml]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/pyproject.toml
+[pyproject_toml]: https://github.com/mozilla-services/merino-py/blob/main/tools/load-tests/pyproject.toml
 [load_test_docs]: ./load-tests.md
-[setup_k8s]: https://github.com/mozilla-services/merino-py/blob/main/tests/load/setup_k8s.sh
+[setup_k8s]: https://github.com/mozilla-services/merino-py/blob/main/tools/load-tests/setup_k8s.sh

@@ -1,0 +1,105 @@
+# Configurations for development, should be *only* used for development.
+# Configurations defined here will override the counterparts in `default.toml`.
+
+# This would be the default environment for development.
+
+[development]
+debug = true
+# For `list` or `table` settings, `dynaconf_merge` allows you to merge settings with the default
+# settings. This enables merge for the entire `development` environment.
+dynaconf_merge = true
+
+[development.metrics]
+dev_logger = true
+
+[development.logging]
+# Any of "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+level = "DEBUG"
+format = "pretty"
+
+[development.accuweather]
+api_key = "test"
+
+[development.fleece]
+# Point at a merino-fleece instance running locally (see apps/fleece/README.md).
+url_base = "http://localhost:8000"
+
+[development.jobs.wikipedia_indexer]
+# GCS path. Combined bucket and object prefix (folders).
+gcs_path = "merino-jobs-dev/wikipedia-exports"
+# GCP project name where the GCS bucket lives.
+gcp_project = "contextual-services-dev"
+
+[development.jobs.navigational_suggestions]
+# GCP project name that contains domain data tables
+source_gcp_project = "mozdata"
+
+[development.sports]
+# List of active sports to process.
+# (e.g. "NBA,NHL,EPL,UCL,etc")
+# See `jobs.sportsdata_jobs.common` for list of supported sports
+sports = ["NBA", "NHL", "EPL", "UCL"]
+cache = "redis"
+api_key = "abc123"
+
+[development.providers.wikipedia]
+backend = "elasticsearch"
+es_url = "http://localhost:9200"
+# Unused, just needs to be non-empty
+es_api_key = "local"
+
+[development.providers.sports]
+enabled_by_default = true
+
+[development.providers.sports.es]
+dsn = "http://localhost:9200"
+# Unused, just needs to be non-empty
+api_key = "local"
+request_timeout_ms = 10000
+
+[development.gcs]
+# To enable overriding the GCS endpoint
+# Leave empty to use the default Google Cloud Storage api
+# MERINO_GCS__ENDPOINT_URL
+endpoint_url = "http://localhost:4443"
+
+[development.image_gcs]
+# MERINO_IMAGE_GCS__GCS_PROJECT
+# Staging project
+gcs_project = ""
+
+# MERINO_IMAGE_GCS__GCS_BUCKET
+gcs_bucket = ""
+
+# MERINO_IMAGE_GCS__ENABLED
+# Whether to enable fetching from GCS.
+# Set to `true` in production and `false` in staging or development.
+gcs_enabled = false
+
+[development.image_gcs_v2]
+# MERINO_IMAGE_GCS_V2__GCS_PROJECT
+gcs_project = ""
+
+# MERINO_IMAGE_GCS_V2__GCS_BUCKET
+gcs_bucket = "merino-images-local"
+
+# MERINO_IMAGE_GCS_V2__CDN_HOSTNAME
+# CDN hostname used for public URLs of stored images
+cdn_hostname = "localhost:4443"
+
+[development.contextual_interest]
+# disabled in dev so we don't fetch artifacts locally
+enabled = false
+
+[development.games_particle_gcs]
+# MERINO_GAMES_PARTICLE__GCS_PROJECT
+# GCS project name that contains domain data (GCP V2)
+gcs_project = ""
+
+# MERINO_GAMES_PARTICLE__GCS_BUCKET
+# GCS bucket that contains domain data files (GCP V2)
+gcs_bucket = "merino-games-particle-local"
+
+# MERINO_GAMES_PARTICLE__CDN_HOSTNAME
+# CDN hostname used for public URL (GCP V2)
+cdn_hostname = "localhost:4443"

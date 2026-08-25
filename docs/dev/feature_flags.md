@@ -32,9 +32,9 @@ The feature flags system in Merino consists of three components:
 
 | Description | Location |
 | ----------- | -------- |
-| A FastAPI middleware that reads the query parameter `sid` sent by the client application and sets a session ID for the current request based on that. | `merino/middleware/featureflags.py`|
-| A `FeatureFlags` class which you can use to check if a certain feature flag is enabled. | `merino/featureflags.py` |
-| A local directory containing static files that define and configure feature flags for Merino. | `merino/configs/flags/` |
+| A FastAPI middleware that reads the query parameter `sid` sent by the client application and sets a session ID for the current request based on that. | `apps/merino/merino/middleware/featureflags.py`|
+| A `FeatureFlags` class which you can use to check if a certain feature flag is enabled. | `apps/merino/merino/utils/featureflags.py` |
+| A local directory containing static files that define and configure feature flags for Merino. | `apps/merino/merino/configs/flags/` |
 
 ## Configuration
 
@@ -78,8 +78,8 @@ The format of these tags is:
 feature_flag.<feature_flag_name>
 ```
 
-For more information about this see the `ClientMeta` meta class and the
-`add_feature_flags` decorator in `merino/metrics.py`.
+For details on how decisions are recorded, see the `FeatureFlags.decisions` mapping and
+`record_decision` decorator in `apps/merino/merino/utils/featureflags.py`.
 
 ## Monitoring in Grafana
 
