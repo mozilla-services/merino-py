@@ -103,3 +103,11 @@ gcs_bucket = "merino-games-particle-local"
 # MERINO_GAMES_PARTICLE__CDN_HOSTNAME
 # CDN hostname used for public URL (GCP V2)
 cdn_hostname = "localhost:4443"
+
+# Settings for the asynchronous search term submission message handler.
+[development.message_handler]
+# MERINO_MESSAGE_HANDLER__ENABLED
+enabled = true
+
+# MERINO_MESSAGE_HANDLER__PUBSUB_TOPIC
+pubsub_topic = "projects/merino-local/topics/merino-fleece-sanitization-local"

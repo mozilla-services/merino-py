@@ -4,4 +4,4 @@ dynaconf_merge = true
 # Search term submission to merino-fleece; off by default,
 # rolled out by raising `enabled` toward 1.
 [production.flags.search-term-submission]
-enabled = 0
+enabled = 0.03
