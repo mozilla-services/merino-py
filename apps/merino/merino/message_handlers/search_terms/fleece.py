@@ -45,20 +45,21 @@ class FleeceClient:
         """
         submission = SearchTermsSubmission(search_terms=search_terms)
         start = time.perf_counter()
-        outcome = "success"
+        outcome = "error"
         try:
             response = await self.http_client.post(
                 self.search_terms_path, json=submission.model_dump()
             )
             response.raise_for_status()
         except HTTPError as ex:
-            outcome = "error"
             if isinstance(ex, HTTPStatusError):
                 raise FleeceError(
                     "Fleece returned an unexpected status "
                     f"{ex.response.status_code} {ex.response.reason_phrase}"
                 ) from ex
             raise FleeceError(f"Failed to submit search terms to Fleece: {ex}") from ex
+        else:
+            outcome = "success"
         finally:
             _submit_duration_histogram.record(time.perf_counter() - start, {"outcome": outcome})
 
