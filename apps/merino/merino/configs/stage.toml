@@ -168,3 +168,16 @@ base_url = "https://ads.allizom.org/v1/suggest/"
 
 # MERINO_MARS__SEND_TEST_PADDING
 send_test_padding = true
+
+
+# Settings for the asynchronous search term submission message handler.
+[stage.message_handler]
+# MERINO_MESSAGE_HANDLER__ENABLED
+enabled = true
+
+# MERINO_MESSAGE_HANDLER__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for establishing a connection to merino-fleece for search term submissions.
+connect_timeout_sec = 3.0
+
+# MERINO_MESSAGE_HANDLER__PUBSUB_TOPIC
+pubsub_topic = "projects/moz-fx-merino-nonprod-db57/topics/merino-fleece-sanitization-stage"
