@@ -5,8 +5,10 @@
 """Unit tests for the AsyncBatchQueue graceful-shutdown behavior."""
 
 import asyncio
+import logging
 import os
 import signal
+from collections.abc import Awaitable, Callable
 
 import pytest
 from opentelemetry.sdk.metrics import MeterProvider
@@ -763,3 +765,79 @@ async def test_remaining_capacity_recovers_as_batches_are_collected() -> None:
 
     assert processed == [1, 2]
     assert batcher.remaining_capacity() == 2
+
+
+LOGGER_NAME = "merino_common.utils.async_batch_queue"
+
+
+async def _run_one_failing_batch(
+    on_error: Callable[[list[int], Exception], Awaitable[None]] | None,
+    caplog: pytest.LogCaptureFixture,
+) -> list[logging.LogRecord]:
+    """Process a single batch whose on_batch raises, returning the queue's log records."""
+    caplog.set_level(logging.WARNING, logger=LOGGER_NAME)
+
+    async def on_batch(batch: list[int]) -> None:
+        raise ValueError("boom")
+
+    batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
+        on_batch=on_batch,
+        on_error=on_error,
+        max_batch_size=1,
+        collection_delay_s=0.02,
+        meter_provider=None,
+    )
+    await batcher.start()
+    batcher.put(1)
+    # A graceful stop drains the queue, so the batch is processed by the time it returns.
+    await batcher.stop()
+
+    return [record for record in caplog.records if record.name == LOGGER_NAME]
+
+
+@pytest.mark.asyncio
+async def test_absorbed_batch_failure_logs_warning_not_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A batch failure that the error callback absorbs is logged at warning, not error.
+
+    Sentry's logging integration turns every error record into an event, so logging
+    this at error reports an issue per failed batch for a condition the queue is
+    designed to recover from. The traceback is kept, as a breadcrumb for the error
+    that does get reported when the fallback fails too.
+    """
+
+    async def on_error(batch: list[int], exc: Exception) -> None:
+        pass  # the fallback absorbs the batch cleanly
+
+    records = await _run_one_failing_batch(on_error, caplog)
+
+    assert [record.levelno for record in records] == [logging.WARNING]
+    assert records[0].exc_info is not None, "the warning keeps the traceback for debugging"
+
+
+@pytest.mark.asyncio
+async def test_batch_failure_logs_error_without_an_error_callback(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Without an error callback there is no fallback, so a failed batch is data loss
+    and keeps the error level.
+    """
+    records = await _run_one_failing_batch(None, caplog)
+
+    assert [record.levelno for record in records] == [logging.ERROR]
+
+
+@pytest.mark.asyncio
+async def test_failed_error_callback_logs_error(caplog: pytest.LogCaptureFixture) -> None:
+    """When the error callback raises, both paths have failed and the batch is lost, so
+    an error is logged after the warning that recorded the primary failure.
+    """
+
+    async def on_error(batch: list[int], exc: Exception) -> None:
+        raise RuntimeError("fallback down")
+
+    records = await _run_one_failing_batch(on_error, caplog)
+
+    assert [record.levelno for record in records] == [logging.WARNING, logging.ERROR]
+    assert "Error callback raised on batch" in records[1].message

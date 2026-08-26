@@ -120,6 +120,13 @@ class AsyncBatchQueue(Generic[T]):
            already pulled into the run loop. This metric is not recorded on drops due
            to ``shutdown(force=True)``.
 
+    Logging:
+        The log level of a batch failure reflects the final outcome, not the first
+        failure. If ``on_error`` fallback is successful, log at ``warning``. ``error``
+        is reserved for the cases that lose data: no ``on_error`` is configured, or
+        ``on_error`` itself raised. The Sentry logging integration turns Error records
+        into events, so this ties alert to data loss only.
+
     Examples:
         ```
         batcher: AsyncBatchQueue[int] = AsyncBatchQueue(
@@ -336,9 +343,15 @@ class AsyncBatchQueue(Generic[T]):
         try:
             await self._batch_callback(batch)
         except Exception as e:
-            self.logger.error("Error processing batch", exc_info=True)
             self._record_outcome(self._processed_counter, len(batch), error=e)
-            if self._error_callback is not None:
+            if self._error_callback is None:
+                self.logger.error("Error processing batch", exc_info=True)
+            else:
+                # Graceful fallback is expected; only log a warning
+                # until the fallback itself fails.
+                self.logger.warning(
+                    "Error processing batch, routing to error callback", exc_info=True
+                )
                 try:
                     await self._error_callback(batch, e)
                     self._record_outcome(self._error_callback_counter, len(batch), error=None)
