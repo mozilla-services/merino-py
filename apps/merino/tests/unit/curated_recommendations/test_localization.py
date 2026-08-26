@@ -2,7 +2,10 @@
 
 import pytest
 
-from merino.curated_recommendations.localization import get_translation
+from merino.curated_recommendations.localization import (
+    LOCALIZED_SECTION_TITLES,
+    get_translation,
+)
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
 
 
@@ -14,6 +17,7 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
         (SurfaceId.NEW_TAB_DE_DE, "Meistgelesen"),
         (SurfaceId.NEW_TAB_EN_CA, "Popular Today"),
         (SurfaceId.NEW_TAB_EN_IE, "Popular Today"),
+        (SurfaceId.NEW_TAB_EN_INTL, "Popular Today"),
         (SurfaceId.NEW_TAB_EN_US, "Popular Today"),
         (SurfaceId.NEW_TAB_EN_XE, "Popular Today"),
         (SurfaceId.NEW_TAB_ES_ES, "Tendencias"),
@@ -29,6 +33,7 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
         "de_de",
         "en_ca",
         "en_ie",
+        "en_intl",
         "en_us",
         "en_xe",
         "es_es",
@@ -44,9 +49,15 @@ def test_get_translation_top_stories(surface_id: SurfaceId, expected_title: str)
     assert expected_title == get_translation(surface_id, "top-stories", "Default")
 
 
-def test_get_translation_non_existing_locale(caplog):
-    """Test logs error and falls back to default when locale translations do not exist."""
-    result = get_translation(SurfaceId.NEW_TAB_EN_INTL, "business", "Default")
+def test_get_translation_unsupported_surface(caplog, monkeypatch):
+    """Test logs error and falls back to default when a surface has no translations.
+
+    Every surface is currently enabled for sections, so drop one to stand in for a
+    surface that has not been enabled yet.
+    """
+    monkeypatch.delitem(LOCALIZED_SECTION_TITLES, SurfaceId.NEW_TAB_PL_PL)
+
+    result = get_translation(SurfaceId.NEW_TAB_PL_PL, "business", "Default")
     assert result == "Default"
 
     errors = [r for r in caplog.records if r.levelname == "ERROR"]

@@ -31,6 +31,9 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
     SurfaceId.NEW_TAB_EN_IE: {
         "top-stories": "Popular Today",
     },
+    SurfaceId.NEW_TAB_EN_INTL: {
+        "top-stories": "Popular Today",
+    },
     SurfaceId.NEW_TAB_EN_US: {
         "top-stories": "Popular Today",
     },

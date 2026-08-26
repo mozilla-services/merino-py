@@ -2728,10 +2728,11 @@ class TestSections:
         [
             ("GB", SurfaceId.NEW_TAB_EN_GB.value),
             ("IE", SurfaceId.NEW_TAB_EN_IE.value),
+            ("IN", SurfaceId.NEW_TAB_EN_INTL.value),
         ],
     )
-    def test_uk_sections_enabled(self, region, expected_surface, client: TestClient):
-        """Test that UK/IE users with feeds=['sections'] get sections."""
+    def test_sections_enabled_by_region(self, region, expected_surface, client: TestClient):
+        """Test that GB/IE/IN users with feeds=['sections'] get sections."""
         response = client.post(
             "/api/v1/curated-recommendations",
             json={
@@ -2759,6 +2760,23 @@ class TestSections:
 
         # data array should be empty (all recommendations in feeds)
         assert len(data["data"]) == 0
+
+    def test_india_without_sections_feed_is_not_forced_into_sections(self, client: TestClient):
+        """Test that clients in India that do not request sections keep the legacy grid.
+
+        NEW_TAB_EN_INTL is not in ROLLED_OUT_SECTION_SURFACES, so non-sections requests are
+        still served from the scheduled surface backend.
+        """
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "region": "IN"},
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_INTL.value
+        assert data["feeds"] is None
+        assert len(data["data"]) > 0
 
 
 def test_uk_sections_with_gb_backend_data(
