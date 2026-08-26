@@ -47,6 +47,7 @@ def _build_validators() -> list[Validator]:
         Validator("mars.request_timeout_sec", is_type_of=float, gt=0, must_exist=True),
         Validator("mars.resync_interval_sec", is_type_of=int, gt=0, must_exist=True),
         Validator("mars.cron_interval_sec", is_type_of=int, gt=0, must_exist=True),
+        Validator("pubsub.ack_deadline_sec", is_type_of=float, gt=0, must_exist=True),
         Validator(
             "logging.format",
             is_in=["mozlog", "pretty"],

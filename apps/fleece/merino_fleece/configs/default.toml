@@ -138,17 +138,8 @@ can_propagate = false
 # Subscription for the backup PubSub topic.
 subscription = "projects/merino-local/subscriptions/merino-fleece-sanitization-local"
 
-# MERINO_FLEECE_PUBSUB__RESTART_STREAM
-# Whether to restart pubsub subscription on stream errors
-restart_stream = true
-
-# MERINO_FLEECE_PUBSUB__RESTART_BACKOFF
-# How long to wait before restarting stream after stream error
-# Only applicable if `restart_stream` is true
-restart_backoff = 10  # seconds
-
 # MERINO_FLEECE_PUBSUB__HEARTBEAT_PATH
-# Filesystem path the worker refreshes while the streaming pull is running, for an
+# Filesystem path the worker refreshes while it is consuming messages, for an
 # external liveness probe (e.g. a Kubernetes exec probe). Parent directories are created
 # on demand. Must be writable by the container's unprivileged `app` user (uid 10001)
 # Empty disables the heartbeat.
@@ -156,5 +147,12 @@ heartbeat_path = ""
 
 # MERINO_FLEECE_PUBSUB__HEARTBEAT_INTERVAL
 # How often to refresh the heartbeat file. Keep the probe's staleness threshold
-# comfortably above `heartbeat_interval + restart_backoff`.
+# comfortably above `heartbeat_interval`.
 heartbeat_interval = 10  # seconds
+
+# MERINO_FLEECE_PUBSUB__ACK_DEADLINE_SEC
+# The subscription's ack deadline, in seconds. Not a tunable -- mirror whatever terraform
+# set on the subscription. The worker derives its concurrency, prefetch depth, and
+# per-message sanitization ceiling from this and `pii.executor_max_workers`; see
+# `SubscriberTuning` in `sanitize/worker/worker.py` for the budget those follow.
+ack_deadline_sec = 30.0

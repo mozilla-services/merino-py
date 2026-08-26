@@ -1,188 +1,180 @@
-"""Pub/Sub worker for processing search term submissions."""
+"""Pub/Sub worker for processing search term submissions.
 
+Consumes the backup channel merino falls back to when direct submission to merino-fleece
+fails, and runs each message's search terms through the same sanitization pass the HTTP
+endpoint uses.
+
+The client is `gcloud-aio-pubsub`, whose subscriber is native asyncio: its handler is a
+coroutine, so `sanitize_batch` is simply awaited on the loop that already owns the SpaCy
+detector and the exempts registry. `subscribe()` acks a message only after its handler
+returns and nacks it if the handler raises, which is exactly the delivery contract this
+worker wants.
+"""
+
+import asyncio
 import logging
 import os
-import threading
 import time
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 
-import google.cloud.pubsub_v1 as pubsub_v1
-from google.cloud.pubsub_v1.subscriber.message import Message
-from google.cloud.pubsub_v1.types import SubscriberOptions
+from gcloud.aio.pubsub import SubscriberMessage
 from merino_common.models.suggest_logging import SearchTermsSubmission
 from pydantic import ValidationError
 
-from merino_fleece.sanitize.emitter import emit_sanitized_query
-from merino_fleece.sanitize.sanitizer import sanitize_query
+from merino_fleece.sanitize.sanitizer import sanitize_batch
 
 logger = logging.getLogger(__name__)
 
-# Seconds to wait before reconnecting after a stream error.
-DEFAULT_RECONNECT_DELAY_SECONDS = 5
-
-# Seconds between heartbeat file refreshes.
-DEFAULT_HEARTBEAT_INTERVAL_SECONDS = 10
+MessageHandler = Callable[[SubscriberMessage], Awaitable[None]]
 
 
-def callback(message: Message) -> None:
-    """Handle an incoming Pub/Sub message: sanitize then emit its search terms."""
-    try:
-        submission = SearchTermsSubmission.model_validate_json(message.data)
-        for query in submission.search_terms:
-            sanitized = sanitize_query(query)
-            emit_sanitized_query(sanitized)
-    except ValidationError:
-        logger.exception("Dropping invalid message")
-    # TODO: Any additional exception handling as needed if encounter
-    # error during sanitization or emission, once methods are defined
-    # Should be caught and `nacked` for redelivery if not fatal
-    message.ack()
+# Pub/Sub caps a single pull request at 1000 messages.
+MAX_PULL_LIMIT = 1000
+
+# A pessimistic ceiling on how long sanitizing one message takes. Measured: a full
+# 512-term batch runs ~161ms on `en_core_web_sm`, leaving roughly 6x headroom for the
+# larger `en_core_web_lg` that deployed environments load.
+SLOW_BATCH_S = 1.0
+
+# Messages handled concurrently per NER thread. At 2, one batch per thread is in NER while
+# another is ready to take its place, so a thread never waits on a pull. Higher values only
+# deepen the queue, and queued messages are already burning their ack deadline.
+MESSAGES_PER_NER_WORKER = 2
 
 
-class FleeceQueueWorker:
-    """Streaming-pull worker that consumes and processes search term submissions.
+@dataclass(frozen=True)
+class SubscriberTuning:
+    """Subscriber limits derived from the subscription's ack deadline and the NER pool.
 
-    Wraps a Pub/Sub `SubscriberClient` and blocks on a streaming pull until the
-    subscription is cancelled via `stop` or an error interrupts the stream.
+    The ack deadline is a hard budget rather than a target: `gcloud-aio-pubsub` never
+    extends leases, so a message not acked within it is redelivered while still being
+    handled, and its terms are sanitized -- and logged -- twice. The deadline is therefore
+    split in thirds: one absorbs time spent waiting in the local queue, one is the ceiling
+    on sanitizing a single message, and the last is left unused as margin.
 
-    Args:
-        subscription_name: Fully-qualified Pub/Sub subscription path
-            (``projects/{project}/subscriptions/{subscription}``) to consume from.
-        restart_stream: When True, `start` rebuilds the client and reopens the
-            pull after a stream error, looping until the process is terminated.
-            When False, `start` returns on the first stream error.
-        restart_backoff: Seconds to wait before reconnecting after a stream error.
-        heartbeat_path: File to refresh while the streaming pull is running, for an
-            external liveness probe (e.g. for k8s). Parent directories are created on
-            demand. When None, the heartbeat is disabled.
-        heartbeat_interval: Seconds between heartbeat refreshes.
+    Deriving these rather than configuring them keeps that budget internally consistent:
+    the two inputs are facts about the deployment (what terraform set on the subscription,
+    how many cores the pod has), and everything else follows.
+
+    Only `num_producers=1` upholds this. The library gives each producer its own queue and
+    consumer, so a second producer would double both concurrency and queue depth.
+
+    Example:
+        The deployed default -- a 30s deadline and a single NER thread::
+
+            >>> SubscriberTuning.derive(ack_deadline_s=30.0, ner_workers=1)
+            SubscriberTuning(concurrency=2, max_messages_per_pull=20, sanitize_timeout_s=10.0)
+
+        Two messages sanitize at a time, at most 20 wait locally, and any single one is
+        abandoned after 10s. Worst case, a message waits (20 / 2) * 1.0 = 10s to start and
+        10s to run, so it acks by 20s -- a full 10s inside the deadline.
+
+        Scaling the pod to 4 NER threads scales concurrency and prefetch together, while
+        the per-message ceiling belongs to the deadline and does not move::
+
+            >>> SubscriberTuning.derive(ack_deadline_s=30.0, ner_workers=4)
+            SubscriberTuning(concurrency=8, max_messages_per_pull=80, sanitize_timeout_s=10.0)
+
+        Worst-case queue wait is still (80 / 8) * 1.0 = 10s: prefetch and concurrency
+        scale in step, so the budget holds at any pod size.
     """
 
-    def __init__(
-        self,
-        subscription_name: str,
-        restart_stream: bool = True,
-        restart_backoff: int = DEFAULT_RECONNECT_DELAY_SECONDS,
-        heartbeat_path: str | None = None,
-        heartbeat_interval: int = DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
-    ) -> None:
-        self.subscription_name = subscription_name
-        self.restart_stream = restart_stream
-        self.restart_backoff = restart_backoff
-        self.heartbeat_path = heartbeat_path
-        self.heartbeat_interval = heartbeat_interval
-        self._stopping = False
-        self._heartbeat_stop = threading.Event()
-        self._connect()
+    concurrency: int
+    max_messages_per_pull: int
+    sanitize_timeout_s: float
 
-    def start(self) -> None:
-        """Consume messages, reconnecting after any stream error until stopped.
+    @classmethod
+    def derive(cls, ack_deadline_s: float, ner_workers: int) -> "SubscriberTuning":
+        """Split `ack_deadline_s` into thirds and size the subscriber against it.
 
-        Blocks on the streaming pull. When the stream errors and `restart_stream`
-        is set, the client is rebuilt and the pull reopened after a short delay,
-        looping indefinitely -- the worker is expected to run until the process is
-        terminated (e.g. a Kubernetes SIGTERM/SIGKILL).
+        Args:
+            ack_deadline_s: The subscription's configured ack deadline, in seconds.
+            ner_workers: Size of this process's NER thread pool
+                (`pii.executor_max_workers`), which is what bounds useful concurrency.
         """
-        if self.heartbeat_path is not None:
-            threading.Thread(
-                target=self._heartbeat_loop, name="fleece-heartbeat", daemon=True
-            ).start()
-        logger.debug(
-            "Listening for messages",
-            extra={"subscription_name": self.subscription_name},
+        concurrency = ner_workers * MESSAGES_PER_NER_WORKER
+        third = ack_deadline_s / 3
+        # Never prefetch less than can be worked on at once, nor more than Pub/Sub allows.
+        prefetch = min(MAX_PULL_LIMIT, max(concurrency, int(concurrency * third / SLOW_BATCH_S)))
+        return cls(
+            concurrency=concurrency,
+            max_messages_per_pull=prefetch,
+            sanitize_timeout_s=third,
         )
-        while True:
-            errored = self._process_messages()
-            # Restart on error, if not stopped manually and restart behavior is enabled
-            if not errored or not self.restart_stream or self._stopping:
-                return
-            time.sleep(self.restart_backoff)
-            self.restart()
 
-    def stop(self) -> None:
-        """Cancel the streaming pull, draining in-flight callbacks before shutdown.
-        If heartbeat is enabled, wake the heartbeat thread so it exits promptly.
-        """
-        self._stopping = True
-        self._heartbeat_stop.set()
-        self._future.cancel()
 
-    def _heartbeat_loop(self) -> None:
-        """Refresh the heartbeat file each interval tick while the streaming pull is running.
+def build_handler(sanitize_timeout_s: float) -> MessageHandler:
+    """Build the per-message handler `subscribe()` invokes.
 
-        Runs on a daemon thread. Writes once up front so the file exists as soon as the
-        worker is up, then refreshes on each tick. The file is only refreshed while the
-        pull future has not completed, so a stream that errored out and a reconnect loop
-        stuck in backoff both let it go stale for an external liveness probe. Idle periods
-        with no messages still count as healthy, since the future keeps running.
+    The handler's outcome decides the message's fate, per `subscribe()`'s contract:
+    returning acks it, raising nacks it. So:
 
-        Write failures are logged and retried on the next tick rather than killing the
-        thread. A transient failure (e.g. a full disk) recovers on a later tick; a
-        persistent one (e.g. a permissions error) leaves the file stale, so the liveness
-        probe restarts the pod.
-        """
-        self._refresh_heartbeat()
-        while not self._heartbeat_stop.wait(self.heartbeat_interval):
-            self._refresh_heartbeat()
+    - Sanitized successfully: returns, and the message is acked. The ack therefore means
+      the terms have been classified and logged, not merely received.
+    - Unparseable: logged and acked. A message that does not parse never will, so nacking
+      it would redeliver it forever.
+    - Sanitization failed or overran `sanitize_timeout_s`: the exception propagates and
+      the message is nacked for redelivery.
 
-    def _refresh_heartbeat(self) -> None:
-        """Write the heartbeat if the streaming pull is still running, swallowing OS errors."""
-        if not self._future.running():
-            return
+    The timeout lives inside the handler so cancellation is native: `asyncio.timeout`
+    cancels the pass in place, and because every `await` in that pass precedes its metrics
+    and data-log writes, a cancelled batch emits nothing partial.
+
+    `sanitize_timeout_s` must stay well inside the subscription's ack deadline. The client
+    does not extend leases while a handler runs, so a handler that outlives the deadline
+    has its message redelivered underneath it and the same terms are logged twice. See the
+    budget documented over `[default.pubsub]`.
+    """
+
+    async def handler(message: SubscriberMessage) -> None:
         try:
-            self._write_heartbeat()
-        except OSError:
-            logger.exception(
-                "Failed to refresh heartbeat file",
-                extra={"heartbeat_path": self.heartbeat_path},
+            submission = SearchTermsSubmission.model_validate_json(message.data or b"")
+        except ValidationError:
+            logger.exception("Dropping invalid message")
+            return
+
+        try:
+            async with asyncio.timeout(sanitize_timeout_s):
+                await sanitize_batch(submission.search_terms)
+        except TimeoutError:
+            logger.error(
+                "Timed out sanitizing search terms; message will be redelivered",
+                extra={
+                    "term_count": len(submission.search_terms),
+                    "timeout_s": sanitize_timeout_s,
+                },
             )
+            raise
 
-    def _write_heartbeat(self) -> None:
-        """Atomically write the current epoch seconds to the heartbeat file."""
-        if self.heartbeat_path is None:
-            return
-        parent = os.path.dirname(self.heartbeat_path)
-        if parent:
-            os.makedirs(parent, exist_ok=True)
-        tmp = f"{self.heartbeat_path}.tmp"
-        with open(tmp, "w") as fh:
-            fh.write(str(int(time.time())))
-        os.replace(tmp, self.heartbeat_path)  # atomic rename; probe never sees a partial write
+    return handler
 
-    def restart(self) -> None:
-        """Rebuild the subscriber and streaming pull after the client has closed.
 
-        A closed `SubscriberClient` cannot be reused, so a fresh client and
-        streaming pull future are created. No-op if the subscriber is still open.
-        """
-        if not self.subscriber.closed:
-            logger.warning("Ignored attempt to restart open subscription; must be closed first.")
-            return
-        self._connect()
+async def heartbeat(path: str, interval: float) -> None:
+    """Refresh `path` every `interval` seconds, for an external liveness probe.
 
-    def _connect(self) -> None:
-        """Create a fresh subscriber client and open a streaming pull."""
-        self.subscriber = pubsub_v1.SubscriberClient(
-            subscriber_options=SubscriberOptions(enable_open_telemetry_tracing=True)
-        )
-        self._future = self.subscriber.subscribe(
-            self.subscription_name,
-            callback=callback,
-            await_callbacks_on_shutdown=True,
-        )
+    Runs as a task on the same loop as message handling, which is what makes it a useful
+    signal: if the loop stalls, the file goes stale and the probe restarts the pod. Parent
+    directories are created on demand.
 
-    def _process_messages(self) -> bool:
-        """Block on the streaming pull until it is cancelled or raises.
+    Write failures are logged and retried on the next tick rather than killing the task. A
+    transient failure (e.g. a full disk) recovers; a persistent one (e.g. a permissions
+    error) leaves the file stale, so the probe restarts the pod.
+    """
+    while True:
+        try:
+            await asyncio.to_thread(_write_heartbeat, path)
+        except OSError:
+            logger.exception("Failed to refresh heartbeat file", extra={"path": path})
+        await asyncio.sleep(interval)
 
-        Returns True if the stream terminated because of an error, or False if it
-        stopped cleanly (e.g. via `stop`).
-        """
-        errored = False
-        with self.subscriber:
-            try:
-                # result() blocks indefinitely when timeout=None until cancel
-                self._future.result(timeout=None)
-            except Exception:
-                logger.exception("Encountered exception during message streaming")
-                self._future.cancel()
-                errored = True
-        return errored
+
+def _write_heartbeat(path: str) -> None:
+    """Atomically write the current epoch seconds to the heartbeat file."""
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    tmp = f"{path}.tmp"
+    with open(tmp, "w") as fh:
+        fh.write(str(int(time.time())))
+    os.replace(tmp, path)  # atomic rename; the probe never sees a partial write

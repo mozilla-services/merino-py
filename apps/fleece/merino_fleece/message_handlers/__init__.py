@@ -1,1 +1,1 @@
-"""Background message handlers for merino-fleece."""
+"""Background message handling for merino-fleece."""

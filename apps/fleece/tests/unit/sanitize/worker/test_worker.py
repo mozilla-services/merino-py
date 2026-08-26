@@ -1,22 +1,32 @@
 """Unit tests for merino_fleece.sanitize.worker.worker."""
 
+import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
+from gcloud.aio.pubsub import SubscriberMessage
 from pytest_mock import MockerFixture
 
-from merino_common.models.suggest_logging import SuggestRequestParams, SearchTermsSubmission
+from merino_common.models.suggest_logging import SearchTermsSubmission, SuggestRequestParams
 
-from merino_fleece.sanitize.models import SanitizedSuggestRequest
-from merino_fleece.sanitize.worker.worker import FleeceQueueWorker, callback
+from merino_fleece.sanitize.worker.worker import (
+    SubscriberTuning,
+    SLOW_BATCH_S,
+    build_handler,
+    heartbeat,
+)
+
+QUERY = "how to use fleece in firefox"
+
+PUBLISH_TIME = datetime(2026, 8, 24, 12, 0, tzinfo=UTC)
 
 
 def _log_entry(**overrides: Any) -> SuggestRequestParams:
     """Build a valid SuggestRequestParams, applying any field overrides."""
     fields: dict[str, Any] = {
-        "query": "how to use fleece in firefox",
+        "query": QUERY,
         "code": 200,
         "rid": "1b11844c52b34c33a6ad54b7bc2eb7c7",
         "client_variants": "",
@@ -29,280 +39,159 @@ def _log_entry(**overrides: Any) -> SuggestRequestParams:
     return SuggestRequestParams(**fields)
 
 
-def test_callback_sanitizes_emits_and_acks(mocker: MockerFixture) -> None:
-    """The callback sanitizes each term, emits it, and acks the message."""
-    emit = mocker.patch("merino_fleece.sanitize.worker.worker.emit_sanitized_query")
-    submission = SearchTermsSubmission(search_terms=[_log_entry(), _log_entry()])
-    message = MagicMock()
-    message.data = submission.model_dump_json().encode("utf-8")
-
-    callback(message)
-
-    assert emit.call_count == 2
-    # Each emitted term is the sanitized request with its query preserved.
-    assert all(isinstance(call.args[0], SanitizedSuggestRequest) for call in emit.call_args_list)
-    assert all(
-        call.args[0].query == "how to use fleece in firefox" for call in emit.call_args_list
+def _message(*terms: SuggestRequestParams) -> SubscriberMessage:
+    """Build a SubscriberMessage carrying a submission of the given terms."""
+    data = SearchTermsSubmission(search_terms=list(terms)).model_dump_json().encode("utf-8")
+    return SubscriberMessage(
+        ack_id="ack-id",
+        message_id="message-id",
+        publish_time=PUBLISH_TIME,
+        data=data,
+        attributes={},
     )
-    message.ack.assert_called_once_with()
 
 
-def test_callback_empty_batch_still_acks(mocker: MockerFixture) -> None:
-    """A submission with no search terms emits nothing but still acks."""
-    emit = mocker.patch("merino_fleece.sanitize.worker.worker.emit_sanitized_query")
-    submission = SearchTermsSubmission(search_terms=[])
-    message = MagicMock()
-    message.data = submission.model_dump_json().encode("utf-8")
-
-    callback(message)
-
-    emit.assert_not_called()
-    message.ack.assert_called_once_with()
+def _raw_message(data: bytes) -> SubscriberMessage:
+    """Build a SubscriberMessage carrying arbitrary bytes."""
+    return SubscriberMessage(
+        ack_id="ack-id",
+        message_id="message-id",
+        publish_time=PUBLISH_TIME,
+        data=data,
+        attributes={},
+    )
 
 
-def test_callback_drops_invalid_message(
+@pytest.mark.asyncio
+async def test_handler_sanitizes_the_whole_submission(mocker: MockerFixture) -> None:
+    """Every term in a message is sanitized as one batch, and the handler returns.
+
+    Returning is what acks the message under `subscribe()`'s contract, so a clean return
+    means the terms are classified and logged -- not merely received.
+    """
+    batches: list[list[SuggestRequestParams]] = []
+
+    async def record(batch: list[SuggestRequestParams]) -> None:
+        batches.append(batch)
+
+    mocker.patch("merino_fleece.sanitize.worker.worker.sanitize_batch", record)
+
+    await build_handler(30.0)(_message(_log_entry(), _log_entry()))
+
+    assert [[term.query for term in batch] for batch in batches] == [[QUERY, QUERY]]
+
+
+@pytest.mark.asyncio
+async def test_handler_acks_invalid_message(
     mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """A message that fails validation is logged, dropped, and still acked."""
-    emit = mocker.patch("merino_fleece.sanitize.worker.worker.emit_sanitized_query")
-    message = MagicMock()
-    message.data = b'{"not": "a valid submission"}'
+    """A message that fails validation is logged and returns, so it is acked not retried."""
+    sanitize = mocker.patch("merino_fleece.sanitize.worker.worker.sanitize_batch")
 
     with caplog.at_level("ERROR", logger="merino_fleece.sanitize.worker.worker"):
-        callback(message)
+        await build_handler(30.0)(_raw_message(b'{"not": "a valid submission"}'))
 
-    emit.assert_not_called()
+    sanitize.assert_not_called()
     assert "Dropping invalid message" in caplog.text
-    message.ack.assert_called_once_with()
 
 
-@pytest.fixture
-def subscriber_mock(mocker: MockerFixture) -> MagicMock:
-    """Patch the Pub/Sub SubscriberClient and return the client instance mock."""
-    client_cls = mocker.patch("merino_fleece.sanitize.worker.worker.pubsub_v1.SubscriberClient")
-    instance: MagicMock = client_cls.return_value
-    return instance
+@pytest.mark.asyncio
+async def test_handler_propagates_sanitization_failure(mocker: MockerFixture) -> None:
+    """A failed batch raises, which is how `subscribe()` is told to nack the message."""
+
+    async def boom(batch: list[SuggestRequestParams]) -> None:
+        raise RuntimeError("NER blew up")
+
+    mocker.patch("merino_fleece.sanitize.worker.worker.sanitize_batch", boom)
+
+    with pytest.raises(RuntimeError, match="NER blew up"):
+        await build_handler(30.0)(_message(_log_entry()))
 
 
-def test_init_creates_subscriber(subscriber_mock: MagicMock) -> None:
-    """The worker stores the subscription name and a subscriber client, not stopping."""
-    worker = FleeceQueueWorker("my-subscription")
-
-    assert worker.subscription_name == "my-subscription"
-    assert worker.subscriber is subscriber_mock
-    assert worker._stopping is False
-
-
-def test_start_subscribes_and_blocks(subscriber_mock: MagicMock) -> None:
-    """start() opens a streaming pull with the worker's subscription and blocks on it."""
-    future = subscriber_mock.subscribe.return_value
-    worker = FleeceQueueWorker("my-subscription")
-
-    worker.start()
-
-    subscriber_mock.subscribe.assert_called_once_with(
-        "my-subscription",
-        callback=callback,
-        await_callbacks_on_shutdown=True,
-    )
-    future.result.assert_called_once_with(timeout=None)
-
-
-def test_stop_cancels_future_and_sets_flag(subscriber_mock: MagicMock) -> None:
-    """stop() marks the worker as stopping and cancels the active streaming pull future."""
-    future = subscriber_mock.subscribe.return_value
-    worker = FleeceQueueWorker("my-subscription")
-    worker.start()
-
-    worker.stop()
-
-    assert worker._stopping is True
-    future.cancel.assert_called_once_with()
-
-
-def test_stop_prevents_reconnect_after_error(
-    subscriber_mock: MagicMock, mocker: MockerFixture
+@pytest.mark.asyncio
+async def test_handler_cancels_and_raises_on_timeout(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """When stop() runs mid-stream, the resulting error does not trigger a reconnect."""
-    sleep = mocker.patch("merino_fleece.sanitize.worker.worker.time.sleep")
-    worker = FleeceQueueWorker("my-subscription")
-    future = subscriber_mock.subscribe.return_value
+    """A batch that outruns the timeout is cancelled in place and the message nacked."""
+    cancelled = asyncio.Event()
 
-    def stop_then_raise(timeout: float | None = None) -> None:
-        # Simulate stop() being called while result() is blocking on the stream.
-        worker.stop()
-        raise RuntimeError("stream cancelled")
+    async def hang(batch: list[SuggestRequestParams]) -> None:
+        try:
+            await asyncio.sleep(60)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
 
-    future.result.side_effect = stop_then_raise
-
-    worker.start()
-
-    # Stopped intentionally: no delay and no rebuilt client beyond the initial connect.
-    sleep.assert_not_called()
-    assert subscriber_mock.subscribe.call_count == 1
-
-
-def test_restarts_after_stream_error(
-    subscriber_mock: MagicMock, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    """A streaming error is logged, the future cancelled, and the stream restarted."""
-    sleep = mocker.patch("merino_fleece.sanitize.worker.worker.time.sleep")
-    subscriber_mock.closed = True  # restart() only proceeds on a closed client
-    future = subscriber_mock.subscribe.return_value
-    # First stream dies; the restarted stream blocks then returns cleanly.
-    future.result.side_effect = [RuntimeError("stream died"), None]
-    worker = FleeceQueueWorker("my-subscription", restart_backoff=5)
+    mocker.patch("merino_fleece.sanitize.worker.worker.sanitize_batch", hang)
 
     with caplog.at_level("ERROR", logger="merino_fleece.sanitize.worker.worker"):
-        worker.start()
+        with pytest.raises(TimeoutError):
+            await build_handler(0.05)(_message(_log_entry()))
 
-    assert "Encountered exception during message streaming" in caplog.text
-    future.cancel.assert_called_once_with()
-    sleep.assert_called_once_with(5)
-    # subscribe: once in __init__, once on restart. result: initial + restarted stream.
-    assert subscriber_mock.subscribe.call_count == 2
-    assert future.result.call_count == 2
+    assert "Timed out sanitizing search terms" in caplog.text
+    assert cancelled.is_set(), "the sanitization pass must be cancelled, not left running"
 
 
-def test_restart_ignored_while_subscriber_open(
-    subscriber_mock: MagicMock, caplog: pytest.LogCaptureFixture
-) -> None:
-    """restart() is a no-op (with a warning) when the subscriber is still open."""
-    subscriber_mock.closed = False
-    worker = FleeceQueueWorker("my-subscription")
-    subscriber_mock.subscribe.reset_mock()
+@pytest.mark.asyncio
+async def test_heartbeat_refreshes_the_file(tmp_path: Path) -> None:
+    """Each tick writes a fresh epoch timestamp, creating parent directories on demand."""
+    path = tmp_path / "nested" / "heartbeat"
 
-    with caplog.at_level("WARNING", logger="merino_fleece.sanitize.worker.worker"):
-        worker.restart()
-
-    subscriber_mock.subscribe.assert_not_called()
-    assert "Ignored attempt to restart open subscription" in caplog.text
-
-
-def test_write_heartbeat_writes_epoch(subscriber_mock: MagicMock, tmp_path: Path) -> None:
-    """_write_heartbeat atomically writes the current epoch seconds to the file."""
-    path = tmp_path / "heartbeat"
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
-
-    worker._write_heartbeat()
-
-    contents = path.read_text()
-    assert contents.isdigit()
-    assert int(contents) > 0
-    # No leftover temp file from the atomic rename
-    assert not (tmp_path / "heartbeat.tmp").exists()
-
-
-def test_heartbeat_loop_writes_while_running(
-    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
-) -> None:
-    """Each tick writes a fresh timestamp to the real file while the pull is running."""
-    path = tmp_path / "heartbeat"
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
-    subscriber_mock.subscribe.return_value.running.return_value = True
-    # One working tick (False), then stop (True) -- exercises the real _write_heartbeat.
-    mocker.patch.object(worker._heartbeat_stop, "wait", side_effect=[False, True])
-
-    worker._heartbeat_loop()
-
-    contents = path.read_text()
-    assert contents.isdigit()
-    assert int(contents) > 0
-    assert not (tmp_path / "heartbeat.tmp").exists()  # no leftover tmp file
-
-
-def test_write_heartbeat_creates_missing_parent_dirs(
-    subscriber_mock: MagicMock, tmp_path: Path
-) -> None:
-    """_write_heartbeat creates the parent directory instead of failing on a missing one."""
-    path = tmp_path / "nested" / "dir" / "heartbeat"
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
-
-    worker._write_heartbeat()
+    task = asyncio.create_task(heartbeat(str(path), 0.01))
+    await asyncio.sleep(0.05)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
 
     assert path.read_text().isdigit()
+    assert not (tmp_path / "nested" / "heartbeat.tmp").exists()  # no leftover tmp file
 
 
-def test_heartbeat_loop_writes_before_first_tick(
-    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
+@pytest.mark.asyncio
+async def test_heartbeat_survives_write_failure(
+    mocker: MockerFixture, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """The file exists as soon as the loop starts, before the first interval elapses."""
-    path = tmp_path / "heartbeat"
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
-    subscriber_mock.subscribe.return_value.running.return_value = True
-    # Stop on the very first wait, so only the pre-loop write can have happened.
-    mocker.patch.object(worker._heartbeat_stop, "wait", return_value=True)
-
-    worker._heartbeat_loop()
-
-    assert path.read_text().isdigit()
-
-
-def test_heartbeat_loop_survives_write_failure(
-    subscriber_mock: MagicMock, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
-) -> None:
-    """A failed write is logged and the loop keeps ticking rather than killing the thread."""
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path="/heartbeat")
-    subscriber_mock.subscribe.return_value.running.return_value = True
-    write_mock = mocker.patch.object(
-        worker, "_write_heartbeat", side_effect=OSError("read-only file system")
+    """A failed write is logged and the task keeps ticking rather than dying."""
+    write = mocker.patch(
+        "merino_fleece.sanitize.worker.worker._write_heartbeat",
+        side_effect=OSError("read-only file system"),
     )
-    mocker.patch.object(worker._heartbeat_stop, "wait", side_effect=[False, True])
 
     with caplog.at_level("ERROR", logger="merino_fleece.sanitize.worker.worker"):
-        worker._heartbeat_loop()
+        task = asyncio.create_task(heartbeat("/heartbeat", 0.01))
+        await asyncio.sleep(0.05)
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
-    # Pre-loop write plus one tick: the first failure did not abort the loop.
-    assert write_mock.call_count == 2
+    assert write.call_count > 1, "the first failure must not abort the loop"
     assert "Failed to refresh heartbeat file" in caplog.text
 
 
-def test_heartbeat_loop_skips_when_not_running(
-    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
+@pytest.mark.parametrize(
+    ("ack_deadline_s", "ner_workers"),
+    [
+        pytest.param(30.0, 1, id="default-pod"),
+        pytest.param(30.0, 4, id="four-core-pod"),
+        pytest.param(10.0, 2, id="short-deadline"),
+        pytest.param(600.0, 8, id="long-deadline"),
+    ],
+)
+def test_tuning_keeps_a_message_inside_the_ack_deadline(
+    ack_deadline_s: float, ner_workers: int
 ) -> None:
-    """A tick leaves the file untouched when the pull is not running."""
-    path = tmp_path / "heartbeat"
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(path))
-    # e.g. mid-reconnect or a stuck stream: the file must be allowed to go stale.
-    subscriber_mock.subscribe.return_value.running.return_value = False
-    mocker.patch.object(worker._heartbeat_stop, "wait", side_effect=[False, True])
+    """Worst-case queue wait plus the sanitization ceiling must fit in the ack deadline.
 
-    worker._heartbeat_loop()
+    This is the invariant the whole derivation exists for: `gcloud-aio-pubsub` never
+    extends leases, so a message that outlives the deadline is redelivered mid-flight and
+    its terms are logged twice.
+    """
+    tuning = SubscriberTuning.derive(ack_deadline_s=ack_deadline_s, ner_workers=ner_workers)
 
-    assert not path.exists()
+    batches_per_task = tuning.max_messages_per_pull / tuning.concurrency
+    worst_case_s = batches_per_task * SLOW_BATCH_S + tuning.sanitize_timeout_s
 
-
-def test_start_spawns_heartbeat_thread_when_configured(
-    subscriber_mock: MagicMock, mocker: MockerFixture, tmp_path: Path
-) -> None:
-    """start() launches the heartbeat daemon thread only when a path is configured."""
-    thread_cls = mocker.patch("merino_fleece.sanitize.worker.worker.threading.Thread")
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(tmp_path / "heartbeat"))
-
-    worker.start()
-
-    thread_cls.assert_called_once_with(
-        target=worker._heartbeat_loop, name="fleece-heartbeat", daemon=True
+    assert worst_case_s < ack_deadline_s, (
+        f"a message could take {worst_case_s:.1f}s against a {ack_deadline_s}s deadline"
     )
-    thread_cls.return_value.start.assert_called_once_with()
-
-
-def test_start_no_heartbeat_thread_when_unconfigured(
-    subscriber_mock: MagicMock, mocker: MockerFixture
-) -> None:
-    """start() does not spawn a heartbeat thread when no path is configured."""
-    thread_cls = mocker.patch("merino_fleece.sanitize.worker.worker.threading.Thread")
-    worker = FleeceQueueWorker("my-subscription")
-
-    worker.start()
-
-    thread_cls.assert_not_called()
-
-
-def test_stop_signals_heartbeat_thread(subscriber_mock: MagicMock, tmp_path: Path) -> None:
-    """stop() sets the heartbeat stop event so the daemon thread exits promptly."""
-    worker = FleeceQueueWorker("my-subscription", heartbeat_path=str(tmp_path / "heartbeat"))
-
-    worker.stop()
-
-    assert worker._heartbeat_stop.is_set()
+    # Prefetching less than can be processed at once would idle the NER pool.
+    assert tuning.max_messages_per_pull >= tuning.concurrency
+    assert tuning.max_messages_per_pull <= 1000, "Pub/Sub caps a pull at 1000 messages"

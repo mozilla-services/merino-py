@@ -18,6 +18,7 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
     },
     "LOGGING": {"format": "mozlog", "level": "INFO", "can_propagate": False},
     "SENTRY": {"mode": "disabled", "dsn": "", "env": "dev", "traces_sample_rate": 0.0},
+    "PUBSUB": {"ack_deadline_sec": 30.0},
     "MARS": {
         "enabled": True,
         "base_url": "http://test-mars-api",
@@ -50,6 +51,13 @@ def _build(**overrides: dict[str, Any]) -> Dynaconf:
 def test_defaults_are_valid() -> None:
     """The baseline every other test overrides from passes validation."""
     _build().validators.validate()
+
+
+def test_non_positive_ack_deadline_rejected() -> None:
+    """A non-positive ack deadline fails validation."""
+    instance = _build(PUBSUB={"ack_deadline_sec": 0.0})
+    with pytest.raises(ValidationError):
+        instance.validators.validate()
 
 
 def test_invalid_model_rejected() -> None:
