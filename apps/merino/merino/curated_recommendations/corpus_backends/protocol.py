@@ -47,7 +47,7 @@ class SurfaceId(str, Enum):
     NEW_TAB_EN_CA = "NEW_TAB_EN_CA"  # canada
     NEW_TAB_EN_GB = "NEW_TAB_EN_GB"  # great britain
     NEW_TAB_EN_IE = "NEW_TAB_EN_IE"  # irelane
-    NEW_TAB_EN_INTL = "NEW_TAB_EN_INTL"  # india(?)
+    NEW_TAB_EN_INTL = "NEW_TAB_EN_INTL"  # india (poorly named; India only)
     NEW_TAB_EN_US = "NEW_TAB_EN_US"  # united states
     NEW_TAB_EN_XE = "NEW_TAB_EN_XE"  # cross-europe english
     NEW_TAB_ES_ES = "NEW_TAB_ES_ES"  # spain
