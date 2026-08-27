@@ -40,15 +40,16 @@ from merino.providers.manifest import Provider as ManifestProvider
 logger = logging.getLogger(__name__)
 
 BASE_SECTION_VARIANT_ID = 0
-MANUAL_SECTION_VARIANT_ID = 1
 FIFTY_FIFTY_EXPERIMENT_VARIANT_ID = 5050
 EXPERIMENT_VARIANT_IDS = {FIFTY_FIFTY_EXPERIMENT_VARIANT_ID}
 
 
-def parse_section_variant(raw_external_id: str, source: str) -> tuple[str, int]:
-    """Normalize a raw section ID into its canonical ID and experiment variant."""
+def parse_section_variant(
+    raw_external_id: str, source: CreateSource | str
+) -> tuple[str, int | None]:
+    """Normalize a raw section ID into its canonical ID and optional experiment variant."""
     if source == CreateSource.MANUAL:
-        return raw_external_id, MANUAL_SECTION_VARIANT_ID
+        return raw_external_id, None
     # Strip any locale suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present.
     external_id = raw_external_id.split("__l", 1)[0]
 

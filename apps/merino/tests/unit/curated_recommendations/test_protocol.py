@@ -91,6 +91,15 @@ class TestCuratedRecommendationSerialization:
         assert payload["variantId"] == 5050
         assert payload["sourceSectionId"] == "government"
 
+    def test_null_variant_id_is_included(self):
+        """VariantId should serialize as null for editorial sections with no variant."""
+        rec = _curated_recommendation(variantId=None, sourceSectionId="editorial")
+
+        payload = rec.model_dump()
+
+        assert payload["variantId"] is None
+        assert payload["sourceSectionId"] == "editorial"
+
     def test_missing_source_section_id_is_omitted(self):
         """SourceSectionId should not serialize when it is unset."""
         rec = _curated_recommendation()
@@ -126,6 +135,18 @@ class TestSectionSerialization:
         )
 
         assert section.model_dump()["variantId"] == 5050
+
+    def test_null_variant_id_is_included(self, valid_layout):
+        """VariantId should serialize as null for editorial sections with no variant."""
+        section = Section(
+            receivedFeedRank=0,
+            recommendations=[],
+            title="Editorial",
+            layout=valid_layout,
+            variantId=None,
+        )
+
+        assert section.model_dump()["variantId"] is None
 
 
 class TestTile:

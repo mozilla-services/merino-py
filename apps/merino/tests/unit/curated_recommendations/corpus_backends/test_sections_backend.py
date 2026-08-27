@@ -25,6 +25,15 @@ class TestParseSectionExternalId:
             ("__exp5050__lDE_DE", ("", 0)),
         ],
     )
-    def test_parse_section_external_id(self, raw_external_id: str, expected: tuple[str, int]):
+    def test_parse_section_external_id(
+        self, raw_external_id: str, expected: tuple[str, int | None]
+    ):
         """Parser should strip locale suffixes and drop malformed experiment variants."""
         assert parse_section_variant(raw_external_id, CreateSource.ML) == expected
+
+    def test_parse_editorial_section_has_null_variant(self):
+        """Editorial/manual sections should not receive an experiment variant."""
+        assert parse_section_variant("editorial-section", CreateSource.MANUAL) == (
+            "editorial-section",
+            None,
+        )

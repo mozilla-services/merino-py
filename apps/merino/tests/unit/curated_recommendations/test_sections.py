@@ -762,6 +762,8 @@ class TestMapCorpusSectionToSection:
         sec = map_corpus_section_to_section(cs, 0)
         assert sec.followable == followable
         assert sec.allowAds == allow_ads
+        assert sec.variantId is None
+        assert sec.recommendations[0].variantId is None
 
 
 class TestGetCorpusSectionsForLegacyTopics:
@@ -1748,7 +1750,7 @@ class TestGetCorpusSections:
         manual_one.heroSubtitle = None
         manual_one.iab = None
         manual_one.createSource = CreateSource.MANUAL
-        manual_one.variantId = 2
+        manual_one.variantId = None
 
         manual_two = MagicMock()
         manual_two.externalId = "custom-section-2"
@@ -1759,7 +1761,7 @@ class TestGetCorpusSections:
         manual_two.heroSubtitle = None
         manual_two.iab = None
         manual_two.createSource = CreateSource.MANUAL
-        manual_two.variantId = 2
+        manual_two.variantId = None
 
         mock_backend.fetch = AsyncMock(return_value=[ml_section, manual_one, manual_two])
         return mock_backend
@@ -2084,7 +2086,7 @@ class TestGetSectionsForcedInterests:
     @pytest.mark.asyncio
     async def test_source_section_id_only_on_top_stories(self):
         """SourceSectionId is only exposed on Popular Today recommendations."""
-        source_variants = {"business": 0, "sports": 5050, "tech": 2}
+        source_variants = {"business": 0, "sports": 5050, "tech": None}
         corpus_sections = [
             generate_corpus_section(section_id, count=20) for section_id in source_variants
         ]

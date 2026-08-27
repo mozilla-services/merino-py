@@ -104,10 +104,13 @@ class CorpusSection(BaseModel):
     iab: IABMetadata | None = None
     externalId: str
     createSource: CreateSource
-    variantId: int = Field(
-        default=0,
+    variantId: int | None = Field(
+        default=None,
         exclude=True,
-        description="type of section. ML can produce different variants. Editorial is a variant",
+        description=(
+            "ML experiment variant for the section. 0 means the canonical ML section; "
+            "null means an editorial/manual section has no variant."
+        ),
     )
     alternateSection: CorpusSection | None = Field(
         default=None,

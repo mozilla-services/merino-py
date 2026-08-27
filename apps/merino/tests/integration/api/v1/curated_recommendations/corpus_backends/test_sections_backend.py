@@ -99,6 +99,7 @@ async def test_fetch(sections_backend: SectionsBackend):
     manual_sections = [s for s in sections if s.createSource == CreateSource.MANUAL]
     assert len(manual_sections) == 1, f"Expected 1 MANUAL section, got {len(manual_sections)}"
     assert manual_sections[0].title == "Tech stuff"
+    assert manual_sections[0].variantId is None
 
     # Lookup the NFL section by its externalId.
     nfl = next(s for s in sections if s.externalId == "nfl")
@@ -172,9 +173,9 @@ async def test_fetch_preserves_experiment_suffix(
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
     government = next(section for section in sections if section.externalId == "government-test")
-    assert government.experimentVariant == 0
+    assert government.variantId == 0
     assert government.alternateSection is not None
-    assert government.alternateSection.experimentVariant == 5050
+    assert government.alternateSection.variantId == 5050
 
 
 @pytest.mark.asyncio
@@ -199,9 +200,9 @@ async def test_fetch_strips_locale_suffix_after_experiment_suffix(
     sections = await backend.fetch(SurfaceId.NEW_TAB_EN_US)
 
     government = next(section for section in sections if section.externalId == "government-test")
-    assert government.experimentVariant == 0
+    assert government.variantId == 0
     assert government.alternateSection is not None
-    assert government.alternateSection.experimentVariant == 5050
+    assert government.alternateSection.variantId == 5050
 
 
 @pytest.mark.asyncio
@@ -229,9 +230,9 @@ async def test_fetch_links_experiment_variant_to_base_section(
         section for section in sections if section.externalId == "government-test"
     ]
     assert len(government_sections) == 1
-    assert government_sections[0].experimentVariant == 0
+    assert government_sections[0].variantId == 0
     assert government_sections[0].alternateSection is not None
-    assert government_sections[0].alternateSection.experimentVariant == 5050
+    assert government_sections[0].alternateSection.variantId == 5050
 
 
 class _StubSpindle(SpindleBackendProtocol):
