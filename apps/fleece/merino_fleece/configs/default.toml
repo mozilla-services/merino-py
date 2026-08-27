@@ -21,10 +21,10 @@ query_character_max = 500
 # Reload the SpaCy pipeline once it has processed this many texts. SpaCy interns every
 # novel token it sees, and the memory zone detection runs in reclaims those allocations
 # but not the index capacity behind them, so a long-lived process creeps upward at
-# roughly 78 bytes per novel token. Reloading resets it, and costs ~173ms during which
-# NER is paused -- the search term queue absorbs that. Lower bounds memory more tightly
-# at the cost of more frequent pauses; 0 disables recycling.
-recycle_after_texts = 500000
+# roughly 78 bytes per novel token. Reloading resets it, and costs a window (subsecond)
+# during which NER is paused -- the search term queue absorbs that. Lower bounds memory
+# more tightly at the cost of more frequent pauses; 0 disables recycling.
+recycle_after_texts = 100000
 
 # MERINO_FLEECE_PII__EXECUTOR_MAX_WORKERS
 # Size of the thread pool that runs CPU-bound SpaCy NER off the event loop.
