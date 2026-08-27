@@ -1,0 +1,27 @@
+language: unknown
+stack: infrastructure
+layer: tool
+
+project:
+  title: Merino Documentation
+  description: Developer and operational documentation published with mdBook
+
+toolchains:
+  default: system
+
+tasks:
+  build:
+    description: Build the mdBook documentation
+    command: ./dev/make-all-docs.sh
+    inputs:
+      - "**/*"
+      - /book.toml
+      - /dev/make-all-docs.sh
+    outputs:
+      - /book/**/*
+    tags:
+      - docs
+      - ci
+    toolchains: system
+    options:
+      runFromWorkspaceRoot: true

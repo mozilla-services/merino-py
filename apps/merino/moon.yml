@@ -1,0 +1,81 @@
+language: python
+stack: backend
+layer: application
+
+project:
+  title: Merino
+  description: Firefox Suggest service and jobs
+
+dependsOn:
+  - id: merino-common
+    scope: production
+
+toolchains:
+  default: system
+
+tasks:
+  lint:
+    args:
+      - apps/merino/merino
+      - apps/merino/tests
+
+  format-check:
+    args:
+      - apps/merino/merino
+      - apps/merino/tests
+
+  security:
+    args:
+      - apps/merino/merino
+      - apps/merino/tests
+      - --configfile
+      - pyproject.toml
+
+  typecheck:
+    args:
+      - apps/merino/merino
+      - apps/merino/tests
+      - --config-file=pyproject.toml
+    env:
+      MYPYPATH: apps/merino:packages/merino-common
+
+  test:
+    args:
+      - apps/merino/tests/unit
+      - --no-cov
+    inputs:
+      - "**/*"
+      - /dev/GeoLite2-City-Test.mmdb
+
+  integration-test:
+    description: Run Merino integration tests (expects the Elasticsearch image to exist)
+    command:
+      - uv
+      - run
+      - --frozen
+      - --no-sync
+      - pytest
+      - --config-file
+      - pyproject.toml
+      - apps/merino/tests/integration
+      - --no-cov
+    env:
+      MERINO_ENV: testing
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    inputs:
+      - "**/*"
+      - pyproject.toml
+      - project://^
+      - /pyproject.toml
+      - /uv.lock
+      - /.python-version
+      - /dev/**/*
+    tags:
+      - test
+      - ci
+    deps:
+      - workspace:install
+    toolchains: system
+    options:
+      cache: false
+      runFromWorkspaceRoot: true

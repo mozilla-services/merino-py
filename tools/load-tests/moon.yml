@@ -1,0 +1,67 @@
+language: python
+stack: backend
+layer: automation
+
+project:
+  title: Merino Load Tests
+  description: Locust load-testing tools for Merino
+
+dependsOn:
+  - id: merino
+    scope: production
+  - id: merino-common
+    scope: production
+
+toolchains:
+  default: system
+
+workspace:
+  inheritedTasks:
+    exclude:
+      - test
+
+tasks:
+  lint:
+    args:
+      - tools/load-tests
+
+  format-check:
+    args:
+      - tools/load-tests
+
+  security:
+    args:
+      - tools/load-tests
+      - --configfile
+      - pyproject.toml
+
+  typecheck:
+    args:
+      - tools/load-tests
+      - --config-file=pyproject.toml
+    env:
+      MYPYPATH: apps/merino:packages/merino-common:tools/load-tests
+
+  validate:
+    description: Validate that Locust can discover the load-test users
+    command:
+      - uv
+      - run
+      - --frozen
+      - --no-sync
+      - locust
+      - --locustfile
+      - tools/load-tests/locustfiles
+      - --list
+    env:
+      LOAD_TESTS__LOGGING_LEVEL: "10"
+      MERINO_ENV: testing
+      PYTHONPATH: tools/load-tests
+    deps:
+      - workspace:install
+    tags:
+      - test
+      - ci
+    toolchains: system
+    options:
+      runFromWorkspaceRoot: true

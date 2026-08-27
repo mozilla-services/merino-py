@@ -7,6 +7,8 @@
 .git
 .install.stamp
 .mypy_cache
+.moon/cache
+.moon/docker
 .pytest_cache
 .venv
 **/__pycache__

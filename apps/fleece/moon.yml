@@ -1,0 +1,47 @@
+language: python
+stack: backend
+layer: application
+
+project:
+  title: Fleece
+  description: PII sanitization service supporting Merino
+
+dependsOn:
+  - id: merino-common
+    scope: production
+
+toolchains:
+  default: system
+
+tasks:
+  lint:
+    args:
+      - apps/fleece/merino_fleece
+      - apps/fleece/tests
+
+  format-check:
+    args:
+      - apps/fleece/merino_fleece
+      - apps/fleece/tests
+
+  security:
+    args:
+      - apps/fleece/merino_fleece
+      - apps/fleece/tests
+      - --configfile
+      - pyproject.toml
+
+  typecheck:
+    args:
+      - apps/fleece/merino_fleece
+      - apps/fleece/tests
+      - --config-file=pyproject.toml
+    env:
+      MYPYPATH: apps/fleece:packages/merino-common
+
+  test:
+    args:
+      - apps/fleece/tests/unit
+      - --no-cov
+    env:
+      MERINO_FLEECE_ENV: testing

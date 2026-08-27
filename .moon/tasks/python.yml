@@ -1,0 +1,88 @@
+inheritedBy:
+  language: python
+
+# Every Python project shares the root tool configuration and uv lockfile.
+# Upstream project inputs ensure, for example, that a common-library change
+# invalidates tasks in Merino and Fleece as well.
+implicitInputs:
+  - pyproject.toml
+  - /pyproject.toml
+  - /uv.lock
+  - /.python-version
+  - project://^
+
+implicitDeps:
+  - workspace:install
+
+taskOptions:
+  runFromWorkspaceRoot: true
+
+tasks:
+  lint:
+    description: Run Ruff lint checks for this project
+    command: uv
+    args:
+      - run
+      - --frozen
+      - --no-sync
+      - ruff
+      - check
+    tags:
+      - quality
+      - ci
+
+  format-check:
+    description: Check Ruff formatting for this project
+    command: uv
+    args:
+      - run
+      - --frozen
+      - --no-sync
+      - ruff
+      - format
+      - --check
+    tags:
+      - quality
+      - ci
+
+  security:
+    description: Run Bandit security checks for this project
+    command: uv
+    args:
+      - run
+      - --frozen
+      - --no-sync
+      - bandit
+      - --quiet
+      - --recursive
+    tags:
+      - quality
+      - ci
+
+  typecheck:
+    description: Run mypy for this project
+    command: uv
+    args:
+      - run
+      - --frozen
+      - --no-sync
+      - mypy
+    tags:
+      - quality
+      - ci
+
+  test:
+    description: Run unit tests for this project
+    command: uv
+    args:
+      - run
+      - --frozen
+      - --no-sync
+      - pytest
+      - --config-file
+      - pyproject.toml
+    env:
+      MERINO_ENV: testing
+    tags:
+      - test
+      - ci

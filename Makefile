@@ -1,4 +1,5 @@
 APP_PROJECT_DIR := apps/merino
+MOON ?= moon
 APP_DIR := $(APP_PROJECT_DIR)/merino
 ES_IMAGE := merino-elasticsearch:local
 TEST_DIR := $(APP_PROJECT_DIR)/tests
@@ -83,6 +84,14 @@ mypy: $(INSTALL_STAMP)  ##  Run mypy
 
 .PHONY: lint
 lint: $(INSTALL_STAMP) ruff-lint ruff-fmt bandit mypy ##  Run various linters
+
+.PHONY: moon-quality
+moon-quality:  ##  Run project-scoped quality checks with Moon
+	$(MOON) run ':#quality'
+
+.PHONY: moon-test
+moon-test:  ##  Run project-scoped unit tests with Moon
+	$(MOON) run ':test'
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
