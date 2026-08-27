@@ -190,7 +190,7 @@ def map_corpus_section_to_section(
         layout=deepcopy(layout),
         followable=corpus_section.followable,
         allowAds=corpus_section.allowAds,
-        variant=corpus_section.variant
+        variantId=corpus_section.variantId
     )
 
 
@@ -232,7 +232,7 @@ def resolve_section_experiment(section: CorpusSection) -> CorpusSection:
     if alternate_section is None:
         return section
 
-    if alternate_section.experimentVariant == 5050:
+    if alternate_section.variantId == 5050:
         return resolve_5050(section, alternate_section)
 
     return section

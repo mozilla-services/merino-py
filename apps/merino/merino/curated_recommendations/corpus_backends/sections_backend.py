@@ -48,7 +48,7 @@ experiment_id_set = {5050}
 def parse_section_variant(raw_external_id: str, source: str) -> tuple[str, int]:
     """Normalize a raw section ID into its canonical ID and experiment variant."""
     if source == CreateSource.MANUAL:
-        return variant_id_map[CreateSource.MANUAL]
+        return raw_external_id, variant_id_map[CreateSource.MANUAL]
     # Strip any locale suffix (e.g., "__lEN_GB", "__lEN_CA") from externalId if present.
     external_id = raw_external_id.split("__l", 1)[0]
 
@@ -205,8 +205,8 @@ class SectionsBackend(SectionsProtocol):
             parsed_sections.append(section_obj)
     
 
-        base_sections = [s for s in parsed_sections if variant_id_map.get(s.experimentVariant, 0) not in experiment_id_set]
-        experimental_sections = [s for s in parsed_sections if variant_id_map.get(s.experimentVariant) in experiment_id_set]
+        base_sections = [s for s in parsed_sections if s.variantId not in experiment_id_set]
+        experimental_sections = [s for s in parsed_sections if s.variantId in experiment_id_set]
 
         base_sections_by_id: dict[str, CorpusSection] = {s.externalId: s for s in base_sections}
 
