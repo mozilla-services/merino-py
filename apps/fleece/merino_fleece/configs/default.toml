@@ -17,6 +17,15 @@ excluded_components = ["tok2vec", "tagger", "parser", "attribute_ruler", "lemmat
 # Maximum allowed length of the `q` query parameter.
 query_character_max = 500
 
+# MERINO_FLEECE_PII__RECYCLE_AFTER_TEXTS
+# Reload the SpaCy pipeline once it has processed this many texts. SpaCy interns every
+# novel token it sees, and the memory zone detection runs in reclaims those allocations
+# but not the index capacity behind them, so a long-lived process creeps upward at
+# roughly 78 bytes per novel token. Reloading resets it, and costs a window (subsecond)
+# during which NER is paused -- the search term queue absorbs that. Lower bounds memory
+# more tightly at the cost of more frequent pauses; 0 disables recycling.
+recycle_after_texts = 100000
+
 # MERINO_FLEECE_PII__EXECUTOR_MAX_WORKERS
 # Size of the thread pool that runs CPU-bound SpaCy NER off the event loop.
 # Roughly match the number of CPU cores available to each worker process; a
