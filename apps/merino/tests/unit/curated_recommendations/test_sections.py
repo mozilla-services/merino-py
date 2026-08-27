@@ -620,8 +620,18 @@ class TestMapSectionItemToRecommendation:
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
         assert rec.features == {f"s_{section_id}": 1.0, f"t_{item.topic.value}": 1.0}
+        assert rec.source_section_id == section_id
         assert rec.sourceSectionId is None
+        assert "source_section_id" not in rec.model_dump()
         assert not rec.in_experiment("unknown_experiment")
+
+    def test_source_section_id_survives_model_copy(self):
+        """Internal source section ID should survive normal recommendation copies."""
+        rec = map_section_item_to_recommendation(generate_corpus_item(), 3, "secX")
+
+        copied_rec = rec.model_copy()
+
+        assert copied_rec.source_section_id == "secX"
 
     def test_basic_mapping_manual_section(self):
         """Map a valid CorpusItem into a CuratedRecommendation."""
@@ -631,6 +641,7 @@ class TestMapSectionItemToRecommendation:
         assert isinstance(rec, CuratedRecommendation)
         assert rec.receivedRank == 3
         assert rec.features == {f"t_{item.topic.value}": 1.0}
+        assert rec.source_section_id == section_id
 
     def test_basic_mapping_experiment(self):
         """Map a valid CorpusItem into a CuratedRecommendation."""
@@ -682,6 +693,7 @@ class TestMapCorpusSectionToSection:
             assert rec.receivedRank == idx
             assert rec.features == features_compare
             assert rec.variantId == 5050
+            assert rec.source_section_id == cs.externalId
             assert rec.sourceSectionId is None
 
     def test_empty_section_items(self):
