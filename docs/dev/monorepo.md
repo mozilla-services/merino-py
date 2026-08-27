@@ -25,15 +25,39 @@ underneath, so there is only one dependency definition and one lockfile per ecos
 
 ## Install Moon
 
-Moon is pinned in `.prototools`. Install [proto](https://moonrepo.dev/docs/proto/install), then run
-this command from the repository root:
+Moon is a local CLI. Its version is pinned in `.prototools`, but that file does not install either
+Moon or its version manager automatically.
+
+### One-time machine setup
+
+Install [proto](https://moonrepo.dev/docs/proto/install) once on your machine. For Bash or Zsh:
+
+```bash
+bash <(curl -fsSL https://moonrepo.dev/install/proto.sh)
+```
+
+For Fish:
+
+```fish
+bash (curl -fsSL https://moonrepo.dev/install/proto.sh | psub)
+```
+
+Follow the installer's prompt to add `~/.proto/bin` to your `PATH`, then restart your shell. You do
+not install Moon through Homebrew. Proto requires Git and common archive utilities; see the proto
+installation documentation if any of those prerequisites are missing.
+
+### Repository setup
+
+After cloning the repository, run:
 
 ```bash
 proto install
+moon --version
 ```
 
-This installs the repository's pinned Moon version without changing the version used by other
-repositories.
+`proto install` reads `.prototools` and installs the repository's pinned Moon version without
+changing the version used by other repositories. A developer who does not run Moon commands does
+not need the CLI, but commands such as `make moon-test` and `moon run merino:test` require it.
 
 Every Python task depends on one repository-level install task. That task runs `uv sync --frozen`
 once before Moon starts parallel work. The project tasks then invoke `uv run --frozen --no-sync`,
@@ -111,11 +135,3 @@ uv sync --all-groups --all-packages
 
 The root `uv.lock` is shared by all Python projects. A lockfile or root Python configuration change
 therefore affects every Python project by design.
-
-## Migration status
-
-Moon currently provides the project graph and local project-scoped quality and test tasks. Existing
-Make commands and GitHub Actions remain the source of truth while the new tasks are compared with
-the current CI. The Moon test tasks report pass or fail but deliberately skip coverage artifacts;
-continue using `make test` for the combined 95% coverage gate. Selective Docker builds, publishing,
-and deployment will be enabled in later, separately reviewed changes.
