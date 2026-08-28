@@ -15,7 +15,6 @@ _DEFAULTS: dict[str, dict[str, Any]] = {
         "excluded_components": ["tok2vec"],
         "query_character_max": 100,
         "executor_max_workers": 4,
-        "recycle_after_texts": 500000,
     },
     "LOGGING": {"format": "mozlog", "level": "INFO", "can_propagate": False},
     "SENTRY": {"mode": "disabled", "dsn": "", "env": "dev", "traces_sample_rate": 0.0},
@@ -107,22 +106,5 @@ def test_missing_mars_section_rejected() -> None:
         environments=False,
         **{key: value for key, value in _DEFAULTS.items() if key != "MARS"},
     )
-    with pytest.raises(ValidationError):
-        instance.validators.validate()
-
-
-@pytest.mark.parametrize(
-    "value",
-    [pytest.param(0, id="zero_disables_recycling"), pytest.param(1000, id="positive")],
-)
-def test_valid_recycle_after_texts_accepted(value: int) -> None:
-    """Zero is a valid `recycle_after_texts`, being the documented way to disable it."""
-    instance = _build(PII={**_DEFAULTS["PII"], "recycle_after_texts": value})
-    instance.validators.validate()
-
-
-def test_negative_recycle_after_texts_rejected() -> None:
-    """A negative `recycle_after_texts` is meaningless and fails validation."""
-    instance = _build(PII={**_DEFAULTS["PII"], "recycle_after_texts": -1})
     with pytest.raises(ValidationError):
         instance.validators.validate()
