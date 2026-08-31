@@ -1247,8 +1247,10 @@ featured_api_base = "https://api.wikimedia.org/feed/v1/wikipedia"
 commons_api_url = "https://commons.wikimedia.org/w/api.php"
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CACHE_CONTROL
-# Cache control headers for stored images in the bucket (1hr)
-cache_control = "public, max-age=3600"
+# Each day's images are uploaded to a fresh dated path and never modified, so clients and
+# the CDN may cache them forever; hourly re-fetching was a major CDN cost driver (SREIN-1732).
+# Remediating a bad image requires publishing it at a new path via the manifest.
+cache_control = "public, max-age=31536000, immutable"
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__IMAGE_MAX_DIMENSION
 # Upper bound (in pixels) on the longest edge of the hi-res image uploaded to the bucket.
