@@ -38,13 +38,6 @@ def _build_validators() -> list[Validator]:
             gt=0,
             must_exist=True,
         ),
-        # `gte=0` rather than `gt=0`: 0 is the documented way to disable recycling.
-        Validator(
-            "pii.recycle_after_texts",
-            is_type_of=int,
-            gte=0,
-            must_exist=True,
-        ),
         Validator("mars.enabled", is_type_of=bool, must_exist=True),
         Validator("mars.base_url", is_type_of=str, must_exist=True),
         Validator("mars.suggestion_url_path", is_type_of=str, must_exist=True),
