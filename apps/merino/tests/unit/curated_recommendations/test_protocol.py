@@ -9,8 +9,10 @@ from merino.curated_recommendations.protocol import (
     ResponsiveLayout,
     Tile,
     TileSize,
+    CuratedRecommendation,
     CuratedRecommendationsRequest,
     ProcessedInterests,
+    Section,
 )
 
 
@@ -50,6 +52,101 @@ def valid_layout(responsive_layout):
         responsive_layout(4, 2),
     ]
     return Layout(name="Valid Layout", responsiveLayouts=responsive_layouts)
+
+
+def _curated_recommendation(**kwargs) -> CuratedRecommendation:
+    """Create a minimal valid CuratedRecommendation."""
+    values = {
+        "corpusItemId": "item-1",
+        "url": "https://example.com/story",
+        "title": "Title",
+        "excerpt": "Excerpt",
+        "publisher": "Publisher",
+        "isTimeSensitive": False,
+        "imageUrl": "https://example.com/image.jpg",
+        "receivedRank": 0,
+    }
+    values.update(kwargs)
+    return CuratedRecommendation(**values)
+
+
+class TestCuratedRecommendationSerialization:
+    """Tests for CuratedRecommendation serialization."""
+
+    def test_base_variant_id_is_omitted(self):
+        """VariantId should not serialize when it is the default base variant."""
+        rec = _curated_recommendation(variantId=0, sourceSectionId="government")
+
+        payload = rec.model_dump()
+
+        assert "variantId" not in payload
+        assert payload["sourceSectionId"] == "government"
+
+    def test_non_base_variant_id_is_included(self):
+        """VariantId should serialize for non-base variants."""
+        rec = _curated_recommendation(variantId=5050, sourceSectionId="government")
+
+        payload = rec.model_dump()
+
+        assert payload["variantId"] == 5050
+        assert payload["sourceSectionId"] == "government"
+
+    def test_null_variant_id_is_included(self):
+        """VariantId should serialize as null for editorial sections with no variant."""
+        rec = _curated_recommendation(variantId=None, sourceSectionId="editorial")
+
+        payload = rec.model_dump()
+
+        assert payload["variantId"] is None
+        assert payload["sourceSectionId"] == "editorial"
+
+    def test_missing_source_section_id_is_omitted(self):
+        """SourceSectionId should not serialize when it is unset."""
+        rec = _curated_recommendation()
+
+        payload = rec.model_dump()
+
+        assert "sourceSectionId" not in payload
+
+
+class TestSectionSerialization:
+    """Tests for Section serialization."""
+
+    def test_base_variant_id_is_omitted(self, valid_layout):
+        """VariantId should not serialize when it is the default base variant."""
+        section = Section(
+            receivedFeedRank=0,
+            recommendations=[],
+            title="Base",
+            layout=valid_layout,
+            variantId=0,
+        )
+
+        assert "variantId" not in section.model_dump()
+
+    def test_non_base_variant_id_is_included(self, valid_layout):
+        """VariantId should serialize for non-base variants."""
+        section = Section(
+            receivedFeedRank=0,
+            recommendations=[],
+            title="Experiment",
+            layout=valid_layout,
+            variantId=5050,
+        )
+
+        assert section.model_dump()["variantId"] == 5050
+
+    def test_null_variant_id_is_included(self, valid_layout):
+        """VariantId should serialize as null for editorial sections with no variant."""
+        section = Section(
+            receivedFeedRank=0,
+            recommendations=[],
+            title="Editorial",
+            layout=valid_layout,
+            variantId=None,
+        )
+
+        assert section.model_dump()["variantId"] is None
 
 
 class TestTile:
