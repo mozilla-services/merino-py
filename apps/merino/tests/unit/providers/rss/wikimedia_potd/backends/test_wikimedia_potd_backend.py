@@ -4,12 +4,14 @@
 
 """Unit tests for the Wikimedia Picture of the Day backend."""
 
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 import freezegun
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock
+from PIL import Image as PILImage
 from pydantic import HttpUrl
 from httpx import AsyncClient, HTTPError, ReadTimeout, Request, Response
 from pytest_mock import MockerFixture
@@ -28,6 +30,16 @@ from merino.utils.gcs.models import Image
 
 FEED_URL = "https://example.com/feed"
 COMMONS_API_URL = "https://commons.example.com/w/api.php"
+
+
+def make_jpeg_image(width: int = 40, height: int = 20) -> Image:
+    """Return an Image holding valid JPEG content, so it survives hi-res processing."""
+    buffer = BytesIO()
+    with PILImage.new("RGB", (width, height)) as img:
+        img.save(buffer, format="JPEG")
+
+    return Image(content=buffer.getvalue(), content_type="image/jpeg")
+
 
 # The sample response is stored verbatim as JSON so the fixture matches the Featured API payload.
 TEST_FEATURED_JSON = Path(
@@ -79,7 +91,7 @@ class TestDownloadAndUploadPotdImagesMethod:
         self, backend, potd, mocker: MockerFixture
     ) -> None:
         """Test that download_and_upload_potd_images method returns two urls when successful."""
-        test_image = Image(content=b"255", content_type="Image/jpeg")
+        test_image = make_jpeg_image()
 
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
 
@@ -111,6 +123,61 @@ class TestDownloadAndUploadPotdImagesMethod:
 
         assert thumbnail_url == expected_uploaded_url
         assert hires_url == expected_uploaded_url
+
+    @pytest.mark.asyncio
+    @freezegun.freeze_time("2026-06-24")
+    async def test_download_and_upload_potd_images_processes_hi_res_but_not_thumbnail(
+        self, backend, potd, mocker: MockerFixture
+    ) -> None:
+        """Uploads the hi-res image re-encoded as WebP and the thumbnail unmodified."""
+        test_image = make_jpeg_image()
+
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.side_effect = [
+            Response(
+                status_code=200,
+                content=test_image.content,
+                request=Request(method="GET", url=str(potd.thumbnail_image_url)),
+                headers={"content-type": test_image.content_type},
+            ),
+            Response(
+                status_code=200,
+                content=test_image.content,
+                request=Request(method="GET", url=str(potd.high_res_image_url)),
+                headers={"content-type": test_image.content_type},
+            ),
+        ]
+
+        upload_mock = mocker.patch.object(backend, "upload_potd_image")
+        upload_mock.return_value = HttpUrl("https://www.uploaded-test-image.com/image.webp")
+
+        await backend.download_and_upload_potd_images(potd)
+
+        thumbnail_call, hi_res_call = upload_mock.call_args_list
+        assert thumbnail_call.kwargs["image"].content_type == "image/jpeg"
+        assert thumbnail_call.kwargs["image"].content == test_image.content
+        assert hi_res_call.kwargs["image"].content_type == "image/webp"
+
+    @pytest.mark.asyncio
+    @freezegun.freeze_time("2026-06-24")
+    async def test_download_and_upload_potd_images_raises_when_hi_res_is_not_decodable(
+        self, backend, potd, mocker: MockerFixture
+    ) -> None:
+        """Propagates WikimediaPotdError when the hi-res image cannot be processed."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=b"not an image",
+            request=Request(method="GET", url=str(potd.high_res_image_url)),
+            headers={"content-type": "image/jpeg"},
+        )
+
+        upload_mock = mocker.patch.object(backend, "upload_potd_image")
+
+        with pytest.raises(WikimediaPotdError):
+            await backend.download_and_upload_potd_images(potd)
+
+        upload_mock.assert_not_called()
 
     @pytest.mark.asyncio
     @freezegun.freeze_time("2026-06-24")
@@ -158,9 +225,7 @@ class TestDownloadAndUploadPotdImagesMethod:
         self, backend, potd, mocker: MockerFixture
     ) -> None:
         """Propagates the error raised by upload_potd_image."""
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/jpeg"
-        )
+        mocker.patch.object(backend, "download_potd_image").return_value = make_jpeg_image()
         mocker.patch.object(backend, "upload_potd_image").side_effect = WikimediaPotdError(
             "upload failed"
         )
@@ -241,9 +306,7 @@ class TestOrchestratePictureOfTheDayUpload:
         )
 
         # mocking download method to return a valid value but raise on the upload method
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/jpeg"
-        )
+        mocker.patch.object(backend, "download_potd_image").return_value = make_jpeg_image()
         mocker.patch.object(backend, "upload_potd_image").side_effect = WikimediaPotdError(
             "upload failed"
         )

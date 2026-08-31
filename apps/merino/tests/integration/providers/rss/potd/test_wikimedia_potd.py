@@ -4,6 +4,7 @@
 
 """Integration tests for the Picture of the Day Provider."""
 
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,9 @@ import freezegun
 import orjson
 
 from typing import cast
-from pydantic import HttpUrl
 from unittest.mock import call, AsyncMock, Mock
+from PIL import Image as PILImage
+from pydantic import HttpUrl
 from httpx import AsyncClient, HTTPError, Request, Response
 from pytest_mock import MockerFixture
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
@@ -34,6 +36,15 @@ TEST_FEATURED_JSON = Path(
 
 # A well-formed JSON response that is missing the "image" object, so parse_potd raises.
 TEST_FEATURED_JSON_NO_IMAGE = "{}"
+
+
+def make_png_image(width: int = 40, height: int = 20) -> Image:
+    """Return an Image holding valid PNG content, so it survives hi-res processing."""
+    buffer = BytesIO()
+    with PILImage.new("RGB", (width, height)) as img:
+        img.save(buffer, format="PNG")
+
+    return Image(content=buffer.getvalue(), content_type="image/png")
 
 
 @pytest.fixture(name="backend")
@@ -76,9 +87,7 @@ class TestUploadPictureOfTheDayMethod:
         )
 
         # mock download_and_upload_potd_images(potd) returns
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/png"
-        )
+        mocker.patch.object(backend, "download_potd_image").return_value = make_png_image()
 
         # call the orchestrate method
         result = await backend.upload_picture_of_the_day()
@@ -95,9 +104,10 @@ class TestUploadPictureOfTheDayMethod:
             str(potd_manifest.thumbnail_image_url)
             == "https://test-cdn-name/wikimedia_potd/2026-06-24/thumbnail.png"
         )
+        # the hi-res image is re-encoded as WebP before upload, so its extension changes
         assert (
             str(potd_manifest.high_res_image_url)
-            == "https://test-cdn-name/wikimedia_potd/2026-06-24/hi_res.png"
+            == "https://test-cdn-name/wikimedia_potd/2026-06-24/hi_res.webp"
         )
         assert "Sagittarius" in potd_manifest.description
         assert potd_manifest.author == "Test Artist"
@@ -109,7 +119,7 @@ class TestUploadPictureOfTheDayMethod:
         potd_blobs = list(gcs_storage_client.get_bucket(gcs_storage_bucket.name).list_blobs())
 
         assert len(potd_blobs) == 3
-        assert potd_blobs[0].name == "wikimedia_potd/2026-06-24/hi_res.png"
+        assert potd_blobs[0].name == "wikimedia_potd/2026-06-24/hi_res.webp"
         assert potd_blobs[1].name == "wikimedia_potd/2026-06-24/potd.json"
         assert potd_blobs[2].name == "wikimedia_potd/2026-06-24/thumbnail.png"
 
@@ -164,7 +174,7 @@ class TestUploadPictureOfTheDayMethod:
         ]
 
         backend_download_method_mock = mocker.patch.object(backend, "download_potd_image")
-        backend_download_method_mock.return_value = Image(content=b"255", content_type="Image/png")
+        backend_download_method_mock.return_value = make_png_image()
 
         result = await backend.upload_picture_of_the_day()
         assert result is True
@@ -238,9 +248,7 @@ class TestUploadPictureOfTheDayMethod:
             content=TEST_FEATURED_JSON,
             request=Request(method="GET", url=FEED_URL),
         )
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/png"
-        )
+        mocker.patch.object(backend, "download_potd_image").return_value = make_png_image()
         mocker.patch.object(backend, "upload_potd_manifest").side_effect = WikimediaPotdError(
             "manifest upload failed"
         )
@@ -265,9 +273,7 @@ class TestUploadPictureOfTheDayMethod:
             request=Request(method="GET", url=FEED_URL),
         )
         # Images "download" fine; only the GCS upload should fail.
-        mocker.patch.object(backend, "download_potd_image").return_value = Image(
-            content=b"255", content_type="Image/png"
-        )
+        mocker.patch.object(backend, "download_potd_image").return_value = make_png_image()
 
         # Simulate a real GCS write failure at the storage layer, so the real
         # GcsUploader.upload_content path runs.

@@ -21,6 +21,7 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
 from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
+from merino.providers.rss.wikimedia_potd.backends.image_processing import process_potd_image
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     parse_potd,
     extract_image_description_with_lang_code,
@@ -55,6 +56,8 @@ class WikimediaPictureOfTheDayBackend:
         self.http_client = http_client
         self.gcs_uploader = gcs_uploader
         self.cache_control = settings.rss_providers.wikimedia_potd.cache_control
+        self.image_max_dimension = settings.rss_providers.wikimedia_potd.image_max_dimension
+        self.image_webp_quality = settings.rss_providers.wikimedia_potd.image_webp_quality
 
     async def upload_picture_of_the_day(self) -> bool:
         """Orchestrates fetching the Featured API, extracting the Picture of the Day (POTD),
@@ -179,12 +182,21 @@ class WikimediaPictureOfTheDayBackend:
     ) -> tuple[HttpUrl, HttpUrl]:
         """Download and upload potd thumbnail and high resolution images.
 
+        The high resolution image is downscaled to fit `image_max_dimension` and re-encoded
+        as WebP before upload; the thumbnail is uploaded unmodified.
+
         Returns:
             tuple[HttpUrl, HttpUrl]. Raises WikimediaPotdError on failure.
         """
         # download thumbnail and high resolution images for the above potd instance
         thumbnail_image = await self.download_potd_image(potd.thumbnail_image_url)
         hi_res_image = await self.download_potd_image(potd.high_res_image_url)
+
+        # bound the hi-res image's resolution and re-encode it as WebP before uploading;
+        # the Wikimedia original can be arbitrarily large (110MB on 2026-08-31)
+        hi_res_image = process_potd_image(
+            hi_res_image, self.image_max_dimension, self.image_webp_quality
+        )
 
         # upload thumbnail and high resolution images to the gcs bucket / cdn
         thumbnail_cdn_url = self.upload_potd_image(image=thumbnail_image, is_thumbnail=True)

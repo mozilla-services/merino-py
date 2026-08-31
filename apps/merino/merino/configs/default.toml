@@ -1247,8 +1247,22 @@ featured_api_base = "https://api.wikimedia.org/feed/v1/wikipedia"
 commons_api_url = "https://commons.wikimedia.org/w/api.php"
 
 # MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__CACHE_CONTROL
-# Cache control headers for stored images in the bucket (1hr)
-cache_control = "public, max-age=3600"
+# Each day's images are uploaded to a fresh dated path and never modified, so clients and
+# the CDN may cache them forever; hourly re-fetching was a major CDN cost driver (SREIN-1732).
+# Remediating a bad image requires publishing it at a new path via the manifest.
+cache_control = "public, max-age=31536000, immutable"
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__IMAGE_MAX_DIMENSION
+# Upper bound (in pixels) on the longest edge of the hi-res image uploaded to the bucket.
+# Larger sources are downscaled to fit, preserving aspect ratio; smaller sources are kept
+# at their original size. 3840 matches the width of a 4K UHD display, the largest common
+# resolution the New Tab wallpaper renders at.
+image_max_dimension = 3840
+
+# MERINO_RSS_PROVIDERS__WIKIMEDIA_POTD__IMAGE_WEBP_QUALITY
+# WebP quality (0-100) used when re-encoding the hi-res image, matching the quality the
+# New Tab image cache (img-getpocket.cdn.mozilla.net) uses for content thumbnails.
+image_webp_quality = 75
 
 [default.games_providers.particle]
 # MERINO_GAMES_PROVIDERS__PARTICLE__TYPE
