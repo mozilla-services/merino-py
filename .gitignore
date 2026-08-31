@@ -134,6 +134,10 @@ dmypy.json
 # For uv install
 .install.stamp
 
+# Moon local cache and generated Docker workspace
+.moon/cache/
+.moon/docker/
+
 # Dynaconf secret files
 apps/merino/merino/configs/.secrets.*
 

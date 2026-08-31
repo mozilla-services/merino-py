@@ -1,0 +1,36 @@
+language: unknown
+stack: infrastructure
+layer: configuration
+
+project:
+  title: Merino Workspace
+  description: Repository-level orchestration for the monorepo
+
+toolchains:
+  default: system
+
+workspace:
+  inheritedTasks:
+    include: []
+
+tasks:
+  install:
+    description: Install the complete Python workspace from the committed lockfile
+    command: uv
+    args:
+      - sync
+      - --frozen
+      - --all-groups
+      - --all-packages
+    inputs:
+      - /.python-version
+      - /pyproject.toml
+      - /uv.lock
+      - /apps/merino/pyproject.toml
+      - /apps/fleece/pyproject.toml
+      - /packages/merino-common/pyproject.toml
+      - /tools/load-tests/pyproject.toml
+    toolchains: system
+    options:
+      cache: false
+      runFromWorkspaceRoot: true

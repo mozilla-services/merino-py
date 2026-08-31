@@ -1,0 +1,41 @@
+language: python
+stack: backend
+layer: library
+
+project:
+  title: Merino Common
+  description: Shared Python modules used by Merino services
+
+toolchains:
+  default: system
+
+tasks:
+  lint:
+    args:
+      - packages/merino-common/merino_common
+      - packages/merino-common/tests
+
+  format-check:
+    args:
+      - packages/merino-common/merino_common
+      - packages/merino-common/tests
+
+  security:
+    args:
+      - packages/merino-common/merino_common
+      - packages/merino-common/tests
+      - --configfile
+      - pyproject.toml
+
+  typecheck:
+    args:
+      - packages/merino-common/merino_common
+      - packages/merino-common/tests
+      - --config-file=pyproject.toml
+    env:
+      MYPYPATH: packages/merino-common
+
+  test:
+    args:
+      - packages/merino-common/tests/unit
+      - --no-cov

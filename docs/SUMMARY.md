@@ -10,6 +10,7 @@
 - [Data collection](./data.md)
 - [Social contract](./social-contract.md)
 - [Working on the Code](./dev/index.md)
+  - [Working in the monorepo](./dev/monorepo.md)
   - [Content Moderation](./dev/content-moderation.md)
   - [Dependencies](./dev/dependencies.md)
   - [Logging and Metrics](./dev/logging-and-metrics.md)

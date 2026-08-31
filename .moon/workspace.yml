@@ -1,0 +1,18 @@
+versionConstraint: ">=2.5.3 <2.6.0"
+
+projects:
+  workspace: .
+  merino: apps/merino
+  fleece: apps/fleece
+  merino-common: packages/merino-common
+  load-tests: tools/load-tests
+  docs: docs
+
+vcs:
+  client: git
+  defaultBranch: main
+
+# uv remains responsible for installing and locking Python dependencies. Moon
+# orchestrates uv commands but must not try to manage the environment itself.
+pipeline:
+  installDependencies: false
