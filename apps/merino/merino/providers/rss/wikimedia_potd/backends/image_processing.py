@@ -11,9 +11,8 @@ from merino.utils.gcs.models import Image
 
 logger = logging.getLogger(__name__)
 
-# Refuse sources above this pixel count to bound decode memory (non-JPEG formats decode at
-# full resolution). Exceeding it fails the day's update, so the previous picture keeps
-# serving. 500 megapixels covers all but the rarest Picture of the Day sources.
+# A decoded image holds ~3 bytes per pixel in memory, so an unbounded source could OOM the
+# job pod. Failing this check skips the day's update and keeps the previous picture serving.
 MAX_SOURCE_PIXELS = 500_000_000
 
 
