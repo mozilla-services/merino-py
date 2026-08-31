@@ -523,31 +523,36 @@ class TestLegacyEndpoints:
     - Other locales (pl-PL, etc.): use scheduler backend via CuratedRecommendationsProvider
     """
 
-    # Locales that use the sections backend (rolled-out section surfaces)
-    SECTIONS_BACKEND_LOCALES = [
-        "de-AT",
-        "de-CH",
-        "de-DE",
-        "en-CA",
-        "en-GB",
-        "en-US",
-        "es-ES",
-        "fr-BE",
-        "fr-FR",
-        "it-IT",
+    # (locale, region) pairs that use the sections backend (rolled-out section surfaces).
+    # India (NEW_TAB_EN_INTL) is selected by region because no dedicated locale exists for it.
+    SECTIONS_BACKEND_MARKETS: list[tuple[str, str | None]] = [
+        ("de-AT", None),
+        ("de-CH", None),
+        ("de-DE", None),
+        ("en-CA", None),
+        ("en-GB", None),
+        ("en-US", None),
+        ("en-US", "IN"),
+        ("es-ES", None),
+        ("fr-BE", None),
+        ("fr-FR", None),
+        ("it-IT", None),
     ]
-    # Locales that use the scheduler backend (non-rolled-out)
-    SCHEDULER_BACKEND_LOCALES = ["pl-PL"]
+    # (locale, region) pairs that use the scheduler backend (non-rolled-out)
+    SCHEDULER_BACKEND_MARKETS: list[tuple[str, str | None]] = [("pl-PL", None)]
 
     @pytest.mark.parametrize(
-        "locale",
-        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
+        "locale,region",
+        SECTIONS_BACKEND_MARKETS + SCHEDULER_BACKEND_MARKETS,
     )
-    def test_fx115_129_returns_valid_response(self, locale: str, client: TestClient):
-        """Test the legacy fx115-129 endpoint returns expected response for all supported locales."""
-        response = client.get(
-            "/api/v1/curated-recommendations/legacy-115-129", params={"locale": locale}
-        )
+    def test_fx115_129_returns_valid_response(
+        self, locale: str, region: str | None, client: TestClient
+    ):
+        """Test the legacy fx115-129 endpoint returns expected response for all supported markets."""
+        params = {"locale": locale}
+        if region:
+            params["region"] = region
+        response = client.get("/api/v1/curated-recommendations/legacy-115-129", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -566,15 +571,17 @@ class TestLegacyEndpoints:
         assert all(item["imageUrl"] for item in corpus_items)
 
     @pytest.mark.parametrize(
-        "locale_lang",
-        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
+        "locale_lang,region",
+        SECTIONS_BACKEND_MARKETS + SCHEDULER_BACKEND_MARKETS,
     )
-    def test_fx114_returns_valid_response(self, locale_lang: str, client: TestClient):
-        """Test the legacy fx114 endpoint returns expected response for all supported locales."""
-        response = client.get(
-            "/api/v1/curated-recommendations/legacy-114",
-            params={"locale_lang": locale_lang},
-        )
+    def test_fx114_returns_valid_response(
+        self, locale_lang: str, region: str | None, client: TestClient
+    ):
+        """Test the legacy fx114 endpoint returns expected response for all supported markets."""
+        params = {"locale_lang": locale_lang}
+        if region:
+            params["region"] = region
+        response = client.get("/api/v1/curated-recommendations/legacy-114", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -598,7 +605,7 @@ class TestLegacyEndpoints:
             ("legacy-114", "locale_lang", "count", 20),
         ],
     )
-    @pytest.mark.parametrize("locale", SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES)
+    @pytest.mark.parametrize("locale,region", SECTIONS_BACKEND_MARKETS + SCHEDULER_BACKEND_MARKETS)
     def test_count_parameter(
         self,
         endpoint: str,
@@ -606,14 +613,15 @@ class TestLegacyEndpoints:
         count_param: str,
         default_count: int,
         locale: str,
+        region: str | None,
         client: TestClient,
     ):
-        """Test that the count parameter limits results for both endpoints and all locales."""
+        """Test that the count parameter limits results for both endpoints and all markets."""
         requested_count = 5
-        response = client.get(
-            f"/api/v1/curated-recommendations/{endpoint}",
-            params={locale_param: locale, count_param: requested_count},
-        )
+        params = {locale_param: locale, count_param: requested_count}
+        if region:
+            params["region"] = region
+        response = client.get(f"/api/v1/curated-recommendations/{endpoint}", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -621,39 +629,6 @@ class TestLegacyEndpoints:
         # Get items from correct response field
         items = data["data"] if endpoint == "legacy-115-129" else data["recommendations"]
         assert len(items) == requested_count
-
-    @pytest.mark.parametrize(
-        "endpoint,locale_param,items_key,default_count",
-        [
-            ("legacy-115-129", "locale", "data", 30),
-            ("legacy-114", "locale_lang", "recommendations", 20),
-        ],
-    )
-    def test_india_returns_valid_response(
-        self,
-        endpoint: str,
-        locale_param: str,
-        items_key: str,
-        default_count: int,
-        client: TestClient,
-    ):
-        """Test both legacy endpoints for India (region IN maps to NEW_TAB_EN_INTL).
-
-        India is selected by region rather than locale, and is served from the sections
-        backend like the other rolled-out section surfaces.
-        """
-        response = client.get(
-            f"/api/v1/curated-recommendations/{endpoint}",
-            params={locale_param: "en-US", "region": "IN"},
-        )
-
-        assert response.status_code == 200
-        items = response.json()[items_key]
-
-        assert len(items) == default_count
-        assert all(item["title"] for item in items)
-        assert all(item["url"] for item in items)
-        assert all(item["excerpt"] for item in items)
 
     @pytest.mark.parametrize(
         "endpoint,locale_param",
