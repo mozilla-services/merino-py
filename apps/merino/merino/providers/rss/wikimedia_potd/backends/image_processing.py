@@ -59,8 +59,8 @@ def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> I
         processed.thumbnail((max_dimension, max_dimension), PILImage.Resampling.LANCZOS)
 
         buffer = BytesIO()
-        # the WebP encoder converts to RGB itself, keeping alpha when present. EXIF and
-        # other metadata are dropped; the ICC profile is kept so colors survive.
+        # the WebP encoder converts to RGB itself. EXIF and other metadata are dropped;
+        # the ICC profile is kept so colors survive.
         processed.save(
             buffer,
             format="WEBP",

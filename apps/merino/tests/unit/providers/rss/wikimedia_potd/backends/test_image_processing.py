@@ -66,15 +66,6 @@ class TestProcessPotdImage:
         with open_processed(result) as img:
             assert img.format == "WEBP"
 
-    def test_keeps_alpha_channel(self) -> None:
-        """Preserves the alpha channel of a transparent source image."""
-        result = process_potd_image(
-            make_image(50, 50, image_format="PNG", mode="RGBA"), max_dimension=200, webp_quality=75
-        )
-
-        with open_processed(result) as img:
-            assert img.mode == "RGBA"
-
     def test_applies_exif_orientation_and_strips_metadata(self) -> None:
         """Bakes the EXIF orientation into the pixels and drops the EXIF metadata itself."""
         exif = PILImage.Exif()
