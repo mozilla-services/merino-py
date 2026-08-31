@@ -14,7 +14,7 @@ from merino.providers.rss.wikimedia_potd.backends.image_processing import proces
 from merino.providers.rss.wikimedia_potd.backends.protocol import WikimediaPotdError
 from merino.utils.gcs.models import Image
 
-# EXIF tag id for orientation; value 6 means the pixels are rotated 90 degrees.
+# EXIF tag id for the image orientation.
 EXIF_ORIENTATION_TAG = 0x0112
 
 
@@ -69,6 +69,8 @@ class TestProcessPotdImage:
     def test_applies_exif_orientation_and_strips_metadata(self) -> None:
         """Bakes the EXIF orientation into the pixels and drops the EXIF metadata itself."""
         exif = PILImage.Exif()
+        # orientation 6 means "rotate 90 degrees clockwise to display", so the 200x100 source
+        # below must come out as 100x200
         exif[EXIF_ORIENTATION_TAG] = 6
 
         result = process_potd_image(
