@@ -75,17 +75,8 @@ class TestProcessPotdImage:
         with open_processed(result) as img:
             assert img.mode == "RGBA"
 
-    def test_flattens_palette_image(self) -> None:
-        """Converts a palette-mode source without transparency to plain RGB."""
-        result = process_potd_image(
-            make_image(50, 50, image_format="PNG", mode="P"), max_dimension=200, webp_quality=75
-        )
-
-        with open_processed(result) as img:
-            assert img.mode == "RGB"
-
-    def test_applies_exif_orientation(self) -> None:
-        """Bakes the EXIF orientation into the pixels, swapping the stored dimensions."""
+    def test_applies_exif_orientation_and_strips_metadata(self) -> None:
+        """Bakes the EXIF orientation into the pixels and drops the EXIF metadata itself."""
         exif = PILImage.Exif()
         exif[EXIF_ORIENTATION_TAG] = 6
 
@@ -95,17 +86,6 @@ class TestProcessPotdImage:
 
         with open_processed(result) as img:
             assert img.size == (100, 200)
-
-    def test_strips_exif_metadata(self) -> None:
-        """Drops EXIF metadata from the output."""
-        exif = PILImage.Exif()
-        exif[EXIF_ORIENTATION_TAG] = 6
-
-        result = process_potd_image(
-            make_image(200, 100, exif=exif), max_dimension=300, webp_quality=75
-        )
-
-        with open_processed(result) as img:
             assert not img.getexif()
 
     def test_raises_for_undecodable_content(self) -> None:

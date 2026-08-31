@@ -55,6 +55,9 @@ class WikimediaPictureOfTheDayBackend(Protocol):
     ) -> tuple[HttpUrl, HttpUrl]:  # pragma: no cover
         """Download and upload potd thumbnail and high resolution images.
 
+        The high resolution image is downscaled to fit `image_max_dimension` and re-encoded
+        as WebP before upload; the thumbnail is uploaded unmodified.
+
         Returns:
             tuple[HttpUrl, HttpUrl]. Raises WikimediaPotdError on failure.
         """

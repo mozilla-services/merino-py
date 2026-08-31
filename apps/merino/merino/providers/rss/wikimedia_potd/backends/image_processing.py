@@ -11,10 +11,11 @@ from merino.utils.gcs.models import Image
 
 logger = logging.getLogger(__name__)
 
-# Upper bound on the source image size in pixels. A source above this bound fails the day's
-# update (the provider keeps serving the previous picture) rather than risking an
-# out-of-memory decode. 500 megapixels covers Picture of the Day sources with ample margin;
-# the 2026-08-31 picture that motivated this bound was 18018x8275 (~149 megapixels).
+# Upper bound on the source image size in pixels, bounding the worst-case decode. A source
+# above this bound fails the day's update (the provider keeps serving the previous picture)
+# instead of being processed or shipped raw. 500 megapixels covers all but the rarest
+# Picture of the Day sources; the 2026-08-31 picture that motivated this bound was
+# 18018x8275 (~149 megapixels).
 MAX_SOURCE_PIXELS = 500_000_000
 
 
@@ -31,10 +32,10 @@ def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> I
     """
     try:
         # PIL's decompression bomb guard warns at ~89 megapixels, below routine POTD sizes,
-        # so it is swapped for the explicit MAX_SOURCE_PIXELS check below. The guard only
-        # runs while the header is parsed in open(), and this function only runs in the
-        # single-threaded potd update job, so the brief global override cannot race other
-        # PIL users such as the navigational suggestions job.
+        # so it is swapped for the explicit MAX_SOURCE_PIXELS check below while open() parses
+        # the header. The override is scoped to this call because the web service imports
+        # this module and its guard must stay intact there; nothing else in the potd update
+        # job uses PIL concurrently.
         original_max_pixels = PILImage.MAX_IMAGE_PIXELS
         PILImage.MAX_IMAGE_PIXELS = None
         try:
@@ -51,29 +52,22 @@ def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> I
                 )
 
             # decode JPEG sources at a reduced DCT scale (a no-op for other formats) so a
-            # very large picture is never held at full resolution in memory. Passing the
-            # current mode keeps the pixel format unchanged; only the scale is reduced.
+            # very large picture is never held at full resolution in memory
             img.draft(img.mode, (max_dimension, max_dimension))
 
             # bake the EXIF orientation into the pixels since the tag is stripped on save
             processed = ImageOps.exif_transpose(img)
 
-        # WebP encodes RGB or RGBA: flatten palette images and keep alpha only when present
-        has_alpha = processed.mode in ("RGBA", "LA") or (
-            processed.mode == "P" and "transparency" in processed.info
-        )
-        processed = processed.convert("RGBA" if has_alpha else "RGB")
-
         # in-place downscale that preserves the aspect ratio and never upscales
         processed.thumbnail((max_dimension, max_dimension), PILImage.Resampling.LANCZOS)
 
         buffer = BytesIO()
-        # EXIF and other metadata are dropped; the ICC profile is kept so colors survive
+        # the WebP encoder converts to RGB itself, keeping alpha when present. EXIF and
+        # other metadata are dropped; the ICC profile is kept so colors survive.
         processed.save(
             buffer,
             format="WEBP",
             quality=webp_quality,
-            method=6,
             icc_profile=processed.info.get("icc_profile"),
         )
     except OSError as ex:

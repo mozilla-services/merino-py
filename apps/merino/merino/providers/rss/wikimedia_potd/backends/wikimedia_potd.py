@@ -1,6 +1,5 @@
 """Wikimedia Picture of the Day backend."""
 
-import asyncio
 import logging
 import aiodogstatsd
 from datetime import datetime, timezone
@@ -183,6 +182,9 @@ class WikimediaPictureOfTheDayBackend:
     ) -> tuple[HttpUrl, HttpUrl]:
         """Download and upload potd thumbnail and high resolution images.
 
+        The high resolution image is downscaled to fit `image_max_dimension` and re-encoded
+        as WebP before upload; the thumbnail is uploaded unmodified.
+
         Returns:
             tuple[HttpUrl, HttpUrl]. Raises WikimediaPotdError on failure.
         """
@@ -191,13 +193,9 @@ class WikimediaPictureOfTheDayBackend:
         hi_res_image = await self.download_potd_image(potd.high_res_image_url)
 
         # bound the hi-res image's resolution and re-encode it as WebP before uploading;
-        # the Wikimedia original can be arbitrarily large (110MB on 2026-08-31). Runs in a
-        # worker thread because decoding and encoding are CPU-bound.
-        hi_res_image = await asyncio.to_thread(
-            process_potd_image,
-            hi_res_image,
-            self.image_max_dimension,
-            self.image_webp_quality,
+        # the Wikimedia original can be arbitrarily large (110MB on 2026-08-31)
+        hi_res_image = process_potd_image(
+            hi_res_image, self.image_max_dimension, self.image_webp_quality
         )
 
         # upload thumbnail and high resolution images to the gcs bucket / cdn
