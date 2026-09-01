@@ -458,8 +458,20 @@ async def curated_content(
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc]. Accepted for
         backward compatibility, but it no longer affects the ranking of recommendations.
-    - `feeds`: [Optional] A list of sections.
-    - `inferredInterests`: [Optional] A dictionary of topics with relative interest values.
+    - `feeds`: [Optional] A list of feeds to include, e.g. `["sections"]`. When "sections" is
+        requested, recommendations are grouped into topic sections in the `feeds` response field;
+        otherwise a flat list is returned in `data`.
+    - `sections`: [Optional] The user's per-section preferences: followed (with `followedAt`)
+        and blocked sections. Followed sections rank higher and blocked sections are omitted.
+        Only affects responses with sections.
+    - `enableInterestPicker`: [Optional] When true and sections are returned, the response
+        includes an interest picker: a prompt for the user to follow more sections.
+    - `inferredInterests`: [Optional] A dictionary of topics with relative interest values,
+        computed locally by the client. Used to personalize the ranking of sections.
+    - `coarseOs`: [Optional] Coarse operating system (mac, win, linux, android, ios, other).
+        Reserved for future use; it currently does not affect the response.
+    - `utcOffset`: [Optional] The user's UTC offset in hours (0-23). Reserved for future use;
+        it currently does not affect the response.
     - `experimentName`: [Optional] The Nimbus New Tab experiment name that the user is enrolled in.
         When an experiment _only_ requires backend changes, this allows us to run the experiments
         without waiting on the Firefox release cycle. When an experiment _does_ require changes in
