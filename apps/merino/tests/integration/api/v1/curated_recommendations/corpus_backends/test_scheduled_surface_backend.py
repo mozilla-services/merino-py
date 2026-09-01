@@ -6,7 +6,7 @@ import logging
 import pytest
 
 from circuitbreaker import STATE_HALF_OPEN, CircuitBreakerMonitor
-from datetime import datetime
+from datetime import datetime, timedelta
 from httpx import AsyncClient, HTTPStatusError, Response
 from pydantic import HttpUrl
 from tests.types import FilterCaplogFixture
@@ -290,6 +290,7 @@ class TestScheduledSurfaceCircuitBreaker:
         make_scheduled_surface_backend,
         scheduled_surface_http_client: AsyncMock,
         fixture_request_data,
+        scheduled_surface_circuit_breaker,
         caplog,
         filter_caplog: FilterCaplogFixture,
     ):
@@ -305,8 +306,11 @@ class TestScheduledSurfaceCircuitBreaker:
 
             assert scheduled_surface_http_client.post.call_count == 1
 
-            # fast-forward time so the cache expires
-            time_gem.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
+            # Fast-forward past the max TTL with a margin: freezegun's tick() advances
+            # from the freeze start, so real time spent since freezing is not counted.
+            time_gem.tick(
+                delta=ScheduledSurfaceBackend.cache_time_to_live_max + timedelta(minutes=1)
+            )
 
             # open the circuit breaker
             await trip_breaker(make_scheduled_surface_backend, fixture_request_data)
@@ -343,8 +347,9 @@ class TestScheduledSurfaceCircuitBreaker:
 
             assert scheduled_surface_circuit_breaker.opened
 
-            # advance time so the circuit breaker recovers
-            time_gem.tick(RECOVERY_TIMEOUT + 5)
+            # Advance past the recovery timeout with a margin: freezegun's tick() advances
+            # from the freeze start, so the real time trip_breaker consumed is not counted.
+            time_gem.tick(RECOVERY_TIMEOUT + 60)
 
             assert scheduled_surface_circuit_breaker.state == STATE_HALF_OPEN
 
