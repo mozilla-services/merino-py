@@ -164,8 +164,9 @@ class TestStaleWhileRevalidate:
             assert result1 == 20
             assert self.call_count == 1
 
-            # Advance time beyond the expiration (advance >120s) to force staleness.
-            frozen_datetime.tick(121.0)
+            # Advance past the max TTL (120s) with a margin: freezegun's tick() advances
+            # from the freeze start, so real time spent since freezing is not counted.
+            frozen_datetime.tick(180.0)
 
             n = 1000
             tasks = [asyncio.create_task(self.compute_value(10)) for _ in range(n)]
@@ -199,7 +200,7 @@ class TestStaleWhileRevalidate:
             result1 = await self.failing_compute_after_first_call(5)
             assert result1 == 15
 
-            frozen_datetime.tick(121.0)  # Force staleness. Max ttl is 120 seconds.
+            frozen_datetime.tick(180.0)  # Force staleness: max TTL (120s) plus a margin.
             result2 = await self.failing_compute_after_first_call(5)
             assert result2 == 15
             # 2x margin for event loop overhead
@@ -237,8 +238,8 @@ class TestStaleWhileRevalidate:
             assert result == 15
             assert self.call_count == 1
 
-            # 2. Expire the cache. Max TTL is 120 seconds.
-            frozen_datetime.tick(121.0)
+            # 2. Expire the cache: max TTL (120s) plus a margin.
+            frozen_datetime.tick(180.0)
 
             # 3. Simulate multiple sequential requests, each separated by enough
             #    time for the background update task to complete and release the lock
