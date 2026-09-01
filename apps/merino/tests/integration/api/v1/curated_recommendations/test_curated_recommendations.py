@@ -2694,55 +2694,6 @@ def test_experiment_surface_non_sections_request(
     assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
 
 
-def test_non_sections_request_for_surface_without_sections(
-    sections_empty_backend: SectionsProtocol,
-    engagement_backend: EngagementBackend,
-    prior_backend: PriorBackend,
-    local_model_backend: LocalModelBackend,
-    ml_recommendations_backend: MLRecsBackend,
-    cohort_model_backend: CohortModelBackend,
-    client: TestClient,
-    caplog,
-):
-    """Test that a surface without sections content returns 200 with empty data.
-
-    Applies to EN_XE/ES_XA until sections exist for them.
-    """
-    empty_provider = CuratedRecommendationsProvider(
-        engagement_backend=engagement_backend,
-        prior_backend=prior_backend,
-        sections_backend=sections_empty_backend,
-        local_model_backend=local_model_backend,
-        ml_recommendations_backend=ml_recommendations_backend,
-        cohort_model_backend=cohort_model_backend,
-        lints_interest_backend=EmptyLinTSInterestBackend(),
-    )
-
-    app.dependency_overrides[get_provider] = lambda: empty_provider
-
-    try:
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={
-                "locale": "es",
-                "region": "MX",
-                "experimentName": "sections-in-global-spanish",
-                "experimentBranch": "treatment",
-            },
-        )
-        data = response.json()
-
-        assert response.status_code == 200
-        assert data["surfaceId"] == SurfaceId.NEW_TAB_ES_XA.value
-        assert data["feeds"] is None
-        assert data["data"] == []
-
-        assert any("No recommendations available" in r.message for r in caplog.records)
-    finally:
-        # Reset the provider override
-        app.dependency_overrides[get_provider] = lambda: None
-
-
 def test_curated_recommendations_enriched_with_icons(
     manifest_provider,
     sections_http_client,

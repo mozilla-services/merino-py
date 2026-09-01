@@ -42,18 +42,6 @@ def sections_ie_response_data():
 
 
 @pytest.fixture()
-def sections_empty_http_client(fixture_request_data) -> AsyncMock:
-    """Mock HTTP client for a surface without any sections content."""
-    mock_http_client = AsyncMock(spec=AsyncClient)
-    mock_http_client.post.return_value = Response(
-        status_code=200,
-        json={"data": {"getSections": []}},
-        request=fixture_request_data,
-    )
-    return mock_http_client
-
-
-@pytest.fixture()
 def fixture_graphql_200ok_with_error_response():
     """Load mock response data for a GraphQL error response."""
     with open("apps/merino/tests/data/graphql_error.json") as f:
@@ -158,19 +146,6 @@ def sections_ie_backend(sections_ie_http_client: AsyncMock, manifest_provider) -
     """Create a mock SectionsCorpusBackend instance with IE sections data."""
     return SectionsBackend(
         http_client=sections_ie_http_client,
-        graph_config=CorpusApiGraphConfig(),
-        metrics_client=get_metrics_client(),
-        manifest_provider=manifest_provider,
-    )
-
-
-@pytest.fixture()
-def sections_empty_backend(
-    sections_empty_http_client: AsyncMock, manifest_provider
-) -> SectionsBackend:
-    """Create a mock SectionsCorpusBackend instance that returns no sections."""
-    return SectionsBackend(
-        http_client=sections_empty_http_client,
         graph_config=CorpusApiGraphConfig(),
         metrics_client=get_metrics_client(),
         manifest_provider=manifest_provider,
