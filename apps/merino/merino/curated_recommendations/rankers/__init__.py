@@ -16,7 +16,6 @@ from merino.curated_recommendations.rankers.utils import (
     is_section_recently_followed,
     renumber_recommendations,
     spread_publishers,
-    boost_preferred_topic,
     put_top_stories_first,
     greedy_personalized_section_rank,
     takedown_reported_recommendations,

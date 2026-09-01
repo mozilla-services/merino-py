@@ -10,25 +10,6 @@ from merino.curated_recommendations.protocol import (
     Locale,
 )
 
-# Surfaces where sections have rolled out at 100%. Non-sections requests for these
-# surfaces are served from the sections backend (via the legacy adapter) instead of
-# the scheduled-surface backend.
-ROLLED_OUT_SECTION_SURFACES: frozenset[SurfaceId] = frozenset(
-    {
-        SurfaceId.NEW_TAB_DE_AT,
-        SurfaceId.NEW_TAB_DE_CH,
-        SurfaceId.NEW_TAB_DE_DE,
-        SurfaceId.NEW_TAB_EN_CA,
-        SurfaceId.NEW_TAB_EN_GB,
-        SurfaceId.NEW_TAB_EN_IE,
-        SurfaceId.NEW_TAB_EN_US,
-        SurfaceId.NEW_TAB_ES_ES,
-        SurfaceId.NEW_TAB_FR_BE,
-        SurfaceId.NEW_TAB_FR_FR,
-        SurfaceId.NEW_TAB_IT_IT,
-    }
-)
-
 # Continental-European regions whose English-speaking users are routed to the
 # cross-Europe English surface (NEW_TAB_EN_XE) when enrolled in the
 # sections-in-en-europe experiment. More specific English markets (US, GB, CA, IE,

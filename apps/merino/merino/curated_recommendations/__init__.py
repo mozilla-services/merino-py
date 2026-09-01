@@ -8,13 +8,10 @@ import random
 
 from merino.configs import settings
 from merino.curated_recommendations.corpus_backends.protocol import SurfaceId
-from merino.curated_recommendations.corpus_backends.scheduled_surface_backend import (
-    ScheduledSurfaceBackend,
-    CorpusApiGraphConfig,
-)
 from merino.curated_recommendations.corpus_backends.sections_backend import (
     SectionsBackend,
 )
+from merino.curated_recommendations.corpus_backends.utils import CorpusApiGraphConfig
 from merino.curated_recommendations.engagement_backends.fake_engagement import FakeEngagement
 from merino.curated_recommendations.engagement_backends.gcs_engagement import GcsEngagement
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
@@ -262,13 +259,6 @@ def init_provider() -> None:
     lints_interest_backend = init_lints_interest_backend()
     spindle_backend = init_spindle_backend()
 
-    scheduled_surface_backend = ScheduledSurfaceBackend(
-        http_client=create_http_client(base_url=""),
-        graph_config=CorpusApiGraphConfig(),
-        metrics_client=get_metrics_client(),
-        manifest_provider=get_manifest_provider(),
-    )
-
     sections_backend = SectionsBackend(
         http_client=create_http_client(base_url=""),
         graph_config=CorpusApiGraphConfig(),
@@ -278,7 +268,6 @@ def init_provider() -> None:
     )
 
     _provider = CuratedRecommendationsProvider(
-        scheduled_surface_backend=scheduled_surface_backend,
         engagement_backend=engagement_backend,
         prior_backend=init_prior_backend(),
         sections_backend=sections_backend,

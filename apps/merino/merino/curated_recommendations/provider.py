@@ -15,10 +15,8 @@ from merino.curated_recommendations.ml_backends.protocol import (
     SpindleBackendProtocol,
 )
 from merino.curated_recommendations.corpus_backends.protocol import (
-    ScheduledSurfaceProtocol,
     SurfaceId,
     SectionsProtocol,
-    Topic,
 )
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.interest_picker import create_interest_picker
@@ -31,11 +29,6 @@ from merino.curated_recommendations.protocol import (
     ProcessedInterests,
 )
 
-from merino.curated_recommendations.rankers import (
-    boost_preferred_topic,
-    spread_publishers,
-    ThompsonSamplingRanker,
-)
 from merino.curated_recommendations.legacy.sections_adapter import (
     get_legacy_recommendations_from_sections,
 )
@@ -44,7 +37,6 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
 )
 from merino.curated_recommendations.sections import get_sections
 from merino.curated_recommendations.utils import (
-    ROLLED_OUT_SECTION_SURFACES,
     derive_engagement_region,
     get_recommendation_surface_id,
     get_millisecond_epoch_time,
@@ -59,12 +51,10 @@ LOCAL_MODEL_DB_VALUES_KEY = "values"  # Key to differentially private values
 class CuratedRecommendationsProvider:
     """Provider for recommendations that have been reviewed by human curators."""
 
-    scheduled_surface_backend: ScheduledSurfaceProtocol
     sections_backend: SectionsProtocol
 
     def __init__(
         self,
-        scheduled_surface_backend: ScheduledSurfaceProtocol,
         engagement_backend: EngagementBackend,
         prior_backend: PriorBackend,
         sections_backend: SectionsProtocol,
@@ -75,7 +65,6 @@ class CuratedRecommendationsProvider:
         spindle_backend: SpindleBackendProtocol | None = None,
     ) -> None:
         """Initialize the provider with all backend dependencies."""
-        self.scheduled_surface_backend = scheduled_surface_backend
         self.engagement_backend = engagement_backend
         self.prior_backend = prior_backend
         self.sections_backend = sections_backend
@@ -101,48 +90,6 @@ class CuratedRecommendationsProvider:
         if surface_id not in LOCALIZED_SECTION_TITLES:
             return False
         return True
-
-    def rank_recommendations(
-        self,
-        recommendations: list[CuratedRecommendation],
-        request: CuratedRecommendationsRequest,
-    ) -> list[CuratedRecommendation]:
-        """Apply additional processing to the list of recommendations
-        received from Curated Corpus API
-
-        @param recommendations: A list of CuratedRecommendation objects as they are received
-        from Curated Corpus API
-        @param surface_id: a string identifier for the New Tab surface these recommendations
-        are intended for
-        @param request: The full API request with all the data
-        @return: A re-ranked list of curated recommendations
-        """
-        region = derive_region(request.locale, request.region)
-        engagement_region = derive_engagement_region(request)
-        ranker = ThompsonSamplingRanker(
-            engagement_backend=self.engagement_backend,
-            prior_backend=self.prior_backend,
-        )
-        recommendations = ranker.rank_items(
-            recommendations,
-            region=region,
-            engagement_region=engagement_region,
-        )
-
-        # 2. Perform publisher spread on the recommendation set
-        recommendations = spread_publishers(recommendations, spread_distance=3)
-
-        # 1. Finally, perform preferred topics boosting if preferred topics are passed in the request
-        if request.topics:
-            validated_topics: list[Topic] = cast(list[Topic], request.topics)
-            recommendations = boost_preferred_topic(recommendations, validated_topics)
-
-        # 0. Blast-off!
-        for rank, rec in enumerate(recommendations):
-            # Update received_rank now that recommendations have been ranked.
-            rec.receivedRank = rank
-
-        return recommendations[: request.count]
 
     async def fetch(
         self, request: CuratedRecommendationsRequest
@@ -182,8 +129,9 @@ class CuratedRecommendationsProvider:
                 engagement_region=engagement_region,
                 spindle_backend=self.spindle_backend,
             )
-        elif surface_id in ROLLED_OUT_SECTION_SURFACES:
-            # Rolled-out section surfaces: fetch from sections backend instead of scheduler
+        else:
+            # Non-sections requests are served a flat list sourced from the sections backend
+            # via the legacy adapter. Surfaces without sections content get an empty list.
             rescaler = CrawledContentRescaler()
             general_feed = await get_legacy_recommendations_from_sections(
                 sections_backend=self.sections_backend,
@@ -194,22 +142,6 @@ class CuratedRecommendationsProvider:
                 region=region,
                 rescaler=rescaler,
             )
-        else:
-            # Other markets: fetch from scheduled surface backend
-            corpus_items = await self.scheduled_surface_backend.fetch(surface_id)
-            recommendations = [
-                CuratedRecommendation(
-                    **item.model_dump(),
-                    receivedRank=rank,
-                    # Use the topic as a weight-1.0 feature so the client can aggregate a coarse
-                    # interest vector. Data science work shows that using the topics as features
-                    # is effective as a first pass at personalization.
-                    # https://mozilla-hub.atlassian.net/wiki/x/FoV5Ww
-                    features={f"t_{item.topic.value}": 1.0} if item.topic else {},
-                )
-                for rank, item in enumerate(corpus_items)
-            ]
-            general_feed = self.rank_recommendations(recommendations, request)
         local_model = self.local_model_backend.get(
             surface_id,
             experiment_name=request.experimentName,

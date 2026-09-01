@@ -6,7 +6,6 @@ from urllib.parse import quote
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
-    CuratedRecommendationsRequest,
     Locale,
 )
 from merino.curated_recommendations.legacy.protocol import (
@@ -24,7 +23,6 @@ from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
 )
 from merino.curated_recommendations.utils import (
-    ROLLED_OUT_SECTION_SURFACES,
     get_recommendation_surface_id,
     derive_region,
 )
@@ -94,25 +92,18 @@ class LegacyCuratedRecommendationsProvider:
         count: int | None,
         curated_corpus_provider: CuratedRecommendationsProvider,
     ) -> list[CuratedRecommendation]:
-        """Fetch base recommendations from sections backend (US/GB) or scheduler (other)."""
+        """Fetch base recommendations from the sections backend as a flat, ranked list."""
         surface_id = get_recommendation_surface_id(locale, region)
-
-        if surface_id in ROLLED_OUT_SECTION_SURFACES:
-            # Rolled-out section surfaces: fetch from sections backend instead of scheduler
-            rescaler = CrawledContentRescaler()
-            return await get_legacy_recommendations_from_sections(
-                sections_backend=curated_corpus_provider.sections_backend,
-                engagement_backend=curated_corpus_provider.engagement_backend,
-                prior_backend=curated_corpus_provider.prior_backend,
-                surface_id=surface_id,
-                count=count or DEFAULT_RECOMMENDATION_COUNT,
-                region=derive_region(locale, region),
-                rescaler=rescaler,
-            )
-
-        # Other locales: use scheduler via curated recommendations provider
-        request = CuratedRecommendationsRequest(locale=locale, region=region, count=count)
-        return (await curated_corpus_provider.fetch(request)).data
+        rescaler = CrawledContentRescaler()
+        return await get_legacy_recommendations_from_sections(
+            sections_backend=curated_corpus_provider.sections_backend,
+            engagement_backend=curated_corpus_provider.engagement_backend,
+            prior_backend=curated_corpus_provider.prior_backend,
+            surface_id=surface_id,
+            count=count or DEFAULT_RECOMMENDATION_COUNT,
+            region=derive_region(locale, region),
+            rescaler=rescaler,
+        )
 
     async def fetch_recommendations_for_legacy_fx_115_129(
         self,

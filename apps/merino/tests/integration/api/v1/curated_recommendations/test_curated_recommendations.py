@@ -19,8 +19,8 @@ from scipy.stats import linregress
 
 from merino.configs import settings
 from merino.curated_recommendations import (
-    ScheduledSurfaceBackend,
     CuratedRecommendationsProvider,
+    SectionsBackend,
     get_provider,
     get_legacy_provider,
     ConstantPrior,
@@ -393,7 +393,6 @@ def setup_manifest_provider(manifest_provider):
 
 @pytest.fixture(name="corpus_provider")
 def provider(
-    scheduled_surface_backend: ScheduledSurfaceBackend,
     sections_backend: SectionsProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
@@ -403,7 +402,6 @@ def provider(
 ) -> CuratedRecommendationsProvider:
     """Mock curated recommendations provider."""
     return CuratedRecommendationsProvider(
-        scheduled_surface_backend=scheduled_surface_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         sections_backend=sections_backend,
@@ -444,7 +442,7 @@ def fetch_en_us(client: TestClient) -> Response:
 
 
 def fetch_pl_pl(client: TestClient) -> Response:
-    """Make a curated recommendations request with pl-PL locale (uses scheduled_surface backend)"""
+    """Make a non-sections curated recommendations request with pl-PL locale."""
     return cast(
         Response,
         client.post(
@@ -516,36 +514,39 @@ def test_curated_recommendations_sections_request(repeat, client: TestClient):
 class TestLegacyEndpoints:
     """Test the legacy curated recommendations endpoints (fx114 and fx115-129).
 
-    These endpoints have two code paths:
-    - Rolled-out section surfaces (en-US, en-CA, en-GB, de-DE, fr-FR, es-ES, it-IT, de-AT, de-CH, fr-BE): use sections backend via get_legacy_recommendations_from_sections
-    - Other locales (pl-PL, etc.): use scheduler backend via CuratedRecommendationsProvider
+    All markets are served from the sections backend via
+    get_legacy_recommendations_from_sections.
     """
 
-    # Locales that use the sections backend (rolled-out section surfaces)
-    SECTIONS_BACKEND_LOCALES = [
-        "de-AT",
-        "de-CH",
-        "de-DE",
-        "en-CA",
-        "en-GB",
-        "en-US",
-        "es-ES",
-        "fr-BE",
-        "fr-FR",
-        "it-IT",
+    # (locale, region) pairs for all supported markets.
+    # India (NEW_TAB_EN_INTL) is selected by region because no dedicated locale exists for it.
+    SECTIONS_BACKEND_MARKETS: list[tuple[str, str | None]] = [
+        ("de-AT", None),
+        ("de-CH", None),
+        ("de-DE", None),
+        ("en-CA", None),
+        ("en-GB", None),
+        ("en-US", None),
+        ("en-US", "IN"),
+        ("es-ES", None),
+        ("fr-BE", None),
+        ("fr-FR", None),
+        ("it-IT", None),
+        ("pl-PL", None),
     ]
-    # Locales that use the scheduler backend (non-rolled-out)
-    SCHEDULER_BACKEND_LOCALES = ["pl-PL"]
 
     @pytest.mark.parametrize(
-        "locale",
-        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
+        "locale,region",
+        SECTIONS_BACKEND_MARKETS,
     )
-    def test_fx115_129_returns_valid_response(self, locale: str, client: TestClient):
-        """Test the legacy fx115-129 endpoint returns expected response for all supported locales."""
-        response = client.get(
-            "/api/v1/curated-recommendations/legacy-115-129", params={"locale": locale}
-        )
+    def test_fx115_129_returns_valid_response(
+        self, locale: str, region: str | None, client: TestClient
+    ):
+        """Test the legacy fx115-129 endpoint returns expected response for all supported markets."""
+        params = {"locale": locale}
+        if region:
+            params["region"] = region
+        response = client.get("/api/v1/curated-recommendations/legacy-115-129", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -564,15 +565,17 @@ class TestLegacyEndpoints:
         assert all(item["imageUrl"] for item in corpus_items)
 
     @pytest.mark.parametrize(
-        "locale_lang",
-        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
+        "locale_lang,region",
+        SECTIONS_BACKEND_MARKETS,
     )
-    def test_fx114_returns_valid_response(self, locale_lang: str, client: TestClient):
-        """Test the legacy fx114 endpoint returns expected response for all supported locales."""
-        response = client.get(
-            "/api/v1/curated-recommendations/legacy-114",
-            params={"locale_lang": locale_lang},
-        )
+    def test_fx114_returns_valid_response(
+        self, locale_lang: str, region: str | None, client: TestClient
+    ):
+        """Test the legacy fx114 endpoint returns expected response for all supported markets."""
+        params = {"locale_lang": locale_lang}
+        if region:
+            params["region"] = region
+        response = client.get("/api/v1/curated-recommendations/legacy-114", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -596,7 +599,7 @@ class TestLegacyEndpoints:
             ("legacy-114", "locale_lang", "count", 20),
         ],
     )
-    @pytest.mark.parametrize("locale", SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES)
+    @pytest.mark.parametrize("locale,region", SECTIONS_BACKEND_MARKETS)
     def test_count_parameter(
         self,
         endpoint: str,
@@ -604,14 +607,15 @@ class TestLegacyEndpoints:
         count_param: str,
         default_count: int,
         locale: str,
+        region: str | None,
         client: TestClient,
     ):
-        """Test that the count parameter limits results for both endpoints and all locales."""
+        """Test that the count parameter limits results for both endpoints and all markets."""
         requested_count = 5
-        response = client.get(
-            f"/api/v1/curated-recommendations/{endpoint}",
-            params={locale_param: locale, count_param: requested_count},
-        )
+        params = {locale_param: locale, count_param: requested_count}
+        if region:
+            params["region"] = region
+        response = client.get(f"/api/v1/curated-recommendations/{endpoint}", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -671,14 +675,18 @@ class TestLegacyEndpoints:
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     @pytest.mark.parametrize(
         "region,expected_surface",
-        [("GB", SurfaceId.NEW_TAB_EN_GB), ("IE", SurfaceId.NEW_TAB_EN_IE)],
+        [
+            ("GB", SurfaceId.NEW_TAB_EN_GB),
+            ("IE", SurfaceId.NEW_TAB_EN_IE),
+            ("IN", SurfaceId.NEW_TAB_EN_INTL),
+        ],
     )
     def test_en_gb_non_sections_request(
         self, region: str, expected_surface: SurfaceId, client: TestClient
     ):
         """Test en-GB non-sections request via main endpoint (backward-compatible path).
 
-        GB/IE clients without feeds=["sections"] use get_legacy_recommendations_from_sections.
+        GB/IE/IN clients without feeds=["sections"] use get_legacy_recommendations_from_sections.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -857,17 +865,14 @@ class TestCuratedRecommendationsRequestParameters:
         assert response.status_code == 200
 
     @pytest.mark.parametrize("count", [10, 50, 100])
-    def test_curated_recommendations_count(
-        self, count, scheduled_surface_response_data, client: TestClient
-    ):
+    def test_curated_recommendations_count(self, count, client: TestClient):
         """Test the curated recommendations endpoint accepts valid count."""
         response = client.post(
             "/api/v1/curated-recommendations", json={"locale": "en-US", "count": count}
         )
         assert response.status_code == 200
         data = response.json()
-        schedule_count = len(scheduled_surface_response_data["data"]["scheduledSurface"]["items"])
-        assert len(data["data"]) == min(count, schedule_count)
+        assert len(data["data"]) == count
 
     @pytest.mark.parametrize("count", [None, 100.5])
     def test_curated_recommendations_count_failure(self, count, client: TestClient):
@@ -960,240 +965,30 @@ class TestCuratedRecommendationsRequestParameters:
         assert all(item["topic"] is not None for item in corpus_items)
 
     @pytest.mark.parametrize(
-        "preferred_topics",
-        [
-            [Topic.EDUCATION],
-            [Topic.EDUCATION, Topic.PERSONAL_FINANCE],
-            [Topic.EDUCATION, Topic.PERSONAL_FINANCE, Topic.BUSINESS],
-            [Topic.EDUCATION, Topic.PERSONAL_FINANCE, Topic.BUSINESS, Topic.TECHNOLOGY],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.BUSINESS,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-                Topic.SPORTS,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-                Topic.SPORTS,
-                Topic.SCIENCE,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-                Topic.SPORTS,
-                Topic.SCIENCE,
-                Topic.SELF_IMPROVEMENT,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-                Topic.SPORTS,
-                Topic.SCIENCE,
-                Topic.SELF_IMPROVEMENT,
-                Topic.PARENTING,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-                Topic.SPORTS,
-                Topic.SCIENCE,
-                Topic.SELF_IMPROVEMENT,
-                Topic.PARENTING,
-                Topic.CAREER,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-                Topic.SPORTS,
-                Topic.SCIENCE,
-                Topic.SELF_IMPROVEMENT,
-                Topic.PARENTING,
-                Topic.CAREER,
-                Topic.HEALTH_FITNESS,
-            ],
-            [
-                Topic.EDUCATION,
-                Topic.PERSONAL_FINANCE,
-                Topic.BUSINESS,
-                Topic.TECHNOLOGY,
-                Topic.TRAVEL,
-                Topic.FOOD,
-                Topic.ARTS,
-                Topic.POLITICS,
-                Topic.GAMING,
-                Topic.SPORTS,
-                Topic.SCIENCE,
-                Topic.SELF_IMPROVEMENT,
-                Topic.PARENTING,
-                Topic.CAREER,
-                Topic.HEALTH_FITNESS,
-                Topic.HOME,
-            ],
-        ],
-    )
-    def test_non_sections_request_boosts_preferred_topics(
-        self, preferred_topics, client: TestClient
-    ):
-        """Test non-sections requests boost preferred topics to top positions.
-
-        Uses pl-PL locale (scheduler backend path) which supports topic boosting.
-        Note: en-US non-sections requests intentionally do NOT apply topic boosting.
-        """
-        response = client.post(
-            "/api/v1/curated-recommendations",
-            json={"locale": "pl-PL", "topics": preferred_topics},
-        )
-        data = response.json()
-        corpus_items = data["data"]
-
-        assert response.status_code == 200
-        # assert items are returned
-        assert len(corpus_items) == 100
-
-        # determine the number of recs that are expected to be preferred
-        # based on number of preferred topics
-        top_recs = min(10, 2 * len(preferred_topics))
-        # store the topics for the top N recs in an array
-        top_topics = [item["topic"] for item in corpus_items[:top_recs]]
-        # assert that all top_topics are preferred topics
-        assert all([topic in preferred_topics for topic in top_topics])
-
-    @pytest.mark.parametrize(
-        "topics, expected_topics, expected_warning",
+        "topics, expected_warning",
         [
             # Valid topic, but must be wrapped in a list
-            (
-                "arts",
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Topics not wrapped in a list: arts",
-            ),
+            ("arts", "Topics not wrapped in a list: arts"),
             # Invalid topic & must be wrapped in a list
-            (
-                "invalid-topic",
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Topics not wrapped in a list: invalid-topic",
-            ),
+            ("invalid-topic", "Topics not wrapped in a list: invalid-topic"),
             # Invalid topic in a list
-            (
-                ["not-a-valid-topic"],
-                [Topic.CAREER, Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD],
-                "Invalid topic: not-a-valid-topic",
-            ),
+            (["not-a-valid-topic"], "Invalid topic: not-a-valid-topic"),
             # 2 valid topics, 1 invalid topic
-            (
-                ["food", "invalid_topic", "society-parenting"],
-                [Topic.FOOD, Topic.PARENTING, Topic.PARENTING, Topic.FOOD, Topic.CAREER],
-                "Invalid topic: invalid_topic",
-            ),
+            (["food", "invalid_topic", "society-parenting"], "Invalid topic: invalid_topic"),
         ],
-    )
-    @pytest.mark.parametrize(
-        "repeat",  # See thompson_sampling config in testing.toml for how to repeat this test.
-        range(settings.curated_recommendations.rankers.thompson_sampling.test_repeat_count),
     )
     def test_curated_recommendations_invalid_topic_return_200(
         self,
         topics,
-        expected_topics,
         expected_warning,
-        scheduled_surface_response_data_short,
-        fixture_request_data,
-        scheduled_surface_http_client,
         caplog,
-        repeat,
         filter_caplog: FilterCaplogFixture,
         client: TestClient,
     ):
         """Test the curated recommendations endpoint ignores invalid topic in topics param.
         Should treat invalid topic as blank.
-        Uses pl-PL locale to test scheduled_surface backend behavior.
         """
         caplog.set_level(logging.WARN)
-        scheduled_surface_http_client.post.return_value = Response(
-            status_code=200,
-            json=scheduled_surface_response_data_short,
-            request=fixture_request_data,
-        )
         response = client.post(
             "/api/v1/curated-recommendations", json={"locale": "pl-PL", "topics": topics}
         )
@@ -1201,9 +996,7 @@ class TestCuratedRecommendationsRequestParameters:
         corpus_items = data["data"]
         # assert 200 is returned even tho some invalid topics
         assert response.status_code == 200
-        # get topics in returned recs
-        result_topics = [item["topic"] for item in corpus_items]
-        assert set(result_topics) == set(expected_topics)
+        assert len(corpus_items) > 0
         # Assert that a warning was logged with a descriptive message when invalid topic
         warnings = filter_caplog(caplog.records, "merino.curated_recommendations.protocol")
 
@@ -1220,13 +1013,11 @@ class TestCuratedRecommendationsRequestParameters:
 
 class TestCorpusApiCaching:
     """Tests covering the caching behavior of the Corpus backend.
-    Uses pl-PL locale to test scheduled_surface backend caching (en-US uses sections backend).
+    Uses pl-PL non-sections requests, which are served from the sections backend.
     """
 
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
-    def test_single_request_multiple_fetches(
-        self, scheduled_surface_http_client, client: TestClient
-    ):
+    def test_single_request_multiple_fetches(self, sections_http_client, client: TestClient):
         """Test that only a single request is made to the curated-corpus-api."""
         # Gather multiple fetch calls
         results = [fetch_pl_pl(client) for _ in range(3)]
@@ -1234,7 +1025,7 @@ class TestCorpusApiCaching:
         assert all(len(result.json()["data"]) > 0 for result in results)
 
         # Assert that exactly one request was made to the corpus api
-        scheduled_surface_http_client.post.assert_called_once()
+        sections_http_client.post.assert_called_once()
 
     @freezegun.freeze_time("2012-01-14 00:00:00", tick=True, tz_offset=0)
     @pytest.mark.parametrize(
@@ -1247,9 +1038,9 @@ class TestCorpusApiCaching:
     @pytest.mark.asyncio
     async def test_single_request_multiple_failed_fetches(
         self,
-        scheduled_surface_http_client,
+        sections_http_client,
         fixture_request_data,
-        scheduled_surface_response_data,
+        sections_response_data,
         fixture_graphql_200ok_with_error_response,
         caplog,
         error_type,
@@ -1284,11 +1075,11 @@ class TestCorpusApiCaching:
             else:
                 return Response(
                     status_code=200,
-                    json=scheduled_surface_response_data,
+                    json=sections_response_data,
                     request=fixture_request_data,
                 )
 
-        scheduled_surface_http_client.post = AsyncMock(side_effect=temporary_downtime)
+        sections_http_client.post = AsyncMock(side_effect=temporary_downtime)
 
         # Hit the endpoint until a 200 response is received or until timeout.
         while datetime.now() < start_time + timedelta(seconds=1):
@@ -1302,7 +1093,7 @@ class TestCorpusApiCaching:
         assert result.status_code == 200
 
         # Assert that we did not send a lot of requests to the backend.
-        assert scheduled_surface_http_client.post.call_count == 2
+        assert sections_http_client.post.call_count == 2
 
         # Assert that a warning was logged with a descriptive message.
         warnings = [r for r in caplog.records if r.levelname == "WARNING"]
@@ -1311,30 +1102,29 @@ class TestCorpusApiCaching:
     @pytest.mark.asyncio
     async def test_cache_returned_on_subsequent_calls(
         self,
-        scheduled_surface_http_client,
-        scheduled_surface_response_data,
+        sections_http_client,
+        sections_response_data,
         fixture_request_data,
         client: TestClient,
     ):
-        """Test that the cache expires, and subsequent requests return new data.
-        Uses pl-PL locale to test scheduled_surface backend caching.
-        """
+        """Test that the cache expires, and subsequent requests return new data."""
         with freezegun.freeze_time(tick=True) as frozen_datetime:
             # First fetch to populate cache
             initial_response = fetch_pl_pl(client)
             initial_data = initial_response.json()
 
-            for item in scheduled_surface_response_data["data"]["scheduledSurface"]["items"]:
-                item["corpusItem"]["title"] += " (NEW)"  # Change all the titles
+            for section in sections_response_data["data"]["getSections"]:
+                for item in section["sectionItems"]:
+                    item["corpusItem"]["title"] += " (NEW)"  # Change all the titles
 
-            scheduled_surface_http_client.post.return_value = Response(
+            sections_http_client.post.return_value = Response(
                 status_code=200,
-                json=scheduled_surface_response_data,
+                json=sections_response_data,
                 request=fixture_request_data,
             )
 
             # Progress time to after the cache expires.
-            frozen_datetime.tick(delta=ScheduledSurfaceBackend.cache_time_to_live_max)
+            frozen_datetime.tick(delta=SectionsBackend.cache_time_to_live_max)
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
             # When the cache is expired, the first fetch may return stale data.
@@ -1344,7 +1134,7 @@ class TestCorpusApiCaching:
             # Next fetch should get the new data from the cache
             new_response = fetch_pl_pl(client)
 
-            assert scheduled_surface_http_client.post.call_count == 2
+            assert sections_http_client.post.call_count == 2
 
             new_data = new_response.json()
 
@@ -1352,17 +1142,17 @@ class TestCorpusApiCaching:
             assert all("NEW" in item["title"] for item in new_data["data"])
 
     def test_valid_cache_returned_on_error(
-        self, scheduled_surface_http_client, fixture_request_data, caplog, client: TestClient
+        self, sections_http_client, fixture_request_data, caplog, client: TestClient
     ):
         """Test that the cache does not cache error data even if expired & returns latest valid data from cache."""
         # First fetch to populate cache with good data
         initial_response = fetch_pl_pl(client)
         initial_data = initial_response.json()
         assert initial_response.status_code == 200
-        assert scheduled_surface_http_client.post.call_count == 1
+        assert sections_http_client.post.call_count == 1
 
         # Simulate 503 error from Corpus API
-        scheduled_surface_http_client.post.return_value = Response(
+        sections_http_client.post.return_value = Response(
             status_code=503,
             request=fixture_request_data,
         )
@@ -1378,7 +1168,7 @@ class TestCorpusApiCaching:
 
 class TestCuratedRecommendationsMetrics:
     """Tests that the right metrics are recorded for curated-recommendations requests.
-    Uses pl-PL locale to test scheduled_surface backend metrics.
+    Uses pl-PL non-sections requests, which are served from the sections backend.
     """
 
     def test_metrics_cache_miss(self, mocker: MockerFixture, client: TestClient) -> None:
@@ -1390,16 +1180,16 @@ class TestCuratedRecommendationsMetrics:
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
         assert metric_keys == [
-            "corpus_api.scheduled_surface.timing",
-            "corpus_api.scheduled_surface.status_codes.200",
+            "corpus_api.get_sections.timing",
+            "corpus_api.get_sections.status_codes.200",
         ]
 
     def test_metrics_corpus_api_error(
         self,
         mocker: MockerFixture,
-        scheduled_surface_http_client,
+        sections_http_client,
         fixture_request_data,
-        scheduled_surface_response_data,
+        sections_response_data,
         client: TestClient,
     ) -> None:
         """Test that metrics are recorded when the curated-corpus-api returns a 500 error"""
@@ -1415,21 +1205,21 @@ class TestCuratedRecommendationsMetrics:
             else:
                 return Response(
                     status_code=200,
-                    json=scheduled_surface_response_data,
+                    json=sections_response_data,
                     request=fixture_request_data,
                 )
 
-        scheduled_surface_http_client.post = AsyncMock(side_effect=first_request_returns_error)
+        sections_http_client.post = AsyncMock(side_effect=first_request_returns_error)
 
         fetch_pl_pl(client)
 
         # TODO: Remove reliance on internal details of aiodogstatsd
         metric_keys: list[str] = [call.args[0] for call in report.call_args_list]
         assert metric_keys == [
-            "corpus_api.scheduled_surface.timing",
-            "corpus_api.scheduled_surface.status_codes.500",
-            "corpus_api.scheduled_surface.timing",
-            "corpus_api.scheduled_surface.status_codes.200",
+            "corpus_api.get_sections.timing",
+            "corpus_api.get_sections.status_codes.500",
+            "corpus_api.get_sections.timing",
+            "corpus_api.get_sections.status_codes.200",
         ]
 
 
@@ -2619,8 +2409,6 @@ class TestSections:
         derived_region,
         mocker,
         engagement_backend,
-        scheduled_surface_http_client,
-        fixture_request_data,
         client: TestClient,
     ):
         """Ensure that when fetching a 'sections' feed we pass the right region into engagement.get"""
@@ -2764,8 +2552,8 @@ class TestSections:
     def test_india_without_sections_feed_is_not_forced_into_sections(self, client: TestClient):
         """Test that clients in India that do not request sections keep the legacy grid.
 
-        NEW_TAB_EN_INTL is not in ROLLED_OUT_SECTION_SURFACES, so non-sections requests are
-        still served from the scheduled surface backend.
+        Non-sections requests are served a flat list sourced from the sections backend (via
+        the legacy adapter), not a sections feed.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2777,10 +2565,11 @@ class TestSections:
         assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_INTL.value
         assert data["feeds"] is None
         assert len(data["data"]) > 0
+        # scheduledCorpusItemId equals corpusItemId (sections backend behavior)
+        assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in data["data"])
 
 
 def test_uk_sections_with_gb_backend_data(
-    scheduled_surface_backend: ScheduledSurfaceBackend,
     sections_gb_backend: SectionsProtocol,
     engagement_backend: EngagementBackend,
     prior_backend: PriorBackend,
@@ -2796,7 +2585,6 @@ def test_uk_sections_with_gb_backend_data(
     """
     # Create a provider specifically with GB sections backend
     gb_provider = CuratedRecommendationsProvider(
-        scheduled_surface_backend=scheduled_surface_backend,
         engagement_backend=engagement_backend,
         prior_backend=prior_backend,
         sections_backend=sections_gb_backend,
@@ -2867,12 +2655,12 @@ def test_uk_sections_with_gb_backend_data(
 
 def test_curated_recommendations_enriched_with_icons(
     manifest_provider,
-    scheduled_surface_http_client,
+    sections_http_client,
     fixture_request_data,
     client: TestClient,
 ):
     """Test the enrichment of a curated recommendation with an added icon-url.
-    Uses pl-PL locale to test scheduled_surface backend icon enrichment.
+    Uses a pl-PL non-sections request, which is served from the sections backend.
     """
     # Set up the manifest data first
     manifest_provider.manifest_data.domains = [
@@ -2890,26 +2678,37 @@ def test_curated_recommendations_enriched_with_icons(
 
     mocked_response = {
         "data": {
-            "scheduledSurface": {
-                "items": [
-                    {
-                        "id": "scheduledSurfaceItemId-ABC",
-                        "corpusItem": {
-                            "id": "corpusItemId-XYZ",
-                            "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-pl-pl",
-                            "title": "Some MS Article",
-                            "excerpt": "All about Microsoft something",
-                            "topic": "tech",
-                            "publisher": "ExamplePublisher",
-                            "isTimeSensitive": False,
-                            "imageUrl": "https://somewhere.com/test.jpg",
-                        },
-                    }
-                ]
-            }
+            "getSections": [
+                {
+                    "createSource": "ML",
+                    "externalId": "tech",
+                    "active": True,
+                    "title": "Tech",
+                    "description": None,
+                    "heroTitle": None,
+                    "heroDescription": None,
+                    "followable": True,
+                    "allowAds": True,
+                    "iab": None,
+                    "sectionItems": [
+                        {
+                            "corpusItem": {
+                                "id": "corpusItemId-XYZ",
+                                "url": "https://www.microsoft.com/some-article?utm_source=firefox-newtab-pl-pl",
+                                "title": "Some MS Article",
+                                "excerpt": "All about Microsoft something",
+                                "topic": "TECHNOLOGY",
+                                "publisher": "ExamplePublisher",
+                                "isTimeSensitive": False,
+                                "imageUrl": "https://somewhere.com/test.jpg",
+                            }
+                        }
+                    ],
+                }
+            ]
         }
     }
-    scheduled_surface_http_client.post.return_value = Response(
+    sections_http_client.post.return_value = Response(
         status_code=200,
         json=mocked_response,
         request=fixture_request_data,
