@@ -143,7 +143,15 @@ async def test_heartbeat_refreshes_the_file(tmp_path: Path) -> None:
     await asyncio.gather(task, return_exceptions=True)
 
     assert path.read_text().isdigit()
-    assert not (tmp_path / "nested" / "heartbeat.tmp").exists()  # no leftover tmp file
+    # Cancelling the task does not stop an in-flight to_thread write: the executor thread may
+    # still be between writing heartbeat.tmp and its atomic rename. Wait for the rename to
+    # finish instead of asserting immediately.
+    tmp = tmp_path / "nested" / "heartbeat.tmp"
+    for _ in range(100):
+        if not tmp.exists():
+            break
+        await asyncio.sleep(0.01)
+    assert not tmp.exists()  # no leftover tmp file
 
 
 @pytest.mark.asyncio
