@@ -456,13 +456,13 @@ async def curated_content(
         This will help return more relevant recommendations. If `region` is missing or cannot
         be parsed as a 2-letter code, it is derived from the second part of the `locale`
         parameter, if present (e.g. en-US → US).
-    - `count`: [Optional] The maximum number of recommendations in the flat `data` list.
-        Defaults to 100. Ignored when the sections feed is requested.
+    - `count`: [Optional] The maximum number of recommendations in the legacy grid response
+        (the `data` list). Defaults to 100. Ignored when the sections feed is requested.
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc]. Accepted for
         backward compatibility, but it no longer affects the ranking of recommendations.
     - `feeds`: [Optional] A list of feeds to include; "sections" is the only recognized value.
         When "sections" is requested, recommendations are grouped into topic sections in the
-        `feeds` response field; otherwise a flat list is returned in `data`.
+        `feeds` response field; otherwise a legacy grid response is returned in `data`.
     - `sections`: [Optional] The user's followed and blocked sections. Followed sections rank
         directly below the top stories section (`followedAt` orders them). Blocking removes
         recommendations whose topic matches the blocked section id; other blocked sections are
