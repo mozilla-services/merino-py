@@ -1040,9 +1040,11 @@ class TestCorpusApiCaching:
                 request=fixture_request_data,
             )
 
-            # Progress time to after the cache expires.
-            frozen_datetime.tick(delta=SectionsBackend.cache_time_to_live_max)
-            frozen_datetime.tick(delta=timedelta(seconds=1))
+            # Progress time to after the cache expires, with a margin: freezegun's tick()
+            # advances from the freeze start, so real time spent since freezing is not counted.
+            frozen_datetime.tick(
+                delta=SectionsBackend.cache_time_to_live_max + timedelta(minutes=1)
+            )
 
             # When the cache is expired, the first fetch may return stale data.
             fetch_pl_pl(client)

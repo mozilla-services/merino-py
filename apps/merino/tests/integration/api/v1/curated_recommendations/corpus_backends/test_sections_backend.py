@@ -6,6 +6,7 @@ import freezegun
 import logging
 import pytest
 
+from datetime import timedelta
 from httpx import AsyncClient, HTTPStatusError, Response
 from tests.types import FilterCaplogFixture
 from unittest.mock import AsyncMock
@@ -386,6 +387,7 @@ class TestSectionsCircuitBreaker:
         make_sections_backend,
         sections_http_client: AsyncMock,
         fixture_request_data,
+        sections_circuit_breaker,
         caplog,
         filter_caplog: FilterCaplogFixture,
     ):
@@ -401,8 +403,9 @@ class TestSectionsCircuitBreaker:
 
             assert sections_http_client.post.call_count == 1
 
-            # fast-forward time so the cache expires
-            time_gem.tick(delta=SectionsBackend.cache_time_to_live_max)
+            # Fast-forward past the max TTL with a margin: freezegun's tick() advances
+            # from the freeze start, so real time spent since freezing is not counted.
+            time_gem.tick(delta=SectionsBackend.cache_time_to_live_max + timedelta(minutes=1))
 
             # open the circuit breaker
             await trip_breaker(make_sections_backend, fixture_request_data)
@@ -439,8 +442,9 @@ class TestSectionsCircuitBreaker:
 
             assert sections_circuit_breaker.opened
 
-            # advance time so the circuit breaker recovers
-            time_gem.tick(RECOVERY_TIMEOUT + 5)
+            # Advance past the recovery timeout with a margin: freezegun's tick() advances
+            # from the freeze start, so the real time trip_breaker consumed is not counted.
+            time_gem.tick(RECOVERY_TIMEOUT + 60)
 
             assert sections_circuit_breaker.state == STATE_HALF_OPEN
 
