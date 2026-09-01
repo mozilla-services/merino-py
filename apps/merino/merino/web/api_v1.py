@@ -455,7 +455,7 @@ async def curated_content(
     - `region`: [Optional] The country-level region, for example US or IE (Ireland).
         This will help return more relevant recommendations. If `region` is missing or cannot
         be parsed as a 2-letter code, it is derived from the second part of the `locale`
-        parameter, if present (e.g. en-US → US).
+        parameter, if present (e.g. en-US -> US).
     - `count`: [Optional] The maximum number of recommendations in the legacy grid response
         (the `data` list). Defaults to 100. Ignored when the sections feed is requested.
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc]. Accepted for
