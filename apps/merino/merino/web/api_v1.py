@@ -458,8 +458,6 @@ async def curated_content(
         parameter, if present (e.g. en-US -> US).
     - `count`: [Optional] The maximum number of recommendations in the legacy grid response
         (the `data` list). Defaults to 100. Ignored when the sections feed is requested.
-    - `topics`: [Optional] A list of preferred [topics][curated-topics-doc]. Accepted for
-        backward compatibility, but it no longer affects the ranking of recommendations.
     - `feeds`: [Optional] A list of feeds to include; "sections" is the only recognized value.
         When "sections" is requested, recommendations are grouped into topic sections in the
         `feeds` response field; otherwise a legacy grid response is returned in `data`.
@@ -485,7 +483,7 @@ async def curated_content(
         its behavior. Any string or null is accepted.
     - `experimentBranch`: [Optional] The branch name of the Nimbus experiment that the user is in.
 
-    [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
+    Unknown body parameters are accepted and ignored, including the retired `topics` parameter.
     """
     return await provider.fetch(curated_recommendations_request)
 

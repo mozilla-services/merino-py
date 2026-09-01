@@ -13,7 +13,7 @@ import os
 import socket
 import struct
 from itertools import chain
-from random import choice, randint, sample
+from random import choice, randint
 from typing import Any
 
 import faker
@@ -24,7 +24,6 @@ from locust.runners import MasterRunner
 from pydantic import BaseModel
 
 from merino.configs import settings
-from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
@@ -527,24 +526,6 @@ class MerinoUser(_MerinoBaseUser):
             CuratedRecommendationsRequest(locale=choice(list(Locale))), "locale"
         )
 
-    @task(weight=52)
-    def curated_recommendations_random_topics(self) -> None:
-        """Send request to get curated recommendations with a random number of topics (1-4).
-
-        The topics field is accepted for backward compatibility but no longer affects
-        ranking; this task probes API compatibility for requests that still send it.
-        """
-        num_topics = randint(1, 4)  # Randomly choose between 1 and 4 topics
-        self._request_recommendations(
-            CuratedRecommendationsRequest(
-                locale=choice(list(Locale)),
-                topics=self.generate_random_arr_from_enum(
-                    enum_values=list(Topic), array_length=num_topics
-                ),
-            ),
-            "topics",
-        )
-
     def _request_recommendations(
         self,
         data: CuratedRecommendationsRequest,
@@ -582,11 +563,6 @@ class MerinoUser(_MerinoBaseUser):
             # from Merino. This will raise a ValidationError if the response is missing
             # fields which will be reported as a failure in Locust's statistics.
             CuratedRecommendationsResponse(**response.json())
-
-    @staticmethod
-    def generate_random_arr_from_enum(enum_values, array_length: int):
-        """Generate an array of random unique enum values."""
-        return sample(enum_values, array_length)
 
     @staticmethod
     def _get_ip_from_range(begin_ip_address: str, end_ip_address: str) -> str:

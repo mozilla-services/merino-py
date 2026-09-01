@@ -3,7 +3,6 @@
 import asyncio
 import json
 from datetime import timedelta, datetime
-import logging
 from typing import Any, cast
 from unittest.mock import AsyncMock
 from uuid import UUID
@@ -72,7 +71,6 @@ from merino.curated_recommendations.protocol import (
 from merino.main import app
 from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.manifest.backends.protocol import Domain
-from tests.types import FilterCaplogFixture
 
 # Music, NFL, Movies, Soccer, NBA
 REC_HIGH_CTR_IDS = [
@@ -445,9 +443,7 @@ def fetch_pl_pl(client: TestClient) -> Response:
     """Make a non-sections curated recommendations request with pl-PL locale."""
     return cast(
         Response,
-        client.post(
-            "/api/v1/curated-recommendations", json={"locale": "pl-PL", "topics": [Topic.FOOD]}
-        ),
+        client.post("/api/v1/curated-recommendations", json={"locale": "pl-PL"}),
     )
 
 
@@ -899,110 +895,30 @@ class TestCuratedRecommendationsRequestParameters:
         )
         assert response.status_code == 400
 
-    @pytest.mark.parametrize(
-        "topics",
-        [
-            None,
-            [],
-            # Each topic by itself is accepted.
-            ["arts"],
-            ["education"],
-            ["hobbies"],
-            ["society-parenting"],
-            ["business"],
-            ["education-science"],
-            ["finance"],
-            ["food"],
-            ["government"],
-            ["health"],
-            ["home"],
-            ["society"],
-            ["sports"],
-            ["tech"],
-            ["travel"],
-            # Multiple topics
-            ["tech", "travel"],
-            ["arts", "education", "hobbies", "society-parenting"],
-            [
-                "arts",
-                "education",
-                "hobbies",
-                "society-parenting",
-                "business",
-                "education-science",
-                "finance",
-                "food",
-                "government",
-                "health",
-                "home",
-                "society",
-                "sports",
-                "tech",
-                "travel",
-            ],
-        ],
-    )
-    def test_curated_recommendations_topics(self, topics, client: TestClient):
-        """Test the curated recommendations endpoint accepts valid topics."""
+    def test_curated_recommendations_ignores_unknown_parameters(self, client: TestClient):
+        """Test that unknown body parameters, including the retired topics parameter, are
+        accepted and ignored.
+        """
         response = client.post(
-            "/api/v1/curated-recommendations", json={"locale": "en-US", "topics": topics}
+            "/api/v1/curated-recommendations",
+            json={"locale": "en-US", "topics": ["arts", "not-a-topic"], "foo": "bar"},
         )
-        assert response.status_code == 200, f"{topics} resulted in {response.status_code}"
+
+        assert response.status_code == 200
+        assert len(response.json()["data"]) > 0
 
     @pytest.mark.parametrize(
         "locale",
         ["en-US", "en-GB", "fr-FR", "es-ES", "it-IT", "de-DE"],
     )
-    @pytest.mark.parametrize("topics", [None, ["arts", "finance"]])
-    def test_curated_recommendations_en_topic(self, locale, topics, client: TestClient):
+    def test_curated_recommendations_en_topic(self, locale, client: TestClient):
         """Test that topic is present."""
-        response = client.post(
-            "/api/v1/curated-recommendations", json={"locale": locale, "topics": topics}
-        )
+        response = client.post("/api/v1/curated-recommendations", json={"locale": locale})
         data = response.json()
         corpus_items = data["data"]
 
         assert len(corpus_items) > 0
         assert all(item["topic"] is not None for item in corpus_items)
-
-    @pytest.mark.parametrize(
-        "topics, expected_warning",
-        [
-            # Valid topic, but must be wrapped in a list
-            ("arts", "Topics not wrapped in a list: arts"),
-            # Invalid topic & must be wrapped in a list
-            ("invalid-topic", "Topics not wrapped in a list: invalid-topic"),
-            # Invalid topic in a list
-            (["not-a-valid-topic"], "Invalid topic: not-a-valid-topic"),
-            # 2 valid topics, 1 invalid topic
-            (["food", "invalid_topic", "society-parenting"], "Invalid topic: invalid_topic"),
-        ],
-    )
-    def test_curated_recommendations_invalid_topic_return_200(
-        self,
-        topics,
-        expected_warning,
-        caplog,
-        filter_caplog: FilterCaplogFixture,
-        client: TestClient,
-    ):
-        """Test the curated recommendations endpoint ignores invalid topic in topics param.
-        Should treat invalid topic as blank.
-        """
-        caplog.set_level(logging.WARN)
-        response = client.post(
-            "/api/v1/curated-recommendations", json={"locale": "pl-PL", "topics": topics}
-        )
-        data = response.json()
-        corpus_items = data["data"]
-        # assert 200 is returned even tho some invalid topics
-        assert response.status_code == 200
-        assert len(corpus_items) > 0
-        # Assert that a warning was logged with a descriptive message when invalid topic
-        warnings = filter_caplog(caplog.records, "merino.curated_recommendations.protocol")
-
-        assert len(warnings) == 1
-        assert expected_warning in warnings[0].message
 
     def test_curated_recommendations_locale_bad_request(self, client: TestClient):
         """Test the curated recommendations endpoint response is 400 if locale is not provided"""
@@ -1228,13 +1144,6 @@ class TestCorpusApiRanking:
     """Tests covering the ranking behavior of the Corpus backend"""
 
     @pytest.mark.parametrize(
-        "topics",
-        [
-            [Topic.POLITICS],
-            None,
-        ],
-    )
-    @pytest.mark.parametrize(
         "locale,region,derived_region",
         [
             ("en-US", None, "US"),
@@ -1256,7 +1165,6 @@ class TestCorpusApiRanking:
     )
     def test_thompson_sampling_behavior(
         self,
-        topics,
         engagement_backend,
         experiment_name,
         experiment_branch,
@@ -1277,7 +1185,6 @@ class TestCorpusApiRanking:
                 json={
                     "locale": locale,
                     "region": region,
-                    "topics": topics,
                     "experimentName": experiment_name,
                     "experimentBranch": experiment_branch,
                 },
