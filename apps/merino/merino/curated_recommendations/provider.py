@@ -75,7 +75,7 @@ class CuratedRecommendationsProvider:
         self.spindle_backend = spindle_backend
 
     @staticmethod
-    def is_sections_experiment(
+    def is_sections_request(
         request: CuratedRecommendationsRequest,
         surface_id: SurfaceId,
     ) -> bool:
@@ -108,7 +108,7 @@ class CuratedRecommendationsProvider:
             if self.ml_recommendations_backend
             else None
         )
-        if self.is_sections_experiment(request, surface_id):
+        if self.is_sections_request(request, surface_id):
             inferred_interests = self.process_request_interests(
                 request,
                 surface_id,

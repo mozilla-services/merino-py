@@ -74,8 +74,8 @@ class TestCuratedRecommendationTileId:
             )
 
 
-class TestIsSectionsExperiment:
-    """Unit tests for CuratedRecommendationsProvider.is_sections_experiment."""
+class TestIsSectionsRequest:
+    """Unit tests for CuratedRecommendationsProvider.is_sections_request."""
 
     @pytest.mark.parametrize(
         "locale, surface_id",
@@ -106,7 +106,7 @@ class TestIsSectionsExperiment:
             experimentName=experiment_name,
             experimentBranch=experiment_branch,
         )
-        assert CuratedRecommendationsProvider.is_sections_experiment(request, surface_id) is True
+        assert CuratedRecommendationsProvider.is_sections_request(request, surface_id) is True
 
     @pytest.mark.parametrize(
         "locale, surface_id",
@@ -123,4 +123,4 @@ class TestIsSectionsExperiment:
             experimentName="some-unrelated-experiment",
             experimentBranch="treatment",
         )
-        assert CuratedRecommendationsProvider.is_sections_experiment(request, surface_id) is False
+        assert CuratedRecommendationsProvider.is_sections_request(request, surface_id) is False
