@@ -517,35 +517,42 @@ class TestLegacyEndpoints:
     """Test the legacy curated recommendations endpoints (fx114 and fx115-129).
 
     These endpoints have two code paths:
-    - Rolled-out section surfaces (en-US, en-CA, en-GB, de-DE, fr-FR, es-ES, it-IT, de-AT, de-CH, fr-BE): use sections backend via get_legacy_recommendations_from_sections
+    - Rolled-out section surfaces (en-US, en-CA, en-GB, de-DE, fr-FR, es-ES, it-IT, de-AT,
+      de-CH, fr-BE, and region IN): use sections backend via
+      get_legacy_recommendations_from_sections
     - Other locales (pl-PL, etc.): use scheduler backend via CuratedRecommendationsProvider
     """
 
-    # Locales that use the sections backend (rolled-out section surfaces)
-    SECTIONS_BACKEND_LOCALES = [
-        "de-AT",
-        "de-CH",
-        "de-DE",
-        "en-CA",
-        "en-GB",
-        "en-US",
-        "es-ES",
-        "fr-BE",
-        "fr-FR",
-        "it-IT",
+    # (locale, region) pairs that use the sections backend (rolled-out section surfaces).
+    # India (NEW_TAB_EN_INTL) is selected by region because no dedicated locale exists for it.
+    SECTIONS_BACKEND_MARKETS: list[tuple[str, str | None]] = [
+        ("de-AT", None),
+        ("de-CH", None),
+        ("de-DE", None),
+        ("en-CA", None),
+        ("en-GB", None),
+        ("en-US", None),
+        ("en-US", "IN"),
+        ("es-ES", None),
+        ("fr-BE", None),
+        ("fr-FR", None),
+        ("it-IT", None),
     ]
-    # Locales that use the scheduler backend (non-rolled-out)
-    SCHEDULER_BACKEND_LOCALES = ["pl-PL"]
+    # (locale, region) pairs that use the scheduler backend (non-rolled-out)
+    SCHEDULER_BACKEND_MARKETS: list[tuple[str, str | None]] = [("pl-PL", None)]
 
     @pytest.mark.parametrize(
-        "locale",
-        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
+        "locale,region",
+        SECTIONS_BACKEND_MARKETS + SCHEDULER_BACKEND_MARKETS,
     )
-    def test_fx115_129_returns_valid_response(self, locale: str, client: TestClient):
-        """Test the legacy fx115-129 endpoint returns expected response for all supported locales."""
-        response = client.get(
-            "/api/v1/curated-recommendations/legacy-115-129", params={"locale": locale}
-        )
+    def test_fx115_129_returns_valid_response(
+        self, locale: str, region: str | None, client: TestClient
+    ):
+        """Test the legacy fx115-129 endpoint returns expected response for all supported markets."""
+        params = {"locale": locale}
+        if region:
+            params["region"] = region
+        response = client.get("/api/v1/curated-recommendations/legacy-115-129", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -564,15 +571,17 @@ class TestLegacyEndpoints:
         assert all(item["imageUrl"] for item in corpus_items)
 
     @pytest.mark.parametrize(
-        "locale_lang",
-        SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES,
+        "locale_lang,region",
+        SECTIONS_BACKEND_MARKETS + SCHEDULER_BACKEND_MARKETS,
     )
-    def test_fx114_returns_valid_response(self, locale_lang: str, client: TestClient):
-        """Test the legacy fx114 endpoint returns expected response for all supported locales."""
-        response = client.get(
-            "/api/v1/curated-recommendations/legacy-114",
-            params={"locale_lang": locale_lang},
-        )
+    def test_fx114_returns_valid_response(
+        self, locale_lang: str, region: str | None, client: TestClient
+    ):
+        """Test the legacy fx114 endpoint returns expected response for all supported markets."""
+        params = {"locale_lang": locale_lang}
+        if region:
+            params["region"] = region
+        response = client.get("/api/v1/curated-recommendations/legacy-114", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -596,7 +605,7 @@ class TestLegacyEndpoints:
             ("legacy-114", "locale_lang", "count", 20),
         ],
     )
-    @pytest.mark.parametrize("locale", SECTIONS_BACKEND_LOCALES + SCHEDULER_BACKEND_LOCALES)
+    @pytest.mark.parametrize("locale,region", SECTIONS_BACKEND_MARKETS + SCHEDULER_BACKEND_MARKETS)
     def test_count_parameter(
         self,
         endpoint: str,
@@ -604,14 +613,15 @@ class TestLegacyEndpoints:
         count_param: str,
         default_count: int,
         locale: str,
+        region: str | None,
         client: TestClient,
     ):
-        """Test that the count parameter limits results for both endpoints and all locales."""
+        """Test that the count parameter limits results for both endpoints and all markets."""
         requested_count = 5
-        response = client.get(
-            f"/api/v1/curated-recommendations/{endpoint}",
-            params={locale_param: locale, count_param: requested_count},
-        )
+        params = {locale_param: locale, count_param: requested_count}
+        if region:
+            params["region"] = region
+        response = client.get(f"/api/v1/curated-recommendations/{endpoint}", params=params)
 
         assert response.status_code == 200
         data = response.json()
@@ -671,14 +681,18 @@ class TestLegacyEndpoints:
     @freezegun.freeze_time("2012-01-14 03:21:34", tz_offset=0)
     @pytest.mark.parametrize(
         "region,expected_surface",
-        [("GB", SurfaceId.NEW_TAB_EN_GB), ("IE", SurfaceId.NEW_TAB_EN_IE)],
+        [
+            ("GB", SurfaceId.NEW_TAB_EN_GB),
+            ("IE", SurfaceId.NEW_TAB_EN_IE),
+            ("IN", SurfaceId.NEW_TAB_EN_INTL),
+        ],
     )
     def test_en_gb_non_sections_request(
         self, region: str, expected_surface: SurfaceId, client: TestClient
     ):
         """Test en-GB non-sections request via main endpoint (backward-compatible path).
 
-        GB/IE clients without feeds=["sections"] use get_legacy_recommendations_from_sections.
+        GB/IE/IN clients without feeds=["sections"] use get_legacy_recommendations_from_sections.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2764,8 +2778,9 @@ class TestSections:
     def test_india_without_sections_feed_is_not_forced_into_sections(self, client: TestClient):
         """Test that clients in India that do not request sections keep the legacy grid.
 
-        NEW_TAB_EN_INTL is not in ROLLED_OUT_SECTION_SURFACES, so non-sections requests are
-        still served from the scheduled surface backend.
+        NEW_TAB_EN_INTL is in ROLLED_OUT_SECTION_SURFACES, so non-sections requests are served
+        a flat list sourced from the sections backend (via the legacy adapter), not a sections
+        feed.
         """
         response = client.post(
             "/api/v1/curated-recommendations",
@@ -2777,6 +2792,8 @@ class TestSections:
         assert data["surfaceId"] == SurfaceId.NEW_TAB_EN_INTL.value
         assert data["feeds"] is None
         assert len(data["data"]) > 0
+        # scheduledCorpusItemId equals corpusItemId (sections backend behavior)
+        assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in data["data"])
 
 
 def test_uk_sections_with_gb_backend_data(
