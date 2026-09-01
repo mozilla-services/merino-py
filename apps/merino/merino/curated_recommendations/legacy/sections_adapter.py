@@ -126,10 +126,17 @@ async def get_legacy_recommendations_from_sections(
     # 9. Renumber receivedRank sequentially (0, 1, 2, ... count-1)
     renumber_recommendations(recommendations)
 
-    # 10. Log error if no recommendations after filtering
+    # 10. Log if no recommendations remain. A surface without any sections content is expected
+    # (e.g. NEW_TAB_EN_XE before sections launch there), so log a warning. Sections that were
+    # all filtered away indicate a content problem, so log an error.
     if not recommendations:
-        logger.error(
-            f"No recommendations available after filtering for surface_id={surface_id}, region={region}"
+        message = (
+            f"No recommendations available after filtering for "
+            f"surface_id={surface_id}, region={region}"
         )
+        if corpus_sections:
+            logger.error(message)
+        else:
+            logger.warning(message)
 
     return recommendations

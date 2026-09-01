@@ -518,14 +518,15 @@ class TestLegacyEndpoints:
     get_legacy_recommendations_from_sections.
     """
 
-    # (locale, region) pairs for all supported markets.
-    # India (NEW_TAB_EN_INTL) is selected by region because no dedicated locale exists for it.
+    # (locale, region) pairs covering every surface reachable through the legacy endpoints.
+    # India (NEW_TAB_EN_INTL) and Ireland (NEW_TAB_EN_IE) are selected by region.
     SECTIONS_BACKEND_MARKETS: list[tuple[str, str | None]] = [
         ("de-AT", None),
         ("de-CH", None),
         ("de-DE", None),
         ("en-CA", None),
         ("en-GB", None),
+        ("en-GB", "IE"),
         ("en-US", None),
         ("en-US", "IN"),
         ("es-ES", None),
@@ -2648,6 +2649,97 @@ def test_uk_sections_with_gb_backend_data(
 
         # data array should be empty (all recommendations in feeds)
         assert len(data["data"]) == 0
+    finally:
+        # Reset the provider override
+        app.dependency_overrides[get_provider] = lambda: None
+
+
+@pytest.mark.parametrize(
+    "payload,expected_surface",
+    [
+        (
+            {
+                "locale": "en-US",
+                "region": "DE",
+                "experimentName": "sections-in-en-europe",
+                "experimentBranch": "treatment",
+            },
+            SurfaceId.NEW_TAB_EN_XE,
+        ),
+        (
+            {
+                "locale": "es",
+                "region": "MX",
+                "experimentName": "sections-in-global-spanish",
+                "experimentBranch": "treatment",
+            },
+            SurfaceId.NEW_TAB_ES_XA,
+        ),
+    ],
+)
+def test_experiment_surface_non_sections_request(
+    payload: dict, expected_surface: SurfaceId, client: TestClient
+):
+    """Test that experiment surfaces (EN_XE/ES_XA) without feeds get a flat list from sections."""
+    response = client.post("/api/v1/curated-recommendations", json=payload)
+    data = response.json()
+
+    assert response.status_code == 200
+    assert data["surfaceId"] == expected_surface.value
+    assert data["feeds"] is None
+
+    corpus_items = data["data"]
+    assert len(corpus_items) > 0
+    # scheduledCorpusItemId equals corpusItemId (sections backend behavior)
+    assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
+
+
+def test_non_sections_request_for_surface_without_sections(
+    sections_empty_backend: SectionsProtocol,
+    engagement_backend: EngagementBackend,
+    prior_backend: PriorBackend,
+    local_model_backend: LocalModelBackend,
+    ml_recommendations_backend: MLRecsBackend,
+    cohort_model_backend: CohortModelBackend,
+    client: TestClient,
+    caplog,
+):
+    """Test that a surface without sections content returns 200 with empty data and warns.
+
+    Applies to EN_XE/ES_XA until sections exist for them; an empty corpus is expected there,
+    so the adapter logs a warning rather than an error.
+    """
+    empty_provider = CuratedRecommendationsProvider(
+        engagement_backend=engagement_backend,
+        prior_backend=prior_backend,
+        sections_backend=sections_empty_backend,
+        local_model_backend=local_model_backend,
+        ml_recommendations_backend=ml_recommendations_backend,
+        cohort_model_backend=cohort_model_backend,
+        lints_interest_backend=EmptyLinTSInterestBackend(),
+    )
+
+    app.dependency_overrides[get_provider] = lambda: empty_provider
+
+    try:
+        response = client.post(
+            "/api/v1/curated-recommendations",
+            json={
+                "locale": "es",
+                "region": "MX",
+                "experimentName": "sections-in-global-spanish",
+                "experimentBranch": "treatment",
+            },
+        )
+        data = response.json()
+
+        assert response.status_code == 200
+        assert data["surfaceId"] == SurfaceId.NEW_TAB_ES_XA.value
+        assert data["feeds"] is None
+        assert data["data"] == []
+
+        records = [r for r in caplog.records if "No recommendations available" in r.message]
+        assert [r.levelname for r in records] == ["WARNING"]
     finally:
         # Reset the provider override
         app.dependency_overrides[get_provider] = lambda: None

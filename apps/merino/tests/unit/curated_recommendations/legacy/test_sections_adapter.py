@@ -243,3 +243,56 @@ class TestGetLegacyRecommendationsFromSections:
 
         # Verify we got the expected number of non-gaming items
         assert len(result) == 3  # 2 sports + 1 tech (gaming filtered out)
+
+    @pytest.mark.asyncio
+    @patch("merino.curated_recommendations.legacy.sections_adapter.get_corpus_sections")
+    async def test_surface_without_sections_returns_empty_list_and_warns(
+        self, mock_get_corpus_sections, caplog
+    ):
+        """A surface with no sections content (e.g. NEW_TAB_EN_XE before sections launch there)
+        returns an empty list and logs a warning, not an error.
+        """
+        mock_get_corpus_sections.return_value = (None, {})
+
+        result = await get_legacy_recommendations_from_sections(
+            sections_backend=AsyncMock(),
+            engagement_backend=StubEngagementBackend(),
+            prior_backend=StubPriorBackend(),
+            surface_id=SurfaceId.NEW_TAB_EN_XE,
+            count=10,
+            region="DE",
+        )
+
+        assert result == []
+        records = [r for r in caplog.records if "No recommendations available" in r.message]
+        assert [r.levelname for r in records] == ["WARNING"]
+
+    @pytest.mark.asyncio
+    @patch("merino.curated_recommendations.legacy.sections_adapter.get_corpus_sections")
+    async def test_sections_filtered_to_nothing_logs_error(self, mock_get_corpus_sections, caplog):
+        """Sections that exist but whose items are all filtered away log an error."""
+        gaming_recs = generate_recommendations(item_ids=["gaming-1"], topics=[Topic.GAMING])
+        # "hobbies" is a legacy topic id, so the section survives the legacy-topic filter,
+        # and its only item is then removed by the gaming exclusion.
+        sections = {
+            Topic.GAMING.value: Section(
+                receivedFeedRank=0,
+                recommendations=gaming_recs,
+                title="Gaming",
+                layout=deepcopy(layout_4_medium),
+            ),
+        }
+        mock_get_corpus_sections.return_value = (None, sections)
+
+        result = await get_legacy_recommendations_from_sections(
+            sections_backend=AsyncMock(),
+            engagement_backend=StubEngagementBackend(),
+            prior_backend=StubPriorBackend(),
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            count=10,
+            region="US",
+        )
+
+        assert result == []
+        records = [r for r in caplog.records if "No recommendations available" in r.message]
+        assert [r.levelname for r in records] == ["ERROR"]

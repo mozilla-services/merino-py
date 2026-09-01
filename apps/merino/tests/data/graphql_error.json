@@ -10,7 +10,7 @@
         }
       ],
       "path": [
-        "scheduledSurface"
+        "getSections"
       ],
       "extensions": {
         "code": "BAD_USER_INPUT"

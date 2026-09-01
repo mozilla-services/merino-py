@@ -124,7 +124,7 @@ class CorpusSection(BaseModel):
 
 
 class SectionsProtocol(Protocol):
-    """Protocol for fetching sections of corpus items for a given surface, without a date."""
+    """Protocol for fetching sections of corpus items for a given surface."""
 
     async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
         """Fetch corpus items for the given surface.

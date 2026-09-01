@@ -456,7 +456,8 @@ async def curated_content(
         This will help return more relevant recommendations. If `region` is not provided,
         then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
     - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
-    - `topics`: [Optional] A list of preferred [topics][curated-topics-doc].
+    - `topics`: [Optional] A list of preferred [topics][curated-topics-doc]. Accepted for
+        backward compatibility, but it no longer affects the ranking of recommendations.
     - `feeds`: [Optional] A list of sections.
     - `inferredInterests`: [Optional] A dictionary of topics with relative interest values.
     - `experimentName`: [Optional] The Nimbus New Tab experiment name that the user is enrolled in.

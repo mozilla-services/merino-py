@@ -529,7 +529,11 @@ class MerinoUser(_MerinoBaseUser):
 
     @task(weight=52)
     def curated_recommendations_random_topics(self) -> None:
-        """Send request to get curated recommendations with a random number of topics (between 1 & 4(max))."""
+        """Send request to get curated recommendations with a random number of topics (1-4).
+
+        The topics field is accepted for backward compatibility but no longer affects
+        ranking; this task probes API compatibility for requests that still send it.
+        """
         num_topics = randint(1, 4)  # Randomly choose between 1 and 4 topics
         self._request_recommendations(
             CuratedRecommendationsRequest(

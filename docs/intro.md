@@ -101,7 +101,6 @@ subgraph suggestBackends["fa:fa-microchip Suggest Backends"]
 end
 subgraph curatedRecommendationsBackends["fa:fa-microchip Curated Recommendations Backends"]
         corpusBackend("corpus")
-        extendedExpirationCorpusBackend("corpus extended expiration")
         gcsEngagementBackend("gcs engagement")
         gcsPriorBackend("gcs prior")
         spindleBackend("spindle ML server")
