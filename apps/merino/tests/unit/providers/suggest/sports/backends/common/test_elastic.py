@@ -21,6 +21,7 @@ from merino.providers.suggest.sports.backends.sportsdata.common import GameStatu
 from merino.providers.suggest.sports.backends.sportsdata.common.data import Event
 
 from merino.providers.suggest.sports.backends.sportsdata.common.elastic import (
+    EVENT_WINDOW,
     SportsDataStore,
     ElasticCredentials,
     META_INDEX,
@@ -605,6 +606,54 @@ async def test_search_event_raise_exception(
     es_client.search.side_effect = Exception("oops")
     with pytest.raises(BackendError):
         await sport_data_store.search_events(q="oops", language_code="en", mix_sports=False)
+
+
+@freezegun.freeze_time("2026-08-31T12:00:00Z")
+@pytest.mark.asyncio
+async def test_search_events_bounds_results_by_event_window(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+):
+    """Test that the search filters on the event date, not just on expiry, so
+    old results aren't returned.
+    """
+    es_client.search.return_value = {"hits": {"total": {"value": 0}, "hits": []}}
+
+    await sport_data_store.search_events(q="game", language_code="en")
+
+    now = datetime.datetime(2026, 8, 31, 12, 0, tzinfo=datetime.timezone.utc)
+    query = es_client.search.call_args.kwargs["query"]
+    assert query["bool"]["filter"] == [{"range": {"date": {"gte": now - EVENT_WINDOW}}}]
+    # The expiry clause stays as the per-sport control (NHL and MLB use a 48h TTL).
+    assert query["bool"]["must_not"] == [{"range": {"expiry": {"lt": now}}}]
+
+
+@freezegun.freeze_time("2026-08-31T12:00:00Z")
+@pytest.mark.asyncio
+async def test_search_events_window_excludes_event_outliving_its_expiry(
+    sport_data_store: SportsDataStore,
+    es_client: AsyncMock,
+):
+    """Regression test for https://mozilla-hub.atlassian.net/browse/DISCO-4467
+
+    Tests that stale event carrying a far-future expiry is omitted from response.
+
+    Events ingested by a since-retired sport keep whatever expiry was stamped when they
+    were last written, which can be arbitrarily far ahead of the event itself. Such a
+    document passes the expiry clause, so only the date floor excludes it.
+    """
+    es_client.search.return_value = {"hits": {"total": {"value": 0}, "hits": []}}
+
+    await sport_data_store.search_events(q="game", language_code="en")
+
+    stale_event_date = datetime.datetime(2026, 6, 20, tzinfo=datetime.timezone.utc)
+    far_future_expiry = datetime.datetime(2026, 11, 1, tzinfo=datetime.timezone.utc)
+    query = es_client.search.call_args.kwargs["query"]
+
+    date_floor = query["bool"]["filter"][0]["range"]["date"]["gte"]
+    expiry_ceiling = query["bool"]["must_not"][0]["range"]["expiry"]["lt"]
+    assert stale_event_date < date_floor, "date floor must exclude the stale event"
+    assert far_future_expiry > expiry_ceiling, "expiry alone would have let it through"
 
 
 @freezegun.freeze_time("2025-09-22T12:00:00Z")

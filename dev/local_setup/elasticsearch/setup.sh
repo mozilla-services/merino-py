@@ -17,12 +17,34 @@ done
 
 echo "--- Index creation complete ---"
 
+# Seed documents carry relative-time placeholders rather than literal timestamps.
+# Providers bound how old a document may be before it stops being served (sports
+# filters on the event date against `event_ttl_weeks`), so hard-coded fixture dates
+# silently stop matching some weeks after they are authored. Rendering them at seed
+# time keeps the fixtures inside those windows however long after authoring they load.
+now=$(date -u +%s)
+iso_at() {
+  date -u -d "@$((now + $1))" +%Y-%m-%dT%H:%M:%S+00:00
+}
+
+render_seed() {
+  sed \
+    -e "s/__T_NOW__/$(iso_at 0)/g" \
+    -e "s/__T_MINUS_1H__/$(iso_at -3600)/g" \
+    -e "s/__T_MINUS_1D__/$(iso_at -86400)/g" \
+    -e "s/__T_MINUS_2D__/$(iso_at -172800)/g" \
+    -e "s/__T_PLUS_1D__/$(iso_at 86400)/g" \
+    -e "s/__T_PLUS_1Y__/$(iso_at 31536000)/g" \
+    "$1"
+}
+
 for file in /es-seed/*.ndjson; do
   echo ""
   echo "--- Seeding: $file ---"
+  render_seed "$file" > /tmp/seed.ndjson
   curl -v -X POST "$ES_URL/_bulk" \
     -H "Content-Type: application/x-ndjson" \
-    --data-binary "@$file" 2>&1
+    --data-binary "@/tmp/seed.ndjson" 2>&1
   echo ""
 done
 
