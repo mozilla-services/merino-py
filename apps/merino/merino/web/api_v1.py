@@ -453,21 +453,26 @@ async def curated_content(
         See the Request body schema below for the full list of supported values.
         This will determine the language of the recommendations.
     - `region`: [Optional] The country-level region, for example US or IE (Ireland).
-        This will help return more relevant recommendations. If `region` is not provided,
-        then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
-    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
+        This will help return more relevant recommendations. If `region` is missing or cannot
+        be parsed as a 2-letter code, it is derived from the second part of the `locale`
+        parameter, if present (e.g. en-US → US).
+    - `count`: [Optional] The maximum number of recommendations in the flat `data` list.
+        Defaults to 100. Ignored when the sections feed is requested.
     - `topics`: [Optional] A list of preferred [topics][curated-topics-doc]. Accepted for
         backward compatibility, but it no longer affects the ranking of recommendations.
-    - `feeds`: [Optional] A list of feeds to include, e.g. `["sections"]`. When "sections" is
-        requested, recommendations are grouped into topic sections in the `feeds` response field;
-        otherwise a flat list is returned in `data`.
-    - `sections`: [Optional] The user's per-section preferences: followed (with `followedAt`)
-        and blocked sections. Followed sections rank higher and blocked sections are omitted.
-        Only affects responses with sections.
-    - `enableInterestPicker`: [Optional] When true and sections are returned, the response
-        includes an interest picker: a prompt for the user to follow more sections.
-    - `inferredInterests`: [Optional] A dictionary of topics with relative interest values,
-        computed locally by the client. Used to personalize the ranking of sections.
+    - `feeds`: [Optional] A list of feeds to include; "sections" is the only recognized value.
+        When "sections" is requested, recommendations are grouped into topic sections in the
+        `feeds` response field; otherwise a flat list is returned in `data`.
+    - `sections`: [Optional] The user's followed and blocked sections. Followed sections rank
+        directly below the top stories section (`followedAt` orders them). Blocking removes
+        recommendations whose topic matches the blocked section id; other blocked sections are
+        only flagged `isBlocked`. Only affects responses with sections.
+    - `enableInterestPicker`: [Optional] When true and sections are returned, sections get
+        `isInitiallyVisible` set, and the response includes an interest picker (a prompt to
+        follow more sections) if at least 8 followable sections are not initially visible.
+    - `inferredInterests`: [Optional] A dictionary of interests with relative values, computed
+        locally by the client; it must include a `model_id` to affect ranking. Personalizes the
+        ranking of sections and items. When present, the response includes `inferredLocalModel`.
     - `coarseOs`: [Optional] Coarse operating system (mac, win, linux, android, ios, other).
         Reserved for future use; it currently does not affect the response.
     - `utcOffset`: [Optional] The user's UTC offset in hours (0-23). Reserved for future use;
