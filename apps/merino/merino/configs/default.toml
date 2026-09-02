@@ -576,6 +576,13 @@ api_key=""
 # Directory to store JSON request responses
 cache_dir="/tmp"
 
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__EVENT_TTL_WEEKS
+# How far either side of "now" an event may fall and still be ingested, and how far
+# into the past an event may fall and still be served. Individual sports may narrow
+# this via the `event_ttl` constructor argument (e.g. NHL and MLB use 48 hours), but
+# this is the outer bound applied to every search result.
+event_ttl_weeks=2
+
 # MERINO_PROVIDERS__SPORTS__SPORTSDATA__RETRY_MAX_TRIES
 # Total provider fetch attempts, including the first request
 retry_max_tries=5

@@ -203,3 +203,25 @@ async def test_sportsdata_query_post_prune(sportsdata, sports_league: NFL):
 
     post_result = await sportsdata.data_store.search_events("fakehome", "en")
     assert post_result == {}
+
+
+@freezegun.freeze_time("2025-10-26")
+@pytest.mark.asyncio
+async def test_sportsdata_query_excludes_event_older_than_window(
+    sportsdata: SportsDataBackend, sports_league: NFL
+):
+    """Test that an event older than the event window is not served,
+    even if the `expiry` time on the row has not passed.
+    """
+    await sportsdata.data_store.build_indexes(clear=True)
+
+    now = datetime.now(tz=timezone.utc)
+    for ev in sports_league.events.values():
+        ev.date = now - timedelta(days=60)
+        ev.expiry = now + timedelta(days=365)
+
+    await sportsdata.data_store.store_events(sport=sports_league, language_code="en")
+
+    assert await sportsdata.data_store.search_events("fakehome", "en") == {}
+    # The document is still present -- it is filtered at query time, not deleted.
+    assert await sportsdata.data_store.prune(language_code="en") is True

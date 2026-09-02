@@ -7,7 +7,7 @@ import logging
 # import sys
 from abc import abstractmethod, ABC
 from aiodogstatsd import Client as StatsDClient
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from time import monotonic
 from typing import Any, Final
 
@@ -25,6 +25,7 @@ from elasticsearch import (
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.suggest.sports import (
+    EVENT_TTL_WEEKS,
     LOGGING_TAG,
 )
 from merino.providers.suggest.sports.backends.sportsdata.common import GameStatus
@@ -145,6 +146,13 @@ EN_INDEX_SETTINGS: dict = {
 SUGGEST_ID: Final[str] = "suggest-on-title"
 MAX_SUGGESTIONS: Final[int] = settings.providers.sports.max_suggestions
 REQUEST_TIMEOUT_SEC: Final[float] = settings.providers.sports.es.request_timeout_sec
+# How far into the past a stored event may be and still be served. `Event.expiry` is
+# stamped at ingestion time, so a document written with a long TTL (or one orphaned by a
+# retired sport) can outlive its own event by an arbitrary amount. This window bounds the
+# event `date` itself, independent of whatever expiry a document happens to carry.
+EVENT_WINDOW: Final[timedelta] = timedelta(
+    weeks=settings.providers.sports.sportsdata.get("event_ttl_weeks", EVENT_TTL_WEEKS)
+)
 
 
 class ElasticCredentials:
@@ -706,6 +714,12 @@ class SportsDataStore(ElasticDataStore):
                 "bool": {
                     "must": [{"match": {"terms": {"query": q, "operator": "and"}}}],
                     "must_not": [{"range": {"expiry": {"lt": utc_now}}}],
+                    # `expiry` alone is not a sufficient bound: it is stamped at
+                    # ingestion time, so documents can carry an expiry far beyond the
+                    # event they describe. Filter on the event date as well so nothing
+                    # older than the TTL is served. Filter context keeps this out of
+                    # `_score`, which is passed downstream as `es_score`.
+                    "filter": [{"range": {"date": {"gte": utc_now - EVENT_WINDOW}}}],
                 }
             }
 
