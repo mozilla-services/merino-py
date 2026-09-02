@@ -23,6 +23,7 @@ from merino.providers.suggest.finance.backends.protocol import (
 )
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import CacheAdapterError
+from merino.governance.circuitbreakers import PolygonCircuitBreaker
 from merino.providers.suggest.finance.backends.polygon.errors import (
     PolygonError,
     PolygonErrorMessages,
@@ -60,6 +61,24 @@ TICKER_SEARCH_UPSTREAM_LIMIT: int = settings.providers.polygon.search_upstream_l
 # Below this many characters the substring search returns an alphabetical slice
 # of the whole market, so only the exact symbol lookup runs.
 TICKER_SEARCH_MIN_QUERY_LENGTH: int = settings.providers.polygon.search_min_query_length
+
+# Upstream requests must time out before the API handler's task runner cancels
+# the provider task: an httpx timeout becomes a PolygonError that the circuit
+# breaker counts, while a cancellation is invisible to it and resets its
+# failure count. Keep each request type under its query budget with a margin.
+UPSTREAM_TIMEOUT_FACTOR = 0.9
+SNAPSHOT_REQUEST_TIMEOUT_SEC: float = (
+    settings.providers.polygon.query_timeout_sec * UPSTREAM_TIMEOUT_FACTOR
+)
+SEARCH_REQUEST_TIMEOUT_SEC: float = (
+    settings.providers.polygon.search_query_timeout_sec * UPSTREAM_TIMEOUT_FACTOR
+)
+
+# One breaker guards both upstream request paths, applied below the cache read
+# so that cache-served requests neither reset its failure count nor get refused
+# while it is open. When open, the fallback stands in for the upstream response
+# and cached data can still be served.
+_upstream_breaker = PolygonCircuitBreaker(name="polygon")
 
 # The Lua script to write ticker snapshots and their TTLs for a list of keys.
 #
@@ -236,6 +255,7 @@ class PolygonBackend:
             # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
         return []
 
+    @_upstream_breaker
     async def search_tickers(self, query: str) -> list[TickerMatch]:
         """Search the reference tickers endpoint by symbol or company name.
 
@@ -274,8 +294,12 @@ class PolygonBackend:
                     else None
                 )
         except ExceptionGroup as e:
-            # The task group wraps failures; surface one backend error so the
-            # provider's circuit breaker can count it.
+            # Upstream failures surface as one backend error for the circuit
+            # breaker to count. Anything else in the group is a bug in our own
+            # code and must surface as itself, not as an upstream failure.
+            _, bugs = e.split(PolygonError)
+            if bugs is not None:
+                raise bugs from e
             raise PolygonError(PolygonErrorMessages.FAILED_TICKER_SEARCH, exceptions=e.exceptions)
 
         exact = exact_task.result() if exact_task is not None else []
@@ -297,31 +321,46 @@ class PolygonBackend:
             self.url_param_api_key: self.api_key,
             **params,
         }
-        response = await self._get_json("search", self.url_reference_tickers, request_params)
+        response = await self._get_json(
+            "search", self.url_reference_tickers, request_params, SEARCH_REQUEST_TIMEOUT_SEC
+        )
         return extract_ticker_matches_from_search_response(response)
 
+    @_upstream_breaker
     async def fetch_ticker_snapshot(self, ticker: str) -> Any:
         """Fetch the snapshot for one ticker.
+
+        When the breaker is open, the fallback returns an empty result: callers
+        treat it as an upstream response with no snapshot, so cached quotes are
+        still served while no request leaves for the upstream.
 
         Raises:
             PolygonError: When the upstream request fails.
         """
         params = {"ticker": ticker, self.url_param_api_key: self.api_key}
-        return await self._get_json("snapshot", self.url_single_ticker_snapshot, params)
+        return await self._get_json(
+            "snapshot", self.url_single_ticker_snapshot, params, SNAPSHOT_REQUEST_TIMEOUT_SEC
+        )
 
-    async def _get_json(self, operation: str, url: str, params: dict[str, str]) -> Any:
+    async def _get_json(
+        self, operation: str, url: str, params: dict[str, str], timeout: float
+    ) -> Any:
         """Issue one upstream GET on the request path and return the decoded body.
 
         Emits `polygon.request.<operation>.get` counters and latency. Any HTTP
-        failure, including timeouts, is logged once and re-raised as a
-        `PolygonError` for the provider to handle.
+        failure, including timeouts and undecodable response bodies, is logged
+        once and re-raised as a `PolygonError` so the provider's circuit
+        breaker can count it.
         """
         self.metrics_client.increment(f"polygon.request.{operation}.get")
         try:
             with self.metrics_client.timeit(f"polygon.request.{operation}.get.latency"):
-                response: Response = await self.http_client.get(url, params=params)
+                response: Response = await self.http_client.get(
+                    url, params=params, timeout=timeout
+                )
             response.raise_for_status()
-        except HTTPError as ex:
+            return response.json()
+        except (HTTPError, ValueError) as ex:
             self.metrics_client.increment(f"polygon.request.{operation}.get.failed")
             detail = (
                 f"{ex.response.status_code} {ex.response.reason_phrase}"
@@ -332,8 +371,6 @@ class PolygonBackend:
             raise PolygonError(
                 PolygonErrorMessages.HTTP_REQUEST_ERROR, operation=operation, detail=detail
             ) from ex
-
-        return response.json()
 
     async def get_ticker_image_url(self, ticker: str) -> str | None:
         """Get the logo URL for the ticker (requires API key when fetching)"""

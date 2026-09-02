@@ -203,9 +203,12 @@ def test_extract_snapshot_if_valid_success(
     assert actual_market_closed == expected_market_closed
 
 
-def test_extract_snapshot_if_valid_returns_none() -> None:
-    """Test extract_ticker_snapshot_returns_none method. Should return None when snapshot param is None."""
-    assert extract_snapshot_if_valid(None) is None
+@pytest.mark.parametrize("data", [None, {}], ids=["none", "empty"])
+def test_extract_snapshot_if_valid_returns_none(data: dict[str, Any] | None) -> None:
+    """Test extract_snapshot_if_valid with no response body. An empty result is what
+    the circuit breaker substitutes for the upstream response while it is open.
+    """
+    assert extract_snapshot_if_valid(data) is None
 
 
 def test_extract_snapshot_if_valid_returns_none_for_unknown_ticker(

@@ -12,6 +12,10 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
+from merino.providers.suggest.finance.backends.polygon.errors import (
+    PolygonError,
+    PolygonErrorMessages,
+)
 from merino.providers.suggest.finance.backends.protocol import (
     TickerMatch,
     TickerSnapshot,
@@ -306,6 +310,25 @@ def test_suggest_finance_ticker_search_outlives_the_provider_query_timeout(
     assert response.status_code == 200
     matches = response.json()["suggestions"][0]["custom_details"]["polygon"]["matches"]
     assert [m["ticker"] for m in matches] == ["AAPL"]
+
+
+def test_suggest_finance_backend_error_yields_no_suggestions(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that a failed upstream request degrades to an empty response: the
+    provider lets the error through for its circuit breaker and the handler
+    drops the failed task.
+    """
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+    backend_mock.get_snapshots.side_effect = PolygonError(
+        PolygonErrorMessages.HTTP_REQUEST_ERROR, operation="snapshot", detail="503"
+    )
+
+    response = client.get("/api/v1/suggest?q=AAPL&providers=polygon&source=newtab")
+
+    assert response.status_code == 200
+    assert response.json()["suggestions"] == []
 
 
 def test_suggest_finance_returns_400_for_unknown_request_type(

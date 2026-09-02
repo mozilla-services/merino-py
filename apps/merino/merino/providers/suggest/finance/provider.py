@@ -164,11 +164,16 @@ class Provider(BaseProvider):
         return self.query_timeout_sec
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Provide finance suggestions."""
-        try:
-            if srequest.source == "newtab":
-                return await self._query_widget(srequest)
+        """Provide finance suggestions.
 
+        Widget requests (`source=newtab`) rely on the backend's circuit breaker
+        around its upstream fetches. Urlbar requests keep their original
+        contract: any failure is logged and yields no suggestion.
+        """
+        if srequest.source == "newtab":
+            return await self._query_widget(srequest)
+
+        try:
             # Get the list of tickers (0 to 3) for the query string.
             return await self._quote(get_tickers_for_query(srequest.query), tags={})
         except Exception as e:
@@ -184,6 +189,10 @@ class Provider(BaseProvider):
         bypass the curated mappings entirely; the widget obtains symbols from
         ticker search, stores them client-side, and asks for quotes one symbol
         per request, which keeps every upstream lookup independent.
+
+        `BackendError`s raised by the backend are intentionally unhandled here:
+        the backend's circuit breaker has already counted them, and the API
+        handler drops failed provider tasks from the response.
         """
         if srequest.request_type == TICKER_SEARCH_REQUEST_TYPE:
             return await self._search_tickers(srequest)

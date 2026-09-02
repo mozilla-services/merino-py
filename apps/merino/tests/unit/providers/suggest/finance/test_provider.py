@@ -5,12 +5,14 @@
 """Unit tests for the finance provider module."""
 
 import asyncio
+import logging
 import time
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import HttpUrl
+from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from starlette.exceptions import HTTPException
 
@@ -23,6 +25,10 @@ from merino.providers.suggest.finance.backends.protocol import (
     TickerMatch,
     TickerSnapshot,
     TickerSummary,
+)
+from merino.providers.suggest.finance.backends.polygon.errors import (
+    PolygonError,
+    PolygonErrorMessages,
 )
 from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
     STOCKS_WIDGET_DEFAULT_ETFS,
@@ -490,6 +496,57 @@ async def test_query_ticker_search_allows_digit_queries(
 
     backend_mock.search_tickers.assert_awaited_once_with("3m")
     assert len(suggestions) == 1
+
+
+@pytest.mark.parametrize(
+    "backend_method, srequest_kwargs",
+    [
+        ("get_snapshots", {"query": "KLAR", "source": "newtab"}),
+        (
+            "search_tickers",
+            {"query": "apple", "source": "newtab", "request_type": "ticker_search"},
+        ),
+    ],
+    ids=["quote", "ticker_search"],
+)
+@pytest.mark.asyncio
+async def test_query_propagates_backend_errors_for_circuit_breaker(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    backend_method: str,
+    srequest_kwargs: dict[str, Any],
+) -> None:
+    """Widget queries should propagate backend errors so the circuit breaker can observe them."""
+    getattr(backend_mock, backend_method).side_effect = PolygonError(
+        PolygonErrorMessages.HTTP_REQUEST_ERROR, operation="snapshot", detail="500"
+    )
+
+    with pytest.raises(PolygonError):
+        await provider.query(SuggestionRequest(geolocation=geolocation, **srequest_kwargs))
+
+
+@pytest.mark.asyncio
+async def test_query_urlbar_swallows_backend_errors(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    caplog: LogCaptureFixture,
+) -> None:
+    """Urlbar queries keep their original contract: a backend failure is logged
+    and yields no suggestion instead of reaching the circuit breaker.
+    """
+    caplog.set_level(logging.WARNING)
+    backend_mock.get_snapshots.side_effect = PolygonError(
+        PolygonErrorMessages.HTTP_REQUEST_ERROR, operation="snapshot", detail="500"
+    )
+
+    suggestions = await provider.query(SuggestionRequest(query="ddog", geolocation=geolocation))
+
+    assert suggestions == []
+    assert [record.message for record in caplog.records] == [
+        "Exception occurred for Polygon provider: Polygon snapshot request failed: 500"
+    ]
 
 
 @pytest.mark.parametrize(

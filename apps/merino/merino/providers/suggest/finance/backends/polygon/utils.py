@@ -110,9 +110,11 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
 
     Unknown and delisted tickers come back as a result entry carrying an
     `error` key instead of session data. That is an expected outcome rather
-    than a malformed response, so it yields None without a warning.
+    than a malformed response, so it yields None without a warning. So does
+    an empty result, which is what the backend's circuit breaker substitutes
+    for the upstream response while it is open.
     """
-    if data is None:
+    if not data:
         return None
 
     try:

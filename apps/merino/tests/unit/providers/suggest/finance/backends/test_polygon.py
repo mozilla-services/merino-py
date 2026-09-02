@@ -22,6 +22,7 @@ from merino.configs import settings
 from redis.asyncio import Redis
 
 from merino.providers.suggest.finance.backends.polygon.backend import (
+    SNAPSHOT_REQUEST_TIMEOUT_SEC,
     TICKER_SEARCH_UPSTREAM_LIMIT,
     PolygonBackend,
 )
@@ -226,7 +227,6 @@ async def test_fetch_ticker_snapshot_success(
 
     # Mock metrics client.
     polygon.metrics_client = MagicMock()
-    timeit_metric_mock = polygon.metrics_client.timeit
 
     client_mock.get.return_value = Response(
         status_code=200,
@@ -234,13 +234,15 @@ async def test_fetch_ticker_snapshot_success(
         request=Request(method="GET", url=(f"{base_url}{snapshot_endpoint}")),
     )
 
-    expected = single_ticker_snapshot_response
     actual = await polygon.fetch_ticker_snapshot(ticker)
 
-    assert actual is not None
-    assert actual == expected
-    assert actual["ticker"]["ticker"] == "AAPL"
-    timeit_metric_mock.assert_called_once_with("polygon.request.snapshot.get.latency")
+    assert actual == single_ticker_snapshot_response
+    client_mock.get.assert_awaited_once_with(
+        URL_SINGLE_TICKER_SNAPSHOT,
+        params={"ticker": "AAPL", "apiKey": "api_key"},
+        timeout=SNAPSHOT_REQUEST_TIMEOUT_SEC,
+    )
+    polygon.metrics_client.timeit.assert_called_once_with("polygon.request.snapshot.get.latency")
 
 
 @pytest.mark.parametrize(
@@ -261,7 +263,7 @@ async def test_upstream_http_error_raises_polygon_error(
     operation: str,
 ) -> None:
     """Test that an upstream HTTP failure is logged once, counted, and raised as a
-    PolygonError for the provider to handle.
+    PolygonError so the provider's circuit breaker can observe it.
     """
     caplog.set_level(logging.WARNING)
     client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
@@ -317,6 +319,55 @@ async def test_fetch_ticker_snapshot_raises_for_timeout(
     polygon.metrics_client.increment.assert_any_call("polygon.request.snapshot.get.failed")
 
 
+@pytest.mark.asyncio
+async def test_upstream_undecodable_body_raises_polygon_error(
+    polygon: PolygonBackend,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Test that a 200 with a non-JSON body is logged, counted, and raised as a
+    PolygonError, the same as any other upstream failure.
+    """
+    caplog.set_level(logging.WARNING)
+    client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
+    polygon.metrics_client = MagicMock()
+    client_mock.get.return_value = Response(
+        status_code=200,
+        content=b"<html>service unavailable</html>",
+        request=Request(method="GET", url="https://api.polygon.io"),
+    )
+
+    with pytest.raises(PolygonError):
+        await polygon.fetch_ticker_snapshot("AAPL")
+
+    records = filter_caplog(
+        caplog.records, "merino.providers.suggest.finance.backends.polygon.backend"
+    )
+    assert [record.message for record in records] == [
+        "Polygon snapshot request failed: JSONDecodeError"
+    ]
+    polygon.metrics_client.increment.assert_has_calls(
+        [call("polygon.request.snapshot.get"), call("polygon.request.snapshot.get.failed")]
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_tickers_does_not_convert_bugs_to_backend_errors(
+    polygon: PolygonBackend, mocker: MockerFixture
+) -> None:
+    """Test that only upstream failures become PolygonError: a programming error
+    inside the search tasks surfaces as itself instead of feeding the breaker.
+    """
+    mocker.patch.object(
+        polygon, "_fetch_reference_tickers", side_effect=TypeError("extractor bug")
+    )
+
+    with pytest.raises(ExceptionGroup) as exc_info:
+        await polygon.search_tickers("apple")
+
+    assert any(isinstance(error, TypeError) for error in exc_info.value.exceptions)
+
+
 def _reference_tickers_responder(
     search_results: list[dict[str, Any]], exact_results: list[dict[str, Any]]
 ) -> Callable[..., Response]:
@@ -324,7 +375,7 @@ def _reference_tickers_responder(
     exact `ticker` params get exact_results.
     """
 
-    def responder(url: str, params: dict[str, str]) -> Response:
+    def responder(url: str, params: dict[str, str], timeout: float) -> Response:
         results = search_results if "search" in params else exact_results
         return Response(
             status_code=200,
