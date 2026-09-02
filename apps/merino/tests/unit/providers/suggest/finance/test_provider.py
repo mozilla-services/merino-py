@@ -119,6 +119,7 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         name="finance",
         score=0.3,
         query_timeout_sec=0.2,
+        search_query_timeout_sec=1.0,
         cron_interval_sec=60,
         resync_interval_sec=86400,
     )
@@ -489,6 +490,33 @@ async def test_query_ticker_search_allows_digit_queries(
 
     backend_mock.search_tickers.assert_awaited_once_with("3m")
     assert len(suggestions) == 1
+
+
+@pytest.mark.parametrize(
+    "source, request_type, expected_timeout",
+    [
+        ("newtab", "ticker_search", 1.0),
+        ("urlbar", "ticker_search", 0.2),
+        ("newtab", None, 0.2),
+        ("urlbar", None, 0.2),
+    ],
+    ids=["widget_ticker_search", "ticker_search_without_newtab", "widget_quote", "urlbar"],
+)
+def test_query_timeout_sec_for(
+    provider: Provider,
+    geolocation: Location,
+    source: str,
+    request_type: str | None,
+    expected_timeout: float,
+) -> None:
+    """Test that only widget ticker searches get the search timeout: the wider
+    budget must not be claimable by request_type alone.
+    """
+    srequest = SuggestionRequest(
+        query="apple", geolocation=geolocation, source=source, request_type=request_type
+    )
+
+    assert provider.query_timeout_sec_for(srequest) == expected_timeout
 
 
 # TODO add test for when backend.get_snapshots returns []

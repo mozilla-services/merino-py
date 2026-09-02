@@ -4,12 +4,14 @@
 
 """Integration tests for the Merino v1 suggest API endpoint configured with the polygon (finance) provider."""
 
+import asyncio
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
+from merino.configs import settings
 from merino.providers.suggest.finance.backends.protocol import (
     TickerMatch,
     TickerSnapshot,
@@ -48,6 +50,7 @@ def fixture_providers(backend_mock: Any, statsd_mock: Any) -> dict[str, FinanceP
         score=0.8,
         name="polygon",
         query_timeout_sec=0.2,
+        search_query_timeout_sec=settings.providers.polygon.search_query_timeout_sec,
         enabled_by_default=False,
         resync_interval_sec=60,
         cron_interval_sec=60,
@@ -277,6 +280,32 @@ def test_suggest_finance_ticker_search_returns_matches(
             "is_etf": False,
         },
     ]
+
+
+def test_suggest_finance_ticker_search_outlives_the_provider_query_timeout(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that ticker searches run under their own timeout budget: the upstream
+    name search is slower than quote lookups and must not be cancelled by the
+    keystroke-tuned provider timeout.
+    """
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+
+    async def slow_search(query: str) -> list[TickerMatch]:
+        # Longer than the 0.2s provider query timeout used by the fixture.
+        await asyncio.sleep(0.3)
+        return [TickerMatch(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ", is_etf=False)]
+
+    backend_mock.search_tickers.side_effect = slow_search
+
+    response = client.get(
+        "/api/v1/suggest?q=apple&providers=polygon&source=newtab&request_type=ticker_search"
+    )
+
+    assert response.status_code == 200
+    matches = response.json()["suggestions"][0]["custom_details"]["polygon"]["matches"]
+    assert [m["ticker"] for m in matches] == ["AAPL"]
 
 
 def test_suggest_finance_returns_400_for_unknown_request_type(

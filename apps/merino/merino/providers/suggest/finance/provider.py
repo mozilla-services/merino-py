@@ -48,6 +48,7 @@ class Provider(BaseProvider):
     cron_task_fetch: asyncio.Task
     resync_interval_sec: int
     cron_interval_sec: int
+    search_query_timeout_sec: float
     last_fetch_at: float
     last_fetch_failure_at: float | None = None
 
@@ -58,6 +59,7 @@ class Provider(BaseProvider):
         score: float,
         name: str,
         query_timeout_sec: float,
+        search_query_timeout_sec: float,
         resync_interval_sec: int,
         cron_interval_sec: int,
         enabled_by_default: bool = False,
@@ -67,6 +69,7 @@ class Provider(BaseProvider):
         self.score = score
         self._name = name
         self._query_timeout_sec = query_timeout_sec
+        self.search_query_timeout_sec = search_query_timeout_sec
         self._enabled_by_default = enabled_by_default
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.manifest_data = FinanceManifest(tickers={})
@@ -146,6 +149,19 @@ class Provider(BaseProvider):
     def normalize_query(self, query: str) -> str:
         """Remove trailing spaces from the query string and support both $(stock) and $ (stock)"""
         return query.strip().replace("$", "STOCK ").replace("  ", " ")
+
+    def query_timeout_sec_for(self, srequest: SuggestionRequest) -> float:
+        """Return the query timeout for one request.
+
+        Widget ticker searches hit the upstream reference search, which is
+        materially slower than quote lookups, and the widget waits far longer
+        than the urlbar, so they get their own budget instead of the
+        keystroke-tuned provider timeout. Gated on the same conditions as the
+        search dispatch, so no other request shape can claim the wider budget.
+        """
+        if srequest.source == "newtab" and srequest.request_type == TICKER_SEARCH_REQUEST_TYPE:
+            return self.search_query_timeout_sec
+        return self.query_timeout_sec
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""

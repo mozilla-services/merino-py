@@ -297,6 +297,7 @@ async def suggest(
             pass
 
     lookups: list[Task] = []
+    query_timeouts: list[float] = []
     languages = get_accepted_languages(accept_language)
 
     validate_suggest_custom_location_params(city, region, country, source)
@@ -329,6 +330,7 @@ async def suggest(
             client_variants=client_variants_list,
         )
         p.validate(srequest)
+        query_timeouts.append(p.query_timeout_sec_for(srequest))
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
         task.set_name(p.name)
@@ -336,10 +338,7 @@ async def suggest(
 
     completed_tasks, _ = await task_runner.gather(
         lookups,
-        timeout=max(
-            (provider.query_timeout_sec for provider in search_from),
-            default=QUERY_TIMEOUT_SEC,
-        ),
+        timeout=max(query_timeouts, default=QUERY_TIMEOUT_SEC),
         timeout_cb=partial(task_runner.metrics_timeout_handler, metrics_client),
     )
     suggestions = list(

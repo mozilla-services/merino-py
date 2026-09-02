@@ -201,3 +201,11 @@ class BaseProvider(ABC):
     def query_timeout_sec(self) -> float:
         """Return the query timeout for this provider."""
         return self._query_timeout_sec
+
+    def query_timeout_sec_for(self, srequest: SuggestionRequest) -> float:
+        """Return the query timeout for one request.
+
+        Defaults to the provider-wide timeout. Providers whose request types
+        have different latency profiles override this.
+        """
+        return self.query_timeout_sec

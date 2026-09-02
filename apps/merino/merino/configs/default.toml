@@ -1004,6 +1004,13 @@ score = 0.29
 # for finance data. This will override the default global query timeout.
 query_timeout_sec = 1.0
 
+# MERINO_PROVIDERS__POLYGON__SEARCH_QUERY_TIMEOUT_SEC
+# Timeout for stocks widget ticker searches (request_type=ticker_search).
+# The upstream reference search scans company names and is materially slower
+# than snapshot lookups, and the widget waits far longer than the urlbar, so
+# searches get their own budget instead of the keystroke-tuned one above.
+search_query_timeout_sec = 4.0
+
 # MERINO_PROVIDERS__POLYGON__SEARCH_MIN_QUERY_LENGTH
 # Ticker searches shorter than this skip the upstream substring search, which
 # would only return an alphabetical slice of the market, and run the exact
