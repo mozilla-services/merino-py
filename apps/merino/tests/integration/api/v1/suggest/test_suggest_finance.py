@@ -194,3 +194,53 @@ def test_suggest_for_finance_suggestion_returns_no_suggestion_for_eager_match_bl
     body = response.json()
 
     assert len(body["suggestions"]) == 0
+
+
+def test_suggest_finance_newtab_returns_quote_for_unmapped_ticker(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that a newtab quote lookup resolves a symbol outside the curated mappings."""
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+    backend_mock.get_snapshots.return_value = [
+        TickerSnapshot(
+            ticker="KLAR",
+            last_trade_price="14.55",
+            todays_change_percent="+2.14",
+            name="Klarna Group plc",
+        )
+    ]
+    backend_mock.get_ticker_summary.return_value = TickerSummary(
+        ticker="KLAR",
+        name="Klarna Group plc",
+        last_price="$14.55 USD",
+        todays_change_perc="+2.14",
+        query="KLAR stock",
+        image_url=None,
+        exchange="",
+    )
+
+    response = client.get("/api/v1/suggest?q=klar&providers=polygon&source=newtab")
+
+    assert response.status_code == 200
+    backend_mock.get_snapshots.assert_awaited_once_with(["KLAR"])
+    values = response.json()["suggestions"][0]["custom_details"]["polygon"]["values"]
+    assert [(v["ticker"], v["name"], v["exchange"]) for v in values] == [
+        ("KLAR", "Klarna Group plc", "")
+    ]
+
+
+def test_suggest_finance_newtab_rejects_symbol_list(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that a newtab quote lookup takes one symbol per request: a comma-separated
+    list yields no suggestion and no backend call.
+    """
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+
+    response = client.get("/api/v1/suggest?q=HLN,AAPL&providers=polygon&source=newtab")
+
+    assert response.status_code == 200
+    assert response.json()["suggestions"] == []
+    backend_mock.get_snapshots.assert_not_awaited()

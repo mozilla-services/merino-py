@@ -13,9 +13,8 @@ from pytest import LogCaptureFixture
 
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
-    lookup_ticker_company,
-    lookup_ticker_exchange,
     extract_snapshot_if_valid,
+    get_tickers_for_newtab_query,
     get_tickers_for_query,
     format_number,
 )
@@ -89,40 +88,6 @@ def fixture_single_ticker_snapshot_response() -> dict[str, Any]:
     }
 
 
-def test_lookup_stock_ticker_company_success() -> None:
-    """Test lookup_ticker_company method. Should return valid company name."""
-    assert lookup_ticker_company("TSLA") == "Tesla Inc"
-
-
-def test_lookup_etf_ticker_company_success() -> None:
-    """Test lookup_ticker_company method. Should return valid company name."""
-    assert lookup_ticker_company("VOO") == "Vanguard S&P 500 ETF"
-
-
-def test_lookup_ticker_company_fail() -> None:
-    """Test lookup_ticker_company method. Although this use case wouldn't happen at run time but we are still testing for it."""
-    with pytest.raises(KeyError) as error:
-        _ = lookup_ticker_company("BOB")
-    assert error.typename == "KeyError"
-
-
-def test_lookup_stock_ticker_exchange_success() -> None:
-    """Test lookup_ticker_exchange method. Should return valid exchange name."""
-    assert lookup_ticker_exchange("TSLA") == "NASDAQ"
-
-
-def test_lookup_etf_ticker_exchange_success() -> None:
-    """Test lookup_ticker_exchange method. Should return valid exchange name."""
-    assert lookup_ticker_exchange("VOO") == "NYSE"
-
-
-def test_lookup_ticker_exchange_fail() -> None:
-    """Test lookup_ticker_exchange method. Although this use case wouldn't happen at run time but we are still testing for it."""
-    with pytest.raises(KeyError) as error:
-        _ = lookup_ticker_exchange("BOB")
-    assert error.typename == "KeyError"
-
-
 @pytest.mark.parametrize(
     "test_keyword, expected_tickers",
     [
@@ -151,18 +116,46 @@ def test_get_tickers_for_query(test_keyword, expected_tickers) -> None:
     assert get_tickers_for_query(test_keyword) == expected_tickers
 
 
+@pytest.mark.parametrize(
+    "query, expected_tickers",
+    [
+        ("AAPL", ["AAPL"]),
+        ("  aapl ", ["AAPL"]),  # Case and surrounding whitespace normalized.
+        ("BRK.B", ["BRK.B"]),
+        ("KLAR", ["KLAR"]),  # Not in the curated mappings; passed through as is.
+        ("AAPL,KLAR", None),  # One symbol per request; lists are not symbols.
+        ("apple stock", None),  # Keyword queries are not symbols.
+        ("TOOLONGSYMBOL", None),
+        ("", None),
+    ],
+    ids=[
+        "plain",
+        "lowercase_and_whitespace",
+        "class_suffix",
+        "unmapped_ticker",
+        "symbol_list",
+        "keyword_query",
+        "too_long",
+        "empty",
+    ],
+)
+def test_get_tickers_for_newtab_query(query, expected_tickers) -> None:
+    """Test get_tickers_for_newtab_query for various widget queries."""
+    assert get_tickers_for_newtab_query(query) == expected_tickers
+
+
 def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response: dict[str, Any],
 ) -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return TickerSnapshot object."""
     expected_market_open = TickerSnapshot(
-        ticker="AAPL", last_trade_price="229.47", todays_change_percent="+0.82"
+        ticker="AAPL", last_trade_price="229.47", todays_change_percent="+0.82", name="Apple Inc."
     )
     actual_market_open = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
     # should also validate for int values
     expected_market_open_with_int_values = TickerSnapshot(
-        ticker="AAPL", last_trade_price="229", todays_change_percent="+0.82"
+        ticker="AAPL", last_trade_price="229", todays_change_percent="+0.82", name="Apple Inc."
     )
     # deep copying the fixture to over write a value.
     single_ticker_snapshot_response_with_int_values = copy.deepcopy(
@@ -177,14 +170,14 @@ def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response["results"][0]["market_status"] = "closed"
     # the change percent value is 0.946 from the fixture but the function rounds it to 2 decimal places.
     expected_market_closed = TickerSnapshot(
-        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95"
+        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95", name="Apple Inc."
     )
     actual_market_closed = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
     # setting the market status to early_trading.
     single_ticker_snapshot_response["results"][0]["market_status"] = "early_trading"
     expected_market_early_trading = TickerSnapshot(
-        ticker="AAPL", last_trade_price="227.16", todays_change_percent="-0.13"
+        ticker="AAPL", last_trade_price="227.16", todays_change_percent="-0.13", name="Apple Inc."
     )
     actual_market_early_trading = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
@@ -192,7 +185,7 @@ def test_extract_snapshot_if_valid_success(
     single_ticker_snapshot_response["results"][0]["market_status"] = "late_trading"
     # the change percent value is 0.946 from the fixture but the function rounds it to 2 decimal places.
     expected_market_late_trading = TickerSnapshot(
-        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95"
+        ticker="AAPL", last_trade_price="229.31", todays_change_percent="+0.95", name="Apple Inc."
     )
     actual_market_late_trading = extract_snapshot_if_valid(single_ticker_snapshot_response)
 
@@ -252,6 +245,32 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
     del invalid_json_response["results"][0]["session"]["change_percent"]
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
+
+
+@pytest.mark.parametrize(
+    "snapshot_name, expected_name",
+    [("Klarna Group plc", "Klarna Group plc"), (None, "KLAR")],
+    ids=["snapshot_name", "falls_back_to_symbol"],
+)
+def test_build_ticker_summary_for_unmapped_ticker(
+    snapshot_name: str | None, expected_name: str
+) -> None:
+    """Test that tickers outside the curated mappings take the company name from
+    the snapshot, or the symbol when the snapshot carries none, and no exchange.
+    """
+    actual = build_ticker_summary(
+        snapshot=TickerSnapshot(
+            ticker="KLAR",
+            last_trade_price="40.50",
+            todays_change_percent="+1.20",
+            name=snapshot_name,
+        ),
+        image_url=None,
+    )
+
+    assert actual.name == expected_name
+    assert actual.exchange == ""
+    assert actual.query == "KLAR stock"
 
 
 def test_build_ticker_summary_success() -> None:

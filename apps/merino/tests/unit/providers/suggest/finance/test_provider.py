@@ -326,30 +326,75 @@ async def test_query_returns_default_etfs_for_newtab_source_with_empty_query(
     )
 
 
+@pytest.mark.parametrize(
+    "query, expected_tickers",
+    [
+        ("ddog", ["DDOG"]),
+        ("KLAR", ["KLAR"]),  # Outside the curated mappings; passed through as is.
+        ("brk.b", ["BRK.B"]),
+    ],
+    ids=["mapped_symbol", "unmapped_symbol", "class_suffix"],
+)
 @pytest.mark.asyncio
-async def test_query_uses_ticker_lookup_for_newtab_source_with_non_empty_query(
+async def test_query_newtab_resolves_symbols_directly(
     backend_mock: Any,
     provider: Provider,
     statsd_mock: Any,
     ticker_summary: TickerSummary,
     ticker_snapshot: TickerSnapshot,
     geolocation: Location,
+    query: str,
+    expected_tickers: list[str],
 ) -> None:
-    """Test that query uses get_tickers_for_query when source is newtab but query is non-empty."""
+    """Test that a non-empty newtab query is resolved as one ticker symbol with one
+    backend lookup, bypassing the curated mappings.
+    """
     backend_mock.get_snapshots.return_value = [ticker_snapshot]
     backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="ddog", geolocation=geolocation, source="newtab")
+        SuggestionRequest(query=query, geolocation=geolocation, source="newtab")
     )
 
-    backend_mock.get_snapshots.assert_awaited_once_with(["DDOG"])
+    backend_mock.get_snapshots.assert_awaited_once_with(expected_tickers)
     assert len(suggestions) == 1
-
-    # Verify source=newtab is tracked on individual ticker lookups from newtab.
     statsd_mock.timeit.assert_called_once_with(
         "polygon.provider.query.latency", tags={"source": "newtab"}
     )
+
+
+@pytest.mark.parametrize("query", ["apple stock", "definitely not a ticker", "AAPL,KLAR"])
+@pytest.mark.asyncio
+async def test_query_newtab_non_symbol_query_returns_no_suggestion(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    query: str,
+) -> None:
+    """Test that newtab quote lookups accept one symbol only: keyword phrases, free
+    text and symbol lists resolve to nothing without a backend call.
+    """
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query=query, geolocation=geolocation, source="newtab")
+    )
+
+    assert suggestions == []
+    backend_mock.get_snapshots.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_query_urlbar_unmapped_ticker_returns_no_suggestion(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that urlbar queries stay gated on the curated mappings."""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="KLAR", geolocation=geolocation, source="urlbar")
+    )
+
+    assert suggestions == []
+    backend_mock.get_snapshots.assert_not_awaited()
 
 
 # TODO add test for when backend.get_snapshots returns []

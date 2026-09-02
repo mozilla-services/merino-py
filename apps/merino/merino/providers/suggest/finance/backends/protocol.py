@@ -15,11 +15,16 @@ class FinanceBackendError(BackendError):
 
 
 class TickerSnapshot(BaseModel):
-    """Ticker Snapshot."""
+    """Ticker Snapshot.
+
+    `name` is the company name as reported by the snapshot API. It is optional
+    so that cache entries written before the field existed still validate.
+    """
 
     ticker: str
     todays_change_percent: str
     last_trade_price: str
+    name: str | None = None
 
 
 class TickerSummary(BaseModel):

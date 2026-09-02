@@ -32,15 +32,9 @@ STOCK_QUERY_PATTERN = re.compile(
     r"^(?:(?P<keyword1>\w+)\s+stocks?)$|^(?:stocks?\s+(?P<keyword2>\w+))$", re.IGNORECASE
 )
 
-
-def lookup_ticker_company(ticker: str) -> str:
-    """Get the ticker company for a stock or ETF ticker symbol."""
-    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["company"])
-
-
-def lookup_ticker_exchange(ticker: str) -> str:
-    """Get the ticker exchange for ticker symbol. Stock or ETF."""
-    return str(ALL_TICKER_COMPANY_MAPPING[ticker]["exchange"])
+# A single ticker symbol: uppercase alphanumerics with an optional share-class
+# suffix ("BRK.B"). Accepts widget quote lookups.
+TICKER_SYMBOL_PATTERN = re.compile(r"^[A-Z0-9]{1,6}(?:[.\-][A-Z0-9]{1,3})?$")
 
 
 def get_tickers_for_query(query: str) -> list[str] | None:
@@ -78,6 +72,18 @@ def get_tickers_for_query(query: str) -> list[str] | None:
             return [keyword]
 
     return None
+
+
+def get_tickers_for_newtab_query(query: str) -> list[str] | None:
+    """Return the single ticker symbol in a stocks widget query, or None.
+
+    Widget lookups are not gated on the curated mappings: any well-formed
+    symbol is passed through for a direct snapshot lookup. One symbol per
+    request is deliberate. The approved use of the upstream API requires that
+    a user's symbols are requested independently, so a list is not a symbol.
+    """
+    symbol = query.strip().upper()
+    return [symbol] if TICKER_SYMBOL_PATTERN.match(symbol) else None
 
 
 def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | None:
@@ -121,11 +127,13 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
         )
 
         last_trade_price = format_number(price)
+        name = result.get("name")
 
         return TickerSnapshot(
             ticker=ticker,
             todays_change_percent=todays_change_percent,
             last_trade_price=last_trade_price,
+            name=name if isinstance(name, str) else None,
         )
     except KeyError, IndexError, TypeError:
         logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
@@ -140,10 +148,16 @@ def format_number(number: int | float) -> str:
 
 
 def build_ticker_summary(snapshot: TickerSnapshot, image_url: HttpUrl | None) -> TickerSummary:
-    """Build a ticker summary for a finance suggestion response."""
+    """Build a ticker summary for a finance suggestion response.
+
+    Tickers outside the curated mappings (widget lookups) fall back to the
+    company name reported by the snapshot; snapshots carry no exchange, so it
+    is left empty for those.
+    """
     ticker = snapshot.ticker
-    company = lookup_ticker_company(ticker)
-    exchange = lookup_ticker_exchange(ticker)
+    entry = ALL_TICKER_COMPANY_MAPPING.get(ticker)
+    company = str(entry["company"]) if entry else (snapshot.name or ticker)
+    exchange = str(entry["exchange"]) if entry else ""
     serp_query = f"{ticker} stock"
     last_price = f"${snapshot.last_trade_price} USD"
     todays_change_perc = snapshot.todays_change_percent

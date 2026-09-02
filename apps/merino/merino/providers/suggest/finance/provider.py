@@ -25,6 +25,7 @@ from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mappin
     STOCKS_WIDGET_DEFAULT_ETFS,
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
+    get_tickers_for_newtab_query,
     get_tickers_for_query,
 )
 from merino_common.utils import cron
@@ -145,48 +146,58 @@ class Provider(BaseProvider):
 
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide finance suggestions."""
-        tickers: list[str] | None
-        if srequest.source == "newtab" and not srequest.query:
-            tickers = STOCKS_WIDGET_DEFAULT_ETFS
-        else:
-            # Get the list of tickers (0 to 3) for the query string.
-            tickers = get_tickers_for_query(srequest.query)
-
         try:
-            if not tickers:
-                return []
-            else:
-                # Tag requests from the New Tab stocks widget with "newtab".
-                tags = {"source": "newtab"} if srequest.source == "newtab" else {}
-                with self.metrics_client.timeit("polygon.provider.query.latency", tags=tags):
-                    ticker_summaries: list[TickerSummary] = []
-                    # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
-                    ticker_snapshots = await self.backend.get_snapshots(tickers)
+            if srequest.source == "newtab":
+                return await self._query_widget(srequest)
 
-                    # Build ticker summary for each snapshot and its ticker's image
-                    for snapshot in ticker_snapshots:
-                        image_url = self.get_image_url_for_ticker(snapshot.ticker)
-                        ticker_summaries.append(
-                            self.backend.get_ticker_summary(snapshot, image_url)
-                        )
-
-                    return [self.build_suggestion(ticker_summaries)]
-
+            # Get the list of tickers (0 to 3) for the query string.
+            return await self._quote(get_tickers_for_query(srequest.query), tags={})
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
 
-    def build_suggestion(self, data: list[TickerSummary]) -> BaseSuggestion:
-        """Build the suggestion with custom polygon details since this is a finance suggestion."""
-        custom_details = CustomDetails(polygon=PolygonDetails(values=data))
+    async def _query_widget(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Serve the New Tab stocks widget.
 
+        The widget sends an empty query for the default ETF set or a single
+        ticker symbol for a quote. Quote lookups bypass the curated mappings
+        entirely; the widget stores symbols client-side and asks for them one
+        request at a time, which keeps every upstream lookup independent.
+        """
+        tickers = (
+            get_tickers_for_newtab_query(srequest.query)
+            if srequest.query
+            else STOCKS_WIDGET_DEFAULT_ETFS
+        )
+        return await self._quote(tickers, tags={"source": "newtab"})
+
+    async def _quote(
+        self, tickers: list[str] | None, tags: dict[str, str]
+    ) -> list[BaseSuggestion]:
+        """Build one suggestion carrying a summary per ticker the backend could resolve."""
+        if not tickers:
+            return []
+
+        with self.metrics_client.timeit("polygon.provider.query.latency", tags=tags):
+            snapshots = await self.backend.get_snapshots(tickers)
+            summaries: list[TickerSummary] = [
+                self.backend.get_ticker_summary(
+                    snapshot, self.get_image_url_for_ticker(snapshot.ticker)
+                )
+                for snapshot in snapshots
+            ]
+
+        return [self.build_suggestion(PolygonDetails(values=summaries))]
+
+    def build_suggestion(self, details: PolygonDetails) -> BaseSuggestion:
+        """Wrap polygon details in the generic suggestion envelope."""
         return BaseSuggestion(
             title="Finance Suggestion",
             url=HttpUrl(self.url),
             provider=self.name,
             is_sponsored=False,
             score=self.score,
-            custom_details=custom_details,
+            custom_details=CustomDetails(polygon=details),
         )
 
     def get_image_url_for_ticker(self, ticker: str) -> HttpUrl | None:
