@@ -254,6 +254,25 @@ def test_suggest_finance_newtab_rejects_symbol_list(
     backend_mock.get_snapshots.assert_not_awaited()
 
 
+def test_suggest_finance_newtab_query_bypasses_normalization(
+    client: TestClient,
+    backend_mock,
+    mocker: MockerFixture,
+) -> None:
+    """Test that widget symbols reach the provider untouched even when the urlbar
+    normalization pipeline is active: a share class suffix would not survive it.
+    """
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+    backend_mock.get_snapshots.return_value = []
+    pipeline = mocker.patch("merino.web.api_v1.get_pipeline").return_value
+    pipeline.normalize.return_value = "brk b"
+
+    response = client.get("/api/v1/suggest?q=BRK.B&providers=polygon&source=newtab")
+
+    assert response.status_code == 200
+    backend_mock.get_snapshots.assert_awaited_once_with(["BRK.B"])
+
+
 def test_suggest_finance_ticker_search_returns_matches(
     client: TestClient,
     backend_mock,

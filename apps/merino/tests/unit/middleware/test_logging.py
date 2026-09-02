@@ -111,6 +111,25 @@ async def test_no_logging_for_excluded_provider(
     assert len(caplog.messages) == 0
 
 
+@pytest.mark.parametrize("source", settings.logging.excluded_sources)
+@pytest.mark.asyncio
+async def test_no_logging_for_excluded_source(
+    caplog: LogCaptureFixture,
+    receive_mock: Receive,
+    send_mock: Send,
+    source: str,
+) -> None:
+    """Test that no logging action takes place for a suggest request from an excluded source."""
+    caplog.set_level(logging.INFO)
+    scope = _suggest_scope()
+    scope["query_string"] = f"q=AAPL&providers=polygon&source={source}".encode()
+    logging_middleware: LoggingMiddleware = LoggingMiddleware(app)
+
+    await logging_middleware(scope, receive_mock, send_mock)
+
+    assert len(caplog.messages) == 0
+
+
 @pytest.mark.asyncio
 async def test_logging_for_included_provider(
     mocker: MockerFixture,

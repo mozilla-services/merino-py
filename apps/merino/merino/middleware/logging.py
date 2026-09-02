@@ -39,8 +39,9 @@ LOG_SUGGEST_REQUEST: bool = settings.logging.log_suggest_request
 # Whether to submit search terms to merino-fleece for sanitization.
 SUBMIT_SEARCH_TERMS: bool = settings.message_handler.enabled
 
-# Excluded providers for logging
+# Providers and request sources whose queries are neither logged nor submitted.
 EXCLUDED_PROVIDERS: frozenset[str] = frozenset(settings.logging.excluded_providers)
+EXCLUDED_SOURCES: frozenset[str] = frozenset(settings.logging.excluded_sources)
 
 # Queries longer than this are rejected by the suggest endpoint with HTTP 400, so they
 # are never worth submitting.
@@ -55,6 +56,16 @@ _enqueue_counter = _meter.create_counter(
         "`success`, `error` (the queue rejected it) or `skipped` (prefiltered out)."
     ),
 )
+
+
+def _is_loggable_suggest_request(request: Request) -> bool:
+    """Whether this suggest request's query is eligible for logging and submission."""
+    params = request.query_params
+    return (
+        PATTERN.match(request.url.path) is not None
+        and params.get("providers", "").strip().lower() not in EXCLUDED_PROVIDERS
+        and params.get("source", "").strip().lower() not in EXCLUDED_SOURCES
+    )
 
 
 def _skip_reason(query: str | None) -> str | None:
@@ -106,11 +117,8 @@ class LoggingMiddleware:
                 request = Request(scope=scope)
                 dt: datetime = datetime.fromtimestamp(time.time())
                 # https://mozilla-hub.atlassian.net/browse/DISCO-2489
-                if (
-                    (LOG_SUGGEST_REQUEST or SUBMIT_SEARCH_TERMS)
-                    and PATTERN.match(request.url.path)
-                    and request.query_params.get("providers", "").strip().lower()
-                    not in EXCLUDED_PROVIDERS
+                if (LOG_SUGGEST_REQUEST or SUBMIT_SEARCH_TERMS) and _is_loggable_suggest_request(
+                    request
                 ):
                     suggest_log_data: SuggestLogDataModel = create_suggest_log_data(
                         request, message, dt

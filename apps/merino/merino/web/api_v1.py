@@ -100,12 +100,15 @@ router = APIRouter()
 NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
 
 
-def _should_normalize_query(provider_name: str, client_variants: list[str]) -> bool:
+def _should_normalize_query(provider_name: str, client_variants: list[str], source: str) -> bool:
     """Whether a provider receives the normalized query for this request.
 
-    sports/polygon are always-on (graduated); AMP is gated on the experiment variant.
+    Normalization targets phrases typed into the urlbar. New Tab widgets send
+    ticker symbols and free text meant for upstream search, which must reach
+    the provider untouched. sports/polygon are always-on (graduated); AMP is
+    gated on the experiment variant.
     """
-    if provider_name not in NORMALIZATION_PROVIDERS:
+    if source == "newtab" or provider_name not in NORMALIZATION_PROVIDERS:
         return False
     if provider_name == ProviderType.ADM:
         return AMP_FUZZY_VARIANT in client_variants
@@ -316,7 +319,7 @@ async def suggest(
     for p in search_from:
         q_for_provider = (
             q_normalized
-            if use_normalization and _should_normalize_query(p.name, client_variants_list)
+            if use_normalization and _should_normalize_query(p.name, client_variants_list, source)
             else q
         )
         srequest = SuggestionRequest(

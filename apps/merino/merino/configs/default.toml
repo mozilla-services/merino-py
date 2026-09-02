@@ -91,6 +91,12 @@ log_suggest_request = true
 # Excluded providers for query logging
 excluded_providers = ["accuweather", "geolocation"]
 
+# MERINO_LOGGING__EXCLUDED_SOURCES
+# Request sources excluded from query logging and search term submission. New
+# Tab widgets send ticker symbols and free text for upstream search, not urlbar
+# search terms.
+excluded_sources = ["newtab"]
+
 [default.governance]
 # MERINO_GOVERNANCE__CRON_INTERVAL_SEC
 # The interval of the background cron job for Merino governance.
