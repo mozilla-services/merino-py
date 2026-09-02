@@ -4,7 +4,7 @@ import itertools
 import hashlib
 import logging
 import aiodogstatsd
-from httpx import AsyncClient, Response, HTTPStatusError
+from httpx import AsyncClient, HTTPError, HTTPStatusError, Response
 import orjson
 from pydantic import HttpUrl, ValidationError
 from merino.configs import settings
@@ -21,6 +21,10 @@ from merino.providers.suggest.finance.backends.protocol import (
 )
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import CacheAdapterError
+from merino.providers.suggest.finance.backends.polygon.errors import (
+    PolygonError,
+    PolygonErrorMessages,
+)
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
 )
@@ -135,7 +139,11 @@ class PolygonBackend:
         self.cache_control = settings.providers.polygon.image_cache_control
 
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
-        """Get snapshots for the list of tickers."""
+        """Get snapshots for the list of tickers.
+
+        Raises:
+            PolygonError: When an upstream snapshot request fails.
+        """
         # check the cache first.
         cached = await self.get_snapshots_from_cache(tickers)
         # each tuple has the shape of `(snapshot, ttl)` and ignore the none tuples for now.
@@ -153,7 +161,9 @@ class PolygonBackend:
         else:
             self.metrics_client.increment("polygon.snapshot.cache.miss")
 
-        # Fetch any missing tickers from the API.
+        # Fetch any missing tickers from the API, one request per ticker. The
+        # approved use of the upstream API requires that a user's symbols are
+        # requested independently and never combined into one request.
         fetched_snapshots: list[TickerSnapshot] = []
         for ticker in missed_tickers:
             if (
@@ -207,25 +217,38 @@ class PolygonBackend:
             # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
         return []
 
-    async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
-        """Make a request and fetch the snapshot for this single ticker."""
+    async def fetch_ticker_snapshot(self, ticker: str) -> Any:
+        """Fetch the snapshot for one ticker.
+
+        Raises:
+            PolygonError: When the upstream request fails.
+        """
         params = {"ticker": ticker, self.url_param_api_key: self.api_key}
+        return await self._get_json("snapshot", self.url_single_ticker_snapshot, params)
 
+    async def _get_json(self, operation: str, url: str, params: dict[str, str]) -> Any:
+        """Issue one upstream GET on the request path and return the decoded body.
+
+        Emits `polygon.request.<operation>.get` counters and latency. Any HTTP
+        failure, including timeouts, is logged once and re-raised as a
+        `PolygonError` for the provider to handle.
+        """
+        self.metrics_client.increment(f"polygon.request.{operation}.get")
         try:
-            self.metrics_client.increment("polygon.request.snapshot.get")
-
-            with self.metrics_client.timeit("polygon.request.snapshot.get.latency"):
-                response: Response = await self.http_client.get(
-                    self.url_single_ticker_snapshot, params=params
-                )
-
+            with self.metrics_client.timeit(f"polygon.request.{operation}.get.latency"):
+                response: Response = await self.http_client.get(url, params=params)
             response.raise_for_status()
-        except HTTPStatusError as ex:
-            logger.warning(
-                f"Polygon request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
+        except HTTPError as ex:
+            self.metrics_client.increment(f"polygon.request.{operation}.get.failed")
+            detail = (
+                f"{ex.response.status_code} {ex.response.reason_phrase}"
+                if isinstance(ex, HTTPStatusError)
+                else type(ex).__name__
             )
-            self.metrics_client.increment("polygon.request.snapshot.get.failed")
-            return None
+            logger.warning(f"Polygon {operation} request failed: {detail}")
+            raise PolygonError(
+                PolygonErrorMessages.HTTP_REQUEST_ERROR, operation=operation, detail=detail
+            ) from ex
 
         return response.json()
 

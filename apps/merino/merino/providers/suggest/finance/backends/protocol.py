@@ -1,7 +1,7 @@
 """Protocol for finance provider backends."""
 
 from enum import Enum
-from typing import Any, Dict, Protocol
+from typing import Dict, Protocol
 from pydantic import BaseModel, HttpUrl
 
 from merino.exceptions import BackendError
@@ -75,10 +75,6 @@ class FinanceBackend(Protocol):
 
     async def shutdown(self) -> None:  # pragma: no cover
         """Close down any open connections."""
-        ...
-
-    async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
-        """Make a request and fetch the snapshot for this single ticker."""
         ...
 
     async def get_ticker_image_url(self, ticker) -> str | None:

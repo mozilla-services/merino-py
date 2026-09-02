@@ -81,12 +81,19 @@ def get_tickers_for_query(query: str) -> list[str] | None:
 
 
 def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | None:
-    """Extract the TickerSnapshot from the nested JSON response, if it has the valid json structure."""
+    """Extract the TickerSnapshot from the nested JSON response, if it has the valid json structure.
+
+    Unknown and delisted tickers come back as a result entry carrying an
+    `error` key instead of session data. That is an expected outcome rather
+    than a malformed response, so it yields None without a warning.
+    """
     if data is None:
         return None
 
     try:
         result = data["results"][0]
+        if "error" in result:
+            return None
         ticker = result["ticker"]
         market_status = result["market_status"]
 

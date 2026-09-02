@@ -6,7 +6,10 @@
 
 import pytest
 import copy
+import logging
 from typing import Any
+
+from pytest import LogCaptureFixture
 
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
@@ -204,6 +207,22 @@ def test_extract_snapshot_if_valid_success(
 def test_extract_snapshot_if_valid_returns_none() -> None:
     """Test extract_ticker_snapshot_returns_none method. Should return None when snapshot param is None."""
     assert extract_snapshot_if_valid(None) is None
+
+
+def test_extract_snapshot_if_valid_returns_none_for_unknown_ticker(
+    caplog: LogCaptureFixture,
+) -> None:
+    """Test extract_snapshot_if_valid with an unknown ticker. The API answers with an error
+    entry instead of session data; that is expected and must not be logged as malformed.
+    """
+    caplog.set_level(logging.WARNING)
+    response = {
+        "results": [{"ticker": "ZZZZZZ", "error": "NOT_FOUND", "message": "Ticker not found."}],
+        "status": "OK",
+    }
+
+    assert extract_snapshot_if_valid(response) is None
+    assert not caplog.records
 
 
 def test_extract_snapshot_if_valid_returns_none_for_invalid_value_type(
