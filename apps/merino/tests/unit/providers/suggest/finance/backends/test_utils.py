@@ -7,19 +7,25 @@
 import pytest
 import copy
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from pytest import LogCaptureFixture
 
 from merino.providers.suggest.finance.backends.polygon.utils import (
     build_ticker_summary,
     extract_snapshot_if_valid,
+    extract_ticker_matches_from_search_response,
     get_tickers_for_newtab_query,
     get_tickers_for_query,
     format_number,
+    rank_ticker_matches,
 )
 
-from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
+from merino.providers.suggest.finance.backends.protocol import (
+    TickerMatch,
+    TickerSnapshot,
+    TickerSummary,
+)
 
 
 @pytest.fixture(name="single_ticker_snapshot_response")
@@ -245,6 +251,97 @@ def test_extract_snapshot_if_valid_returns_none_for_missing_property(
     del invalid_json_response["results"][0]["session"]["change_percent"]
 
     assert extract_snapshot_if_valid(invalid_json_response) is None
+
+
+@pytest.mark.parametrize(
+    "response",
+    [None, {}, {"results": "nope"}, {"results": [None, 42]}],
+    ids=["none", "no_results", "results_not_a_list", "results_not_objects"],
+)
+def test_extract_ticker_matches_ignores_malformed_responses(response) -> None:
+    """Test that malformed search responses yield nothing rather than raising."""
+    assert extract_ticker_matches_from_search_response(response) == []
+
+
+def test_extract_ticker_matches_from_search_response(
+    search_result: Callable[..., dict[str, Any]],
+) -> None:
+    """Test that a reference search response yields only active U.S. matches of
+    the supported security types, with exchange MICs mapped to display names.
+    """
+    response = {
+        "results": [
+            search_result("AAPL", "Apple Inc."),
+            search_result(
+                "VTI", "Vanguard Total Stock Market ETF", "ETF", primary_exchange="ARCX"
+            ),
+            # Unknown MIC falls back to the MIC itself.
+            search_result("XYZ", "Block, Inc.", primary_exchange="XPHL"),
+            search_result("AAPLW", "Apple Warrant", "WARRANT"),
+            search_result("APC", "Apple Inc.", locale="de", primary_exchange="XFRA"),
+            search_result("WBA", "Walgreens Boots Alliance, Inc.", active=False),
+            {"ticker": None, "type": "CS", "locale": "us", "active": True},
+        ],
+        "status": "OK",
+    }
+
+    matches = extract_ticker_matches_from_search_response(response)
+
+    assert matches == [
+        TickerMatch(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ", is_etf=False),
+        TickerMatch(
+            ticker="VTI", name="Vanguard Total Stock Market ETF", exchange="NYSE", is_etf=True
+        ),
+        TickerMatch(ticker="XYZ", name="Block, Inc.", exchange="XPHL", is_etf=False),
+    ]
+
+
+def _match(ticker: str, name: str, is_etf: bool = False) -> TickerMatch:
+    return TickerMatch(ticker=ticker, name=name, exchange="NYSE", is_etf=is_etf)
+
+
+@pytest.mark.parametrize(
+    "query, matches, expected_tickers",
+    [
+        # GS: a stock whose name starts with the query once "The " is ignored. The
+        # ETFs also carry the name prefix but rank below stocks. SACH is a
+        # substring-only hit and ranks last.
+        (
+            "goldman sachs",
+            [
+                _match("AAAU", "Goldman Sachs Physical Gold ETF", is_etf=True),
+                _match("GBIL", "Goldman Sachs Access Treasury 0-1 Year ETF", is_etf=True),
+                _match("GS", "The Goldman Sachs Group, Inc."),
+                _match("SACH", "Sachem Capital Corp."),
+            ],
+            ["GS", "AAAU", "GBIL", "SACH"],
+        ),
+        # An exact symbol outranks a name-prefix hit.
+        (
+            "ford",
+            [_match("FORD", "Forward Industries, Inc."), _match("F", "Ford Motor Company")],
+            ["FORD", "F"],
+        ),
+        # A symbol-prefix hit outranks a name-prefix hit.
+        (
+            "goog",
+            [
+                _match("ABCD", "Goog Corp"),
+                _match("GOOGL", "Alphabet Inc. Class A"),
+                _match("GOOG", "Alphabet Inc. Class C"),
+            ],
+            ["GOOG", "GOOGL", "ABCD"],
+        ),
+    ],
+    ids=["name_prefix_and_type", "exact_symbol_first", "symbol_prefix_before_name_prefix"],
+)
+def test_rank_ticker_matches(
+    query: str, matches: list[TickerMatch], expected_tickers: list[str]
+) -> None:
+    """Test the ranking tiers: exact symbol, symbol prefix, name prefix (a leading
+    "The " ignored), stocks before ETFs, then API order.
+    """
+    assert [m.ticker for m in rank_ticker_matches(matches, query)] == expected_tickers
 
 
 @pytest.mark.parametrize(

@@ -269,6 +269,7 @@ def _create_provider(provider_id: str, setting: Settings) -> BaseProvider:
                     url_param_api_key=settings.polygon.url_param_api_key,
                     url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
                     url_single_ticker_overview=settings.polygon.url_single_ticker_overview,
+                    url_reference_tickers=settings.polygon.url_reference_tickers,
                     gcs_uploader=GcsUploader(
                         settings.image_gcs.gcs_project,
                         settings.image_gcs.gcs_bucket,

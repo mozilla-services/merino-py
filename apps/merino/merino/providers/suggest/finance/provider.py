@@ -33,6 +33,9 @@ from merino.configs import settings
 
 logger = logging.getLogger(__name__)
 
+# The `request_type` the stocks widget sends for its search pick-list.
+TICKER_SEARCH_REQUEST_TYPE = "ticker_search"
+
 
 class Provider(BaseProvider):
     """Suggestion provider for finance."""
@@ -159,11 +162,16 @@ class Provider(BaseProvider):
     async def _query_widget(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Serve the New Tab stocks widget.
 
-        The widget sends an empty query for the default ETF set or a single
-        ticker symbol for a quote. Quote lookups bypass the curated mappings
-        entirely; the widget stores symbols client-side and asks for them one
-        request at a time, which keeps every upstream lookup independent.
+        The widget sends three request shapes: an empty query for the default
+        ETF set, a single ticker symbol for a quote, and free text with
+        `request_type=ticker_search` for its search pick-list. Quote lookups
+        bypass the curated mappings entirely; the widget obtains symbols from
+        ticker search, stores them client-side, and asks for quotes one symbol
+        per request, which keeps every upstream lookup independent.
         """
+        if srequest.request_type == TICKER_SEARCH_REQUEST_TYPE:
+            return await self._search_tickers(srequest)
+
         tickers = (
             get_tickers_for_newtab_query(srequest.query)
             if srequest.query
@@ -188,6 +196,26 @@ class Provider(BaseProvider):
             ]
 
         return [self.build_suggestion(PolygonDetails(values=summaries))]
+
+    async def _search_tickers(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Serve a widget ticker search: candidate matches for free text.
+
+        Unlike weather location completion, digit-bearing queries are not
+        filtered as soft PII: names like "3M" are legitimate finance searches,
+        and forwarding widget search input upstream is the approved design.
+        """
+        if not srequest.query:
+            return []
+
+        with self.metrics_client.timeit(
+            "polygon.provider.search.latency", tags={"source": "newtab"}
+        ):
+            matches = await self.backend.search_tickers(srequest.query)
+
+        if not matches:
+            return []
+
+        return [self.build_suggestion(PolygonDetails(values=[], matches=matches))]
 
     def build_suggestion(self, details: PolygonDetails) -> BaseSuggestion:
         """Wrap polygon details in the generic suggestion envelope."""

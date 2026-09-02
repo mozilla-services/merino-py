@@ -21,7 +21,10 @@ from pytest import LogCaptureFixture
 from merino.configs import settings
 from redis.asyncio import Redis
 
-from merino.providers.suggest.finance.backends.polygon.backend import PolygonBackend
+from merino.providers.suggest.finance.backends.polygon.backend import (
+    TICKER_SEARCH_UPSTREAM_LIMIT,
+    PolygonBackend,
+)
 from merino.providers.suggest.finance.backends.polygon.errors import (
     PolygonError,
     PolygonErrorMessages,
@@ -36,6 +39,7 @@ from merino.providers.suggest.finance.backends.protocol import (
 
 URL_SINGLE_TICKER_SNAPSHOT = settings.polygon.url_single_ticker_snapshot
 URL_SINGLE_TICKER_OVERVIEW = settings.polygon.url_single_ticker_overview
+URL_REFERENCE_TICKERS = settings.polygon.url_reference_tickers
 TICKER_TTL_SEC = settings.providers.polygon.cache_ttls.ticker_ttl_sec
 
 
@@ -99,6 +103,7 @@ def fixture_polygon_parameters(
         "url_param_api_key": "apiKey",
         "url_single_ticker_snapshot": URL_SINGLE_TICKER_SNAPSHOT,
         "url_single_ticker_overview": URL_SINGLE_TICKER_OVERVIEW,
+        "url_reference_tickers": URL_REFERENCE_TICKERS,
         "gcs_uploader": mock_gcs_uploader,
         "cache": RedisAdapter(redis_mock_cache_miss),
         "ticker_ttl_sec": TICKER_TTL_SEC,
@@ -238,42 +243,49 @@ async def test_fetch_ticker_snapshot_success(
     timeit_metric_mock.assert_called_once_with("polygon.request.snapshot.get.latency")
 
 
+@pytest.mark.parametrize(
+    "request_upstream, operation",
+    [
+        (lambda polygon: polygon.fetch_ticker_snapshot("AAPL"), "snapshot"),
+        # A multi-word query issues only the search request.
+        (lambda polygon: polygon.search_tickers("apple inc"), "search"),
+    ],
+    ids=["snapshot", "ticker_search"],
+)
 @pytest.mark.asyncio
-async def test_fetch_ticker_snapshot_raises_for_http_500(
+async def test_upstream_http_error_raises_polygon_error(
     polygon: PolygonBackend,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
+    request_upstream: Callable[[PolygonBackend], Awaitable[Any]],
+    operation: str,
 ) -> None:
-    """Test fetch_ticker_snapshot method. Should raise PolygonError on HTTPStatusError 500."""
+    """Test that an upstream HTTP failure is logged once, counted, and raised as a
+    PolygonError for the provider to handle.
+    """
     caplog.set_level(logging.WARNING)
-
     client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
-
-    ticker = "AAPL"
-    base_url = "https://api.polygon.io/apiKey=api_key"
-    snapshot_endpoint = URL_SINGLE_TICKER_SNAPSHOT.format(ticker=ticker)
-
-    # Mock metrics client.
     polygon.metrics_client = MagicMock()
-    increment_metric_mock = polygon.metrics_client.increment
-
     client_mock.get.return_value = Response(
         status_code=500,
         content=b"",
-        request=Request(method="GET", url=(f"{base_url}{snapshot_endpoint}")),
+        request=Request(method="GET", url="https://api.polygon.io"),
     )
 
     with pytest.raises(PolygonError):
-        await polygon.fetch_ticker_snapshot(ticker)
+        await request_upstream(polygon)
 
     records = filter_caplog(
         caplog.records, "merino.providers.suggest.finance.backends.polygon.backend"
     )
-
-    assert len(caplog.records) == 1
-    assert records[0].message == "Polygon snapshot request failed: 500 Internal Server Error"
-    increment_metric_mock.assert_has_calls(
-        [call("polygon.request.snapshot.get"), call("polygon.request.snapshot.get.failed")],
+    assert [record.message for record in records] == [
+        f"Polygon {operation} request failed: 500 Internal Server Error"
+    ]
+    polygon.metrics_client.increment.assert_has_calls(
+        [
+            call(f"polygon.request.{operation}.get"),
+            call(f"polygon.request.{operation}.get.failed"),
+        ],
         any_order=False,
     )
 
@@ -303,6 +315,101 @@ async def test_fetch_ticker_snapshot_raises_for_timeout(
         "Polygon snapshot request failed: ReadTimeout"
     ]
     polygon.metrics_client.increment.assert_any_call("polygon.request.snapshot.get.failed")
+
+
+def _reference_tickers_responder(
+    search_results: list[dict[str, Any]], exact_results: list[dict[str, Any]]
+) -> Callable[..., Response]:
+    """Answer reference tickers requests: `search` params get search_results,
+    exact `ticker` params get exact_results.
+    """
+
+    def responder(url: str, params: dict[str, str]) -> Response:
+        results = search_results if "search" in params else exact_results
+        return Response(
+            status_code=200,
+            content=orjson.dumps({"results": results, "status": "OK"}),
+            request=Request(method="GET", url="https://api.polygon.io/v3/reference/tickers"),
+        )
+
+    return responder
+
+
+@pytest.mark.parametrize(
+    "query, search_results, exact_results, expected_tickers, expected_lookups",
+    [
+        # A symbol-shaped name runs both lookups; the exact hit is deduplicated and first.
+        (
+            "apple",
+            [("AAPL", "Apple Inc."), ("PAPL", "Pineapple Financial Inc.")],
+            [("AAPL", "Apple Inc.")],
+            ["AAPL", "PAPL"],
+            {"search", "ticker"},
+        ),
+        # Searching "EA" matches "ea" anywhere in a name and the API truncates
+        # alphabetically, so the EA ticker itself may be absent from search results.
+        (
+            "EA",
+            [("AACG", "ATA Creativity Global"), ("ABFL", "Abacus FCF Leaders ETF")],
+            [("EA", "Electronic Arts Inc.")],
+            ["EA", "AACG", "ABFL"],
+            {"search", "ticker"},
+        ),
+        # Free text that cannot be a symbol issues only the search request.
+        (
+            "berkshire hathaway",
+            [("BRK.B", "Berkshire Hathaway Inc.")],
+            [],
+            ["BRK.B"],
+            {"search"},
+        ),
+        # Below the minimum query length only the exact lookup runs.
+        (
+            "F",
+            [("FORD", "Forward Industries, Inc.")],
+            [("F", "Ford Motor Company")],
+            ["F"],
+            {"ticker"},
+        ),
+    ],
+    ids=["symbol_shaped_name", "exact_hit_outside_search_window", "free_text", "short_query"],
+)
+@pytest.mark.asyncio
+async def test_search_tickers(
+    polygon: PolygonBackend,
+    search_result: Callable[..., dict[str, Any]],
+    query: str,
+    search_results: list[tuple[str, str]],
+    exact_results: list[tuple[str, str]],
+    expected_tickers: list[str],
+    expected_lookups: set[str],
+) -> None:
+    """Test search_tickers: which upstream lookups a query triggers and how their
+    results are merged and ranked.
+    """
+    client_mock: AsyncMock = cast(AsyncMock, polygon.http_client)
+    client_mock.get.side_effect = _reference_tickers_responder(
+        search_results=[search_result(*args) for args in search_results],
+        exact_results=[search_result(*args) for args in exact_results],
+    )
+
+    matches = await polygon.search_tickers(query)
+
+    assert [match.ticker for match in matches] == expected_tickers
+
+    requests = [c.kwargs["params"] for c in client_mock.get.await_args_list]
+    assert {
+        "search" if "search" in params else "ticker" for params in requests
+    } == expected_lookups
+    for params in requests:
+        assert params["market"] == "stocks"
+        assert params["active"] == "true"
+        assert params["apiKey"] == "api_key"
+        if "search" in params:
+            assert params["search"] == query
+            assert params["limit"] == str(TICKER_SEARCH_UPSTREAM_LIMIT)
+        else:
+            assert params["ticker"] == query.upper()
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,6 @@
 """A wrapper for Polygon API interactions."""
 
+import asyncio
 import itertools
 import hashlib
 import logging
@@ -16,6 +17,7 @@ from merino.providers.suggest.finance.backends.polygon.filemanager import (
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceManifest,
     GetManifestResultCode,
+    TickerMatch,
     TickerSnapshot,
     TickerSummary,
 )
@@ -29,9 +31,12 @@ from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapp
     ALL_STOCK_TICKER_COMPANY_MAPPING,
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
+    TICKER_SYMBOL_PATTERN,
     extract_snapshot_if_valid,
+    extract_ticker_matches_from_search_response,
     build_ticker_summary,
     generate_cache_key_for_ticker,
+    rank_ticker_matches,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
@@ -44,6 +49,17 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 GCS_BLOB_NAME = "polygon_latest.json"
+
+# Upper bound on matches returned to the stocks widget's search pick-list.
+TICKER_SEARCH_LIMIT: int = settings.providers.polygon.search_result_limit
+
+# The search API orders matches by ticker, not relevance, so the real hit can
+# sit far down the alphabet. Fetch a wider window for ranking to work with.
+TICKER_SEARCH_UPSTREAM_LIMIT: int = settings.providers.polygon.search_upstream_limit
+
+# Below this many characters the substring search returns an alphabetical slice
+# of the whole market, so only the exact symbol lookup runs.
+TICKER_SEARCH_MIN_QUERY_LENGTH: int = settings.providers.polygon.search_min_query_length
 
 # The Lua script to write ticker snapshots and their TTLs for a list of keys.
 #
@@ -97,6 +113,7 @@ class PolygonBackend:
     url_param_api_key: str
     url_single_ticker_snapshot: str
     url_single_ticker_overview: str
+    url_reference_tickers: str
     filemanager: PolygonFilemanager
 
     def __init__(
@@ -107,6 +124,7 @@ class PolygonBackend:
         url_param_api_key: str,
         url_single_ticker_snapshot: str,
         url_single_ticker_overview: str,
+        url_reference_tickers: str,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
         gcs_uploader: GcsUploader,
@@ -123,6 +141,7 @@ class PolygonBackend:
         self.gcs_uploader = gcs_uploader
         self.url_single_ticker_snapshot = url_single_ticker_snapshot
         self.url_single_ticker_overview = url_single_ticker_overview
+        self.url_reference_tickers = url_reference_tickers
         self.filemanager = PolygonFilemanager(
             gcs_bucket_path=settings.image_gcs.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
@@ -216,6 +235,70 @@ class PolygonBackend:
 
             # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
         return []
+
+    async def search_tickers(self, query: str) -> list[TickerMatch]:
+        """Search the reference tickers endpoint by symbol or company name.
+
+        The search API matches substrings anywhere in the name and orders
+        results by ticker, so the intended security can fall outside the
+        response window entirely (searching "EA" returns names containing
+        "ea"). For symbol-shaped queries an exact ticker lookup therefore runs
+        concurrently and its hit is ranked first; the remaining matches are
+        fetched with a wider window and re-ranked by relevance. Queries below
+        the minimum length skip the substring search, which would only return
+        an alphabetical slice of the market.
+
+        Results are intentionally not cached: the query is free text typed by
+        the user, mirroring how weather location completion talks to its API.
+
+        Raises:
+            PolygonError: When an upstream request fails.
+        """
+        query = query.strip()
+        symbol = query.upper()
+
+        try:
+            async with asyncio.TaskGroup() as tg:
+                search_task = (
+                    tg.create_task(
+                        self._fetch_reference_tickers(
+                            {"search": query, "limit": str(TICKER_SEARCH_UPSTREAM_LIMIT)}
+                        )
+                    )
+                    if len(query) >= TICKER_SEARCH_MIN_QUERY_LENGTH
+                    else None
+                )
+                exact_task = (
+                    tg.create_task(self._fetch_reference_tickers({"ticker": symbol}))
+                    if TICKER_SYMBOL_PATTERN.match(symbol)
+                    else None
+                )
+        except ExceptionGroup as e:
+            # The task group wraps failures; surface one backend error so the
+            # provider's circuit breaker can count it.
+            raise PolygonError(PolygonErrorMessages.FAILED_TICKER_SEARCH, exceptions=e.exceptions)
+
+        exact = exact_task.result() if exact_task is not None else []
+        searched = search_task.result() if search_task is not None else []
+        exact_tickers = {match.ticker for match in exact}
+        ranked = [
+            match
+            for match in rank_ticker_matches(searched, query)
+            if match.ticker not in exact_tickers
+        ]
+
+        return (exact + ranked)[:TICKER_SEARCH_LIMIT]
+
+    async def _fetch_reference_tickers(self, params: dict[str, str]) -> list[TickerMatch]:
+        """Make one reference tickers request and extract the matches."""
+        request_params = {
+            "market": "stocks",
+            "active": "true",
+            self.url_param_api_key: self.api_key,
+            **params,
+        }
+        response = await self._get_json("search", self.url_reference_tickers, request_params)
+        return extract_ticker_matches_from_search_response(response)
 
     async def fetch_ticker_snapshot(self, ticker: str) -> Any:
         """Fetch the snapshot for one ticker.

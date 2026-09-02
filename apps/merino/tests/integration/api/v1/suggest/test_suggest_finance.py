@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from merino.providers.suggest.finance.backends.protocol import (
+    TickerMatch,
     TickerSnapshot,
     TickerSummary,
 )
@@ -244,3 +245,49 @@ def test_suggest_finance_newtab_rejects_symbol_list(
     assert response.status_code == 200
     assert response.json()["suggestions"] == []
     backend_mock.get_snapshots.assert_not_awaited()
+
+
+def test_suggest_finance_ticker_search_returns_matches(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that a newtab ticker search returns candidate matches under polygon custom details."""
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+    backend_mock.search_tickers.return_value = [
+        TickerMatch(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ", is_etf=False),
+        TickerMatch(
+            ticker="APLE", name="Apple Hospitality REIT, Inc.", exchange="NYSE", is_etf=False
+        ),
+    ]
+
+    response = client.get(
+        "/api/v1/suggest?q=apple&providers=polygon&source=newtab&request_type=ticker_search"
+    )
+
+    assert response.status_code == 200
+    backend_mock.search_tickers.assert_awaited_once_with("apple")
+    polygon = response.json()["suggestions"][0]["custom_details"]["polygon"]
+    assert polygon["values"] == []
+    assert polygon["matches"] == [
+        {"ticker": "AAPL", "name": "Apple Inc.", "exchange": "NASDAQ", "is_etf": False},
+        {
+            "ticker": "APLE",
+            "name": "Apple Hospitality REIT, Inc.",
+            "exchange": "NYSE",
+            "is_etf": False,
+        },
+    ]
+
+
+def test_suggest_finance_returns_400_for_unknown_request_type(
+    client: TestClient,
+    backend_mock,
+) -> None:
+    """Test that the suggest endpoint rejects request_type values outside the allowed set."""
+    backend_mock.fetch_manifest_data.return_value = (1, None)
+
+    response = client.get(
+        "/api/v1/suggest?q=apple&providers=polygon&source=newtab&request_type=bogus"
+    )
+
+    assert response.status_code == 400

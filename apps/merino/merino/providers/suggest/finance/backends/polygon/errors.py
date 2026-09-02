@@ -12,6 +12,7 @@ class PolygonErrorMessages(Enum):
     CACHE_WRITE_ERROR = "Something went wrong with storing to cache. Did not update cache."
     CACHE_READ_ERROR = "Failed to read from cache: {exception}"
     FAILED_FINANCE_REPORT = "Failed to fetch finance report: {exceptions}"
+    FAILED_TICKER_SEARCH = "Failed to search tickers: {exceptions}"
     HTTP_REQUEST_ERROR = "Polygon {operation} request failed: {detail}"
     HTTP_UNEXPECTED_RESPONSE = "Unexpected response for request: {req}"
 

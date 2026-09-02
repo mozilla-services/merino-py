@@ -156,7 +156,9 @@ async def suggest(
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    request_type: Annotated[
+        str | None, Query(pattern="^(location|weather|ticker_search)$")
+    ] = None,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -197,7 +199,9 @@ async def suggest(
     - `request_type`: [Optional] For AccuWeather provider, the request type should be either a
         "location" or "weather" string. For "location" it will get location completion
         suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
-        to weather suggestions.
+        to weather suggestions. For the Polygon provider with `source=newtab`, the
+        "ticker_search" request type searches tickers by symbol or company name and returns
+        candidate matches instead of prices.
 
     **Headers:**
 

@@ -27,6 +27,19 @@ class TickerSnapshot(BaseModel):
     name: str | None = None
 
 
+class TickerMatch(BaseModel):
+    """One candidate from a ticker search, shown in the widget's search pick-list.
+
+    The user selects a match client-side; the widget stores the ticker symbol
+    and uses it for subsequent quote lookups. Merino keeps no selection state.
+    """
+
+    ticker: str
+    name: str
+    exchange: str
+    is_etf: bool
+
+
 class TickerSummary(BaseModel):
     """Ticker summary."""
 
@@ -76,6 +89,10 @@ class FinanceBackend(Protocol):
         Raises:
             BackendError: Category of error specific to provider backends.
         """
+        ...
+
+    async def search_tickers(self, query: str) -> list[TickerMatch]:  # pragma: no cover
+        """Search the upstream reference data by ticker symbol or company name."""
         ...
 
     async def shutdown(self) -> None:  # pragma: no cover

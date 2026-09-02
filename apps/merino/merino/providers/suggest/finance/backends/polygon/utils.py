@@ -6,7 +6,12 @@ from typing import Any
 import hashlib
 
 from pydantic import HttpUrl
-from merino.providers.suggest.finance.backends.protocol import TickerSnapshot, TickerSummary
+from merino.configs import settings
+from merino.providers.suggest.finance.backends.protocol import (
+    TickerMatch,
+    TickerSnapshot,
+    TickerSummary,
+)
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
     STOCK_TICKER_EAGER_MATCH_BLOCKLIST,
@@ -35,6 +40,20 @@ STOCK_QUERY_PATTERN = re.compile(
 # A single ticker symbol: uppercase alphanumerics with an optional share-class
 # suffix ("BRK.B"). Accepts widget quote lookups.
 TICKER_SYMBOL_PATTERN = re.compile(r"^[A-Z0-9]{1,6}(?:[.\-][A-Z0-9]{1,3})?$")
+
+# The equities universe served to the widget's ticker search, as upstream
+# security type codes.
+SEARCH_SECURITY_TYPES: frozenset[str] = frozenset(settings.providers.polygon.search_security_types)
+
+# Exchange labels shown in suggestions, keyed by the MIC reported by the API.
+# Unknown MICs fall back to the MIC itself.
+MIC_DISPLAY_NAMES = {
+    "XNAS": "NASDAQ",
+    "XNYS": "NYSE",
+    "ARCX": "NYSE",
+    "BATS": "BATS",
+    "XASE": "AMEX",
+}
 
 
 def get_tickers_for_query(query: str) -> list[str] | None:
@@ -138,6 +157,67 @@ def extract_snapshot_if_valid(data: dict[str, Any] | None) -> TickerSnapshot | N
     except KeyError, IndexError, TypeError:
         logger.warning(f"Polygon snapshot response json has incorrect shape: {data}")
         return None
+
+
+def extract_ticker_matches_from_search_response(
+    data: dict[str, Any] | None,
+) -> list[TickerMatch]:
+    """Extract widget search matches from a reference tickers search response.
+
+    Keeps only active U.S. listings of the supported security types; anything
+    else (warrants, units, foreign locales, delisted entries) is dropped.
+    """
+    results = data.get("results") if isinstance(data, dict) else None
+    if not isinstance(results, list):
+        return []
+
+    matches: list[TickerMatch] = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        ticker = result.get("ticker")
+        name = result.get("name")
+        security_type = result.get("type")
+        if (
+            not isinstance(ticker, str)
+            or not isinstance(name, str)
+            or security_type not in SEARCH_SECURITY_TYPES
+            or result.get("locale") != "us"
+            or result.get("active") is not True
+        ):
+            continue
+        mic = result.get("primary_exchange")
+        matches.append(
+            TickerMatch(
+                ticker=ticker,
+                name=name,
+                exchange=MIC_DISPLAY_NAMES.get(mic, mic) if isinstance(mic, str) else "",
+                is_etf=security_type == "ETF",
+            )
+        )
+    return matches
+
+
+def rank_ticker_matches(matches: list[TickerMatch], query: str) -> list[TickerMatch]:
+    """Order search matches by relevance; the API returns them ordered by ticker.
+
+    Exact symbol first, then symbols starting with the query, then names
+    starting with the query (a leading "The " ignored), then common stock and
+    ADRs ahead of ETFs. Ties keep the API order.
+    """
+    query_lower = query.strip().lower()
+    query_upper = query_lower.upper()
+
+    def tier(match: TickerMatch) -> tuple[bool, bool, bool, bool]:
+        name = match.name.lower().removeprefix("the ")
+        return (
+            match.ticker != query_upper,
+            not match.ticker.startswith(query_upper),
+            not name.startswith(query_lower),
+            match.is_etf,
+        )
+
+    return sorted(matches, key=tier)
 
 
 def format_number(number: int | float) -> str:

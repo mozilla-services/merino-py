@@ -20,6 +20,7 @@ from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
     FinanceManifest,
     GetManifestResultCode,
+    TickerMatch,
     TickerSnapshot,
     TickerSummary,
 )
@@ -395,6 +396,99 @@ async def test_query_urlbar_unmapped_ticker_returns_no_suggestion(
 
     assert suggestions == []
     backend_mock.get_snapshots.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_search_returns_matches(
+    backend_mock: Any,
+    provider: Provider,
+    statsd_mock: Any,
+    geolocation: Location,
+) -> None:
+    """Test that a newtab ticker search returns one suggestion carrying the
+    candidate matches under the polygon custom details.
+    """
+    matches = [
+        TickerMatch(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ", is_etf=False),
+        TickerMatch(
+            ticker="APLE", name="Apple Hospitality REIT, Inc.", exchange="NYSE", is_etf=False
+        ),
+    ]
+    backend_mock.search_tickers.return_value = matches
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(
+            query="apple", geolocation=geolocation, source="newtab", request_type="ticker_search"
+        )
+    )
+
+    backend_mock.search_tickers.assert_awaited_once_with("apple")
+    backend_mock.get_snapshots.assert_not_awaited()
+    assert [suggestion.custom_details for suggestion in suggestions] == [
+        CustomDetails(polygon=PolygonDetails(values=[], matches=matches))
+    ]
+    statsd_mock.timeit.assert_called_once_with(
+        "polygon.provider.search.latency", tags={"source": "newtab"}
+    )
+
+
+@pytest.mark.parametrize(
+    "srequest_kwargs, backend_matches",
+    [
+        ({"query": "aaple", "source": "newtab"}, []),
+        ({"query": "", "source": "newtab"}, None),
+        ({"query": "klarna"}, None),  # Search is only served to the widget.
+    ],
+    ids=["no_matches", "empty_query", "not_newtab"],
+)
+@pytest.mark.asyncio
+async def test_query_ticker_search_returns_no_suggestion(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    srequest_kwargs: dict[str, Any],
+    backend_matches: list[TickerMatch] | None,
+) -> None:
+    """Test the ticker search requests that yield nothing. A None `backend_matches`
+    means the backend must not be consulted at all.
+    """
+    backend_mock.search_tickers.return_value = backend_matches or []
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(geolocation=geolocation, request_type="ticker_search", **srequest_kwargs)
+    )
+
+    assert suggestions == []
+    backend_mock.get_snapshots.assert_not_awaited()
+    if backend_matches is None:
+        backend_mock.search_tickers.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_search_allows_digit_queries(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that digit-bearing queries reach the backend: names like "3M" are
+    legitimate finance searches, so ticker search applies no soft-PII gate.
+    """
+    backend_mock.search_tickers.return_value = [
+        TickerMatch(ticker="MMM", name="3M Company", exchange="NYSE", is_etf=False)
+    ]
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(
+            query="3m",
+            geolocation=geolocation,
+            source="newtab",
+            request_type="ticker_search",
+            is_soft_pii=True,
+        )
+    )
+
+    backend_mock.search_tickers.assert_awaited_once_with("3m")
+    assert len(suggestions) == 1
 
 
 # TODO add test for when backend.get_snapshots returns []
