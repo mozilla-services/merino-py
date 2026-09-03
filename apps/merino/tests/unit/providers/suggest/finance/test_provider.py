@@ -5,12 +5,14 @@
 """Unit tests for the finance provider module."""
 
 import asyncio
+import logging
 import time
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import HttpUrl
+from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 from starlette.exceptions import HTTPException
 
@@ -20,8 +22,13 @@ from merino.providers.suggest.finance.backends.protocol import (
     FinanceBackend,
     FinanceManifest,
     GetManifestResultCode,
+    TickerMatch,
     TickerSnapshot,
     TickerSummary,
+)
+from merino.providers.suggest.finance.backends.polygon.errors import (
+    PolygonError,
+    PolygonErrorMessages,
 )
 from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mapping import (
     STOCKS_WIDGET_DEFAULT_ETFS,
@@ -118,6 +125,7 @@ def fixture_provider(backend_mock: Any, statsd_mock: Any) -> Provider:
         name="finance",
         score=0.3,
         query_timeout_sec=0.2,
+        search_query_timeout_sec=1.0,
         cron_interval_sec=60,
         resync_interval_sec=86400,
     )
@@ -326,30 +334,246 @@ async def test_query_returns_default_etfs_for_newtab_source_with_empty_query(
     )
 
 
+@pytest.mark.parametrize(
+    "query, expected_tickers",
+    [
+        ("ddog", ["DDOG"]),
+        ("KLAR", ["KLAR"]),  # Outside the curated mappings; passed through as is.
+        ("brk.b", ["BRK.B"]),
+    ],
+    ids=["mapped_symbol", "unmapped_symbol", "class_suffix"],
+)
 @pytest.mark.asyncio
-async def test_query_uses_ticker_lookup_for_newtab_source_with_non_empty_query(
+async def test_query_newtab_resolves_symbols_directly(
     backend_mock: Any,
     provider: Provider,
     statsd_mock: Any,
     ticker_summary: TickerSummary,
     ticker_snapshot: TickerSnapshot,
     geolocation: Location,
+    query: str,
+    expected_tickers: list[str],
 ) -> None:
-    """Test that query uses get_tickers_for_query when source is newtab but query is non-empty."""
+    """Test that a non-empty newtab query is resolved as one ticker symbol with one
+    backend lookup, bypassing the curated mappings.
+    """
     backend_mock.get_snapshots.return_value = [ticker_snapshot]
     backend_mock.get_ticker_summary.return_value = ticker_summary
 
     suggestions: list[BaseSuggestion] = await provider.query(
-        SuggestionRequest(query="ddog", geolocation=geolocation, source="newtab")
+        SuggestionRequest(query=query, geolocation=geolocation, source="newtab")
     )
 
-    backend_mock.get_snapshots.assert_awaited_once_with(["DDOG"])
+    backend_mock.get_snapshots.assert_awaited_once_with(expected_tickers)
     assert len(suggestions) == 1
-
-    # Verify source=newtab is tracked on individual ticker lookups from newtab.
     statsd_mock.timeit.assert_called_once_with(
         "polygon.provider.query.latency", tags={"source": "newtab"}
     )
+
+
+@pytest.mark.parametrize("query", ["apple stock", "definitely not a ticker", "AAPL,KLAR"])
+@pytest.mark.asyncio
+async def test_query_newtab_non_symbol_query_returns_no_suggestion(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    query: str,
+) -> None:
+    """Test that newtab quote lookups accept one symbol only: keyword phrases, free
+    text and symbol lists resolve to nothing without a backend call.
+    """
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query=query, geolocation=geolocation, source="newtab")
+    )
+
+    assert suggestions == []
+    backend_mock.get_snapshots.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_query_urlbar_unmapped_ticker_returns_no_suggestion(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that urlbar queries stay gated on the curated mappings."""
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(query="KLAR", geolocation=geolocation, source="urlbar")
+    )
+
+    assert suggestions == []
+    backend_mock.get_snapshots.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_search_returns_matches(
+    backend_mock: Any,
+    provider: Provider,
+    statsd_mock: Any,
+    geolocation: Location,
+) -> None:
+    """Test that a newtab ticker search returns one suggestion carrying the
+    candidate matches under the polygon custom details.
+    """
+    matches = [
+        TickerMatch(ticker="AAPL", name="Apple Inc.", exchange="NASDAQ", is_etf=False),
+        TickerMatch(
+            ticker="APLE", name="Apple Hospitality REIT, Inc.", exchange="NYSE", is_etf=False
+        ),
+    ]
+    backend_mock.search_tickers.return_value = matches
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(
+            query="apple", geolocation=geolocation, source="newtab", request_type="ticker_search"
+        )
+    )
+
+    backend_mock.search_tickers.assert_awaited_once_with("apple")
+    backend_mock.get_snapshots.assert_not_awaited()
+    assert [suggestion.custom_details for suggestion in suggestions] == [
+        CustomDetails(polygon=PolygonDetails(values=[], matches=matches))
+    ]
+    statsd_mock.timeit.assert_called_once_with(
+        "polygon.provider.search.latency", tags={"source": "newtab"}
+    )
+
+
+@pytest.mark.parametrize(
+    "srequest_kwargs, backend_matches",
+    [
+        ({"query": "aaple", "source": "newtab"}, []),
+        ({"query": "", "source": "newtab"}, None),
+        ({"query": "klarna"}, None),  # Search is only served to the widget.
+    ],
+    ids=["no_matches", "empty_query", "not_newtab"],
+)
+@pytest.mark.asyncio
+async def test_query_ticker_search_returns_no_suggestion(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    srequest_kwargs: dict[str, Any],
+    backend_matches: list[TickerMatch] | None,
+) -> None:
+    """Test the ticker search requests that yield nothing. A None `backend_matches`
+    means the backend must not be consulted at all.
+    """
+    backend_mock.search_tickers.return_value = backend_matches or []
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(geolocation=geolocation, request_type="ticker_search", **srequest_kwargs)
+    )
+
+    assert suggestions == []
+    backend_mock.get_snapshots.assert_not_awaited()
+    if backend_matches is None:
+        backend_mock.search_tickers.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_query_ticker_search_allows_digit_queries(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+) -> None:
+    """Test that digit-bearing queries reach the backend: names like "3M" are
+    legitimate finance searches, so ticker search applies no soft-PII gate.
+    """
+    backend_mock.search_tickers.return_value = [
+        TickerMatch(ticker="MMM", name="3M Company", exchange="NYSE", is_etf=False)
+    ]
+
+    suggestions: list[BaseSuggestion] = await provider.query(
+        SuggestionRequest(
+            query="3m",
+            geolocation=geolocation,
+            source="newtab",
+            request_type="ticker_search",
+            is_soft_pii=True,
+        )
+    )
+
+    backend_mock.search_tickers.assert_awaited_once_with("3m")
+    assert len(suggestions) == 1
+
+
+@pytest.mark.parametrize(
+    "backend_method, srequest_kwargs",
+    [
+        ("get_snapshots", {"query": "KLAR", "source": "newtab"}),
+        (
+            "search_tickers",
+            {"query": "apple", "source": "newtab", "request_type": "ticker_search"},
+        ),
+    ],
+    ids=["quote", "ticker_search"],
+)
+@pytest.mark.asyncio
+async def test_query_propagates_backend_errors_for_circuit_breaker(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    backend_method: str,
+    srequest_kwargs: dict[str, Any],
+) -> None:
+    """Widget queries should propagate backend errors so the circuit breaker can observe them."""
+    getattr(backend_mock, backend_method).side_effect = PolygonError(
+        PolygonErrorMessages.HTTP_REQUEST_ERROR, operation="snapshot", detail="500"
+    )
+
+    with pytest.raises(PolygonError):
+        await provider.query(SuggestionRequest(geolocation=geolocation, **srequest_kwargs))
+
+
+@pytest.mark.asyncio
+async def test_query_urlbar_swallows_backend_errors(
+    backend_mock: Any,
+    provider: Provider,
+    geolocation: Location,
+    caplog: LogCaptureFixture,
+) -> None:
+    """Urlbar queries keep their original contract: a backend failure is logged
+    and yields no suggestion instead of reaching the circuit breaker.
+    """
+    caplog.set_level(logging.WARNING)
+    backend_mock.get_snapshots.side_effect = PolygonError(
+        PolygonErrorMessages.HTTP_REQUEST_ERROR, operation="snapshot", detail="500"
+    )
+
+    suggestions = await provider.query(SuggestionRequest(query="ddog", geolocation=geolocation))
+
+    assert suggestions == []
+    assert [record.message for record in caplog.records] == [
+        "Exception occurred for Polygon provider: Polygon snapshot request failed: 500"
+    ]
+
+
+@pytest.mark.parametrize(
+    "source, request_type, expected_timeout",
+    [
+        ("newtab", "ticker_search", 1.0),
+        ("urlbar", "ticker_search", 0.2),
+        ("newtab", None, 0.2),
+        ("urlbar", None, 0.2),
+    ],
+    ids=["widget_ticker_search", "ticker_search_without_newtab", "widget_quote", "urlbar"],
+)
+def test_query_timeout_sec_for(
+    provider: Provider,
+    geolocation: Location,
+    source: str,
+    request_type: str | None,
+    expected_timeout: float,
+) -> None:
+    """Test that only widget ticker searches get the search timeout: the wider
+    budget must not be claimable by request_type alone.
+    """
+    srequest = SuggestionRequest(
+        query="apple", geolocation=geolocation, source=source, request_type=request_type
+    )
+
+    assert provider.query_timeout_sec_for(srequest) == expected_timeout
 
 
 # TODO add test for when backend.get_snapshots returns []

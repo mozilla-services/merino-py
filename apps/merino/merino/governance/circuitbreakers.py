@@ -73,6 +73,19 @@ class FlightawareCircuitBreaker(CircuitBreaker):
     FALLBACK_FUNCTION = _suggest_provider_fallback_fn
 
 
+class PolygonCircuitBreaker(CircuitBreaker):
+    """Circuit breaker for the polygon (finance) provider."""
+
+    FAILURE_THRESHOLD = settings.providers.polygon.circuit_breaker_failure_threshold
+    RECOVERY_TIMEOUT = settings.providers.polygon.circuit_breaker_recover_timeout_sec
+    # Raised by the backend for Polygon API failures. Redis failures degrade to
+    # cache misses inside the backend and deliberately do not trip it.
+    EXPECTED_EXCEPTION = BackendError
+    # When the breaker is open, stand in for the upstream response with an
+    # empty result; the backend then serves whatever the cache still holds.
+    FALLBACK_FUNCTION = _suggest_provider_fallback_fn
+
+
 class WikipediaCircuitBreaker(CircuitBreaker):
     """Circuit breaker for the wikipedia provider."""
 

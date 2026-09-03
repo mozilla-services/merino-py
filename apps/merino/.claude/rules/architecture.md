@@ -27,7 +27,7 @@ If provider data seems stale, check if the corresponding job has run:
 
 ## Other Components
 
-- **Circuit breakers** (`apps/merino/merino/governance/`): Weather and FlightAware providers use circuit breakers. 10 failures -> open -> 30s recovery -> fallback returns `[]`.
+- **Circuit breakers** (`apps/merino/merino/governance/`): Weather, FlightAware, and Finance (polygon) providers use circuit breakers. 10 failures -> open -> 30s recovery -> fallback returns `[]`.
 - **SyncedGcsBlob** (`apps/merino/merino/utils/synced_gcs_blob.py`): Periodically pulls GCS blob, calls callback on change. Used by curated_recommendations backends.
 - **Cron jobs** (`packages/merino-common/merino_common/utils/cron.py`): Background refresh for providers (ADM, Weather, Top Picks, Finance, etc.).
 - **Blocklists** (`apps/merino/merino/utils/blocklists.py`): `TOP_PICKS_BLOCKLIST`, `WIKIPEDIA_TITLE_BLOCKLIST`.

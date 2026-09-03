@@ -1,9 +1,9 @@
 """Custom Details specific Models"""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from merino.middleware.geolocation import Coordinates
-from merino.providers.suggest.finance.backends.protocol import TickerSummary
+from merino.providers.suggest.finance.backends.protocol import TickerMatch, TickerSummary
 from merino.providers.suggest.flightaware.backends.protocol import FlightSummary
 from merino.providers.suggest.yelp.backends.protocol import YelpBusinessDetails
 
@@ -48,6 +48,11 @@ class PolygonDetails(BaseModel):
     """Polygon specific fields."""
 
     values: list[TickerSummary]
+    matches: list[TickerMatch] | None = Field(
+        default=None,
+        description="Candidates for the stocks widget's search pick-list. "
+        "Only present on `request_type=ticker_search` responses.",
+    )
 
 
 class FlightAwareDetails(BaseModel):

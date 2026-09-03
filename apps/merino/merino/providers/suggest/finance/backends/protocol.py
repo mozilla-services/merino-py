@@ -1,7 +1,7 @@
 """Protocol for finance provider backends."""
 
 from enum import Enum
-from typing import Any, Dict, Protocol
+from typing import Dict, Protocol
 from pydantic import BaseModel, HttpUrl
 
 from merino.exceptions import BackendError
@@ -15,11 +15,29 @@ class FinanceBackendError(BackendError):
 
 
 class TickerSnapshot(BaseModel):
-    """Ticker Snapshot."""
+    """Ticker Snapshot.
+
+    `name` is the company name as reported by the snapshot API. It is optional
+    so that cache entries written before the field existed still validate.
+    """
 
     ticker: str
     todays_change_percent: str
     last_trade_price: str
+    name: str | None = None
+
+
+class TickerMatch(BaseModel):
+    """One candidate from a ticker search, shown in the widget's search pick-list.
+
+    The user selects a match client-side; the widget stores the ticker symbol
+    and uses it for subsequent quote lookups. Merino keeps no selection state.
+    """
+
+    ticker: str
+    name: str
+    exchange: str
+    is_etf: bool
 
 
 class TickerSummary(BaseModel):
@@ -73,12 +91,12 @@ class FinanceBackend(Protocol):
         """
         ...
 
-    async def shutdown(self) -> None:  # pragma: no cover
-        """Close down any open connections."""
+    async def search_tickers(self, query: str) -> list[TickerMatch]:  # pragma: no cover
+        """Search the upstream reference data by ticker symbol or company name."""
         ...
 
-    async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
-        """Make a request and fetch the snapshot for this single ticker."""
+    async def shutdown(self) -> None:  # pragma: no cover
+        """Close down any open connections."""
         ...
 
     async def get_ticker_image_url(self, ticker) -> str | None:

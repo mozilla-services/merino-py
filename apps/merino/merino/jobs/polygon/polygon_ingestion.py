@@ -35,6 +35,7 @@ class PolygonIngestion:
                 url_param_api_key=settings.polygon.url_param_api_key,
                 url_single_ticker_snapshot=settings.polygon.url_single_ticker_snapshot,
                 url_single_ticker_overview=settings.polygon.url_single_ticker_overview,
+                url_reference_tickers=settings.polygon.url_reference_tickers,
                 ticker_ttl_sec=settings.providers.polygon.cache_ttls.ticker_ttl_sec,
                 gcs_uploader=GcsUploader(
                     settings.image_gcs.gcs_project,
@@ -47,6 +48,7 @@ class PolygonIngestion:
             score=setting.score,
             name="polygon",
             query_timeout_sec=setting.query_timeout_sec,
+            search_query_timeout_sec=setting.search_query_timeout_sec,
             enabled_by_default=setting.enabled_by_default,
             resync_interval_sec=setting.resync_interval_sec,
             cron_interval_sec=setting.cron_interval_sec,

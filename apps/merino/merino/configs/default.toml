@@ -91,6 +91,12 @@ log_suggest_request = true
 # Excluded providers for query logging
 excluded_providers = ["accuweather", "geolocation"]
 
+# MERINO_LOGGING__EXCLUDED_SOURCES
+# Request sources excluded from query logging and search term submission. New
+# Tab widgets send ticker symbols and free text for upstream search, not urlbar
+# search terms.
+excluded_sources = ["newtab"]
+
 [default.governance]
 # MERINO_GOVERNANCE__CRON_INTERVAL_SEC
 # The interval of the background cron job for Merino governance.
@@ -1011,6 +1017,34 @@ score = 0.29
 # for finance data. This will override the default global query timeout.
 query_timeout_sec = 1.0
 
+# MERINO_PROVIDERS__POLYGON__SEARCH_QUERY_TIMEOUT_SEC
+# Timeout for stocks widget ticker searches (request_type=ticker_search).
+# The upstream reference search scans company names and is materially slower
+# than snapshot lookups, and the widget waits far longer than the urlbar, so
+# searches get their own budget instead of the keystroke-tuned one above.
+search_query_timeout_sec = 4.0
+
+# MERINO_PROVIDERS__POLYGON__SEARCH_MIN_QUERY_LENGTH
+# Ticker searches shorter than this skip the upstream substring search, which
+# would only return an alphabetical slice of the market, and run the exact
+# symbol lookup alone.
+search_min_query_length = 2
+
+# MERINO_PROVIDERS__POLYGON__SEARCH_RESULT_LIMIT
+# Upper bound on matches returned to the stocks widget's search pick-list.
+search_result_limit = 10
+
+# MERINO_PROVIDERS__POLYGON__SEARCH_UPSTREAM_LIMIT
+# How many matches to request upstream per search. The API orders matches by
+# ticker rather than relevance, so a wider window gives ranking something to
+# work with.
+search_upstream_limit = 50
+
+# MERINO_PROVIDERS__POLYGON__SEARCH_SECURITY_TYPES
+# Upstream security type codes served to the widget's ticker search: common
+# stock, ADRs, and ETFs. Warrants, units, rights, and preferred shares are out.
+search_security_types = ["CS", "ADRC", "ETF"]
+
 # MERINO_PROVIDERS__POLYGON__CONNECT_TIMEOUT_SEC
 # A floating point (in seconds) indicating the maximum waiting period for the
 # polygon backend http client to establish a connection to the host.
@@ -1058,6 +1092,10 @@ url_single_ticker_snapshot = "v3/snapshot"
 
 # MERINO_POLYGON__URL_TICKER_OVERVIEW
 url_single_ticker_overview = "/v3/reference/tickers/{ticker}"
+
+# MERINO_POLYGON__URL_REFERENCE_TICKERS
+# Reference tickers endpoint; supports searching by symbol or company name.
+url_reference_tickers = "v3/reference/tickers"
 
 # MERINO_ACCUWEATHER__URL_PARAM_API_KEY
 # The name of the query param whose value is the API key, not the key itself.

@@ -25,12 +25,16 @@ from merino.providers.suggest.finance.backends.polygon.etf_ticker_company_mappin
     STOCKS_WIDGET_DEFAULT_ETFS,
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
+    get_tickers_for_newtab_query,
     get_tickers_for_query,
 )
 from merino_common.utils import cron
 from merino.configs import settings
 
 logger = logging.getLogger(__name__)
+
+# The `request_type` the stocks widget sends for its search pick-list.
+TICKER_SEARCH_REQUEST_TYPE = "ticker_search"
 
 
 class Provider(BaseProvider):
@@ -44,6 +48,7 @@ class Provider(BaseProvider):
     cron_task_fetch: asyncio.Task
     resync_interval_sec: int
     cron_interval_sec: int
+    search_query_timeout_sec: float
     last_fetch_at: float
     last_fetch_failure_at: float | None = None
 
@@ -54,6 +59,7 @@ class Provider(BaseProvider):
         score: float,
         name: str,
         query_timeout_sec: float,
+        search_query_timeout_sec: float,
         resync_interval_sec: int,
         cron_interval_sec: int,
         enabled_by_default: bool = False,
@@ -63,6 +69,7 @@ class Provider(BaseProvider):
         self.score = score
         self._name = name
         self._query_timeout_sec = query_timeout_sec
+        self.search_query_timeout_sec = search_query_timeout_sec
         self._enabled_by_default = enabled_by_default
         self.url = HttpUrl("https://merino.services.mozilla.com/")
         self.manifest_data = FinanceManifest(tickers={})
@@ -143,50 +150,107 @@ class Provider(BaseProvider):
         """Remove trailing spaces from the query string and support both $(stock) and $ (stock)"""
         return query.strip().replace("$", "STOCK ").replace("  ", " ")
 
+    def query_timeout_sec_for(self, srequest: SuggestionRequest) -> float:
+        """Return the query timeout for one request.
+
+        Widget ticker searches hit the upstream reference search, which is
+        materially slower than quote lookups, and the widget waits far longer
+        than the urlbar, so they get their own budget instead of the
+        keystroke-tuned provider timeout. Gated on the same conditions as the
+        search dispatch, so no other request shape can claim the wider budget.
+        """
+        if srequest.source == "newtab" and srequest.request_type == TICKER_SEARCH_REQUEST_TYPE:
+            return self.search_query_timeout_sec
+        return self.query_timeout_sec
+
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
-        """Provide finance suggestions."""
-        tickers: list[str] | None
-        if srequest.source == "newtab" and not srequest.query:
-            tickers = STOCKS_WIDGET_DEFAULT_ETFS
-        else:
-            # Get the list of tickers (0 to 3) for the query string.
-            tickers = get_tickers_for_query(srequest.query)
+        """Provide finance suggestions.
+
+        Widget requests (`source=newtab`) rely on the backend's circuit breaker
+        around its upstream fetches. Urlbar requests keep their original
+        contract: any failure is logged and yields no suggestion.
+        """
+        if srequest.source == "newtab":
+            return await self._query_widget(srequest)
 
         try:
-            if not tickers:
-                return []
-            else:
-                # Tag requests from the New Tab stocks widget with "newtab".
-                tags = {"source": "newtab"} if srequest.source == "newtab" else {}
-                with self.metrics_client.timeit("polygon.provider.query.latency", tags=tags):
-                    ticker_summaries: list[TickerSummary] = []
-                    # Get snapshots for the extracted tickers. Can return 0 to 3 snapshots.
-                    ticker_snapshots = await self.backend.get_snapshots(tickers)
-
-                    # Build ticker summary for each snapshot and its ticker's image
-                    for snapshot in ticker_snapshots:
-                        image_url = self.get_image_url_for_ticker(snapshot.ticker)
-                        ticker_summaries.append(
-                            self.backend.get_ticker_summary(snapshot, image_url)
-                        )
-
-                    return [self.build_suggestion(ticker_summaries)]
-
+            # Get the list of tickers (0 to 3) for the query string.
+            return await self._quote(get_tickers_for_query(srequest.query), tags={})
         except Exception as e:
             logger.warning(f"Exception occurred for Polygon provider: {e}")
             return []
 
-    def build_suggestion(self, data: list[TickerSummary]) -> BaseSuggestion:
-        """Build the suggestion with custom polygon details since this is a finance suggestion."""
-        custom_details = CustomDetails(polygon=PolygonDetails(values=data))
+    async def _query_widget(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Serve the New Tab stocks widget.
 
+        The widget sends three request shapes: an empty query for the default
+        ETF set, a single ticker symbol for a quote, and free text with
+        `request_type=ticker_search` for its search pick-list. Quote lookups
+        bypass the curated mappings entirely; the widget obtains symbols from
+        ticker search, stores them client-side, and asks for quotes one symbol
+        per request, which keeps every upstream lookup independent.
+
+        `BackendError`s raised by the backend are intentionally unhandled here:
+        the backend's circuit breaker has already counted them, and the API
+        handler drops failed provider tasks from the response.
+        """
+        if srequest.request_type == TICKER_SEARCH_REQUEST_TYPE:
+            return await self._search_tickers(srequest)
+
+        tickers = (
+            get_tickers_for_newtab_query(srequest.query)
+            if srequest.query
+            else STOCKS_WIDGET_DEFAULT_ETFS
+        )
+        return await self._quote(tickers, tags={"source": "newtab"})
+
+    async def _quote(
+        self, tickers: list[str] | None, tags: dict[str, str]
+    ) -> list[BaseSuggestion]:
+        """Build one suggestion carrying a summary per ticker the backend could resolve."""
+        if not tickers:
+            return []
+
+        with self.metrics_client.timeit("polygon.provider.query.latency", tags=tags):
+            snapshots = await self.backend.get_snapshots(tickers)
+            summaries: list[TickerSummary] = [
+                self.backend.get_ticker_summary(
+                    snapshot, self.get_image_url_for_ticker(snapshot.ticker)
+                )
+                for snapshot in snapshots
+            ]
+
+        return [self.build_suggestion(PolygonDetails(values=summaries))]
+
+    async def _search_tickers(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
+        """Serve a widget ticker search: candidate matches for free text.
+
+        Unlike weather location completion, digit-bearing queries are not
+        filtered as soft PII: names like "3M" are legitimate finance searches,
+        and forwarding widget search input upstream is the approved design.
+        """
+        if not srequest.query:
+            return []
+
+        with self.metrics_client.timeit(
+            "polygon.provider.search.latency", tags={"source": "newtab"}
+        ):
+            matches = await self.backend.search_tickers(srequest.query)
+
+        if not matches:
+            return []
+
+        return [self.build_suggestion(PolygonDetails(values=[], matches=matches))]
+
+    def build_suggestion(self, details: PolygonDetails) -> BaseSuggestion:
+        """Wrap polygon details in the generic suggestion envelope."""
         return BaseSuggestion(
             title="Finance Suggestion",
             url=HttpUrl(self.url),
             provider=self.name,
             is_sponsored=False,
             score=self.score,
-            custom_details=custom_details,
+            custom_details=CustomDetails(polygon=details),
         )
 
     def get_image_url_for_ticker(self, ticker: str) -> HttpUrl | None:

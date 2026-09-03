@@ -100,12 +100,15 @@ router = APIRouter()
 NORMALIZATION_PROVIDERS: frozenset[str] = frozenset(settings.query_normalization.providers)
 
 
-def _should_normalize_query(provider_name: str, client_variants: list[str]) -> bool:
+def _should_normalize_query(provider_name: str, client_variants: list[str], source: str) -> bool:
     """Whether a provider receives the normalized query for this request.
 
-    sports/polygon are always-on (graduated); AMP is gated on the experiment variant.
+    Normalization targets phrases typed into the urlbar. New Tab widgets send
+    ticker symbols and free text meant for upstream search, which must reach
+    the provider untouched. sports/polygon are always-on (graduated); AMP is
+    gated on the experiment variant.
     """
-    if provider_name not in NORMALIZATION_PROVIDERS:
+    if source == "newtab" or provider_name not in NORMALIZATION_PROVIDERS:
         return False
     if provider_name == ProviderType.ADM:
         return AMP_FUZZY_VARIANT in client_variants
@@ -156,7 +159,9 @@ async def suggest(
     providers: str | None = None,
     client_variants: str | None = Query(default=None, max_length=CLIENT_VARIANT_CHARACTER_MAX),
     sources: tuple[dict[str, BaseProvider], list[BaseProvider]] = Depends(get_suggest_providers),
-    request_type: Annotated[str | None, Query(pattern="^(location|weather)$")] = None,
+    request_type: Annotated[
+        str | None, Query(pattern="^(location|weather|ticker_search)$")
+    ] = None,
 ) -> Response:
     """Query Merino for suggestions.
 
@@ -197,7 +202,9 @@ async def suggest(
     - `request_type`: [Optional] For AccuWeather provider, the request type should be either a
         "location" or "weather" string. For "location" it will get location completion
         suggestion. For "weather" it will return weather suggestions. If omitted, it defaults
-        to weather suggestions.
+        to weather suggestions. For the Polygon provider with `source=newtab`, the
+        "ticker_search" request type searches tickers by symbol or company name and returns
+        candidate matches instead of prices.
 
     **Headers:**
 
@@ -293,6 +300,7 @@ async def suggest(
             pass
 
     lookups: list[Task] = []
+    query_timeouts: list[float] = []
     languages = get_accepted_languages(accept_language)
 
     validate_suggest_custom_location_params(city, region, country, source)
@@ -311,7 +319,7 @@ async def suggest(
     for p in search_from:
         q_for_provider = (
             q_normalized
-            if use_normalization and _should_normalize_query(p.name, client_variants_list)
+            if use_normalization and _should_normalize_query(p.name, client_variants_list, source)
             else q
         )
         srequest = SuggestionRequest(
@@ -325,6 +333,7 @@ async def suggest(
             client_variants=client_variants_list,
         )
         p.validate(srequest)
+        query_timeouts.append(p.query_timeout_sec_for(srequest))
         task = metrics_client.timeit_task(p.query(srequest), f"providers.{p.name}.query")
         # `timeit_task()` doesn't support task naming, need to set the task name manually
         task.set_name(p.name)
@@ -332,10 +341,7 @@ async def suggest(
 
     completed_tasks, _ = await task_runner.gather(
         lookups,
-        timeout=max(
-            (provider.query_timeout_sec for provider in search_from),
-            default=QUERY_TIMEOUT_SEC,
-        ),
+        timeout=max(query_timeouts, default=QUERY_TIMEOUT_SEC),
         timeout_cb=partial(task_runner.metrics_timeout_handler, metrics_client),
     )
     suggestions = list(

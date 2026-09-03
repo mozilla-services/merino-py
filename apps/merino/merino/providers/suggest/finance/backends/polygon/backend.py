@@ -1,10 +1,11 @@
 """A wrapper for Polygon API interactions."""
 
+import asyncio
 import itertools
 import hashlib
 import logging
 import aiodogstatsd
-from httpx import AsyncClient, Response, HTTPStatusError
+from httpx import AsyncClient, HTTPError, HTTPStatusError, Response
 import orjson
 from pydantic import HttpUrl, ValidationError
 from merino.configs import settings
@@ -16,18 +17,27 @@ from merino.providers.suggest.finance.backends.polygon.filemanager import (
 from merino.providers.suggest.finance.backends.protocol import (
     FinanceManifest,
     GetManifestResultCode,
+    TickerMatch,
     TickerSnapshot,
     TickerSummary,
 )
 from merino.cache.protocol import CacheAdapter
 from merino.exceptions import CacheAdapterError
+from merino.governance.circuitbreakers import PolygonCircuitBreaker
+from merino.providers.suggest.finance.backends.polygon.errors import (
+    PolygonError,
+    PolygonErrorMessages,
+)
 from merino.providers.suggest.finance.backends.polygon.stock_ticker_company_mapping import (
     ALL_STOCK_TICKER_COMPANY_MAPPING,
 )
 from merino.providers.suggest.finance.backends.polygon.utils import (
+    TICKER_SYMBOL_PATTERN,
     extract_snapshot_if_valid,
+    extract_ticker_matches_from_search_response,
     build_ticker_summary,
     generate_cache_key_for_ticker,
+    rank_ticker_matches,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
 from merino.utils.gcs.models import Image
@@ -40,6 +50,35 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 GCS_BLOB_NAME = "polygon_latest.json"
+
+# Upper bound on matches returned to the stocks widget's search pick-list.
+TICKER_SEARCH_LIMIT: int = settings.providers.polygon.search_result_limit
+
+# The search API orders matches by ticker, not relevance, so the real hit can
+# sit far down the alphabet. Fetch a wider window for ranking to work with.
+TICKER_SEARCH_UPSTREAM_LIMIT: int = settings.providers.polygon.search_upstream_limit
+
+# Below this many characters the substring search returns an alphabetical slice
+# of the whole market, so only the exact symbol lookup runs.
+TICKER_SEARCH_MIN_QUERY_LENGTH: int = settings.providers.polygon.search_min_query_length
+
+# Upstream requests must time out before the API handler's task runner cancels
+# the provider task: an httpx timeout becomes a PolygonError that the circuit
+# breaker counts, while a cancellation is invisible to it and resets its
+# failure count. Keep each request type under its query budget with a margin.
+UPSTREAM_TIMEOUT_FACTOR = 0.9
+SNAPSHOT_REQUEST_TIMEOUT_SEC: float = (
+    settings.providers.polygon.query_timeout_sec * UPSTREAM_TIMEOUT_FACTOR
+)
+SEARCH_REQUEST_TIMEOUT_SEC: float = (
+    settings.providers.polygon.search_query_timeout_sec * UPSTREAM_TIMEOUT_FACTOR
+)
+
+# One breaker guards both upstream request paths, applied below the cache read
+# so that cache-served requests neither reset its failure count nor get refused
+# while it is open. When open, the fallback stands in for the upstream response
+# and cached data can still be served.
+_upstream_breaker = PolygonCircuitBreaker(name="polygon")
 
 # The Lua script to write ticker snapshots and their TTLs for a list of keys.
 #
@@ -93,6 +132,7 @@ class PolygonBackend:
     url_param_api_key: str
     url_single_ticker_snapshot: str
     url_single_ticker_overview: str
+    url_reference_tickers: str
     filemanager: PolygonFilemanager
 
     def __init__(
@@ -103,6 +143,7 @@ class PolygonBackend:
         url_param_api_key: str,
         url_single_ticker_snapshot: str,
         url_single_ticker_overview: str,
+        url_reference_tickers: str,
         metrics_client: aiodogstatsd.Client,
         http_client: AsyncClient,
         gcs_uploader: GcsUploader,
@@ -119,6 +160,7 @@ class PolygonBackend:
         self.gcs_uploader = gcs_uploader
         self.url_single_ticker_snapshot = url_single_ticker_snapshot
         self.url_single_ticker_overview = url_single_ticker_overview
+        self.url_reference_tickers = url_reference_tickers
         self.filemanager = PolygonFilemanager(
             gcs_bucket_path=settings.image_gcs.gcs_bucket,
             blob_name=GCS_BLOB_NAME,
@@ -135,7 +177,11 @@ class PolygonBackend:
         self.cache_control = settings.providers.polygon.image_cache_control
 
     async def get_snapshots(self, tickers: list[str]) -> list[TickerSnapshot]:
-        """Get snapshots for the list of tickers."""
+        """Get snapshots for the list of tickers.
+
+        Raises:
+            PolygonError: When an upstream snapshot request fails.
+        """
         # check the cache first.
         cached = await self.get_snapshots_from_cache(tickers)
         # each tuple has the shape of `(snapshot, ttl)` and ignore the none tuples for now.
@@ -153,7 +199,9 @@ class PolygonBackend:
         else:
             self.metrics_client.increment("polygon.snapshot.cache.miss")
 
-        # Fetch any missing tickers from the API.
+        # Fetch any missing tickers from the API, one request per ticker. The
+        # approved use of the upstream API requires that a user's symbols are
+        # requested independently and never combined into one request.
         fetched_snapshots: list[TickerSnapshot] = []
         for ticker in missed_tickers:
             if (
@@ -207,27 +255,122 @@ class PolygonBackend:
             # TODO @Herraj -- Propagate the error for circuit breaking as PolygonError.
         return []
 
-    async def fetch_ticker_snapshot(self, ticker: str) -> Any | None:
-        """Make a request and fetch the snapshot for this single ticker."""
-        params = {"ticker": ticker, self.url_param_api_key: self.api_key}
+    @_upstream_breaker
+    async def search_tickers(self, query: str) -> list[TickerMatch]:
+        """Search the reference tickers endpoint by symbol or company name.
+
+        The search API matches substrings anywhere in the name and orders
+        results by ticker, so the intended security can fall outside the
+        response window entirely (searching "EA" returns names containing
+        "ea"). For symbol-shaped queries an exact ticker lookup therefore runs
+        concurrently and its hit is ranked first; the remaining matches are
+        fetched with a wider window and re-ranked by relevance. Queries below
+        the minimum length skip the substring search, which would only return
+        an alphabetical slice of the market.
+
+        Results are intentionally not cached: the query is free text typed by
+        the user, mirroring how weather location completion talks to its API.
+
+        Raises:
+            PolygonError: When an upstream request fails.
+        """
+        query = query.strip()
+        symbol = query.upper()
 
         try:
-            self.metrics_client.increment("polygon.request.snapshot.get")
-
-            with self.metrics_client.timeit("polygon.request.snapshot.get.latency"):
-                response: Response = await self.http_client.get(
-                    self.url_single_ticker_snapshot, params=params
+            async with asyncio.TaskGroup() as tg:
+                search_task = (
+                    tg.create_task(
+                        self._fetch_reference_tickers(
+                            {"search": query, "limit": str(TICKER_SEARCH_UPSTREAM_LIMIT)}
+                        )
+                    )
+                    if len(query) >= TICKER_SEARCH_MIN_QUERY_LENGTH
+                    else None
                 )
+                exact_task = (
+                    tg.create_task(self._fetch_reference_tickers({"ticker": symbol}))
+                    if TICKER_SYMBOL_PATTERN.match(symbol)
+                    else None
+                )
+        except ExceptionGroup as e:
+            # Upstream failures surface as one backend error for the circuit
+            # breaker to count. Anything else in the group is a bug in our own
+            # code and must surface as itself, not as an upstream failure.
+            _, bugs = e.split(PolygonError)
+            if bugs is not None:
+                raise bugs from e
+            raise PolygonError(PolygonErrorMessages.FAILED_TICKER_SEARCH, exceptions=e.exceptions)
 
+        exact = exact_task.result() if exact_task is not None else []
+        searched = search_task.result() if search_task is not None else []
+        exact_tickers = {match.ticker for match in exact}
+        ranked = [
+            match
+            for match in rank_ticker_matches(searched, query)
+            if match.ticker not in exact_tickers
+        ]
+
+        return (exact + ranked)[:TICKER_SEARCH_LIMIT]
+
+    async def _fetch_reference_tickers(self, params: dict[str, str]) -> list[TickerMatch]:
+        """Make one reference tickers request and extract the matches."""
+        request_params = {
+            "market": "stocks",
+            "active": "true",
+            self.url_param_api_key: self.api_key,
+            **params,
+        }
+        response = await self._get_json(
+            "search", self.url_reference_tickers, request_params, SEARCH_REQUEST_TIMEOUT_SEC
+        )
+        return extract_ticker_matches_from_search_response(response)
+
+    @_upstream_breaker
+    async def fetch_ticker_snapshot(self, ticker: str) -> Any:
+        """Fetch the snapshot for one ticker.
+
+        When the breaker is open, the fallback returns an empty result: callers
+        treat it as an upstream response with no snapshot, so cached quotes are
+        still served while no request leaves for the upstream.
+
+        Raises:
+            PolygonError: When the upstream request fails.
+        """
+        params = {"ticker": ticker, self.url_param_api_key: self.api_key}
+        return await self._get_json(
+            "snapshot", self.url_single_ticker_snapshot, params, SNAPSHOT_REQUEST_TIMEOUT_SEC
+        )
+
+    async def _get_json(
+        self, operation: str, url: str, params: dict[str, str], timeout: float
+    ) -> Any:
+        """Issue one upstream GET on the request path and return the decoded body.
+
+        Emits `polygon.request.<operation>.get` counters and latency. Any HTTP
+        failure, including timeouts and undecodable response bodies, is logged
+        once and re-raised as a `PolygonError` so the provider's circuit
+        breaker can count it.
+        """
+        self.metrics_client.increment(f"polygon.request.{operation}.get")
+        try:
+            with self.metrics_client.timeit(f"polygon.request.{operation}.get.latency"):
+                response: Response = await self.http_client.get(
+                    url, params=params, timeout=timeout
+                )
             response.raise_for_status()
-        except HTTPStatusError as ex:
-            logger.warning(
-                f"Polygon request error for ticker snapshot: {ex.response.status_code} {ex.response.reason_phrase}"
+            return response.json()
+        except (HTTPError, ValueError) as ex:
+            self.metrics_client.increment(f"polygon.request.{operation}.get.failed")
+            detail = (
+                f"{ex.response.status_code} {ex.response.reason_phrase}"
+                if isinstance(ex, HTTPStatusError)
+                else type(ex).__name__
             )
-            self.metrics_client.increment("polygon.request.snapshot.get.failed")
-            return None
-
-        return response.json()
+            logger.warning(f"Polygon {operation} request failed: {detail}")
+            raise PolygonError(
+                PolygonErrorMessages.HTTP_REQUEST_ERROR, operation=operation, detail=detail
+            ) from ex
 
     async def get_ticker_image_url(self, ticker: str) -> str | None:
         """Get the logo URL for the ticker (requires API key when fetching)"""
