@@ -1,11 +1,12 @@
 """Utility functions for parsing Wikimedia Featured API picture of the day data."""
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
+    PictureOfTheDayBase,
     WikimediaPotdError,
 )
 
@@ -83,11 +84,35 @@ def parse_discovered_languages(commons_data: dict) -> set[str]:
     return discovered_languages
 
 
-def build_potd_bucket_directory_path() -> str:
-    """Build the dated gcs bucket directory path where today's potd assets are stored."""
+def build_potd_bucket_directory_path(date_str: str | None = None) -> str:
+    """Build the dated gcs bucket directory path where a day's potd assets are stored.
+
+    `date_str` is a YYYY-MM-DD date and defaults to today (UTC).
+    """
     # YYYY-MM-DD format
-    date_time = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_time = date_str or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return f"wikimedia_potd/{date_time}/"
+
+
+def previous_day(date_str: str) -> str:
+    """Return the calendar day before `date_str`, both in YYYY-MM-DD format."""
+    return (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+
+
+def as_previous_entry(potd: PictureOfTheDay | None) -> PictureOfTheDayBase | None:
+    """Convert yesterday's manifest into the entry attached under today's `previous`.
+
+    Yesterday's manifest carries its own `previous` from the day it was published. Dropping
+    that field here is what keeps every published manifest exactly one day deep, instead of
+    chaining back through each day the job has run.
+
+    Returns:
+        The narrowed entry, or None when yesterday has no manifest.
+    """
+    if potd is None:
+        return None
+
+    return PictureOfTheDayBase.model_validate(potd.model_dump(exclude={"previous"}))
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:

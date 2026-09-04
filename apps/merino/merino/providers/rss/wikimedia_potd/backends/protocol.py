@@ -10,8 +10,8 @@ class WikimediaPotdError(BackendError):
     """Error raised by the Wikimedia POTD backend when the picture of the day cannot be produced."""
 
 
-class PictureOfTheDay(BaseModel):
-    """Model for the Wikimedia Picture of the Day."""
+class PictureOfTheDayBase(BaseModel):
+    """Model for a single day's Wikimedia Picture of the Day."""
 
     title: str = Field(description="Title of the picture of the day.")
     thumbnail_image_url: HttpUrl = Field(
@@ -36,6 +36,17 @@ class PictureOfTheDay(BaseModel):
     file_page: HttpUrl | None = Field(default=None, description="Commons file page URL.")
     license_label: str = Field(default="", description="License type, e.g. 'CC BY-SA 4.0'.")
     license_link: HttpUrl | None = Field(default=None, description="License URL.")
+
+
+class PictureOfTheDay(PictureOfTheDayBase):
+    """The picture of the day served to clients, with the previous day's picture attached."""
+
+    previous: PictureOfTheDayBase | None = Field(
+        default=None,
+        description=(
+            "The previous day's picture of the day, or null when that day has no manifest."
+        ),
+    )
 
 
 class WikimediaPictureOfTheDayBackend(Protocol):
@@ -105,8 +116,10 @@ class WikimediaPictureOfTheDayBackend(Protocol):
         """
         ...
 
-    def fetch_potd_from_gcs_bucket(self) -> PictureOfTheDay | None:  # pragma: no cover
-        """Fetch the PictureOfTheDay object from the gcs bucket.
+    def fetch_potd_from_gcs_bucket(
+        self, date_str: str | None = None
+    ) -> PictureOfTheDay | None:  # pragma: no cover
+        """Fetch the PictureOfTheDay object for `date_str` (defaults to today) from the gcs bucket.
 
         Returns:
             A PictureOfTheDay object if available, otherwise None.
