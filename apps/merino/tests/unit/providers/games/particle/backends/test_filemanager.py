@@ -210,11 +210,29 @@ class TestRemoteFileManagerEmptyStagingFolder:
         """Verify the call succeeds."""
         # simulate a partially staged fileset
         files: list[GameFile] = [
-            GameFile(url="https://test.com/test.html", sha="1234abcd", content_type="text/html"),
-            GameFile(url="https://test.com/test.jpg", sha="1234abcd", content_type="image/jpeg"),
-            GameFile(url="https://test.com/test.png", sha="1234abcd", content_type="image/png"),
             GameFile(
-                url="https://test.com/test.json", sha="1234abcd", content_type="application/json"
+                url="https://test.com/test.html",
+                sha="1234abcd",
+                content_type="text/html",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.png",
+                sha="1234abcd",
+                content_type="image/png",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.json",
+                sha="1234abcd",
+                content_type="application/json",
+                cache_control="public",
             ),
         ]
 
@@ -236,11 +254,29 @@ class TestRemoteFileManagerEmptyStagingFolder:
         """Verify the call succeeds and filters files correctly."""
         # simulate a partially staged fileset
         files: list[GameFile] = [
-            GameFile(url="https://test.com/test.html", sha="1234abcd", content_type="text/html"),
-            GameFile(url="https://test.com/test.jpg", sha="1234abcd", content_type="image/jpeg"),
-            GameFile(url="https://test.com/test.png", sha="1234abcd", content_type="image/png"),
             GameFile(
-                url="https://test.com/test.json", sha="1234abcd", content_type="application/json"
+                url="https://test.com/test.html",
+                sha="1234abcd",
+                content_type="text/html",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.png",
+                sha="1234abcd",
+                content_type="image/png",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.json",
+                sha="1234abcd",
+                content_type="application/json",
+                cache_control="public",
             ),
         ]
 
@@ -269,11 +305,29 @@ class TestRemoteFileManagerEmptyStagingFolder:
         """Verify sentry is called when the GCS client captures an exception."""
         # simulate a partially staged fileset
         files: list[GameFile] = [
-            GameFile(url="https://test.com/test.html", sha="1234abcd", content_type="text/html"),
-            GameFile(url="https://test.com/test.jpg", sha="1234abcd", content_type="image/jpeg"),
-            GameFile(url="https://test.com/test.png", sha="1234abcd", content_type="image/png"),
             GameFile(
-                url="https://test.com/test.json", sha="1234abcd", content_type="application/json"
+                url="https://test.com/test.html",
+                sha="1234abcd",
+                content_type="text/html",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.png",
+                sha="1234abcd",
+                content_type="image/png",
+                cache_control="public",
+            ),
+            GameFile(
+                url="https://test.com/test.json",
+                sha="1234abcd",
+                content_type="application/json",
+                cache_control="public",
             ),
         ]
 
@@ -313,10 +367,30 @@ class TestRemoteFileManagerDeployStagedFiles:
         """Test success scenario."""
         # simulate a staged fileset
         files: list[GameFile] = [
-            GameFile(url="runtime/test.html", sha="1234abcd", content_type="text/html"),
-            GameFile(url="assets/test.jpg", sha="1234abcd", content_type="image/jpeg"),
-            GameFile(url="assets/test.png", sha="1234abcd", content_type="image/png"),
-            GameFile(url="generated/test.json", sha="1234abcd", content_type="application/json"),
+            GameFile(
+                url="runtime/test.html",
+                sha="1234abcd",
+                content_type="text/html",
+                cache_control="public",
+            ),
+            GameFile(
+                url="assets/test.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="assets/test.png",
+                sha="1234abcd",
+                content_type="image/png",
+                cache_control="public",
+            ),
+            GameFile(
+                url="generated/test.json",
+                sha="1234abcd",
+                content_type="application/json",
+                cache_control="public",
+            ),
         ]
 
         # finish simulating a staged fileset
@@ -350,10 +424,30 @@ class TestRemoteFileManagerDeployStagedFiles:
         """Verify sentry is called when the GCS client captures an exception."""
         # simulate a staged fileset
         files: list[GameFile] = [
-            GameFile(url="runtime/test.html", sha="1234abcd", content_type="text/html"),
-            GameFile(url="assets/test.jpg", sha="1234abcd", content_type="image/jpeg"),
-            GameFile(url="assets/test.png", sha="1234abcd", content_type="image/png"),
-            GameFile(url="generated/test.json", sha="1234abcd", content_type="application/json"),
+            GameFile(
+                url="runtime/test.html",
+                sha="1234abcd",
+                content_type="text/html",
+                cache_control="public",
+            ),
+            GameFile(
+                url="assets/test.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="assets/test.png",
+                sha="1234abcd",
+                content_type="image/png",
+                cache_control="public",
+            ),
+            GameFile(
+                url="generated/test.json",
+                sha="1234abcd",
+                content_type="application/json",
+                cache_control="public",
+            ),
         ]
 
         # finish simulating a staged fileset
