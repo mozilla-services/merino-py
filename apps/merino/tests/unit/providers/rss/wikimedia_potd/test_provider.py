@@ -330,15 +330,14 @@ async def test_get_picture_of_the_day_serves_the_previous_day_alongside_today(
     assert potd.previous.published_date == "2026-06-06"
     assert potd.previous.description == "previous description"
 
+
 @freezegun.freeze_time("2026-06-07")
 @pytest.mark.asyncio
 async def test_get_picture_of_the_day_when_there_is_no_previous_day(
     provider: WikimediaPictureOfTheDayProvider, test_potd: PictureOfTheDay
 ) -> None:
     """Serves today's potd when no previous day is attached."""
-    provider.potd = test_potd.model_copy(
-        update={"previous": None}
-    )
+    provider.potd = test_potd.model_copy(update={"previous": None})
 
     potd = await provider.get_picture_of_the_day()
 
@@ -385,12 +384,11 @@ async def test_get_picture_of_the_day_keeps_the_previous_days_default_descriptio
     provider: WikimediaPictureOfTheDayProvider, test_potd_with_previous: PictureOfTheDay
 ) -> None:
     """Keeps today's localized description while the previous day falls back to its default."""
+    previous = test_potd_with_previous.previous
+    assert previous is not None
+
     provider.potd = test_potd_with_previous.model_copy(
-        update={
-            "previous": test_potd_with_previous.previous.model_copy(
-                update={"localized_descriptions": {}}
-            )
-        }
+        update={"previous": previous.model_copy(update={"localized_descriptions": {}})}
     )
 
     potd = await provider.get_picture_of_the_day(["de"])
