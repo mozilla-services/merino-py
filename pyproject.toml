@@ -163,4 +163,7 @@ filterwarnings = [
   "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
   # Ignored: testcontainers' own RedisContainer uses the deprecated decorator internally.
   "ignore:The @wait_container_is_ready decorator is deprecated:DeprecationWarning",
+  # Ignored: starlette.testclient still imports the alias anyio 4.15 deprecated.
+  # Drop once https://github.com/Kludex/starlette/issues/3497 ships in a release.
+  "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
 ]
