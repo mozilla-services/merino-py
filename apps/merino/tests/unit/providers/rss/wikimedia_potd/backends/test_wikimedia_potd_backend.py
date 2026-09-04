@@ -330,11 +330,7 @@ class TestOrchestratePictureOfTheDayUpload:
 
 
 class TestUploadPictureOfTheDayAttachesPreviousDay:
-    """Tests that the uploaded manifest carries the previous day's picture.
-
-    The job embeds yesterday's manifest at write time so the serving path stays a single
-    read; these tests cover what ends up under `previous` on the manifest being published.
-    """
+    """Tests that the uploaded manifest carries the previous day's picture."""
 
     @staticmethod
     def _mock_upload_dependencies(backend, mocker: MockerFixture):
@@ -460,6 +456,7 @@ class TestFetchPotdFromGcsBucketMethod:
         """Reads the given day's manifest, which is how the job picks up the previous day."""
         self._mock_blob(backend, yesterdays_potd)
 
+        # fetch yesterday's potd
         result = backend.fetch_potd_from_gcs_bucket("2026-06-23")
 
         backend.gcs_uploader.get_file_by_name.assert_called_once_with(

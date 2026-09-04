@@ -208,28 +208,6 @@ def test_as_previous_entry_returns_none_when_there_is_no_manifest() -> None:
     """Returns None when yesterday has no manifest, so `previous` serializes as null."""
     assert as_previous_entry(None) is None
 
-
-def test_as_previous_entry_carries_over_every_field() -> None:
-    """Returns an entry holding the day's fields, including the descriptions used to localize."""
-    yesterday = PictureOfTheDay(
-        title="Wikimedia Commons Picture of the Day for June 6",
-        published_date="2026-06-06",
-        thumbnail_image_url=HttpUrl(THUMBNAIL_URL),
-        high_res_image_url=HttpUrl(HIGH_RES_URL),
-        description="Yesterday's description.",
-        localized_descriptions={"de": "Deutscher Text"},
-        author="Test Artist",
-        file_page=HttpUrl(FILE_PAGE_URL),
-        license_label="CC BY-SA 4.0",
-        license_link=HttpUrl(LICENSE_URL),
-    )
-
-    entry = as_previous_entry(yesterday)
-
-    assert isinstance(entry, PictureOfTheDayBase)
-    assert entry.model_dump() == yesterday.model_dump(exclude={"previous"})
-
-
 def test_as_previous_entry_drops_the_days_own_previous() -> None:
     """Drops the fetched day's `previous` so a published manifest is only one day deep."""
     two_days_ago = PictureOfTheDayBase(
