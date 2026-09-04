@@ -208,6 +208,7 @@ def test_as_previous_entry_returns_none_when_there_is_no_manifest() -> None:
     """Returns None when yesterday has no manifest, so `previous` serializes as null."""
     assert as_previous_entry(None) is None
 
+
 def test_as_previous_entry_drops_the_days_own_previous() -> None:
     """Drops the fetched day's `previous` so a published manifest is only one day deep."""
     two_days_ago = PictureOfTheDayBase(
