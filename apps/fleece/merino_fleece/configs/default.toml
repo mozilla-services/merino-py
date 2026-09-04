@@ -57,7 +57,7 @@ ner_chunk_size = 64
 # MERINO_FLEECE_SANITIZE__LOG_SEARCH_TERMS
 # Whether to emit the `web.suggest.sanitized` data log for search terms that
 # sanitization clears as NON_PII. Terms flagged as any other PII type are never
-# logged. Off by default; enabled per environment once the log sink is in place.
+# logged.
 log_search_terms = false
 
 [default.mars]
