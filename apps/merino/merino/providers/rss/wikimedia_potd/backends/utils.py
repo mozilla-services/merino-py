@@ -100,19 +100,18 @@ def previous_day(date_str: str) -> str:
 
 
 def as_previous_entry(potd: PictureOfTheDay | None) -> PictureOfTheDayBase | None:
-    """Convert yesterday's manifest into the entry attached under today's `previous`.
+    """Prepare the previous day's manifest for embedding under today's `previous`.
 
-    Yesterday's manifest carries its own `previous` from the day it was published. Dropping
-    that field here is what keeps every published manifest exactly one day deep, instead of
-    chaining back through each day the job has run.
+    The entry type has no `previous` field, so that day's own chain back through earlier
+    days drops away and each published manifest stays exactly one day deep.
 
     Returns:
-        The narrowed entry, or None when yesterday has no manifest.
+        The entry to embed, or None when that day published no manifest.
     """
     if potd is None:
         return None
 
-    return PictureOfTheDayBase.model_validate(potd.model_dump(exclude={"previous"}))
+    return PictureOfTheDayBase.model_validate(potd.model_dump())
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:
