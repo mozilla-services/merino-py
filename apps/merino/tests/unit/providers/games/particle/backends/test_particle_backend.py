@@ -135,8 +135,18 @@ def mock_cleanup_old_files_for_channel(backend):
 def mock_successfully_updated_game_files() -> list[GameFile]:
     """Mock files that have been successfully verified and uploaded."""
     files = [
-        GameFile(url="/path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
-        GameFile(url="/path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"),
+        GameFile(
+            url="/path/to/file.jpg",
+            sha="1234abcd",
+            content_type="image/jpeg",
+            cache_control="public",
+        ),
+        GameFile(
+            url="/path/to/style.css",
+            sha="5678abcd",
+            content_type="text/css; charset=utf-8",
+            cache_control="public",
+        ),
     ]
 
     for f in files:
@@ -286,9 +296,17 @@ class TestUpdateChannelFiles:
     def setup_method(self):
         """Reset the list of GameFiles before each test."""
         self.mock_game_files = [
-            GameFile(url="path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
             GameFile(
-                url="path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"
+                url="path/to/file.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="path/to/style.css",
+                sha="5678abcd",
+                content_type="text/css; charset=utf-8",
+                cache_control="public",
             ),
         ]
 
@@ -495,9 +513,17 @@ class TestStageChannelFiles:
     def setup_method(self):
         """Reset the list of GameFiles before each test."""
         self.mock_game_files = [
-            GameFile(url="path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
             GameFile(
-                url="path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"
+                url="path/to/file.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="path/to/style.css",
+                sha="5678abcd",
+                content_type="text/css; charset=utf-8",
+                cache_control="public",
             ),
         ]
 
@@ -805,6 +831,7 @@ class TestStageChannelFiles:
                 url="path/to/file.jpg",
                 sha=self.MOCK_PARTICLE_GAME_FILE_SHA,
                 content_type="image/jpeg",
+                cache_control="public",
             ),
         ]
 
@@ -833,9 +860,17 @@ class TestDeployChannelFiles:
     def setup_method(self):
         """Reset the list of GameFiles before each test."""
         self.mock_game_files = [
-            GameFile(url="/path/to/file.jpg", sha="1234abcd", content_type="image/jpeg"),
             GameFile(
-                url="/path/to/style.css", sha="5678abcd", content_type="text/css; charset=utf-8"
+                url="/path/to/file.jpg",
+                sha="1234abcd",
+                content_type="image/jpeg",
+                cache_control="public",
+            ),
+            GameFile(
+                url="/path/to/style.css",
+                sha="5678abcd",
+                content_type="text/css; charset=utf-8",
+                cache_control="public",
             ),
         ]
 

@@ -10,6 +10,7 @@ from enum import StrEnum
 from jsonschema import exceptions, validate
 from pydantic import Json
 
+from merino.configs import settings
 from merino.providers.games.particle.backends.errors import (
     ParticleManifestValidationError,
     ParticleRemoteFileProcessError,
@@ -17,6 +18,8 @@ from merino.providers.games.particle.backends.errors import (
 
 
 logger = logging.getLogger(__name__)
+
+cache_control_html = settings.games_providers.particle.cache_control_html
 
 
 class RemoteChannelEnum(StrEnum):
@@ -33,6 +36,8 @@ class GameFile:
 
     # the name of the file, e.g. style.css - pulled from remote_url
     name: str
+    # per-file cache settings specified by particle
+    cache_control: str
     # the content-type of the file
     content_type: str
     # the name of the file when staged in GCS
@@ -51,10 +56,14 @@ class GameFile:
     # set to True only after verifying SHA from downloaded file matches sha_target
     sha_verified: bool = False
 
-    def __init__(self, url: str, sha: str, content_type: str):
+    def __init__(self, cache_control: str, content_type: str, sha: str, url: str):
         """Initialize the instance by splitting up the remote file path into
         path and file name
         """
+        # until we implement manifest polling in the API pods (which will allow
+        # us to use the particle provided hashed HTML file name), we need to
+        # customize caching for the staticly named "index.html" file.
+        self.cache_control = cache_control_html if url.lower().endswith(".html") else cache_control
         self.content_type = content_type
         self.remote_path = url
         self.sha_target = sha
@@ -134,7 +143,12 @@ def get_files_from_manifest_for_channel(
 
     for file in files:
         game_files.append(
-            GameFile(url=file["url"], sha=file["sha256"], content_type=file["contentType"])
+            GameFile(
+                cache_control=file["cacheControl"],
+                url=file["url"],
+                sha=file["sha256"],
+                content_type=file["contentType"],
+            )
         )
 
     return game_files

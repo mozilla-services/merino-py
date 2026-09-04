@@ -97,7 +97,9 @@ class ParticleRemoteFileManager:
         # return json, or None if the blob wasn't found in GCS (cold start)
         return manifest
 
-    async def upload_file(self, file_name: str, file_path: str, content_type: str) -> str:
+    async def upload_file(
+        self, file_name: str, file_path: str, content_type: str, cache_control: str
+    ) -> str:
         """Attempt to upload a file from the local filesystem to GCS. Overwrites an existing file."""
         blob_name = ""
 
@@ -109,6 +111,7 @@ class ParticleRemoteFileManager:
                 destination_name=f"{self.green_deployment_folder}/{file_name}",
                 content_type=content_type,
                 forced_upload=True,  # force an overwrite if necessary
+                cache_control=cache_control,
             )
 
             if blob:

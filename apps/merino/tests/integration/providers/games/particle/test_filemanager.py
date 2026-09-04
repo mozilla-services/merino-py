@@ -67,6 +67,7 @@ class TestRemoteFileManagerUploadFile:
             file_name="images/image.jpg",
             file_path="apps/merino/tests/data/games/particle/image.jpg",
             content_type="image/jpeg",
+            cache_control="public",
         )
 
         assert blob_name == f"{GREEN_DEPLOYMENT_FOLDER}/images/image.jpg"
@@ -83,6 +84,7 @@ class TestRemoteFileManagerUploadFile:
                 file_name="images/image.jpg",
                 file_path="/apps/merino/tests/data/games/image.jpg",
                 content_type="image/jpeg",
+                cache_control="public",
             )
 
             assert blob_name == ""

@@ -191,9 +191,10 @@ class ParticleBackend:
                 # assets/style-SOMEHASH.css, so directory information is
                 # retained in GCS.
                 file.gcs_staging_name = await self.remote_file_manager.upload_file(
+                    cache_control=file.cache_control,
+                    content_type=file.content_type,
                     file_name=file.remote_path,
                     file_path=file.local_path,
-                    content_type=file.content_type,
                 )
 
                 if file.gcs_staging_name:
