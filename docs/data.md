@@ -67,10 +67,8 @@ log inspection interfaces.
 
 ### Curated Recommendations
 
-- `ERROR merino.curated_recommendations.corpus_backends.corpus_api_backend` -
- Failed to get timezone for scheduled surface.
-- `WARNING merino.curated_recommendations.corpus_backends.corpus_api_backend` -
- Retrying CorpusApiBackend after an http client exception was raised.
+- `WARNING merino.curated_recommendations.corpus_backends.sections_backend` -
+ Retrying the Corpus API after an http client exception was raised.
 - `ERROR GcsEngagement failed to update cache: {e}` - unexpected exception when updating engagement.
 - `ERROR Curated recommendations engagement size {blob.size} > {self.max_size}` -
  Max engagement blob size is exceeded. The backend will gracefully fall back to cached data or 0's.
@@ -193,17 +191,17 @@ The weather provider records additional metrics.
 
 The following additional metrics are recorded when curated recommendations are requested.
 
-- `corpus_api.{get_sections | scheduled_surface}.timing` -
+- `corpus_api.get_sections.timing` -
  A timer to measure the duration (in ms) of making a request to the Corpus API.
-- `corpus_api.{get_sections | scheduled_surface}.status_codes.{res.status_code}` -
+- `corpus_api.get_sections.status_codes.{res.status_code}` -
  A counter to measure the status codes of an HTTP request to the curated-corpus-api.
-- `corpus_api.{get_sections | scheduled_surface}.graphql_error` -
+- `corpus_api.get_sections.graphql_error` -
  A counter to measure the number of GraphQL errors from the curated-corpus-api.
 - `recommendation.engagement.update.timing` -
  A timer to measure the duration (in ms) of updating the engagement data from GCS.
 - `recommendation.engagement.size` - A gauge to track the size of the engagement blob on GCS.
 - `recommendation.engagement.count` - A gauge to measure the total number of engagement records.
-- `recommendation.engagement.{country}.count` - A gauge to measure the number of scheduled corpus
+- `recommendation.engagement.{country}.count` - A gauge to measure the number of corpus
  items with engagement data per country.
 - `recommendation.engagement.{country}.clicks` - A gauge to measure the number of clicks per country
  in our GCS engagement blob.

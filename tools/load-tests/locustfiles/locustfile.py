@@ -29,6 +29,7 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
     Locale,
+    SectionConfiguration,
 )
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.exceptions import BackendError
@@ -522,23 +523,29 @@ class MerinoUser(_MerinoBaseUser):
 
     @task(weight=298)
     def curated_recommendations_locale(self) -> None:
-        """Send request to get curated recommendations, specifying random locale & 0 topics."""
+        """Send request to get curated recommendations, specifying random locale & no sections."""
         self._request_recommendations(
             CuratedRecommendationsRequest(locale=choice(list(Locale))), "locale"
         )
 
     @task(weight=52)
-    def curated_recommendations_random_topics(self) -> None:
-        """Send request to get curated recommendations with a random number of topics (between 1 & 4(max))."""
-        num_topics = randint(1, 4)  # Randomly choose between 1 and 4 topics
+    def curated_recommendations_random_sections(self) -> None:
+        """Send request to get curated recommendations with a random number of followed sections
+        (between 1 & 4(max)). Varying the sections makes these requests uncacheable.
+        """
+        num_sections = randint(1, 4)  # Randomly choose between 1 and 4 sections
         self._request_recommendations(
             CuratedRecommendationsRequest(
                 locale=choice(list(Locale)),
-                topics=self.generate_random_arr_from_enum(
-                    enum_values=list(Topic), array_length=num_topics
-                ),
+                feeds=["sections"],
+                sections=[
+                    SectionConfiguration(sectionId=topic.value, isFollowed=True, isBlocked=False)
+                    for topic in self.generate_random_arr_from_enum(
+                        enum_values=list(Topic), array_length=num_sections
+                    )
+                ],
             ),
-            "topics",
+            "sections",
         )
 
     def _request_recommendations(

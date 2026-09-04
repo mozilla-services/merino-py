@@ -103,10 +103,8 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
     "apps/merino/merino/curated_recommendations/corpus_backends/protocol.py": {
         "direct": [],
         "indirect": [
-            "apps/merino/tests/integration/api/v1/curated_recommendations/corpus_backends/test_scheduled_surface_backend.py",
             "apps/merino/tests/integration/api/v1/curated_recommendations/corpus_backends/test_sections_backend.py",
             "apps/merino/tests/integration/api/v1/curated_recommendations/test_curated_recommendations.py",
-            "apps/merino/tests/unit/curated_recommendations/corpus_backends/test_scheduled_corpus_backend.py",
             "apps/merino/tests/unit/curated_recommendations/corpus_backends/test_utils.py",
             "apps/merino/tests/unit/curated_recommendations/ml_backends/test_static_local_model.py",
             "apps/merino/tests/unit/curated_recommendations/test_localization.py",
@@ -115,13 +113,6 @@ SOURCE_TEST_MAPPING_DETAILED: dict[str, dict[str, list[str]]] = {
             "apps/merino/tests/unit/curated_recommendations/test_sections.py",
             "apps/merino/tests/unit/curated_recommendations/test_utils.py",
             "apps/merino/tests/unit/prior_backends/test_engagement_rescaler.py",
-        ],
-    },
-    "apps/merino/merino/curated_recommendations/corpus_backends/scheduled_surface_backend.py": {
-        "direct": [],
-        "indirect": [
-            "apps/merino/tests/integration/api/v1/curated_recommendations/corpus_backends/test_scheduled_surface_backend.py",
-            "apps/merino/tests/unit/curated_recommendations/corpus_backends/test_scheduled_corpus_backend.py",
         ],
     },
     "apps/merino/merino/curated_recommendations/corpus_backends/sections_backend.py": {

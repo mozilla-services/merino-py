@@ -77,7 +77,7 @@ class IABMetadata(BaseModel):
 
 
 class CorpusItem(BaseModel):
-    """Represents a scheduled item from our 'corpus'.
+    """Represents an item from our 'corpus'.
     The corpus is the set of all curated items deemed recommendable.
     """
 
@@ -124,31 +124,15 @@ class CorpusSection(BaseModel):
 
 
 class SectionsProtocol(Protocol):
-    """Protocol for fetching sections of corpus items for a given surface, without a date."""
+    """Protocol for fetching sections of corpus items for a given surface."""
 
     async def fetch(self, surface_id: SurfaceId) -> list[CorpusSection]:
         """Fetch corpus items for the given surface.
 
         Args:
-            surface_id: Identifies the scheduled surface, e.g. NEW_TAB_EN_US.
+            surface_id: Identifies the surface, e.g. NEW_TAB_EN_US.
 
         Returns:
             list[CorpusSection]: A list of sections, each of which contains list of corpus items.
-        """
-        ...
-
-
-class ScheduledSurfaceProtocol(Protocol):
-    """Protocol for corpus backends extended with support for fetching items by day offset."""
-
-    async def fetch(self, surface_id: SurfaceId, days_offset: int = 0) -> list[CorpusItem]:
-        """Fetch corpus items for the given surface and day offset.
-
-        Args:
-            surface_id: Identifies the scheduled surface, e.g. NEW_TAB_EN_US.
-            days_offset: Number of days relative to today (0 for today, negative for past, positive for future).
-
-        Returns:
-            list[CorpusItem]: A list of fetched corpus items.
         """
         ...

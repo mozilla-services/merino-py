@@ -4,12 +4,10 @@ from dataclasses import replace
 from datetime import datetime, timezone
 import logging
 import random
-import uuid
 
 import freezegun
 import pytest
 from freezegun import freeze_time
-from pydantic import HttpUrl
 
 from merino.curated_recommendations import EngagementBackend
 from merino.curated_recommendations.article_balancer import TopStoriesArticleBalancer
@@ -23,7 +21,6 @@ from merino.curated_recommendations.protocol import (
     ITEM_HEADLINES_FLAG,
     ITEM_SUBTOPIC_FLAG,
     CuratedRecommendation,
-    MIN_TILE_ID,
     Section,
     SectionConfiguration,
     ProcessedInterests,
@@ -41,7 +38,6 @@ from merino.curated_recommendations.rankers import (
 from merino.curated_recommendations.rankers.contextual_ranker import ContextualRanker
 from merino.curated_recommendations.rankers.utils import (
     spread_publishers,
-    boost_preferred_topic,
     boost_followed_sections,
     is_section_recently_followed,
     renumber_recommendations,
@@ -868,180 +864,6 @@ class TestCuratedRecommendationsProviderSpreadPublishers:
             "7",
             "8",
         ]
-
-
-class TestCuratedRecommendationsProviderBoostPreferredTopic:
-    """Unit tests for boost_preferred_topic & is_boostable."""
-
-    @staticmethod
-    def generate_recommendations(topics: list[Topic]) -> list[CuratedRecommendation]:
-        """Create dummy recommendations for the tests below with specific topics."""
-        recs = []
-        i = 1
-        for topic in topics:
-            rec = CuratedRecommendation(
-                experiment_flags=set(),
-                corpusItemId=str(uuid.uuid4()),
-                tileId=MIN_TILE_ID + random.randint(0, 101),
-                receivedRank=i,
-                scheduledCorpusItemId=str(i),
-                url=HttpUrl("https://littlelarry.com/"),
-                title="little larry",
-                excerpt="is failing english",
-                topic=topic,
-                publisher="cohens",
-                isTimeSensitive=False,
-                imageUrl=HttpUrl("https://placehold.co/600x400/"),
-                iconUrl=None,
-            )
-            recs.append(rec)
-            i += 1
-        return recs
-
-    def test_boost_preferred_topic_two_topics(self):
-        """If two preferred topics are provided but only one topic is found in list or recs, boost first 2 recs
-        to first two slots.
-        """
-        recs = self.generate_recommendations(
-            [Topic.TRAVEL, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.EDUCATION, Topic.FOOD]
-        )
-        # career topic is not present in rec list, boost item with food topic to second slot
-        reordered_recs = boost_preferred_topic(recs, [Topic.CAREER, Topic.FOOD])
-
-        assert len(recs) == len(reordered_recs)
-        # for readability
-        assert reordered_recs[0].topic == Topic.FOOD
-        assert reordered_recs[0].scheduledCorpusItemId == "4"
-        assert reordered_recs[1].topic == Topic.FOOD
-        assert reordered_recs[1].scheduledCorpusItemId == "6"
-
-    @pytest.mark.parametrize(
-        "preferred_topics, expected_topics, expected_ids",
-        [
-            # Test case for 1 preferred topic
-            (
-                [Topic.EDUCATION],
-                [Topic.EDUCATION, Topic.EDUCATION],
-                ["6", "16"],
-            ),
-            # Test case for 2 preferred topics
-            (
-                [Topic.POLITICS, Topic.EDUCATION],
-                [Topic.EDUCATION, Topic.POLITICS, Topic.POLITICS, Topic.EDUCATION],
-                ["6", "9", "12", "16"],
-            ),
-            # Test case for 5 preferred topics
-            (
-                [Topic.POLITICS, Topic.EDUCATION, Topic.TRAVEL, Topic.BUSINESS, Topic.ARTS],
-                [
-                    Topic.BUSINESS,
-                    Topic.TRAVEL,
-                    Topic.ARTS,
-                    Topic.EDUCATION,
-                    Topic.TRAVEL,
-                    Topic.POLITICS,
-                    Topic.ARTS,
-                    Topic.POLITICS,
-                    Topic.BUSINESS,
-                    Topic.EDUCATION,
-                ],
-                ["1", "2", "3", "6", "8", "9", "10", "12", "14", "16"],
-            ),
-            # Test case for 6+ preferred topics (assuming max 10 items in total)
-            (
-                [
-                    Topic.GAMING,
-                    Topic.POLITICS,
-                    Topic.EDUCATION,
-                    Topic.TRAVEL,
-                    Topic.BUSINESS,
-                    Topic.ARTS,
-                ],
-                [
-                    Topic.BUSINESS,
-                    Topic.TRAVEL,
-                    Topic.ARTS,
-                    Topic.EDUCATION,
-                    Topic.GAMING,
-                    Topic.TRAVEL,
-                    Topic.POLITICS,
-                    Topic.ARTS,
-                    Topic.POLITICS,
-                    Topic.BUSINESS,
-                ],
-                ["1", "2", "3", "6", "7", "8", "9", "10", "12", "14"],
-            ),
-        ],
-    )
-    def test_boost_preferred_topic(self, preferred_topics, expected_topics, expected_ids):
-        """Test boosting works correctly for 1, 2, 5, 6+ preferred topics & that expected topics
-        & recommendation ids are in the correct positions.
-        """
-        recs = self.generate_recommendations(
-            [
-                Topic.BUSINESS,  # 1
-                Topic.TRAVEL,  # 2
-                Topic.ARTS,  # 3
-                Topic.SPORTS,  # 4
-                Topic.FOOD,  # 5
-                Topic.EDUCATION,  # 6
-                Topic.GAMING,  # 7
-                Topic.TRAVEL,  # 8
-                Topic.POLITICS,  # 9
-                Topic.ARTS,  # 10
-                Topic.ARTS,  # 11
-                Topic.POLITICS,  # 12
-                Topic.SPORTS,  # 13
-                Topic.BUSINESS,  # 14
-                Topic.PARENTING,  # 15
-                Topic.EDUCATION,  # 16
-                Topic.BUSINESS,  # 17
-                Topic.FOOD,  # 18
-                Topic.GAMING,  # 19
-                Topic.POLITICS,  # 20
-            ]
-        )
-
-        reordered_recs = boost_preferred_topic(recs, preferred_topics)
-
-        # Check that the length of the reordered recommendations matches
-        assert len(reordered_recs) == len(recs)
-
-        # Check that the expected topics and IDs are in the correct positions
-        for idx, (expected_topic, expected_id) in enumerate(zip(expected_topics, expected_ids)):
-            assert reordered_recs[idx].topic == expected_topic.value
-            assert reordered_recs[idx].scheduledCorpusItemId == expected_id
-
-    def test_boost_preferred_topic_no_preferred_topic_found(self):
-        """Don't reorder list of recs if no items with preferred topics are found."""
-        recs = self.generate_recommendations(
-            [Topic.POLITICS, Topic.ARTS, Topic.SPORTS, Topic.FOOD, Topic.PERSONAL_FINANCE]
-        )
-        reordered_recs = boost_preferred_topic(recs, [Topic.CAREER])
-
-        assert len(recs) == len(reordered_recs)
-        # assert that the order of recs has not changed since recs don't have preferred topic
-        assert reordered_recs == recs
-
-    def test_boost_preferred_topic_no_reorder(self):
-        """Should not reorder list of recs if all preferred topics are not in the top N slots (2 recs per topic)"""
-        recs = self.generate_recommendations(
-            [
-                Topic.TRAVEL,
-                Topic.TRAVEL,
-                Topic.EDUCATION,
-                Topic.SPORTS,
-                Topic.EDUCATION,
-                Topic.SPORTS,
-            ]
-        )
-        # should return true as recs with TRAVEL topic are in the first two slots, but 3rd slot is occupied by ARTS
-        # topic but should be occupied with SPORTS topic
-        not_reordered_recs = boost_preferred_topic(
-            recs, [Topic.TRAVEL, Topic.EDUCATION, Topic.SPORTS]
-        )
-
-        assert recs == not_reordered_recs
 
 
 class TestIsSectionRecentlyFollowed:

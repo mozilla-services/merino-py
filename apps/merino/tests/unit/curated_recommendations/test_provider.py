@@ -9,13 +9,11 @@ from merino.curated_recommendations.corpus_backends.protocol import (
 )
 from merino.curated_recommendations.provider import CuratedRecommendationsProvider
 from merino.curated_recommendations.protocol import (
-    ExperimentName,
     MAX_TILE_ID,
     MIN_TILE_ID,
     CuratedRecommendation,
     CuratedRecommendationsRequest,
 )
-from merino.curated_recommendations.rankers import ThompsonSamplingRanker
 
 
 class TestCuratedRecommendationTileId:
@@ -76,8 +74,8 @@ class TestCuratedRecommendationTileId:
             )
 
 
-class TestIsSectionsExperiment:
-    """Unit tests for CuratedRecommendationsProvider.is_sections_experiment."""
+class TestIsSectionsRequest:
+    """Unit tests for CuratedRecommendationsProvider.is_sections_request."""
 
     @pytest.mark.parametrize(
         "locale, surface_id",
@@ -108,7 +106,7 @@ class TestIsSectionsExperiment:
             experimentName=experiment_name,
             experimentBranch=experiment_branch,
         )
-        assert CuratedRecommendationsProvider.is_sections_experiment(request, surface_id) is True
+        assert CuratedRecommendationsProvider.is_sections_request(request, surface_id) is True
 
     @pytest.mark.parametrize(
         "locale, surface_id",
@@ -125,51 +123,4 @@ class TestIsSectionsExperiment:
             experimentName="some-unrelated-experiment",
             experimentBranch="treatment",
         )
-        assert CuratedRecommendationsProvider.is_sections_experiment(request, surface_id) is False
-
-
-class TestRankRecommendationsEngagementRegion:
-    """Unit tests for provider engagement-region routing."""
-
-    def test_germany_publisher_constraint_request_passes_branch_region_to_ranker(
-        self, monkeypatch
-    ):
-        """The provider should pass country region for priors and branch region for engagement."""
-        captured_regions = {}
-
-        def fake_rank_items(
-            self,
-            recommendations,
-            rescaler=None,
-            personal_interests=None,
-            region=None,
-            engagement_region=None,
-        ):
-            captured_regions["region"] = region
-            captured_regions["engagement_region"] = engagement_region
-            return recommendations
-
-        monkeypatch.setattr(ThompsonSamplingRanker, "rank_items", fake_rank_items)
-        monkeypatch.setattr(
-            "merino.curated_recommendations.utils."
-            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
-            True,
-        )
-        provider = CuratedRecommendationsProvider.__new__(CuratedRecommendationsProvider)
-        provider.engagement_backend = object()
-        provider.prior_backend = object()
-
-        request = CuratedRecommendationsRequest(
-            locale="de-DE",
-            region="DE",
-            experimentName=ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
-            experimentBranch="control",
-        )
-        recommendations = [CuratedRecommendation(**TestCuratedRecommendationTileId.common_params)]
-
-        provider.rank_recommendations(recommendations, request)
-
-        assert captured_regions == {
-            "region": "DE",
-            "engagement_region": "DE-publisher-constraint-in-germany-control",
-        }
+        assert CuratedRecommendationsProvider.is_sections_request(request, surface_id) is False
