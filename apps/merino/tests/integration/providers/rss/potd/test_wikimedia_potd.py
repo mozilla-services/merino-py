@@ -125,6 +125,43 @@ class TestUploadPictureOfTheDayMethod:
 
     @freezegun.freeze_time("2026-06-24")
     @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_skips_when_today_already_uploaded(
+        self,
+        backend: WikimediaPictureOfTheDayBackend,
+        gcs_storage_client,
+        gcs_storage_bucket,
+        mocker: MockerFixture,
+    ) -> None:
+        """A second run on the same day exits early instead of redoing the whole pipeline."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_FEATURED_JSON,
+            request=Request(method="GET", url=FEED_URL),
+        )
+        mocker.patch.object(backend, "download_potd_image").return_value = make_png_image()
+
+        assert await backend.upload_picture_of_the_day() is True
+
+        bucket = gcs_storage_client.get_bucket(gcs_storage_bucket.name)
+        manifest_generation = bucket.get_blob("wikimedia_potd/2026-06-24/potd.json").generation
+        upstream_call_count = client_mock.get.call_count
+
+        # the cron ticks again later the same day
+        assert await backend.upload_picture_of_the_day() is True
+
+        # no further upstream requests, and the manifest was not rewritten. the manifest is
+        # uploaded with forced_upload=True, so an unchanged generation proves the second run
+        # did no work at all.
+        assert client_mock.get.call_count == upstream_call_count
+        assert (
+            bucket.get_blob("wikimedia_potd/2026-06-24/potd.json").generation
+            == manifest_generation
+        )
+        assert len(list(bucket.list_blobs())) == 3
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
     async def test_upload_picture_of_the_day_stores_localized_descriptions(
         self,
         backend: WikimediaPictureOfTheDayBackend,

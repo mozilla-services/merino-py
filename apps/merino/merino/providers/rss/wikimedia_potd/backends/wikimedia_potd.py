@@ -71,6 +71,16 @@ class WikimediaPictureOfTheDayBackend:
         try:
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
+            # The job runs on a cron tick every couple of hours purely so a failed tick can be
+            # retried. Once a tick has published the day's picture the remaining ones have
+            # nothing to do. Early exit if it is already uploaded.
+            if self.is_potd_uploaded_for_today():
+                logger.info(
+                    "Today's potd is already uploaded, skipping the upload",
+                    extra={"date": today},
+                )
+                return True
+
             # discover which languages have an authored description for today's picture
             languages = await self.discover_languages(today)
 
@@ -320,6 +330,25 @@ class WikimediaPictureOfTheDayBackend:
         # landed in the bucket and fail loudly otherwise.
         if self.gcs_uploader.get_file_by_name(destination_name) is None:
             raise WikimediaPotdError(f"Failed to upload POTD manifest: {destination_name}")
+
+    def is_potd_uploaded_for_today(self) -> bool:
+        """Return True when today's potd manifest is already in the gcs bucket.
+
+        Returns:
+            True when today's manifest exists, False when it is absent or the probe fails.
+        """
+        manifest_path = f"{build_potd_bucket_directory_path()}potd.json"
+
+        try:
+            return self.gcs_uploader.get_file_by_name(manifest_path) is not None
+        except Exception as ex:
+            logger.warning(
+                "Failed to check whether today's POTD manifest exists",
+                extra={"error": str(ex), "path": manifest_path},
+            )
+
+            # a false would trigger a re-run of the cron job to upload potd
+            return False
 
     def fetch_potd_from_gcs_bucket(self) -> PictureOfTheDay | None:
         """Fetch the PictureOfTheDay object from the gcs bucket.
