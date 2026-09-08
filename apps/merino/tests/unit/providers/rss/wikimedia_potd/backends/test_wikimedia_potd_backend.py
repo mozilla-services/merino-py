@@ -19,6 +19,7 @@ from pytest_mock import MockerFixture
 from merino.configs import settings
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
+    PictureOfTheDayBase,
     WikimediaPotdError,
 )
 from merino.utils.gcs.gcs_uploader import GcsUploader
@@ -67,6 +68,19 @@ def fixture_backend(
         featured_api_base=FEED_URL,
         commons_api_url=COMMONS_API_URL,
         gcs_uploader=gcs_uploader_mock,
+    )
+
+
+@pytest.fixture(name="yesterdays_potd")
+def fixture_yesterdays_potd() -> PictureOfTheDay:
+    """Return the manifest published the day before the frozen 2026-06-24 upload date."""
+    return PictureOfTheDay(
+        title="Wikimedia Commons Picture of the Day for June 23",
+        description="Yesterday's description",
+        published_date="2026-06-23",
+        thumbnail_image_url=HttpUrl("https://cdn/wikimedia_potd/2026-06-23/thumbnail.jpeg"),
+        high_res_image_url=HttpUrl("https://cdn/wikimedia_potd/2026-06-23/hi_res.webp"),
+        localized_descriptions={"de": "Gestriger deutscher Text"},
     )
 
 
@@ -313,6 +327,151 @@ class TestOrchestratePictureOfTheDayUpload:
 
         result = await backend.upload_picture_of_the_day()
         assert result is False
+
+
+class TestUploadPictureOfTheDayAttachesPreviousDay:
+    """Tests that the uploaded manifest carries the previous day's picture."""
+
+    @staticmethod
+    def _mock_upload_dependencies(backend, mocker: MockerFixture):
+        """Stub out the Featured API fetch and image upload, returning the manifest upload mock."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_FEATURED_JSON,
+            request=Request(method="GET", url=FEED_URL),
+        )
+        mocker.patch.object(
+            backend,
+            "download_and_upload_potd_images",
+            return_value=(
+                HttpUrl("https://cdn/wikimedia_potd/2026-06-24/thumbnail.jpeg"),
+                HttpUrl("https://cdn/wikimedia_potd/2026-06-24/hi_res.webp"),
+            ),
+        )
+        return mocker.patch.object(backend, "upload_potd_manifest")
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_embeds_the_previous_days_manifest(
+        self, backend, yesterdays_potd: PictureOfTheDay, mocker: MockerFixture
+    ) -> None:
+        """Fetches the previous calendar day's manifest and embeds it under `previous`."""
+        manifest_mock = self._mock_upload_dependencies(backend, mocker)
+        fetch_mock = mocker.patch.object(
+            backend, "fetch_potd_from_gcs_bucket", return_value=yesterdays_potd
+        )
+
+        result = await backend.upload_picture_of_the_day()
+        assert result is True
+
+        # only the previous calendar day is looked up, no walking further back
+        fetch_mock.assert_called_once_with("2026-06-23")
+
+        uploaded: PictureOfTheDay = manifest_mock.call_args.args[0]
+        assert uploaded.published_date == "2026-06-24"
+        assert uploaded.previous is not None
+        assert uploaded.previous.published_date == "2026-06-23"
+        assert str(uploaded.previous.high_res_image_url) == (
+            "https://cdn/wikimedia_potd/2026-06-23/hi_res.webp"
+        )
+        # the localization map rides along so `previous.description` can be localized on serve
+        assert uploaded.previous.localized_descriptions == {"de": "Gestriger deutscher Text"}
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_leaves_previous_unset_when_yesterday_has_no_manifest(
+        self, backend, mocker: MockerFixture
+    ) -> None:
+        """Publishes with `previous` unset when yesterday's job never uploaded a manifest."""
+        manifest_mock = self._mock_upload_dependencies(backend, mocker)
+        mocker.patch.object(backend, "fetch_potd_from_gcs_bucket", return_value=None)
+
+        result = await backend.upload_picture_of_the_day()
+
+        # a missing previous day never fails today's upload
+        assert result is True
+        assert manifest_mock.call_args.args[0].previous is None
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_does_not_chain_past_the_previous_day(
+        self, backend, yesterdays_potd: PictureOfTheDay, mocker: MockerFixture
+    ) -> None:
+        """Drops the previous day's own `previous`, keeping the manifest one day deep."""
+        manifest_mock = self._mock_upload_dependencies(backend, mocker)
+        mocker.patch.object(
+            backend,
+            "fetch_potd_from_gcs_bucket",
+            return_value=yesterdays_potd.model_copy(
+                update={
+                    "previous": PictureOfTheDayBase(
+                        title="Wikimedia Commons Picture of the Day for June 22",
+                        description="Two days ago",
+                        published_date="2026-06-22",
+                        thumbnail_image_url=HttpUrl("https://cdn/t.jpeg"),
+                        high_res_image_url=HttpUrl("https://cdn/h.webp"),
+                    )
+                }
+            ),
+        )
+
+        result = await backend.upload_picture_of_the_day()
+        assert result is True
+
+        uploaded: PictureOfTheDay = manifest_mock.call_args.args[0]
+        assert uploaded.previous is not None
+        assert uploaded.previous.published_date == "2026-06-23"
+        assert "previous" not in uploaded.previous.model_dump()
+
+
+class TestFetchPotdFromGcsBucketMethod:
+    """Tests for the date addressing of fetch_potd_from_gcs_bucket."""
+
+    @staticmethod
+    def _mock_blob(backend, potd: PictureOfTheDay) -> None:
+        """Make the bucket return `potd` as the manifest for whichever blob is requested."""
+        blob = MagicMock()
+        blob.download_as_text.return_value = potd.model_dump_json()
+        backend.gcs_uploader.get_file_by_name.return_value = blob
+
+    @freezegun.freeze_time("2026-06-24")
+    def test_fetch_potd_from_gcs_bucket_reads_todays_path_by_default(
+        self, backend, potd: PictureOfTheDay
+    ) -> None:
+        """Reads today's manifest when no date is given, as the serving path does."""
+        self._mock_blob(backend, potd)
+
+        result = backend.fetch_potd_from_gcs_bucket()
+
+        backend.gcs_uploader.get_file_by_name.assert_called_once_with(
+            "wikimedia_potd/2026-06-24/potd.json"
+        )
+        assert result == potd
+
+    @freezegun.freeze_time("2026-06-24")
+    def test_fetch_potd_from_gcs_bucket_reads_the_given_dates_path(
+        self, backend, yesterdays_potd: PictureOfTheDay
+    ) -> None:
+        """Reads the given day's manifest, which is how the job picks up the previous day."""
+        self._mock_blob(backend, yesterdays_potd)
+
+        # fetch yesterday's potd
+        result = backend.fetch_potd_from_gcs_bucket("2026-06-23")
+
+        backend.gcs_uploader.get_file_by_name.assert_called_once_with(
+            "wikimedia_potd/2026-06-23/potd.json"
+        )
+        assert result == yesterdays_potd
+
+    @freezegun.freeze_time("2026-06-24")
+    def test_fetch_potd_from_gcs_bucket_returns_none_when_the_day_has_no_manifest(
+        self, backend
+    ) -> None:
+        """Returns None when the day's blob is absent, which the job reports as no `previous`."""
+        backend.gcs_uploader.get_file_by_name.return_value = None
+
+        assert backend.fetch_potd_from_gcs_bucket("2026-06-23") is None
 
 
 class TestFetchPictureOfTheDayMethod:

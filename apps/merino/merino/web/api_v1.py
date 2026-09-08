@@ -691,8 +691,15 @@ async def get_picture_of_the_day(
     # localized_descriptions is a server-side selection map used to swap `description` into
     # the client's language; it is not part of the client-facing contract, so exclude it here
     # (but keep it on the model and in the GCS manifest, which localization reads back from).
+    # The nested previous day's picture carries the same map and is excluded the same way.
     return JSONResponse(
-        content=jsonable_encoder(potd, exclude={"localized_descriptions"}),
+        content=jsonable_encoder(
+            potd,
+            exclude={
+                "localized_descriptions": True,
+                "previous": {"localized_descriptions": True},
+            },
+        ),
     )
 
 

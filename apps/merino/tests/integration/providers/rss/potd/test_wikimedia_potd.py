@@ -47,6 +47,22 @@ def make_png_image(width: int = 40, height: int = 20) -> Image:
     return Image(content=buffer.getvalue(), content_type="image/png")
 
 
+async def upload_potd_for_day(
+    backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture, day: str
+) -> None:
+    """Run the upload job as if it were `day`, so the bucket gains that day's assets."""
+    client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+    client_mock.get.return_value = Response(
+        status_code=200,
+        content=TEST_FEATURED_JSON,
+        request=Request(method="GET", url=FEED_URL),
+    )
+    mocker.patch.object(backend, "download_potd_image").return_value = make_png_image()
+
+    with freezegun.freeze_time(day):
+        assert await backend.upload_picture_of_the_day() is True
+
+
 @pytest.fixture(name="backend")
 def fixture_backend(
     statsd_mock, mocker: MockerFixture, gcs_storage_client, gcs_storage_bucket
@@ -313,6 +329,77 @@ class TestUploadPictureOfTheDayMethod:
         sentry_capture.assert_called_once_with(unexpected_error)
 
 
+class TestPreviousDayManifest:
+    """Tests that a published manifest carries the previous day's picture."""
+
+    @pytest.mark.asyncio
+    async def test_manifest_embeds_the_previous_days_manifest(
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    ) -> None:
+        """The second day's manifest carries the first day's picture and its dated image urls."""
+        await upload_potd_for_day(backend, mocker, "2026-06-24")
+
+        with freezegun.freeze_time("2026-06-24"):
+            first_day = backend.fetch_potd_from_gcs_bucket()
+
+        # nothing precedes the first day, so it publishes without a previous picture
+        assert first_day is not None
+        assert first_day.previous is None
+
+        await upload_potd_for_day(backend, mocker, "2026-06-25")
+
+        with freezegun.freeze_time("2026-06-25"):
+            second_day = backend.fetch_potd_from_gcs_bucket()
+
+        assert second_day is not None
+        assert second_day.published_date == "2026-06-25"
+        assert second_day.previous is not None
+        assert second_day.previous.published_date == "2026-06-24"
+        assert second_day.previous.title == "Wikimedia Commons Picture of the Day for June 24"
+        # the embedded picture points at the first day's own immutable image paths
+        assert (
+            str(second_day.previous.thumbnail_image_url)
+            == "https://test-cdn-name/wikimedia_potd/2026-06-24/thumbnail.png"
+        )
+        assert (
+            str(second_day.previous.high_res_image_url)
+            == "https://test-cdn-name/wikimedia_potd/2026-06-24/hi_res.webp"
+        )
+
+    @pytest.mark.asyncio
+    async def test_manifest_never_chains_past_the_previous_day(
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    ) -> None:
+        """Each manifest stays one day deep however many days the job has run."""
+        for day in ("2026-06-24", "2026-06-25", "2026-06-26"):
+            await upload_potd_for_day(backend, mocker, day)
+
+        with freezegun.freeze_time("2026-06-26"):
+            third_day = backend.fetch_potd_from_gcs_bucket()
+
+        assert third_day is not None
+        assert third_day.previous is not None
+        assert third_day.previous.published_date == "2026-06-25"
+        # the second day's own previous is dropped rather than chained through
+        assert "previous" not in third_day.previous.model_dump()
+
+    @pytest.mark.asyncio
+    async def test_previous_is_unset_when_the_day_before_published_nothing(
+        self, backend: WikimediaPictureOfTheDayBackend, mocker: MockerFixture
+    ) -> None:
+        """Only the previous calendar day is looked up, so a skipped day leaves it unset."""
+        await upload_potd_for_day(backend, mocker, "2026-06-24")
+        # the job does not run on the 25th
+        await upload_potd_for_day(backend, mocker, "2026-06-26")
+
+        with freezegun.freeze_time("2026-06-26"):
+            third_day = backend.fetch_potd_from_gcs_bucket()
+
+        assert third_day is not None
+        assert third_day.published_date == "2026-06-26"
+        assert third_day.previous is None
+
+
 class TestFetchPictureOfTheDayMethod:
     """Tests for the fetch_picture_of_the_day method."""
 
@@ -525,6 +612,30 @@ class TestFetchPotdFromGcsBucketMethod:
         actual = backend.fetch_potd_from_gcs_bucket()
 
         assert actual is None
+
+    def test_fetch_potd_from_gcs_bucket_returns_the_given_days_manifest(
+        self, backend: WikimediaPictureOfTheDayBackend
+    ) -> None:
+        """Returns a past day's manifest when an explicit date is given."""
+        expected = PictureOfTheDay(
+            title="Test Potd",
+            description="Test potd description",
+            published_date="2026-06-06",
+            high_res_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+            thumbnail_image_url=HttpUrl("https://www.test-image.com/image.jpeg"),
+        )
+
+        with freezegun.freeze_time("2026-06-06"):
+            backend.upload_potd_manifest(potd=expected)
+
+        with freezegun.freeze_time("2026-06-07"):
+            # today published nothing, but the day before is still addressable
+            assert backend.fetch_potd_from_gcs_bucket() is None
+            actual = backend.fetch_potd_from_gcs_bucket("2026-06-06")
+
+        assert actual is not None
+        assert actual.published_date == "2026-06-06"
+        assert actual.title == expected.title
 
     @freezegun.freeze_time("2026-06-07")
     def test_fetch_potd_from_gcs_bucket_returns_none_when_blob_retrieval_returns_an_error(
