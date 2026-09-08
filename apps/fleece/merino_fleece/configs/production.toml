@@ -20,3 +20,10 @@ subscription = "projects/moz-fx-merino-prod-5de4/subscriptions/merino-fleece-san
 # external liveness probe (e.g. a Kubernetes exec probe). Empty disables the heartbeat.
 # Must be writable by the container's unprivileged `app` user (uid 10001)
 heartbeat_path = "/tmp/fleece/heartbeat"
+
+[production.sanitize]
+# MERINO_FLEECE_SANITIZE__LOG_SEARCH_TERMS
+# Whether to emit the `web.suggest.sanitized` data log for search terms that
+# sanitization clears as NON_PII. Terms flagged as any other PII type are never
+# logged.
+log_search_terms = true
