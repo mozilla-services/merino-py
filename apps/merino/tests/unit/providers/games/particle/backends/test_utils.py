@@ -27,6 +27,7 @@ from merino.providers.games.particle.backends.utils import (
 )
 
 _manifest_schema_version = settings.games_providers.particle.manifest_schema_version
+_html_cache_control = settings.games_providers.particle.cache_control_html
 
 
 # BEGIN FIXTURES
@@ -253,13 +254,26 @@ class TestGameFile:
         url = "/path/to/a/remote/file.jpg"
         sha = "1234IDeclareASHAWar"
         content_type = "image/jpeg"
-        gf = GameFile(url=url, sha=sha, content_type=content_type)
+        cache_control = "public,max-age=31536000,immutable"
+        gf = GameFile(url=url, sha=sha, content_type=content_type, cache_control=cache_control)
 
         assert gf.sha_target == sha
         assert gf.remote_path == "/path/to/a/remote/file.jpg"
         assert gf.name == "file.jpg"
         assert gf.content_type == content_type
+        assert gf.cache_control == cache_control
         assert not gf.sha_verified
+
+    def test_initialzation_html_file_cache_control(self):
+        """Test that initializing a GameFile object customizes cache_control for the HTML file."""
+        url = "/path/to/a/remote/widget-123456.html"
+        sha = "1234IDeclareASHAWar"
+        content_type = "text/html"
+        cache_control = "public,max-age=31536000,immutable"
+        gf = GameFile(url=url, sha=sha, content_type=content_type, cache_control=cache_control)
+
+        assert gf.cache_control != cache_control
+        assert gf.cache_control == _html_cache_control
 
 
 class TestGetFilesForCleanupForChannel:
@@ -305,18 +319,42 @@ class TestGetFilesForCleanupForChannel:
         ) as mock_get_files:
             # the newly deployed files
             green_files = [
-                GameFile(url="assets/a.jpg", sha="123", content_type="image/jpeg"),
-                GameFile(url="assets/a.png", sha="123", content_type="image/png"),
-                GameFile(url="runtime/index-1234.html", sha="123", content_type="text/html"),
+                GameFile(
+                    url="assets/a.jpg",
+                    sha="123",
+                    content_type="image/jpeg",
+                    cache_control="public",
+                ),
+                GameFile(
+                    url="assets/a.png", sha="123", content_type="image/png", cache_control="public"
+                ),
+                GameFile(
+                    url="runtime/index-1234.html",
+                    sha="123",
+                    content_type="text/html",
+                    cache_control="public",
+                ),
             ]
 
             # the previously deployed files - two are different from green:
             # - assets/b.jpg
             # - runtime/index-5678.html
             blue_files = [
-                GameFile(url="assets/b.jpg", sha="123", content_type="image/jpeg"),
-                GameFile(url="assets/a.png", sha="123", content_type="image/png"),
-                GameFile(url="runtime/index-5678.html", sha="123", content_type="text/html"),
+                GameFile(
+                    url="assets/b.jpg",
+                    sha="123",
+                    content_type="image/jpeg",
+                    cache_control="public",
+                ),
+                GameFile(
+                    url="assets/a.png", sha="123", content_type="image/png", cache_control="public"
+                ),
+                GameFile(
+                    url="runtime/index-5678.html",
+                    sha="123",
+                    content_type="text/html",
+                    cache_control="public",
+                ),
             ]
 
             mock_get_files.side_effect = [green_files, blue_files]
@@ -341,9 +379,21 @@ class TestGetFilesForCleanupForChannel:
         ) as mock_get_files:
             # the newly deployed files
             green_files = [
-                GameFile(url="assets/a.jpg", sha="123", content_type="image/jpeg"),
-                GameFile(url="assets/a.png", sha="123", content_type="image/png"),
-                GameFile(url="runtime/index-1234.html", sha="123", content_type="text/html"),
+                GameFile(
+                    url="assets/a.jpg",
+                    sha="123",
+                    content_type="image/jpeg",
+                    cache_control="public",
+                ),
+                GameFile(
+                    url="assets/a.png", sha="123", content_type="image/png", cache_control="public"
+                ),
+                GameFile(
+                    url="runtime/index-1234.html",
+                    sha="123",
+                    content_type="text/html",
+                    cache_control="public",
+                ),
             ]
 
             mock_get_files.side_effect = [green_files]

@@ -1323,6 +1323,11 @@ enabled = false
 # The amount of time in seconds for the max-age Cache-control header.
 cache_ttl = 86400 # one day
 
+# MERINO_GAMES_PROVIDERS__PARTICLE__CACHE_CONTROL_HTML
+# HTML file needs a specific cache value set. All other particle files have
+# cache_control dictated by the remote provider's manifest.
+cache_control_html = "public, max-age=3600"
+
 # MERINO_GAMES_PROVIDERS__PARTICLE__GAME_URL
 # The URL pointing to the game hosted in GCP (GCS)
 game_url = "https://prod-games-particle.merino.prod.webservices.mozgcp.net/index.html"
