@@ -6,8 +6,6 @@ import time
 from itertools import islice
 from typing import Any, Dict, Mapping
 
-from google.cloud.storage import Blob
-
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
 from merino.jobs.wikipedia_indexer.settings import get_settings_for_version
 from merino.jobs.wikipedia_indexer.settings.v1 import (
@@ -28,7 +26,6 @@ class Indexer:
 
     queue: list[Mapping[str, Any]]
     suggestion_builder: Builder
-    export_file: Blob
     index_version: str
     file_manager: FileManager
     elasticsearch: ElasticSearchAdapter
@@ -58,7 +55,7 @@ class Indexer:
         language = self.file_manager.language
         logger.info(f"Ensuring latest {language} dump is on GCS")
         latest = self.file_manager.get_latest_gcs()
-        if not latest.name:
+        if latest is None:
             raise RuntimeError(f"No exports available on GCS for {language}")
 
         # parse the index name out of the latest file name

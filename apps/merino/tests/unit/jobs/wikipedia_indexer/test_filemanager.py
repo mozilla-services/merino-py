@@ -5,19 +5,20 @@
 """Unit tests for the wikipedia indexer filemanager module."""
 
 import bz2
-from datetime import datetime
+from datetime import datetime as dt
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-from google.api_core.exceptions import GoogleAPIError
-from requests import ConnectionError, HTTPError
+from requests import ConnectionError
+
 from merino.jobs.wikipedia_indexer.filemanager import (
+    SUCCESS_MARKER,
     DirectoryParser,
     FileManager,
+    Snapshot,
     WikipediaFilemanagerError,
 )
-from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 
 BASE_URL = "http://mock-url/"
 
@@ -39,7 +40,7 @@ def _shards(date: str, count: int, language: str = "fr") -> list[str]:
 
 
 def _serve(pages: dict[str, list[str]]):
-    """Build a requests.get side effect that serves directory listings by URL."""
+    """Build a session.get side effect that serves directory listings by URL."""
 
     def _get(url, *args, **kwargs):
         if url not in pages:
@@ -52,93 +53,41 @@ def _serve(pages: dict[str, list[str]]):
     return _get
 
 
-def test_get_latest_gcs_returns_latest_blob():
-    """Returns the most recent matching blob for a given language."""
-    mock_client = MagicMock()
-    mock_bucket = MagicMock()
-
-    mock_blob_old = MagicMock()
-    mock_blob_old.name = "frwiki-20240101-cirrussearch-content.json.bz2"
-
-    mock_blob_new = MagicMock()
-    mock_blob_new.name = "frwiki-20240401-cirrussearch-content.json.bz2"
-
-    mock_bucket.list_blobs.return_value = [mock_blob_old, mock_blob_new]
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", "", language="fr")
-        latest_blob = fm.get_latest_gcs()
-
-    assert latest_blob == mock_blob_new
+def _gcs_blob(name: str, size: int = 0) -> MagicMock:
+    """Build a GCS blob mock with a name and size."""
+    blob = MagicMock()
+    blob.name = name
+    blob.size = size
+    return blob
 
 
-def test_get_latest_gcs_filters_by_language():
-    """Filters out blobs not matching the current language pattern."""
-    mock_client = MagicMock()
-    mock_bucket = MagicMock()
-
-    fr_blob = MagicMock()
-    fr_blob.name = "frwiki-20240301-cirrussearch-content.json.bz2"
-
-    en_blob = MagicMock()
-    en_blob.name = "enwiki-20240301-cirrussearch-content.json.bz2"
-
-    random_blob = MagicMock()
-    random_blob.name = "unrelated-file.txt"
-
-    mock_bucket.list_blobs.return_value = [fr_blob, en_blob, random_blob]
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", "", language="fr")
-        result = fm.get_latest_gcs()
-
-    # the frwiki blob should match and be returned
-    assert result == fr_blob
+@pytest.fixture(name="session")
+def fixture_session(mocker):
+    """Replace the pooled Wikimedia session so requests can be scripted."""
+    session = MagicMock()
+    mocker.patch.object(FileManager, "session", new_callable=PropertyMock, return_value=session)
+    return session
 
 
-def test_get_latest_gcs_ignores_deprecated_gzip_dumps():
-    """Ignores dumps left over from the deprecated gzip export layout."""
-    mock_client = MagicMock()
-    mock_bucket = MagicMock()
-
-    legacy_blob = MagicMock()
-    legacy_blob.name = "frwiki-20251229-cirrussearch-content.json.gz"
-
-    mock_bucket.list_blobs.return_value = [legacy_blob]
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", "", language="fr")
-
-        with pytest.raises(RuntimeError, match="No matching dump files found"):
-            fm.get_latest_gcs()
+@pytest.fixture(name="gcs_client")
+def fixture_gcs_client():
+    """Return a mock GCS client whose bucket returns a single configurable mock."""
+    client = MagicMock()
+    bucket = MagicMock()
+    client.bucket.return_value = bucket
+    return client
 
 
-def test_get_latest_gcs_raises_runtime_error_if_no_matches():
-    """Raises RuntimeError when no blobs match the language-specific pattern."""
-    mock_client = MagicMock()
-    mock_bucket = MagicMock()
-
-    en_blob = MagicMock()
-    en_blob.name = "enwiki-20240301-cirrussearch-content.json.bz2"
-
-    unrelated_blob = MagicMock()
-    unrelated_blob.name = "somefile.txt"
-
-    mock_bucket.list_blobs.return_value = [en_blob, unrelated_blob]
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", "", language="fr")
-
-        with pytest.raises(RuntimeError, match="No matching dump files found"):
-            fm.get_latest_gcs()
+def _file_manager(
+    gcs_client, language: str = "fr", gcs_bucket: str = "gcs-bucket", base_url: str = BASE_URL
+) -> FileManager:
+    """Build a FileManager with its GCS client replaced."""
+    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=gcs_client):
+        return FileManager(gcs_bucket, "gcs-project", base_url, language)
 
 
 def test_directory_parser_decodes_percent_encoded_hrefs():
-    """Decodes percent-encoded hrefs, as used for the 'index_name=' subdirectories."""
+    """Decode percent-encoded hrefs, as used for the 'index_name=' subdirectories."""
     parser = DirectoryParser()
     parser.feed('<a href="index_name%3Dfrwiki_content/" class="dir">frwiki_content</a>')
 
@@ -146,7 +95,7 @@ def test_directory_parser_decodes_percent_encoded_hrefs():
 
 
 def test_directory_parser_ignores_valueless_attributes():
-    """Ignores anchors whose href attribute carries no value."""
+    """Ignore anchors whose href attribute carries no value."""
     parser = DirectoryParser()
     parser.feed('<a href>empty</a><a href="20240401/">20240401/</a>')
 
@@ -154,7 +103,7 @@ def test_directory_parser_ignores_valueless_attributes():
 
 
 def test_directory_parser_collects_every_href():
-    """Collects all anchor hrefs, including navigation, and ignores other tags."""
+    """Collect all anchor hrefs, including navigation, and ignore other tags."""
     parser = DirectoryParser()
     parser.feed(
         "<html><body><a href='../'>../</a><img src='icon.png'/>"
@@ -164,23 +113,133 @@ def test_directory_parser_collects_every_href():
     assert parser.file_paths == ["../", "20240401/", "_SUCCESS"]
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_returns_ordered_shards(mock_get):
-    """Returns every shard of the newest complete snapshot, in shard order."""
-    mock_get.side_effect = _serve(
+@pytest.mark.parametrize(
+    ["gcs_bucket", "expected_bucket", "expected_prefix"],
+    [
+        ("bucket-only", "bucket-only", ""),
+        ("bucket/prefix", "bucket", "prefix"),
+        ("bucket/nested/prefix", "bucket", "nested/prefix"),
+    ],
+    ids=["no_prefix", "single_prefix", "nested_prefix"],
+)
+def test_parse_gcs_bucket(gcs_client, gcs_bucket, expected_bucket, expected_prefix):
+    """Split the configured GCS path into a bucket and an object prefix."""
+    fm = _file_manager(gcs_client, gcs_bucket=gcs_bucket)
+
+    assert fm.gcs_bucket == expected_bucket
+    assert fm.object_prefix == expected_prefix
+
+
+@pytest.mark.parametrize(
+    ["gcs_bucket", "expected_prefix"],
+    [
+        ("bucket-only", "frwiki-20240401-cirrussearch-content"),
+        ("bucket/exports", "exports/frwiki-20240401-cirrussearch-content"),
+    ],
+    ids=["no_prefix", "with_prefix"],
+)
+def test_snapshot_for_builds_name_and_prefix(gcs_client, gcs_bucket, expected_prefix):
+    """Build the snapshot prefix from the language and date."""
+    fm = _file_manager(gcs_client, gcs_bucket=gcs_bucket)
+
+    snapshot = fm.snapshot_for(dt(2024, 4, 1))
+
+    # The name keeps the shape the old single-object layout used, so it still works
+    # as the basis for the Elasticsearch index name.
+    assert snapshot.name == "frwiki-20240401-cirrussearch-content"
+    assert snapshot.prefix == expected_prefix
+    assert snapshot.date == dt(2024, 4, 1)
+
+
+def test_filemanager_rejects_invalid_language(gcs_client):
+    """Raise ValueError for a language the service does not support."""
+    with pytest.raises(ValueError, match="Unsupported language 'es'"):
+        _file_manager(gcs_client, language="es")
+
+
+def test_get_latest_gcs_returns_newest_complete_snapshot(gcs_client):
+    """Return the most recent snapshot that has a success marker."""
+    gcs_client.bucket.return_value.list_blobs.return_value = [
+        _gcs_blob(f"frwiki-20240101-cirrussearch-content/{SUCCESS_MARKER}"),
+        _gcs_blob("frwiki-20240401-cirrussearch-content/frwiki_content-20240401-00000.json.bz2"),
+        _gcs_blob(f"frwiki-20240401-cirrussearch-content/{SUCCESS_MARKER}"),
+    ]
+    fm = _file_manager(gcs_client)
+
+    latest = fm.get_latest_gcs()
+
+    assert latest is not None
+    assert latest.date == dt(2024, 4, 1)
+
+
+def test_get_latest_gcs_ignores_snapshot_without_success_marker(gcs_client):
+    """Ignore a newer snapshot whose copy has not finished.
+
+    Shards land one object at a time, so a prefix full of shards but missing the
+    marker is a copy still in flight or abandoned by a failed run.
+    """
+    gcs_client.bucket.return_value.list_blobs.return_value = [
+        _gcs_blob(f"frwiki-20240101-cirrussearch-content/{SUCCESS_MARKER}"),
+        # Newer, but only partially copied.
+        _gcs_blob("frwiki-20240401-cirrussearch-content/frwiki_content-20240401-00000.json.bz2"),
+        _gcs_blob("frwiki-20240401-cirrussearch-content/frwiki_content-20240401-00001.json.bz2"),
+    ]
+    fm = _file_manager(gcs_client)
+
+    latest = fm.get_latest_gcs()
+
+    assert latest is not None
+    assert latest.date == dt(2024, 1, 1)
+
+
+def test_get_latest_gcs_filters_by_language(gcs_client):
+    """Ignore complete snapshots belonging to another language."""
+    gcs_client.bucket.return_value.list_blobs.return_value = [
+        _gcs_blob(f"enwiki-20240401-cirrussearch-content/{SUCCESS_MARKER}"),
+        _gcs_blob(f"frwiki-20240301-cirrussearch-content/{SUCCESS_MARKER}"),
+    ]
+    fm = _file_manager(gcs_client)
+
+    latest = fm.get_latest_gcs()
+
+    assert latest is not None
+    assert latest.name == "frwiki-20240301-cirrussearch-content"
+
+
+@pytest.mark.parametrize(
+    "blob_names",
+    [
+        [],
+        ["somefile.txt"],
+        # The deprecated single-object gzip and bz2 layouts are no longer recognized.
+        ["frwiki-20240401-cirrussearch-content.json.gz"],
+        ["frwiki-20240401-cirrussearch-content.json.bz2"],
+        # Right shape, impossible date.
+        [f"frwiki-20240132-cirrussearch-content/{SUCCESS_MARKER}"],
+    ],
+    ids=["empty", "unrelated", "legacy_gzip", "legacy_bz2", "impossible_date"],
+)
+def test_get_latest_gcs_returns_none_when_nothing_is_usable(gcs_client, blob_names):
+    """Return None when no complete snapshot exists in the new layout."""
+    gcs_client.bucket.return_value.list_blobs.return_value = [
+        _gcs_blob(name) for name in blob_names
+    ]
+    fm = _file_manager(gcs_client)
+
+    assert fm.get_latest_gcs() is None
+
+
+def test_get_latest_dump_shards_returns_ordered_shards(gcs_client, session):
+    """Return every shard of the newest complete snapshot, in shard order."""
+    session.get.side_effect = _serve(
         {
             BASE_URL: ["20240301/", "20240401/"],
-            _index_url("20240401"): [*_shards("20240401", 3), "_SUCCESS"],
+            _index_url("20240401"): [*_shards("20240401", 3), SUCCESS_MARKER],
         }
     )
+    fm = _file_manager(gcs_client)
 
-    mock_blob = MagicMock()
-    mock_blob.name = "frwiki-20240301-cirrussearch-content.json.bz2"  # older GCS file
-
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(mock_blob)
+    result = fm.get_latest_dump_shards(fm.snapshot_for(dt(2024, 3, 1)))
 
     index_url = _index_url("20240401")
     assert result == [
@@ -190,25 +249,22 @@ def test_get_latest_dump_shards_returns_ordered_shards(mock_get):
     ]
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_orders_numerically_not_lexically(mock_get):
-    """Orders shards by shard number so a padding width change cannot reorder them."""
-    mock_get.side_effect = _serve(
+def test_get_latest_dump_shards_orders_numerically_not_lexically(gcs_client, session):
+    """Order shards by shard number so a padding width change cannot reorder them."""
+    session.get.side_effect = _serve(
         {
             BASE_URL: ["20240401/"],
             _index_url("20240401"): [
                 "frwiki_content-20240401-10.json.bz2",
                 "frwiki_content-20240401-9.json.bz2",
                 "frwiki_content-20240401-00002.json.bz2",
-                "_SUCCESS",
+                SUCCESS_MARKER,
             ],
         }
     )
+    fm = _file_manager(gcs_client)
 
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(None)
+    result = fm.get_latest_dump_shards(None)
 
     assert [url.rsplit("-", 1)[-1] for url in result] == [
         "00002.json.bz2",
@@ -217,108 +273,82 @@ def test_get_latest_dump_shards_orders_numerically_not_lexically(mock_get):
     ]
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_when_gcs_is_none(mock_get):
-    """Returns the newest snapshot's shards on first run when no GCS file exists."""
-    mock_get.side_effect = _serve(
+def test_get_latest_dump_shards_when_gcs_is_none(gcs_client, session):
+    """Return the newest snapshot's shards on first run when GCS is empty."""
+    session.get.side_effect = _serve(
         {
             BASE_URL: ["20250512/"],
-            _index_url("20250512", "de"): [*_shards("20250512", 1, "de"), "_SUCCESS"],
+            _index_url("20250512", "de"): [*_shards("20250512", 1, "de"), SUCCESS_MARKER],
         }
     )
+    fm = _file_manager(gcs_client, language="de")
 
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "de")
-        result = fm.get_latest_dump_shards(latest_gcs=None)
+    result = fm.get_latest_dump_shards(latest_gcs=None)
 
     assert result == [f"{_index_url('20250512', 'de')}dewiki_content-20250512-00000.json.bz2"]
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_returns_empty_if_not_newer(mock_get):
-    """Returns no shards when the latest snapshot is not newer than the GCS dump."""
-    mock_get.side_effect = _serve({BASE_URL: ["20240301/"]})
+def test_get_latest_dump_shards_returns_empty_if_not_newer(gcs_client, session):
+    """Return no shards when the latest snapshot is not newer than the GCS copy."""
+    session.get.side_effect = _serve({BASE_URL: ["20240301/"]})
+    fm = _file_manager(gcs_client)
 
-    mock_blob = MagicMock()
-    mock_blob.name = "frwiki-20240301-cirrussearch-content.json.bz2"  # same date
-
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(mock_blob)
+    result = fm.get_latest_dump_shards(fm.snapshot_for(dt(2024, 3, 1)))
 
     assert result == []
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_skips_snapshot_without_success_marker(mock_get):
-    """Falls back to the previous snapshot when the newest is not fully published."""
-    mock_get.side_effect = _serve(
+def test_get_latest_dump_shards_skips_snapshot_without_success_marker(gcs_client, session):
+    """Fall back to the previous snapshot when the newest is not fully published."""
+    session.get.side_effect = _serve(
         {
             BASE_URL: ["20240301/", "20240401/"],
             # Newest snapshot is still being written: shards present, no marker.
             _index_url("20240401"): _shards("20240401", 2),
-            _index_url("20240301"): [*_shards("20240301", 1), "_SUCCESS"],
+            _index_url("20240301"): [*_shards("20240301", 1), SUCCESS_MARKER],
         }
     )
+    fm = _file_manager(gcs_client)
 
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(None)
+    result = fm.get_latest_dump_shards(None)
 
     assert result == [f"{_index_url('20240301')}frwiki_content-20240301-00000.json.bz2"]
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_returns_empty_when_no_snapshot_is_complete(mock_get):
-    """Returns no shards when every available snapshot is still incomplete."""
-    mock_get.side_effect = _serve(
+def test_get_latest_dump_shards_returns_empty_when_no_snapshot_is_complete(gcs_client, session):
+    """Return no shards when every available snapshot is still incomplete."""
+    session.get.side_effect = _serve(
         {
             BASE_URL: ["20240301/", "20240401/"],
             _index_url("20240401"): _shards("20240401", 2),  # no marker
             _index_url("20240301"): [],  # export missing entirely
         }
     )
+    fm = _file_manager(gcs_client)
 
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(None)
-
-    assert result == []
+    assert fm.get_latest_dump_shards(None) == []
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_does_not_walk_past_gcs_date(mock_get):
-    """Stops at the GCS dump's date rather than re-copying an older snapshot."""
+def test_get_latest_dump_shards_does_not_walk_past_gcs_date(gcs_client, session):
+    """Stop at the GCS copy's date rather than re-copying an older snapshot."""
     # _serve raises if the 20240301 listing is requested, which it must not be.
-    mock_get.side_effect = _serve(
+    session.get.side_effect = _serve(
         {
             BASE_URL: ["20240301/", "20240401/"],
             _index_url("20240401"): _shards("20240401", 2),  # incomplete, no marker
         }
     )
+    fm = _file_manager(gcs_client)
 
-    mock_blob = MagicMock()
-    mock_blob.name = "frwiki-20240301-cirrussearch-content.json.bz2"
-
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(mock_blob)
-
-    assert result == []
+    assert fm.get_latest_dump_shards(fm.snapshot_for(dt(2024, 3, 1))) == []
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_skips_snapshot_that_fails_to_list(mock_get):
-    """Skips to an older snapshot when listing the newest one errors."""
+def test_get_latest_dump_shards_skips_snapshot_that_fails_to_list(gcs_client, session):
+    """Skip to an older snapshot when listing the newest one errors."""
     serve = _serve(
         {
             BASE_URL: ["20240301/", "20240401/"],
-            _index_url("20240301"): [*_shards("20240301", 1), "_SUCCESS"],
+            _index_url("20240301"): [*_shards("20240301", 1), SUCCESS_MARKER],
         }
     )
 
@@ -327,376 +357,352 @@ def test_get_latest_dump_shards_skips_snapshot_that_fails_to_list(mock_get):
             raise ConnectionError("Simulated listing failure")
         return serve(url)
 
-    mock_get.side_effect = _get
+    session.get.side_effect = _get
+    fm = _file_manager(gcs_client)
 
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(None)
+    result = fm.get_latest_dump_shards(None)
 
     assert result == [f"{_index_url('20240301')}frwiki_content-20240301-00000.json.bz2"]
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_get_latest_dump_shards_ignores_non_snapshot_entries(mock_get):
-    """Ignores directory entries that are not dated snapshots."""
-    mock_get.side_effect = _serve(
+def test_get_latest_dump_shards_ignores_non_snapshot_entries(gcs_client, session):
+    """Ignore directory entries that are not dated snapshots."""
+    session.get.side_effect = _serve(
         {
             # "99999999/" has the right shape but is not a real date.
             BASE_URL: ["DEPRECATED.txt", "current/", "99999999/", "20240401/"],
-            _index_url("20240401"): [*_shards("20240401", 1), "_SUCCESS"],
+            _index_url("20240401"): [*_shards("20240401", 1), SUCCESS_MARKER],
         }
     )
+    fm = _file_manager(gcs_client)
 
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        result = fm.get_latest_dump_shards(None)
+    result = fm.get_latest_dump_shards(None)
 
     assert result == [f"{_index_url('20240401')}frwiki_content-20240401-00000.json.bz2"]
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.head")
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_stream_dump_to_gcs_concatenates_shards(mock_get, mock_head):
-    """Copies each shard's raw bytes into a single blob named for the snapshot date."""
-    mock_chunk = b"x" * 1024
+def test_list_gcs_shards_orders_numerically_and_ignores_other_objects(gcs_client):
+    """Return only shard objects, ordered by shard number."""
+    prefix = "frwiki-20240401-cirrussearch-content"
+    gcs_client.bucket.return_value.list_blobs.return_value = [
+        _gcs_blob(f"{prefix}/frwiki_content-20240401-00010.json.bz2"),
+        _gcs_blob(f"{prefix}/{SUCCESS_MARKER}"),
+        _gcs_blob(f"{prefix}/frwiki_content-20240401-00002.json.bz2"),
+        _gcs_blob(f"{prefix}/unrelated.txt"),
+    ]
+    fm = _file_manager(gcs_client)
 
-    def _shard_response(url, *args, **kwargs):
+    shards = fm.list_gcs_shards(fm.snapshot_for(dt(2024, 4, 1)))
+
+    assert [str(blob.name).rsplit("-", 1)[-1] for blob in shards] == [
+        "00002.json.bz2",
+        "00010.json.bz2",
+    ]
+
+
+def _shard_get(chunk: bytes = b"x" * 1024):
+    """Build a session.get side effect that streams one chunk per shard."""
+
+    def _get(url, *args, **kwargs):
         resp = MagicMock()
         resp.__enter__.return_value = resp
-        resp.iter_content.return_value = [mock_chunk]
+        resp.iter_content.return_value = [chunk]
         resp.raise_for_status.return_value = None
         return resp
 
-    mock_get.side_effect = _shard_response
-
-    head_resp = MagicMock()
-    head_resp.headers = {"Content-Length": str(len(mock_chunk))}
-    head_resp.raise_for_status.return_value = None
-    mock_head.return_value = head_resp
-
-    mock_writer = MagicMock()
-    mock_writer.write.side_effect = lambda chunk: len(chunk)
-
-    mock_blob = MagicMock()
-    mock_blob.open.return_value.__enter__.return_value = mock_writer
-
-    mock_bucket = MagicMock()
-    mock_bucket.blob.return_value = mock_blob
-
-    mock_client = MagicMock()
-    mock_client.bucket.return_value = mock_bucket
-
-    index_url = _index_url("20240501")
-    shard_urls = [f"{index_url}{name}" for name in _shards("20240501", 2)]
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket/exports", "gcs-project", BASE_URL, "fr")
-        fm._stream_dump_to_gcs(shard_urls)
-
-    # One write per shard, into a single blob opened once for the whole concatenation.
-    assert mock_writer.write.call_count == 2
-    mock_blob.open.assert_called_once()
-    assert mock_get.call_count == 2
-    # Wikimedia 403s requests that do not identify themselves.
-    mock_get.assert_any_call(shard_urls[0], stream=True, headers=WIKIMEDIA_REQUEST_HEADERS)
-    # The reassembled dump keeps the historical single-file naming convention.
-    assert (
-        mock_bucket.blob.call_args.args[0]
-        == "exports/frwiki-20240501-cirrussearch-content.json.bz2"
-    )
+    return _get
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.head")
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_stream_dump_to_gcs_copies_when_size_unknown(mock_get, mock_head):
-    """Still copies the shards when shard sizes cannot be read for progress reporting."""
-    mock_head.side_effect = ConnectionError("Simulated HEAD failure")
-
+def _head(size: int | None):
+    """Build a session.head side effect reporting a Content-Length (or none)."""
     resp = MagicMock()
-    resp.__enter__.return_value = resp
-    resp.iter_content.return_value = [b"y" * 512]
+    resp.headers = {} if size is None else {"Content-Length": str(size)}
     resp.raise_for_status.return_value = None
-    mock_get.return_value = resp
-
-    mock_writer = MagicMock()
-    mock_writer.write.side_effect = lambda chunk: len(chunk)
-
-    mock_blob = MagicMock()
-    mock_blob.open.return_value.__enter__.return_value = mock_writer
-
-    mock_bucket = MagicMock()
-    mock_bucket.blob.return_value = mock_blob
-
-    mock_client = MagicMock()
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        fm._stream_dump_to_gcs([f"{_index_url('20240501')}frwiki_content-20240501-00000.json.bz2"])
-
-    mock_writer.write.assert_called_once()
+    return resp
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.head")
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_stream_dump_to_gcs_handles_stream_failure_and_deletes_blob(mock_get, mock_head):
-    """Handles stream failure by deleting the partial GCS blob and raising an error."""
-    head_resp = MagicMock()
-    head_resp.headers = {"Content-Length": "1024"}
-    head_resp.raise_for_status.return_value = None
-    mock_head.return_value = head_resp
+def _recording_writer(sink: dict[str, bytes], name: str) -> MagicMock:
+    """Build a BlobWriter stand-in that records writes and returns byte counts."""
+    sink[name] = b""
 
-    mock_response = MagicMock()
-    mock_response.__enter__.return_value = mock_response
-    mock_response.raise_for_status.side_effect = HTTPError("Simulated HTTP error")
-    mock_get.return_value = mock_response
+    def _write(chunk: bytes) -> int:
+        sink[name] += chunk
+        return len(chunk)
 
-    mock_blob = MagicMock()
-    mock_blob.exists.return_value = True
-
-    mock_bucket = MagicMock()
-    mock_bucket.blob.return_value = mock_blob
-
-    mock_client = MagicMock()
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-
-        with pytest.raises(WikipediaFilemanagerError, match="Failed to stream dump to GCS"):
-            fm._stream_dump_to_gcs(
-                [f"{_index_url('20240501')}frwiki_content-20240501-00000.json.bz2"]
-            )
-
-    mock_blob.exists.assert_called_once()
-    mock_blob.delete.assert_called_once()
+    writer = MagicMock()
+    writer.write.side_effect = _write
+    return writer
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.head")
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_stream_dump_to_gcs_skips_delete_when_no_partial_blob(mock_get, mock_head):
-    """Does not attempt a delete when the failed copy left no blob behind."""
-    mock_head.side_effect = ConnectionError("Simulated HEAD failure")
-
-    mock_response = MagicMock()
-    mock_response.__enter__.return_value = mock_response
-    mock_response.raise_for_status.side_effect = HTTPError("Simulated HTTP error")
-    mock_get.return_value = mock_response
-
-    mock_blob = MagicMock()
-    mock_blob.exists.return_value = False
-
-    mock_bucket = MagicMock()
-    mock_bucket.blob.return_value = mock_blob
-
-    mock_client = MagicMock()
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-
-        with pytest.raises(WikipediaFilemanagerError, match="Failed to stream dump to GCS"):
-            fm._stream_dump_to_gcs(
-                [f"{_index_url('20240501')}frwiki_content-20240501-00000.json.bz2"]
-            )
-
-    mock_blob.delete.assert_not_called()
+def _writer_ctx(sink: dict[str, bytes], name: str) -> MagicMock:
+    """Wrap a recording writer in the context manager blob.open() returns."""
+    ctx = MagicMock()
+    ctx.__enter__.return_value = _recording_writer(sink, name)
+    ctx.__exit__.return_value = False
+    return ctx
 
 
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.head")
-@patch("merino.jobs.wikipedia_indexer.filemanager.requests.get")
-def test_stream_dump_to_gcs_still_raises_when_cleanup_fails(mock_get, mock_head):
-    """Reports the streaming failure even when deleting the partial upload also fails."""
-    mock_head.side_effect = ConnectionError("Simulated HEAD failure")
-
-    mock_response = MagicMock()
-    mock_response.__enter__.return_value = mock_response
-    mock_response.raise_for_status.side_effect = HTTPError("Simulated HTTP error")
-    mock_get.return_value = mock_response
-
-    mock_blob = MagicMock()
-    mock_blob.exists.return_value = True
-    mock_blob.delete.side_effect = GoogleAPIError("Simulated delete failure")
-
-    mock_bucket = MagicMock()
-    mock_bucket.blob.return_value = mock_blob
-
-    mock_client = MagicMock()
-    mock_client.bucket.return_value = mock_bucket
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-
-        with pytest.raises(WikipediaFilemanagerError, match="Failed to stream dump to GCS"):
-            fm._stream_dump_to_gcs(
-                [f"{_index_url('20240501')}frwiki_content-20240501-00000.json.bz2"]
-            )
-
-    mock_blob.delete.assert_called_once()
+def _recording_bucket(bucket: MagicMock) -> dict[str, bytes]:
+    """Make bucket.blob() record everything written, keyed by object name."""
+    written: dict[str, bytes] = {}
+    bucket.blob.side_effect = lambda name, chunk_size=None: MagicMock(
+        open=MagicMock(return_value=_writer_ctx(written, name))
+    )
+    return written
 
 
-def test_stream_dump_to_gcs_rejects_unrecognized_shard_name():
-    """Raises rather than guessing when a shard URL does not match the expected form."""
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
+@pytest.mark.asyncio
+async def test_stream_dump_to_gcs_writes_one_object_per_shard(gcs_client, session):
+    """Copy each shard into its own object, then publish the success marker."""
+    chunk = b"x" * 1024
+    session.get.side_effect = _shard_get(chunk)
+    session.head.return_value = _head(len(chunk))
 
-        with pytest.raises(WikipediaFilemanagerError, match="Unrecognized shard name"):
-            fm._stream_dump_to_gcs(["http://mock-url/not-a-shard.json.bz2"])
+    bucket = gcs_client.bucket.return_value
+    bucket.get_blob.return_value = None  # nothing copied yet
+    written = _recording_bucket(bucket)
+    fm = _file_manager(gcs_client)
 
+    index_url = _index_url("20240401")
+    await fm._stream_dump_to_gcs([f"{index_url}{name}" for name in _shards("20240401", 3)])
 
-@patch.object(FileManager, "_stream_dump_to_gcs")
-@patch.object(FileManager, "get_latest_dump_shards")
-@patch.object(FileManager, "get_latest_gcs")
-def test_stream_latest_dump_triggers_stream(
-    mock_get_latest_gcs, mock_get_latest_shards, mock_stream
-):
-    """Triggers dump streaming when a newer remote dump is available."""
-    mock_client = MagicMock()
-    mock_blob = MagicMock()
-    mock_get_latest_gcs.return_value = mock_blob
-    shard_urls = [f"{_index_url('20240501')}frwiki_content-20240501-00000.json.bz2"]
-    mock_get_latest_shards.return_value = shard_urls
-
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        returned_blob = fm.stream_latest_dump_to_gcs()
-
-    mock_stream.assert_called_once_with(shard_urls)
-    assert returned_blob == mock_blob
+    prefix = "frwiki-20240401-cirrussearch-content"
+    shard_objects = {name: body for name, body in written.items() if name.endswith(".bz2")}
+    assert set(shard_objects) == {
+        f"{prefix}/frwiki_content-20240401-00000.json.bz2",
+        f"{prefix}/frwiki_content-20240401-00001.json.bz2",
+        f"{prefix}/frwiki_content-20240401-00002.json.bz2",
+    }
+    assert all(body == chunk for body in shard_objects.values())
+    # The marker is written last, and only once every shard has landed.
+    bucket.blob.assert_any_call(f"{prefix}/{SUCCESS_MARKER}")
 
 
-@patch.object(FileManager, "_stream_dump_to_gcs")
-@patch.object(FileManager, "get_latest_dump_shards")
-@patch.object(FileManager, "get_latest_gcs")
-def test_stream_latest_dump_uses_caller_supplied_blob(
-    mock_get_latest_gcs, mock_get_latest_shards, mock_stream
-):
-    """Does not re-list GCS when the caller already knows the latest blob."""
-    mock_client = MagicMock()
-    caller_blob = MagicMock()
-    caller_blob.name = "frwiki-20240301-cirrussearch-content.json.bz2"
-    mock_get_latest_shards.return_value = []
+@pytest.mark.asyncio
+async def test_stream_dump_to_gcs_skips_shards_already_copied(gcs_client, session):
+    """Skip a shard already on GCS at its upstream size, so a retry resumes."""
+    chunk = b"x" * 1024
+    session.get.side_effect = _shard_get(chunk)
+    session.head.return_value = _head(len(chunk))
 
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        returned_blob = fm.stream_latest_dump_to_gcs(latest_gcs=caller_blob)
+    bucket = gcs_client.bucket.return_value
+    prefix = "frwiki-20240401-cirrussearch-content"
+    already = f"{prefix}/frwiki_content-20240401-00000.json.bz2"
 
-    mock_get_latest_gcs.assert_not_called()
-    mock_get_latest_shards.assert_called_once_with(caller_blob)
-    assert returned_blob == caller_blob
+    def _get_blob(name):
+        # Shard 0 landed on a previous attempt at the right size; shard 1 did not.
+        return _gcs_blob(name, size=len(chunk)) if name == already else None
 
+    bucket.get_blob.side_effect = _get_blob
+    written = _recording_bucket(bucket)
+    fm = _file_manager(gcs_client)
 
-@patch.object(FileManager, "_stream_dump_to_gcs")
-@patch.object(FileManager, "get_latest_dump_shards")
-@patch.object(FileManager, "get_latest_gcs")
-def test_stream_latest_dump_skips_if_up_to_date(
-    mock_get_latest_gcs, mock_get_latest_shards, mock_stream
-):
-    """Skips dump streaming when no newer dump is available."""
-    mock_client = MagicMock()
-    mock_blob = MagicMock()
-    mock_get_latest_gcs.return_value = mock_blob
-    mock_get_latest_shards.return_value = []  # No newer dump
+    index_url = _index_url("20240401")
+    await fm._stream_dump_to_gcs([f"{index_url}{name}" for name in _shards("20240401", 2)])
 
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        returned_blob = fm.stream_latest_dump_to_gcs()
-
-    mock_stream.assert_not_called()
-    assert returned_blob == mock_blob
+    # Only the missing shard was fetched and written.
+    shard_objects = [name for name in written if name.endswith(".bz2")]
+    assert shard_objects == [f"{prefix}/frwiki_content-20240401-00001.json.bz2"]
+    assert session.get.call_count == 1
 
 
-@patch.object(FileManager, "_stream_dump_to_gcs")
-@patch.object(FileManager, "get_latest_dump_shards")
-@patch.object(FileManager, "get_latest_gcs")
-def test_stream_latest_dump_when_gcs_empty(
-    mock_get_latest_gcs, mock_get_latest_shards, mock_stream
-):
-    """Triggers streaming when no prior GCS dump exists (first-time run)."""
-    mock_client = MagicMock()
+@pytest.mark.asyncio
+async def test_stream_dump_to_gcs_recopies_shard_of_wrong_size(gcs_client, session):
+    """Re-copy a shard whose object exists but does not match upstream.
 
-    mock_blob = MagicMock()
-    mock_blob.name = "BlobMock"
+    A failed write can still finalize a truncated object, so size is what decides.
+    """
+    chunk = b"x" * 1024
+    session.get.side_effect = _shard_get(chunk)
+    session.head.return_value = _head(len(chunk))
 
-    # First call raises RuntimeError (no file)
-    mock_get_latest_gcs.side_effect = [
-        RuntimeError("No matching dump files found"),
-        mock_blob,
+    bucket = gcs_client.bucket.return_value
+    bucket.get_blob.side_effect = lambda name: _gcs_blob(name, size=7)  # truncated
+    written = _recording_bucket(bucket)
+    fm = _file_manager(gcs_client)
+
+    index_url = _index_url("20240401")
+    await fm._stream_dump_to_gcs([f"{index_url}{name}" for name in _shards("20240401", 1)])
+
+    assert session.get.call_count == 1
+    assert [b for n, b in written.items() if n.endswith(".bz2")] == [chunk]
+
+
+@pytest.mark.asyncio
+async def test_stream_dump_to_gcs_copies_when_size_unknown(gcs_client, session):
+    """Copy shards even when HEAD gives no Content-Length to report against."""
+    chunk = b"x" * 512
+    session.get.side_effect = _shard_get(chunk)
+    session.head.return_value = _head(None)
+
+    bucket = gcs_client.bucket.return_value
+    bucket.get_blob.return_value = None
+    written = _recording_bucket(bucket)
+    fm = _file_manager(gcs_client)
+
+    index_url = _index_url("20240401")
+    await fm._stream_dump_to_gcs([f"{index_url}{name}" for name in _shards("20240401", 1)])
+
+    assert [b for n, b in written.items() if n.endswith(".bz2")] == [chunk]
+
+
+@pytest.mark.asyncio
+async def test_stream_dump_to_gcs_copies_when_head_fails(gcs_client, session, caplog):
+    """Fall back to copying without progress reporting when HEAD errors.
+
+    An unknown size also disables the resume check, so the shard is re-copied rather
+    than wrongly assumed complete.
+    """
+    chunk = b"x" * 256
+    session.get.side_effect = _shard_get(chunk)
+    session.head.side_effect = ConnectionError("Simulated HEAD failure")
+
+    bucket = gcs_client.bucket.return_value
+    bucket.get_blob.return_value = _gcs_blob("already-there", size=999)
+    written = _recording_bucket(bucket)
+    fm = _file_manager(gcs_client)
+
+    index_url = _index_url("20240401")
+    await fm._stream_dump_to_gcs([f"{index_url}{name}" for name in _shards("20240401", 1)])
+
+    assert [b for n, b in written.items() if n.endswith(".bz2")] == [chunk]
+    assert "Could not determine size" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_stream_dump_to_gcs_raises_and_skips_marker_on_failure(gcs_client, session):
+    """Surface the failure and leave the snapshot unmarked, so it is not indexed."""
+    session.head.return_value = _head(1024)
+    session.get.side_effect = ConnectionError("Simulated download failure")
+
+    bucket = gcs_client.bucket.return_value
+    bucket.get_blob.return_value = None
+    fm = _file_manager(gcs_client)
+
+    index_url = _index_url("20240401")
+    with pytest.raises(WikipediaFilemanagerError, match="Failed to copy shard"):
+        await fm._stream_dump_to_gcs([f"{index_url}{name}" for name in _shards("20240401", 2)])
+
+    prefix = "frwiki-20240401-cirrussearch-content"
+    assert bucket.blob.call_args_list  # shard blobs were attempted
+    for call in bucket.blob.call_args_list:
+        assert call.args[0] != f"{prefix}/{SUCCESS_MARKER}"
+
+
+@pytest.mark.asyncio
+async def test_stream_dump_to_gcs_rejects_unrecognized_shard_name(gcs_client, session):
+    """Raise when a shard URL does not carry a parseable snapshot date."""
+    fm = _file_manager(gcs_client)
+
+    with pytest.raises(WikipediaFilemanagerError, match="Unrecognized shard name"):
+        await fm._stream_dump_to_gcs([f"{BASE_URL}not-a-shard.json.bz2"])
+
+
+@pytest.mark.asyncio
+async def test_stream_latest_dump_copies_when_newer_exists(gcs_client, mocker):
+    """Copy the newer snapshot and return the refreshed GCS state."""
+    fm = _file_manager(gcs_client)
+    newer = fm.snapshot_for(dt(2024, 4, 1))
+
+    mocker.patch.object(FileManager, "get_latest_gcs", side_effect=[None, newer])
+    mocker.patch.object(FileManager, "get_latest_dump_shards", return_value=["shard-url"])
+    copy = mocker.patch.object(FileManager, "_stream_dump_to_gcs")
+
+    result = await fm.stream_latest_dump_to_gcs()
+
+    copy.assert_awaited_once_with(["shard-url"])
+    assert result == newer
+
+
+@pytest.mark.asyncio
+async def test_stream_latest_dump_skips_if_up_to_date(gcs_client, mocker):
+    """Do not copy anything when GCS already holds the newest snapshot."""
+    fm = _file_manager(gcs_client)
+    current = fm.snapshot_for(dt(2024, 4, 1))
+
+    mocker.patch.object(FileManager, "get_latest_gcs", return_value=current)
+    mocker.patch.object(FileManager, "get_latest_dump_shards", return_value=[])
+    copy = mocker.patch.object(FileManager, "_stream_dump_to_gcs")
+
+    result = await fm.stream_latest_dump_to_gcs()
+
+    copy.assert_not_called()
+    assert result == current
+
+
+@pytest.mark.asyncio
+async def test_stream_latest_dump_uses_caller_supplied_snapshot(gcs_client, mocker):
+    """Skip re-listing GCS when the caller already knows the current snapshot."""
+    fm = _file_manager(gcs_client)
+    current = fm.snapshot_for(dt(2024, 4, 1))
+
+    latest_gcs = mocker.patch.object(FileManager, "get_latest_gcs", return_value=current)
+    mocker.patch.object(FileManager, "get_latest_dump_shards", return_value=[])
+
+    result = await fm.stream_latest_dump_to_gcs(latest_gcs=current)
+
+    latest_gcs.assert_not_called()
+    assert result == current
+
+
+@pytest.mark.asyncio
+async def test_stream_latest_dump_when_gcs_empty(gcs_client, mocker, caplog):
+    """Warn and copy from scratch when GCS holds no complete snapshot."""
+    fm = _file_manager(gcs_client)
+    fresh = fm.snapshot_for(dt(2024, 4, 1))
+
+    mocker.patch.object(FileManager, "get_latest_gcs", side_effect=[None, fresh])
+    mocker.patch.object(FileManager, "get_latest_dump_shards", return_value=["shard-url"])
+    mocker.patch.object(FileManager, "_stream_dump_to_gcs")
+
+    result = await fm.stream_latest_dump_to_gcs()
+
+    assert result == fresh
+    assert "No existing snapshot on GCS" in caplog.text
+
+
+def test_stream_from_gcs_reads_lines_across_shards(gcs_client, mocker):
+    """Chain the shards so callers still see one continuous sequence of lines."""
+    shards = [
+        bz2.compress(b'{"index": 1}\n{"title": "one"}\n'),
+        bz2.compress(b'{"index": 2}\n{"title": "two"}\n'),
     ]
-    shard_urls = [f"{_index_url('20250512', 'de')}dewiki_content-20250512-00000.json.bz2"]
-    mock_get_latest_shards.return_value = shard_urls
+    blobs = []
+    for payload in shards:
+        blob = MagicMock()
+        blob.open.return_value.__enter__.return_value = BytesIO(payload)
+        blob.open.return_value.__exit__.return_value = False
+        blobs.append(blob)
 
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "de")
-        returned_blob = fm.stream_latest_dump_to_gcs()
+    fm = _file_manager(gcs_client)
+    mocker.patch.object(FileManager, "list_gcs_shards", return_value=blobs)
 
-    mock_stream.assert_called_once_with(shard_urls)
-    assert returned_blob.name == "BlobMock"
-
-
-def test_stream_from_gcs_reads_concatenated_bz2_shards():
-    """Reads a blob of concatenated bzip2 shards as one continuous line stream."""
-    first = bz2.compress(b'{"index": {"_id": 1}}\n{"title": "One"}\n')
-    second = bz2.compress(b'{"index": {"_id": 2}}\n{"title": "Two"}\n')
-
-    mock_blob = MagicMock()
-    mock_blob.name = "frwiki-20240501-cirrussearch-content.json.bz2"
-    mock_blob.open.return_value.__enter__.return_value = BytesIO(first + second)
-
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-        lines = list(fm.stream_from_gcs(mock_blob))
+    lines = list(fm.stream_from_gcs(fm.snapshot_for(dt(2024, 4, 1))))
 
     assert lines == [
-        b'{"index": {"_id": 1}}\n',
-        b'{"title": "One"}\n',
-        b'{"index": {"_id": 2}}\n',
-        b'{"title": "Two"}\n',
+        b'{"index": 1}\n',
+        b'{"title": "one"}\n',
+        b'{"index": 2}\n',
+        b'{"title": "two"}\n',
     ]
 
 
-def test_parse_date_returns_correct_datetime():
-    """Parses and returns the correct datetime from a valid filename."""
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
+def test_stream_from_gcs_raises_when_no_shards(gcs_client, mocker):
+    """Raise rather than silently indexing nothing when a snapshot has no shards."""
+    fm = _file_manager(gcs_client)
+    mocker.patch.object(FileManager, "list_gcs_shards", return_value=[])
 
-        filename = "frwiki-20240501-cirrussearch-content.json.bz2"
-        result = fm._parse_date(filename)
-
-        assert isinstance(result, datetime)
-        assert result == datetime(2024, 5, 1)
+    with pytest.raises(WikipediaFilemanagerError, match="No shards found on GCS"):
+        list(fm.stream_from_gcs(fm.snapshot_for(dt(2024, 4, 1))))
 
 
-def test_parse_date_returns_default_on_invalid_filename():
-    """Returns the default fallback datetime when the filename is invalid."""
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
+def test_snapshot_is_hashable_and_comparable(gcs_client):
+    """Compare and hash Snapshot by value, since it is a frozen dataclass."""
+    fm = _file_manager(gcs_client)
 
-        filename = "invalid-file-name.txt"
-        result = fm._parse_date(filename)
+    first = fm.snapshot_for(dt(2024, 4, 1))
+    second = fm.snapshot_for(dt(2024, 4, 1))
 
-        assert result == datetime(1, 1, 1)
-
-
-def test_parse_date_returns_default_on_impossible_date():
-    """Returns the default fallback datetime when a well-formed name holds a bad date."""
-    mock_client = MagicMock()
-    with patch("merino.jobs.wikipedia_indexer.filemanager.Client", return_value=mock_client):
-        fm = FileManager("gcs-bucket", "gcs-project", BASE_URL, "fr")
-
-        # January 32nd: matches the pattern but is not a date.
-        result = fm._parse_date("frwiki-20240132-cirrussearch-content.json.bz2")
-
-        assert result == datetime(1, 1, 1)
-
-
-def test_filemanager_rejects_invalid_language():
-    """Raises ValueError if FileManager is initialized with an unsupported language."""
-    with pytest.raises(ValueError, match="Unsupported language 'es'"):
-        FileManager("gcs-bucket", "gcs-project", "http://mock-url", language="es")
+    assert first == second
+    assert isinstance(first, Snapshot)
+    assert len({first, second}) == 1

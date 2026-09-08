@@ -20,12 +20,31 @@ The `copy-export` step reads Wikimedia's CirrusSearch index dumps from
 <https://dumps.wikimedia.org/other/cirrus_search_index/>. That listing holds one directory per
 weekly snapshot (`20260816/`), and within each snapshot one directory per index
 (`index_name=enwiki_content/`). Upstream shards each index into many bzip2 files to parallelize
-dump generation, so the job traverses snapshots newest-first and concatenates the shards of the first
-complete one into a single object on GCS, named `<lang>wiki-<date>-cirrussearch-content.json.bz2`.
-bzip2 streams may be concatenated, so no recompression happens during the copy.
+dump generation — English is currently around 66 shards of roughly 630 MB each.
 
-A snapshot only counts as complete once Wikimedia writes a `_SUCCESS` marker beside its shards,
-which happens roughly 12 hours after the directory first appears. A snapshot without the marker is skipped in favour of the previous one, so a run logging `Currently up to date` shortly after a new snapshot appears is expected rather than a failure.
+The job traverses snapshots newest-first and copies the shards of the first complete one to GCS,
+**one object per shard**, under a prefix named for the snapshot:
+
+```
+<gcs_path>/<lang>wiki-<date>-cirrussearch-content/
+    <lang>wiki_content-<date>-00000.json.bz2
+    ...
+    _SUCCESS
+```
+
+Shards are copied three at a time. dumps.wikimedia.org states that *"Downloads are also rate limited and capped at 3 connections per-IP"* and blocks clients that work around it. `DOWNLOAD_CONCURRENCY` in `filemanager.py` must not be raised.
+
+### Success markers
+
+A snapshot only counts as complete once Wikimedia writes a `_SUCCESS` marker beside its shards, which happens roughly 12 hours after the directory first appears. A snapshot without the marker is skipped in favour of the previous one, so a run logging `Currently up to date` shortly after a new snapshot appears is expected rather than a failure.
+
+### Resuming a failed copy
+
+A failed `copy-export` leaves whatever shards it managed to copy in place and does not write the marker. Re-running it skips shards already on GCS at their upstream size and re-fetches the rest, so a retry resumes rather than re-transferring all shards. A shard that was truncated by a failed write
+has the wrong size and is re-copied.
+
+Note that objects from the previous single-file layout
+(`<lang>wiki-<date>-cirrussearch-content.json.bz2`) are ignored, not deleted. They can be removed manually once a run under the new layout has succeeded.
 
 ## Running the job in Airflow
 Normally, the job is set as a cron to run at set intervals as a [DAG in Airflow][airflow_docs].

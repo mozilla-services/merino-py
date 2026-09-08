@@ -1,5 +1,6 @@
 """CLI commands for the wikipedia_indexer module"""
 
+import asyncio
 import logging
 from typing import Annotated
 
@@ -94,8 +95,8 @@ def copy_export(
         f"Ensuring latest {language} dump is on GCS",
         extra={"gcs_path": gcs_path, "gcp_project": gcp_project},
     )
-    latest = file_manager.stream_latest_dump_to_gcs()
-    if latest is None or not getattr(latest, "name", ""):
+    latest = asyncio.run(file_manager.stream_latest_dump_to_gcs())
+    if latest is None:
         raise RuntimeError(
             f"No complete {language} CirrusSearch export found under {export_base_url}."
         )
