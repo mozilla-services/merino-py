@@ -4,6 +4,7 @@
 
 """Unit tests for the Wikimedia Picture of the Day backend."""
 
+import logging
 from io import BytesIO
 from pathlib import Path
 
@@ -236,6 +237,34 @@ class TestDownloadAndUploadPotdImagesMethod:
 
 class TestOrchestratePictureOfTheDayUpload:
     """Tests for orchestrate_picture_of_the_day_upload method."""
+
+    @pytest.fixture(autouse=True)
+    def fixture_not_already_uploaded(self, backend, mocker: MockerFixture) -> None:
+        """Force the already-uploaded probe to miss so these tests run the full pipeline.
+
+        `gcs_uploader_mock` is a MagicMock, so its `get_file_by_name` returns a truthy mock by
+        default (the upload methods rely on that for their read-back verification) and the
+        orchestrator would otherwise take its early-exit path in every test here.
+        """
+        mocker.patch.object(backend, "is_potd_uploaded_for_today", return_value=False)
+
+    @freezegun.freeze_time("2026-06-24")
+    @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_skips_when_already_uploaded_today(
+        self, backend, gcs_uploader_mock, mocker: MockerFixture
+    ) -> None:
+        """Returns True without doing any work when today's manifest is already in the bucket."""
+        mocker.patch.object(backend, "is_potd_uploaded_for_today", return_value=True)
+
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+
+        result = await backend.upload_picture_of_the_day()
+
+        assert result is True
+        # no upstream requests and no writes to the bucket
+        client_mock.get.assert_not_called()
+        gcs_uploader_mock.upload_image.assert_not_called()
+        gcs_uploader_mock.upload_content.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_upload_picture_of_the_day_returns_false_when_no_feed_is_fetched(
@@ -578,3 +607,45 @@ class TestGcsUploadVerification:
 
         with pytest.raises(WikimediaPotdError):
             backend.upload_potd_manifest(potd)
+
+
+class TestIsPotdUploadedForTodayMethod:
+    """Tests for is_potd_uploaded_for_today method."""
+
+    @freezegun.freeze_time("2026-06-24")
+    def test_is_potd_uploaded_for_today_returns_true_when_manifest_exists(
+        self, backend, gcs_uploader_mock
+    ) -> None:
+        """Returns True and probes today's manifest path when the object is in the bucket."""
+        gcs_uploader_mock.get_file_by_name.return_value = MagicMock()
+
+        assert backend.is_potd_uploaded_for_today() is True
+        gcs_uploader_mock.get_file_by_name.assert_called_once_with(
+            "wikimedia_potd/2026-06-24/potd.json"
+        )
+
+    @freezegun.freeze_time("2026-06-24")
+    def test_is_potd_uploaded_for_today_returns_false_when_manifest_is_absent(
+        self, backend, gcs_uploader_mock
+    ) -> None:
+        """Returns False when today's manifest has not been uploaded yet."""
+        gcs_uploader_mock.get_file_by_name.return_value = None
+
+        assert backend.is_potd_uploaded_for_today() is False
+
+    @freezegun.freeze_time("2026-06-24")
+    def test_is_potd_uploaded_for_today_returns_false_and_logs_when_probe_raises(
+        self, backend, gcs_uploader_mock, caplog, filter_caplog
+    ) -> None:
+        """Degrades to False with a warning when the storage probe fails."""
+        caplog.set_level(logging.WARNING)
+
+        gcs_uploader_mock.get_file_by_name.side_effect = Exception("gcs is down")
+
+        assert backend.is_potd_uploaded_for_today() is False
+
+        records = filter_caplog(
+            caplog.records, "merino.providers.rss.wikimedia_potd.backends.wikimedia_potd"
+        )
+        assert len(records) == 1
+        assert records[0].message == "Failed to check whether today's POTD manifest exists"
