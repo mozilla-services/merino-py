@@ -4,6 +4,8 @@
 
 """Unit tests for Wikimedia POTD backend utility functions."""
 
+from datetime import date
+
 import pytest
 import freezegun
 from pydantic import HttpUrl
@@ -12,12 +14,16 @@ from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
     WikimediaPotdError,
 )
+from merino.providers.rss.wikimedia_potd.backends.curated_potd_dates import (
+    CURATED_POTD_DATE_MAPPING,
+)
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     is_valid_potd_image_url,
     parse_potd,
     extract_image_description_with_lang_code,
     parse_discovered_languages,
     build_potd_bucket_directory_path,
+    resolve_potd_content_date,
 )
 
 THUMBNAIL_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Test.jpg/320px-Test.jpg"
@@ -220,3 +226,32 @@ def test_parse_discovered_languages_extracts_codes() -> None:
 def test_parse_discovered_languages_returns_empty_when_no_pages() -> None:
     """Returns an empty set when the Commons response has no allpages."""
     assert parse_discovered_languages({}) == set()
+
+
+@pytest.mark.parametrize(
+    ["fx_date", "expected"],
+    [
+        # first and last curated dates
+        ("2026-09-11", "2025-01-04"),
+        ("2027-01-12", "2023-08-18"),
+        # no curated picture is approved for 2026-12-24 yet
+        ("2026-12-24", "2026-12-24"),
+        # dates before the curated window and after it exhausts
+        ("2026-09-10", "2026-09-10"),
+        ("2027-01-13", "2027-01-13"),
+    ],
+    ids=["first-curated", "last-curated", "uncurated-gap", "before-window", "after-window"],
+)
+def test_resolve_potd_content_date(fx_date: str, expected: str) -> None:
+    """Resolves curated Firefox dates and falls through to the date itself otherwise."""
+    assert resolve_potd_content_date(fx_date) == expected
+
+
+def test_curated_potd_date_mapping_keys_are_sorted_dates() -> None:
+    """Every mapped date is a valid YYYY-MM-DD date and the keys are in chronological order."""
+    keys = list(CURATED_POTD_DATE_MAPPING)
+
+    assert keys == sorted(keys)
+    for fx_date, wikimedia_date in CURATED_POTD_DATE_MAPPING.items():
+        assert date.fromisoformat(fx_date)
+        assert date.fromisoformat(wikimedia_date)
