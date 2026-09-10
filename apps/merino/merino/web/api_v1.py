@@ -459,12 +459,28 @@ async def curated_content(
         See the Request body schema below for the full list of supported values.
         This will determine the language of the recommendations.
     - `region`: [Optional] The country-level region, for example US or IE (Ireland).
-        This will help return more relevant recommendations. If `region` is not provided,
-        then region is extracted from the `locale` parameter if it contains two parts (e.g. en-US).
-    - `count`: [Optional] The maximum number of recommendations to return. Defaults to 100.
-    - `topics`: [Optional] A list of preferred [topics][curated-topics-doc].
-    - `feeds`: [Optional] A list of sections.
-    - `inferredInterests`: [Optional] A dictionary of topics with relative interest values.
+        This will help return more relevant recommendations. If `region` is missing or cannot
+        be parsed as a 2-letter code, it is derived from the second part of the `locale`
+        parameter, if present (e.g. en-US -> US).
+    - `count`: [Optional] The maximum number of recommendations in the legacy grid response
+        (the `data` list). Defaults to 100. Ignored when the sections feed is requested.
+    - `feeds`: [Optional] A list of feeds to include; "sections" is the only recognized value.
+        When "sections" is requested, recommendations are grouped into topic sections in the
+        `feeds` response field; otherwise a legacy grid response is returned in `data`.
+    - `sections`: [Optional] The user's followed and blocked sections. Followed sections rank
+        directly below the top stories section (`followedAt` orders them). Blocking removes
+        recommendations whose topic matches the blocked section id; other blocked sections are
+        only flagged `isBlocked`. Only affects responses with sections.
+    - `enableInterestPicker`: [Optional] When true and sections are returned, sections get
+        `isInitiallyVisible` set, and the response includes an interest picker (a prompt to
+        follow more sections) if at least 8 followable sections are not initially visible.
+    - `inferredInterests`: [Optional] A dictionary of interests with relative values, computed
+        locally by the client; it must include a `model_id` to affect ranking. Personalizes the
+        ranking of sections and items. When present, the response includes `inferredLocalModel`.
+    - `coarseOs`: [Optional] Coarse operating system (mac, win, linux, android, ios, other).
+        Reserved for future use; it currently does not affect the response.
+    - `utcOffset`: [Optional] The user's UTC offset in hours (0-23). Reserved for future use;
+        it currently does not affect the response.
     - `experimentName`: [Optional] The Nimbus New Tab experiment name that the user is enrolled in.
         When an experiment _only_ requires backend changes, this allows us to run the experiments
         without waiting on the Firefox release cycle. When an experiment _does_ require changes in
@@ -473,7 +489,7 @@ async def curated_content(
         its behavior. Any string or null is accepted.
     - `experimentBranch`: [Optional] The branch name of the Nimbus experiment that the user is in.
 
-    [curated-topics-doc]: https://mozilla-hub.atlassian.net/wiki/x/LQDaMg
+    Unknown body parameters are accepted and ignored, including the retired `topics` parameter.
     """
     return await provider.fetch(curated_recommendations_request)
 

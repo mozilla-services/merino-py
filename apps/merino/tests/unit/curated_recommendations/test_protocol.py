@@ -255,32 +255,6 @@ class TestCuratedRecommendationsRequestsProtocol:
             )
             assert request.utcOffset is None
 
-    def test_topics_validation(self):
-        """Test that topics validation works correctly."""
-        # Valid topics
-        valid_topics = [
-            [],
-            ["government", "arts"],
-        ]
-        for topics in valid_topics:
-            request = CuratedRecommendationsRequest(
-                locale="en-US",
-                topics=topics,
-            )
-            assert request.topics == topics
-
-        invalid_topics_or_types = [
-            [None],
-            [123],
-            ["invalid_topic"],
-        ]
-        for topics in invalid_topics_or_types:
-            request = CuratedRecommendationsRequest(
-                locale="en-US",
-                topics=topics,
-            )
-            assert request.topics == []
-
 
 class TestProcessedInterests:
     """Tests for ProcessedInterests validations."""

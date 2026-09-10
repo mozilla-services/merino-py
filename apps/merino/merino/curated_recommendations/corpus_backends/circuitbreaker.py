@@ -26,7 +26,7 @@ class CuratedRecommendationsCircuitBreaker(CircuitBreaker):
     in a cold-start/empty cache state.
 
     this decorator sits between two other decorators on the `fetch` functions
-    of any corpus backend (sections and scheduled surfaces, currently). the
+    of any corpus backend (currently only sections). the
     decorator chain (first applied to last applied is):
 
     1. @retry - decorates with retry logic, only final result of final

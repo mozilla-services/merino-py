@@ -4,7 +4,6 @@ import hashlib
 from enum import unique, Enum
 import math
 from typing import Annotated
-import logging
 from datetime import datetime
 import numbers
 
@@ -29,8 +28,6 @@ from merino.curated_recommendations.ml_backends.protocol import (
     TIME_ZONE_OFFSET_INFERRED_KEY,
     InferredLocalModel,
 )
-
-logger = logging.getLogger(__name__)
 
 
 @unique
@@ -351,7 +348,6 @@ class CuratedRecommendationsRequest(BaseModel):
         ),
     ] = None
     count: int = 100
-    topics: list[Topic | str] | None = None
     feeds: list[str] | None = None
     sections: list[SectionConfiguration] | None = None
     # Firefox sends the name and branch for Nimbus experiments on the "pocketNewtab" feature:
@@ -376,31 +372,6 @@ class CuratedRecommendationsRequest(BaseModel):
             return None
         # If string, consider invalid
         return None
-
-    @field_validator("topics", mode="before")
-    def validate_topics(cls, values):
-        """Validate the topics param."""
-        if values:
-            if isinstance(values, list):
-                valid_topics = []
-                for value in values:
-                    # if value is a valid Topic, add it to valid_topics
-                    if isinstance(value, Topic):
-                        valid_topics.append(value)
-                    # if value is a string, check if its in enum Topic
-                    # skip if invalid topic
-                    elif isinstance(value, str):
-                        try:
-                            valid_topics.append(Topic(value))
-                        except ValueError:
-                            # Skip invalid topics
-                            logger.warning(f"Invalid topic: {value}")
-                            continue
-                return valid_topics
-            else:
-                # Not wrapped in a list
-                logger.warning(f"Topics not wrapped in a list: {values}")
-        return []
 
 
 @unique

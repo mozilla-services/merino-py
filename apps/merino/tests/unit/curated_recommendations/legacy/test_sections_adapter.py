@@ -243,3 +243,25 @@ class TestGetLegacyRecommendationsFromSections:
 
         # Verify we got the expected number of non-gaming items
         assert len(result) == 3  # 2 sports + 1 tech (gaming filtered out)
+
+    @pytest.mark.asyncio
+    @patch("merino.curated_recommendations.legacy.sections_adapter.get_corpus_sections")
+    async def test_surface_without_sections_returns_empty_list(
+        self, mock_get_corpus_sections, caplog
+    ):
+        """A surface with no sections content (e.g. NEW_TAB_EN_XE before sections launch there)
+        returns an empty list and logs that no recommendations are available.
+        """
+        mock_get_corpus_sections.return_value = (None, {})
+
+        result = await get_legacy_recommendations_from_sections(
+            sections_backend=AsyncMock(),
+            engagement_backend=StubEngagementBackend(),
+            prior_backend=StubPriorBackend(),
+            surface_id=SurfaceId.NEW_TAB_EN_XE,
+            count=10,
+            region="DE",
+        )
+
+        assert result == []
+        assert any("No recommendations available" in r.message for r in caplog.records)

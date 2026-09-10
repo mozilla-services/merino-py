@@ -36,7 +36,7 @@ def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
 
 
 def get_utm_source(surface_id: SurfaceId) -> str | None:
-    """Return the utm_source for the given scheduled surface id."""
+    """Return the utm_source for the given surface id."""
     utm_mapping = {
         SurfaceId.NEW_TAB_EN_US: "firefox-newtab-en-us",
         SurfaceId.NEW_TAB_EN_GB: "firefox-newtab-en-gb",

@@ -48,14 +48,14 @@ def test_map_corpus_to_serp_topic(topic, mapped_topic):
     assert result.value == mapped_topic
 
 
-@pytest.mark.parametrize("scheduled_surface_id", ["bad-scheduled-surface-id"])
-def test_get_utm_source_return_none(scheduled_surface_id):
+@pytest.mark.parametrize("surface_id", ["bad-surface-id"])
+def test_get_utm_source_return_none(surface_id):
     """Testing get_utm_source() method ensuring ids that don't have a mapping return None."""
-    assert get_utm_source(scheduled_surface_id) is None
+    assert get_utm_source(surface_id) is None
 
 
 @pytest.mark.parametrize(
-    ("scheduled_surface_id", "expected_utm_source"),
+    ("surface_id", "expected_utm_source"),
     [
         (SurfaceId.NEW_TAB_EN_US, "firefox-newtab-en-us"),
         (SurfaceId.NEW_TAB_EN_GB, "firefox-newtab-en-gb"),
@@ -70,9 +70,9 @@ def test_get_utm_source_return_none(scheduled_surface_id):
         (SurfaceId.NEW_TAB_PL_PL, "firefox-newtab-pl-pl"),
     ],
 )
-def test_get_utm_source(scheduled_surface_id, expected_utm_source):
-    """Testing get_utm_source() method ensuring correct utm_source is returned for a scheduled surface id."""
-    assert get_utm_source(scheduled_surface_id) == expected_utm_source
+def test_get_utm_source(surface_id, expected_utm_source):
+    """Testing get_utm_source() method ensuring correct utm_source is returned for a surface id."""
+    assert get_utm_source(surface_id) == expected_utm_source
 
 
 @pytest.mark.parametrize(

@@ -9,7 +9,6 @@ import math
 from copy import copy
 from datetime import datetime, timedelta, timezone
 
-from merino.curated_recommendations.corpus_backends.protocol import Topic
 from merino.curated_recommendations.engagement_backends.protocol import EngagementBackend
 from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
@@ -53,9 +52,6 @@ def renumber_sections(ordered_sections: list[tuple[str, Section]]) -> dict[str, 
         result[section_id] = section
     return result
 
-
-MAX_TOP_REC_SLOTS = 10
-NUM_RECS_PER_TOPIC = 2
 
 TOP_STORIES_SECTION_KEY = "top_stories_section"
 
@@ -302,43 +298,6 @@ def put_top_stories_first(sections: dict[str, Section]) -> dict[str, Section]:
         if section_id != key and section.receivedFeedRank < original_top_stories_rank:
             section.receivedFeedRank += 1
     return sections
-
-
-def boost_preferred_topic(
-    recs: list[CuratedRecommendation],
-    preferred_topics: list[Topic],
-) -> list[CuratedRecommendation]:
-    """Boost recommendations into top N slots based on preferred topics.
-    2 recs per topic (for now).
-
-    :param recs: List of recommendations
-    :param preferred_topics: User's preferred topic(s)
-    :return: CuratedRecommendations ranked based on a preferred topic(s), while otherwise
-    preserving the order.
-    """
-    boosted_recs: list[CuratedRecommendation] = []
-    remaining_recs = []
-    # The following dict tracks the number of recommendations per topic to be boosted.
-    remaining_num_topic_boosts = {
-        preferred_topic: NUM_RECS_PER_TOPIC for preferred_topic in preferred_topics
-    }
-
-    for rec in recs:
-        topic = rec.topic
-        # Check if the recommendation should be boosted
-        # Boost if slots (e.g. 10) remain and its topic hasn't been boosted too often (e.g. 2).
-        # It relies on get() returning None for missing keys, and None and 0 being falsy.
-        if (
-            topic in remaining_num_topic_boosts
-            and len(boosted_recs) < MAX_TOP_REC_SLOTS
-            and remaining_num_topic_boosts.get(topic)
-        ):
-            boosted_recs.append(rec)
-            remaining_num_topic_boosts[topic] -= 1  # decrement remaining # of topics to boost
-        else:
-            remaining_recs.append(rec)
-
-    return boosted_recs + remaining_recs
 
 
 def is_section_recently_followed(followed_at: datetime | None) -> bool:
