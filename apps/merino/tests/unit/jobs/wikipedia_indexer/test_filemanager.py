@@ -7,7 +7,7 @@
 import bz2
 from datetime import datetime as dt
 from io import BytesIO
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from requests import ConnectionError
@@ -65,7 +65,7 @@ def _gcs_blob(name: str, size: int = 0) -> MagicMock:
 def fixture_session(mocker):
     """Replace the pooled Wikimedia session so requests can be scripted."""
     session = MagicMock()
-    mocker.patch.object(FileManager, "session", new_callable=PropertyMock, return_value=session)
+    mocker.patch.object(FileManager, "_build_session", return_value=session)
     return session
 
 

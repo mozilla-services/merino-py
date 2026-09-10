@@ -99,6 +99,7 @@ class FileManager:
     shard_pattern: Pattern
     client: Client
     language: str
+    session: requests.Session
 
     def __init__(
         self, gcs_bucket: str, gcs_project: str, export_base_url: str, language: str
@@ -117,7 +118,7 @@ class FileManager:
         self.client = Client(gcs_project)
         self.base_url = export_base_url
         self.language = language
-        self._http: requests.Session | None = None
+        self.session = self._build_session()
         # Bytes copied so far in the current run, shared across the copy workers.
         self._copied = 0
         self._progress_lock = threading.Lock()
@@ -127,27 +128,25 @@ class FileManager:
             self.gcs_bucket = gcs_bucket
             self.object_prefix = ""
 
-    @property
-    def session(self) -> requests.Session:
-        """A pooled session for Wikimedia requests."""
-        if self._http is None:
-            session = requests.Session()
-            session.headers.update(WIKIMEDIA_REQUEST_HEADERS)
-            adapter = HTTPAdapter(
-                pool_maxsize=DOWNLOAD_CONCURRENCY,
-                max_retries=Retry(
-                    total=5,
-                    connect=5,
-                    read=3,
-                    backoff_factor=1.0,
-                    status_forcelist=(429, 500, 502, 503, 504),
-                    raise_on_status=False,
-                ),
-            )
-            session.mount("https://", adapter)
-            session.mount("http://", adapter)
-            self._http = session
-        return self._http
+    @staticmethod
+    def _build_session() -> requests.Session:
+        """Build the pooled session used for every Wikimedia request."""
+        session = requests.Session()
+        session.headers.update(WIKIMEDIA_REQUEST_HEADERS)
+        adapter = HTTPAdapter(
+            pool_maxsize=DOWNLOAD_CONCURRENCY,
+            max_retries=Retry(
+                total=5,
+                connect=5,
+                read=3,
+                backoff_factor=1.0,
+                status_forcelist=(429, 500, 502, 503, 504),
+                raise_on_status=False,
+            ),
+        )
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
 
     def get_latest_dump_shards(self, latest_gcs: Optional[Snapshot]) -> list[str]:
         """Find the shards of the latest complete export newer than the latest on GCS.
