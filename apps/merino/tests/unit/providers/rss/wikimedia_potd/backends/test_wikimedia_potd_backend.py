@@ -4,6 +4,7 @@
 
 """Unit tests for the Wikimedia Picture of the Day backend."""
 
+import json
 import logging
 from io import BytesIO
 from pathlib import Path
@@ -343,6 +344,40 @@ class TestOrchestratePictureOfTheDayUpload:
         result = await backend.upload_picture_of_the_day()
         assert result is False
 
+    @freezegun.freeze_time("2026-09-11")
+    @pytest.mark.asyncio
+    async def test_upload_picture_of_the_day_uses_the_curated_date_for_wikimedia_calls(
+        self, backend, gcs_uploader_mock, mocker: MockerFixture
+    ) -> None:
+        """Queries Wikimedia for the curated date while publishing under today's date."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_FEATURED_JSON,
+            request=Request(method="GET", url=FEED_URL),
+        )
+        discover_languages_mock = mocker.patch.object(
+            backend, "discover_languages", return_value=set()
+        )
+        mocker.patch.object(backend, "download_and_upload_potd_images").return_value = (
+            HttpUrl("https://cdn.example.com/thumbnail.jpeg"),
+            HttpUrl("https://cdn.example.com/hi_res.webp"),
+        )
+
+        result = await backend.upload_picture_of_the_day()
+
+        assert result is True
+        # 2026-09-11 is curated to the 2025-01-04 Wikimedia picture
+        discover_languages_mock.assert_awaited_once_with("2025-01-04")
+        client_mock.get.assert_awaited_once_with(
+            f"{FEED_URL}/en/featured/2025/01/04", headers=WIKIMEDIA_REQUEST_HEADERS
+        )
+
+        # the manifest is still published for, and stored under, today's date
+        upload_kwargs = gcs_uploader_mock.upload_content.call_args.kwargs
+        assert upload_kwargs["destination_name"] == "wikimedia_potd/2026-09-11/potd.json"
+        assert json.loads(upload_kwargs["content"])["published_date"] == "2026-09-11"
+
 
 class TestFetchPictureOfTheDayMethod:
     """Tests for fetch_picture_of_the_day method."""
@@ -367,6 +402,27 @@ class TestFetchPictureOfTheDayMethod:
         assert result["image"]["title"] == "File:Milky Way over Sagittarius.jpg"
         client_mock.get.assert_called_once_with(
             f"{FEED_URL}/en/featured/2026/06/24", headers=WIKIMEDIA_REQUEST_HEADERS
+        )
+
+    @pytest.mark.asyncio
+    @freezegun.freeze_time("2026-09-11")
+    async def test_fetch_potd_requests_the_curated_date_url(
+        self,
+        backend: WikimediaPictureOfTheDayBackend,
+    ) -> None:
+        """Requests the curated picture's Featured API url, not today's."""
+        client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
+        client_mock.get.return_value = Response(
+            status_code=200,
+            content=TEST_FEATURED_JSON.encode(),
+            request=Request(method="GET", url=FEED_URL),
+        )
+
+        await backend.fetch_picture_of_the_day("en")
+
+        # 2026-09-11 is curated to the 2025-01-04 Wikimedia picture
+        client_mock.get.assert_called_once_with(
+            f"{FEED_URL}/en/featured/2025/01/04", headers=WIKIMEDIA_REQUEST_HEADERS
         )
 
     @pytest.mark.asyncio

@@ -4,6 +4,9 @@ import re
 from datetime import datetime, timezone
 from pydantic import HttpUrl
 
+from merino.providers.rss.wikimedia_potd.backends.curated_potd_dates import (
+    CURATED_POTD_DATE_MAPPING,
+)
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
     WikimediaPotdError,
@@ -88,6 +91,19 @@ def build_potd_bucket_directory_path() -> str:
     # YYYY-MM-DD format
     date_time = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     return f"wikimedia_potd/{date_time}/"
+
+
+def resolve_potd_content_date(fx_date: str) -> str:
+    """Return the Wikimedia POTD date to query for the Firefox date `fx_date`.
+
+    Firefox dates with an approved picture return that picture's Wikimedia Commons date.
+    Every other date returns `fx_date` unchanged, so those days keep serving the live
+    picture of the day.
+
+    Returns:
+        A YYYY-MM-DD date string.
+    """
+    return CURATED_POTD_DATE_MAPPING.get(fx_date, fx_date)
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:

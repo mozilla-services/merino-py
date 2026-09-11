@@ -28,6 +28,7 @@ from merino.providers.rss.wikimedia_potd.backends.utils import (
     parse_discovered_languages,
     build_potd_bucket_directory_path,
     is_valid_potd_image_url,
+    resolve_potd_content_date,
 )
 import sentry_sdk
 
@@ -81,8 +82,9 @@ class WikimediaPictureOfTheDayBackend:
                 )
                 return True
 
-            # discover which languages have an authored description for today's picture
-            languages = await self.discover_languages(today)
+            # discover which languages have an authored description for the picture served,
+            # which is the curated picture for today when there is one
+            languages = await self.discover_languages(resolve_potd_content_date(today))
 
             # fetch the default (en) response for the image urls and base metadata
             potd_en = await self.fetch_picture_of_the_day("en")
@@ -229,17 +231,22 @@ class WikimediaPictureOfTheDayBackend:
     async def fetch_picture_of_the_day(self, lang: str) -> dict:
         """Fetch the Wikimedia Featured API picture of the day for today in `lang`.
 
+        When a curated picture is scheduled for today the Featured API is queried for that
+        picture's own Wikimedia date instead (see `resolve_potd_content_date`).
+
         Retries transient failures with exponential backoff before giving up; the final
         failure is re-raised so the upload job's error boundary reports it once.
 
         Returns:
             The parsed JSON response as a dict. Raises WikimediaPotdError on failure.
         """
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
         # setting the format to YYYY/MM/DD which is accepted as the url param
-        today = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+        content_date = resolve_potd_content_date(today).replace("-", "/")
 
         # the Featured API expects lang and date in the url path: .../{lang}/featured/{yyyy}/{mm}/{dd}
-        url = f"{self.featured_api_base}/{lang}/featured/{today}"
+        url = f"{self.featured_api_base}/{lang}/featured/{content_date}"
 
         response: Response = await self.http_client.get(url, headers=WIKIMEDIA_REQUEST_HEADERS)
 
