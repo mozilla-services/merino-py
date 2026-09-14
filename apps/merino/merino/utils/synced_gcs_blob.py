@@ -9,7 +9,6 @@ import logging
 import time
 from datetime import datetime, timezone
 from typing import Callable
-from warnings import deprecated
 
 from google.cloud.storage import Client
 from aiodogstatsd import Client as StatsdClient
@@ -23,9 +22,6 @@ logger = logging.getLogger(__name__)
 LAST_UPDATED_INITIAL_VALUE = datetime.min.replace(tzinfo=timezone.utc)
 
 
-@deprecated(
-    "Prefer SyncedGcsBlobV2 which uses async storage client and reduces metrics cardinality"
-)
 class SyncedGcsBlob:
     """Class to manage a synchronized Google Cloud Storage blob.
 

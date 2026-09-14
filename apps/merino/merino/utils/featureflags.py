@@ -6,11 +6,10 @@ from contextvars import ContextVar
 from enum import Enum
 from pathlib import Path
 from random import randbytes
-from typing import Annotated, Any, Callable
+from typing import Annotated, Any
 
 from dynaconf import Dynaconf
 from pydantic import BaseModel, Field, TypeAdapter
-from wrapt import decorator
 
 logger = logging.getLogger(__name__)
 
@@ -57,30 +56,6 @@ FeatureFlagsDecisions = dict[str, bool]
 _DYNACONF_FLAGS = TypeAdapter(FeatureFlagsConfigurations).validate_python(_dynaconf_loader())
 
 
-@decorator
-def record_decision(
-    wrapped_method: Callable[..., bool],
-    instance: "FeatureFlags",
-    args: tuple,
-    kwargs: dict,
-) -> bool:
-    """Record the decision for when is_enabled() is called for a feature flag."""
-    # `flag_name` is expected to be the first positional argument
-    [flag_name, *remaining_args] = args
-
-    if flag_name in instance.decisions:
-        # There has been a previous call to `is_enabled()` for this feature flag
-        # name. Return the recorded decision rather than generating a new one.
-        return instance.decisions[flag_name]
-
-    # Call the decorated callable with the given arguments
-    decision = wrapped_method(flag_name, *remaining_args, **kwargs)
-
-    instance.decisions[flag_name] = decision
-
-    return decision
-
-
 # The session ID is set on this context variable by the FeatureFlagsMiddleware
 # based on the "sid" query parameter of an incoming HTTP request. We use that
 # for feature flags using a "session" scheme.
@@ -123,10 +98,9 @@ class FeatureFlags:
         else:
             self.flags = TypeAdapter(FeatureFlagsConfigurations).validate_python(flags)
 
-        # This dict is populated by @record_decision when is_enabled() is called
+        # Keep each flag's first decision consistent throughout the request.
         self.decisions = {}
 
-    @record_decision
     def is_enabled(self, flag_name: str, bucket_for: str | bytes | None = None) -> bool:
         """Check if a given flag is enabled via a feature flag configuration
         block. Two of the guiding principals for this method are: fail to 'off'
@@ -141,6 +115,12 @@ class FeatureFlags:
         Returns:
             bool: Returns true if the feature should be enabled.
         """
+        if flag_name not in self.decisions:
+            self.decisions[flag_name] = self._decide(flag_name, bucket_for)
+        return self.decisions[flag_name]
+
+    def _decide(self, flag_name: str, bucket_for: str | bytes | None) -> bool:
+        """Compute the first decision for a flag."""
         if flag_name not in self.flags:
             return False
 

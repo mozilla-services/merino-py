@@ -79,7 +79,6 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
     mredis.get.side_effect = RedisError
     mredis.mget.side_effect = RedisError
     mredis.set.side_effect = RedisError
-    mredis.setnx.side_effect = RedisError
     mredis.delete.side_effect = RedisError
     mredis.hexists.side_effect = RedisError
     mredis.hget.side_effect = RedisError
@@ -104,8 +103,6 @@ async def test_adapter_functions(mocker: MockerFixture) -> None:
         await adapter.mget([b"key"])
     with pytest.raises(CacheAdapterError):
         await adapter.set("key", b"value", expy)
-    with pytest.raises(CacheAdapterError):
-        await adapter.setnx("key", b"value", expy)
     with pytest.raises(CacheAdapterError):
         await adapter.delete("key")
     with pytest.raises(CacheAdapterError):

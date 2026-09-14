@@ -79,7 +79,7 @@ feature_flag.<feature_flag_name>
 ```
 
 For details on how decisions are recorded, see the `FeatureFlags.decisions` mapping and
-`record_decision` decorator in `apps/merino/merino/utils/featureflags.py`.
+`FeatureFlags.is_enabled()` method in `apps/merino/merino/utils/featureflags.py`.
 
 ## Monitoring in Grafana
 

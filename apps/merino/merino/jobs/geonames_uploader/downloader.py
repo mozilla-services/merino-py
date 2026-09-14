@@ -7,14 +7,16 @@ regions, and countries [1]. See technical documentation at [2].
 
 """
 
-import logging
-from typing import Any, Callable
-from dataclasses import dataclass
-
 import csv
-import requests
+import logging
+from dataclasses import dataclass
+from io import TextIOWrapper
+from shutil import copyfileobj
+from tempfile import TemporaryFile
+from typing import Any, Callable
+from zipfile import ZipFile
 
-from merino.jobs.geonames_uploader.tempzipfile import TempZipFile
+import requests
 
 from merino.jobs.utils import pretty_file_size
 
@@ -257,12 +259,15 @@ def _download(
     content_len = resp.headers.get("content-length")
     content_len_str = pretty_file_size(int(content_len)) if content_len else "??? bytes"
     logger.info(f"Downloading {url} ({content_len_str})")
-    with TempZipFile(resp.raw) as zip_file:
+    with TemporaryFile() as archive:
+        copyfileobj(resp.raw, archive)
         txt_filename = f"{country}.txt"
-        logger.info(f"Extracting {txt_filename} from {url}")
-        txt_path = zip_file.extract(txt_filename)
         logger.info(f"Opening {txt_filename} from {url}")
-        with open(txt_path, newline="", encoding="utf-8-sig") as txt_file:
+        with (
+            ZipFile(archive) as zip_file,
+            zip_file.open(txt_filename) as member,
+            TextIOWrapper(member, newline="", encoding="utf-8-sig") as txt_file,
+        ):
             reader = csv.reader(txt_file, dialect="excel-tab")
             for line in reader:
                 process_line(line)

@@ -496,101 +496,6 @@ providers/rss/wikimedia_potd:
       The "api/v1/rss/picture-of-the-day" API endpoint.
     alert_policy: []
 
-utils/synced_gcs_blob_v2:
-  gcs.sync.data.not_ready:
-    description: |
-      A counter incremented when synced GCS blob data is accessed before it is available.
-    type: counter
-    labels:
-      - name: bucket
-        description: |
-          The GCS bucket name.
-      - name: blob
-        description: |
-          The full path to the GCS blob.
-    scope: |
-      Any component using SyncedGcsBlobV2.
-    alert_policy: []
-
-  gcs.sync.update.timing:
-    description: |
-      A timer covering the count and latency of GCS blob update task executions.
-    type: timing
-    labels:
-      - name: bucket
-        description: |
-          The GCS bucket name.
-      - name: blob
-        description: |
-          The full path to the GCS blob.
-    scope: |
-      Any component using SyncedGcsBlobV2.
-    alert_policy: []
-
-  gcs.sync.valid:
-    description: |
-      A gauge indicating whether the most recently fetched GCS blob data is valid (1) or invalid (0).
-    type: gauge
-    labels:
-      - name: bucket
-        description: |
-          The GCS bucket name.
-      - name: blob
-        description: |
-          The full path to the GCS blob.
-    scope: |
-      Any component using SyncedGcsBlobV2.
-    alert_policy: []
-
-  gcs.sync.fetch.response:
-    description: |
-      A counter for GCS blob fetch responses, labeled by HTTP status code.
-    type: counter
-    labels:
-      - name: bucket
-        description: |
-          The GCS bucket name.
-      - name: blob
-        description: |
-          The full path to the GCS blob.
-      - name: status
-        description: |
-          The HTTP status code returned by the GCS fetch (e.g., 200, 404).
-    scope: |
-      Any component using SyncedGcsBlobV2.
-    alert_policy: []
-
-  gcs.sync.size:
-    description: |
-      A gauge tracking the size in bytes of the fetched GCS blob.
-    type: gauge
-    labels:
-      - name: bucket
-        description: |
-          The GCS bucket name.
-      - name: blob
-        description: |
-          The full path to the GCS blob.
-    scope: |
-      Any component using SyncedGcsBlobV2.
-    alert_policy: []
-
-  gcs.sync.last_updated:
-    description: |
-      A gauge tracking the time in seconds since the GCS blob was last successfully updated.
-      Can be used to alert if data becomes stale.
-    type: gauge
-    labels:
-      - name: bucket
-        description: |
-          The GCS bucket name.
-      - name: blob
-        description: |
-          The full path to the GCS blob.
-    scope: |
-      Any component using SyncedGcsBlobV2.
-    alert_policy: []
-
 search/elasticsearch:
   es.search.count:
     description: |
@@ -670,17 +575,6 @@ curated_recommendations/spindle:
       The Spindle ML server "/find_similar_stories" endpoint.
     alert_policy: []
 
-  recommendation.spindle.image.timing:
-    description: |
-      A timer covering the count and latency of calls to the Spindle ML server
-      `/find_similar_images` endpoint, used to find near-duplicate stories
-      by image embedding for the article balancer.
-    type: timing
-    labels: []
-    scope: |
-      The Spindle ML server "/find_similar_images" endpoint.
-    alert_policy: []
-
   recommendation.spindle.text.status_codes:
     description: |
       A counter for HTTP status codes returned by the Spindle ML server
@@ -690,17 +584,6 @@ curated_recommendations/spindle:
     labels: []
     scope: |
       The Spindle ML server "/find_similar_stories" endpoint.
-    alert_policy: []
-
-  recommendation.spindle.image.status_codes:
-    description: |
-      A counter for HTTP status codes returned by the Spindle ML server
-      `/find_similar_images` endpoint. The status code is included as a
-      suffix on the metric name (e.g. `...status_codes.500`).
-    type: counter
-    labels: []
-    scope: |
-      The Spindle ML server "/find_similar_images" endpoint.
     alert_policy: []
 
   recommendation.spindle.text.error:
@@ -713,18 +596,6 @@ curated_recommendations/spindle:
     labels: []
     scope: |
       The Spindle ML server "/find_similar_stories" endpoint.
-    alert_policy: []
-
-  recommendation.spindle.image.error:
-    description: |
-      A counter incremented when a call to the Spindle ML server
-      `/find_similar_images` endpoint raises an HTTP error or returns a body
-      that cannot be parsed. The previously cached similarity info is
-      preserved on error.
-    type: counter
-    labels: []
-    scope: |
-      The Spindle ML server "/find_similar_images" endpoint.
     alert_policy: []
 
 providers/suggest:
