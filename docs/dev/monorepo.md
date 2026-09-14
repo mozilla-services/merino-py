@@ -63,6 +63,9 @@ Every Python task depends on one repository-level install task. That task runs `
 once before Moon starts parallel work. The project tasks then invoke `uv run --frozen --no-sync`,
 so they never compete to update the shared virtual environment.
 
+Mypy uses `.mypy_cache/<project>` so parallel type checks do not share a cache database.
+Python 3.14 is selected by the committed `.python-version` and constrained in the Python manifests.
+
 ## Projects and dependencies
 
 | Project | Directory | Depends on |
@@ -121,6 +124,76 @@ moon run merino:test -- -k query_normalization
 Moon runs tasks from the workspace root because parts of the current Python runtime and test suite
 resolve files relative to that directory. Project inputs still define the boundary used for
 caching and affected-project decisions.
+
+## Project-scoped tests and coverage
+
+`moon run :test` runs the unit suites for Merino, Fleece, and Merino Common in separate processes.
+Each suite measures its own Python package and writes these files under
+`workspace/test-results/moon/<project>/`:
+
+| File | Contents |
+| --- | --- |
+| `.coverage.unit` | Raw branch coverage data |
+| `unit__coverage.json` | Coverage report for the project's package |
+| `unit__results.xml` | JUnit results, with the project in the suite name |
+
+These paths are separate from the existing Make/CI reports. Moon declares all three files as
+outputs, so a cache hit restores the reports as well as the successful task result. Generated
+reports and tool caches are ignored by Git. Keep hidden `.coverage*` files when uploading artifacts.
+
+Run Merino's integration suite with Docker running:
+
+```bash
+moon run merino:integration-test
+```
+
+Its `build-test-image` dependency builds `merino-elasticsearch:local` from the committed Dockerfile,
+including the ICU plugin. Testcontainers starts the other required services. Both the image build
+and integration tests bypass Moon's result cache because Docker's state is external to Moon.
+The suite produces `.coverage.integration`, `integration__coverage.json`, and
+`integration__results.xml` in the Merino report directory.
+
+Check the combined Merino coverage, or include the changed-line check:
+
+```bash
+moon run merino:coverage
+moon run merino:diff-coverage
+```
+
+Both commands depend on the complete Merino unit and integration suites. The combine step uses
+their exact data files, retains the originals for artifact upload/cache reuse, and writes
+`.coverage`, `combined__coverage.json`, and `coverage.xml`. It fails if an input is missing; it does
+not scan for and accidentally combine other projects' reports or old Make results.
+
+The minimus are: **95% combined Merino coverage** and **95% coverage of changed
+Merino lines** against `origin/main`. A partial unit or integration suite has no separate minimum.
+
+For all unit suites plus both coverage checks:
+
+```bash
+moon run :test merino:diff-coverage
+```
+
+Use affected selection for quick feedback, for example:
+
+```bash
+moon run :test --affected --base origin/main
+```
+
+A Fleece source change selects Fleece; a common-library change selects all three unit suites.
+Root Python configuration and lockfile changes also select all three. Documentation changes do not
+select Python tests.
+
+Coverage gates must run **without `--affected` or pytest filters** so they check complete suites.
+They opt out of `moon ci`'s affected-only selection (`runInCI: false`); run them in an unconditional
+`moon run merino:diff-coverage` step when integrating Moon into CI. The existing Make-based CI,
+coverage checks, and ETE artifact naming/upload remain in place during this ticket. Running Moon
+alongside that CI and mapping these reports to its upload conventions is DISCO-4443; switching the
+required checks is DISCO-4441.
+
+For a filtered investigation, `moon run merino:test -- -k query_normalization` still works. Its
+reports describe only that selection. Run the unfiltered task again before using its reports for
+coverage decisions; Moon uses different cache entries for different arguments.
 
 ## Python dependency changes
 

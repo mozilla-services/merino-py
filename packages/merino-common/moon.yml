@@ -38,4 +38,4 @@ tasks:
   test:
     args:
       - packages/merino-common/tests/unit
-      - --no-cov
+      - --cov=merino_common

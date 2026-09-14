@@ -67,6 +67,9 @@ tasks:
       - --frozen
       - --no-sync
       - mypy
+    env:
+      # Parallel projects must not write to the same mypy cache database.
+      MYPY_CACHE_DIR: .mypy_cache/$project
     tags:
       - quality
       - ci
@@ -81,8 +84,20 @@ tasks:
       - pytest
       - --config-file
       - pyproject.toml
+      # Replace the root's Merino-only coverage source with the project's source.
+      - --cov-reset
+      - --cov-report=term:skip-covered
+      - --cov-report=json:workspace/test-results/moon/$project/unit__coverage.json
+      - --junitxml=workspace/test-results/moon/$project/unit__results.xml
+      - -o
+      - junit_suite_name=$project-unit
     env:
       MERINO_ENV: testing
+      COVERAGE_FILE: workspace/test-results/moon/$project/.coverage.unit
+    outputs:
+      - /workspace/test-results/moon/$project/.coverage.unit
+      - /workspace/test-results/moon/$project/unit__coverage.json
+      - /workspace/test-results/moon/$project/unit__results.xml
     tags:
       - test
       - ci

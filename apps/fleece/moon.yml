@@ -42,6 +42,6 @@ tasks:
   test:
     args:
       - apps/fleece/tests/unit
-      - --no-cov
+      - --cov=merino_fleece
     env:
       MERINO_FLEECE_ENV: testing
