@@ -10,7 +10,7 @@ CUSTOM_FAVICONS: dict[str, str] = {
     # --- Original entries ---
     "axios": "https://static.axios.com/icons/favicon.svg",
     "espn": "https://a.espncdn.com/favicon.ico",
-    "ign": "https://kraken.ignimgs.com/favicon.ico",
+    "ign": "https://play-lh.googleusercontent.com/4n8on75Den6Yw5iX2FEkBe5M0dPKaHudeIH6CI8jprqcy2u0goqdg441VnDx6n0DD533Bj1fomFUjiiNRM2b",  # 512x512, Google Play; the old favicon.ico topped out at 48px
     "infobae": "https://www.infobae.com/pf/resources/favicon/favicon-32x32.png?d=3209",
     "mozilla": "https://www.mozilla.org/media/img/favicons/mozilla/favicon-196x196.e143075360ea.png",
     "ndtv": "https://www.ndtv.com/images/icons/ndtv.ico",
@@ -37,8 +37,9 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "imdb": "https://www.imdb.com/apple-touch-icon.png",  # 60x60
     "twitch": "https://www.twitch.tv/apple-touch-icon.png",  # 180x180
     # --- New Tab publishers flagged by editorial across markets (HNT-2760) ---
-    # Publisher-hosted assets only. Domains whose second-level name is shared with a
-    # separately branded publisher are deliberately omitted; see the PR for the list.
+    # Hosted by the publisher or on its own Google Play / App Store listing. Domains whose
+    # second-level name is shared with a separately branded publisher are deliberately
+    # omitted; see the PR for the list.
     # EN
     "aeon": "https://aeon.co/icon-512.png",  # 512x512
     "cbc": "https://site-cbc.radio-canada.ca/media/4616/imagesgem-menu-guide-line.png",  # 301x301
@@ -48,9 +49,12 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "epicurious": "https://www.epicurious.com/apple-touch-icon.png",  # 180x180
     "food52": "https://food52.com/food52/favicon.png",  # 180x180
     "gamespot": "https://www.gamespot.com/wp-content/uploads/2026/04/cropped-gamespot-favicon.png",  # 512x512
+    "historytoday": "https://play-lh.googleusercontent.com/sVOvz85gSbsAlAcnm6GPnJMkXQAPwlsXILpdwl0gHvkPWZs2Wroz398VIdOERMN2KZ7frjVqfsaL52oBf0mPnQ",  # 512x512, Google Play
     "hollywoodreporter": "https://www.hollywoodreporter.com/wp-content/uploads/2026/05/thr-site-icon.png",  # 512x512
+    "houseandgarden": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/13/06/e5/1306e50f-7be3-d822-0daf-041fd8ff9d4f/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.png",  # 512x512, App Store
     "ipolitics": "https://www.ipolitics.ca/wp-content/uploads/2026/03/cropped-Screen-Shot-2026-03-03-at-4.54.56-PM-270x270.png",  # 270x270
     "macleans": "https://macleans.ca/android-chrome-512x512.png",  # 512x512
+    "metro": "https://play-lh.googleusercontent.com/PlQYN2oe2PMun3ZRKrS-dbh-Zgm5gsThZrfMadJbn_QoisfUq9HwAnhMAhwYsNflMOszjnJ5S_B92QMyqXmgrSQ",  # 512x512, Google Play
     "mit": "https://web.mit.edu/themes/mit/assets/favicon/favicon-512x512.png",  # 512x512
     "mother": "https://mother.ly/wp-content/themes/motherly/assets/img/favicon/apple-touch-icon.png",  # 180x180
     "nautil": "https://lede-admin.nautil.us/wp-content/uploads/sites/70/sites/3/nautilus/cropped-thicker_smaller_logo.png",  # 512x512
@@ -59,7 +63,9 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "psyche": "https://psyche.co/icon-512.png",  # 512x512
     "rte": "https://www.rte.ie/img/logo-192.png",  # 192x192
     "simplyrecipes": "https://www.simplyrecipes.com/apple-touch-icon-180x180.png",  # 180x180
+    "stylist": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/53/77/d6/5377d65d-06ee-dc27-2f0e-69817758fab1/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.png",  # 512x512, App Store
     "thecanadianpressnews": "https://www.thecanadianpress.com/app/themes/canadianpress/assets/favicon/android-icon-192x192.png",  # 192x192
+    "thespec": "https://play-lh.googleusercontent.com/wxFBSdc6IfRn99i84RfEzvhsMzpaxYB8a0HZcE8oRxzAuqkpLkjq1tsa1Ijcnfleo-D-c30BSDc9G4HL19ZTx84",  # 512x512, Google Play
     "todaysparent": "https://www.todaysparent.com/android-chrome-512x512.png",  # 512x512
     # FR
     "admagazine": "https://admagazine.fr/apple-touch-icon.png",  # 180x180
@@ -67,6 +73,7 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "elle": "https://cdn-elle.ladmedia.fr/design/elle2/images/apple/favicon-192x192.png",  # 192x192
     "gqmagazine": "https://gqmagazine.fr/apple-touch-icon.png",  # 180x180
     "jeuxactu": "https://i.jeuxactus.com/images/site/ja_appletouch.png",  # 129x129
+    "leparisien": "https://play-lh.googleusercontent.com/wPtP28sF4PWzfC1_AbxNuykHRK179Z_ow05tGcJxJqyUWhVreosptmK9oxVGWF1lbIHmVAO0Cnhq3Y8Uuurlug",  # 512x512, Google Play
     "sciencesetavenir": "https://www.sciencesetavenir.fr/icons/apple-touch-icon-180x180.png",  # 180x180
     "sudouest": "https://sudouest.fr/so/android-icon-512x512.png",  # 512x512
     # DE
@@ -76,6 +83,7 @@ CUSTOM_FAVICONS: dict[str, str] = {
     # IT
     "agi": "https://agi.it/favicons/android-icon-192x192.png",  # 192x192
     "fanpage": "https://d2kujwgapv5t1y.cloudfront.net/static/1531231231/images/fp-icon-192x192.png",  # 192x192
+    "gamberorosso": "https://play-lh.googleusercontent.com/OCXgeTYccKqUwMJToO-Dg9eIREqs7BzJmmBtFVnGhIc4lbB0JTOpzKZn3kwmvPO9-xSoikfOobRm_IhoxZ89Jw",  # 512x512, Google Play
     "gqitalia": "https://gqitalia.it/apple-touch-icon.png",  # 180x180
     "ilmattino": "https://statics.cedscdn.it/utils/img/favicon/ilmattino/android-icon-192x192.png",  # 192x192
     "spaziogames": "https://cdn.spaziogames.it/assets/favicons/apple-touch-icon.png",  # 180x180
@@ -84,6 +92,8 @@ CUSTOM_FAVICONS: dict[str, str] = {
     "bonviveur": "https://bonviveur.com/apple-touch-icon.png",  # 302x302
     "clara": "https://clara.es/favicon.ico",  # 48x48
     "eleconomista": "https://eleconomista.es/favicon.ico",  # 256x256
+    "elmueble": "https://play-lh.googleusercontent.com/q9s-GA_hJ1eZZifNiXd8oFiSYJLao-D3bm2Y5PTqlZlwbHNpzb6_Fcyxi9vbybm4-MXNX4BwNgHhH9CFIW8VDOQ",  # 512x512, Google Play
+    "elmundo": "https://play-lh.googleusercontent.com/543rl6T8Eam1it3LHEbXx7ulliusdVQlsgMN6ywmgoeomr9lLNUVYicVnR1wBr3LjgVJsqP67bqrO4CQ9j36",  # 512x512, Google Play
     "gamereactor": "https://www.gamereactor.es/media/icons/touch_icon_ipad_retina.png",  # 144x144
     "generacionxbox": "https://generacionxbox.com/wp-content/uploads/2020/05/cropped-favicon-gx-2.png",  # 512x512
     "guiainfantil": "https://guiainfantil.com/android-chrome-512x512.png",  # 512x512

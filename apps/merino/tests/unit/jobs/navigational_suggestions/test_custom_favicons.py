@@ -72,8 +72,17 @@ class TestCustomFavicons:
             assert url.startswith("https://"), f"URL for {domain} should use HTTPS"
             assert "." in url, f"URL for {domain} should contain domain"
 
-            # Check common favicon extensions or paths
-            favicon_indicators = [".ico", ".png", ".svg", "/favicon", "/icons/", "/media/"]
+            # Check common favicon extensions or paths. Google Play app icons have no
+            # extension, so accept that host too.
+            favicon_indicators = [
+                ".ico",
+                ".png",
+                ".svg",
+                "/favicon",
+                "/icons/",
+                "/media/",
+                "play-lh.googleusercontent.com/",
+            ]
             has_favicon_indicator = any(
                 indicator in url.lower() for indicator in favicon_indicators
             )
@@ -84,7 +93,10 @@ class TestCustomFavicons:
         [
             ("axios", "https://static.axios.com/icons/favicon.svg"),
             ("espn", "https://a.espncdn.com/favicon.ico"),
-            ("ign", "https://kraken.ignimgs.com/favicon.ico"),
+            (
+                "ign",
+                "https://play-lh.googleusercontent.com/4n8on75Den6Yw5iX2FEkBe5M0dPKaHudeIH6CI8jprqcy2u0goqdg441VnDx6n0DD533Bj1fomFUjiiNRM2b",
+            ),
             (
                 "mozilla",
                 "https://www.mozilla.org/media/img/favicons/mozilla/favicon-196x196.e143075360ea.png",
