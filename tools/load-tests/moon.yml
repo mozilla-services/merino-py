@@ -21,6 +21,14 @@ workspace:
       - test
 
 tasks:
+  docker-build:
+    args:
+      - --tag
+      - merino-locust:build
+      - .
+    inputs:
+      - /dev/**/*
+
   lint:
     args:
       - tools/load-tests

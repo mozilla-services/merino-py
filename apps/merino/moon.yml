@@ -14,6 +14,14 @@ toolchains:
   default: system
 
 tasks:
+  docker-build:
+    args:
+      - --tag
+      - app:build
+      - .
+    inputs:
+      - /dev/**/*
+
   lint:
     args:
       - apps/merino/merino

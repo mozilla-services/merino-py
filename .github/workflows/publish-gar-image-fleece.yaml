@@ -30,7 +30,7 @@ jobs:
           name: merino-fleece
           path: .
       - name: Load Docker image
-        run: gunzip -c fleece-image.tar.gz | docker load
+        run: gunzip -c image.tar.gz | docker load
       - name: Tag image with GAR path
         run: docker tag app-fleece:build ${{ secrets.DOCKER_IMAGE_PATH }}/merino-fleece:${{ inputs.image_tag }}
       - name: Push image to GAR

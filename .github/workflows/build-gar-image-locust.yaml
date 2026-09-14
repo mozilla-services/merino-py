@@ -10,12 +10,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
-      - name: Build Locust Docker image
-        run: docker build -t merino-locust:build -f ./tools/load-tests/Dockerfile .
-      - name: Save image
-        run: docker save merino-locust:build | gzip > locust-image.tar.gz
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v6
+      - uses: ./.github/actions/build-project-image
         with:
-          name: locust-image
-          path: locust-image.tar.gz
+          project: load-tests
+          image: merino-locust:build
+          artifact-name: locust-image

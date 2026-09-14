@@ -16,8 +16,12 @@ WORKDIR $APP_HOME
 RUN groupadd --gid 10001 app \
   && useradd -m -g app --uid 10001 -s /usr/sbin/nologin app
 
-# Copy local code to the container image
-COPY . $APP_HOME
+# uv needs every workspace manifest, but only this service and its shared package.
+COPY pyproject.toml uv.lock LICENSE version.json ./
+COPY apps/fleece ./apps/fleece
+COPY packages/merino-common ./packages/merino-common
+COPY apps/merino/pyproject.toml ./apps/merino/pyproject.toml
+COPY tools/load-tests/pyproject.toml ./tools/load-tests/pyproject.toml
 
 # Install app dependencies. Clean up build tools after.
 # `en_core_web_lg` is also installed by default.
