@@ -6,12 +6,16 @@ import logging
 
 import freezegun
 import pytest
-from google.cloud.storage import Blob
-
+from merino.jobs.wikipedia_indexer.filemanager import Snapshot
 from merino.jobs.wikipedia_indexer.indexer import Indexer
 from merino.search.elastic import ElasticSearchAdapter
 
 FROZEN_TIME = "2020-01-01"
+SNAPSHOT = Snapshot(
+    name="enwiki-20220101-cirrussearch-content",
+    date=datetime.datetime(2022, 1, 1),
+    prefix="bar/enwiki-20220101-cirrussearch-content",
+)
 EPOCH_FROZEN_TIME = int(
     datetime.datetime(2020, 1, 1).replace(tzinfo=datetime.timezone.utc).timestamp()
 )
@@ -111,7 +115,7 @@ def test_index_from_export_no_exports_available(
     file_manager, es_adapter, category_blocklist, title_blocklist
 ):
     """Test that RuntimeError is emitted."""
-    file_manager.get_latest_gcs.return_value = Blob("", "bucket")
+    file_manager.get_latest_gcs.return_value = None
     file_manager.language = "en"
     es_adapter.index_exists.return_value = False
     indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
@@ -128,9 +132,7 @@ def test_index_from_export_fail_on_existing_index(
     title_blocklist,
 ):
     """Test that Exception is emitted."""
-    file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
-    )
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
     es_adapter.index_exists.return_value = False
     es_adapter.create_index.return_value = False
     indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
@@ -206,9 +208,7 @@ def test_index_from_export(
     title_blocklist,
 ):
     """Test full index from export flow."""
-    file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
-    )
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
 
     es_adapter.bulk.return_value = {
         "acknowledged": True,
@@ -251,9 +251,7 @@ def test_index_from_export_with_category_blocklist_content_filter(
     title_blocklist,
 ):
     """Test content moderation removes blocked categories from category blocklist."""
-    file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
-    )
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
 
     def check_bulk_side_effect(operations):
         """Use a side effect to test that we send exactly 2 lines to bulk operation
@@ -318,9 +316,7 @@ def test_index_from_export_with_title_blocklist_content_filter(
     """Test content moderation removes blocked categories from title blocklist.
     Also verifies that matching results are not case sensitive, given a title.
     """
-    file_manager.get_latest_gcs.return_value = Blob(
-        "foo/enwiki-20220101-cirrussearch-content.json.bz2", "bar"
-    )
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
 
     def check_bulk_side_effect(operations):
         """Use a side effect to test that we send exactly 2 lines to bulk operation
