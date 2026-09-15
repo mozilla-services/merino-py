@@ -1,0 +1,34 @@
+name: detect-image-changes
+
+on:
+  workflow_call:
+    outputs:
+      merino:
+        description: Whether the Merino image needs rebuilding
+        value: ${{ jobs.detect.outputs.merino }}
+      fleece:
+        description: Whether the Fleece image needs rebuilding
+        value: ${{ jobs.detect.outputs.fleece }}
+      load_tests:
+        description: Whether the Locust image needs rebuilding
+        value: ${{ jobs.detect.outputs.load_tests }}
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      merino: ${{ steps.images.outputs.merino }}
+      fleece: ${{ steps.images.outputs.fleece }}
+      load_tests: ${{ steps.images.outputs.load_tests }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: moonrepo/setup-toolchain@v0
+      - name: Test image selection
+        run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
+      - name: Select affected images
+        id: images
+        run: python3 .github/scripts/affected_images.py

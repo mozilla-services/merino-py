@@ -16,8 +16,13 @@ WORKDIR $APP_HOME
 RUN groupadd --gid 10001 app \
   && useradd -m -g app --uid 10001 -s /usr/sbin/nologin app
 
-# Copy local code to the container image
-COPY . $APP_HOME
+# uv needs every workspace manifest, but only this service and its shared package.
+COPY pyproject.toml uv.lock LICENSE version.json ./
+COPY apps/merino ./apps/merino
+COPY packages/merino-common ./packages/merino-common
+COPY apps/fleece/pyproject.toml ./apps/fleece/pyproject.toml
+COPY tools/load-tests/pyproject.toml ./tools/load-tests/pyproject.toml
+COPY dev ./dev
 
 # Install maxmind db and app dependencies. Clean up build tools after
 RUN apt-get update && \

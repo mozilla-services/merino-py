@@ -1,0 +1,39 @@
+name: Build project image
+description: Build one Moon project and upload its image without registry credentials
+inputs:
+  project:
+    description: Moon project containing the docker-build task
+    required: true
+  image:
+    description: Local image tag produced by the task
+    required: true
+  artifact-name:
+    description: Artifact consumed by the publish workflow
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: moonrepo/setup-toolchain@v0
+    - name: Create version.json
+      shell: bash
+      run: |
+        printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
+          "$GITHUB_SHA" \
+          "$GITHUB_REF_NAME" \
+          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
+    - name: Build project image
+      shell: bash
+      env:
+        PROJECT: ${{ inputs.project }}
+      run: moon run "$PROJECT:docker-build"
+    - name: Save image
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+      run: docker save "$IMAGE" | gzip > image.tar.gz
+    - uses: actions/upload-artifact@v6
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: image.tar.gz
+        if-no-files-found: error

@@ -53,7 +53,7 @@ jobs:
           name: locust-image
           path: .
       - name: Load Locust Docker image
-        run: gunzip -c locust-image.tar.gz | docker load
+        run: gunzip -c image.tar.gz | docker load
       - name: Push Locust image to GAR
         uses: mozilla/deploy-actions/docker-push@v3.11.1
         with:
