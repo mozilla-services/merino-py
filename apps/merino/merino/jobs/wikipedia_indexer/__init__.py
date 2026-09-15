@@ -47,6 +47,8 @@ def index(
     ] = "en",
     elasticsearch_url: str = job_settings.es_url,
     elasticsearch_api_key: str = job_settings.es_api_key,
+    elasticsearch_request_timeout: float = job_settings.es_request_timeout,
+    elasticsearch_create_index_timeout: float = job_settings.es_create_index_timeout,
     blocklist_file_url: str = job_settings.blocklist_file_url,
     index_version: str = version_option,
     total_docs: int = job_settings.total_docs,
@@ -54,7 +56,12 @@ def index(
     gcp_project: str = gcp_project_option,
 ):
     """Index file from GCS to Elasticsearch"""
-    elasticsearch = ElasticSearchAdapter(url=elasticsearch_url, api_key=elasticsearch_api_key)
+    elasticsearch = ElasticSearchAdapter(
+        url=elasticsearch_url,
+        api_key=elasticsearch_api_key,
+        request_timeout=elasticsearch_request_timeout,
+        create_index_timeout=elasticsearch_create_index_timeout,
+    )
 
     blocklist = create_blocklist(
         blocklist_file_url

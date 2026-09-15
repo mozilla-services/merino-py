@@ -3,17 +3,21 @@
 from typing import Any
 from unittest.mock import MagicMock
 import pytest
-from merino.search.elastic import (
-    CREATE_INDEX_TIMEOUT,
-    DEFAULT_REQUEST_TIMEOUT,
-    ElasticSearchAdapter,
-)
+from merino.search.elastic import ElasticSearchAdapter
+
+REQUEST_TIMEOUT = 60.0
+CREATE_INDEX_TIMEOUT = 120.0
 
 
 @pytest.fixture
 def adapter() -> ElasticSearchAdapter:
     """Return an ElasticSearchAdapter configured with dummy connection settings."""
-    return ElasticSearchAdapter(url="https://example:9200", api_key="abc123")
+    return ElasticSearchAdapter(
+        url="https://example:9200",
+        api_key="abc123",
+        request_timeout=REQUEST_TIMEOUT,
+        create_index_timeout=CREATE_INDEX_TIMEOUT,
+    )
 
 
 def _mock_client() -> MagicMock:
@@ -115,12 +119,9 @@ def test_create_client_sets_a_default_request_timeout(monkeypatch: pytest.Monkey
     elasticsearch = MagicMock(name="Elasticsearch")
     monkeypatch.setattr("merino.search.elastic.Elasticsearch", elasticsearch)
 
-    ElasticSearchAdapter(url="http://es:9200", api_key="key").create_client()
-
-    assert elasticsearch.call_args.kwargs["request_timeout"] == DEFAULT_REQUEST_TIMEOUT
-
-    elasticsearch.reset_mock()
-    ElasticSearchAdapter(url="http://es:9200", api_key="key", request_timeout=7).create_client()
+    ElasticSearchAdapter(
+        url="http://es:9200", api_key="key", request_timeout=7, create_index_timeout=9
+    ).create_client()
 
     assert elasticsearch.call_args.kwargs["request_timeout"] == 7
 

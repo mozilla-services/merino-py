@@ -4,12 +4,6 @@ from typing import Any, Mapping, Sequence, cast
 
 from elasticsearch import Elasticsearch
 
-# Seconds to wait on any Elasticsearch request unless the caller overrides it.
-DEFAULT_REQUEST_TIMEOUT = 60.0
-
-# Seconds to wait on index creation.
-CREATE_INDEX_TIMEOUT = 120.0
-
 
 class ElasticSearchAdapter:
     """A wrapper around the Elasticsearch Python client.
@@ -23,11 +17,13 @@ class ElasticSearchAdapter:
         *,
         url: str,
         api_key: str,
-        request_timeout: float = DEFAULT_REQUEST_TIMEOUT,
+        request_timeout: float,
+        create_index_timeout: float,
     ) -> None:
         self._url = url
         self._api_key = api_key
         self._request_timeout = request_timeout
+        self._create_index_timeout = create_index_timeout
         self._client: Elasticsearch | None = None
 
     def create_client(self) -> Elasticsearch:
@@ -59,7 +55,7 @@ class ElasticSearchAdapter:
         settings: dict[str, Any] | None = None,
         aliases: dict[str, Any] | None = None,
         wait_for_active_shards: str | int = "1",
-        request_timeout: float = CREATE_INDEX_TIMEOUT,
+        request_timeout: float | None = None,
     ) -> bool:
         """Create an index and return whether the operation was acknowledged.
 
@@ -67,7 +63,7 @@ class ElasticSearchAdapter:
         """
         res = (
             self.get_client()
-            .options(request_timeout=request_timeout)
+            .options(request_timeout=request_timeout or self._create_index_timeout)
             .indices.create(
                 index=index,
                 mappings=mappings,
