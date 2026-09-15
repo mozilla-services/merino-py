@@ -1554,6 +1554,14 @@ es_url = ""
 # Elasticsearch API key for indexing job.
 es_api_key = ""
 
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_REQUEST_TIMEOUT
+# Seconds to wait on any Elasticsearch request unless the caller overrides it.
+es_request_timeout = 60
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__ES_CREATE_INDEX_TIMEOUT
+# Seconds to wait on index creation.
+es_create_index_timeout = 120
+
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_ALIAS
 # Elasticsearch english alias value for indexing job.
 en_es_alias = "enwiki-{version}"
