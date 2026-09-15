@@ -105,28 +105,6 @@ class RedisAdapter:
                 f"Failed to delete `{repr(keys)}` with error: `{exc}`"
             ) from exc
 
-    # define a setnx() function because we should not modify `set`. Doing so would touch too
-    # much code for this PR.
-
-    async def setnx(
-        self,
-        key: str,
-        value: bytes,
-        ttl: timedelta | None = None,
-        nx: bool = True,  # include as opt arg for if/when this replaces `set`
-    ) -> bool | None:
-        """Store a key-value pair in Redis, if there is not previous value, and optionally
-        expiring after the time-to-live.
-        """
-        # TODO: modify `self.set` to accept the `nx` param, but that requires too much code for the
-        # initial PR.
-        try:
-            return await self.primary.set(
-                key, value, ex=ttl.days * 86400 + ttl.seconds if ttl else None, nx=nx
-            )
-        except RedisError as exc:
-            raise CacheAdapterError(f"Failed to setnx `{repr(key)}` with error: `{exc}`") from exc
-
     async def set(
         self,
         key: str,

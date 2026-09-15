@@ -41,7 +41,6 @@ dev = [
   "pytest-cov>=7.1.0,<8",
   "pytest-mock>=3.15.0,<4",
   "freezegun>=1.2.2,<2",
-  "time-machine>=2.16.0,<3",
   "requests-mock>=1.10.0,<2",
   "requests-toolbelt>=1.0.0,<2",
   "ruff>=0.15.0,<1",
@@ -155,8 +154,6 @@ filterwarnings = [
   "error",
   # Ignored due to https://github.com/encode/starlette/discussions/2603
   "ignore::pytest.PytestUnraisableExceptionWarning",
-  # Ignored while callers are being migrated to SyncedGcsBlobV2
-  "ignore:Prefer SyncedGcsBlobV2:DeprecationWarning",
   # Ignored due to gcloud.aio.storage relies on backoff
   "ignore:'asyncio\\.iscoroutinefunction' is deprecated:DeprecationWarning",
   # Ignored: starlette.testclient nudges toward httpx2, but the suite uses httpx.

@@ -17,7 +17,6 @@ dependencies = [
     "aiodogstatsd>=0.16.0,<0.17",
     "geoip2>=5.2.0,<6",
     "rich>=15.0.0,<16",
-    "wrapt>=1.14.1,<2",
     "elasticsearch[async]>=8.5.0,<9",
     "google-cloud-storage>=3.10.0,<4",
     "google-cloud-bigquery>=3.41.0,<4",

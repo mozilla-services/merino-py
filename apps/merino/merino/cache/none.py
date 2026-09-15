@@ -17,14 +17,6 @@ class NoCacheAdapter:  # pragma: no cover
     async def delete(self, *keys: str) -> int | None:  # noqa: D102
         return None
 
-    async def setnx(
-        self, key: str, value: bytes, ttl: timedelta | None = None, nx: bool = False
-    ) -> bool | None:
-        """Store a key-value pair in Redis, if there is not previous value, and optionally
-        expiring after the time-to-live.
-        """
-        return None
-
     async def set(  # noqa: D102
         self,
         key: str,

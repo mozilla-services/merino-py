@@ -12,7 +12,6 @@ from pydantic import HttpUrl
 
 from merino.curated_recommendations.corpus_backends.protocol import CorpusItem, SurfaceId
 from merino.curated_recommendations.ml_backends.spindle_backend import (
-    SIMILAR_STORIES_IMAGE_API_PATH,
     SIMILAR_STORIES_TEXT_API_PATH,
     DummySpindleBackend,
     SimilarStoriesInfo,
@@ -142,11 +141,8 @@ class TestSpindleBackendRefresh:
         http_client.post.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_success_populates_text_and_image_info(self):
-        """Successful response should populate the text cache with symmetric pairs.
-
-        Image refresh is currently disabled, so the image cache stays empty.
-        """
+    async def test_success_populates_text_info(self):
+        """Successful response should populate the text cache with symmetric pairs."""
         http_client = MagicMock(spec=AsyncClient)
         text_payload = {
             "similar": {"a": ["b"]},
@@ -156,20 +152,10 @@ class TestSpindleBackendRefresh:
             "num_items": 2,
             "num_pairs": 1,
         }
-        image_payload = {
-            "similar": {"a": ["c"]},
-            "model_version": "img-v1",
-            "threshold": 0.85,
-            "locale": "en_US",
-            "num_items": 2,
-            "num_pairs": 1,
-        }
 
         async def fake_post(path: str, json: dict, headers: dict | None = None) -> Response:
             if path == SIMILAR_STORIES_TEXT_API_PATH:
                 return _ok_response(text_payload)
-            if path == SIMILAR_STORIES_IMAGE_API_PATH:
-                return _ok_response(image_payload)
             raise AssertionError(f"unexpected path {path}")
 
         http_client.post = AsyncMock(side_effect=fake_post)
@@ -181,25 +167,17 @@ class TestSpindleBackendRefresh:
         )
 
         text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
-        image_info = backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US)
         assert text_info is not None
         assert text_info.neighbors("a") == ["b"]
         assert text_info.neighbors("b") == ["a"]
-        # Enable once images are enabled
-        # assert image_info is not None
-        # assert image_info.neighbors("a") == ["c"]
-        assert image_info is None
 
-        # Status-code metric should have fired for each endpoint.
+        http_client.post.assert_awaited_once()
+        # Status-code metric should have fired for the text endpoint.
         increment_calls = [c.args[0] for c in metrics.increment.call_args_list]
         assert "recommendation.spindle.text.status_codes.200" in increment_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.status_codes.200" in increment_calls
         # Timing metric should have been used.
         timing_calls = [c.args[0] for c in metrics.timeit.call_args_list]
         assert "recommendation.spindle.text.timing" in timing_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.timing" in timing_calls
 
     @pytest.mark.asyncio
     async def test_unchanged_content_ids_skip_refresh(self):
@@ -307,11 +285,8 @@ class TestSpindleBackendRefresh:
         await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_EN_US)
 
         assert backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US) is None
-        assert backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US) is None
         increment_calls = [c.args[0] for c in metrics.increment.call_args_list]
         assert "recommendation.spindle.text.error" in increment_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.error" in increment_calls
 
     @pytest.mark.asyncio
     async def test_non_2xx_emits_status_metric_and_returns_none(self):
@@ -341,4 +316,3 @@ class TestDummySpindleBackend:
         backend = DummySpindleBackend()
         await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_EN_US)
         assert backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US) is None
-        assert backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US) is None

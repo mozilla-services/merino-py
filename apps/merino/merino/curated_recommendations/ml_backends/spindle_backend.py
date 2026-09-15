@@ -1,7 +1,7 @@
 """Spindle backend.
 
 Talks to the Content-ML Spindle service to find near-duplicate stories using
-text and image embeddings. Results are cached per-surface and exposed to the
+text embeddings. Results are cached per-surface and exposed to the
 ranking pipeline via the `SimilarStoriesProtocol`.
 """
 
@@ -22,12 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 SIMILAR_STORIES_TEXT_API_PATH = "/find_similar_stories"
-SIMILAR_STORIES_IMAGE_API_PATH = "/find_similar_images"
-
-LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
-    SurfaceId.NEW_TAB_EN_US: "en_US",
-    SurfaceId.NEW_TAB_DE_DE: "de_DE",
-}
 
 METRIC_NAMESPACE = "recommendation.spindle"
 
@@ -48,13 +42,6 @@ class SimilarStoriesTextItem(BaseModel):
     excerpt: str
 
 
-class SimilarStoriesImageItem(BaseModel):
-    """Image payload entry sent to /find_similar_images."""
-
-    corpus_item_id: str
-    image_url: str
-
-
 class FindSimilarStoriesRequest(BaseModel):
     """Request body for /find_similar_stories."""
 
@@ -63,22 +50,13 @@ class FindSimilarStoriesRequest(BaseModel):
     language: str = Field("en", min_length=2, max_length=10)
 
 
-class FindSimilarImagesRequest(BaseModel):
-    """Request body for /find_similar_images."""
-
-    items: list[SimilarStoriesImageItem]
-    threshold: float = Field(0.8, ge=0.0, le=1.0)
-    locale: str = Field("en_US", min_length=2, max_length=10)
-
-
 class FindSimilarResponse(BaseModel):
-    """Response body for /find_similar_stories (and the text-only fields of images)."""
+    """Response body for /find_similar_stories."""
 
     similar: dict[str, list[str]]
     model_version: str
     threshold: float
     language: str | None = None
-    locale: str | None = None
     num_items: int
     num_pairs: int
 
@@ -134,7 +112,6 @@ class SpindleBackend(SpindleBackendProtocol):
             max_connections=5,
         )
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
-        self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._text_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
         self._api_key = api_key
 
@@ -144,16 +121,13 @@ class SpindleBackend(SpindleBackendProtocol):
             return None
         return parts[2].lower()
 
-    def _locale_for_surface(self, surface: SurfaceId) -> str | None:
-        return LOCALE_FOR_SURFACE.get(surface)
-
     async def refresh_duplicate_item_info(
         self,
         items: list[CorpusItem],
         surface: SurfaceId,
         threshold: float = 0.7,
     ) -> None:
-        """Refresh both text and image similarity caches for `surface`.
+        """Refresh the text similarity cache for `surface`.
 
         Each call is best-effort: failures are logged and leave the previously
         cached values in place.
@@ -162,9 +136,6 @@ class SpindleBackend(SpindleBackendProtocol):
             return
         deduped_items = list({item.corpusItemId: item for item in items}.values())
         await self._refresh_text(deduped_items, surface, threshold)
-
-        # Refresh images will be rolled out as soon as GPU inference is verified
-        # await self._refresh_image(deduped_items, surface, threshold)
 
     async def _refresh_text(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
@@ -198,35 +169,6 @@ class SpindleBackend(SpindleBackendProtocol):
             self._text_info[surface] = SimilarStoriesInfo(response.similar)
             self._text_content_ids[surface] = content_ids
 
-    async def _refresh_image(
-        self, items: list[CorpusItem], surface: SurfaceId, threshold: float
-    ) -> None:
-        locale = self._locale_for_surface(surface)
-        if locale is None:
-            return
-        image_items = [
-            SimilarStoriesImageItem(
-                corpus_item_id=item.corpusItemId,
-                image_url=str(item.imageUrl),
-            )
-            for item in items
-            if item.imageUrl is not None
-        ]
-        if not image_items:
-            return
-        request = FindSimilarImagesRequest(
-            items=image_items,
-            threshold=threshold,
-            locale=locale,
-        )
-        response = await self._post(
-            path=SIMILAR_STORIES_IMAGE_API_PATH,
-            json_body=request.model_dump(),
-            metric_subname="image",
-        )
-        if response is not None:
-            self._image_info[surface] = SimilarStoriesInfo(response.similar)
-
     async def _post(
         self,
         path: str,
@@ -256,10 +198,6 @@ class SpindleBackend(SpindleBackendProtocol):
         """Return cached text-similarity for `surface`, or None if not yet populated."""
         return self._text_info.get(surface)
 
-    def get_similar_stories_image(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
-        """Return cached image-similarity for `surface`, or None if not yet populated."""
-        return self._image_info.get(surface)
-
 
 class DummySpindleBackend(SpindleBackendProtocol):
     """No-op backend used when Spindle is disabled or unreachable."""
@@ -274,9 +212,5 @@ class DummySpindleBackend(SpindleBackendProtocol):
         return None
 
     def get_similar_stories_text(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
-        """Return None — the dummy backend has no cache."""
-        return None
-
-    def get_similar_stories_image(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
         """Return None — the dummy backend has no cache."""
         return None

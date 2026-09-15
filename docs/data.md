@@ -234,12 +234,12 @@ article balancer can drop them from Popular Today. Each section fetch triggers
 a background refresh of the per-surface similarity cache; the metrics below
 are emitted from `apps/merino/merino/curated_recommendations/ml_backends/spindle_backend.py`.
 
-- `recommendation.spindle.{text | image}.timing` -
+- `recommendation.spindle.text.timing` -
  A timer to measure the duration (in ms) of a request to the Spindle
- `/find_similar_stories` (text) or `/find_similar_images` (image) endpoint.
-- `recommendation.spindle.{text | image}.status_codes.{res.status_code}` -
+ `/find_similar_stories` endpoint.
+- `recommendation.spindle.text.status_codes.{res.status_code}` -
  A counter to measure the HTTP status codes returned by Spindle.
-- `recommendation.spindle.{text | image}.error` -
+- `recommendation.spindle.text.error` -
  A counter incremented when the Spindle call raises an HTTP error or the
  response cannot be parsed. The previous cached similarity info is left in
  place when this fires.

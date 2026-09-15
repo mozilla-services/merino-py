@@ -38,6 +38,18 @@ def test_not_enabled():
     assert not flags.is_enabled("test-not-enabled")
 
 
+@pytest.mark.parametrize("enabled", [False, True])
+def test_decision_is_reused(enabled: bool):
+    """Keep the first decision for a flag even when its bucketing identifier changes."""
+    flags = FeatureFlags(flags={"example": {"scheme": "random", "enabled": 0.5}})
+    first_bucket = b"\x00" * 4 if enabled else b"\xff" * 4
+    next_bucket = b"\xff" * 4 if enabled else b"\x00" * 4
+
+    assert flags.is_enabled("example", bucket_for=first_bucket) is enabled
+    assert flags.decisions == {"example": enabled}
+    assert flags.is_enabled("example", bucket_for=next_bucket) is enabled
+
+
 def test_no_scheme_no_session_id(caplog):
     """Test that if a flag is defined without a 'scheme' then is_enabled will return
     False and an error message will be logged.

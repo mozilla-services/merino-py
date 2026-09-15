@@ -1155,9 +1155,6 @@ class TestGetTopStoryList:
             def get_similar_stories_text(self, surface):
                 return self._info
 
-            def get_similar_stories_image(self, surface):
-                return None
-
             async def refresh_duplicate_item_info(self, items, surface, threshold=0.85):
                 return None
 
