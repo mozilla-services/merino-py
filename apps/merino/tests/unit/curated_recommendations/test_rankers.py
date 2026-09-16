@@ -395,7 +395,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "GB-ctrpred_engb-control"): (40, 100),
+                ("item", "GB-example-experiment-control"): (40, 100),
             }
         )
 
@@ -407,10 +407,10 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="GB",
-            engagement_region="GB-ctrpred_engb-control",
+            engagement_region="GB-example-experiment-control",
         )
 
-        assert ("item", "GB-ctrpred_engb-control") in (engagement_backend.calls)
+        assert ("item", "GB-example-experiment-control") in (engagement_backend.calls)
         assert ("item", "GB") not in engagement_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(48.05)
@@ -427,7 +427,7 @@ class TestThompsonSampling:
             {
                 None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
                 "GB": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
-                "GB-ctrpred_engb-control": Prior(
+                "GB-example-experiment-control": Prior(
                     alpha=30,
                     beta=300,
                     total_impressions_per_day=1_000_000,
@@ -437,7 +437,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "GB-ctrpred_engb-control"): (40, 100),
+                ("item", "GB-example-experiment-control"): (40, 100),
             }
         )
 
@@ -449,10 +449,10 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="GB",
-            engagement_region="GB-ctrpred_engb-control",
+            engagement_region="GB-example-experiment-control",
         )
 
-        assert "GB-ctrpred_engb-control" in prior_backend.calls
+        assert "GB-example-experiment-control" in prior_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(67.05)
         assert ranked[0].ranking_data.beta == pytest.approx(352.0)
@@ -473,7 +473,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "GB-ctrpred_engb-control"): (40, 100),
+                ("item", "GB-example-experiment-control"): (40, 100),
             }
         )
 
@@ -485,11 +485,11 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="GB",
-            engagement_region="GB-ctrpred_engb-control",
+            engagement_region="GB-example-experiment-control",
         )
 
         assert prior_backend.calls[:2] == [
-            "GB-ctrpred_engb-control",
+            "GB-example-experiment-control",
             "GB",
         ]
         assert ranked[0].ranking_data is not None
@@ -521,11 +521,11 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="GB",
-            engagement_region="GB-ctrpred_engb-control",
+            engagement_region="GB-example-experiment-control",
         )
 
         assert engagement_backend.calls == [
-            ("item", "GB-ctrpred_engb-control"),
+            ("item", "GB-example-experiment-control"),
             ("item", None),
             ("item", "GB"),
         ]
@@ -549,7 +549,7 @@ class TestThompsonSampling:
             {
                 ("branch-item", None): (1, 101),
                 ("base-only-item", None): (2, 102),
-                ("branch-item", "GB-ctrpred_engb-control"): (40, 100),
+                ("branch-item", "GB-example-experiment-control"): (40, 100),
                 ("base-only-item", "GB"): (20, 100),
             }
         )
@@ -562,12 +562,12 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="GB",
-            engagement_region="GB-ctrpred_engb-control",
+            engagement_region="GB-example-experiment-control",
         )
 
         assert (
             "base-only-item",
-            "GB-ctrpred_engb-control",
+            "GB-example-experiment-control",
         ) in engagement_backend.calls
         assert ("base-only-item", "GB") not in engagement_backend.calls
         by_id = {rec.corpusItemId: rec for rec in ranked}

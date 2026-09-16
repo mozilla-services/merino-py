@@ -188,7 +188,9 @@ class CTRPredictionRanker(Ranker):
 
         [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
         """
-        engagement_region = engagement_region if engagement_region is not None else region
+        engagement_region = self.resolve_engagement_region(
+            recs, region, engagement_region if engagement_region is not None else region
+        )
         fresh_items_max: int = rescaler.fresh_items_max if rescaler else 0
 
         def boost_interest(rec: CuratedRecommendation) -> float:
@@ -297,8 +299,11 @@ class CTRPredictionRanker(Ranker):
 
         [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
         """
-        # Missing treatment rows use seasonal pseudo-counts, never raw country counts.
-        engagement_region = engagement_region if engagement_region is not None else region
+        engagement_region = self.resolve_engagement_region(
+            [rec for sec in sections.values() for rec in sec.recommendations],
+            region,
+            engagement_region if engagement_region is not None else region,
+        )
 
         def sample_score(section_id: str, sec: Section) -> float:
             """Sample beta distribution for the combined engagement of the top _n_ items."""

@@ -63,20 +63,25 @@ async def test_experiment_routing(name, branch, locale, region, mocker):
     assert treatment_sections.call_count == int(treatment)
     assert vanilla_items.call_count == int(not treatment)
     assert vanilla_sections.call_count == int(not treatment)
+    if enrolled:
+        items = treatment_items if treatment else vanilla_items
+        sections = treatment_sections if treatment else vanilla_sections
+        assert items.call_args.kwargs["engagement_region"] == engagement_region
+        assert sections.call_args.kwargs["engagement_region"] == engagement_region
 
 
 @pytest.mark.parametrize("hour", [0, 12, 23])
-def test_missing_rows_use_hourly_fallback_not_country_counts(hour, monkeypatch):
-    """Even an entirely missing branch must not consume raw GB engagement."""
+def test_missing_branch_rows_fall_back_to_country_counts(hour, monkeypatch):
+    """An entirely missing branch uses country counts without global blending."""
     monkeypatch.setattr(ctr_prediction, "PSEUDOCOUNT_UTC_HOUR_OVERRIDE", hour)
     backend = RegionAwareStubEngagementBackend({("item", "GB"): (900, 1000)})
     ranker = ctr_prediction.CTRPredictionRanker(backend, ConstantPrior())
     recs = generate_recommendations(item_ids=["item"])
     ranker.rank_items(recs, region="GB", engagement_region="GB-ctrpred_engb-treatment")
     data = recs[0].ranking_data
-    expected = ctr_prediction.ACTRSSM_CONSTANTS_BY_REGION["GB"]["hourly_ctr"][hour]
-    assert data.alpha / (data.alpha + data.beta) == pytest.approx(expected)
-    assert ("item", "GB") not in backend.calls
+    assert data.alpha == 900
+    assert data.beta == 100
+    assert ("item", "GB") in backend.calls
 
 
 def test_existing_rows_and_fractional_freshness():
@@ -151,3 +156,85 @@ def test_no_exposure_uses_hourly_fallback_for_items_and_sections(
     sample = mocker.patch.object(ctr_prediction.beta, "rvs", return_value=0.5)
     ranker.rank_sections(sections, region="GB", engagement_region=region)
     sample.assert_called_once_with(expected_alpha, expected_beta)
+
+
+@pytest.mark.parametrize("counts", [None, (0, 0), (0, 100), (5, 5), (5, 100)])
+@pytest.mark.parametrize("branch_prior", [False, True])
+def test_control_uses_only_branch_engagement_and_priors(counts, branch_prior, mocker):
+    """Control uses country counts only when the entire branch is missing, without blending."""
+    from merino.curated_recommendations.prior_backends.protocol import Prior
+    from tests.unit.curated_recommendations.test_rankers import RegionAwareStubPriorBackend
+
+    region = "GB-ctrpred_engb-control"
+    metrics = {("item", None): (500, 1000), ("item", "GB"): (800, 1000)}
+    if counts is not None:
+        metrics[("item", region)] = counts
+    engagement = RegionAwareStubEngagementBackend(metrics)
+    cohort_prior = Prior(alpha=2, beta=20, total_impressions_per_day=1000)
+    priors = RegionAwareStubPriorBackend(
+        {
+            None: cohort_prior,
+            "GB": cohort_prior,
+            **({region: cohort_prior} if branch_prior else {}),
+        }
+    )
+    ranker = ThompsonSamplingRanker(engagement, priors, region_weight=1.0)
+    recs = generate_recommendations(item_ids=["item"])
+    ranker.rank_items(recs, region="GB", engagement_region=region)
+    clicks, impressions = counts if counts is not None else (800, 1000)
+    prior = cohort_prior if branch_prior else ConstantPrior().get()
+    assert recs[0].ranking_data.alpha == clicks + prior.alpha
+    assert recs[0].ranking_data.beta == impressions - clicks + prior.beta
+
+    sections = generate_sections_feed(section_count=1)
+    sections["top_stories_section"].recommendations = recs
+    sample = mocker.patch(
+        "merino.curated_recommendations.rankers.t_sampling.beta.rvs", return_value=0.5
+    )
+    ranker.rank_sections(sections, region="GB", engagement_region=region)
+    # Retain vanilla section aggregation and its fixed prior.
+    fixed = ConstantPrior().get()
+    sample.assert_called_once_with(
+        max(clicks + fixed.alpha, 1.0), max(impressions - 2 * clicks + fixed.beta, 1.0)
+    )
+    assert all(lookup_region in {region, "GB"} for _, lookup_region in engagement.calls)
+    if counts is not None:
+        assert all(lookup_region == region for _, lookup_region in engagement.calls)
+    assert all(lookup_region == region for lookup_region in priors.calls)
+
+
+@pytest.mark.parametrize("branch", ["control", "treatment"])
+@pytest.mark.parametrize("has_branch_row", [False, True])
+def test_whole_pass_fallback_never_blends_global(branch, has_branch_row, mocker):
+    """Item and section passes select one region, including for partially populated branches."""
+    region = f"GB-ctrpred_engb-{branch}"
+    metrics = {
+        (item, lookup): counts
+        for item in ("a", "b")
+        for lookup, counts in [(None, (999, 1000)), ("GB", (3, 30))]
+    }
+    if has_branch_row:
+        metrics[("a", region)] = (2, 20)
+    backend = RegionAwareStubEngagementBackend(metrics)
+    if branch == "control":
+        ranker = ThompsonSamplingRanker(backend, ConstantPrior(), region_weight=1.0)
+    else:
+        ranker = ctr_prediction.CTRPredictionRanker(backend, ConstantPrior())
+    recs = generate_recommendations(item_ids=["a", "b"])
+    ranker.rank_items(recs, region="GB", engagement_region=region)
+    if not has_branch_row:
+        prior = ConstantPrior().get()
+        for rec in recs:
+            assert rec.ranking_data.alpha == (3 + prior.alpha if branch == "control" else 3)
+            assert rec.ranking_data.beta == (27 + prior.beta if branch == "control" else 27)
+    assert not any(lookup is None for _, lookup in backend.calls)
+    assert any(lookup == "GB" for _, lookup in backend.calls) == (not has_branch_row)
+    backend.calls.clear()
+    sections = generate_sections_feed(section_count=1)
+    sections["top_stories_section"].recommendations = recs
+    sample = mocker.patch.object(ctr_prediction.beta, "rvs", return_value=0.5)
+    ranker.rank_sections(sections, region="GB", engagement_region=region)
+    if not has_branch_row and branch == "treatment":
+        sample.assert_called_once_with(6.0, 54.0)
+    assert not any(lookup is None for _, lookup in backend.calls)
+    assert any(lookup == "GB" for _, lookup in backend.calls) == (not has_branch_row)

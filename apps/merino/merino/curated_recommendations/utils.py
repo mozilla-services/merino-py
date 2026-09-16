@@ -154,6 +154,12 @@ def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | No
     return region
 
 
+def is_ctr_prediction_engagement_region(region: str | None) -> bool:
+    """Identify the CTR prediction cohorts whose engagement must remain isolated."""
+    experiment = ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value
+    return region in {f"GB-{experiment}-control", f"GB-{experiment}-treatment"}
+
+
 def is_enrolled_in_experiment(
     request: CuratedRecommendationsRequest, name: str, branch: str
 ) -> bool:

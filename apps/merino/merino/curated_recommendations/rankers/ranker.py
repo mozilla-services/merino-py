@@ -17,12 +17,17 @@ from merino.curated_recommendations.protocol import (
     Section,
 )
 from merino.curated_recommendations.rankers.utils import REGION_ENGAGEMENT_WEIGHT
+from merino.curated_recommendations.utils import is_ctr_prediction_engagement_region
 
 logger = logging.getLogger(__name__)
 
 
 class Ranker:
-    """Base class for ranking curated recommendations"""
+    """Base class for ranking curated recommendations.
+
+    CTR prediction engagement keys select only that cohort's engagement and fitted
+    prior. Missing cohort priors use the fixed historical prior.
+    """
 
     def __init__(
         self,
@@ -65,8 +70,11 @@ class Ranker:
 
         for rec in recs:
             if self.engagement_backend.get(rec.corpusItemId, engagement_region) is not None:
+                # One row establishes that branch data is available. Keep this key for
+                # every candidate; individual missing rows must not mix in country data.
                 return engagement_region
 
+        # No candidate has branch data yet, so use country data for the entire pass.
         return region
 
     def get_regional_prior(
@@ -78,7 +86,15 @@ class Ranker:
 
         Branch-specific priors are request-level artifacts. If a branch prior exists,
         use it for the full ranking pass; otherwise fall back to the base country prior.
+        Isolated experiments use a fixed prior instead of another cohort's fitted prior.
         """
+        if is_ctr_prediction_engagement_region(prior_region):
+            # Never substitute a prior fitted from another cohort's engagement.
+            return (
+                self.prior_backend.get(prior_region if prior_region is not None else region)
+                or ConstantPrior().get()
+            )
+
         if prior_region is not None and prior_region != region:
             prior = self.prior_backend.get(prior_region)
             if prior is not None:
@@ -96,24 +112,40 @@ class Ranker:
         blend_region_with_global=True,
     ) -> tuple[float, float, float, float, float]:
         """Compute opens, no_opens, a_prior, b_prior, non_rescaled_b_prior for a recommendation."""
-        opens, no_opens, _ = self.get_opens_no_opens(rec)
-        region_query = engagement_region if engagement_region is not None else region
-        region_opens, region_no_opens, _ = self.get_opens_no_opens(rec, region_query=region_query)
+        if is_ctr_prediction_engagement_region(engagement_region) or self.region_weight == 1.0:
+            # Use only the selected region's counts for this article. The experiment key
+            # selects this path directly; weight=1 also preserves it after the whole-pass
+            # fallback replaces that key with GB. Neither case reads global engagement.
+            region_query = engagement_region if engagement_region is not None else region
+            opens, no_opens, _ = self.get_opens_no_opens(rec, region_query=region_query)
+            # Missing or zero-count rows retain zero observations and rely on the prior,
+            # rather than borrowing global counts that can include the other branch.
+            prior = regional_prior or self.get_regional_prior(region, engagement_region)
+            prior = prior or ConstantPrior().get()
+            a_prior, b_prior = float(prior.alpha), float(prior.beta)
+        else:
+            # Preserve the existing policy for other traffic: start with global counts,
+            # then blend regional counts and priors when the required data is available.
+            opens, no_opens, _ = self.get_opens_no_opens(rec)
+            region_query = engagement_region if engagement_region is not None else region
+            region_opens, region_no_opens, _ = self.get_opens_no_opens(
+                rec, region_query=region_query
+            )
 
-        prior: Prior = self.prior_backend.get() or ConstantPrior().get()
-        a_prior = float(prior.alpha)
-        b_prior = float(prior.beta)
-        region_prior = (
-            regional_prior if regional_prior is not None else self.prior_backend.get(region)
-        )
+            prior = self.prior_backend.get() or ConstantPrior().get()
+            a_prior = float(prior.alpha)
+            b_prior = float(prior.beta)
+            region_prior = (
+                regional_prior if regional_prior is not None else self.prior_backend.get(region)
+            )
 
-        if region_no_opens and region_prior:
-            # Weighted average of regional and global engagement
-            region_weight = self.region_weight if blend_region_with_global else 1.0
-            opens = region_opens * region_weight + opens * (1 - region_weight)
-            no_opens = region_no_opens * region_weight + no_opens * (1 - region_weight)
-            a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
-            b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
+            if region_no_opens and region_prior:
+                # Weighted average of regional and global engagement
+                region_weight = self.region_weight if blend_region_with_global else 1.0
+                opens = region_opens * region_weight + opens * (1 - region_weight)
+                no_opens = region_no_opens * region_weight + no_opens * (1 - region_weight)
+                a_prior = (region_weight * region_prior.alpha) + ((1 - region_weight) * a_prior)
+                b_prior = (region_weight * region_prior.beta) + ((1 - region_weight) * b_prior)
 
         if rescaler is not None:
             opens, no_opens = rescaler.rescale(rec, opens, no_opens)

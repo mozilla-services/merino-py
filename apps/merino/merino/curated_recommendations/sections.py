@@ -931,13 +931,17 @@ async def get_sections(
         request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, "treatment"
     ):
         ranker = CTRPredictionRanker(
-            engagement_backend=engagement_backend, prior_backend=prior_backend
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
         )
     elif surface_id == SurfaceId.NEW_TAB_EN_GB and is_enrolled_in_experiment(
         request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, "control"
     ):
         ranker = ThompsonSamplingRanker(
-            engagement_backend=engagement_backend, prior_backend=prior_backend
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            # Keep 100% of the selected region even if branch data falls back to GB.
+            region_weight=1.0,
         )
     # Interest ranker is experimental so gets priority over contextual ranker.
     elif use_interest_ranker:
