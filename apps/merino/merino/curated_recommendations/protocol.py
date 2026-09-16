@@ -105,8 +105,6 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
-    # Germany rollout of editorial sections: the treatment branch is the one that shows them
-    EDITORIAL_SECTIONS_GERMANY_EXPERIMENT = "editorial-sections-experiment-germany"
     # Experiment to serve the cross-Europe English sections surface (NEW_TAB_EN_XE)
     SECTIONS_IN_EN_EUROPE_EXPERIMENT = "sections-in-en-europe"
     # Experiment to serve the global Spanish sections surface (NEW_TAB_ES_XA)
@@ -128,14 +126,6 @@ class DailyBriefingBranch(str, Enum):
     BRIEFING_WITH_POPULAR = "briefing-with-popular"
     # Show Daily Briefing (headlines) section WITHOUT Popular Today section
     BRIEFING_WITHOUT_POPULAR = "briefing-without-popular"
-
-
-class EditorialSectionsBranch(str, Enum):
-    """Treatment branches for the German Editorial Sections experiment."""
-
-    # The 80% branch that receives editorial sections. Editorial sections are hidden in Germany
-    # unless the user is on this branch.
-    GERMANY_TREATMENT = "treatment"
 
 
 # Maximum tileId that Firefox can support. Firefox uses Javascript to store this value. The max
