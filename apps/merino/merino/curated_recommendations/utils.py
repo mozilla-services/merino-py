@@ -138,9 +138,9 @@ def derive_region(locale: Locale, region: str | None = None) -> str | None:
 def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | None:
     """Derive the engagement lookup region for a curated recommendations request.
 
-    Most requests use the country-level region. The publisher constraint experiment in Germany
-    writes branch-specific engagement rows while preserving the existing artifact schema by
-    encoding the branch in the region field.
+    Most requests use the country-level region. The Germany publisher constraint and
+    en_GB CTR prediction experiments encode the branch in the region field. CTR prediction
+    treatment rows contain pseudo-counts; control rows contain observed engagement.
     """
     region = derive_region(request.locale, request.region)
     branch = request.experimentBranch
@@ -157,6 +157,17 @@ def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | No
         )
     ):
         return f"{PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX}-{branch}"
+
+    if (
+        get_recommendation_surface_id(request.locale, request.region, request)
+        == SurfaceId.NEW_TAB_EN_GB
+        and branch is not None
+        and branch in {"control", "treatment"}
+        and is_enrolled_in_experiment(
+            request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, branch
+        )
+    ):
+        return f"GB-ctrpred_engb-{branch}"
 
     return region
 

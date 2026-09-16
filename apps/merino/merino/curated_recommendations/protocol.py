@@ -111,6 +111,8 @@ class ExperimentName(str, Enum):
     SECTIONS_IN_EN_EUROPE_EXPERIMENT = "sections-in-en-europe"
     # Experiment to serve the global Spanish sections surface (NEW_TAB_ES_XA)
     SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT = "sections-in-global-spanish"
+    CTR_PREDICTION_ENGB_EXPERIMENT = "ctrpred_engb"
+
     # Experiment to apply Germany publisher constraint engagement by branch
     PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT = "publisher-constraint-in-germany"
 
