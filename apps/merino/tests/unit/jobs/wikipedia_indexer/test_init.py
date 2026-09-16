@@ -16,7 +16,7 @@ def fixture_collaborators(mocker):
     """Replace everything the CLI commands construct or call out to."""
     return {
         "adapter": mocker.patch(f"{MODULE}.ElasticSearchAdapter"),
-        "file_manager": mocker.patch(f"{MODULE}.FileManager"),
+        "file_manager": mocker.patch(f"{MODULE}.FileManager", autospec=True),
         "indexer": mocker.patch(f"{MODULE}.Indexer"),
         "create_blocklist": mocker.patch(f"{MODULE}.create_blocklist", return_value={"meme"}),
     }
@@ -99,7 +99,7 @@ def test_copy_export_copies_the_latest_dump(collaborators):
     collaborators["file_manager"].assert_called_once_with(
         "bucket/prefix", "a-project", "http://dumps/", "en"
     )
-    collaborators["file_manager"].return_value.stream_latest_dump_to_gcs.assert_called_once_with()
+    collaborators["file_manager"].return_value.stream_latest_dump_to_gcs.assert_awaited_once_with()
 
 
 def test_copy_export_raises_when_no_export_is_found(collaborators):
@@ -113,3 +113,5 @@ def test_copy_export_raises_when_no_export_is_found(collaborators):
             gcs_path="bucket/prefix",
             gcp_project="a-project",
         )
+
+    collaborators["file_manager"].return_value.stream_latest_dump_to_gcs.assert_awaited_once_with()

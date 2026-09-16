@@ -74,6 +74,7 @@ from merino.curated_recommendations.rankers import (
     TOP_STORIES_SECTION_KEY,
     takedown_reported_recommendations,
 )
+from merino.curated_recommendations.rankers.ctr_prediction import CTRPredictionRanker
 from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 logger = logging.getLogger(__name__)
@@ -925,8 +926,25 @@ async def get_sections(
         and bool(personal_interests.scores)
     )
 
-    # Interest ranker is experimental so gets priority over contexual ranker
-    if use_interest_ranker:
+    # The CTR prediction treatment owns both item and section ranking on en_GB.
+    if surface_id == SurfaceId.NEW_TAB_EN_GB and is_enrolled_in_experiment(
+        request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, "treatment"
+    ):
+        ranker = CTRPredictionRanker(
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+        )
+    elif surface_id == SurfaceId.NEW_TAB_EN_GB and is_enrolled_in_experiment(
+        request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, "control"
+    ):
+        ranker = ThompsonSamplingRanker(
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            # Keep 100% of the selected region even if branch data falls back to GB.
+            region_weight=1.0,
+        )
+    # Interest ranker is experimental so gets priority over contextual ranker.
+    elif use_interest_ranker:
         no_interests = False
         if personal_interests and personal_interests.scores:
             for key, score in personal_interests.scores.items():

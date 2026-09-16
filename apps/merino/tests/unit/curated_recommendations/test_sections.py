@@ -2078,7 +2078,7 @@ class TestGetSectionsForcedInterests:
         request = CuratedRecommendationsRequest(
             locale=Locale.DE_DE,
             region="DE",
-            experimentName=ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
+            experimentName=ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value,
             experimentBranch="treatment",
         )
 

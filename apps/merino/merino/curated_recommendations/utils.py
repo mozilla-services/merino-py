@@ -16,11 +16,6 @@ from merino.curated_recommendations.protocol import (
 # IN) take priority, so this only applies to regions not handled above.
 EN_XE_REGIONS: frozenset[str] = frozenset({"DE", "FR", "AT", "CH", "BE", "IT", "ES", "PL"})
 
-PUBLISHER_CONSTRAINT_IN_GERMANY_REGION = "DE"
-PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES: frozenset[str] = frozenset({"control", "treatment"})
-PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX = "DE-publisher-constraint-in-germany"
-PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED = True
-
 
 def get_recommendation_surface_id(
     locale: Locale,
@@ -138,27 +133,31 @@ def derive_region(locale: Locale, region: str | None = None) -> str | None:
 def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | None:
     """Derive the engagement lookup region for a curated recommendations request.
 
-    Most requests use the country-level region. The publisher constraint experiment in Germany
-    writes branch-specific engagement rows while preserving the existing artifact schema by
-    encoding the branch in the region field.
+    Most requests use the country-level region. The en_GB CTR prediction
+    experiment encodes the branch in the region field. CTR prediction
+    treatment rows contain pseudo-counts; control rows contain observed engagement.
     """
     region = derive_region(request.locale, request.region)
     branch = request.experimentBranch
 
     if (
-        PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED
-        and region == PUBLISHER_CONSTRAINT_IN_GERMANY_REGION
+        get_recommendation_surface_id(request.locale, request.region, request)
+        == SurfaceId.NEW_TAB_EN_GB
         and branch is not None
-        and branch in PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES
+        and branch in {"control", "treatment"}
         and is_enrolled_in_experiment(
-            request,
-            ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
-            branch,
+            request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, branch
         )
     ):
-        return f"{PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX}-{branch}"
+        return f"GB-ctrpred_engb-{branch}"
 
     return region
+
+
+def is_ctr_prediction_engagement_region(region: str | None) -> bool:
+    """Identify the CTR prediction cohorts whose engagement must remain isolated."""
+    experiment = ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value
+    return region in {f"GB-{experiment}-control", f"GB-{experiment}-treatment"}
 
 
 def is_enrolled_in_experiment(
