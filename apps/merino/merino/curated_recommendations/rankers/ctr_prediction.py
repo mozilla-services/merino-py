@@ -1,6 +1,7 @@
 """CTR prediction treatment ranking using seasonal pseudo-counts and fractional freshness."""
 
 from datetime import datetime, timezone
+from math import ceil
 from typing import TypedDict
 
 from merino.curated_recommendations.engagement_backends.protocol import Engagement
@@ -27,9 +28,10 @@ from merino.curated_recommendations.rankers.utils import (
 BETA_EPSILON = 1e-18
 PSEUDOCOUNT_MIN_STRENGTH = 1.0
 PSEUDOCOUNT_MAX_STRENGTH = 10_000_000.0
-# Serving concentration multiplier inherited from the original replay implementation.
-# Its calibration rationale is not documented. It preserves the hourly mean but
-# reduces Beta variance by approximately 32x (before clipping), limiting exploration.
+# BQETL applies 32x strength to all emitted pseudo-count rows. Consume those rows
+# as-is; apply this multiplier only when synthesizing the sparse-row fallback.
+# It preserves the hourly mean but reduces Beta variance by approximately 32x
+# before clipping. Fallback concentration can be evaluated separately in simulation.
 PSEUDOCOUNT_STRENGTH_MULTIPLIER = 32.0
 PSEUDO_FRESH_CANDIDATE_FRACTION = 0.125
 PSEUDOCOUNT_UTC_HOUR_OVERRIDE: int | None = None
@@ -130,6 +132,31 @@ def _constants_for_region(region: str | None) -> SeasonalConstants:
     return ACTRSSM_CONSTANTS_BY_REGION.get(country, ACTRSSM_CONSTANTS_BY_REGION[None])
 
 
+def _fallback_logit_variance(region: str | None) -> float:
+    """Return the model's stationary no-observation logit variance."""
+    constants = _constants_for_region(region)
+    return constants["process_variance"] / (1.0 - constants["phi"] ** 2)
+
+
+def _engagement_logit_variance(engagement: Engagement | None, region: str | None) -> float:
+    """Reconstruct model uncertainty before serving rescaling or Beta epsilon clamps."""
+    if engagement is None:
+        return _fallback_logit_variance(region)
+    opens = float(engagement.click_count)
+    no_opens = float(engagement.impression_count) - opens
+    strength = opens + no_opens
+    if opens == 0 and strength >= PSEUDOCOUNT_MAX_STRENGTH:
+        # The production zero-click boundary at maximum strength is well-observed,
+        # not infinitely uncertain. Exact pre-clipping variance is unrecoverable.
+        return 0.0
+    if opens <= 0 or no_opens <= 0:
+        return _fallback_logit_variance(region)
+    multiplier = PSEUDOCOUNT_STRENGTH_MULTIPLIER
+    # Invert K = s * (1 / (p * (1-p) * V) - 1). At the upper strength cap,
+    # this is a conservative upper bound, not the exact pre-clipping variance.
+    return multiplier * strength * strength / (opens * no_opens * (strength + multiplier))
+
+
 def _missing_sparse_row_pseudocounts(region: str | None) -> tuple[float, float]:
     """Return fallback pseudo-clicks/non-clicks for an absent artifact row.
 
@@ -146,9 +173,7 @@ def _missing_sparse_row_pseudocounts(region: str | None) -> tuple[float, float]:
     constants = _constants_for_region(region)
     hour = _pseudocount_utc_hour()
     probability = float(constants["hourly_ctr"][hour])
-    phi = float(constants["phi"])
-    process_variance = float(constants["process_variance"])
-    stationary_variance = process_variance / (1.0 - phi**2)
+    stationary_variance = _fallback_logit_variance(region)
 
     raw_strength = 1.0 / (probability * (1.0 - probability) * stationary_variance) - 1.0
     matched_strength = min(
@@ -195,7 +220,9 @@ class CTRPredictionRanker(Ranker):
         Use the selected region's counts directly as Beta parameters, without an
         additive Merino prior or global blending. Missing, zero/zero, and invalid
         rows use seasonal hourly pseudo-counts. Apply interest boosts, mark the
-        lowest pseudo-non-click fraction fresh, and suppress excess fresh items.
+        highest reconstructed logit-variance fraction fresh (rounded up), and
+        suppress excess fresh items. Uncertainty uses counts before serving rescaling;
+        missing and unusable counts receive the model's cold-start variance.
 
         Args:
             recs: Candidates to score before publisher spreading.
@@ -228,6 +255,8 @@ class CTRPredictionRanker(Ranker):
                 * PERSONALIZATION_TOPIC_WEIGHTING.get(rec.topic, 1.0)
             )
 
+        logit_variance_by_rec: dict[int, float] = {}
+
         def pseudo_count_interactions(rec: CuratedRecommendation) -> tuple[float, float]:
             """Return pseudo-clicks/non-clicks without adding Merino priors.
 
@@ -236,14 +265,19 @@ class CTRPredictionRanker(Ranker):
             pseudo-counts for the active engagement region.
             """
             engagement = self.engagement_backend.get(rec.corpusItemId, engagement_region)
+            logit_variance_by_rec[id(rec)] = _engagement_logit_variance(
+                engagement, engagement_region
+            )
             opens, no_opens = _opens_no_opens_from_engagement(engagement, engagement_region)
             if rescaler is not None:
                 opens, no_opens = rescaler.rescale(rec, opens, no_opens)
             return opens, no_opens
 
-        def compute_ranking_scores(rec: CuratedRecommendation) -> float:
+        def compute_ranking_scores(rec: CuratedRecommendation) -> None:
             """Sample from pseudo-counts for a recommendation."""
             opens, no_opens = pseudo_count_interactions(rec)
+            # Under the production pseudo-count contract, zero pseudo-clicks occur
+            # only after 10M impressions with no clicks. Keep epsilon clamping here.
             alpha_val = max(opens, BETA_EPSILON)
             beta_val = max(no_opens, BETA_EPSILON)
             rec.ranking_data = RankingData(
@@ -251,42 +285,28 @@ class CTRPredictionRanker(Ranker):
                 alpha=alpha_val,
                 beta=beta_val,
             )
-            return no_opens
 
-        def mark_lowest_pseudo_no_open_items_fresh(
-            pseudo_no_opens_by_rec: dict[int, float],
-        ) -> None:
-            """Approximate Merino's fresh throttle after replacing priors.
-
-            The normal freshness threshold is based on the old prior beta. This
-            branch removes that prior, so use the fitted replay proxy: mark the
-            lowest-pseudo-impression candidate fraction as fresh.
-            """
+        def mark_fresh_items() -> None:
+            """Use the existing freshness throttle for the highest model uncertainty."""
             if rescaler is None or PSEUDO_FRESH_CANDIDATE_FRACTION <= 0:
                 return
             eligible = [
-                (pseudo_no_opens_by_rec[id(rec)], rec)
-                for rec in recs
-                if rec.ranking_data is not None and not rec.isTimeSensitive
+                rec for rec in recs if rec.ranking_data is not None and not rec.isTimeSensitive
             ]
-            if not eligible:
-                return
-            fresh_count = round(len(eligible) * PSEUDO_FRESH_CANDIDATE_FRACTION)
-            if fresh_count <= 0:
-                return
-            eligible.sort(key=lambda item: item[0])
-            target_no_opens = eligible[min(fresh_count, len(eligible)) - 1][0]
-            for no_opens, rec in eligible[:fresh_count]:
+            uncertain_count = ceil(len(eligible) * PSEUDO_FRESH_CANDIDATE_FRACTION)
+            most_uncertain_first = sorted(
+                eligible, key=lambda rec: logit_variance_by_rec[id(rec)], reverse=True
+            )
+            for rec in most_uncertain_first[:uncertain_count]:
                 if rec.ranking_data is not None:
+                    # is_fresh is the existing downstream throttle flag. Here it denotes
+                    # high logit uncertainty, not age or a pseudo-impression threshold.
                     rec.ranking_data.is_fresh = True
-                    rec.ranking_data.remaining_impressions = int(
-                        max(target_no_opens - no_opens, 0.0)
-                    )
+                    rec.ranking_data.remaining_impressions = 0
 
-        pseudo_no_opens_by_rec = {}
         for rec in recs:
-            pseudo_no_opens_by_rec[id(rec)] = compute_ranking_scores(rec)
-        mark_lowest_pseudo_no_open_items_fresh(pseudo_no_opens_by_rec)
+            compute_ranking_scores(rec)
+        mark_fresh_items()
         self.suppress_fresh_items(recs, fresh_items_max)
         # Sort the recommendations from best to worst sampled score & renumber
         sorted_recs = sorted(

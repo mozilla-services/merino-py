@@ -85,7 +85,7 @@ def test_missing_branch_rows_fall_back_to_country_counts(hour, monkeypatch):
 
 
 def test_existing_rows_and_fractional_freshness():
-    """Treatment uses counts without additive priors and marks the lowest eighth fresh."""
+    """Equal pseudo-click counts rank by reconstructed uncertainty, not non-clicks."""
     region = "GB-ctrpred_engb-treatment"
     recs = generate_recommendations(item_ids=[str(i) for i in range(16)], time_sensitive_count=0)
     backend = RegionAwareStubEngagementBackend({(str(i), region): (2, 20 + i) for i in range(16)})
@@ -94,7 +94,7 @@ def test_existing_rows_and_fractional_freshness():
     for i, rec in enumerate(recs):
         assert rec.ranking_data.alpha == 2
         assert rec.ranking_data.beta == 18 + i
-        assert rec.ranking_data.is_fresh == (i < 2)
+        assert rec.ranking_data.is_fresh == (i >= 14)
 
 
 def test_section_scores_sum_pseudocounts(mocker):
@@ -238,3 +238,75 @@ def test_whole_pass_fallback_never_blends_global(branch, has_branch_row, mocker)
         sample.assert_called_once_with(6.0, 54.0)
     assert not any(lookup is None for _, lookup in backend.calls)
     assert any(lookup == "GB" for _, lookup in backend.calls) == (not has_branch_row)
+
+
+@pytest.mark.parametrize("probability,variance", [(0.001, 0.2), (0.01, 0.2), (0.3, 0.8)])
+def test_reconstruct_logit_variance(probability, variance):
+    """Invert the generator independently of CTR, without substituting Beta variance."""
+    from types import SimpleNamespace
+
+    strength = 32 * (1 / (probability * (1 - probability) * variance) - 1)
+    row = SimpleNamespace(click_count=probability * strength, impression_count=strength)
+    assert ctr_prediction._engagement_logit_variance(row, "GB") == pytest.approx(variance)
+
+
+@pytest.mark.parametrize("counts", [None, (0, 0), (5, 3), (5, 5), (-1, 10)])
+def test_uncertainty_uses_explicit_cold_start_variance(counts):
+    """Missing and invalid rows have finite model uncertainty, not infinite uncertainty."""
+    from types import SimpleNamespace
+
+    row = (
+        None
+        if counts is None
+        else SimpleNamespace(click_count=counts[0], impression_count=counts[1])
+    )
+    constants = ctr_prediction.ACTRSSM_CONSTANTS_BY_REGION["GB"]
+    expected = constants["process_variance"] / (1 - constants["phi"] ** 2)
+    assert ctr_prediction._engagement_logit_variance(row, "GB") == pytest.approx(expected)
+
+
+def test_zero_click_max_strength_is_low_uncertainty():
+    """The well-observed production zero-click boundary must not divide by zero."""
+    from types import SimpleNamespace
+
+    row = SimpleNamespace(click_count=0, impression_count=10_000_000)
+    assert ctr_prediction._engagement_logit_variance(row, "GB") == 0
+
+
+@pytest.mark.parametrize("length,expected_count", [(1, 1), (8, 1), (9, 2), (16, 2)])
+def test_missing_items_compete_by_variance_with_ceil_quota(length, expected_count):
+    """Missing items share fallback uncertainty; they are not all automatically fresh."""
+    recs = generate_recommendations(length=length, time_sensitive_count=0)
+    ctr_prediction.CTRPredictionRanker(
+        RegionAwareStubEngagementBackend({}), ConstantPrior()
+    ).rank_items(recs, region="GB", rescaler=EngagementRescaler())
+    assert sum(rec.ranking_data.is_fresh for rec in recs) == expected_count
+
+
+@pytest.mark.parametrize("rescale_counts", [False, True])
+def test_uncertainty_selection_uses_model_counts_before_rescaling(rescale_counts, monkeypatch):
+    """High logit variance wins over low non-click counts and ignores serving rescaling."""
+    region = "GB-ctrpred_engb-treatment"
+    ids = ["uncertain", "low_non_clicks", "missing"] + [str(i) for i in range(5)]
+    recs = generate_recommendations(item_ids=ids, time_sensitive_count=0)
+    metrics = {(item, region): (1000, 100000) for item in ids if item != "missing"}
+    metrics[("uncertain", region)] = (1, 1000)
+    metrics[("low_non_clicks", region)] = (20, 40)
+    rescaler = EngagementRescaler()
+    if rescale_counts:
+        monkeypatch.setattr(
+            EngagementRescaler,
+            "rescale",
+            lambda self, rec, a, b: (
+                (a * 100000, b * 100000) if rec.corpusItemId == "uncertain" else (a, b)
+            ),
+        )
+    ranked = ctr_prediction.CTRPredictionRanker(
+        RegionAwareStubEngagementBackend(metrics), ConstantPrior()
+    ).rank_items(recs, region="GB", engagement_region=region, rescaler=rescaler)
+    assert {rec.corpusItemId for rec in ranked if rec.ranking_data.is_fresh} == {"uncertain"}
+    monkeypatch.setattr("merino.curated_recommendations.rankers.utils.random", lambda: 1.0)
+    retained, _ = ctr_prediction.filter_fresh_items_with_probability(
+        ranked, fresh_story_prob=0.15, max_items=7
+    )
+    assert all(rec.corpusItemId != "uncertain" for rec in retained)
