@@ -115,8 +115,8 @@ def test_section_scores_sum_pseudocounts(mocker):
     sample.assert_called_once_with(6.0, 54.0)
 
 
-@pytest.mark.parametrize("clicks,impressions,alpha,beta", [(0, 10, 1e-18, 10), (5, 3, 5, 1e-18)])
-def test_existing_nonempty_or_inconsistent_rows(clicks, impressions, alpha, beta):
+@pytest.mark.parametrize("clicks,impressions,alpha,beta", [(0, 10, 1e-18, 10), (5, 10, 5, 5)])
+def test_existing_valid_rows(clicks, impressions, alpha, beta):
     """Existing rows keep their pseudo-counts, clamped to valid beta parameters."""
     backend = RegionAwareStubEngagementBackend({("item", "GB"): (clicks, impressions)})
     recs = generate_recommendations(item_ids=["item"])
@@ -135,11 +135,11 @@ def test_time_sensitive_items_are_not_fresh():
 
 
 @pytest.mark.parametrize("hour", [0, 12, 23])
-@pytest.mark.parametrize("counts", [None, (0, 0)])
-def test_no_exposure_uses_hourly_fallback_for_items_and_sections(
+@pytest.mark.parametrize("counts", [None, (0, 0), (5, 3), (5, 5), (5, 0), (-1, 10), (0, -1)])
+def test_missing_or_invalid_rows_use_hourly_fallback_for_items_and_sections(
     hour, counts, monkeypatch, mocker
 ):
-    """Missing and explicit zero/zero rows use the same seasonal beta in both passes."""
+    """Unusable rows get a seasonal posterior, never a near-certain CTR of one."""
     monkeypatch.setattr(ctr_prediction, "PSEUDOCOUNT_UTC_HOUR_OVERRIDE", hour)
     region = "GB-ctrpred_engb-treatment"
     metrics = {} if counts is None else {("item", region): counts}

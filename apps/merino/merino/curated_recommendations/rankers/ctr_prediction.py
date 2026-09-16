@@ -27,6 +27,9 @@ from merino.curated_recommendations.rankers.utils import (
 BETA_EPSILON = 1e-18
 PSEUDOCOUNT_MIN_STRENGTH = 1.0
 PSEUDOCOUNT_MAX_STRENGTH = 10_000_000.0
+# Serving concentration multiplier inherited from the original replay implementation.
+# Its calibration rationale is not documented. It preserves the hourly mean but
+# reduces Beta variance by approximately 32x (before clipping), limiting exploration.
 PSEUDOCOUNT_STRENGTH_MULTIPLIER = 32.0
 PSEUDO_FRESH_CANDIDATE_FRACTION = 0.125
 PSEUDOCOUNT_UTC_HOUR_OVERRIDE: int | None = None
@@ -132,9 +135,13 @@ def _missing_sparse_row_pseudocounts(region: str | None) -> tuple[float, float]:
 
     Sparse pseudo-count artifacts omit low-history candidates. Treat those
     missing rows as zero observed exposure, not as an old additive Merino prior.
-    Merino has no per-item row state here, so this uses the fitted seasonal
-    fallback mean at the current UTC hour and the steady-state no-observation
-    logit variance.
+    Merino has no per-item row state here, so use the fitted seasonal mean at the
+    current UTC hour. Derive an initial Beta concentration from the steady-state
+    no-observation logit variance using a local variance approximation, then apply
+    the serving strength multiplier and bounds. The returned pseudo-counts retain
+    the hourly mean but do not preserve that variance: the 32x multiplier reduces
+    Beta variance by approximately 32x when neither strength bound is active.
+    These synthetic counts represent concentration, not observed exposure.
     """
     constants = _constants_for_region(region)
     hour = _pseudocount_utc_hour()
@@ -155,11 +162,21 @@ def _missing_sparse_row_pseudocounts(region: str | None) -> tuple[float, float]:
     return probability * strength, (1.0 - probability) * strength
 
 
-def _opens_no_opens_from_engagement(engagement: Engagement) -> tuple[float, float]:
-    """Convert Merino engagement rows to Thompson alpha/beta observations."""
-    opens = float(engagement.click_count)
-    no_opens = float(engagement.impression_count) - opens
-    return opens, max(no_opens, 0.0)
+def _opens_no_opens_from_engagement(
+    engagement: Engagement | None, region: str | None
+) -> tuple[float, float]:
+    """Use seasonal pseudo-counts when a row cannot supply a valid posterior."""
+    if (
+        engagement is None
+        or engagement.click_count < 0
+        or engagement.impression_count <= engagement.click_count
+    ):
+        # Zero/zero and inconsistent rows have no usable non-click count. An epsilon
+        # beta would give positive-click rows a near-certain CTR of 1, dominating ranks.
+        return _missing_sparse_row_pseudocounts(region)
+    return float(engagement.click_count), float(
+        engagement.impression_count - engagement.click_count
+    )
 
 
 class CTRPredictionRanker(Ranker):
@@ -173,20 +190,24 @@ class CTRPredictionRanker(Ranker):
         region: str | None = None,
         engagement_region: str | None = None,
     ) -> list[CuratedRecommendation]:
-        """Re-rank items using [Thompson sampling][thompson-sampling], combining exploitation of known item
-        CTR with exploration of new items using a prior.
+        """Rank items by sampling Beta distributions from rescaled pseudo-counts.
 
-        :param recs: A list of recommendations in the desired order (pre-publisher spread).
-        :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
-        :param prior_backend: Provides prior alpha and beta values for Thompson sampling.
-        :param region: Optionally, the client's region, e.g. 'US'.
-        :param region_weight: In a weighted average, how much to weigh regional engagement.
-        :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
-        :param personal_interests User interests
+        Use the selected region's counts directly as Beta parameters, without an
+        additive Merino prior or global blending. Missing, zero/zero, and invalid
+        rows use seasonal hourly pseudo-counts. Apply interest boosts, mark the
+        lowest pseudo-non-click fraction fresh, and suppress excess fresh items.
 
-        :return: A re-ordered version of recs, ranked according to the Thompson sampling score.
+        Args:
+            recs: Candidates to score before publisher spreading.
+            rescaler: Optional count rescaling and freshness-throttle settings.
+            personal_interests: Optional normalized interests for score boosts.
+            region: Base country key used if no candidate has branch engagement.
+            engagement_region: Engagement lookup key, typically the treatment branch.
+                Defaults to region; falls back to region for the whole candidate list
+                if none has a row under this key.
 
-        [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
+        Returns:
+            Candidates sorted by descending score, with ranking_data updated in place.
         """
         engagement_region = self.resolve_engagement_region(
             recs, region, engagement_region if engagement_region is not None else region
@@ -210,17 +231,12 @@ class CTRPredictionRanker(Ranker):
         def pseudo_count_interactions(rec: CuratedRecommendation) -> tuple[float, float]:
             """Return pseudo-clicks/non-clicks without adding Merino priors.
 
-            Nonzero artifact rows are already ACTRSSM pseudo-counts. Missing
-            or zero/zero rows have no exposure, so synthesize the cold-start
+            Valid artifact rows are already ACTRSSM pseudo-counts. Missing,
+            zero/zero, or inconsistent rows use the seasonal cold-start
             pseudo-counts for the active engagement region.
             """
             engagement = self.engagement_backend.get(rec.corpusItemId, engagement_region)
-            if engagement is None or (
-                engagement.click_count == 0 and engagement.impression_count == 0
-            ):
-                opens, no_opens = _missing_sparse_row_pseudocounts(engagement_region)
-            else:
-                opens, no_opens = _opens_no_opens_from_engagement(engagement)
+            opens, no_opens = _opens_no_opens_from_engagement(engagement, engagement_region)
             if rescaler is not None:
                 opens, no_opens = rescaler.rescale(rec, opens, no_opens)
             return opens, no_opens
@@ -288,16 +304,25 @@ class CTRPredictionRanker(Ranker):
         region: str | None = None,
         engagement_region: str | None = None,
     ) -> dict[str, Section]:
-        """Re-rank sections using [Thompson sampling][thompson-sampling], based on the combined engagement of top items.
+        """Rank sections by sampling Beta distributions from summed item pseudo-counts.
 
-        :param sections: Mapping of section IDs to Section objects whose recommendations will be scored.
-        :param engagement_backend: Provides aggregate click and impression engagement by corpusItemId.
-        :param top_n: Number of top items in each section for which to sum engagement in the Thompson sampling score.
-        :param rescaler: Class that can up-scale interaction stats for certain items based on experiment size
+        Select up to top_n items per section using the freshness filter, rescale
+        their pseudo-counts, and sum them into section Beta parameters. Missing,
+        zero/zero, and invalid rows use seasonal hourly pseudo-counts. No additive
+        Merino prior or global engagement blend is applied; section boosts are
+        added after sampling.
 
-        :return: Mapping of section IDs to Section objects with updated receivedFeedRank.
+        Args:
+            sections: Section IDs mapped to sections containing ranked recommendations.
+            top_n: Maximum number of retained items contributing to each section score.
+            rescaler: Optional count rescaling, fresh-item retention, and section boosts.
+            region: Base country key used if no candidate has branch engagement.
+            engagement_region: Engagement lookup key, typically the treatment branch.
+                Defaults to region; falls back to region for all sections if none of
+                their candidates has a row under this key.
 
-        [thompson-sampling]: https://en.wikipedia.org/wiki/Thompson_sampling
+        Returns:
+            Sections ordered by sampled score with updated receivedFeedRank values.
         """
         engagement_region = self.resolve_engagement_region(
             [rec for sec in sections.values() for rec in sec.recommendations],
@@ -306,9 +331,7 @@ class CTRPredictionRanker(Ranker):
         )
 
         def sample_score(section_id: str, sec: Section) -> float:
-            """Sample beta distribution for the combined engagement of the top _n_ items."""
-            # sum clicks and impressions over top_n items
-
+            """Sample from the summed pseudo-counts of retained top items."""
             fresh_retain_likelyhood = (
                 rescaler.fresh_items_section_ranking_max_percentage
                 if rescaler is not None
@@ -323,12 +346,7 @@ class CTRPredictionRanker(Ranker):
 
             for rec in recs:
                 engagement = self.engagement_backend.get(rec.corpusItemId, engagement_region)
-                if engagement is None or (
-                    engagement.click_count == 0 and engagement.impression_count == 0
-                ):
-                    opens, no_opens = _missing_sparse_row_pseudocounts(engagement_region)
-                else:
-                    opens, no_opens = _opens_no_opens_from_engagement(engagement)
+                opens, no_opens = _opens_no_opens_from_engagement(engagement, engagement_region)
                 if rescaler is not None:
                     opens, no_opens = rescaler.rescale(rec, opens, no_opens)
 
