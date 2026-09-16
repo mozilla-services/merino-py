@@ -278,11 +278,11 @@ def test_engagement_region_is_ignored_for_lints_ranker() -> None:
 
     ranker.rank_items(
         recs,
-        region="DE",
-        engagement_region="DE-publisher-constraint-in-germany-treatment",
+        region="GB",
+        engagement_region="GB-ctrpred_engb-control",
     )
 
-    assert engagement_backend.calls == [("A", None), ("A", "DE")]
+    assert engagement_backend.calls == [("A", None), ("A", "GB")]
 
 
 def test_strict_score_descending_order() -> None:

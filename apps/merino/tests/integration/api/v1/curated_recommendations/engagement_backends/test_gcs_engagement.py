@@ -213,8 +213,8 @@ async def test_gcs_engagement_fetches_branch_region_data(
         gcs_bucket,
         [
             {
-                "corpus_item_id": "DE1",
-                "region": "DE-publisher-constraint-in-germany-treatment",
+                "corpus_item_id": "GB1",
+                "region": "GB-ctrpred_engb-control",
                 "click_count": 7,
                 "impression_count": 70,
             }
@@ -223,9 +223,9 @@ async def test_gcs_engagement_fetches_branch_region_data(
     gcs_engagement = create_gcs_engagement(gcs_storage_client, gcs_bucket, metrics_client)
     await wait_until_engagement_is_updated(gcs_engagement)
 
-    assert gcs_engagement.get("DE1", "DE-publisher-constraint-in-germany-treatment") == Engagement(
-        corpus_item_id="DE1",
-        region="DE-publisher-constraint-in-germany-treatment",
+    assert gcs_engagement.get("GB1", "GB-ctrpred_engb-control") == Engagement(
+        corpus_item_id="GB1",
+        region="GB-ctrpred_engb-control",
         click_count=7,
         impression_count=70,
     )

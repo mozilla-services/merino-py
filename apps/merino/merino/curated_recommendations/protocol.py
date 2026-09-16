@@ -113,9 +113,6 @@ class ExperimentName(str, Enum):
     SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT = "sections-in-global-spanish"
     CTR_PREDICTION_ENGB_EXPERIMENT = "ctrpred_engb"
 
-    # Experiment to apply Germany publisher constraint engagement by branch
-    PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT = "publisher-constraint-in-germany"
-
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
