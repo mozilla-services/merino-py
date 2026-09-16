@@ -5,17 +5,26 @@ from unittest.mock import MagicMock
 import pytest
 from merino.search.elastic import ElasticSearchAdapter
 
+REQUEST_TIMEOUT = 60.0
+CREATE_INDEX_TIMEOUT = 120.0
+
 
 @pytest.fixture
 def adapter() -> ElasticSearchAdapter:
     """Return an ElasticSearchAdapter configured with dummy connection settings."""
-    return ElasticSearchAdapter(url="https://example:9200", api_key="abc123")
+    return ElasticSearchAdapter(
+        url="https://example:9200",
+        api_key="abc123",
+        request_timeout=REQUEST_TIMEOUT,
+        create_index_timeout=CREATE_INDEX_TIMEOUT,
+    )
 
 
 def _mock_client() -> MagicMock:
     """Return a mocked Elasticsearch client"""
     client = MagicMock(name="ElasticsearchClient")
     client.indices = MagicMock(name="IndicesClient")
+    client.options.return_value = client
     return client
 
 
@@ -77,6 +86,44 @@ def test_create_index_returns_acknowledged_true(
         aliases={"my-alias": {}},
         wait_for_active_shards="all",
     )
+
+
+def test_create_index_applies_a_longer_timeout(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that create_index overrides the client's default request timeout."""
+    client = _mock_client()
+    client.indices.create.return_value = {"acknowledged": True}
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.create_index(index="my-index")
+
+    client.options.assert_called_once_with(request_timeout=CREATE_INDEX_TIMEOUT)
+
+
+def test_create_index_accepts_a_custom_timeout(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that callers can override the index creation timeout."""
+    client = _mock_client()
+    client.indices.create.return_value = {"acknowledged": True}
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.create_index(index="my-index", request_timeout=5)
+
+    client.options.assert_called_once_with(request_timeout=5)
+
+
+def test_create_client_sets_a_default_request_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify the client is built with the configured request timeout."""
+    elasticsearch = MagicMock(name="Elasticsearch")
+    monkeypatch.setattr("merino.search.elastic.Elasticsearch", elasticsearch)
+
+    ElasticSearchAdapter(
+        url="http://es:9200", api_key="key", request_timeout=7, create_index_timeout=9
+    ).create_client()
+
+    assert elasticsearch.call_args.kwargs["request_timeout"] == 7
 
 
 def test_create_index_returns_acknowledged_false_when_missing(

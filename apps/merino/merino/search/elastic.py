@@ -17,9 +17,13 @@ class ElasticSearchAdapter:
         *,
         url: str,
         api_key: str,
+        request_timeout: float,
+        create_index_timeout: float,
     ) -> None:
         self._url = url
         self._api_key = api_key
+        self._request_timeout = request_timeout
+        self._create_index_timeout = create_index_timeout
         self._client: Elasticsearch | None = None
 
     def create_client(self) -> Elasticsearch:
@@ -27,6 +31,7 @@ class ElasticSearchAdapter:
         return Elasticsearch(
             self._url,
             api_key=self._api_key,
+            request_timeout=self._request_timeout,
         )
 
     def get_client(self) -> Elasticsearch:
@@ -50,17 +55,22 @@ class ElasticSearchAdapter:
         settings: dict[str, Any] | None = None,
         aliases: dict[str, Any] | None = None,
         wait_for_active_shards: str | int = "1",
+        request_timeout: float | None = None,
     ) -> bool:
         """Create an index and return whether the operation was acknowledged.
 
         Note: This does not check for existence. Call `index_exists()` if needed.
         """
-        res = self.get_client().indices.create(
-            index=index,
-            mappings=mappings,
-            settings=settings,
-            aliases=aliases,
-            wait_for_active_shards=wait_for_active_shards,
+        res = (
+            self.get_client()
+            .options(request_timeout=request_timeout or self._create_index_timeout)
+            .indices.create(
+                index=index,
+                mappings=mappings,
+                settings=settings,
+                aliases=aliases,
+                wait_for_active_shards=wait_for_active_shards,
+            )
         )
         return bool(res.get("acknowledged", False))
 

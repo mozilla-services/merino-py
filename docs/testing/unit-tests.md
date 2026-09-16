@@ -5,6 +5,11 @@ Due to their narrow scope, unit tests are fundamental to thorough test coverage.
 
 To execute unit tests, use: `make unit-tests`
 
+For project-scoped execution, use `moon run merino:test`, `moon run fleece:test`, or
+`moon run merino-common:test`. `moon run :test` runs all three suites in parallel. See
+[project-scoped tests and coverage](../dev/monorepo.md#project-scoped-tests-and-coverage) for reports,
+coverage checks, and affected-test selection.
+
 Unit tests are written and executed with pytest and are located in the `apps/merino/tests/unit` directory,
 using the same organizational structure as the source code of the merino service.
 Type aliases dedicated for test should be stored in the `types.py` module.
