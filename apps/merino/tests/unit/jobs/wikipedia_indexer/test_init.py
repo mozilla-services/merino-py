@@ -14,9 +14,12 @@ MODULE = "merino.jobs.wikipedia_indexer"
 @pytest.fixture(name="collaborators")
 def fixture_collaborators(mocker):
     """Replace everything the CLI commands construct or call out to."""
+    file_manager = mocker.patch(f"{MODULE}.FileManager")
+    file_manager.return_value.stream_latest_dump_to_gcs = mocker.AsyncMock()
+
     return {
         "adapter": mocker.patch(f"{MODULE}.ElasticSearchAdapter"),
-        "file_manager": mocker.patch(f"{MODULE}.FileManager"),
+        "file_manager": file_manager,
         "indexer": mocker.patch(f"{MODULE}.Indexer"),
         "create_blocklist": mocker.patch(f"{MODULE}.create_blocklist", return_value={"meme"}),
     }
