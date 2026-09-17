@@ -52,7 +52,6 @@ from merino.curated_recommendations.protocol import (
     CuratedRecommendation,
     Section,
     SectionConfiguration,
-    EditorialSectionsBranch,
     ExperimentName,
     DailyBriefingBranch,
     ProcessedInterests,
@@ -252,7 +251,6 @@ async def get_corpus_sections(
     surface_id: SurfaceId,
     min_feed_rank: int,
     include_subtopics: bool = False,
-    exclude_editorial_sections: bool = False,
 ) -> tuple[CorpusSection | None, dict[str, Section]]:
     """Fetch curated sections.
 
@@ -261,7 +259,6 @@ async def get_corpus_sections(
         surface_id: Identifier for which surface to fetch sections.
         min_feed_rank: Starting rank offset for assigning receivedFeedRank.
         include_subtopics: Whether to include subtopic sections.
-        exclude_editorial_sections: Whether to drop manually curated sections.
 
     Returns:
         A tuple of the raw daily-briefing CorpusSection (if present,
@@ -283,13 +280,6 @@ async def get_corpus_sections(
         remaining_raw,
         include_subtopics,
     )
-
-    if exclude_editorial_sections:
-        filtered_corpus_sections = {
-            sid: cs
-            for sid, cs in filtered_corpus_sections.items()
-            if cs.createSource != CreateSource.MANUAL
-        }
 
     # Process the sections using the shared logic
     corpus_sections = _process_corpus_sections(
@@ -412,29 +402,6 @@ def is_custom_sections_experiment(request: CuratedRecommendationsRequest) -> boo
     """Return True if custom sections should be included based on experiments."""
     return is_enrolled_in_experiment(
         request, ExperimentName.NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT.value, "treatment"
-    )
-
-
-def should_exclude_editorial_sections(
-    request: CuratedRecommendationsRequest,
-    surface_id: SurfaceId,
-) -> bool:
-    """Return True if editorial (manually curated) sections must be hidden.
-
-    Editorial sections are being introduced in Germany as an experiment-gated feature, so on
-    NEW_TAB_DE_DE they are hidden unless the request is on the `treatment` branch of the German
-    experiment. The 20% holdback and any unenrolled DE client see no editorial sections. All
-    other surfaces show them unconditionally.
-
-    Popular Today, Daily Briefing and ML sections are unaffected.
-    """
-    if surface_id != SurfaceId.NEW_TAB_DE_DE:
-        return False
-
-    return not is_enrolled_in_experiment(
-        request,
-        ExperimentName.EDITORIAL_SECTIONS_GERMANY_EXPERIMENT.value,
-        EditorialSectionsBranch.GERMANY_TREATMENT.value,
     )
 
 
@@ -869,7 +836,6 @@ async def get_sections(
         surface_id=surface_id,
         min_feed_rank=1,
         include_subtopics=True,
-        exclude_editorial_sections=should_exclude_editorial_sections(request, surface_id),
     )
 
     # Determine if we should include daily briefing based on experiment
