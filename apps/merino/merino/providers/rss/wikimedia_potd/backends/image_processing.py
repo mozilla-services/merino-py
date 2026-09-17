@@ -11,9 +11,16 @@ from merino.utils.gcs.models import Image
 
 logger = logging.getLogger(__name__)
 
-# A decoded image holds ~3 bytes per pixel in memory, so an unbounded source could OOM the
-# job pod. Failing this check skips the day's update and keeps the previous picture serving.
-MAX_SOURCE_PIXELS = 500_000_000
+# Upper bound on the pixels the decoder is allowed to materialise, which is what the job
+# pod's memory limit is really spent on. A decoded image holds ~3 bytes per pixel and the
+# downscale allocates a further intermediate on top of that. The bound is on the decoded
+# size rather than the source's nominal size because `draft()` below often decodes a very
+# large JPEG at a fraction of its resolution, so the two can diverge sharply. An 81MP
+# source drafts down to 20MP and peaks ~130MB lower than a 40MP source that cannot be
+# drafted at all. At 40MP the job peaks near 700MB on a synthetic incompressible source
+# and around 420MB on a real photograph, both inside the 1Gi cron pod limit. Exceeding
+# the bound skips the day's update and keeps the previous picture serving.
+MAX_DECODED_PIXELS = 40_000_000
 
 
 def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> Image:
@@ -25,14 +32,14 @@ def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> I
 
     Returns:
         An Image holding the WebP content. Raises WikimediaPotdError when the source
-        cannot be decoded or is larger than MAX_SOURCE_PIXELS.
+        cannot be decoded or decodes to more than MAX_DECODED_PIXELS.
     """
     try:
         # PIL's decompression bomb guard warns at ~89 megapixels, below routine POTD sizes,
-        # so it is swapped for the explicit MAX_SOURCE_PIXELS check below while open() parses
-        # the header. The override is scoped to this call because the web service imports
-        # this module and its guard must stay intact there; nothing else in the potd update
-        # job uses PIL concurrently.
+        # so it is swapped for the explicit MAX_DECODED_PIXELS check below while open()
+        # parses the header. The override is scoped to this call because the web service
+        # imports this module and its guard must stay intact there. Nothing else in the potd
+        # update job uses PIL concurrently.
         original_max_pixels = PILImage.MAX_IMAGE_PIXELS
         PILImage.MAX_IMAGE_PIXELS = None
         try:
@@ -42,31 +49,39 @@ def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> I
 
         with img:
             source_width, source_height = img.size
-            if source_width * source_height > MAX_SOURCE_PIXELS:
-                raise WikimediaPotdError(
-                    f"POTD image of {source_width}x{source_height} pixels exceeds the "
-                    f"{MAX_SOURCE_PIXELS} pixel processing bound"
-                )
 
             # decode JPEG sources at a reduced DCT scale (a no-op for other formats) so a
-            # very large picture is never held at full resolution in memory
+            # very large picture is never held at full resolution in memory. This only
+            # records the scale to decode at. No pixels are materialised until they are
+            # first accessed, which is why the bound below can be enforced before the
+            # decode rather than after it.
             img.draft(img.mode, (max_dimension, max_dimension))
 
+            if img.width * img.height > MAX_DECODED_PIXELS:
+                raise WikimediaPotdError(
+                    f"POTD image of {source_width}x{source_height} pixels decodes to "
+                    f"{img.width}x{img.height}, over the {MAX_DECODED_PIXELS} pixel "
+                    f"processing bound"
+                )
+
+            # downscale before transposing. The bounding box is square, so both orders
+            # yield the same dimensions, but resizing first leaves the transpose working on
+            # the small image rather than copying the full-resolution one.
+            img.thumbnail((max_dimension, max_dimension), PILImage.Resampling.LANCZOS)
+
             # bake the EXIF orientation into the pixels since the tag is stripped on save
-            processed = ImageOps.exif_transpose(img)
+            ImageOps.exif_transpose(img, in_place=True)
 
-        # in-place downscale that preserves the aspect ratio and never upscales
-        processed.thumbnail((max_dimension, max_dimension), PILImage.Resampling.LANCZOS)
-
-        buffer = BytesIO()
-        # the WebP encoder converts to RGB itself. EXIF and other metadata are dropped;
-        # the ICC profile is kept so colors survive.
-        processed.save(
-            buffer,
-            format="WEBP",
-            quality=webp_quality,
-            icc_profile=processed.info.get("icc_profile"),
-        )
+            buffer = BytesIO()
+            # the WebP encoder converts to RGB itself. EXIF and other metadata are dropped;
+            # the ICC profile is kept so colors survive.
+            img.save(
+                buffer,
+                format="WEBP",
+                quality=webp_quality,
+                icc_profile=img.info.get("icc_profile"),
+            )
+            processed_width, processed_height = img.size
     except OSError as ex:
         raise WikimediaPotdError(f"Failed to process POTD image: {ex}") from ex
 
@@ -76,7 +91,7 @@ def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> I
         "Processed POTD image",
         extra={
             "source_dimensions": f"{source_width}x{source_height}",
-            "processed_dimensions": f"{processed.width}x{processed.height}",
+            "processed_dimensions": f"{processed_width}x{processed_height}",
             "source_bytes": len(image.content),
             "processed_bytes": len(processed_image.content),
         },

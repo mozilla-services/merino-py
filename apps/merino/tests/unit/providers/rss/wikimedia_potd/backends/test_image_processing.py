@@ -81,6 +81,22 @@ class TestProcessPotdImage:
             assert img.size == (100, 200)
             assert not img.getexif()
 
+    def test_applies_exif_orientation_when_also_downscaling(self) -> None:
+        """Fits the bounding box in the displayed orientation, not the stored one.
+
+        The downscale runs before the transpose, so a rotating orientation has to survive
+        being applied to an already-resized image.
+        """
+        exif = PILImage.Exif()
+        exif[EXIF_ORIENTATION_TAG] = 6
+
+        result = process_potd_image(
+            make_image(800, 400, exif=exif), max_dimension=200, webp_quality=75
+        )
+
+        with open_processed(result) as img:
+            assert img.size == (100, 200)
+
     def test_raises_for_undecodable_content(self) -> None:
         """Raises WikimediaPotdError when the content is not a decodable image."""
         image = Image(content=b"not an image", content_type="image/jpeg")
@@ -88,12 +104,49 @@ class TestProcessPotdImage:
         with pytest.raises(WikimediaPotdError):
             process_potd_image(image, max_dimension=200, webp_quality=75)
 
-    def test_raises_when_source_exceeds_pixel_bound(self, mocker: MockerFixture) -> None:
-        """Raises WikimediaPotdError when the source has more pixels than MAX_SOURCE_PIXELS."""
+    def test_raises_when_decoded_size_exceeds_pixel_bound(self, mocker: MockerFixture) -> None:
+        """Raises WikimediaPotdError when the decode would exceed MAX_DECODED_PIXELS."""
         mocker.patch(
-            "merino.providers.rss.wikimedia_potd.backends.image_processing.MAX_SOURCE_PIXELS",
+            "merino.providers.rss.wikimedia_potd.backends.image_processing.MAX_DECODED_PIXELS",
             100,
         )
 
         with pytest.raises(WikimediaPotdError):
             process_potd_image(make_image(20, 20), max_dimension=200, webp_quality=75)
+
+    def test_bound_applies_to_the_decoded_size_not_the_source_size(
+        self, mocker: MockerFixture
+    ) -> None:
+        """Accepts an oversized JPEG that draft() decodes down under MAX_DECODED_PIXELS.
+
+        A 1600x1600 source is over the bound below, but asking for a 200px longest edge lets
+        the JPEG decoder run at 1/8 scale, so only 200x200 pixels are ever materialised.
+        """
+        mocker.patch(
+            "merino.providers.rss.wikimedia_potd.backends.image_processing.MAX_DECODED_PIXELS",
+            1_000_000,
+        )
+
+        result = process_potd_image(make_image(1600, 1600), max_dimension=200, webp_quality=75)
+
+        with open_processed(result) as img:
+            assert img.size == (200, 200)
+
+    def test_bound_is_enforced_before_the_source_is_decoded(self, mocker: MockerFixture) -> None:
+        """Rejects an oversized source without ever materialising its pixels.
+
+        The bound exists to keep the job inside its pod memory limit, so it is worthless if
+        the decode has already happened by the time it is checked.
+        """
+        mocker.patch(
+            "merino.providers.rss.wikimedia_potd.backends.image_processing.MAX_DECODED_PIXELS",
+            100,
+        )
+        # built before the spy so that encoding the source itself is not counted
+        image = make_image(400, 400)
+        load = mocker.spy(PILImage.Image, "load")
+
+        with pytest.raises(WikimediaPotdError):
+            process_potd_image(image, max_dimension=400, webp_quality=75)
+
+        load.assert_not_called()
