@@ -132,6 +132,27 @@ class TestProcessPotdImage:
         with open_processed(result) as img:
             assert img.size == (200, 200)
 
+    def test_drafts_an_elongated_source_against_its_fitted_target(
+        self, mocker: MockerFixture
+    ) -> None:
+        """Lets the JPEG decoder scale down a panorama that the square box would hold back.
+
+        draft() only halves while the result stays at or above the size it is asked for, so
+        against a square bounding box an elongated source is pinned at full resolution by
+        its short edge. A 1600x400 source fitted to a 200px longest edge targets 200x50 and
+        so decodes at 1/8 for 10k pixels. Against the square box its short edge caps the
+        decode at 1/2, leaving 160k pixels and busting the bound patched in below.
+        """
+        mocker.patch(
+            "merino.providers.rss.wikimedia_potd.backends.image_processing.MAX_DECODED_PIXELS",
+            50_000,
+        )
+
+        result = process_potd_image(make_image(1600, 400), max_dimension=200, webp_quality=75)
+
+        with open_processed(result) as img:
+            assert img.size == (200, 50)
+
     def test_bound_is_enforced_before_the_source_is_decoded(self, mocker: MockerFixture) -> None:
         """Rejects an oversized source without ever materialising its pixels.
 

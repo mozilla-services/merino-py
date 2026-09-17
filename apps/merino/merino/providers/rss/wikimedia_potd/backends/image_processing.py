@@ -15,12 +15,25 @@ logger = logging.getLogger(__name__)
 # pod's memory limit is really spent on. A decoded image holds ~3 bytes per pixel and the
 # downscale allocates a further intermediate on top of that. The bound is on the decoded
 # size rather than the source's nominal size because `draft()` below often decodes a very
-# large JPEG at a fraction of its resolution, so the two can diverge sharply. An 81MP
-# source drafts down to 20MP and peaks ~130MB lower than a 40MP source that cannot be
-# drafted at all. At 40MP the job peaks near 700MB on a synthetic incompressible source
-# and around 420MB on a real photograph, both inside the 1Gi cron pod limit. Exceeding
-# the bound skips the day's update and keeps the previous picture serving.
-MAX_DECODED_PIXELS = 40_000_000
+# large JPEG at a fraction of its resolution, so the two can diverge sharply: a 16000x4000
+# panorama decodes at 4MP and peaks at 173MB. 60MP rejects under 0.1% of pictures of the
+# day. It also sits just above the most a JPEG can reach at all, 58.9MP, because draft()
+# halves any source whose longest edge is twice the target; that worst case peaks at
+# 621MB, inside the 1Gi cron pod limit. The bound therefore mostly guards the formats
+# draft() cannot scale, such as PNG. Exceeding it skips the day's update and keeps the
+# previous picture serving.
+MAX_DECODED_PIXELS = 60_000_000
+
+
+def _fitted_size(width: int, height: int, max_dimension: int) -> tuple[int, int]:
+    """Scale `width` x `height` to fit a `max_dimension` square, never upscaling.
+
+    Returns:
+        The fitted dimensions, each at least one pixel.
+    """
+    scale = min(max_dimension / width, max_dimension / height, 1.0)
+
+    return max(1, round(width * scale)), max(1, round(height * scale))
 
 
 def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> Image:
@@ -55,7 +68,13 @@ def process_potd_image(image: Image, max_dimension: int, webp_quality: int) -> I
             # records the scale to decode at. No pixels are materialised until they are
             # first accessed, which is why the bound below can be enforced before the
             # decode rather than after it.
-            img.draft(img.mode, (max_dimension, max_dimension))
+            #
+            # draft() halves only while the result stays at or above the size it is asked
+            # for, so it has to be given the aspect-fitted target rather than the square
+            # bounding box. Against the square box an elongated source is held back by its
+            # short edge: a 16000x4000 panorama stays at its full 64MP, where the fitted
+            # target lets the decoder run at 1/4 scale for 4MP.
+            img.draft(img.mode, _fitted_size(source_width, source_height, max_dimension))
 
             if img.width * img.height > MAX_DECODED_PIXELS:
                 raise WikimediaPotdError(
