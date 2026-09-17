@@ -372,6 +372,111 @@ def test_index_from_export_with_title_blocklist_content_filter(
     es_adapter.bulk.assert_called_once()
 
 
+def test_index_from_export_filters_redirects(
+    file_manager,
+    es_adapter,
+    category_blocklist,
+    title_blocklist,
+):
+    """Test that redirect documents are not indexed."""
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+
+    def check_bulk_side_effect(operations):
+        """Use a side effect to check only the primary document reaches bulk.
+        The operations list is mutable, so the contents must be checked at call time.
+        """
+        assert len(operations) == 2
+        assert operations[1]["title"] == "Paris"
+        return {
+            "acknowledged": True,
+            "errors": False,
+            "items": [{"id": 1000}],
+        }
+
+    es_adapter.bulk.side_effect = check_bulk_side_effect
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    operation0 = {"index": {"_type": "doc", "_id": "1000"}}
+    document0 = {
+        "title": "Paris",
+        "text_bytes": 1000,
+        "incoming_links": 10,
+        "popularity_score": 0.0003,
+        "create_timestamp": "2001-06-10T22:29:58Z",
+        "page_id": 1000,
+        "page_type": "primary",
+        "category": ["cities"],
+    }
+    operation_filtered_out = {"index": {"_type": "doc", "_id": "1001"}}
+    document_filtered_out = {
+        "title": "Paris, France",
+        "text_bytes": 1000,
+        "incoming_links": 10,
+        "popularity_score": 0.0003,
+        "create_timestamp": "2001-06-10T22:29:58Z",
+        "page_id": 1001,
+        "page_type": "redirect",
+        "category": ["cities"],
+    }
+
+    inputs = [
+        json.dumps(operation0),
+        json.dumps(document0),
+        json.dumps(operation_filtered_out),
+        json.dumps(document_filtered_out),
+    ]
+
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+
+    indexer.index_from_export(1, "enwiki")
+
+    es_adapter.bulk.assert_called_once()
+
+
+def test_index_from_export_keeps_documents_without_a_page_type(
+    file_manager,
+    es_adapter,
+    category_blocklist,
+    title_blocklist,
+):
+    """Test that a document with no page type is still indexed."""
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+
+    es_adapter.bulk.return_value = {
+        "acknowledged": True,
+        "errors": False,
+        "items": [{"id": 1000}],
+    }
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    inputs = [
+        json.dumps({"index": {"_type": "doc", "_id": "1000"}}),
+        json.dumps(
+            {
+                "title": "Paris",
+                "text_bytes": 1000,
+                "incoming_links": 10,
+                "popularity_score": 0.0003,
+                "create_timestamp": "2001-06-10T22:29:58Z",
+                "page_id": 1000,
+                "category": ["cities"],
+            }
+        ),
+    ]
+
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+
+    indexer.index_from_export(1, "enwiki")
+
+    es_adapter.bulk.assert_called_once()
+
+
 def _set_queue(indexer, n=1):
     # queue is [op, doc, op, doc, ...]
     indexer.queue.clear()
