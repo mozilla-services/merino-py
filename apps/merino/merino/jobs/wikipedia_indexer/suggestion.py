@@ -100,7 +100,7 @@ class Builder:
     batch_id: int
     version: str
 
-    def __init__(self, version: str, max_docs: int = 6_500_000) -> None:
+    def __init__(self, version: str, max_docs: int = 7_300_000) -> None:
         self.batch_id = int(time.time_ns() / 1000)
         self.version = version
         self.scorer = Scorer(max_docs)

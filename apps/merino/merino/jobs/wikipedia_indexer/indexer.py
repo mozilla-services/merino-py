@@ -18,6 +18,9 @@ from merino.search.elastic import ElasticSearchAdapter
 
 logger = logging.getLogger(__name__)
 
+# Page type the export uses for a redirect, e.g. "Paris, France" pointing at "Paris".
+REDIRECT_PAGE_TYPE = "redirect"
+
 
 class Indexer:
     """Index documents from wikimedia search exports into Elasticsearch"""
@@ -118,13 +121,14 @@ class Indexer:
 
     def _should_filter(self, doc: Dict[str, Any]) -> bool:
         """Return True if we want to filter out this document and not index it.
-        Checks for existence of matching categories or title in both title and category blocklists.
+        Checks for redirects, matching categories, or title in the category and title blocklists.
         """
         categories: set[str] = set(doc.get("category", []))
         title: str = doc.get("title", "")
+        should_filter_redirect: bool = doc.get("page_type") == REDIRECT_PAGE_TYPE
         should_filter_category: bool = not self.category_blocklist.isdisjoint(categories)
         should_filter_title: bool = title.lower() in self.title_blocklist if title != "" else True
-        return should_filter_category or should_filter_title
+        return should_filter_redirect or should_filter_category or should_filter_title
 
     def _enqueue(self, index_name: str, tpl: tuple[Mapping[str, Any], ...]):
         op, doc = self._parse_tuple(index_name, tpl)

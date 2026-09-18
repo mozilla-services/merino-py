@@ -1588,7 +1588,7 @@ index_version = "v1"
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__TOTAL_DOCS
 # Estimate of the total documents in the elasticsearch index.
-total_docs = 6_400_000
+total_docs = 7_300_000
 
 # MERINO_JOBS__WIKIPEDIA_INDEXER__GCS_PATH
 # GCS path. Combined bucket and object prefix (folders).
