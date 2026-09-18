@@ -10,6 +10,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          filter: blob:none
       - uses: ./.github/actions/build-project-image
         with:
           project: merino

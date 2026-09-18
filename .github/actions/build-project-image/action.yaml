@@ -13,7 +13,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: moonrepo/setup-toolchain@v0
+    - uses: ./.github/actions/setup-moon
     - name: Create version.json
       shell: bash
       run: |
