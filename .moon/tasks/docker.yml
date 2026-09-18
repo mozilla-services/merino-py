@@ -1,0 +1,33 @@
+inheritedBy:
+  file: Dockerfile
+
+tasks:
+  docker-build:
+    description: Build this project's image in the local Docker daemon
+    command: docker
+    args:
+      - build
+      - --file
+      - $projectSource/Dockerfile
+    inputs:
+      - "**/*"
+      - /pyproject.toml
+      - /uv.lock
+      - /apps/*/pyproject.toml
+      - /packages/*/pyproject.toml
+      - /tools/*/pyproject.toml
+      - /LICENSE
+      - /version.json
+      - /.dockerignore
+      - /.prototools
+      - /moon.yml
+      - /.github/**/*
+      - project://^
+    tags:
+      - docker
+      - ci
+    toolchains: system
+    options:
+      # Docker owns the image/layer cache; a Moon cache hit cannot restore an image.
+      cache: false
+      runFromWorkspaceRoot: true

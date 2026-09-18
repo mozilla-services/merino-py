@@ -11,15 +11,14 @@ implicitInputs:
   - /.python-version
   - project://^
 
-implicitDeps:
-  - workspace:install
-
 taskOptions:
   runFromWorkspaceRoot: true
 
 tasks:
   lint:
     description: Run Ruff lint checks for this project
+    deps:
+      - workspace:install
     command: uv
     args:
       - run
@@ -33,6 +32,8 @@ tasks:
 
   format-check:
     description: Check Ruff formatting for this project
+    deps:
+      - workspace:install
     command: uv
     args:
       - run
@@ -47,6 +48,8 @@ tasks:
 
   security:
     description: Run Bandit security checks for this project
+    deps:
+      - workspace:install
     command: uv
     args:
       - run
@@ -61,6 +64,8 @@ tasks:
 
   typecheck:
     description: Run mypy for this project
+    deps:
+      - workspace:install
     command: uv
     args:
       - run
@@ -76,6 +81,8 @@ tasks:
 
   test:
     description: Run unit tests for this project
+    deps:
+      - workspace:install
     command: uv
     args:
       - run

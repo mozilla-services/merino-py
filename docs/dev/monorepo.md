@@ -59,7 +59,7 @@ moon --version
 changing the version used by other repositories. A developer who does not run Moon commands does
 not need the CLI, but commands such as `make moon-test` and `moon run merino:test` require it.
 
-Every Python task depends on one repository-level install task. That task runs `uv sync --frozen`
+Python quality and test tasks depend on one repository-level install task. That task runs `uv sync --frozen`
 once before Moon starts parallel work. The project tasks then invoke `uv run --frozen --no-sync`,
 so they never compete to update the shared virtual environment.
 
@@ -208,3 +208,43 @@ uv sync --all-groups --all-packages
 
 The root `uv.lock` is shared by all Python projects. A lockfile or root Python configuration change
 therefore affects every Python project by design.
+
+## Docker builds
+
+Each deployable project owns a `docker-build` task. With Docker running, build one image or all
+three from the repository root:
+
+```bash
+moon run merino:docker-build      # app:build
+moon run fleece:docker-build      # app-fleece:build
+moon run load-tests:docker-build  # merino-locust:build
+moon run :docker-build
+```
+
+These tasks install dependencies inside Docker and do not sync the host Python environment.
+Moon caching is disabled for image builds because a Moon cache hit cannot restore an image into
+the Docker daemon. Docker still reuses its own cached layers.
+
+PR and main CI use Moon's Docker task inputs to select images:
+
+| Changed files | Images built |
+| --- | --- |
+| Fleece code | Fleece |
+| Merino code | Merino and Locust |
+| Load-test code | Locust |
+| Shared package, workspace manifests, or lockfile | All three |
+| Docker/Moon/CI configuration | Affected images; shared configuration rebuilds all three |
+| Documentation only | None |
+
+Service Dockerfiles copy their own project, shared code, and required runtime files. They also
+copy every Python workspace manifest so `uv` can resolve the workspace without including unrelated
+application code. Locust includes Merino because its tests import Merino internals.
+
+For PRs, selection compares the checked-out merge commit with the PR base. For pushes, it compares
+the previous tip with the new tip, including every pushed commit and both sides of a rename. If
+the previous commit is unavailable, CI builds all images. Manually running `main-workflow` also
+builds all images, which can recover a failed release or refresh external base images.
+
+The existing Make-based checks and full test suite still run in CI and gate image publication.
+Running Moon tests alongside existing CI (DISCO-4443) and switching testing over to Moon
+(DISCO-4441) remain separate steps.

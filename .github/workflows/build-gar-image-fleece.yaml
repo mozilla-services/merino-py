@@ -10,25 +10,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
-      - name: Get info
-        run: |
-          uname -v
-          docker info
-      - name: Create version.json
-        run: |
-          printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
-          "$GITHUB_SHA" \
-          "$GITHUB_REF_NAME" \
-          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
-          "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
-      - name: Output version.json
-        run: cat version.json
-      - name: Build docker image
-        run: make docker-build-fleece
-      - name: Save app:build image
-        run: docker save app-fleece:build | gzip > fleece-image.tar.gz
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v6
+      - uses: ./.github/actions/build-project-image
         with:
-          name: merino-fleece
-          path: fleece-image.tar.gz
+          project: fleece
+          image: app-fleece:build
+          artifact-name: merino-fleece

@@ -5,8 +5,18 @@ This project currently follows a [Continuous Deployment][continuous_deployment] 
 [continuous_deployment]: https://en.wikipedia.org/wiki/Continuous_deployment
 
 Whenever a commit is pushed to this repository's `main` branch, the GitHub Actions
-`main-workflow` performs code checks, runs automated tests, and builds the service images. Image
-publication requires the checks, tests, and corresponding image build to succeed.
+`main-workflow` performs code checks, runs automated tests, and builds only the affected project
+images. Moon selects Merino, Fleece, and Locust independently using their task inputs and project
+dependencies. Documentation-only changes do not publish images; shared code or dependency changes
+can rebuild all three. See [Docker builds](monorepo.md#docker-builds) for the selection rules.
+
+Image publication requires the checks, tests, and corresponding image build to succeed. The same
+Merino build artifact is published to GAR and Docker Hub. Fleece and Locust each have their own
+build artifact and GAR publication.
+
+To rebuild every image after a failed release or refresh external base images, manually run
+`main-workflow` in GitHub Actions with the `main` branch selected. Publishing is restricted to
+`main`, including manual runs, and still requires successful checks and tests.
 
 Pushing a new Docker image to the Docker Hub registry triggers a webhook that starts the Jenkins
 deployment pipeline (the Docker image tag determines the target environment). The deployment
@@ -14,9 +24,9 @@ pipeline first deploys to the [`stage` environment][stage_environment] and subse
 [`production` environment][production_environment].
 
 After the deployment is complete, accessing the [`__version__` endpoint][stage_version] will show
-the commit hash of the deployed version, which will eventually match to the one of the latest commit
-on the `main` branch (a node with an older version might still serve the request before it is shut
-down).
+the commit hash of the deployed Merino version. This is the most recent commit that published a
+Merino image, which may precede the latest `main` commit when later changes affect only docs or
+other projects. During rollout, a node with an older version may still serve the request.
 
 [stage_environment]: ../firefox.md#stage
 [production_environment]: ../firefox.md#production

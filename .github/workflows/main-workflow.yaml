@@ -4,8 +4,12 @@ on:
   push:
     branches:
       - main
+  # Rebuild all images to recover a failed release or refresh external dependencies.
+  workflow_dispatch:
 
 jobs:
+  detect-images:
+    uses: ./.github/workflows/detect-image-changes.yaml
   run-checks:
     uses: ./.github/workflows/checks.yaml
   run-tests:
@@ -28,11 +32,15 @@ jobs:
     uses: ./.github/workflows/docs-build.yaml
   run-docs-publish-github-pages:
     needs: run-docs-build
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/docs-publish-github-pages.yaml
   run-build-gar-image:
+    needs: detect-images
+    if: needs.detect-images.outputs.merino == 'true'
     uses: ./.github/workflows/build-gar-image.yaml
   run-publish-gar-image:
     needs: [run-checks, run-tests, run-build-gar-image]
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/publish-gar-image.yaml
     with:
       image_tag: latest
@@ -41,9 +49,12 @@ jobs:
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-build-gar-image-fleece:
+    needs: detect-images
+    if: needs.detect-images.outputs.fleece == 'true'
     uses: ./.github/workflows/build-gar-image-fleece.yaml
   run-publish-gar-image-fleece:
     needs: [run-checks, run-tests, run-build-gar-image-fleece]
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/publish-gar-image-fleece.yaml
     with:
       image_tag: latest
@@ -52,9 +63,12 @@ jobs:
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-build-gar-image-locust:
+    needs: detect-images
+    if: needs.detect-images.outputs.load_tests == 'true'
     uses: ./.github/workflows/build-gar-image-locust.yaml
   run-publish-gar-image-locust:
     needs: [run-checks, run-tests, run-build-gar-image-locust]
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/publish-gar-image-locust.yaml
     with:
       image_tag: latest
@@ -62,10 +76,9 @@ jobs:
       workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
-  run-build-dockerhub-app:
-    uses: ./.github/workflows/build-dockerhub-app-image.yaml
   run-publish-dockerhub-app:
-    needs: [run-checks, run-tests, run-build-dockerhub-app]
+    needs: [run-checks, run-tests, run-build-gar-image]
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/publish-dockerhub-app-image.yaml
     with:
       image_tag: ${{ github.sha }}

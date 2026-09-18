@@ -14,6 +14,12 @@ toolchains:
   default: system
 
 tasks:
+  docker-build:
+    args:
+      - --tag
+      - app-fleece:build
+      - .
+
   lint:
     args:
       - apps/fleece/merino_fleece
