@@ -1,0 +1,22 @@
+name: Set up Moon
+description: Install the pinned Moon CLI on Linux x64 runners
+runs:
+  using: composite
+  steps:
+    # Keep installation in this repository under the enterprise Actions policy.
+    - name: Install pinned Moon release
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="$(python3 -c \
+          'import tomllib; print(tomllib.load(open(".prototools", "rb"))["moon"])')"
+        archive=moon_cli-x86_64-unknown-linux-gnu.tar.xz
+        release="https://github.com/moonrepo/moon/releases/download/v$version"
+        install_dir="$(mktemp -d "$RUNNER_TEMP/moon.XXXXXX")"
+        cd "$install_dir"
+        curl --fail --silent --show-error --location "$release/$archive" -o "$archive"
+        curl --fail --silent --show-error --location "$release/$archive.sha256" -o "$archive.sha256"
+        sha256sum --check "$archive.sha256"
+        tar --extract --xz --file "$archive" --strip-components=1
+        echo "$install_dir" >> "$GITHUB_PATH"
+        ./moon --version

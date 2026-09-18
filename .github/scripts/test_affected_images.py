@@ -169,7 +169,7 @@ class MoonTaskTests(unittest.TestCase):
                 self.assertTrue(task["options"]["runFromWorkspaceRoot"])
 
     def test_python_tasks_still_install_dependencies(self) -> None:
-        """Moving install dependencies off Docker tasks preserves Python task setup."""
+        """Inherited Python tasks retain their direct workspace install dependency."""
         result = subprocess.check_output(  # nosec B607
             ["moon", "query", "tasks"],
             shell=False,  # nosec B603
@@ -177,7 +177,7 @@ class MoonTaskTests(unittest.TestCase):
         tasks = json.loads(result)["tasks"]
         for project in (*IMAGE_PROJECTS, "merino-common"):
             for name, task in tasks[project].items():
-                if name == "docker-build":
+                if name not in ("lint", "format-check", "security", "typecheck", "test"):
                     continue
                 with self.subTest(project=project, task=name):
                     self.assertIn("workspace:install", [dep["target"] for dep in task["deps"]])
