@@ -73,7 +73,11 @@ from merino.curated_recommendations.rankers import (
     TOP_STORIES_SECTION_KEY,
     takedown_reported_recommendations,
 )
-from merino.curated_recommendations.utils import is_enrolled_in_experiment
+from merino.curated_recommendations.rankers.utils import REGION_ENGAGEMENT_WEIGHT
+from merino.curated_recommendations.utils import (
+    is_ctr_prediction_engagement_region,
+    is_enrolled_in_experiment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -890,6 +894,11 @@ async def get_sections(
         and personal_interests is not None
         and bool(personal_interests.scores)
     )
+    region_weight = (
+        1.0
+        if is_ctr_prediction_engagement_region(engagement_region)
+        else REGION_ENGAGEMENT_WEIGHT
+    )
 
     # Interest ranker is experimental so gets priority over contexual ranker
     if use_interest_ranker:
@@ -905,6 +914,7 @@ async def get_sections(
             prior_backend=prior_backend,
             surface_id=surface_id,
             lints_backend=lints_interest_backend,
+            region_weight=region_weight,
         )
     elif use_contexual_ranker:
         is_inferred_time_zone_experiment_enabled = is_inferred_time_zone_experiment(request)
@@ -922,10 +932,13 @@ async def get_sections(
             prior_backend=prior_backend,
             surface_id=surface_id,
             ml_backend=ml_backend,
+            region_weight=region_weight,
         )
     else:
         ranker = ThompsonSamplingRanker(
-            engagement_backend=engagement_backend, prior_backend=prior_backend
+            engagement_backend=engagement_backend,
+            prior_backend=prior_backend,
+            region_weight=region_weight,
         )
 
     # 7. Rank all corpus recommendations globally by engagement
