@@ -16,12 +16,6 @@ from merino.curated_recommendations.protocol import (
 # IN) take priority, so this only applies to regions not handled above.
 EN_XE_REGIONS: frozenset[str] = frozenset({"DE", "FR", "AT", "CH", "BE", "IT", "ES", "PL"})
 
-PUBLISHER_CONSTRAINT_IN_GERMANY_REGION = "DE"
-PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES: frozenset[str] = frozenset({"control", "treatment"})
-PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX = "DE-publisher-constraint-in-germany"
-PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED = True
-
-
 def get_recommendation_surface_id(
     locale: Locale,
     region: str | None = None,
@@ -136,29 +130,8 @@ def derive_region(locale: Locale, region: str | None = None) -> str | None:
 
 
 def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | None:
-    """Derive the engagement lookup region for a curated recommendations request.
-
-    Most requests use the country-level region. The publisher constraint experiment in Germany
-    writes branch-specific engagement rows while preserving the existing artifact schema by
-    encoding the branch in the region field.
-    """
-    region = derive_region(request.locale, request.region)
-    branch = request.experimentBranch
-
-    if (
-        PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED
-        and region == PUBLISHER_CONSTRAINT_IN_GERMANY_REGION
-        and branch is not None
-        and branch in PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCHES
-        and is_enrolled_in_experiment(
-            request,
-            ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
-            branch,
-        )
-    ):
-        return f"{PUBLISHER_CONSTRAINT_IN_GERMANY_ENGAGEMENT_REGION_PREFIX}-{branch}"
-
-    return region
+    """Derive the engagement lookup region for a curated recommendations request."""
+    return derive_region(request.locale, request.region)
 
 
 def is_enrolled_in_experiment(

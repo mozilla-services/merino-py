@@ -395,7 +395,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("item", "DE-experiment-treatment"): (40, 100),
             }
         )
 
@@ -407,10 +407,10 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            engagement_region="DE-experiment-treatment",
         )
 
-        assert ("item", "DE-publisher-constraint-in-germany-treatment") in (
+        assert ("item", "DE-experiment-treatment") in (
             engagement_backend.calls
         )
         assert ("item", "DE") not in engagement_backend.calls
@@ -429,7 +429,7 @@ class TestThompsonSampling:
             {
                 None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
                 "DE": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
-                "DE-publisher-constraint-in-germany-treatment": Prior(
+                "DE-experiment-treatment": Prior(
                     alpha=30,
                     beta=300,
                     total_impressions_per_day=1_000_000,
@@ -439,7 +439,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("item", "DE-experiment-treatment"): (40, 100),
             }
         )
 
@@ -451,10 +451,10 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            engagement_region="DE-experiment-treatment",
         )
 
-        assert "DE-publisher-constraint-in-germany-treatment" in prior_backend.calls
+        assert "DE-experiment-treatment" in prior_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(67.05)
         assert ranked[0].ranking_data.beta == pytest.approx(352.0)
@@ -475,7 +475,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("item", "DE-experiment-treatment"): (40, 100),
             }
         )
 
@@ -487,11 +487,11 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            engagement_region="DE-experiment-treatment",
         )
 
         assert prior_backend.calls[:2] == [
-            "DE-publisher-constraint-in-germany-treatment",
+            "DE-experiment-treatment",
             "DE",
         ]
         assert ranked[0].ranking_data is not None
@@ -523,11 +523,11 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            engagement_region="DE-experiment-treatment",
         )
 
         assert engagement_backend.calls == [
-            ("item", "DE-publisher-constraint-in-germany-treatment"),
+            ("item", "DE-experiment-treatment"),
             ("item", None),
             ("item", "DE"),
         ]
@@ -551,7 +551,7 @@ class TestThompsonSampling:
             {
                 ("branch-item", None): (1, 101),
                 ("base-only-item", None): (2, 102),
-                ("branch-item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("branch-item", "DE-experiment-treatment"): (40, 100),
                 ("base-only-item", "DE"): (20, 100),
             }
         )
@@ -564,12 +564,12 @@ class TestThompsonSampling:
         ranked = ranker.rank_items(
             recs,
             region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            engagement_region="DE-experiment-treatment",
         )
 
         assert (
             "base-only-item",
-            "DE-publisher-constraint-in-germany-treatment",
+            "DE-experiment-treatment",
         ) in engagement_backend.calls
         assert ("base-only-item", "DE") not in engagement_backend.calls
         by_id = {rec.corpusItemId: rec for rec in ranked}

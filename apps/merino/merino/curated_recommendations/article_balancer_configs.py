@@ -8,9 +8,7 @@ from merino.curated_recommendations.protocol import (
     ITEM_SUBTOPIC_FLAG,
     CuratedRecommendation,
     CuratedRecommendationsRequest,
-    ExperimentName,
 )
-from merino.curated_recommendations.utils import is_enrolled_in_experiment
 
 
 @dataclass(frozen=True)
@@ -86,18 +84,4 @@ def get_top_stories_article_balancer_config(
     config = TOP_STORIES_BALANCER_CONFIG_BY_SURFACE.get(
         surface_id, DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG
     )
-    if (
-        surface_id == SurfaceId.NEW_TAB_DE_DE
-        and request is not None
-        and is_enrolled_in_experiment(
-            request,
-            ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value,
-            "treatment",
-        )
-    ):
-        return replace(
-            config,
-            max_per_publisher=DEFAULT_TOP_STORIES_ARTICLE_BALANCER_CONFIG.max_per_publisher,
-            publisher_enforcement_likelyhood=0.0,
-        )
     return config

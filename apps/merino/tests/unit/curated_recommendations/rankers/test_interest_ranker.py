@@ -279,7 +279,7 @@ def test_engagement_region_is_ignored_for_lints_ranker() -> None:
     ranker.rank_items(
         recs,
         region="DE",
-        engagement_region="DE-publisher-constraint-in-germany-treatment",
+        engagement_region="DE-experiment-treatment",
     )
 
     assert engagement_backend.calls == [("A", None), ("A", "DE")]
