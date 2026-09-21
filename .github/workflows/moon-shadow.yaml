@@ -1,0 +1,97 @@
+name: moon-shadow
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Keep this workflow optional during the trial. Existing CI remains authoritative.
+# At cutover retain the main-workflow name for ETE, remove the legacy triggers,
+# and remove the literal false guards below to enable publication on main.
+jobs:
+  moon-ci:
+    uses: ./.github/workflows/moon-ci.yaml
+
+  # Publication is wired to the real artifacts but disabled throughout the trial.
+  upload-test-artifacts:
+    permissions:
+      contents: read
+      id-token: write
+    needs: moon-ci
+    if: ${{ false && always() && github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/upload-test-artifacts-to-gcs.yaml
+    with:
+      destination: "gs://ecosystem-test-eng-metrics/merino-py/junit"
+      extension: "xml"
+  upload-coverage-artifacts:
+    permissions:
+      contents: read
+      id-token: write
+    needs: moon-ci
+    if: ${{ false && always() && github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/upload-test-artifacts-to-gcs.yaml
+    with:
+      destination: "gs://ecosystem-test-eng-metrics/merino-py/coverage"
+      extension: "json"
+  run-docs-publish-github-pages:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    needs: moon-ci
+    if: ${{ false && github.ref == 'refs/heads/main' && needs.moon-ci.outputs.docs == 'true' }}
+    uses: ./.github/workflows/docs-publish-github-pages.yaml
+  run-publish-gar-image:
+    permissions:
+      contents: read
+      id-token: write
+    needs: moon-ci
+    if: ${{ false && github.ref == 'refs/heads/main' && needs.moon-ci.outputs.merino == 'true' }}
+    uses: ./.github/workflows/publish-gar-image.yaml
+    with:
+      image_tag: latest
+      project_id: ${{ vars.GCP_PROJECT_ID }}
+      workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-publish-gar-image-fleece:
+    permissions:
+      contents: read
+      id-token: write
+    needs: moon-ci
+    if: ${{ false && github.ref == 'refs/heads/main' && needs.moon-ci.outputs.fleece == 'true' }}
+    uses: ./.github/workflows/publish-gar-image-fleece.yaml
+    with:
+      image_tag: latest
+      project_id: ${{ vars.GCP_PROJECT_ID }}
+      workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-publish-gar-image-locust:
+    permissions:
+      contents: read
+      id-token: write
+    needs: moon-ci
+    if: ${{ false && github.ref == 'refs/heads/main' && needs.moon-ci.outputs.load_tests == 'true' }}
+    uses: ./.github/workflows/publish-gar-image-locust.yaml
+    with:
+      image_tag: latest
+      project_id: ${{ vars.GCP_PROJECT_ID }}
+      workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-publish-dockerhub-app:
+    needs: moon-ci
+    if: ${{ false && github.ref == 'refs/heads/main' && needs.moon-ci.outputs.merino == 'true' }}
+    uses: ./.github/workflows/publish-dockerhub-app-image.yaml
+    with:
+      image_tag: ${{ github.sha }}
+    secrets:
+      DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_REPO }}
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      DOCKERHUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
