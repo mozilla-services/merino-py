@@ -16,6 +16,7 @@ from merino.curated_recommendations.protocol import (
 # IN) take priority, so this only applies to regions not handled above.
 EN_XE_REGIONS: frozenset[str] = frozenset({"DE", "FR", "AT", "CH", "BE", "IT", "ES", "PL"})
 
+
 def get_recommendation_surface_id(
     locale: Locale,
     region: str | None = None,

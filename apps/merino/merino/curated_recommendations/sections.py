@@ -895,9 +895,7 @@ async def get_sections(
         and bool(personal_interests.scores)
     )
     region_weight = (
-        1.0
-        if is_ctr_prediction_engagement_region(engagement_region)
-        else REGION_ENGAGEMENT_WEIGHT
+        1.0 if is_ctr_prediction_engagement_region(engagement_region) else REGION_ENGAGEMENT_WEIGHT
     )
 
     # Interest ranker is experimental so gets priority over contexual ranker

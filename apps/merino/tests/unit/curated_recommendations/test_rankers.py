@@ -411,9 +411,7 @@ class TestThompsonSampling:
             engagement_region="GB-example-experiment-control",
         )
 
-        assert ("item", "GB-example-experiment-control") in (
-            engagement_backend.calls
-        )
+        assert ("item", "GB-example-experiment-control") in (engagement_backend.calls)
         assert ("item", "GB") not in engagement_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(48.05)
@@ -605,9 +603,7 @@ class TestThompsonSampling:
         assert prior is not None
         assert recs[0].ranking_data is not None
         assert recs[0].ranking_data.alpha == pytest.approx(counts[0] + prior.alpha)
-        assert recs[0].ranking_data.beta == pytest.approx(
-            counts[1] - counts[0] + prior.beta
-        )
+        assert recs[0].ranking_data.beta == pytest.approx(counts[1] - counts[0] + prior.beta)
         assert not any(lookup_region is None for _, lookup_region in engagement_backend.calls)
         assert not any(lookup_region == "GB" for _, lookup_region in engagement_backend.calls)
 
@@ -624,9 +620,7 @@ class TestThompsonSampling:
             }
         )
         prior_backend = ConstantPrior()
-        ranker = ThompsonSamplingRanker(
-            engagement_backend, prior_backend, region_weight=1.0
-        )
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend, region_weight=1.0)
         recs = generate_recommendations(item_ids=["item"], time_sensitive_count=0)
         monkeypatch.setattr(
             "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
