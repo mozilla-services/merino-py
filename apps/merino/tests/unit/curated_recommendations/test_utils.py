@@ -23,6 +23,7 @@ from merino.curated_recommendations.utils import (
 
 _EN_EUROPE = ExperimentName.SECTIONS_IN_EN_EUROPE_EXPERIMENT.value
 _GLOBAL_SPANISH = ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value
+_CTR_PREDICTION_ENGB = ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value
 
 
 class TestCuratedRecommendationsProviderExtractLanguageFromLocale:
@@ -113,6 +114,57 @@ class TestCuratedRecommendationsProviderDeriveRegion:
 
 class TestCuratedRecommendationsProviderDeriveEngagementRegion:
     """Unit tests for derive_engagement_region."""
+
+    @pytest.mark.parametrize("branch", ["control", "treatment"])
+    def test_ctr_prediction_engb_uses_branch_region(self, branch: str):
+        """Each en-GB experiment branch uses its own engagement table."""
+        request = CuratedRecommendationsRequest(
+            locale=Locale.EN_GB,
+            region="GB",
+            experimentName=_CTR_PREDICTION_ENGB,
+            experimentBranch=branch,
+        )
+
+        assert derive_engagement_region(request) == f"GB-ctrpred_engb-{branch}"
+
+    def test_optin_ctr_prediction_engb_uses_branch_region(self):
+        """Forced enrollment uses the same branch engagement table."""
+        request = CuratedRecommendationsRequest(
+            locale=Locale.EN_GB,
+            region="GB",
+            experimentName=f"optin-{_CTR_PREDICTION_ENGB}",
+            experimentBranch="treatment",
+        )
+
+        assert derive_engagement_region(request) == "GB-ctrpred_engb-treatment"
+
+    @pytest.mark.parametrize(
+        "locale, region, experiment_name, branch, expected",
+        [
+            (Locale.EN_US, "US", _CTR_PREDICTION_ENGB, "treatment", "US"),
+            (Locale.EN_GB, "GB", "another-experiment", "treatment", "GB"),
+            (Locale.EN_GB, "GB", _CTR_PREDICTION_ENGB, "other", "GB"),
+            (Locale.EN_GB, "GB", _CTR_PREDICTION_ENGB, None, "GB"),
+            (Locale.DE_DE, "GB", _CTR_PREDICTION_ENGB, "treatment", "GB"),
+        ],
+    )
+    def test_non_matching_requests_use_country_region(
+        self,
+        locale: Locale,
+        region: str,
+        experiment_name: str,
+        branch: str | None,
+        expected: str,
+    ):
+        """Only valid en-GB experiment enrollments use branch engagement."""
+        request = CuratedRecommendationsRequest(
+            locale=locale,
+            region=region,
+            experimentName=experiment_name,
+            experimentBranch=branch,
+        )
+
+        assert derive_engagement_region(request) == expected
 
     @pytest.mark.parametrize("region", ["DE", "US", "FR", "CA"])
     @pytest.mark.parametrize("branch", ["control", "treatment", None])

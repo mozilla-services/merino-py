@@ -130,8 +130,26 @@ def derive_region(locale: Locale, region: str | None = None) -> str | None:
 
 
 def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | None:
-    """Derive the engagement lookup region for a curated recommendations request."""
-    return derive_region(request.locale, request.region)
+    """Derive the engagement lookup region for a curated recommendations request.
+
+    Requests enrolled in the en-GB CTR prediction experiment use engagement
+    tables keyed by experiment branch. Other requests use their country region.
+    """
+    region = derive_region(request.locale, request.region)
+    branch = request.experimentBranch
+
+    if (
+        get_recommendation_surface_id(request.locale, request.region, request)
+        == SurfaceId.NEW_TAB_EN_GB
+        and branch is not None
+        and branch in {"control", "treatment"}
+        and is_enrolled_in_experiment(
+            request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, branch
+        )
+    ):
+        return f"GB-ctrpred_engb-{branch}"
+
+    return region
 
 
 def is_enrolled_in_experiment(

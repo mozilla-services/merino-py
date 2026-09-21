@@ -395,7 +395,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-experiment-treatment"): (40, 100),
+                ("item", "GB-ctrpred_engb-control"): (40, 100),
             }
         )
 
@@ -406,14 +406,14 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-experiment-treatment",
+            region="GB",
+            engagement_region="GB-ctrpred_engb-control",
         )
 
-        assert ("item", "DE-experiment-treatment") in (
+        assert ("item", "GB-ctrpred_engb-control") in (
             engagement_backend.calls
         )
-        assert ("item", "DE") not in engagement_backend.calls
+        assert ("item", "GB") not in engagement_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(48.05)
         assert ranked[0].ranking_data.beta == pytest.approx(162.0)
@@ -428,8 +428,8 @@ class TestThompsonSampling:
         prior_backend = RegionAwareStubPriorBackend(
             {
                 None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
-                "DE": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
-                "DE-experiment-treatment": Prior(
+                "GB": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
+                "GB-ctrpred_engb-control": Prior(
                     alpha=30,
                     beta=300,
                     total_impressions_per_day=1_000_000,
@@ -439,7 +439,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-experiment-treatment"): (40, 100),
+                ("item", "GB-ctrpred_engb-control"): (40, 100),
             }
         )
 
@@ -450,11 +450,11 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-experiment-treatment",
+            region="GB",
+            engagement_region="GB-ctrpred_engb-control",
         )
 
-        assert "DE-experiment-treatment" in prior_backend.calls
+        assert "GB-ctrpred_engb-control" in prior_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(67.05)
         assert ranked[0].ranking_data.beta == pytest.approx(352.0)
@@ -469,13 +469,13 @@ class TestThompsonSampling:
         prior_backend = RegionAwareStubPriorBackend(
             {
                 None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
-                "DE": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
+                "GB": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
             }
         )
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-experiment-treatment"): (40, 100),
+                ("item", "GB-ctrpred_engb-control"): (40, 100),
             }
         )
 
@@ -486,13 +486,13 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-experiment-treatment",
+            region="GB",
+            engagement_region="GB-ctrpred_engb-control",
         )
 
         assert prior_backend.calls[:2] == [
-            "DE-experiment-treatment",
-            "DE",
+            "GB-ctrpred_engb-control",
+            "GB",
         ]
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(57.55)
@@ -511,7 +511,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE"): (20, 100),
+                ("item", "GB"): (20, 100),
             }
         )
 
@@ -522,14 +522,14 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-experiment-treatment",
+            region="GB",
+            engagement_region="GB-ctrpred_engb-control",
         )
 
         assert engagement_backend.calls == [
-            ("item", "DE-experiment-treatment"),
+            ("item", "GB-ctrpred_engb-control"),
             ("item", None),
-            ("item", "DE"),
+            ("item", "GB"),
         ]
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(29.05)
@@ -551,8 +551,8 @@ class TestThompsonSampling:
             {
                 ("branch-item", None): (1, 101),
                 ("base-only-item", None): (2, 102),
-                ("branch-item", "DE-experiment-treatment"): (40, 100),
-                ("base-only-item", "DE"): (20, 100),
+                ("branch-item", "GB-ctrpred_engb-control"): (40, 100),
+                ("base-only-item", "GB"): (20, 100),
             }
         )
 
@@ -563,15 +563,15 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-experiment-treatment",
+            region="GB",
+            engagement_region="GB-ctrpred_engb-control",
         )
 
         assert (
             "base-only-item",
-            "DE-experiment-treatment",
+            "GB-ctrpred_engb-control",
         ) in engagement_backend.calls
-        assert ("base-only-item", "DE") not in engagement_backend.calls
+        assert ("base-only-item", "GB") not in engagement_backend.calls
         by_id = {rec.corpusItemId: rec for rec in ranked}
         assert by_id["base-only-item"].ranking_data is not None
         assert by_id["base-only-item"].ranking_data.alpha == pytest.approx(12)

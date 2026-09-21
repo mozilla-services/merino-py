@@ -109,6 +109,9 @@ class ExperimentName(str, Enum):
     SECTIONS_IN_EN_EUROPE_EXPERIMENT = "sections-in-en-europe"
     # Experiment to serve the global Spanish sections surface (NEW_TAB_ES_XA)
     SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT = "sections-in-global-spanish"
+    # Experiment to compare observed and predicted engagement for en-GB.
+    CTR_PREDICTION_ENGB_EXPERIMENT = "ctrpred_engb"
+
     # Experiment for doing local reranking of popular today via inferred interests
     INFERRED_LOCAL_EXPERIMENT = "new-tab-automated-personalization-local-ranking"
     INFERRED_LOCAL_EXPERIMENT_V2 = "new-tab-automated-personalization-local-ranking-2"
