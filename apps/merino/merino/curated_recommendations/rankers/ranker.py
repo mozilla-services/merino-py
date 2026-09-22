@@ -81,8 +81,11 @@ class Ranker:
         use it for the full ranking pass; otherwise fall back to the base country prior.
         """
         if is_ctr_prediction_engagement_region(prior_region):
-            # Do not substitute a prior fitted from another experiment cohort.
-            return self.prior_backend.get(prior_region) or ConstantPrior().get()
+            return (
+                self.prior_backend.get(prior_region)
+                or self.prior_backend.get(region)
+                or ConstantPrior().get()
+            )
 
         if prior_region is not None and prior_region != region:
             prior = self.prior_backend.get(prior_region)

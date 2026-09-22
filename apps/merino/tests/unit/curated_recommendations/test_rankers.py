@@ -636,6 +636,25 @@ class TestThompsonSampling:
         assert not any(lookup_region is None for _, lookup_region in engagement_backend.calls)
         assert any(lookup_region == "GB" for _, lookup_region in engagement_backend.calls)
 
+    def test_ctr_prediction_missing_branch_prior_falls_back_to_gb_prior(self, monkeypatch):
+        """A missing experiment prior uses the base GB prior before the constant prior."""
+        region = "GB-ctrpred_engb-treatment"
+        gb_prior = Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000)
+        prior_backend = RegionAwareStubPriorBackend({"GB": gb_prior})
+        engagement_backend = RegionAwareStubEngagementBackend({("item", region): (40, 100)})
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        recs = generate_recommendations(item_ids=["item"], time_sensitive_count=0)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker.rank_items(recs, region="GB", engagement_region=region)
+
+        assert prior_backend.calls[:2] == [region, "GB"]
+        assert recs[0].ranking_data is not None
+        assert recs[0].ranking_data.alpha == pytest.approx(60)
+        assert recs[0].ranking_data.beta == pytest.approx(260)
+
     def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
         """Ranking data should be populated and fresh items flagged when using DefaultRescaler."""
         recs = generate_recommendations(

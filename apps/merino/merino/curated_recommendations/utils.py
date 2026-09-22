@@ -143,7 +143,6 @@ def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | No
         get_recommendation_surface_id(request.locale, request.region, request)
         == SurfaceId.NEW_TAB_EN_GB
         and branch is not None
-        and branch in {"control", "treatment"}
         and is_enrolled_in_experiment(
             request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, branch
         )

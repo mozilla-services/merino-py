@@ -143,7 +143,6 @@ class TestCuratedRecommendationsProviderDeriveEngagementRegion:
         [
             (Locale.EN_US, "US", _CTR_PREDICTION_ENGB, "treatment", "US"),
             (Locale.EN_GB, "GB", "another-experiment", "treatment", "GB"),
-            (Locale.EN_GB, "GB", _CTR_PREDICTION_ENGB, "other", "GB"),
             (Locale.EN_GB, "GB", _CTR_PREDICTION_ENGB, None, "GB"),
             (Locale.DE_DE, "GB", _CTR_PREDICTION_ENGB, "treatment", "GB"),
         ],

@@ -7,7 +7,6 @@ from merino.curated_recommendations.corpus_backends.protocol import SurfaceId, T
 from merino.curated_recommendations.protocol import (
     ITEM_SUBTOPIC_FLAG,
     CuratedRecommendation,
-    CuratedRecommendationsRequest,
 )
 
 
@@ -78,7 +77,6 @@ TOP_STORIES_BALANCER_CONFIG_BY_SURFACE: dict[SurfaceId, ArticleBalancerConfig] =
 
 def get_top_stories_article_balancer_config(
     surface_id: SurfaceId,
-    request: CuratedRecommendationsRequest | None = None,
 ) -> ArticleBalancerConfig:
     """Return the Top Stories/Popular Today balancer config for a surface."""
     config = TOP_STORIES_BALANCER_CONFIG_BY_SURFACE.get(
