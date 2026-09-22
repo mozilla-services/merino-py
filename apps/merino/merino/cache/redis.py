@@ -373,6 +373,6 @@ class RedisAdapter:
             # Run the script in the replica nodes if it's readonly.
             res = await self.scripts[sid](keys, args, self.replica if readonly else self.primary)
         except RedisError as exc:
-            raise CacheAdapterError(f"Failed to run script {id} with error: `{exc}`") from exc
+            raise CacheAdapterError(f"Failed to run script {sid} with error: `{exc}`") from exc
 
         return res
