@@ -141,7 +141,7 @@ tasks:
       - coverage
     toolchains: system
     options:
-      # Use an unconditional `moon run` for coverage, outside affected-only CI.
+      # In CI, invoke explicitly with `moon exec --ignore-ci-checks --upstream deep`.
       cache: false
       runInCI: false
       runFromWorkspaceRoot: true
@@ -165,5 +165,6 @@ tasks:
     options:
       # The comparison ref can move without changing project files.
       cache: false
+      # In CI, invoke explicitly with `moon exec --ignore-ci-checks --upstream deep`.
       runInCI: false
       runFromWorkspaceRoot: true

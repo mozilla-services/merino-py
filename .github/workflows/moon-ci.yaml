@@ -1,0 +1,142 @@
+name: moon-ci
+
+on:
+  workflow_call:
+    outputs:
+      merino:
+        description: Whether a Merino image was built and uploaded
+        value: ${{ jobs.ci.outputs.merino }}
+      fleece:
+        description: Whether a Fleece image was built and uploaded
+        value: ${{ jobs.ci.outputs.fleece }}
+      load_tests:
+        description: Whether a Locust image was built and uploaded
+        value: ${{ jobs.ci.outputs.load_tests }}
+      docs:
+        description: Whether documentation was built and uploaded
+        value: ${{ jobs.ci.outputs.docs }}
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      merino: ${{ steps.images.outputs.merino }}
+      fleece: ${{ steps.images.outputs.fleece }}
+      load_tests: ${{ steps.images.outputs.load_tests }}
+      docs: ${{ steps.docs.outputs.built }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/weave
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-moon
+      - name: Set up documentation tools
+        run: |
+          mkdir -p bin
+          echo "$GITHUB_WORKSPACE/bin" >> "$GITHUB_PATH"
+          curl -fsSL \
+            https://github.com/rust-lang/mdBook/releases/download/v0.4.24/mdbook-v0.4.24-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=bin
+          curl -fsSL \
+            https://github.com/badboy/mdbook-mermaid/releases/download/v0.12.6/mdbook-mermaid-v0.12.6-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz --directory=bin
+      - name: Prepare build metadata
+        run: |
+          mdbook-mermaid install ./
+          printf '{"commit":"%s","version":"%s","source":"%s","build":"%s"}\n' \
+            "$GITHUB_SHA" "$GITHUB_REF_NAME" \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > version.json
+      - name: Run affected checks, tests, documentation, and image builds
+        env:
+          MOON_BASE: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
+          MOON_HEAD: ${{ github.sha }}
+          MOON_FORCE: ${{ github.event_name == 'workflow_dispatch' || github.event.forced == true }}
+        # Moon owns affected selection. Coverage runs separately with complete Merino suites.
+        run: moon ci ':#quality' :test load-tests:validate docs:build :docker-build --downstream none
+      - name: Enforce complete Merino coverage and changed-line coverage
+        # Coverage opts out of automatic CI selection; explicitly run its full dependency chain.
+        run: moon exec merino:diff-coverage --ignore-ci-checks --upstream deep
+      - name: Package images for the existing publishers
+        id: images
+        run: |
+          for entry in 'merino app:build merino' 'fleece app-fleece:build merino-fleece' \
+            'load_tests merino-locust:build locust-image'; do
+            read -r project image artifact <<< "$entry"
+            if docker image inspect "$image" > /dev/null 2>&1; then
+              mkdir -p "workspace/images/$artifact"
+              docker save "$image" | gzip > "workspace/images/$artifact/image.tar.gz"
+              echo "$project=true" >> "$GITHUB_OUTPUT"
+            fi
+          done
+      - uses: actions/upload-artifact@v6
+        if: steps.images.outputs.merino == 'true'
+        with:
+          name: merino
+          path: workspace/images/merino/image.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        if: steps.images.outputs.fleece == 'true'
+        with:
+          name: merino-fleece
+          path: workspace/images/merino-fleece/image.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        if: steps.images.outputs.load_tests == 'true'
+        with:
+          name: locust-image
+          path: workspace/images/locust-image/image.tar.gz
+          if-no-files-found: error
+      - name: Check for built documentation
+        id: docs
+        run: |
+          if [ -d book ]; then
+            echo 'built=true' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.docs.outputs.built == 'true'
+        with:
+          path: book
+      - name: Package reports for the existing metrics uploader
+        if: always()
+        env:
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+        run: |
+          prefix="${GITHUB_RUN_NUMBER}__$(date +%s)__${REPOSITORY_NAME}__${GITHUB_WORKFLOW}__"
+          mkdir -p workspace/unit-test-results workspace/integration-test-results
+          for project in merino merino-common fleece; do
+            for suite in unit integration; do
+              name="$suite"
+              if [ "$project" != merino ]; then name="$project-$suite"; fi
+              for report in results.xml coverage.json; do
+                source="workspace/test-results/moon/$project/${suite}__$report"
+                if [ -f "$source" ]; then
+                  cp "$source" "workspace/$suite-test-results/${prefix}${name}__$report"
+                fi
+              done
+            done
+          done
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: unit-test-results
+          path: workspace/unit-test-results/
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: integration-test-results
+          path: workspace/integration-test-results/
+      - name: Upload Moon execution and coverage reports
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: moon-reports
+          include-hidden-files: true
+          path: |
+            workspace/test-results/moon/
+            .moon/cache/ciReport.json
+            .moon/cache/runReport.json

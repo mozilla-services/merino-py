@@ -185,8 +185,10 @@ Root Python configuration and lockfile changes also select all three. Documentat
 select Python tests.
 
 Coverage gates must run **without `--affected` or pytest filters** so they check complete suites.
-They opt out of `moon ci`'s affected-only selection (`runInCI: false`); run them in an unconditional
-`moon run merino:diff-coverage` step when integrating Moon into CI. The existing Make-based CI,
+They opt out of automatic CI selection (`runInCI: false`). This also excludes them from
+`moon run` when `CI=true`. In CI, explicitly run the full dependency chain with
+`moon exec merino:diff-coverage --ignore-ci-checks --upstream deep`. Locally, the `moon run`
+commands above still apply. The existing Make-based CI,
 coverage checks, and ETE artifact naming/upload remain in place during this ticket. Running Moon
 alongside that CI and mapping these reports to its upload conventions is DISCO-4443; switching the
 required checks is DISCO-4441.
