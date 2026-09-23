@@ -44,7 +44,7 @@ shutdown_deadline_sec = 30.0
 # MERINO_FLEECE_SANITIZE__MAX_QUEUE_SIZE
 # Max number of search terms to buffer in the queue. Submissions are rejected with
 # a 503 once this capacity is reached.
-max_queue_size = 10000
+max_queue_size = 11000
 
 # MERINO_FLEECE_SANITIZE__NER_CHUNK_SIZE
 # Number of queries handed to SpaCy's `nlp.pipe()` per thread pool hop. Larger
