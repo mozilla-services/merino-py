@@ -323,6 +323,30 @@ class TestSpindleBackendRefresh:
         assert "recommendation.spindle.text.status_codes.500" in increment_calls
         assert backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US) is None
 
+    def test_get_similar_stories_either_unions_both_caches(self):
+        """Pairs from either modality are available through the combined lookup."""
+        backend = _make_backend(MagicMock(spec=AsyncClient))
+        backend._text_info[SurfaceId.NEW_TAB_EN_US] = SimilarStoriesInfo({"a": ["b"]})
+        backend._image_info[SurfaceId.NEW_TAB_EN_US] = SimilarStoriesInfo({"a": ["c"]})
+
+        info = backend.get_similar_stories_either(SurfaceId.NEW_TAB_EN_US)
+
+        assert info is not None
+        assert set(info.neighbors("a")) == {"b", "c"}
+
+    def test_get_similar_stories_either_falls_back_to_available_cache(self):
+        """The combined lookup returns whichever modality is available."""
+        backend = _make_backend(MagicMock(spec=AsyncClient))
+        text_info = SimilarStoriesInfo({"a": ["b"]})
+        image_info = SimilarStoriesInfo({"a": ["c"]})
+
+        backend._text_info[SurfaceId.NEW_TAB_EN_US] = text_info
+        assert backend.get_similar_stories_either(SurfaceId.NEW_TAB_EN_US) is text_info
+
+        backend._text_info.clear()
+        backend._image_info[SurfaceId.NEW_TAB_EN_US] = image_info
+        assert backend.get_similar_stories_either(SurfaceId.NEW_TAB_EN_US) is image_info
+
 
 class TestDummySpindleBackend:
     """DummySpindleBackend always returns None."""
@@ -334,3 +358,4 @@ class TestDummySpindleBackend:
         await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_EN_US)
         assert backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US) is None
         assert backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US) is None
+        assert backend.get_similar_stories_either(SurfaceId.NEW_TAB_EN_US) is None
