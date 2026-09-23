@@ -24,11 +24,6 @@ logger = logging.getLogger(__name__)
 SIMILAR_STORIES_TEXT_API_PATH = "/find_similar_stories"
 SIMILAR_STORIES_IMAGE_API_PATH = "/find_similar_images"
 
-LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
-    SurfaceId.NEW_TAB_EN_US: "en_US",
-    SurfaceId.NEW_TAB_DE_DE: "de_DE",
-}
-
 METRIC_NAMESPACE = "recommendation.spindle"
 
 
@@ -81,6 +76,7 @@ class FindSimilarResponse(BaseModel):
     locale: str | None = None
     num_items: int
     num_pairs: int
+    missing: list[str] = Field(default_factory=list)
 
 
 class SimilarStoriesInfo(SimilarStoriesProtocol):
@@ -145,7 +141,10 @@ class SpindleBackend(SpindleBackendProtocol):
         return parts[2].lower()
 
     def _locale_for_surface(self, surface: SurfaceId) -> str | None:
-        return LOCALE_FOR_SURFACE.get(surface)
+        parts = surface.value.split("_")
+        if len(parts) < 4:
+            return None
+        return f"{parts[2]}_{parts[3]}"
 
     async def refresh_duplicate_item_info(
         self,
@@ -163,8 +162,7 @@ class SpindleBackend(SpindleBackendProtocol):
         deduped_items = list({item.corpusItemId: item for item in items}.values())
         await self._refresh_text(deduped_items, surface, threshold)
 
-        # Refresh images will be rolled out as soon as GPU inference is verified
-        # await self._refresh_image(deduped_items, surface, threshold)
+        await self._refresh_image(deduped_items, surface, threshold)
 
     async def _refresh_text(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
