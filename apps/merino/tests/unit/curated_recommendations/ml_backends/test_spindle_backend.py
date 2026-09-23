@@ -143,10 +143,7 @@ class TestSpindleBackendRefresh:
 
     @pytest.mark.asyncio
     async def test_success_populates_text_and_image_info(self):
-        """Successful response should populate the text cache with symmetric pairs.
-
-        Image refresh is currently disabled, so the image cache stays empty.
-        """
+        """Successful responses should populate both similarity caches."""
         http_client = MagicMock(spec=AsyncClient)
         text_payload = {
             "similar": {"a": ["b"]},
@@ -213,14 +210,14 @@ class TestSpindleBackendRefresh:
         backend = _make_backend(http_client)
 
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
 
         http_client.post.assert_awaited_once()
-        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_GB)
         assert text_info is not None
         assert text_info.neighbors("a") == ["b"]
 
@@ -250,14 +247,14 @@ class TestSpindleBackendRefresh:
         backend = _make_backend(http_client)
 
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("c")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("c")], SurfaceId.NEW_TAB_EN_GB
         )
 
         assert http_client.post.await_count == 2
-        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_GB)
         assert text_info is not None
         assert text_info.neighbors("a") == ["c"]
 
@@ -277,14 +274,14 @@ class TestSpindleBackendRefresh:
         backend = _make_backend(http_client)
 
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
 
         assert http_client.post.await_count == 2
-        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_GB)
         assert text_info is not None
         assert text_info.neighbors("a") == ["b"]
 
@@ -306,8 +303,7 @@ class TestSpindleBackendRefresh:
         assert backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US) is None
         increment_calls = [c.args[0] for c in metrics.increment.call_args_list]
         assert "recommendation.spindle.text.error" in increment_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.error" in increment_calls
+        assert "recommendation.spindle.image.error" in increment_calls
 
     @pytest.mark.asyncio
     async def test_non_2xx_emits_status_metric_and_returns_none(self):
