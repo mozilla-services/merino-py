@@ -137,6 +137,7 @@ class SpindleBackend(SpindleBackendProtocol):
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._text_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
+        self._image_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
         self._api_key = api_key
 
     def _language_for_surface(self, surface: SurfaceId) -> str | None:
@@ -214,6 +215,9 @@ class SpindleBackend(SpindleBackendProtocol):
         ]
         if not image_items:
             return
+        content_ids = tuple(item.corpus_item_id for item in image_items)
+        if self._image_content_ids.get(surface) == content_ids:
+            return
         request = FindSimilarImagesRequest(
             items=image_items,
             threshold=threshold,
@@ -226,6 +230,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         if response is not None:
             self._image_info[surface] = SimilarStoriesInfo(response.similar)
+            self._image_content_ids[surface] = content_ids
 
     async def _post(
         self,

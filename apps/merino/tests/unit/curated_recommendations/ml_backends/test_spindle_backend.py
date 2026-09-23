@@ -176,6 +176,11 @@ class TestSpindleBackendRefresh:
         await backend.refresh_duplicate_item_info(
             [_item("a"), _item("b"), _item("c")], SurfaceId.NEW_TAB_EN_US
         )
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("b"), _item("c")], SurfaceId.NEW_TAB_EN_US
+        )
+
+        assert http_client.post.await_count == 2
 
         text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
         image_info = backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US)
