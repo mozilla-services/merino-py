@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 SIMILAR_STORIES_TEXT_API_PATH = "/find_similar_stories"
 SIMILAR_STORIES_IMAGE_API_PATH = "/find_similar_images"
 
+LOCALE_FOR_SURFACE: dict[SurfaceId, str] = {
+    SurfaceId.NEW_TAB_EN_US: "en_US",
+    SurfaceId.NEW_TAB_DE_DE: "de_DE",
+}
+
 METRIC_NAMESPACE = "recommendation.spindle"
 
 
@@ -141,10 +146,7 @@ class SpindleBackend(SpindleBackendProtocol):
         return parts[2].lower()
 
     def _locale_for_surface(self, surface: SurfaceId) -> str | None:
-        parts = surface.value.split("_")
-        if len(parts) < 4:
-            return None
-        return f"{parts[2]}_{parts[3]}"
+        return LOCALE_FOR_SURFACE.get(surface)
 
     async def refresh_duplicate_item_info(
         self,
