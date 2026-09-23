@@ -185,21 +185,17 @@ class TestSpindleBackendRefresh:
         assert text_info is not None
         assert text_info.neighbors("a") == ["b"]
         assert text_info.neighbors("b") == ["a"]
-        # Enable once images are enabled
-        # assert image_info is not None
-        # assert image_info.neighbors("a") == ["c"]
-        assert image_info is None
+        assert image_info is not None
+        assert image_info.neighbors("a") == ["c"]
 
         # Status-code metric should have fired for each endpoint.
         increment_calls = [c.args[0] for c in metrics.increment.call_args_list]
         assert "recommendation.spindle.text.status_codes.200" in increment_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.status_codes.200" in increment_calls
+        assert "recommendation.spindle.image.status_codes.200" in increment_calls
         # Timing metric should have been used.
         timing_calls = [c.args[0] for c in metrics.timeit.call_args_list]
         assert "recommendation.spindle.text.timing" in timing_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.timing" in timing_calls
+        assert "recommendation.spindle.image.timing" in timing_calls
 
     @pytest.mark.asyncio
     async def test_unchanged_content_ids_skip_refresh(self):

@@ -255,6 +255,10 @@ class _StubSpindle(SpindleBackendProtocol):
         """No cache."""
         return None
 
+    def get_similar_stories_either(self, surface):
+        """No cache."""
+        return None
+
 
 @pytest.mark.asyncio
 async def test_fetch_schedules_spindle_refresh(
