@@ -29,6 +29,7 @@ from merino.curated_recommendations.protocol import (
 from merino.curated_recommendations.prior_backends.engagment_rescaler import (
     CrawledContentRescaler,
 )
+from merino.curated_recommendations.prior_backends.constant_prior import ConstantPrior
 from merino.curated_recommendations.ml_backends.protocol import ContextualArticleRankings
 from merino.curated_recommendations.prior_backends.protocol import Prior, PriorBackend
 from merino.curated_recommendations.rankers import (
@@ -395,7 +396,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("item", "GB-example-experiment-control"): (40, 100),
             }
         )
 
@@ -406,14 +407,12 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            region="GB",
+            engagement_region="GB-example-experiment-control",
         )
 
-        assert ("item", "DE-publisher-constraint-in-germany-treatment") in (
-            engagement_backend.calls
-        )
-        assert ("item", "DE") not in engagement_backend.calls
+        assert ("item", "GB-example-experiment-control") in (engagement_backend.calls)
+        assert ("item", "GB") not in engagement_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(48.05)
         assert ranked[0].ranking_data.beta == pytest.approx(162.0)
@@ -428,8 +427,8 @@ class TestThompsonSampling:
         prior_backend = RegionAwareStubPriorBackend(
             {
                 None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
-                "DE": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
-                "DE-publisher-constraint-in-germany-treatment": Prior(
+                "GB": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
+                "GB-example-experiment-control": Prior(
                     alpha=30,
                     beta=300,
                     total_impressions_per_day=1_000_000,
@@ -439,7 +438,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("item", "GB-example-experiment-control"): (40, 100),
             }
         )
 
@@ -450,11 +449,11 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            region="GB",
+            engagement_region="GB-example-experiment-control",
         )
 
-        assert "DE-publisher-constraint-in-germany-treatment" in prior_backend.calls
+        assert "GB-example-experiment-control" in prior_backend.calls
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(67.05)
         assert ranked[0].ranking_data.beta == pytest.approx(352.0)
@@ -469,13 +468,13 @@ class TestThompsonSampling:
         prior_backend = RegionAwareStubPriorBackend(
             {
                 None: Prior(alpha=10, beta=100, total_impressions_per_day=1_000_000),
-                "DE": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
+                "GB": Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000),
             }
         )
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
+                ("item", "GB-example-experiment-control"): (40, 100),
             }
         )
 
@@ -486,13 +485,13 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            region="GB",
+            engagement_region="GB-example-experiment-control",
         )
 
         assert prior_backend.calls[:2] == [
-            "DE-publisher-constraint-in-germany-treatment",
-            "DE",
+            "GB-example-experiment-control",
+            "GB",
         ]
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(57.55)
@@ -511,7 +510,7 @@ class TestThompsonSampling:
         engagement_backend = RegionAwareStubEngagementBackend(
             {
                 ("item", None): (1, 101),
-                ("item", "DE"): (20, 100),
+                ("item", "GB"): (20, 100),
             }
         )
 
@@ -522,14 +521,14 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            region="GB",
+            engagement_region="GB-example-experiment-control",
         )
 
         assert engagement_backend.calls == [
-            ("item", "DE-publisher-constraint-in-germany-treatment"),
+            ("item", "GB-example-experiment-control"),
             ("item", None),
-            ("item", "DE"),
+            ("item", "GB"),
         ]
         assert ranked[0].ranking_data is not None
         assert ranked[0].ranking_data.alpha == pytest.approx(29.05)
@@ -551,8 +550,8 @@ class TestThompsonSampling:
             {
                 ("branch-item", None): (1, 101),
                 ("base-only-item", None): (2, 102),
-                ("branch-item", "DE-publisher-constraint-in-germany-treatment"): (40, 100),
-                ("base-only-item", "DE"): (20, 100),
+                ("branch-item", "GB-example-experiment-control"): (40, 100),
+                ("base-only-item", "GB"): (20, 100),
             }
         )
 
@@ -563,19 +562,98 @@ class TestThompsonSampling:
         ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
         ranked = ranker.rank_items(
             recs,
-            region="DE",
-            engagement_region="DE-publisher-constraint-in-germany-treatment",
+            region="GB",
+            engagement_region="GB-example-experiment-control",
         )
 
         assert (
             "base-only-item",
-            "DE-publisher-constraint-in-germany-treatment",
+            "GB-example-experiment-control",
         ) in engagement_backend.calls
-        assert ("base-only-item", "DE") not in engagement_backend.calls
+        assert ("base-only-item", "GB") not in engagement_backend.calls
         by_id = {rec.corpusItemId: rec for rec in ranked}
         assert by_id["base-only-item"].ranking_data is not None
         assert by_id["base-only-item"].ranking_data.alpha == pytest.approx(12)
         assert by_id["base-only-item"].ranking_data.beta == pytest.approx(200)
+
+    @pytest.mark.parametrize("branch", ["control", "treatment"])
+    @pytest.mark.parametrize("counts", [(0, 0), (0, 100), (5, 5), (40, 100)])
+    def test_ctr_prediction_uses_only_branch_article_engagement(
+        self, monkeypatch, branch: str, counts: tuple[int, int]
+    ):
+        """CTR prediction cohorts do not mix global counts into branch article rows."""
+        region = f"GB-ctrpred_engb-{branch}"
+        engagement_backend = RegionAwareStubEngagementBackend(
+            {
+                ("item", None): (500, 1_000),
+                ("item", "GB"): (800, 1_000),
+                ("item", region): counts,
+            }
+        )
+        prior_backend = ConstantPrior()
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        recs = generate_recommendations(item_ids=["item"], time_sensitive_count=0)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker.rank_items(recs, region="GB", engagement_region=region)
+
+        prior = prior_backend.get()
+        assert prior is not None
+        assert recs[0].ranking_data is not None
+        assert recs[0].ranking_data.alpha == pytest.approx(counts[0] + prior.alpha)
+        assert recs[0].ranking_data.beta == pytest.approx(counts[1] - counts[0] + prior.beta)
+        assert not any(lookup_region is None for _, lookup_region in engagement_backend.calls)
+        assert not any(lookup_region == "GB" for _, lookup_region in engagement_backend.calls)
+
+    @pytest.mark.parametrize("branch", ["control", "treatment"])
+    def test_ctr_prediction_missing_branch_falls_back_to_gb_without_global_blend(
+        self, monkeypatch, branch: str
+    ):
+        """An entirely missing branch uses GB counts without mixing global counts."""
+        region = f"GB-ctrpred_engb-{branch}"
+        engagement_backend = RegionAwareStubEngagementBackend(
+            {
+                ("item", None): (500, 1_000),
+                ("item", "GB"): (40, 100),
+            }
+        )
+        prior_backend = ConstantPrior()
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend, region_weight=1.0)
+        recs = generate_recommendations(item_ids=["item"], time_sensitive_count=0)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker.rank_items(recs, region="GB", engagement_region=region)
+
+        prior = prior_backend.get()
+        assert prior is not None
+        assert recs[0].ranking_data is not None
+        assert recs[0].ranking_data.alpha == pytest.approx(40 + prior.alpha)
+        assert recs[0].ranking_data.beta == pytest.approx(60 + prior.beta)
+        assert not any(lookup_region is None for _, lookup_region in engagement_backend.calls)
+        assert any(lookup_region == "GB" for _, lookup_region in engagement_backend.calls)
+
+    def test_ctr_prediction_missing_branch_prior_falls_back_to_gb_prior(self, monkeypatch):
+        """A missing experiment prior uses the base GB prior before the constant prior."""
+        region = "GB-ctrpred_engb-treatment"
+        gb_prior = Prior(alpha=20, beta=200, total_impressions_per_day=1_000_000)
+        prior_backend = RegionAwareStubPriorBackend({"GB": gb_prior})
+        engagement_backend = RegionAwareStubEngagementBackend({("item", region): (40, 100)})
+        ranker = ThompsonSamplingRanker(engagement_backend, prior_backend)
+        recs = generate_recommendations(item_ids=["item"], time_sensitive_count=0)
+        monkeypatch.setattr(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs", lambda a, b: 0.42
+        )
+
+        ranker.rank_items(recs, region="GB", engagement_region=region)
+
+        assert prior_backend.calls[:2] == [region, "GB"]
+        assert recs[0].ranking_data is not None
+        assert recs[0].ranking_data.alpha == pytest.approx(60)
+        assert recs[0].ranking_data.beta == pytest.approx(260)
 
     def test_ranking_data_and_fresh_flag_set_with_default_rescaler(self, monkeypatch):
         """Ranking data should be populated and fresh items flagged when using DefaultRescaler."""

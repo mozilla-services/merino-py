@@ -23,7 +23,7 @@ from merino.curated_recommendations.utils import (
 
 _EN_EUROPE = ExperimentName.SECTIONS_IN_EN_EUROPE_EXPERIMENT.value
 _GLOBAL_SPANISH = ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value
-_GERMANY_PUBLISHER_CONSTRAINT = ExperimentName.PUBLISHER_CONSTRAINT_IN_GERMANY_EXPERIMENT.value
+_CTR_PREDICTION_ENGB = ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value
 
 
 class TestCuratedRecommendationsProviderExtractLanguageFromLocale:
@@ -115,93 +115,65 @@ class TestCuratedRecommendationsProviderDeriveRegion:
 class TestCuratedRecommendationsProviderDeriveEngagementRegion:
     """Unit tests for derive_engagement_region."""
 
-    def test_germany_publisher_constraint_uses_country_region_when_disabled(self, monkeypatch):
-        """Germany publisher constraint branches use country-level engagement when disabled."""
-        monkeypatch.setattr(
-            "merino.curated_recommendations.utils."
-            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
-            False,
-        )
+    @pytest.mark.parametrize("branch", ["control", "treatment"])
+    def test_ctr_prediction_engb_uses_branch_region(self, branch: str):
+        """Each en-GB experiment branch uses its own engagement table."""
         request = CuratedRecommendationsRequest(
-            locale=Locale.DE_DE,
-            region="DE",
-            experimentName=_GERMANY_PUBLISHER_CONSTRAINT,
+            locale=Locale.EN_GB,
+            region="GB",
+            experimentName=_CTR_PREDICTION_ENGB,
+            experimentBranch=branch,
+        )
+
+        assert derive_engagement_region(request) == f"GB-ctrpred_engb-{branch}"
+
+    def test_optin_ctr_prediction_engb_uses_branch_region(self):
+        """Forced enrollment uses the same branch engagement table."""
+        request = CuratedRecommendationsRequest(
+            locale=Locale.EN_GB,
+            region="GB",
+            experimentName=f"optin-{_CTR_PREDICTION_ENGB}",
             experimentBranch="treatment",
         )
 
-        assert derive_engagement_region(request) == "DE"
+        assert derive_engagement_region(request) == "GB-ctrpred_engb-treatment"
 
     @pytest.mark.parametrize(
-        "branch, expected",
+        "locale, region, experiment_name, branch, expected",
         [
-            ("control", "DE-publisher-constraint-in-germany-control"),
-            ("treatment", "DE-publisher-constraint-in-germany-treatment"),
+            (Locale.EN_US, "US", _CTR_PREDICTION_ENGB, "treatment", "US"),
+            (Locale.EN_GB, "GB", "another-experiment", "treatment", "GB"),
+            (Locale.EN_GB, "GB", _CTR_PREDICTION_ENGB, None, "GB"),
+            (Locale.DE_DE, "GB", _CTR_PREDICTION_ENGB, "treatment", "GB"),
         ],
     )
-    def test_germany_publisher_constraint_branches_use_branch_region(
-        self, monkeypatch, branch: str, expected: str
+    def test_non_matching_requests_use_country_region(
+        self,
+        locale: Locale,
+        region: str,
+        experiment_name: str,
+        branch: str | None,
+        expected: str,
     ):
-        """Germany publisher constraint branches use branch-specific engagement keys."""
-        monkeypatch.setattr(
-            "merino.curated_recommendations.utils."
-            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
-            True,
-        )
+        """Only valid en-GB experiment enrollments use branch engagement."""
         request = CuratedRecommendationsRequest(
-            locale=Locale.DE_DE,
-            region="DE",
-            experimentName=_GERMANY_PUBLISHER_CONSTRAINT,
+            locale=locale,
+            region=region,
+            experimentName=experiment_name,
             experimentBranch=branch,
         )
 
         assert derive_engagement_region(request) == expected
 
-    def test_optin_germany_publisher_constraint_uses_branch_region(self, monkeypatch):
-        """Opt-in experiment enrollment follows the same branch-specific routing."""
-        monkeypatch.setattr(
-            "merino.curated_recommendations.utils."
-            "PUBLISHER_CONSTRAINT_IN_GERMANY_BRANCH_ENGAGEMENT_ENABLED",
-            True,
-        )
-        request = CuratedRecommendationsRequest(
-            locale=Locale.DE_DE,
-            region="DE",
-            experimentName=f"optin-{_GERMANY_PUBLISHER_CONSTRAINT}",
-            experimentBranch="treatment",
-        )
-
-        assert derive_engagement_region(request) == "DE-publisher-constraint-in-germany-treatment"
-
-    @pytest.mark.parametrize(
-        "experiment_name, branch",
-        [
-            ("some-other-experiment", "treatment"),
-            (_GERMANY_PUBLISHER_CONSTRAINT, "other"),
-            (_GERMANY_PUBLISHER_CONSTRAINT, None),
-            (None, "treatment"),
-        ],
-    )
-    def test_germany_non_matching_enrollment_uses_country_region(
-        self, experiment_name: str | None, branch: str | None
-    ):
-        """Germany requests outside the exact experiment branches keep country-level engagement."""
-        request = CuratedRecommendationsRequest(
-            locale=Locale.DE_DE,
-            region="DE",
-            experimentName=experiment_name,
-            experimentBranch=branch,
-        )
-
-        assert derive_engagement_region(request) == "DE"
-
-    @pytest.mark.parametrize("region", ["US", "FR", "CA"])
-    def test_non_germany_regions_are_unchanged(self, region: str):
-        """The Germany experiment does not affect non-Germany engagement keys."""
+    @pytest.mark.parametrize("region", ["DE", "US", "FR", "CA"])
+    @pytest.mark.parametrize("branch", ["control", "treatment", None])
+    def test_experiments_use_country_region(self, region: str, branch: str | None):
+        """Experiment metadata does not alter the country engagement key."""
         request = CuratedRecommendationsRequest(
             locale=Locale.EN_US,
             region=region,
-            experimentName=_GERMANY_PUBLISHER_CONSTRAINT,
-            experimentBranch="treatment",
+            experimentName="another-experiment",
+            experimentBranch=branch,
         )
 
         assert derive_engagement_region(request) == region
