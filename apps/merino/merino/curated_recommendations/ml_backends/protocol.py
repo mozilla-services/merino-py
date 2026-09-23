@@ -290,3 +290,7 @@ class SpindleBackendProtocol(Protocol):
     def get_similar_stories_image(self, surface: SurfaceId) -> SimilarStoriesProtocol | None:
         """Get similar-story lookup for `surface` based on image embeddings."""
         ...
+
+    def get_similar_stories_either(self, surface: SurfaceId) -> SimilarStoriesProtocol | None:
+        """Get stories similar by text or image embeddings."""
+        ...

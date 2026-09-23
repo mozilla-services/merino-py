@@ -258,6 +258,23 @@ class SpindleBackend(SpindleBackendProtocol):
         """Return cached image-similarity for `surface`, or None if not yet populated."""
         return self._image_info.get(surface)
 
+    def get_similar_stories_either(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
+        """Return stories similar by text or image, using whichever caches are available."""
+        text_info = self.get_similar_stories_text(surface)
+        image_info = self.get_similar_stories_image(surface)
+        if text_info is None:
+            return image_info
+        if image_info is None:
+            return text_info
+
+        similar: dict[str, set[str]] = {}
+        for info in (text_info, image_info):
+            for corpus_item_id, neighbors in info._neighbors.items():
+                similar.setdefault(corpus_item_id, set()).update(neighbors)
+        return SimilarStoriesInfo(
+            {corpus_item_id: list(neighbors) for corpus_item_id, neighbors in similar.items()}
+        )
+
 
 class DummySpindleBackend(SpindleBackendProtocol):
     """No-op backend used when Spindle is disabled or unreachable."""
@@ -276,5 +293,9 @@ class DummySpindleBackend(SpindleBackendProtocol):
         return None
 
     def get_similar_stories_image(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
+        """Return None — the dummy backend has no cache."""
+        return None
+
+    def get_similar_stories_either(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
         """Return None — the dummy backend has no cache."""
         return None

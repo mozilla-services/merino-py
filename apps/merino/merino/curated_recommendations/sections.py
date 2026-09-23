@@ -739,10 +739,7 @@ def get_top_story_list(
 
     similar_stories_info = None
     if spindle_backend is not None and surface_id is not None:
-        # Prefer text similarity (more reliable today); fall back to image.
-        similar_stories_info = spindle_backend.get_similar_stories_text(
-            surface_id
-        ) or spindle_backend.get_similar_stories_image(surface_id)
+        similar_stories_info = spindle_backend.get_similar_stories_either(surface_id)
     balancer = TopStoriesArticleBalancer(
         round(top_count * constraint_scale),
         config=article_balancer_config,
