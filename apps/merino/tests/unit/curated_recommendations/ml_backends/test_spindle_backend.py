@@ -143,10 +143,7 @@ class TestSpindleBackendRefresh:
 
     @pytest.mark.asyncio
     async def test_success_populates_text_and_image_info(self):
-        """Successful response should populate the text cache with symmetric pairs.
-
-        Image refresh is currently disabled, so the image cache stays empty.
-        """
+        """Successful responses should populate both similarity caches."""
         http_client = MagicMock(spec=AsyncClient)
         text_payload = {
             "similar": {"a": ["b"]},
@@ -179,27 +176,28 @@ class TestSpindleBackendRefresh:
         await backend.refresh_duplicate_item_info(
             [_item("a"), _item("b"), _item("c")], SurfaceId.NEW_TAB_EN_US
         )
+        await backend.refresh_duplicate_item_info(
+            [_item("a"), _item("b"), _item("c")], SurfaceId.NEW_TAB_EN_US
+        )
+
+        assert http_client.post.await_count == 2
 
         text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
         image_info = backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US)
         assert text_info is not None
         assert text_info.neighbors("a") == ["b"]
         assert text_info.neighbors("b") == ["a"]
-        # Enable once images are enabled
-        # assert image_info is not None
-        # assert image_info.neighbors("a") == ["c"]
-        assert image_info is None
+        assert image_info is not None
+        assert image_info.neighbors("a") == ["c"]
 
         # Status-code metric should have fired for each endpoint.
         increment_calls = [c.args[0] for c in metrics.increment.call_args_list]
         assert "recommendation.spindle.text.status_codes.200" in increment_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.status_codes.200" in increment_calls
+        assert "recommendation.spindle.image.status_codes.200" in increment_calls
         # Timing metric should have been used.
         timing_calls = [c.args[0] for c in metrics.timeit.call_args_list]
         assert "recommendation.spindle.text.timing" in timing_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.timing" in timing_calls
+        assert "recommendation.spindle.image.timing" in timing_calls
 
     @pytest.mark.asyncio
     async def test_unchanged_content_ids_skip_refresh(self):
@@ -217,14 +215,14 @@ class TestSpindleBackendRefresh:
         backend = _make_backend(http_client)
 
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
 
         http_client.post.assert_awaited_once()
-        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_GB)
         assert text_info is not None
         assert text_info.neighbors("a") == ["b"]
 
@@ -254,14 +252,14 @@ class TestSpindleBackendRefresh:
         backend = _make_backend(http_client)
 
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("c")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("c")], SurfaceId.NEW_TAB_EN_GB
         )
 
         assert http_client.post.await_count == 2
-        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_GB)
         assert text_info is not None
         assert text_info.neighbors("a") == ["c"]
 
@@ -281,14 +279,14 @@ class TestSpindleBackendRefresh:
         backend = _make_backend(http_client)
 
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
         await backend.refresh_duplicate_item_info(
-            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_US
+            [_item("a"), _item("b")], SurfaceId.NEW_TAB_EN_GB
         )
 
         assert http_client.post.await_count == 2
-        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US)
+        text_info = backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_GB)
         assert text_info is not None
         assert text_info.neighbors("a") == ["b"]
 
@@ -310,8 +308,7 @@ class TestSpindleBackendRefresh:
         assert backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US) is None
         increment_calls = [c.args[0] for c in metrics.increment.call_args_list]
         assert "recommendation.spindle.text.error" in increment_calls
-        # Enable once images are enabled
-        # assert "recommendation.spindle.image.error" in increment_calls
+        assert "recommendation.spindle.image.error" in increment_calls
 
     @pytest.mark.asyncio
     async def test_non_2xx_emits_status_metric_and_returns_none(self):
@@ -331,6 +328,33 @@ class TestSpindleBackendRefresh:
         assert "recommendation.spindle.text.status_codes.500" in increment_calls
         assert backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US) is None
 
+    def test_get_similar_stories_combined_unions_both_caches(self):
+        """Pairs from either modality are available through the combined lookup."""
+        backend = _make_backend(MagicMock(spec=AsyncClient))
+        backend._text_info[SurfaceId.NEW_TAB_EN_US] = SimilarStoriesInfo({"a": ["b"]})
+        backend._image_info[SurfaceId.NEW_TAB_EN_US] = SimilarStoriesInfo({"a": ["c"]})
+        backend._update_combined_info(SurfaceId.NEW_TAB_EN_US)
+
+        info = backend.get_similar_stories_combined(SurfaceId.NEW_TAB_EN_US)
+
+        assert info is not None
+        assert set(info.neighbors("a")) == {"b", "c"}
+
+    def test_get_similar_stories_combined_falls_back_to_available_cache(self):
+        """The combined lookup returns whichever modality is available."""
+        backend = _make_backend(MagicMock(spec=AsyncClient))
+        text_info = SimilarStoriesInfo({"a": ["b"]})
+        image_info = SimilarStoriesInfo({"a": ["c"]})
+
+        backend._text_info[SurfaceId.NEW_TAB_EN_US] = text_info
+        backend._update_combined_info(SurfaceId.NEW_TAB_EN_US)
+        assert backend.get_similar_stories_combined(SurfaceId.NEW_TAB_EN_US) is text_info
+
+        backend._text_info.clear()
+        backend._image_info[SurfaceId.NEW_TAB_EN_US] = image_info
+        backend._update_combined_info(SurfaceId.NEW_TAB_EN_US)
+        assert backend.get_similar_stories_combined(SurfaceId.NEW_TAB_EN_US) is image_info
+
 
 class TestDummySpindleBackend:
     """DummySpindleBackend always returns None."""
@@ -342,3 +366,4 @@ class TestDummySpindleBackend:
         await backend.refresh_duplicate_item_info([_item("a")], SurfaceId.NEW_TAB_EN_US)
         assert backend.get_similar_stories_text(SurfaceId.NEW_TAB_EN_US) is None
         assert backend.get_similar_stories_image(SurfaceId.NEW_TAB_EN_US) is None
+        assert backend.get_similar_stories_combined(SurfaceId.NEW_TAB_EN_US) is None

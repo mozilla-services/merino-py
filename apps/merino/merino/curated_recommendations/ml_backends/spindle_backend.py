@@ -81,6 +81,7 @@ class FindSimilarResponse(BaseModel):
     locale: str | None = None
     num_items: int
     num_pairs: int
+    missing: list[str] = Field(default_factory=list)
 
 
 class SimilarStoriesInfo(SimilarStoriesProtocol):
@@ -135,7 +136,9 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
+        self._combined_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._text_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
+        self._image_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
         self._api_key = api_key
 
     def _language_for_surface(self, surface: SurfaceId) -> str | None:
@@ -163,8 +166,7 @@ class SpindleBackend(SpindleBackendProtocol):
         deduped_items = list({item.corpusItemId: item for item in items}.values())
         await self._refresh_text(deduped_items, surface, threshold)
 
-        # Refresh images will be rolled out as soon as GPU inference is verified
-        # await self._refresh_image(deduped_items, surface, threshold)
+        await self._refresh_image(deduped_items, surface, threshold)
 
     async def _refresh_text(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
@@ -197,6 +199,7 @@ class SpindleBackend(SpindleBackendProtocol):
         if response is not None:
             self._text_info[surface] = SimilarStoriesInfo(response.similar)
             self._text_content_ids[surface] = content_ids
+            self._update_combined_info(surface)
 
     async def _refresh_image(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
@@ -214,6 +217,9 @@ class SpindleBackend(SpindleBackendProtocol):
         ]
         if not image_items:
             return
+        content_ids = tuple(item.corpus_item_id for item in image_items)
+        if self._image_content_ids.get(surface) == content_ids:
+            return
         request = FindSimilarImagesRequest(
             items=image_items,
             threshold=threshold,
@@ -226,6 +232,28 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         if response is not None:
             self._image_info[surface] = SimilarStoriesInfo(response.similar)
+            self._image_content_ids[surface] = content_ids
+            self._update_combined_info(surface)
+
+    def _update_combined_info(self, surface: SurfaceId) -> None:
+        """Build the combined similarity cache from available modality caches."""
+        text_info = self._text_info.get(surface)
+        image_info = self._image_info.get(surface)
+        if text_info is None:
+            if image_info is not None:
+                self._combined_info[surface] = image_info
+            return
+        if image_info is None:
+            self._combined_info[surface] = text_info
+            return
+
+        similar: dict[str, set[str]] = {}
+        for info in (text_info, image_info):
+            for corpus_item_id, neighbors in info._neighbors.items():
+                similar.setdefault(corpus_item_id, set()).update(neighbors)
+        self._combined_info[surface] = SimilarStoriesInfo(
+            {corpus_item_id: list(neighbors) for corpus_item_id, neighbors in similar.items()}
+        )
 
     async def _post(
         self,
@@ -260,6 +288,10 @@ class SpindleBackend(SpindleBackendProtocol):
         """Return cached image-similarity for `surface`, or None if not yet populated."""
         return self._image_info.get(surface)
 
+    def get_similar_stories_combined(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
+        """Return the precomputed text-or-image similarity cache for `surface`."""
+        return self._combined_info.get(surface)
+
 
 class DummySpindleBackend(SpindleBackendProtocol):
     """No-op backend used when Spindle is disabled or unreachable."""
@@ -278,5 +310,9 @@ class DummySpindleBackend(SpindleBackendProtocol):
         return None
 
     def get_similar_stories_image(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
+        """Return None — the dummy backend has no cache."""
+        return None
+
+    def get_similar_stories_combined(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
         """Return None — the dummy backend has no cache."""
         return None

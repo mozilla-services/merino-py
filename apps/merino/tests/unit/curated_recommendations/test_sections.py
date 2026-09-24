@@ -1108,6 +1108,9 @@ class TestGetTopStoryList:
             def get_similar_stories_image(self, surface):
                 return None
 
+            def get_similar_stories_combined(self, surface):
+                return self._info
+
             async def refresh_duplicate_item_info(self, items, surface, threshold=0.85):
                 return None
 
