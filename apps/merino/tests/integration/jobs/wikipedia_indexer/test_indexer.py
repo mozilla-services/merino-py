@@ -3,6 +3,7 @@
 import datetime
 import json
 import logging
+from unittest.mock import call as mocker_call
 
 import freezegun
 import pytest
@@ -46,6 +47,9 @@ def file_manager(mocker):
 def es_adapter(mocker):
     """Return a mock ElasticSearchAdapter."""
     adapter_mock = mocker.Mock(spec=ElasticSearchAdapter)
+    # Defaults so the lifecycle sweep after the alias flip has iterable results.
+    adapter_mock.get_indices_for_alias.return_value = []
+    adapter_mock.get_index_lifecycle_policies.return_value = {}
     return adapter_mock
 
 
@@ -201,6 +205,7 @@ def test_flip_alias(
     es_adapter.update_aliases.assert_called_with(actions=expected_actions)
 
 
+@freezegun.freeze_time(FROZEN_TIME)
 def test_index_from_export(
     file_manager,
     es_adapter,
@@ -242,6 +247,111 @@ def test_index_from_export(
     es_adapter.bulk.assert_called_once()
     es_adapter.refresh_index.assert_called_once()
     es_adapter.update_aliases.assert_called_once()
+    es_adapter.set_index_lifecycle_policy.assert_called_once_with(
+        index=f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", policy="enwiki_policy"
+    )
+
+
+@freezegun.freeze_time(FROZEN_TIME)
+def test_index_from_export_applies_active_policy_before_flipping_alias(
+    file_manager,
+    es_adapter,
+    category_blocklist,
+    title_blocklist,
+    mocker,
+):
+    """Test that the new index is never exposed under the alias while it still
+    carries a policy that could delete it.
+    """
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+
+    es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{"id": 1000}]}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+
+    calls = mocker.Mock()
+    calls.attach_mock(es_adapter.set_index_lifecycle_policy, "set_policy")
+    calls.attach_mock(es_adapter.update_aliases, "update_aliases")
+
+    inputs = [
+        json.dumps({"index": {"_type": "doc", "_id": "1000"}}),
+        json.dumps({"title": "Paris", "page_id": 1000, "category": ["cities"]}),
+    ]
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+
+    indexer.index_from_export(1, "enwiki-{version}")
+
+    # Ordering is important here
+    assert [call[0] for call in calls.mock_calls] == ["set_policy", "update_aliases"]
+
+
+@freezegun.freeze_time(FROZEN_TIME)
+def test_index_from_export_demotes_superseded_indices_to_backup_policy(
+    file_manager,
+    es_adapter,
+    category_blocklist,
+    title_blocklist,
+):
+    """Test that indices no longer served by the alias get the backup policy, and
+    that the live index and already-demoted indices are left alone.
+    """
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    new_index = f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}"
+
+    es_adapter.bulk.return_value = {"acknowledged": True, "errors": False, "items": [{"id": 1000}]}
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+    # Post-flip the alias resolves to the just-built index
+    es_adapter.get_indices_for_alias.return_value = [new_index]
+    es_adapter.get_index_lifecycle_policies.return_value = {
+        new_index: "enwiki_policy",
+        "enwiki-20211201-v1-100": "enwiki_policy",
+        "enwiki-20211101-v1-99": "enwiki_backup_policy",
+        "enwiki-20211001-v1-98": None,
+    }
+
+    inputs = [
+        json.dumps({"index": {"_type": "doc", "_id": "1000"}}),
+        json.dumps({"title": "Paris", "page_id": 1000, "category": ["cities"]}),
+    ]
+    file_manager.stream_from_gcs.return_value = (input for input in inputs)
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+
+    indexer.index_from_export(1, "enwiki-{version}")
+
+    es_adapter.get_index_lifecycle_policies.assert_called_once_with(index="enwiki-*-v1-*")
+    assert es_adapter.set_index_lifecycle_policy.call_args_list == [
+        # The active index, applied before the flip.
+        mocker_call(index=new_index, policy="enwiki_policy"),
+        # Superseded, and not already on the backup policy.
+        mocker_call(index="enwiki-20211201-v1-100", policy="enwiki_backup_policy"),
+        mocker_call(index="enwiki-20211001-v1-98", policy="enwiki_backup_policy"),
+    ]
+
+
+@pytest.mark.parametrize("language", ["en", "fr", "de", "it", "pl"])
+def test_backup_lifecycle_policies_are_language_scoped(
+    file_manager,
+    es_adapter,
+    category_blocklist,
+    title_blocklist,
+    language,
+):
+    """Test that policy names and the discovery pattern track the language."""
+    file_manager.language = language
+    es_adapter.get_indices_for_alias.return_value = [f"{language}wiki-1-v1-2"]
+    es_adapter.get_index_lifecycle_policies.return_value = {f"{language}wiki-1-v1-1": None}
+
+    indexer = Indexer("v1", category_blocklist, title_blocklist, file_manager, es_adapter)
+    indexer._apply_backup_lifecycle_policies(f"{language}wiki-v1")
+
+    es_adapter.get_index_lifecycle_policies.assert_called_once_with(index=f"{language}wiki-*-v1-*")
+    es_adapter.set_index_lifecycle_policy.assert_called_once_with(
+        index=f"{language}wiki-1-v1-1", policy=f"{language}wiki_backup_policy"
+    )
 
 
 def test_index_from_export_with_category_blocklist_content_filter(

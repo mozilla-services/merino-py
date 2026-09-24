@@ -21,6 +21,17 @@ logger = logging.getLogger(__name__)
 # Page type the export uses for a redirect, e.g. "Paris, France" pointing at "Paris".
 REDIRECT_PAGE_TYPE = "redirect"
 
+# ILM policies are provisioned per language by terraform in webservices-infra
+# (merino/tf/modules/elasticsearch). The active policy never deletes, so the index
+# serving the alias survives however long it takes to build a replacement; the
+# backup policy expires superseded indices after 7 days.
+ACTIVE_ILM_POLICY = "{language}wiki_policy"
+BACKUP_ILM_POLICY = "{language}wiki_backup_policy"
+
+# Matches every index this job has built for a language and index version,
+# e.g. `enwiki-20240101-v1-1700000000`.
+INDEX_PATTERN = "{language}wiki-*-{version}-*"
+
 
 class Indexer:
     """Index documents from wikimedia search exports into Elasticsearch"""
@@ -110,12 +121,20 @@ class Indexer:
             )
             logger.info("Force merged index", extra={"index": index_name})
 
+            # Attach the never-delete policy before the swap so the index is never
+            # eligible for deletion while it is the one serving the alias.
+            self._apply_active_lifecycle_policy(index_name)
+
             # Flip the alias pointer to the new index and remove the previous index
-            self._flip_alias_to_latest(index_name, elasticsearch_alias)
+            alias = self._flip_alias_to_latest(index_name, elasticsearch_alias)
             logger.info(
                 "Flipped alias to latest index",
-                extra={"index": index_name, "alias": elasticsearch_alias},
+                extra={"index": index_name, "alias": alias},
             )
+
+            # Anything the alias no longer points at is now a backup, so hand it
+            # over to the expiring policy.
+            self._apply_backup_lifecycle_policies(alias)
         else:
             raise Exception("Could not create the index")
 
@@ -187,7 +206,43 @@ class Indexer:
 
         return False
 
-    def _flip_alias_to_latest(self, current_index: str, alias: str):
+    def _apply_active_lifecycle_policy(self, index_name: str):
+        """Attach the never-delete ILM policy to the newly built index."""
+        policy = ACTIVE_ILM_POLICY.format(language=self.file_manager.language)
+        self.elasticsearch.set_index_lifecycle_policy(index=index_name, policy=policy)
+        logger.info(
+            "Applied active lifecycle policy",
+            extra={"index": index_name, "policy": policy},
+        )
+
+    def _apply_backup_lifecycle_policies(self, alias: str):
+        """Attach the expiring ILM policy to every superseded index.
+
+        Indices still served by `alias` keep the active policy. Indices that already
+        carry the backup policy are skipped so a rerun is a no-op for them.
+        """
+        language = self.file_manager.language
+        policy = BACKUP_ILM_POLICY.format(language=language)
+        pattern = INDEX_PATTERN.format(language=language, version=self.index_version)
+
+        active = set(self.elasticsearch.get_indices_for_alias(alias=alias))
+        current = self.elasticsearch.get_index_lifecycle_policies(index=pattern)
+
+        for index, current_policy in current.items():
+            if index in active or current_policy == policy:
+                continue
+            self.elasticsearch.set_index_lifecycle_policy(index=index, policy=policy)
+            logger.info(
+                "Applied backup lifecycle policy",
+                extra={
+                    "index": index,
+                    "policy": policy,
+                    "previous_policy": current_policy,
+                },
+            )
+
+    def _flip_alias_to_latest(self, current_index: str, alias: str) -> str:
+        """Point `alias` at `current_index` only, and return the resolved alias."""
         alias = alias.format(version=self.index_version)
 
         # fetch previous index using alias so we know what to delete
@@ -203,3 +258,4 @@ class Indexer:
                 actions.append({"remove": {"index": idx, "alias": alias}})
 
         self.elasticsearch.update_aliases(actions=actions)
+        return alias

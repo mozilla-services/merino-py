@@ -280,6 +280,42 @@ def test_get_indices_for_alias_returns_keys(
     client.indices.get_alias.assert_called_once_with(name="my-alias")
 
 
+def test_get_index_lifecycle_policies_extracts_policy_names(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that get_index_lifecycle_policies maps each matching index to its
+    attached ILM policy, using None for indices that have none.
+    """
+    client = _mock_client()
+    client.indices.get_settings.return_value = {
+        "index-a": {"settings": {"index": {"lifecycle": {"name": "enwiki_policy"}}}},
+        "index-b": {"settings": {"index": {"number_of_shards": "1"}}},
+        "index-c": {"settings": {}},
+    }
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    policies = adapter.get_index_lifecycle_policies(index="enwiki-*-v1-*")
+
+    assert policies == {"index-a": "enwiki_policy", "index-b": None, "index-c": None}
+    client.indices.get_settings.assert_called_once_with(
+        index="enwiki-*-v1-*", ignore_unavailable=True
+    )
+
+
+def test_set_index_lifecycle_policy_calls_put_settings(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that set_index_lifecycle_policy writes the lifecycle name setting."""
+    client = _mock_client()
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.set_index_lifecycle_policy(index="my-index", policy="enwiki_backup_policy")
+
+    client.indices.put_settings.assert_called_once_with(
+        index="my-index", settings={"index.lifecycle.name": "enwiki_backup_policy"}
+    )
+
+
 def test_forcemerge_calls_indices_forcemerge(
     adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
 ) -> None:

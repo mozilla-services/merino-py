@@ -159,6 +159,29 @@ class ElasticSearchAdapter:
             wait_for_completion=wait_for_completion,
         )
 
+    def get_index_lifecycle_policies(self, *, index: str) -> dict[str, str | None]:
+        """Return the ILM policy attached to each index matching `index`.
+
+        `index` may be a concrete name or a wildcard pattern. Indices that have
+        no ILM policy attached map to `None`.
+        """
+        res = cast(
+            dict[str, Any],
+            self.get_client().indices.get_settings(index=index, ignore_unavailable=True),
+        )
+        policies: dict[str, str | None] = {}
+        for name, body in res.items():
+            index_settings = (body.get("settings") or {}).get("index") or {}
+            policies[name] = (index_settings.get("lifecycle") or {}).get("name")
+        return policies
+
+    def set_index_lifecycle_policy(self, *, index: str, policy: str) -> None:
+        """Attach an ILM policy to an index."""
+        self.get_client().indices.put_settings(
+            index=index,
+            settings={"index.lifecycle.name": policy},
+        )
+
     def update_aliases(self, *, actions: list[dict[str, Any]]) -> None:
         """Apply alias update actions atomically."""
         self.get_client().indices.update_aliases(
