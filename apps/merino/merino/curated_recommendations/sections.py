@@ -739,7 +739,46 @@ def get_top_story_list(
 
     similar_stories_info = None
     if spindle_backend is not None and surface_id is not None:
-        similar_stories_info = spindle_backend.get_similar_stories_either(surface_id)
+        text_similar_stories = spindle_backend.get_similar_stories_text(surface_id)
+        image_similar_stories = spindle_backend.get_similar_stories_image(surface_id)
+        similar_stories_info = spindle_backend.get_similar_stories_combined(surface_id)
+        text_pairs = (
+            {
+                item.corpusItemId: text_similar_stories.neighbors(item.corpusItemId)
+                for item in items
+                if text_similar_stories is not None
+                and text_similar_stories.neighbors(item.corpusItemId)
+            }
+            if text_similar_stories is not None
+            else None
+        )
+        image_pairs = (
+            {
+                item.corpusItemId: image_similar_stories.neighbors(item.corpusItemId)
+                for item in items
+                if image_similar_stories is not None
+                and image_similar_stories.neighbors(item.corpusItemId)
+            }
+            if image_similar_stories is not None
+            else None
+        )
+        either_pairs = (
+            {
+                item.corpusItemId: similar_stories_info.neighbors(item.corpusItemId)
+                for item in items
+                if similar_stories_info is not None
+                and similar_stories_info.neighbors(item.corpusItemId)
+            }
+            if similar_stories_info is not None
+            else None
+        )
+        print("========== SPINDLE TEXT SIMILARS ==========")
+        print(text_pairs)
+        print("========== SPINDLE IMAGE SIMILARS ==========")
+        print(image_pairs)
+        print("========== SPINDLE COMBINED SIMILARS ==========")
+        print(either_pairs)
+        print("========== END SPINDLE SIMILARS ==========")
     balancer = TopStoriesArticleBalancer(
         round(top_count * constraint_scale),
         config=article_balancer_config,

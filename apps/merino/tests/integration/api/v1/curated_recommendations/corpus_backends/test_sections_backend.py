@@ -255,7 +255,7 @@ class _StubSpindle(SpindleBackendProtocol):
         """No cache."""
         return None
 
-    def get_similar_stories_either(self, surface):
+    def get_similar_stories_combined(self, surface):
         """No cache."""
         return None
 

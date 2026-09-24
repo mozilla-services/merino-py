@@ -136,6 +136,7 @@ class SpindleBackend(SpindleBackendProtocol):
         )
         self._text_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._image_info: dict[SurfaceId, SimilarStoriesInfo] = {}
+        self._combined_info: dict[SurfaceId, SimilarStoriesInfo] = {}
         self._text_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
         self._image_content_ids: dict[SurfaceId, tuple[str, ...]] = {}
         self._api_key = api_key
@@ -198,6 +199,7 @@ class SpindleBackend(SpindleBackendProtocol):
         if response is not None:
             self._text_info[surface] = SimilarStoriesInfo(response.similar)
             self._text_content_ids[surface] = content_ids
+            self._update_combined_info(surface)
 
     async def _refresh_image(
         self, items: list[CorpusItem], surface: SurfaceId, threshold: float
@@ -231,6 +233,27 @@ class SpindleBackend(SpindleBackendProtocol):
         if response is not None:
             self._image_info[surface] = SimilarStoriesInfo(response.similar)
             self._image_content_ids[surface] = content_ids
+            self._update_combined_info(surface)
+
+    def _update_combined_info(self, surface: SurfaceId) -> None:
+        """Build the combined similarity cache from available modality caches."""
+        text_info = self._text_info.get(surface)
+        image_info = self._image_info.get(surface)
+        if text_info is None:
+            if image_info is not None:
+                self._combined_info[surface] = image_info
+            return
+        if image_info is None:
+            self._combined_info[surface] = text_info
+            return
+
+        similar: dict[str, set[str]] = {}
+        for info in (text_info, image_info):
+            for corpus_item_id, neighbors in info._neighbors.items():
+                similar.setdefault(corpus_item_id, set()).update(neighbors)
+        self._combined_info[surface] = SimilarStoriesInfo(
+            {corpus_item_id: list(neighbors) for corpus_item_id, neighbors in similar.items()}
+        )
 
     async def _post(
         self,
@@ -265,22 +288,9 @@ class SpindleBackend(SpindleBackendProtocol):
         """Return cached image-similarity for `surface`, or None if not yet populated."""
         return self._image_info.get(surface)
 
-    def get_similar_stories_either(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
-        """Return stories similar by text or image, using whichever caches are available."""
-        text_info = self.get_similar_stories_text(surface)
-        image_info = self.get_similar_stories_image(surface)
-        if text_info is None:
-            return image_info
-        if image_info is None:
-            return text_info
-
-        similar: dict[str, set[str]] = {}
-        for info in (text_info, image_info):
-            for corpus_item_id, neighbors in info._neighbors.items():
-                similar.setdefault(corpus_item_id, set()).update(neighbors)
-        return SimilarStoriesInfo(
-            {corpus_item_id: list(neighbors) for corpus_item_id, neighbors in similar.items()}
-        )
+    def get_similar_stories_combined(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
+        """Return the precomputed text-or-image similarity cache for `surface`."""
+        return self._combined_info.get(surface)
 
 
 class DummySpindleBackend(SpindleBackendProtocol):
@@ -303,6 +313,6 @@ class DummySpindleBackend(SpindleBackendProtocol):
         """Return None — the dummy backend has no cache."""
         return None
 
-    def get_similar_stories_either(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
+    def get_similar_stories_combined(self, surface: SurfaceId) -> SimilarStoriesInfo | None:
         """Return None — the dummy backend has no cache."""
         return None
