@@ -5,7 +5,7 @@
 """Unit tests for the Thompson sampling code path of the AdM provider."""
 
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from pydantic import HttpUrl
@@ -71,9 +71,15 @@ async def test_query_with_thompson_returns_suggestion(
             ),
         )
     ]
-    statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select",
-        tags={"outcome": "selected", "subject": "example.org", "below_threshold": "false"},
+    assert statsd_mock.increment.call_count == 2
+    statsd_mock.increment.assert_has_calls(
+        [
+            call(
+                "providers.adm.thompson.select",
+                tags={"outcome": "selected", "subject": "example.org", "below_threshold": "false"},
+            ),
+            call("providers.adm.served", tags={"match_type": "exact_prefix"}),
+        ]
     )
 
 
@@ -204,9 +210,15 @@ async def test_query_with_thompson_single_candidate_below_threshold_returns_sugg
             ),
         )
     ]
-    statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select",
-        tags={"outcome": "skipped", "subject": "example.org", "below_threshold": "true"},
+    assert statsd_mock.increment.call_count == 2
+    statsd_mock.increment.assert_has_calls(
+        [
+            call(
+                "providers.adm.thompson.select",
+                tags={"outcome": "skipped", "subject": "example.org", "below_threshold": "true"},
+            ),
+            call("providers.adm.served", tags={"match_type": "exact_prefix"}),
+        ]
     )
 
 
@@ -245,7 +257,9 @@ async def test_query_with_thompson_without_engagement_data_skips_sampling(
             ),
         )
     ]
-    statsd_mock.increment.assert_not_called()
+    statsd_mock.increment.assert_called_once_with(
+        "providers.adm.served", tags={"match_type": "exact_prefix"}
+    )
 
 
 @patch("merino.providers.suggest.adm.provider.TS_DRY_RUN", True)
@@ -283,9 +297,15 @@ async def test_query_with_thompson_returns_fallback_when_fallback_enabled(
             ),
         )
     ]
-    statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select",
-        tags={"outcome": "selected", "subject": "example.org", "below_threshold": "false"},
+    assert statsd_mock.increment.call_count == 2
+    statsd_mock.increment.assert_has_calls(
+        [
+            call(
+                "providers.adm.thompson.select",
+                tags={"outcome": "selected", "subject": "example.org", "below_threshold": "false"},
+            ),
+            call("providers.adm.served", tags={"match_type": "exact_prefix"}),
+        ]
     )
 
 
@@ -329,7 +349,17 @@ async def test_query_with_thompson_dummy_return_suggestion_when_fallback_enabled
             ),
         )
     ]
-    statsd_mock.increment.assert_called_once_with(
-        "providers.adm.thompson.select",
-        tags={"outcome": "suppressed", "subject": "example.org", "below_threshold": "false"},
+    assert statsd_mock.increment.call_count == 2
+    statsd_mock.increment.assert_has_calls(
+        [
+            call(
+                "providers.adm.thompson.select",
+                tags={
+                    "outcome": "suppressed",
+                    "subject": "example.org",
+                    "below_threshold": "false",
+                },
+            ),
+            call("providers.adm.served", tags={"match_type": "exact_prefix"}),
+        ]
     )
