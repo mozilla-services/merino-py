@@ -5,7 +5,7 @@
 """Unit tests for the adm provider module."""
 
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from pydantic import HttpUrl
@@ -22,7 +22,6 @@ from merino.providers.suggest.adm.backends.protocol import (
 )
 from merino.providers.suggest.adm.fuzzy import RejectionReason
 from merino.providers.suggest.adm.provider import (
-    AMP_FUZZY_VARIANT,
     NonsponsoredSuggestion,
     Provider,
 )
@@ -108,41 +107,18 @@ async def test_fuzzy_rescues_single_typo(adm: Provider) -> None:
     assert rescued[0].advertiser == "Example.org"
 
 
-@pytest.mark.parametrize(
-    "client_variants",
-    [None, [], ["some_other_variant"]],
-    ids=["no-variants", "empty-variants", "other-variant"],
-)
 @pytest.mark.asyncio
-async def test_query_no_fuzzy_without_treatment_variant(
-    srequest: SuggestionRequestFixture,
-    adm: Provider,
-    client_variants: list[str] | None,
-) -> None:
-    """Without the treatment variant the fuzzy fallback stays off, so a typo returns nothing."""
-    await adm.initialize()
-    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
-    geolocation = Location(country="US")
-
-    res = await adm.query(srequest("firefox accountz", geolocation, user_agent, client_variants))
-
-    assert res == []
-
-
-@pytest.mark.asyncio
-async def test_query_fuzzy_rescues_typo_for_treatment(
+async def test_query_fuzzy_rescues_typo(
     srequest: SuggestionRequestFixture,
     adm: Provider,
     adm_parameters: dict[str, Any],
 ) -> None:
-    """With the treatment variant, a single-typo miss is rescued to its AMP suggestion."""
+    """With fuzzy enabled, a single-typo miss is rescued to its AMP suggestion."""
     await adm.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
 
-    res = await adm.query(
-        srequest("firefox accountz", geolocation, user_agent, [AMP_FUZZY_VARIANT])
-    )
+    res = await adm.query(srequest("firefox accountz", geolocation, user_agent))
 
     assert res == [
         NonsponsoredSuggestion(
@@ -181,24 +157,22 @@ async def test_query_fuzzy_drops_guardrail_rejected_candidate(
 
     # "girefox accounts" is a first-char substitution of "firefox accounts": the extension
     # surfaces it as a fuzzy candidate, but the guardrail rejects it as too risky.
-    res = await adm.query(
-        srequest("girefox accounts", geolocation, user_agent, [AMP_FUZZY_VARIANT])
-    )
+    res = await adm.query(srequest("girefox accounts", geolocation, user_agent))
 
     assert res == []
 
 
 @pytest.mark.asyncio
-async def test_query_fuzzy_variant_leaves_exact_match_unchanged(
+async def test_query_fuzzy_leaves_exact_match_unchanged(
     srequest: SuggestionRequestFixture,
     adm: Provider,
 ) -> None:
-    """The treatment variant does not disturb exact/prefix matches."""
+    """Fuzzy matching does not disturb exact/prefix matches."""
     await adm.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
 
-    res = await adm.query(srequest("firefox", geolocation, user_agent, [AMP_FUZZY_VARIANT]))
+    res = await adm.query(srequest("firefox", geolocation, user_agent))
 
     assert len(res) == 1
     suggestion = res[0]
@@ -220,14 +194,14 @@ async def test_query_fuzzy_emits_metrics(
     geolocation = Location(country="US")
 
     # rescue -> candidate found and served
-    await adm.query(srequest("firefox accountz", geolocation, user_agent, [AMP_FUZZY_VARIANT]))
+    await adm.query(srequest("firefox accountz", geolocation, user_agent))
     statsd_mock.increment.assert_any_call("providers.adm.fuzzy.candidate_found")
     statsd_mock.increment.assert_any_call("providers.adm.fuzzy.served")
 
     statsd_mock.increment.reset_mock()
 
     # guardrail drop -> candidate found, rejected with reason, and overall miss
-    await adm.query(srequest("girefox accounts", geolocation, user_agent, [AMP_FUZZY_VARIANT]))
+    await adm.query(srequest("girefox accounts", geolocation, user_agent))
     statsd_mock.increment.assert_any_call("providers.adm.fuzzy.candidate_found")
     statsd_mock.increment.assert_any_call(
         "providers.adm.fuzzy.rejected",
@@ -242,16 +216,116 @@ async def test_query_fuzzy_disabled_by_kill_switch(
     srequest: SuggestionRequestFixture,
     adm: Provider,
 ) -> None:
-    """With the kill-switch off, the treatment variant no longer enables the fuzzy fallback."""
+    """With the kill-switch off, fuzzy matching is disabled and a typo returns nothing."""
     await adm.initialize()
     user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
     geolocation = Location(country="US")
 
-    res = await adm.query(
-        srequest("firefox accountz", geolocation, user_agent, [AMP_FUZZY_VARIANT])
-    )
+    res = await adm.query(srequest("firefox accountz", geolocation, user_agent))
 
     assert res == []
+
+
+@pytest.mark.asyncio
+async def test_engagement_lookup_uses_engagement_query(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    mocker: MockerFixture,
+) -> None:
+    """The engagement/Thompson lookup keys on `engagement_query` (the raw form)."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+    select_spy = mocker.spy(adm, "_select")
+
+    request = srequest("firefox", geolocation, user_agent)
+    request.engagement_query = "firefox raw"
+
+    await adm.query(request)
+
+    # `_select(suggestions, query)` — the second arg is the engagement key.
+    assert select_spy.call_args.args[1] == "firefox raw"
+
+
+@pytest.mark.asyncio
+async def test_engagement_query_defaults_to_query(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    mocker: MockerFixture,
+) -> None:
+    """When `engagement_query` is unset, the lookup falls back to the matched query."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+    select_spy = mocker.spy(adm, "_select")
+
+    await adm.query(srequest("firefox", geolocation, user_agent))
+
+    assert select_spy.call_args.args[1] == "firefox"
+
+
+@pytest.mark.asyncio
+async def test_served_metric_exact_prefix(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    statsd_mock: Any,
+) -> None:
+    """An exact/prefix match (raw == matched) emits served{match_type=exact_prefix}."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    await adm.query(srequest("firefox", geolocation, user_agent))
+
+    statsd_mock.increment.assert_called_once_with(
+        "providers.adm.served", tags={"match_type": "exact_prefix"}
+    )
+
+
+@pytest.mark.asyncio
+async def test_served_metric_fuzzy(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    statsd_mock: Any,
+) -> None:
+    """A fuzzy rescue emits served{match_type=fuzzy}."""
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    await adm.query(srequest("firefox accountz", geolocation, user_agent))
+
+    assert statsd_mock.increment.call_count == 3
+    statsd_mock.increment.assert_has_calls(
+        [
+            call("providers.adm.fuzzy.candidate_found"),
+            call("providers.adm.fuzzy.served"),
+            call("providers.adm.served", tags={"match_type": "fuzzy"}),
+        ]
+    )
+
+
+@pytest.mark.asyncio
+async def test_served_metric_normalized(
+    srequest: SuggestionRequestFixture,
+    adm: Provider,
+    statsd_mock: Any,
+) -> None:
+    """An exact match on a normalization-rewritten query (engagement_query != query)
+    emits served{match_type=normalized}.
+    """
+    await adm.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    request = srequest("firefox", geolocation, user_agent)
+    request.engagement_query = "firefox raw"
+
+    await adm.query(request)
+
+    statsd_mock.increment.assert_called_once_with(
+        "providers.adm.served", tags={"match_type": "normalized"}
+    )
 
 
 @pytest.mark.parametrize(
@@ -459,12 +533,15 @@ async def test_top_pick_promotion_metric_emitted_on_match(
 
     await adm_top_pick.query(srequest("firefox", geolocation, user_agent, None))
 
-    adm_top_pick.metrics_client.increment.assert_called_once_with(  # type: ignore[attr-defined]
-        "providers.adm.top_pick_promotion",
-        tags={
-            "advertiser": "example.org",
-            "prefix_length": 4,
-        },
+    assert adm_top_pick.metrics_client.increment.call_count == 2  # type: ignore[attr-defined]
+    adm_top_pick.metrics_client.increment.assert_has_calls(  # type: ignore[attr-defined]
+        [
+            call("providers.adm.served", tags={"match_type": "exact_prefix"}),
+            call(
+                "providers.adm.top_pick_promotion",
+                tags={"advertiser": "example.org", "prefix_length": 4},
+            ),
+        ]
     )
 
 
@@ -490,7 +567,9 @@ async def test_top_pick_promotion_metric_not_emitted(
 
     await adm_top_pick.query(srequest(query, geolocation, user_agent, None))
 
-    adm_top_pick.metrics_client.increment.assert_not_called()  # type: ignore[attr-defined]
+    adm_top_pick.metrics_client.increment.assert_called_once_with(  # type: ignore[attr-defined]
+        "providers.adm.served", tags={"match_type": "exact_prefix"}
+    )
 
 
 @pytest.mark.asyncio
@@ -507,7 +586,9 @@ async def test_query_is_top_pick_false_when_record_has_no_prefix(
 
     assert len(res) == 1
     assert res[0].is_top_pick is False
-    adm.metrics_client.increment.assert_not_called()  # type: ignore[attr-defined]
+    adm.metrics_client.increment.assert_called_once_with(  # type: ignore[attr-defined]
+        "providers.adm.served", tags={"match_type": "exact_prefix"}
+    )
 
 
 SAMPLE_ENGAGEMENT_DATA = EngagementData(

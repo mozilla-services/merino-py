@@ -25,6 +25,9 @@ class SuggestionRequest(BaseModel):
     source: str | None = None
     is_soft_pii: bool = False
     client_variants: list[str] = []
+    # Raw query (lstrip+lower) for the AMP engagement lookup; matches the offline write key:
+    # https://github.com/mozilla/bigquery-etl/blob/e808bac2b73ca94dc56be198dcf2cc2e01b8327c/sql/moz-fx-data-shared-prod/search_terms_derived/suggest_impression_sanitized_v3/query.sql#L16
+    engagement_query: str | None = None
 
 
 class BaseSuggestion(BaseModel):
