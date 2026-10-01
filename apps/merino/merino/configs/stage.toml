@@ -140,6 +140,11 @@ dummy_engaged_count = 5
 # MERINO_PROVIDERS__ADM__THOMPSON__DUMMY_ATTEMPTED_COUNT
 dummy_attempted_count = 1000
 
+[stage.providers.adm.fuzzy]
+# MERINO_PROVIDERS__ADM__FUZZY__ENABLED
+# On in stage to validate AMP fuzzy + normalization before prod.
+enabled = true
+
 [stage.query_normalization]
 enabled = true
 data_source = "remote"

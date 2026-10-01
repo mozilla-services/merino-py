@@ -47,6 +47,15 @@ class IABCategory(str, Enum):
     EDUCATION: Final = "5 - Education"
 
 
+@unique
+class MatchType(str, Enum):
+    """How a served AMP suggestion matched, for the `providers.adm.served` reach metric."""
+
+    EXACT_PREFIX: Final = "exact_prefix"
+    FUZZY: Final = "fuzzy"
+    NORMALIZED: Final = "normalized"
+
+
 # Used whenever the `icon` field is missing from the suggestion payload.
 MISSING_ICON_ID: Final = "-1"
 FORM_FACTORS_FALLBACK_MAPPING = {
@@ -59,9 +68,7 @@ FORM_FACTORS_FALLBACK_MAPPING = {
 FALLBACK_FORM_FACTOR: str = "other"
 FALLBACK_COUNTRY_CODE: str = "US"
 TS_DRY_RUN: bool = settings.providers.adm.thompson.dry_run
-# Experiment treatment variant that opts a request into the ED1 fuzzy fallback.
-AMP_FUZZY_VARIANT: str = "amp-fuzzy-matching-treatment"
-# toggle fuzzy matching for AMP suggestions
+# toggles AMP fuzzy matching + query normalization
 AMP_FUZZY_ENABLED: bool = settings.providers.adm.fuzzy.enabled
 # providers that receive normalized queries (AMP gated per-environment)
 NORMALIZATION_PROVIDERS = frozenset(settings.query_normalization.providers)
@@ -351,9 +358,10 @@ class Provider(BaseProvider):
     async def query(self, srequest: SuggestionRequest) -> list[BaseSuggestion]:
         """Provide suggestion for a given query."""
         q: str = srequest.query
+        # Engagement/Thompson key (raw query); falls back to `q`.
+        engagement_query: str = srequest.engagement_query or q
         form_factor = srequest.user_agent.form_factor if srequest.user_agent else None
         country = srequest.geolocation.country
-        client_variants = srequest.client_variants
 
         # Set the fallback country code and form factor if absent. See "DISCO-3971" for details.
         form_factor = form_factor or FALLBACK_FORM_FACTOR
@@ -361,13 +369,23 @@ class Provider(BaseProvider):
 
         segment = (FORM_FACTORS_FALLBACK_MAPPING.get(form_factor, FormFactor.DESKTOP.value),)
         idx_id = f"{country}/{segment}"
-        fuzzy = AMP_FUZZY_ENABLED and AMP_FUZZY_VARIANT in client_variants
         if (
             self.suggestion_content.index_manager.has(idx_id)
-            and (suggestions := self._query_index(idx_id, q, fuzzy))
-            and (res := self._select(suggestions, q))
+            and (suggestions := self._query_index(idx_id, q, AMP_FUZZY_ENABLED))
+            and (res := self._select(suggestions, engagement_query))
         ):
             is_sponsored = res.iab_category == IABCategory.SHOPPING
+
+            # Reach split: net-new (fuzzy / normalization) vs exact-prefix baseline.
+            if res.matched_via == "fuzzy":
+                match_type = MatchType.FUZZY
+            elif engagement_query != q:
+                match_type = MatchType.NORMALIZED
+            else:
+                match_type = MatchType.EXACT_PREFIX
+            self.metrics_client.increment(
+                "providers.adm.served", tags={"match_type": match_type.value}
+            )
 
             # A suggestion gets the "top pick" UI treatment when the query starts with
             # `top_pick_prefix` if specified by MARS.
