@@ -4,12 +4,8 @@
 
 """Type definitions for unit test modules."""
 
-from typing import Callable, Optional
+from typing import Callable
 
-from merino.middleware.geolocation import Location
-from merino.middleware.user_agent import UserAgent
 from merino.providers.suggest.base import SuggestionRequest
 
-SuggestionRequestFixture = Callable[
-    [str, Optional[Location], Optional[UserAgent], Optional[list[str]]], SuggestionRequest
-]
+SuggestionRequestFixture = Callable[..., SuggestionRequest]
