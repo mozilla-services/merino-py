@@ -109,8 +109,8 @@ dry_run = false
 
 [production.providers.adm.fuzzy]
 # MERINO_PROVIDERS__ADM__FUZZY__ENABLED
-# off in prod, will update for prod deployment
-enabled = false
+# On in prod: AMP fuzzy + normalization graduated after stage validation.
+enabled = true
 
 [production.providers.top_picks]
 # MERINO_PROVIDERS__TOP_PICKS__DOMAIN_DATA_SOURCE
