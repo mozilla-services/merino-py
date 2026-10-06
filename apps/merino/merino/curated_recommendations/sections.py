@@ -90,6 +90,9 @@ DAILY_BRIEFING_SECTION_KEY = "daily-briefing"
 # Require enough recommendations to fill the layout plus a single fallback item
 SECTION_FALLBACK_BUFFER = 1
 MAX_SECTIONS_PER_RESPONSE = 20
+# Rest-of-world feeds are a lightweight content experience: one module drawing on every topic,
+# with nothing to follow (HNT-3112).
+TOP_STORIES_ONLY_SURFACES = frozenset({SurfaceId.NEW_TAB_EN_ROW, SurfaceId.NEW_TAB_ES_ROW})
 
 # Number of articles to use when ranking the section. We choose 4 because there are typically only
 # 4 stories shown for each section. For a period we had the number as 6.
@@ -991,6 +994,7 @@ async def get_sections(
             recommendations=top_stories,
             title=get_translation(surface_id, "top-stories", "Popular Today"),
             layout=deepcopy(popular_today_layout),
+            followable=surface_id not in TOP_STORIES_ONLY_SURFACES,
         )
     }
 
@@ -1023,7 +1027,8 @@ async def get_sections(
             sections.pop("top_stories_section", None)
 
     # 13. Add remaining corpus sections
-    sections.update(corpus_sections)
+    if surface_id not in TOP_STORIES_ONLY_SURFACES:
+        sections.update(corpus_sections)
 
     # 14. Prune undersized sections
     sections = get_sections_with_enough_items(sections)
