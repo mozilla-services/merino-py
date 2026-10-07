@@ -26,34 +26,42 @@ $ make run
 $ make dev
 ```
 
-### General commands
+### Checks, tests, and builds
+
+These run through [Moon](./monorepo.md), which runs each task per project. Add
+`--affected --base origin/main` to limit a run to projects changed on your branch.
+
+```shell
+# Run all linting, format, security, and type checks
+$ moon run ':#quality'
+
+# Run a single check for every project: lint, format-check, security, or typecheck
+$ moon run :typecheck
+
+# Run unit tests for every project, or for one project
+$ moon run :test
+$ moon run merino:test
+
+# Forward arguments to pytest
+$ moon run merino:test -- -k weather
+
+# Run Merino integration tests (builds the Elasticsearch test image; needs Docker)
+$ moon run merino:integration-test
+
+# Run all unit tests plus integration tests and enforce the coverage gates
+$ moon run :test merino:diff-coverage
+
+# Build Docker images: merino (app:build), fleece (app-fleece:build), load-tests (merino-locust:build)
+$ moon run merino:docker-build
+```
+
+### Local development helpers
 
 ```shell
 # List all available make commands with descriptions
 $ make help
 
 $ make install
-
-# Run linter
-$ make ruff-lint
-
-# Run format checker
-$ make ruff-fmt
-
-# Run formatter
-$ make ruff-format
-
-# Run black
-$ make black
-
-# Run bandit
-$ make bandit
-
-# Run mypy
-$ make mypy
-
-# Run all linting checks
-$ make -k lint
 
 # Run all formatters
 $ make format
@@ -64,31 +72,11 @@ $ make dev
 # Run merino-py without the auto code reloading
 $ make run
 
-# Run unit and integration tests and evaluate combined coverage
-$ make test
-
-# Evaluate combined unit and integration test coverage
-$ make test-coverage-check
-
-# Run unit tests
-$ make unit-tests
-
 # List fixtures in use per unit test
 $ make unit-test-fixtures
 
-# Run integration tests
-# (assumes prebuilt elasticsearch image)
-$ make integration-tests
-
-# Run integration tests locally
-# (builds custom elasticsearch image)
-$ make integration-tests-local
-
 # List fixtures in use per integration test
 $ make integration-test-fixtures
-
-# Build the docker image for Merino named "app:build"
-$ make docker-build
 
 # Run local execution of (Locust) load tests
 $ make load-tests

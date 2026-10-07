@@ -3,7 +3,7 @@
 The unit layer is suitable for testing complex behavior at a small scale, with fine-grained control over the inputs.
 Due to their narrow scope, unit tests are fundamental to thorough test coverage.
 
-To execute unit tests, use: `make unit-tests`
+To execute unit tests for every project, use: `moon run :test`
 
 For project-scoped execution, use `moon run merino:test`, `moon run fleece:test`, or
 `moon run merino-common:test`. `moon run :test` runs all three suites in parallel. See

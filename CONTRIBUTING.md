@@ -44,7 +44,7 @@ When submitting a PR:
 - Add both your code and new tests if relevant.
 - [Sign][sign] your git commit.
 - Run tests, linting and formatting checks to make sure your code complies with established standards.
-(e.g. No warnings are returned for python: "`make lint`", "`make test`", "`make format`")
+(e.g. No warnings are returned for python: "`moon run ':#quality'`", "`moon run :test merino:diff-coverage`", "`make format`")
 - Ensure your changes do not reduce code coverage of the test suite.
 - Please do not include merge commits in pull requests; include only commits
   with the new relevant code.

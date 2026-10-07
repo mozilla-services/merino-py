@@ -21,7 +21,9 @@ permissions:
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    # Pinned in every workflow so the Ubuntu 26 image move is deliberate (weave's apt packages);
+    # bump all of them together once CI passes on the new image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     outputs:
       merino: ${{ steps.images.outputs.merino }}
