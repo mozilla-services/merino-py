@@ -1337,14 +1337,31 @@ class TestSections:
         legacy_sections_present = [sid for sid in sections if sid in legacy_topics]
         assert len(legacy_sections_present) > 0, "Should have at least some legacy topic sections"
 
-    def test_sections_feed_content(self, caplog, client: TestClient):
+    @pytest.mark.parametrize(
+        "experiment_name, experiment_branch, scores_enabled",
+        [
+            (None, None, False),
+            ("newtab-cosine-ranking", "all-article-server-scores", True),
+            ("optin-newtab-cosine-ranking", "all-article-server-scores", True),
+            ("newtab-cosine-ranking", "control", False),
+            ("other", "all-article-server-scores", False),
+        ],
+    )
+    def test_sections_feed_content(
+        self, experiment_name, experiment_branch, scores_enabled, caplog, client: TestClient
+    ):
         """Test the curated recommendations endpoint response is as expected
         when requesting the 'sections' feed for en-US locale.
         """
         locale = "en-US"
         response = client.post(
             "/api/v1/curated-recommendations",
-            json={"locale": locale, "feeds": ["sections"]},
+            json={
+                "locale": locale,
+                "feeds": ["sections"],
+                "experimentName": experiment_name,
+                "experimentBranch": experiment_branch,
+            },
         )
         data = response.json()
 
@@ -1371,6 +1388,12 @@ class TestSections:
         for section in sections.values():
             recs = section["recommendations"]
             assert {rec["receivedRank"] for rec in recs} == set(range(len(recs)))
+            scores = [rec["serverScore"] for rec in recs]
+            if scores_enabled:
+                assert all(isinstance(score, float) for score in scores)
+                assert all(left > right for left, right in zip(scores, scores[1:]))
+            else:
+                assert scores == [None] * len(recs)
 
         # Check the recs used in top_stories_section are removed from their original ML sections.
         top_story_ids = {
@@ -1546,7 +1569,7 @@ class TestSections:
         assert top_item[
             "corpusItemId"
         ] != ml_recommendations_backend.get_most_popular_content_id_by_cohort_timezone(6, 2)
-        assert isinstance(top_item["serverScore"], float)
+        assert top_item["serverScore"] is None
 
     @pytest.mark.parametrize(
         "sections_payload",
