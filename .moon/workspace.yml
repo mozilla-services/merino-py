@@ -1,4 +1,4 @@
-versionConstraint: ">=2.5.3 <2.6.0"
+versionConstraint: ">=2.6.0 <2.7.0"
 
 projects:
   workspace: .
