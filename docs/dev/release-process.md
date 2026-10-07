@@ -12,7 +12,7 @@ can rebuild all three. See [Docker builds](monorepo.md#docker-builds) for the se
 
 Image publication requires the checks, tests, and corresponding image build to succeed. The same
 Merino build artifact is published to GAR and Docker Hub. Fleece and Locust each have their own
-build artifact and GAR publication.
+build artifact and GAR publication. The documentation site is published only when its inputs change.
 
 To rebuild every image after a failed release or refresh external base images, manually run
 `main-workflow` in GitHub Actions with the `main` branch selected. Publishing is restricted to

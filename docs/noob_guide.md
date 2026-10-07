@@ -255,9 +255,9 @@ It's important to note that the `Manifest` is a [Pydantic BaseModel](https://doc
 Ensure that the following pass without error:
 
 - `make format` -- applies formatting to the python files
-- `make lint` -- General formatting and checks to the code.
-- `make unit-tests` -- validate the code operation (note: adding `-sx` to the `Makefile` `pytest` line will cause tests to fail on first error. While this is useful for local testing, it should NOT be included in commits.)
-- `make integration-tests` -- Contract tests for the API.
+- `moon run ':#quality'` -- General formatting and checks to the code.
+- `moon run :test` -- validate the code operation (note: `moon run merino:test -- -sx` stops on the first failure, which is useful for local testing).
+- `moon run merino:integration-test` -- Contract tests for the API (needs Docker).
 
 Merino has a Code Coverage requirement of 95% coverage (including Unit and Integration Tests).
 

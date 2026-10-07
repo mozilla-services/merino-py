@@ -69,7 +69,7 @@ repository root:
   ```
 - Option 3: Use the Docker instance
   ```shell
-  make docker-build && docker run -p 8000:8000 app:build
+  moon run merino:docker-build && docker run -p 8000:8000 app:build
   ```
 
 ### Run Test Session

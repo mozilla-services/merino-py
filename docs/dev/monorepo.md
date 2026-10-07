@@ -17,7 +17,7 @@ package tools used by each language.
 | Moon | Repository-wide project graph and repeatable tasks | Run lint or tests for one or many projects |
 | `uv` | Python environments, dependencies, workspace packages, and `uv.lock` | Add a Python dependency, sync the environment, or run an ad hoc Python command |
 | Cargo | Rust dependencies, compilation, and tests for future Rust projects | Add a crate or run a crate-specific Cargo command |
-| Make | Compatibility commands during the migration | Use an existing workflow that has not moved to Moon yet |
+| Make | Local development helpers | Run Merino or Fleece locally, start local services, or run a job |
 
 Use Moon when the operation is a named repository task or spans projects. Use `uv` or Cargo when
 managing dependencies or doing language-specific investigation. Moon tasks call those native tools
@@ -57,7 +57,7 @@ moon --version
 
 `proto install` reads `.prototools` and installs the repository's pinned Moon version without
 changing the version used by other repositories. A developer who does not run Moon commands does
-not need the CLI, but commands such as `make moon-test` and `moon run merino:test` require it.
+not need the CLI, but commands such as `moon run merino:test` and the pre-commit mypy hook require it.
 
 Python quality and test tasks depend on one repository-level install task. That task runs `uv sync --frozen`
 once before Moon starts parallel work. The project tasks then invoke `uv run --frozen --no-sync`,
@@ -188,10 +188,8 @@ Coverage gates must run **without `--affected` or pytest filters** so they check
 They opt out of automatic CI selection (`runInCI: false`). This also excludes them from
 `moon run` when `CI=true`. In CI, explicitly run the full dependency chain with
 `moon exec merino:diff-coverage --ignore-ci-checks --upstream deep`. Locally, the `moon run`
-commands above still apply. The existing Make-based CI,
-coverage checks, and ETE artifact naming/upload remain in place during this ticket. Running Moon
-alongside that CI and mapping these reports to its upload conventions is DISCO-4443; switching the
-required checks is DISCO-4441.
+commands above still apply. CI renames the reports to the ETE metrics naming convention before
+uploading them from `main`.
 
 For a filtered investigation, `moon run merino:test -- -k query_normalization` still works. Its
 reports describe only that selection. Run the unfiltered task again before using its reports for
@@ -243,10 +241,8 @@ copy every Python workspace manifest so `uv` can resolve the workspace without i
 application code. Locust includes Merino because its tests import Merino internals.
 
 For PRs, selection compares the checked-out merge commit with the PR base. For pushes, it compares
-the previous tip with the new tip, including every pushed commit and both sides of a rename. If
-the previous commit is unavailable, CI builds all images. Manually running `main-workflow` also
-builds all images, which can recover a failed release or refresh external base images.
+the previous tip with the new tip. Manually running `main-workflow` builds all images, which can
+recover a failed release or refresh external base images.
 
-The existing Make-based checks and full test suite still run in CI and gate image publication.
-Running Moon tests alongside existing CI (DISCO-4443) and switching testing over to Moon
-(DISCO-4441) remain separate steps.
+Pull requests build affected images but do not upload them. On `main`, image publication requires
+the whole `moon-ci` job to pass: quality checks, tests, and both coverage gates.

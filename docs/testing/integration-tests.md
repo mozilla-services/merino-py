@@ -3,7 +3,7 @@
 The integration layer of testing allows for verification of interactions between service components,
 with lower development, maintenance and execution costs compared with higher level tests.
 
-To execute integration tests, make sure you have Docker installed and a docker daemon running. Then use: `make integration-tests`
+To execute integration tests, make sure you have Docker installed and a docker daemon running. Then use: `moon run merino:integration-test`. It builds the `merino-elasticsearch:local` test image first.
 
 Integration tests are located in the `apps/merino/tests/integration` directory.
 They use pytest and the FastAPI `TestClient` to send requests to specific merino endpoints and verify responses as well as other outputs, such as logs.
