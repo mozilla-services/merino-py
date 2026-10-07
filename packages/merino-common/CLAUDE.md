@@ -15,4 +15,4 @@ Dependencies for **merino-common** are managed by its own @packages/merino-commo
 
 ## Testing
 
-The tests of this package is located in @packages/merino-common/tests, which can be run individually. However, since the common modules are used by other member packages, it's preferred to run the whole test suite via `make test` to test the entire project whenever a change is made here.
+The tests of this package is located in @packages/merino-common/tests, which can be run individually. However, since the common modules are used by other member packages, it's preferred to run every project's tests via `moon run :test merino:diff-coverage` whenever a change is made here.
