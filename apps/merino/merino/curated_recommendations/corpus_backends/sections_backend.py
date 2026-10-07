@@ -108,7 +108,7 @@ class SectionsBackend(SectionsProtocol):
     @CuratedRecommendationsCircuitBreaker(name="curated_recommendations_sections_circuit_breaker")
     @retry(
         wait=wait_exponential_jitter(
-            initial=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
+            multiplier=settings.curated_recommendations.corpus_api.retry_wait_initial_seconds,
             jitter=settings.curated_recommendations.corpus_api.retry_wait_jitter_seconds,
         ),
         stop=stop_after_attempt(retry_count),
