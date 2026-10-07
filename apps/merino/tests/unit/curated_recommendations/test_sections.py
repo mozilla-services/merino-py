@@ -1928,7 +1928,7 @@ class _StubEngagementBackend:
 
 
 class TestGetSectionsServerScores:
-    """Verify server scores on every returned section, including Daily Briefing."""
+    """Verify server scores on every returned section."""
 
     @pytest.mark.parametrize(
         "experiment_name, branch, scores_enabled",
@@ -1939,16 +1939,6 @@ class TestGetSectionsServerScores:
             ("newtab-cosine-ranking", "control", False),
             ("other", "all-article-server-scores", False),
             ("newtab-cosine-ranking", None, False),
-            (
-                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
-                DailyBriefingBranch.BRIEFING_WITH_POPULAR.value,
-                False,
-            ),
-            (
-                ExperimentName.DAILY_BRIEFING_EXPERIMENT.value,
-                DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value,
-                False,
-            ),
         ],
     )
     @pytest.mark.asyncio
@@ -1956,7 +1946,7 @@ class TestGetSectionsServerScores:
         """Score every section only for the enrolled branch and serialize null otherwise."""
         corpus_sections = [
             generate_corpus_section(section_id, count=20)
-            for section_id in ("business", "sports", "tech", DAILY_BRIEFING_SECTION_KEY)
+            for section_id in ("business", "sports", "tech")
         ]
         sections_backend = MagicMock(spec=SectionsProtocol)
         sections_backend.fetch = AsyncMock(return_value=corpus_sections)
@@ -1983,13 +1973,8 @@ class TestGetSectionsServerScores:
         )
 
         assert {"business", "sports", "tech"} <= sections.keys()
-        assert (DAILY_BRIEFING_SECTION_KEY in sections) == (
-            experiment_name == ExperimentName.DAILY_BRIEFING_EXPERIMENT.value
-        )
-        assert ("top_stories_section" in sections) == (
-            branch != DailyBriefingBranch.BRIEFING_WITHOUT_POPULAR.value
-        )
-        for section_id, section in sections.items():
+        assert "top_stories_section" in sections
+        for section in sections.values():
             scores = [rec.serverScore for rec in section.recommendations]
             if scores_enabled:
                 assert scores == pytest.approx(
