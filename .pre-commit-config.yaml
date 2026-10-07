@@ -31,7 +31,7 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: make mypy
+        entry: moon run :typecheck
         language: system
         types: [python]
         pass_filenames: false
