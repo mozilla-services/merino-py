@@ -1927,6 +1927,66 @@ class _StubEngagementBackend:
         return 0
 
 
+class TestGetSectionsServerScores:
+    """Verify server scores on every returned section."""
+
+    @pytest.mark.parametrize(
+        "experiment_name, branch, scores_enabled",
+        [
+            (None, None, False),
+            ("newtab-cosine-ranking", "all-article-server-scores", True),
+            ("optin-newtab-cosine-ranking", "all-article-server-scores", True),
+            ("newtab-cosine-ranking", "control", False),
+            ("other", "all-article-server-scores", False),
+            ("newtab-cosine-ranking", None, False),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_scores_all_sections(self, experiment_name, branch, scores_enabled, mocker):
+        """Score every section only for the enrolled branch and serialize null otherwise."""
+        corpus_sections = [
+            generate_corpus_section(section_id, count=20)
+            for section_id in ("business", "sports", "tech")
+        ]
+        sections_backend = MagicMock(spec=SectionsProtocol)
+        sections_backend.fetch = AsyncMock(return_value=corpus_sections)
+        ml_backend = MagicMock(spec=MLRecsBackend)
+        ml_backend.is_valid.return_value = False
+        mocker.patch(
+            "merino.curated_recommendations.rankers.t_sampling.beta.rvs",
+            return_value=0.005678,
+        )
+
+        sections = await get_sections(
+            request=CuratedRecommendationsRequest(
+                locale=Locale.EN_US,
+                feeds=["sections"],
+                experimentName=experiment_name,
+                experimentBranch=branch,
+            ),
+            surface_id=SurfaceId.NEW_TAB_EN_US,
+            sections_backend=sections_backend,
+            ml_backend=ml_backend,
+            engagement_backend=_StubEngagementBackend(),
+            prior_backend=ConstantPrior(),
+            lints_interest_backend=_FakeLinTSBackend(),
+        )
+
+        assert {"business", "sports", "tech"} <= sections.keys()
+        assert "top_stories_section" in sections
+        for section in sections.values():
+            scores = [rec.serverScore for rec in section.recommendations]
+            if scores_enabled:
+                assert scores == pytest.approx(
+                    [0.454 - idx * 0.00001 for idx in range(len(scores))]
+                )
+            else:
+                assert scores == [None] * len(section.recommendations)
+            assert [
+                rec["serverScore"] for rec in section.model_dump()["recommendations"]
+            ] == scores
+
+
 class TestGetSectionsForcedInterests:
     """Covers the forced-default-interests logic in get_sections' InterestRanker branch."""
 
