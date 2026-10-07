@@ -8,12 +8,12 @@ paths:
 ## Running tests
 
 ```bash
-make unit-tests                              # Unit only
-make integration-tests                       # Integration only (needs Docker)
-make test                                    # Both + coverage check
-make quick-test keyword=weather              # Tests matching keyword
+moon run merino:test                         # Unit only
+moon run merino:integration-test             # Integration only (needs Docker)
+moon run merino:diff-coverage                # Both + coverage check
+moon run merino:test -- -k weather           # Tests matching keyword
 
-# Manual pytest runs MUST set MERINO_ENV (Makefile targets do this automatically):
+# Manual pytest runs MUST set MERINO_ENV (moon tasks do this automatically):
 MERINO_ENV=testing uv run pytest apps/merino/tests/unit/path/to/test.py -v
 ```
 

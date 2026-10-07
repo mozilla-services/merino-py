@@ -12,10 +12,10 @@ This project is structured as a monorepo via uv workspaces with three member pac
 ```bash
 make install              # Install deps (uv sync --all-groups)
 make dev                  # FastAPI dev server with hot-reload
-make test                 # Unit + integration tests (95% coverage enforced)
-make unit-tests           # Unit tests
-make integration-tests    # Integration tests
-make lint                 # ruff + bandit + mypy
+moon run :test merino:diff-coverage   # Unit + integration tests (95% coverage enforced)
+moon run :test                        # Unit tests for every project
+moon run merino:integration-test      # Integration tests (needs Docker)
+moon run ':#quality'                  # ruff + bandit + mypy
 make format               # Auto-format with ruff
 make docker-compose-up    # Start local services (Redis, fake-GCS)
 ```
@@ -26,7 +26,7 @@ Run jobs: `uv run merino-jobs --help` (e.g. `uv run merino-jobs wikipedia-indexe
 
 ## Critical Gotchas
 
-- **MERINO_ENV=testing** must be set when running tests. Without it, development config loads and tests break. All Makefile test targets set this automatically.
+- **MERINO_ENV=testing** must be set when running tests. Without it, development config loads and tests break. Moon test tasks set this automatically.
 - **Python 3.14 only**. Pinned in `.python-version`.
 - **Line length is 99**, not 88 or 120.
 - **Warnings are errors** in tests (`filterwarnings = ["error"]`). Any warning from code or deps fails the test.

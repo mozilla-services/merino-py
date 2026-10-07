@@ -63,6 +63,8 @@ jobs:
         run: moon exec merino:diff-coverage --ignore-ci-checks --upstream deep
       - name: Package images for the existing publishers
         id: images
+        # Only main-workflow publishes; PRs still build images but skip the costly save and upload.
+        if: github.event_name != 'pull_request'
         run: |
           for entry in 'merino app:build merino' 'fleece app-fleece:build merino-fleece' \
             'load_tests merino-locust:build locust-image'; do

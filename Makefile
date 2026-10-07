@@ -1,13 +1,6 @@
 APP_PROJECT_DIR := apps/merino
-MOON ?= moon
 APP_DIR := $(APP_PROJECT_DIR)/merino
-ES_IMAGE := merino-elasticsearch:local
 TEST_DIR := $(APP_PROJECT_DIR)/tests
-TEST_RESULTS_DIR ?= "workspace/test-results"
-COV_FAIL_UNDER := 95
-DIFF_COV_FAIL_UNDER := 95
-DIFF_COV_BRANCH ?= origin/main
-COMBINED_COVERAGE_XML := $(TEST_RESULTS_DIR)/coverage.xml
 COMMON_PROJECT_DIR := packages/merino-common
 COMMON_PACKAGE_DIR := $(COMMON_PROJECT_DIR)/merino_common
 COMMON_TEST_DIR := $(COMMON_PROJECT_DIR)/tests
@@ -16,8 +9,6 @@ FLEECE_PACKAGE_DIR := $(FLEECE_PROJECT_DIR)/merino_fleece
 FLEECE_TEST_DIR := $(FLEECE_PROJECT_DIR)/tests
 FLEECE_WORKER_MAIN := $(FLEECE_PACKAGE_DIR)/sanitize/worker/main.py
 UNIT_TEST_DIR := $(TEST_DIR)/unit
-COMMON_UNIT_TEST_DIR := $(COMMON_TEST_DIR)/unit
-FLEECE_UNIT_TEST_DIR := $(FLEECE_TEST_DIR)/unit
 INTEGRATION_TEST_DIR := $(TEST_DIR)/integration
 LOAD_TEST_DIR := tools/load-tests
 APP_AND_TEST_DIRS := $(APP_DIR) $(TEST_DIR) $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR) $(LOAD_TEST_DIR)
@@ -29,15 +20,6 @@ ALL_TEST_FILES := $(shell PYTHONPATH=$(APP_PROJECT_DIR) $(UV) run python $(TEST_
 DIRECT_TEST_FILES := $(shell PYTHONPATH=$(APP_PROJECT_DIR) $(UV) run python $(TEST_PROBE) -q 2> /dev/null)
 # keyword for test selection, set it to an empty string if undefined
 keyword ?=
-
-# In order to be consumed by the ETE Test Metric Pipeline, files need to follow a strict naming
-# convention: {job_number}__{utc_epoch_datetime}__{repository}__{workflow}__{test_suite}__results{-index}.xml
-EPOCH_TIME := $(shell date +"%s")
-TEST_FILE_PREFIX := $(if $(GITHUB_ACTIONS),$(GITHUB_RUN_NUMBER)__$(EPOCH_TIME)__$(GITHUB_REPONAME)__$(GITHUB_WORKFLOW)__)
-UNIT_JUNIT_XML := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)unit__results.xml
-UNIT_COVERAGE_JSON := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)unit__coverage.json
-INTEGRATION_JUNIT_XML := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)integration__results.xml
-INTEGRATION_COVERAGE_JSON := $(TEST_RESULTS_DIR)/$(TEST_FILE_PREFIX)integration__coverage.json
 
 # This will be run if no target is provided
 .DEFAULT_GOAL := help
@@ -55,43 +37,9 @@ $(INSTALL_STAMP): $(PROJECT_MANIFESTS) uv.lock
 	$(UV) sync --all-groups --all-packages
 	touch $(INSTALL_STAMP)
 
-.PHONY: ruff-lint
-ruff-lint: $(INSTALL_STAMP)  ##  Run ruff linting
-	$(UV) run ruff check $(APP_AND_TEST_DIRS)
-
-.PHONY: ruff-fmt
-ruff-fmt: $(INSTALL_STAMP)  ##  Run ruff format checker
-	$(UV) run ruff format --check $(APP_AND_TEST_DIRS)
-
 .PHONY: ruff-format
 ruff-format: $(INSTALL_STAMP)  ##  Run ruff format
 	$(UV) run ruff format $(APP_AND_TEST_DIRS)
-
-.PHONY: bandit
-bandit: $(INSTALL_STAMP)  ##  Run bandit
-	$(UV) run bandit --quiet -r $(APP_AND_TEST_DIRS) -c "pyproject.toml"
-
-.PHONY: mypy
-mypy: $(INSTALL_STAMP)  ##  Run mypy
-	MYPYPATH=$(APP_PROJECT_DIR):$(COMMON_PROJECT_DIR) \
-	    $(UV) run mypy $(APP_DIR) $(TEST_DIR) --config-file="pyproject.toml"
-	MYPYPATH=$(COMMON_PROJECT_DIR) \
-	    $(UV) run mypy $(COMMON_PACKAGE_DIR) $(COMMON_TEST_DIR) --config-file="pyproject.toml"
-	MYPYPATH=$(FLEECE_PROJECT_DIR):$(COMMON_PROJECT_DIR) \
-	    $(UV) run mypy $(FLEECE_PACKAGE_DIR) $(FLEECE_TEST_DIR) --config-file="pyproject.toml"
-	MYPYPATH=$(APP_PROJECT_DIR):$(COMMON_PROJECT_DIR):$(LOAD_TEST_DIR) \
-	    $(UV) run mypy $(LOAD_TEST_DIR) --config-file="pyproject.toml"
-
-.PHONY: lint
-lint: $(INSTALL_STAMP) ruff-lint ruff-fmt bandit mypy ##  Run various linters
-
-.PHONY: moon-quality
-moon-quality:  ##  Run project-scoped quality checks with Moon
-	$(MOON) run ':#quality'
-
-.PHONY: moon-test
-moon-test:  ##  Run project-scoped unit tests with Moon
-	$(MOON) run ':test'
 
 .PHONY: format
 format: $(INSTALL_STAMP)  ##  Sort imports and reformat code
@@ -128,32 +76,6 @@ dev-fleece-worker-otel: $(INSTALL_STAMP)  ##  Run fleece worker locally with OTE
 	PUBSUB_EMULATOR_HOST=localhost:8085 OTEL_SERVICE_NAME=merino OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf $(UV) run --package merino-fleece opentelemetry-instrument $(UV) run --package merino-fleece $(FLEECE_WORKER_MAIN)
 
 
-.PHONY: test
-test: unit-tests integration-tests test-coverage-check  ##  Run unit and integration tests and evaluate combined coverage
-
-.PHONY: test-coverage-check
-test-coverage-check: $(INSTALL_STAMP)  ##  Evaluate combined unit and integration test coverage
-	$(UV) run coverage combine --data-file=$(TEST_RESULTS_DIR)/.coverage
-	$(UV) run coverage report \
-	    --data-file=$(TEST_RESULTS_DIR)/.coverage \
-	    --fail-under=$(COV_FAIL_UNDER)
-
-.PHONY: diff-coverage-check
-diff-coverage-check: $(INSTALL_STAMP)  ##  Check coverage on lines changed vs DIFF_COV_BRANCH (default origin/main); run after `make test`
-	$(UV) run coverage xml \
-	    --data-file=$(TEST_RESULTS_DIR)/.coverage \
-	    -o $(COMBINED_COVERAGE_XML)
-	$(UV) run diff-cover $(COMBINED_COVERAGE_XML) \
-	    --compare-branch=$(DIFF_COV_BRANCH) \
-	    --fail-under=$(DIFF_COV_FAIL_UNDER)
-
-.PHONY: unit-tests
-unit-tests: $(INSTALL_STAMP)  ##  Run unit tests
-	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.unit \
-	    MERINO_ENV=testing \
-	    $(UV) run pytest $(UNIT_TEST_DIR) $(COMMON_UNIT_TEST_DIR) $(FLEECE_UNIT_TEST_DIR) \
-	    --junit-xml=$(UNIT_JUNIT_XML) -vv $(XTRA)
-
 .PHONY: quick-test
 quick-test: $(INSTALL_STAMP)  ## Run specific tests or ones that are only relevant to uncommitted source changes
 	@if [ -n "$(keyword)" ]; then \
@@ -181,45 +103,13 @@ quicker-test: $(INSTALL_STAMP)  ## Same as "quick-test" but quicker
 unit-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per unit test
 	MERINO_ENV=testing $(UV) run pytest $(UNIT_TEST_DIR) --fixtures-per-test
 
-.PHONY: build-es-image
-build-es-image:  ##  Build local Elasticsearch image with analysis-icu plugin
-	docker build \
-	    --build-arg STACK_VERSION=$(shell grep STACK_VERSION dev/.env | cut -d= -f2) \
-	    -t $(ES_IMAGE) \
-	    dev/local_setup/elasticsearch/
-
-.PHONY: integration-tests ## ryuk is a container that helps with clean up, need it disabled to run two test containers at once.
-integration-tests: $(INSTALL_STAMP)  ##  Run integration tests (CI: expects ES image pre-built)
-	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
-	    MERINO_ENV=testing \
-	    TESTCONTAINERS_RYUK_DISABLED=true \
-	    $(UV) run pytest $(INTEGRATION_TEST_DIR) $(XTRA) \
-	    --junit-xml=$(INTEGRATION_JUNIT_XML)
-
-# When running locally need to invoke the elasticsearch build step
-.PHONY: integration-tests-local
-integration-tests-local: $(INSTALL_STAMP) build-es-image  ##  Run integration tests (local: builds ES image first)
-	COVERAGE_FILE=$(TEST_RESULTS_DIR)/.coverage.integration \
-	    MERINO_ENV=testing \
-	    TESTCONTAINERS_RYUK_DISABLED=true \
-	    $(UV) run pytest $(INTEGRATION_TEST_DIR) $(XTRA) \
-	    --junit-xml=$(INTEGRATION_JUNIT_XML)
-
 .PHONY: integration-test-fixtures
 integration-test-fixtures: $(INSTALL_STAMP)  ##  List fixtures in use per integration test
 	MERINO_ENV=testing $(UV) run pytest $(INTEGRATION_TEST_DIR) --fixtures-per-test
 
-.PHONY: docker-build
-docker-build:  ## Build the docker image for Merino named "app:build"
-	docker build -f $(APP_PROJECT_DIR)/Dockerfile -t app:build .
-
 .PHONY: docker-build-jobs
 docker-build-jobs:  ## Build the docker image for Merino job runner named "merino-jobs:build"
 	docker build -f $(APP_PROJECT_DIR)/Dockerfile --target job_runner -t merino-jobs:build .
-
-.PHONY: docker-build-fleece
-docker-build-fleece:  ## Build the docker image for Merino named "app:build"
-	docker build -f $(FLEECE_PROJECT_DIR)/Dockerfile -t app-fleece:build .
 
 .PHONY: load-tests
 load-tests:  ##  Run local execution of (Locust) load tests
@@ -275,6 +165,49 @@ docker-compose-down:  ## Run `docker-compose down` in `./dev`
 docker-compose-down-v:  ## Run `docker-compose down` in `./dev` and remove volumes
 	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down -v
 
+# Transitional aliases for targets replaced by moon tasks, kept so muscle memory still works.
+# Remove this block once contributors have switched to the moon commands.
+define moon_alias
+@echo "warning: 'make $@' is deprecated and will be removed, use: moon run $(1)" >&2
+moon run $(1)
+endef
+
+.PHONY: lint ruff-lint ruff-fmt bandit mypy moon-quality moon-test unit-tests integration-tests \
+	integration-tests-local build-es-image test test-coverage-check diff-coverage-check \
+	docker-build docker-build-fleece
+lint:  ## (deprecated) moon run ':#quality'
+	$(call moon_alias,':#quality')
+ruff-lint:  ## (deprecated) moon run :lint
+	$(call moon_alias,:lint)
+ruff-fmt:  ## (deprecated) moon run :format-check
+	$(call moon_alias,:format-check)
+bandit:  ## (deprecated) moon run :security
+	$(call moon_alias,:security)
+mypy:  ## (deprecated) moon run :typecheck
+	$(call moon_alias,:typecheck)
+moon-quality:  ## (deprecated) moon run ':#quality'
+	$(call moon_alias,':#quality')
+moon-test:  ## (deprecated) moon run :test
+	$(call moon_alias,:test)
+unit-tests:  ## (deprecated) moon run :test
+	$(call moon_alias,:test)
+integration-tests:  ## (deprecated) moon run merino:integration-test
+	$(call moon_alias,merino:integration-test)
+integration-tests-local:  ## (deprecated) moon run merino:integration-test
+	$(call moon_alias,merino:integration-test)
+build-es-image:  ## (deprecated) moon run merino:build-test-image
+	$(call moon_alias,merino:build-test-image)
+test:  ## (deprecated) moon run :test merino:diff-coverage
+	$(call moon_alias,:test merino:diff-coverage)
+test-coverage-check:  ## (deprecated) moon run merino:coverage
+	$(call moon_alias,merino:coverage)
+diff-coverage-check:  ## (deprecated) moon run merino:diff-coverage
+	$(call moon_alias,merino:diff-coverage)
+docker-build:  ## (deprecated) moon run merino:docker-build
+	$(call moon_alias,merino:docker-build)
+docker-build-fleece:  ## (deprecated) moon run fleece:docker-build
+	$(call moon_alias,fleece:docker-build)
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -290,18 +223,6 @@ health-check-prod:  ##  Check the production suggest endpoint with some test que
 .PHONY: health-check-staging
 health-check-staging:  ##  Check the staging suggest endpoint with some test queries
 	./scripts/quic.sh staging
-
-.PHONY: coverage-unit
-coverage-unit:
-	$(UV) run coverage json \
-		--data-file=$(TEST_RESULTS_DIR)/.coverage.unit \
-		-o $(UNIT_COVERAGE_JSON)
-
-.PHONY: coverage-integration
-coverage-integration:
-	$(UV) run coverage json \
-		--data-file=$(TEST_RESULTS_DIR)/.coverage.integration \
-		-o $(INTEGRATION_COVERAGE_JSON)
 
 .PHONY: nav-suggestions
 nav-suggestions: $(INSTALL_STAMP)  ##  Run navigational suggestions job locally (start emulator, run job, stop emulator)
