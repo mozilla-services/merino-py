@@ -165,6 +165,49 @@ docker-compose-down:  ## Run `docker-compose down` in `./dev`
 docker-compose-down-v:  ## Run `docker-compose down` in `./dev` and remove volumes
 	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down -v
 
+# Transitional aliases for targets replaced by moon tasks, kept so muscle memory still works.
+# Remove this block once contributors have switched to the moon commands.
+define moon_alias
+@echo "warning: 'make $@' is deprecated and will be removed, use: moon run $(1)" >&2
+moon run $(1)
+endef
+
+.PHONY: lint ruff-lint ruff-fmt bandit mypy moon-quality moon-test unit-tests integration-tests \
+	integration-tests-local build-es-image test test-coverage-check diff-coverage-check \
+	docker-build docker-build-fleece
+lint:  ## (deprecated) moon run ':#quality'
+	$(call moon_alias,':#quality')
+ruff-lint:  ## (deprecated) moon run :lint
+	$(call moon_alias,:lint)
+ruff-fmt:  ## (deprecated) moon run :format-check
+	$(call moon_alias,:format-check)
+bandit:  ## (deprecated) moon run :security
+	$(call moon_alias,:security)
+mypy:  ## (deprecated) moon run :typecheck
+	$(call moon_alias,:typecheck)
+moon-quality:  ## (deprecated) moon run ':#quality'
+	$(call moon_alias,':#quality')
+moon-test:  ## (deprecated) moon run :test
+	$(call moon_alias,:test)
+unit-tests:  ## (deprecated) moon run :test
+	$(call moon_alias,:test)
+integration-tests:  ## (deprecated) moon run merino:integration-test
+	$(call moon_alias,merino:integration-test)
+integration-tests-local:  ## (deprecated) moon run merino:integration-test
+	$(call moon_alias,merino:integration-test)
+build-es-image:  ## (deprecated) moon run merino:build-test-image
+	$(call moon_alias,merino:build-test-image)
+test:  ## (deprecated) moon run :test merino:diff-coverage
+	$(call moon_alias,:test merino:diff-coverage)
+test-coverage-check:  ## (deprecated) moon run merino:coverage
+	$(call moon_alias,merino:coverage)
+diff-coverage-check:  ## (deprecated) moon run merino:diff-coverage
+	$(call moon_alias,merino:diff-coverage)
+docker-build:  ## (deprecated) moon run merino:docker-build
+	$(call moon_alias,merino:docker-build)
+docker-build-fleece:  ## (deprecated) moon run fleece:docker-build
+	$(call moon_alias,fleece:docker-build)
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
