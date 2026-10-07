@@ -399,6 +399,8 @@ class TestUploadPictureOfTheDayAttachesPreviousDay:
     @staticmethod
     def _mock_upload_dependencies(backend, mocker: MockerFixture):
         """Stub out the Featured API fetch and image upload, returning the manifest upload mock."""
+        # skip the already-uploaded early exit, which the MagicMock gcs uploader would trigger
+        mocker.patch.object(backend, "is_potd_uploaded_for_today", return_value=False)
         client_mock: AsyncMock = cast(AsyncMock, backend.http_client)
         client_mock.get.return_value = Response(
             status_code=200,
