@@ -23,7 +23,9 @@ from merino.utils.gcs.models import Image
 from merino.utils.wikipedia import WIKIMEDIA_REQUEST_HEADERS
 from merino.providers.rss.wikimedia_potd.backends.image_processing import process_potd_image
 from merino.providers.rss.wikimedia_potd.backends.utils import (
+    as_previous_entry,
     parse_potd,
+    previous_day,
     extract_image_description_with_lang_code,
     parse_discovered_languages,
     build_potd_bucket_directory_path,
@@ -100,11 +102,17 @@ class WikimediaPictureOfTheDayBackend:
             # download thumbnail and high resolution images and get the respective cdn urls
             thumbnail_url, hi_res_url = await self.download_and_upload_potd_images(potd)
 
+            # attach yesterday's manifest so clients get the previous picture in the same
+            # response. A day whose job never published has no manifest, which the fetch
+            # reports as None, leaving `previous` null rather than failing today's upload.
+            previous_potd = self.fetch_potd_from_gcs_bucket(previous_day(today))
+
             potd_to_upload = potd.model_copy(
                 update={
                     "thumbnail_image_url": thumbnail_url,
                     "high_res_image_url": hi_res_url,
                     "localized_descriptions": localized_descriptions,
+                    "previous": as_previous_entry(previous_potd),
                 }
             )
 
@@ -357,15 +365,15 @@ class WikimediaPictureOfTheDayBackend:
             # a false would trigger a re-run of the cron job to upload potd
             return False
 
-    def fetch_potd_from_gcs_bucket(self) -> PictureOfTheDay | None:
-        """Fetch the PictureOfTheDay object from the gcs bucket.
+    def fetch_potd_from_gcs_bucket(self, date_str: str | None = None) -> PictureOfTheDay | None:
+        """Fetch the PictureOfTheDay object for `date_str` (defaults to today) from the gcs bucket.
 
         Returns:
             A PictureOfTheDay object if available, otherwise None.
         """
         try:
             blob = self.gcs_uploader.get_file_by_name(
-                f"{build_potd_bucket_directory_path()}potd.json"
+                f"{build_potd_bucket_directory_path(date_str)}potd.json"
             )
 
             if blob:
@@ -377,9 +385,5 @@ class WikimediaPictureOfTheDayBackend:
         return None
 
     async def shutdown(self) -> None:
-        """Shutdown the backend.
-
-        Returns:
-            None.
-        """
+        """Shutdown the backend. Returns: None"""
         await self.http_client.aclose()

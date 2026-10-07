@@ -10,6 +10,7 @@ from pydantic import HttpUrl
 from merino.providers.rss.base import BaseRssProvider
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
+    PictureOfTheDayBase,
     WikimediaPictureOfTheDayBackend,
 )
 
@@ -69,7 +70,7 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
 
     @staticmethod
     def _select_description(
-        potd: PictureOfTheDay, accepted_languages: list[str] | None
+        potd: PictureOfTheDayBase, accepted_languages: list[str] | None
     ) -> str | None:
         """Return the best localized description for `accepted_languages`, or None.
 
@@ -100,6 +101,7 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
         potd isn't available yet we serve the previous day's cached potd rather than
         nothing. When `accepted_languages` matches a localized description, the returned
         potd's `description` is swapped for it; otherwise the default description is kept.
+        The picture attached under `previous` is localized the same way.
         """
         if not self._is_todays_potd(self.potd):
             await self._refresh_potd()
@@ -108,12 +110,19 @@ class WikimediaPictureOfTheDayProvider(BaseRssProvider):
             self.metrics_client.increment("potd.provider.cached.none")
             return None
 
-        localized = self._select_description(self.potd, accepted_languages)
+        potd = self.potd
 
+        localized = self._select_description(potd, accepted_languages)
         if localized is not None:
-            return self.potd.model_copy(update={"description": localized})
+            potd = potd.model_copy(update={"description": localized})
 
-        return self.potd
+        if potd.previous is not None:
+            localized_previous = self._select_description(potd.previous, accepted_languages)
+            if localized_previous is not None:
+                previous = potd.previous.model_copy(update={"description": localized_previous})
+                potd = potd.model_copy(update={"previous": previous})
+
+        return potd
 
     async def upload_picture_of_the_day(self) -> bool:
         """Execute the upload flow. This method is called by the job cli command only."""
