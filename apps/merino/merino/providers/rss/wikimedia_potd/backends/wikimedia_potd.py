@@ -218,7 +218,7 @@ class WikimediaPictureOfTheDayBackend:
 
     @retry(
         wait=wait_exponential_jitter(
-            initial=settings.rss_providers.wikimedia_potd.retry_wait_initial_seconds,
+            multiplier=settings.rss_providers.wikimedia_potd.retry_wait_initial_seconds,
             jitter=settings.rss_providers.wikimedia_potd.retry_wait_jitter_seconds,
         ),
         stop=stop_after_attempt(settings.rss_providers.wikimedia_potd.retry_count),
