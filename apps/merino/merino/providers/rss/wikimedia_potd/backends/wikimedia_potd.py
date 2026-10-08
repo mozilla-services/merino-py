@@ -2,7 +2,7 @@
 
 import logging
 import aiodogstatsd
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pydantic import HttpUrl
 from httpx import AsyncClient, HTTPError, Response
 from tenacity import (
@@ -25,7 +25,6 @@ from merino.providers.rss.wikimedia_potd.backends.image_processing import proces
 from merino.providers.rss.wikimedia_potd.backends.utils import (
     as_previous_entry,
     parse_potd,
-    previous_day,
     extract_image_description_with_lang_code,
     parse_discovered_languages,
     build_potd_bucket_directory_path,
@@ -72,7 +71,7 @@ class WikimediaPictureOfTheDayBackend:
         # This is the single error boundary for the upload job: every helper below either
         # returns a value or raises, and any failure is reported to Sentry once here.
         try:
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            today = datetime.now(timezone.utc).date()
 
             # The job runs on a cron tick every couple of hours purely so a failed tick can be
             # retried. Once a tick has published the day's picture the remaining ones have
@@ -80,13 +79,13 @@ class WikimediaPictureOfTheDayBackend:
             if self.is_potd_uploaded_for_today():
                 logger.info(
                     "Today's potd is already uploaded, skipping the upload",
-                    extra={"date": today},
+                    extra={"date": today.isoformat()},
                 )
                 return True
 
             # discover which languages have an authored description for the picture served,
             # which is the curated picture for today when there is one
-            languages = await self.discover_languages(resolve_potd_content_date(today))
+            languages = await self.discover_languages(resolve_potd_content_date(today.isoformat()))
 
             # fetch the default (en) response for the image urls and base metadata
             potd_en = await self.fetch_picture_of_the_day("en")
@@ -105,7 +104,7 @@ class WikimediaPictureOfTheDayBackend:
             # attach yesterday's manifest so clients get the previous picture in the same
             # response. A day whose job never published has no manifest, which the fetch
             # reports as None, leaving `previous` null rather than failing today's upload.
-            previous_potd = self.fetch_potd_from_gcs_bucket(previous_day(today))
+            previous_potd = self.fetch_potd_from_gcs_bucket(today - timedelta(days=1))
 
             potd_to_upload = potd.model_copy(
                 update={
@@ -365,15 +364,15 @@ class WikimediaPictureOfTheDayBackend:
             # a false would trigger a re-run of the cron job to upload potd
             return False
 
-    def fetch_potd_from_gcs_bucket(self, date_str: str | None = None) -> PictureOfTheDay | None:
-        """Fetch the PictureOfTheDay object for `date_str` (defaults to today) from the gcs bucket.
+    def fetch_potd_from_gcs_bucket(self, day: date | None = None) -> PictureOfTheDay | None:
+        """Fetch the PictureOfTheDay object for `day` (defaults to today) from the gcs bucket.
 
         Returns:
             A PictureOfTheDay object if available, otherwise None.
         """
         try:
             blob = self.gcs_uploader.get_file_by_name(
-                f"{build_potd_bucket_directory_path(date_str)}potd.json"
+                f"{build_potd_bucket_directory_path(day)}potd.json"
             )
 
             if blob:

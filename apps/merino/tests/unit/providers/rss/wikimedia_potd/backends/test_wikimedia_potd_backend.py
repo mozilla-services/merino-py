@@ -6,6 +6,7 @@
 
 import json
 import logging
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 
@@ -432,7 +433,7 @@ class TestUploadPictureOfTheDayAttachesPreviousDay:
         assert result is True
 
         # only the previous calendar day is looked up, no walking further back
-        fetch_mock.assert_called_once_with("2026-06-23")
+        fetch_mock.assert_called_once_with(date(2026, 6, 23))
 
         uploaded: PictureOfTheDay = manifest_mock.call_args.args[0]
         assert uploaded.published_date == "2026-06-24"
@@ -523,7 +524,7 @@ class TestFetchPotdFromGcsBucketMethod:
         self._mock_blob(backend, yesterdays_potd)
 
         # fetch yesterday's potd
-        result = backend.fetch_potd_from_gcs_bucket("2026-06-23")
+        result = backend.fetch_potd_from_gcs_bucket(date(2026, 6, 23))
 
         backend.gcs_uploader.get_file_by_name.assert_called_once_with(
             "wikimedia_potd/2026-06-23/potd.json"
@@ -537,7 +538,7 @@ class TestFetchPotdFromGcsBucketMethod:
         """Returns None when the day's blob is absent, which the job reports as no `previous`."""
         backend.gcs_uploader.get_file_by_name.return_value = None
 
-        assert backend.fetch_potd_from_gcs_bucket("2026-06-23") is None
+        assert backend.fetch_potd_from_gcs_bucket(date(2026, 6, 23)) is None
 
 
 class TestFetchPictureOfTheDayMethod:

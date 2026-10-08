@@ -26,7 +26,6 @@ from merino.providers.rss.wikimedia_potd.backends.utils import (
     parse_discovered_languages,
     build_potd_bucket_directory_path,
     resolve_potd_content_date,
-    previous_day,
 )
 
 THUMBNAIL_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Test.jpg/320px-Test.jpg"
@@ -192,22 +191,7 @@ def test_build_potd_bucket_directory_path() -> None:
 @freezegun.freeze_time("2026-06-07")
 def test_build_potd_bucket_directory_path_uses_the_given_date() -> None:
     """Test that an explicit date is used instead of today, so past days can be addressed."""
-    assert build_potd_bucket_directory_path("2026-06-06") == "wikimedia_potd/2026-06-06/"
-
-
-@pytest.mark.parametrize(
-    ["date_str", "expected"],
-    [
-        ("2026-06-07", "2026-06-06"),
-        ("2026-06-01", "2026-05-31"),
-        ("2026-01-01", "2025-12-31"),
-        ("2028-03-01", "2028-02-29"),
-    ],
-    ids=["mid_month", "month_boundary", "year_boundary", "leap_day"],
-)
-def test_previous_day(date_str: str, expected: str) -> None:
-    """Test previous_day returns the calendar day before the given date."""
-    assert previous_day(date_str) == expected
+    assert build_potd_bucket_directory_path(date(2026, 6, 6)) == "wikimedia_potd/2026-06-06/"
 
 
 def test_as_previous_entry_returns_none_when_there_is_no_manifest() -> None:

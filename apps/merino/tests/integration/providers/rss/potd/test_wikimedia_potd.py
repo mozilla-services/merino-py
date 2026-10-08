@@ -4,6 +4,7 @@
 
 """Integration tests for the Picture of the Day Provider."""
 
+from datetime import date
 from io import BytesIO
 from pathlib import Path
 
@@ -668,7 +669,7 @@ class TestFetchPotdFromGcsBucketMethod:
         with freezegun.freeze_time("2026-06-07"):
             # today published nothing, but the day before is still addressable
             assert backend.fetch_potd_from_gcs_bucket() is None
-            actual = backend.fetch_potd_from_gcs_bucket("2026-06-06")
+            actual = backend.fetch_potd_from_gcs_bucket(date(2026, 6, 6))
 
         assert actual is not None
         assert actual.published_date == "2026-06-06"

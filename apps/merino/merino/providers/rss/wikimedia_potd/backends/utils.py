@@ -1,7 +1,7 @@
 """Utility functions for parsing Wikimedia Featured API picture of the day data."""
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.curated_potd_dates import (
@@ -87,14 +87,14 @@ def parse_discovered_languages(commons_data: dict) -> set[str]:
     return discovered_languages
 
 
-def build_potd_bucket_directory_path(date_str: str | None = None) -> str:
+def build_potd_bucket_directory_path(day: date | None = None) -> str:
     """Build the dated gcs bucket directory path where a day's potd assets are stored.
 
-    `date_str` is a YYYY-MM-DD date and defaults to today (UTC).
+    `day` defaults to today (UTC).
     """
+    day = day or datetime.now(timezone.utc).date()
     # YYYY-MM-DD format
-    date_time = date_str or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    return f"wikimedia_potd/{date_time}/"
+    return f"wikimedia_potd/{day.isoformat()}/"
 
 
 def resolve_potd_content_date(fx_date: str) -> str:
@@ -108,11 +108,6 @@ def resolve_potd_content_date(fx_date: str) -> str:
         A YYYY-MM-DD date string.
     """
     return CURATED_POTD_DATE_MAPPING.get(fx_date, fx_date)
-
-
-def previous_day(date_str: str) -> str:
-    """Return the calendar day before `date_str`, both in YYYY-MM-DD format."""
-    return (datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
 
 
 def as_previous_entry(potd: PictureOfTheDay | None) -> PictureOfTheDayBase | None:

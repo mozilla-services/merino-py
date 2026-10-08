@@ -1,5 +1,6 @@
 """Protocol for Wikimedia Picture of the Day provider backends."""
 
+from datetime import date
 from typing import Protocol
 from pydantic import BaseModel, Field, HttpUrl
 from merino.exceptions import BackendError
@@ -117,9 +118,9 @@ class WikimediaPictureOfTheDayBackend(Protocol):
         ...
 
     def fetch_potd_from_gcs_bucket(
-        self, date_str: str | None = None
+        self, day: date | None = None
     ) -> PictureOfTheDay | None:  # pragma: no cover
-        """Fetch the PictureOfTheDay object for `date_str` (defaults to today) from the gcs bucket.
+        """Fetch the PictureOfTheDay object for `day` (defaults to today) from the gcs bucket.
 
         Returns:
             A PictureOfTheDay object if available, otherwise None.
