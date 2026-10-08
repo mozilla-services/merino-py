@@ -1,7 +1,7 @@
 """Utility functions for parsing Wikimedia Featured API picture of the day data."""
 
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.curated_potd_dates import (
@@ -9,6 +9,7 @@ from merino.providers.rss.wikimedia_potd.backends.curated_potd_dates import (
 )
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
+    PictureOfTheDayBase,
     WikimediaPotdError,
 )
 
@@ -86,11 +87,14 @@ def parse_discovered_languages(commons_data: dict) -> set[str]:
     return discovered_languages
 
 
-def build_potd_bucket_directory_path() -> str:
-    """Build the dated gcs bucket directory path where today's potd assets are stored."""
+def build_potd_bucket_directory_path(day: date | None = None) -> str:
+    """Build the dated gcs bucket directory path where a day's potd assets are stored.
+
+    `day` defaults to today (UTC).
+    """
+    day = day or datetime.now(timezone.utc).date()
     # YYYY-MM-DD format
-    date_time = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    return f"wikimedia_potd/{date_time}/"
+    return f"wikimedia_potd/{day.isoformat()}/"
 
 
 def resolve_potd_content_date(fx_date: str) -> str:
@@ -104,6 +108,21 @@ def resolve_potd_content_date(fx_date: str) -> str:
         A YYYY-MM-DD date string.
     """
     return CURATED_POTD_DATE_MAPPING.get(fx_date, fx_date)
+
+
+def as_previous_entry(potd: PictureOfTheDay | None) -> PictureOfTheDayBase | None:
+    """Prepare the previous day's manifest for embedding under today's `previous`.
+
+    The entry type has no `previous` field, so that day's own chain back through earlier
+    days drops away and each published manifest stays exactly one day deep.
+
+    Returns:
+        The entry to embed, or None when that day published no manifest.
+    """
+    if potd is None:
+        return None
+
+    return PictureOfTheDayBase.model_validate(potd.model_dump())
 
 
 def is_valid_potd_image_url(url: HttpUrl) -> bool:

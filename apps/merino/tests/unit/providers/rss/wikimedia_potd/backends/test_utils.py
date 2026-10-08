@@ -12,12 +12,14 @@ from pydantic import HttpUrl
 
 from merino.providers.rss.wikimedia_potd.backends.protocol import (
     PictureOfTheDay,
+    PictureOfTheDayBase,
     WikimediaPotdError,
 )
 from merino.providers.rss.wikimedia_potd.backends.curated_potd_dates import (
     CURATED_POTD_DATE_MAPPING,
 )
 from merino.providers.rss.wikimedia_potd.backends.utils import (
+    as_previous_entry,
     is_valid_potd_image_url,
     parse_potd,
     extract_image_description_with_lang_code,
@@ -184,6 +186,43 @@ def test_is_valid_potd_image_url(url: HttpUrl, expected: bool) -> None:
 def test_build_potd_bucket_directory_path() -> None:
     """Test build_potd_bucket_directory_path returns the dated gcs bucket directory path."""
     assert build_potd_bucket_directory_path() == "wikimedia_potd/2026-06-07/"
+
+
+@freezegun.freeze_time("2026-06-07")
+def test_build_potd_bucket_directory_path_uses_the_given_date() -> None:
+    """Test that an explicit date is used instead of today, so past days can be addressed."""
+    assert build_potd_bucket_directory_path(date(2026, 6, 6)) == "wikimedia_potd/2026-06-06/"
+
+
+def test_as_previous_entry_returns_none_when_there_is_no_manifest() -> None:
+    """Returns None when yesterday has no manifest, so `previous` serializes as null."""
+    assert as_previous_entry(None) is None
+
+
+def test_as_previous_entry_drops_the_days_own_previous() -> None:
+    """Drops the fetched day's `previous` so a published manifest is only one day deep."""
+    two_days_ago = PictureOfTheDayBase(
+        title="Wikimedia Commons Picture of the Day for June 5",
+        published_date="2026-06-05",
+        thumbnail_image_url=HttpUrl(THUMBNAIL_URL),
+        high_res_image_url=HttpUrl(HIGH_RES_URL),
+        description="Two days ago.",
+    )
+    yesterday = PictureOfTheDay(
+        title="Wikimedia Commons Picture of the Day for June 6",
+        published_date="2026-06-06",
+        thumbnail_image_url=HttpUrl(THUMBNAIL_URL),
+        high_res_image_url=HttpUrl(HIGH_RES_URL),
+        description="Yesterday's description.",
+        previous=two_days_ago,
+    )
+
+    entry = as_previous_entry(yesterday)
+
+    assert entry is not None
+    assert entry.published_date == "2026-06-06"
+    # the chain stops here: the entry has no `previous` field at all
+    assert "previous" not in entry.model_dump()
 
 
 def test_extract_image_description_with_lang_code_returns_lang_and_text(featured: dict) -> None:
