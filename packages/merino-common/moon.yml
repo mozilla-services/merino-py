@@ -9,6 +9,12 @@ project:
 toolchains:
   default: system
 
+workspace:
+  inheritedTasks:
+    # No integration suite yet. Remove this to add one under tests/integration.
+    exclude:
+      - integration-test
+
 tasks:
   lint:
     args:
@@ -35,7 +41,7 @@ tasks:
     env:
       MYPYPATH: packages/merino-common
 
-  test:
+  unit-test:
     args:
       - packages/merino-common/tests/unit
       - --cov=merino_common

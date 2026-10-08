@@ -118,8 +118,11 @@ moon run '~:test'
 Arguments after `--` are forwarded to the underlying command. For example:
 
 ```bash
-moon run merino:test -- -k query_normalization
+moon run merino:unit-test -- -k query_normalization
 ```
+
+Pass pytest arguments to `unit-test` or `integration-test`. `test` only groups them, so arguments
+given to it reach no test runner.
 
 Moon runs tasks from the workspace root because parts of the current Python runtime and test suite
 resolve files relative to that directory. Project inputs still define the boundary used for
@@ -127,8 +130,17 @@ caching and affected-project decisions.
 
 ## Project-scoped tests and coverage
 
-`moon run :test` runs the unit suites for Merino, Fleece, and Merino Common in separate processes.
-Each suite measures its own Python package and writes these files under
+`moon run :test` runs every test suite for Merino, Fleece, and Merino Common. Each project's `test`
+task runs no command itself; it depends on the project's `unit-test` and `integration-test`. Use
+`moon run :unit-test` for unit suites only. `merino:test` also depends on `merino:coverage`, so it
+ends with the combined Merino coverage report and enforces the 95% gate.
+
+Both suite tasks are defined in `.moon/tasks/python.yml`; projects add their test path and
+`--cov=<package>`. Fleece and Merino Common exclude the inherited `integration-test` because they
+have no integration suite; Moon drops the excluded task from their `test` dependencies. To add one,
+remove the exclusion and add the task's `args` to the project's `moon.yml`.
+
+Each unit suite runs in a separate process, measures its own Python package and writes these files under
 `workspace/test-results/moon/<project>/`:
 
 | File | Contents |
@@ -148,12 +160,16 @@ moon run merino:integration-test
 ```
 
 Its `build-test-image` dependency builds `merino-elasticsearch:local` from the committed Dockerfile,
-including the ICU plugin. Testcontainers starts the other required services. Both the image build
-and integration tests bypass Moon's result cache because Docker's state is external to Moon.
+including the ICU plugin. Testcontainers starts the other required services. The image build
+bypasses Moon's result cache because the image lives in Docker. The integration tests are cached:
+their inputs include the Dockerfile and `ES_IMAGE`, so changing either reruns them. Other images
+are pinned in the test code (Redis matches production's 7.2). Use
+`moon run merino:integration-test --force` to rerun regardless of the cache.
 The suite produces `.coverage.integration`, `integration__coverage.json`, and
 `integration__results.xml` in the Merino report directory.
 
-Check the combined Merino coverage, or include the changed-line check:
+`merino:test` already checks combined Merino coverage. To check it alone, or include the
+changed-line check:
 
 ```bash
 moon run merino:coverage
@@ -168,7 +184,7 @@ not scan for and accidentally combine other projects' reports or old Make result
 The minimus are: **95% combined Merino coverage** and **95% coverage of changed
 Merino lines** against `origin/main`. A partial unit or integration suite has no separate minimum.
 
-For all unit suites plus both coverage checks:
+For all suites plus both coverage checks:
 
 ```bash
 moon run :test merino:diff-coverage
@@ -177,21 +193,20 @@ moon run :test merino:diff-coverage
 Use affected selection for quick feedback, for example:
 
 ```bash
-moon run :test --affected --base origin/main
+moon run :unit-test --affected --base origin/main
 ```
 
 A Fleece source change selects Fleece; a common-library change selects all three unit suites.
 Root Python configuration and lockfile changes also select all three. Documentation changes do not
 select Python tests.
 
-Coverage gates must run **without `--affected` or pytest filters** so they check complete suites.
-They opt out of automatic CI selection (`runInCI: false`). This also excludes them from
-`moon run` when `CI=true`. In CI, explicitly run the full dependency chain with
-`moon exec merino:diff-coverage --ignore-ci-checks --upstream deep`. Locally, the `moon run`
-commands above still apply. CI renames the reports to the ETE metrics naming convention before
+Coverage gates must run **without pytest filters** so they check complete suites. Affected
+selection is fine: it selects whole projects, so an affected Merino runs its complete unit and
+integration suites. CI runs `merino:diff-coverage` in the same `moon ci` call as `:test`, so the
+suites run once and the gates run whenever Merino is affected. CI renames the reports to the ETE metrics naming convention before
 uploading them from `main`.
 
-For a filtered investigation, `moon run merino:test -- -k query_normalization` still works. Its
+For a filtered investigation, use `moon run merino:unit-test -- -k query_normalization`. Its
 reports describe only that selection. Run the unfiltered task again before using its reports for
 coverage decisions; Moon uses different cache entries for different arguments.
 

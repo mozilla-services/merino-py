@@ -38,17 +38,20 @@ $ moon run ':#quality'
 # Run a single check for every project: lint, format-check, security, or typecheck
 $ moon run :typecheck
 
-# Run unit tests for every project, or for one project
+# Run unit and integration tests for every project, or for one project (Merino needs Docker)
 $ moon run :test
 $ moon run merino:test
 
+# Run unit tests only
+$ moon run :unit-test
+
 # Forward arguments to pytest
-$ moon run merino:test -- -k weather
+$ moon run merino:unit-test -- -k weather
 
 # Run Merino integration tests (builds the Elasticsearch test image; needs Docker)
 $ moon run merino:integration-test
 
-# Run all unit tests plus integration tests and enforce the coverage gates
+# Run all tests and enforce the coverage gates
 $ moon run :test merino:diff-coverage
 
 # Build Docker images: merino (app:build), fleece (app-fleece:build), load-tests (merino-locust:build)

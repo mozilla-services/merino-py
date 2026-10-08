@@ -79,7 +79,7 @@ tasks:
       - quality
       - ci
 
-  test:
+  unit-test:
     description: Run unit tests for this project
     deps:
       - workspace:install
@@ -108,3 +108,52 @@ tasks:
     tags:
       - test
       - ci
+    options:
+      # Print pytest progress live, not only after the task finishes.
+      outputStyle: stream
+
+  integration-test:
+    description: Run integration tests for this project
+    deps:
+      - workspace:install
+    command: uv
+    args:
+      - run
+      - --frozen
+      - --no-sync
+      - pytest
+      - --config-file
+      - pyproject.toml
+      - --cov-reset
+      - --cov-report=term:skip-covered
+      - --cov-report=json:workspace/test-results/moon/$project/integration__coverage.json
+      - --junitxml=workspace/test-results/moon/$project/integration__results.xml
+      - -o
+      - junit_suite_name=$project-integration
+    env:
+      MERINO_ENV: testing
+      COVERAGE_FILE: workspace/test-results/moon/$project/.coverage.integration
+    outputs:
+      - /workspace/test-results/moon/$project/.coverage.integration
+      - /workspace/test-results/moon/$project/integration__coverage.json
+      - /workspace/test-results/moon/$project/integration__results.xml
+    tags:
+      - test
+      - ci
+    options:
+      # Print pytest progress live, not only after the task finishes.
+      outputStyle: stream
+
+  test:
+    description: Run all tests for this project
+    # Projects without a suite exclude its task; Moon then drops it from these deps.
+    command: noop
+    deps:
+      - unit-test
+      - integration-test
+    tags:
+      - test
+      - ci
+    options:
+      # A cache hit replays the target's last stdout, which may be stale from a former `test`.
+      cache: false

@@ -13,6 +13,12 @@ dependsOn:
 toolchains:
   default: system
 
+workspace:
+  inheritedTasks:
+    # No integration suite yet. Remove this to add one under tests/integration.
+    exclude:
+      - integration-test
+
 tasks:
   docker-build:
     args:
@@ -45,7 +51,7 @@ tasks:
     env:
       MYPYPATH: apps/fleece:packages/merino-common
 
-  test:
+  unit-test:
     args:
       - apps/fleece/tests/unit
       - --cov=merino_fleece

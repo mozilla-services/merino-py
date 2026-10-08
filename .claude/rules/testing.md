@@ -8,10 +8,11 @@ paths:
 ## Running tests
 
 ```bash
-moon run merino:test                         # Unit only
+moon run merino:test                         # Unit + integration + 95% coverage (needs Docker)
+moon run merino:unit-test                    # Unit only
 moon run merino:integration-test             # Integration only (needs Docker)
 moon run merino:diff-coverage                # Both + coverage check
-moon run merino:test -- -k weather           # Tests matching keyword
+moon run merino:unit-test -- -k weather      # Tests matching keyword
 
 # Manual pytest runs MUST set MERINO_ENV (moon tasks do this automatically):
 MERINO_ENV=testing uv run pytest apps/merino/tests/unit/path/to/test.py -v
