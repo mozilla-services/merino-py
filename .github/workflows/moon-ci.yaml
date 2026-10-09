@@ -58,11 +58,11 @@ jobs:
           MOON_BASE: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
           MOON_HEAD: ${{ github.sha }}
           MOON_FORCE: ${{ github.event_name == 'workflow_dispatch' || github.event.forced == true }}
-        # Moon owns affected selection. Coverage runs separately with complete Merino suites.
-        run: moon ci ':#quality' :test load-tests:validate docs:build :docker-build --downstream none
-      - name: Enforce complete Merino coverage and changed-line coverage
-        # Coverage opts out of automatic CI selection; explicitly run its full dependency chain.
-        run: moon exec merino:diff-coverage --ignore-ci-checks --upstream deep
+        # Moon owns affected selection. Merino coverage runs whenever Merino is affected, reusing
+        # the unit and integration results from `:test`.
+        run: >-
+          moon ci ':#quality' :test merino:diff-coverage load-tests:validate docs:build
+          :docker-build --downstream none
       - name: Package images for the existing publishers
         id: images
         # Only main-workflow publishes; PRs still build images but skip the costly save and upload.

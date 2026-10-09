@@ -12,8 +12,9 @@ This project is structured as a monorepo via uv workspaces with three member pac
 ```bash
 make install              # Install deps (uv sync --all-groups)
 make dev                  # FastAPI dev server with hot-reload
-moon run :test merino:diff-coverage   # Unit + integration tests (95% coverage enforced)
-moon run :test                        # Unit tests for every project
+moon run :test merino:diff-coverage   # All tests + 95% combined and changed-line coverage
+moon run :test                        # Unit + integration tests for every project (needs Docker; 95% Merino coverage enforced)
+moon run :unit-test                   # Unit tests only for every project
 moon run merino:integration-test      # Integration tests (needs Docker)
 moon run ':#quality'                  # ruff + bandit + mypy
 make format               # Auto-format with ruff

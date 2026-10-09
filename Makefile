@@ -189,8 +189,8 @@ moon-quality:  ## (deprecated) moon run ':#quality'
 	$(call moon_alias,':#quality')
 moon-test:  ## (deprecated) moon run :test
 	$(call moon_alias,:test)
-unit-tests:  ## (deprecated) moon run :test
-	$(call moon_alias,:test)
+unit-tests:  ## (deprecated) moon run :unit-test
+	$(call moon_alias,:unit-test)
 integration-tests:  ## (deprecated) moon run merino:integration-test
 	$(call moon_alias,merino:integration-test)
 integration-tests-local:  ## (deprecated) moon run merino:integration-test

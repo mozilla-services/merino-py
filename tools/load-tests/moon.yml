@@ -19,6 +19,8 @@ workspace:
   inheritedTasks:
     exclude:
       - test
+      - unit-test
+      - integration-test
 
 tasks:
   docker-build:

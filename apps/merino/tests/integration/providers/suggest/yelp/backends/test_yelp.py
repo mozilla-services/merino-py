@@ -25,6 +25,7 @@ from merino.exceptions import CacheAdapterError
 from testcontainers.core.wait_strategies import LogMessageWaitStrategy
 from testcontainers.community.redis import AsyncRedisContainer
 
+from tests.integration.fixtures.redis import REDIS_IMAGE
 from tests.types import FilterCaplogFixture
 
 from merino.providers.suggest.yelp.backends.yelp import YelpBackend
@@ -63,7 +64,9 @@ def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     """
     logger.info("Starting up redis container")
     container = (
-        AsyncRedisContainer().waiting_for(LogMessageWaitStrategy("Server initialized")).start()
+        AsyncRedisContainer(REDIS_IMAGE)
+        .waiting_for(LogMessageWaitStrategy("Server initialized"))
+        .start()
     )
     logger.info(f"\n Redis server started on port: {container.port}")
 

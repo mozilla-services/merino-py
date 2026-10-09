@@ -256,8 +256,8 @@ Ensure that the following pass without error:
 
 - `make format` -- applies formatting to the python files
 - `moon run ':#quality'` -- General formatting and checks to the code.
-- `moon run :test` -- validate the code operation (note: `moon run merino:test -- -sx` stops on the first failure, which is useful for local testing).
-- `moon run merino:integration-test` -- Contract tests for the API (needs Docker).
+- `moon run :test` -- validate the code operation with unit and integration tests (needs Docker). `moon run merino:unit-test -- -sx` runs unit tests only and stops on the first failure, which is useful for local testing.
+- `moon run merino:integration-test` -- Contract tests for the API only (needs Docker).
 
 Merino has a Code Coverage requirement of 95% coverage (including Unit and Integration Tests).
 

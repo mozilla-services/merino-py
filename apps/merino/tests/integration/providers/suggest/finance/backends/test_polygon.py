@@ -12,6 +12,7 @@ from logging import LogRecord, ERROR
 from pytest import LogCaptureFixture
 from typing import Any, AsyncGenerator, Generator
 from merino.configs import settings
+from tests.integration.fixtures.redis import REDIS_IMAGE
 from tests.types import FilterCaplogFixture
 from httpx import AsyncClient
 from pytest_mock import MockerFixture
@@ -40,7 +41,9 @@ def redis_container() -> Generator[AsyncRedisContainer, None, None]:
     """
     logger.info("Starting up redis container")
     container = (
-        AsyncRedisContainer().waiting_for(LogMessageWaitStrategy("Server initialized")).start()
+        AsyncRedisContainer(REDIS_IMAGE)
+        .waiting_for(LogMessageWaitStrategy("Server initialized"))
+        .start()
     )
     logger.info(f"\n Redis server started on port: {container.port}")
 

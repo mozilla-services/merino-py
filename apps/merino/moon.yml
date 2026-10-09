@@ -47,13 +47,18 @@ tasks:
     env:
       MYPYPATH: apps/merino:packages/merino-common
 
-  test:
+  unit-test:
     args:
       - apps/merino/tests/unit
       - --cov=merino
     inputs:
       - "**/*"
       - /dev/GeoLite2-City-Test.mmdb
+
+  test:
+    # Like the former `make test`, report combined coverage after both suites and enforce the gate.
+    deps:
+      - coverage
 
   build-test-image:
     description: Build the Elasticsearch image required by integration tests
@@ -72,49 +77,18 @@ tasks:
       runFromWorkspaceRoot: true
 
   integration-test:
-    description: Run Merino integration tests with coverage and JUnit reports
-    command:
-      - uv
-      - run
-      - --frozen
-      - --no-sync
-      - pytest
-      - --config-file
-      - pyproject.toml
+    args:
       - apps/merino/tests/integration
-      - --cov-reset
       - --cov=merino
-      - --cov-report=term:skip-covered
-      - --cov-report=json:workspace/test-results/moon/merino/integration__coverage.json
-      - --junitxml=workspace/test-results/moon/merino/integration__results.xml
-      - -o
-      - junit_suite_name=merino-integration
     env:
-      MERINO_ENV: testing
       TESTCONTAINERS_RYUK_DISABLED: "true"
-      COVERAGE_FILE: workspace/test-results/moon/merino/.coverage.integration
     inputs:
       - "**/*"
-      - pyproject.toml
-      - project://^
-      - /pyproject.toml
-      - /uv.lock
-      - /.python-version
+      # The Elasticsearch image's Dockerfile, and an optional override of the image to test against.
       - /dev/**/*
-    outputs:
-      - /workspace/test-results/moon/merino/.coverage.integration
-      - /workspace/test-results/moon/merino/integration__coverage.json
-      - /workspace/test-results/moon/merino/integration__results.xml
-    tags:
-      - test
-      - ci
+      - $ES_IMAGE
     deps:
-      - workspace:install
       - build-test-image
-    toolchains: system
-    options:
-      cache: false
-      runFromWorkspaceRoot: true
 
   coverage:
     description: Combine Merino unit and integration coverage and enforce the existing 95% gate
@@ -131,7 +105,7 @@ tasks:
     env:
       COVERAGE_FILE: workspace/test-results/moon/merino/.coverage
     deps:
-      - test
+      - unit-test
       - integration-test
     outputs:
       - /workspace/test-results/moon/merino/.coverage
@@ -141,9 +115,6 @@ tasks:
       - coverage
     toolchains: system
     options:
-      # In CI, invoke explicitly with `moon exec --ignore-ci-checks --upstream deep`.
-      cache: false
-      runInCI: false
       runFromWorkspaceRoot: true
 
   diff-coverage:
@@ -165,6 +136,4 @@ tasks:
     options:
       # The comparison ref can move without changing project files.
       cache: false
-      # In CI, invoke explicitly with `moon exec --ignore-ci-checks --upstream deep`.
-      runInCI: false
       runFromWorkspaceRoot: true
