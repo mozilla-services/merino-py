@@ -249,7 +249,7 @@ class TestGetLegacyRecommendationsFromSections:
     async def test_surface_without_sections_returns_empty_list(
         self, mock_get_corpus_sections, caplog
     ):
-        """A surface with no sections content (e.g. NEW_TAB_EN_XE before sections launch there)
+        """A surface with no sections content (e.g. NEW_TAB_EN_ROW before its sections are enabled)
         returns an empty list and logs that no recommendations are available.
         """
         mock_get_corpus_sections.return_value = (None, {})
@@ -258,7 +258,7 @@ class TestGetLegacyRecommendationsFromSections:
             sections_backend=AsyncMock(),
             engagement_backend=StubEngagementBackend(),
             prior_backend=StubPriorBackend(),
-            surface_id=SurfaceId.NEW_TAB_EN_XE,
+            surface_id=SurfaceId.NEW_TAB_EN_ROW,
             count=10,
             region="DE",
         )

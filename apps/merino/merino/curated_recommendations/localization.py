@@ -34,16 +34,14 @@ LOCALIZED_SECTION_TITLES: LocalizedTopicSectionTitles = {
     SurfaceId.NEW_TAB_EN_INTL: {
         "top-stories": "Popular Today",
     },
+    SurfaceId.NEW_TAB_EN_ROW: {
+        "top-stories": "Top Stories",
+    },
     SurfaceId.NEW_TAB_EN_US: {
         "top-stories": "Popular Today",
     },
-    SurfaceId.NEW_TAB_EN_XE: {
-        "top-stories": "Popular Today",
-    },
     SurfaceId.NEW_TAB_ES_ES: {"top-stories": "Tendencias"},
-    SurfaceId.NEW_TAB_ES_XA: {
-        "top-stories": "Tendencias",
-    },
+    SurfaceId.NEW_TAB_ES_ROW: {"top-stories": "Destacados"},
     SurfaceId.NEW_TAB_FR_BE: {
         "top-stories": "Tendances du jour",
     },

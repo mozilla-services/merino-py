@@ -105,10 +105,6 @@ class ExperimentName(str, Enum):
     CONTEXTUAL_AD_V2_RELEASE_EXPERIMENT = "new-tab-contextual-ad-updates-v2-release"
     NEW_TAB_CUSTOM_SECTIONS_EXPERIMENT = "new-tab-custom-sections"
     INFERRED_TIME_ZONE_EXPERIMENT = "new-tab-stories-time-zone-based-ranking"
-    # Experiment to serve the cross-Europe English sections surface (NEW_TAB_EN_XE)
-    SECTIONS_IN_EN_EUROPE_EXPERIMENT = "sections-in-en-europe"
-    # Experiment to serve the global Spanish sections surface (NEW_TAB_ES_XA)
-    SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT = "sections-in-global-spanish"
     # Experiment to compare observed and predicted engagement for en-GB.
     CTR_PREDICTION_ENGB_EXPERIMENT = "ctrpred_engb"
 
