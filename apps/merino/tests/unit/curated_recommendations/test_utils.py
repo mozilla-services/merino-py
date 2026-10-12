@@ -21,8 +21,6 @@ from merino.curated_recommendations.utils import (
     get_millisecond_epoch_time,
 )
 
-_EN_EUROPE = ExperimentName.SECTIONS_IN_EN_EUROPE_EXPERIMENT.value
-_GLOBAL_SPANISH = ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value
 _CTR_PREDICTION_ENGB = ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value
 
 
@@ -229,8 +227,8 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
             ("en", "IN", SurfaceId.NEW_TAB_EN_INTL),
             # The locale language primarily determines the market, even if it's not the most common language in the region.
             ("de", "US", SurfaceId.NEW_TAB_DE_DE),
-            ("en", "FR", SurfaceId.NEW_TAB_EN_US),
-            ("es", "DE", SurfaceId.NEW_TAB_ES_ES),
+            ("en", "FR", SurfaceId.NEW_TAB_EN_ROW),
+            ("es", "DE", SurfaceId.NEW_TAB_ES_ROW),
             ("fr", "ES", SurfaceId.NEW_TAB_FR_FR),
             ("it", "CA", SurfaceId.NEW_TAB_IT_IT),
             # Extract region from locale, if it is not explicitly provided.
@@ -265,85 +263,57 @@ class TestCuratedRecommendationsProviderGetRecommendationSurfaceId:
         assert get_recommendation_surface_id(locale, region) == recommendation_surface_id
 
 
-class TestGetRecommendationSurfaceIdExperiments:
-    """Unit tests for experiment-gated surface routing: NEW_TAB_EN_XE
-    (sections-in-en-europe) and NEW_TAB_ES_XA (sections-in-global-spanish).
-    """
-
-    @staticmethod
-    def _request(experiment_name: str, branch: str) -> CuratedRecommendationsRequest:
-        """Build a request with the given experiment enrollment. The request's own
-        locale is irrelevant here: routing uses the `locale`/`region` args directly.
-        """
-        return CuratedRecommendationsRequest(
-            locale=Locale.EN_US,
-            experimentName=experiment_name,
-            experimentBranch=branch,
-        )
+class TestGetRecommendationSurfaceIdRestOfWorld:
+    """Unit tests for routing to the rest-of-world surfaces NEW_TAB_EN_ROW and NEW_TAB_ES_ROW."""
 
     @pytest.mark.parametrize(
-        "locale, region, branch, expected",
+        "locale, region, expected",
         [
-            # Enrolled English speakers in continental Europe get NEW_TAB_EN_XE.
-            ("en", "DE", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en", "FR", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en", "AT", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en", "CH", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en", "BE", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en", "IT", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en", "ES", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en", "PL", "treatment", SurfaceId.NEW_TAB_EN_XE),
-            ("en-DE", None, "treatment", SurfaceId.NEW_TAB_EN_XE),  # region from locale
-            # More specific English markets keep priority even when enrolled.
-            ("en", "US", "treatment", SurfaceId.NEW_TAB_EN_US),
-            ("en", "GB", "treatment", SurfaceId.NEW_TAB_EN_GB),
-            ("en", "CA", "treatment", SurfaceId.NEW_TAB_EN_CA),
-            ("en", "IE", "treatment", SurfaceId.NEW_TAB_EN_IE),
-            ("en", "IN", "treatment", SurfaceId.NEW_TAB_EN_INTL),
-            # Non-treatment branch, or a European region outside the XE set -> default en-US.
-            ("en", "DE", "control", SurfaceId.NEW_TAB_EN_US),
-            ("en", "NL", "treatment", SurfaceId.NEW_TAB_EN_US),
-            # Language takes priority; the experiment does not affect other languages.
-            ("de", "DE", "treatment", SurfaceId.NEW_TAB_DE_DE),
-            ("es", "ES", "treatment", SurfaceId.NEW_TAB_ES_ES),
+            # English users in Germany and France get the global English feed.
+            ("en", "DE", SurfaceId.NEW_TAB_EN_ROW),
+            ("en-US", "DE", SurfaceId.NEW_TAB_EN_ROW),
+            ("en-GB", "FR", SurfaceId.NEW_TAB_EN_ROW),
+            ("en-DE", None, SurfaceId.NEW_TAB_EN_ROW),  # region from locale
+            # English markets with their own feed keep priority.
+            ("en-US", "US", SurfaceId.NEW_TAB_EN_US),
+            ("en-GB", "GB", SurfaceId.NEW_TAB_EN_GB),
+            ("en-US", "IN", SurfaceId.NEW_TAB_EN_INTL),
+            # Other countries are not part of the English experiment.
+            ("en", "AT", SurfaceId.NEW_TAB_EN_US),
+            ("en", "NL", SurfaceId.NEW_TAB_EN_US),
+            ("en", "KE", SurfaceId.NEW_TAB_EN_US),
+            # The locale language picks the feed language: German users in Germany keep German.
+            ("de", "DE", SurfaceId.NEW_TAB_DE_DE),
+            ("fr", "FR", SurfaceId.NEW_TAB_FR_FR),
         ],
     )
-    def test_sections_in_en_europe_surface(
-        self, locale: Locale, region: str | None, branch: str, expected: SurfaceId
-    ):
-        """NEW_TAB_EN_XE is served only to enrolled English speakers in continental
-        Europe; more specific markets, other languages, and non-treatment branches
-        fall back.
-        """
-        request = self._request(_EN_EUROPE, branch)
-        assert get_recommendation_surface_id(locale, region, request) == expected
+    def test_en_row_surface(self, locale: Locale, region: str | None, expected: SurfaceId):
+        """NEW_TAB_EN_ROW is served to English users in DE and FR only."""
+        assert get_recommendation_surface_id(locale, region) == expected
 
     @pytest.mark.parametrize(
-        "locale, region, branch, expected",
+        "locale, region, expected",
         [
-            # Enrolled Spanish speakers outside Spain get NEW_TAB_ES_XA.
-            ("es", "MX", "treatment", SurfaceId.NEW_TAB_ES_XA),
-            ("es", "US", "treatment", SurfaceId.NEW_TAB_ES_XA),
-            ("es", None, "treatment", SurfaceId.NEW_TAB_ES_XA),
-            ("es-MX", None, "treatment", SurfaceId.NEW_TAB_ES_XA),
-            # Spain keeps its more specific market even when enrolled (XA is a fall-back).
-            ("es", "ES", "treatment", SurfaceId.NEW_TAB_ES_ES),
-            ("es-ES", None, "treatment", SurfaceId.NEW_TAB_ES_ES),
-            # Non-treatment branch -> the existing Spanish surface.
-            ("es", "MX", "control", SurfaceId.NEW_TAB_ES_ES),
-            # The experiment does not affect English speakers.
-            ("en", "DE", "treatment", SurfaceId.NEW_TAB_EN_US),
-            ("en", "MX", "treatment", SurfaceId.NEW_TAB_EN_US),
+            # Spanish users anywhere outside Spain get the global Spanish feed.
+            ("es", "MX", SurfaceId.NEW_TAB_ES_ROW),
+            ("es-MX", None, SurfaceId.NEW_TAB_ES_ROW),  # region from locale
+            ("es-419", "AR", SurfaceId.NEW_TAB_ES_ROW),
+            ("es-ES", "EC", SurfaceId.NEW_TAB_ES_ROW),  # the country decides, not the variant
+            ("es", "US", SurfaceId.NEW_TAB_ES_ROW),
+            ("es", "DE", SurfaceId.NEW_TAB_ES_ROW),
+            # Spain keeps its own feed, whatever the Spanish variant.
+            ("es-ES", "ES", SurfaceId.NEW_TAB_ES_ES),
+            ("es-MX", "ES", SurfaceId.NEW_TAB_ES_ES),
+            ("es-ES", None, SurfaceId.NEW_TAB_ES_ES),
+            # Without any country, fall back to Spain's feed.
+            ("es", None, SurfaceId.NEW_TAB_ES_ES),
+            # English users in Spanish-speaking countries are unaffected.
+            ("en", "MX", SurfaceId.NEW_TAB_EN_US),
         ],
     )
-    def test_sections_in_global_spanish_surface(
-        self, locale: Locale, region: str | None, branch: str, expected: SurfaceId
-    ):
-        """NEW_TAB_ES_XA is served to enrolled Spanish speakers outside Spain; Spain
-        (es-ES), non-enrolled Spanish speakers, and English are unaffected.
-        """
-        request = self._request(_GLOBAL_SPANISH, branch)
-        assert get_recommendation_surface_id(locale, region, request) == expected
+    def test_es_row_surface(self, locale: Locale, region: str | None, expected: SurfaceId):
+        """NEW_TAB_ES_ROW is served to Spanish users in any country except Spain."""
+        assert get_recommendation_surface_id(locale, region) == expected
 
 
 class TestIsEnrolledInExperiment:

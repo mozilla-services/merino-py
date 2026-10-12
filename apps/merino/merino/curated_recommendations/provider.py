@@ -95,9 +95,7 @@ class CuratedRecommendationsProvider:
         self, request: CuratedRecommendationsRequest
     ) -> CuratedRecommendationsResponse:
         """Provide curated recommendations."""
-        surface_id = get_recommendation_surface_id(
-            locale=request.locale, region=request.region, request=request
-        )
+        surface_id = get_recommendation_surface_id(locale=request.locale, region=request.region)
         region = derive_region(request.locale, request.region)
         engagement_region = derive_engagement_region(request)
 

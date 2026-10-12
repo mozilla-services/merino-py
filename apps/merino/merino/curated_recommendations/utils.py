@@ -10,17 +10,14 @@ from merino.curated_recommendations.protocol import (
     Locale,
 )
 
-# Continental-European regions whose English-speaking users are routed to the
-# cross-Europe English surface (NEW_TAB_EN_XE) when enrolled in the
-# sections-in-en-europe experiment. More specific English markets (US, GB, CA, IE,
-# IN) take priority, so this only applies to regions not handled above.
-EN_XE_REGIONS: frozenset[str] = frozenset({"DE", "FR", "AT", "CH", "BE", "IT", "ES", "PL"})
+# The global English feed is experimenting only with English-language users in Germany and
+# France (HNT-1814), so it can't fall back for every other region the way ES_ROW does.
+EN_ROW_REGIONS: frozenset[str] = frozenset({"DE", "FR"})
 
 
 def get_recommendation_surface_id(
     locale: Locale,
     region: str | None = None,
-    request: "CuratedRecommendationsRequest | None" = None,
 ) -> SurfaceId:
     """Locale/region mapping is documented here:
     https://docs.google.com/document/d/1omclr-eETJ7zAWTMI7mvvsc3_-ns2Iiho4jPEfrmZfo/edit
@@ -28,7 +25,6 @@ def get_recommendation_surface_id(
     Args:
         locale: The language variant preferred by the user (e.g. 'en-US', or 'en')
         region: Optionally, the geographic region of the user, e.g. 'US'.
-        request: Optionally, the full request object for experiment checks.
 
     Return the most appropriate RecommendationSurfaceId for the given locale/region.
     A value is always returned here. A Firefox pref determines which locales are eligible, so in this
@@ -49,20 +45,10 @@ def get_recommendation_surface_id(
     elif language == "pl":
         return SurfaceId.NEW_TAB_PL_PL
     elif language == "es":
-        # Spanish-speaking users enrolled in the sections-in-global-spanish experiment
-        # get the global Spanish surface, except in Spain (es-ES) whose more specific
-        # market keeps priority. Non-enrolled users also keep NEW_TAB_ES_ES.
-        if (
-            request is not None
-            and derived_region != "ES"
-            and is_enrolled_in_experiment(
-                request,
-                ExperimentName.SECTIONS_IN_GLOBAL_SPANISH_EXPERIMENT.value,
-                "treatment",
-            )
-        ):
-            return SurfaceId.NEW_TAB_ES_XA
-        return SurfaceId.NEW_TAB_ES_ES
+        # Spain has its own feed; Nimbus decides which other countries request Spanish stories.
+        if derived_region in (None, "ES"):
+            return SurfaceId.NEW_TAB_ES_ES
+        return SurfaceId.NEW_TAB_ES_ROW
     elif language == "fr":
         match derived_region:
             case "BE":  # belgium
@@ -83,19 +69,8 @@ def get_recommendation_surface_id(
             return SurfaceId.NEW_TAB_EN_GB
         elif derived_region == "IN":
             return SurfaceId.NEW_TAB_EN_INTL
-        elif (
-            request is not None
-            and derived_region in EN_XE_REGIONS
-            and is_enrolled_in_experiment(
-                request,
-                ExperimentName.SECTIONS_IN_EN_EUROPE_EXPERIMENT.value,
-                "treatment",
-            )
-        ):
-            # English-speaking users in continental Europe enrolled in the
-            # sections-in-en-europe experiment get the cross-Europe English surface.
-            # Fall-back for European regions not matched above (specific markets keep priority).
-            return SurfaceId.NEW_TAB_EN_XE
+        elif derived_region in EN_ROW_REGIONS:
+            return SurfaceId.NEW_TAB_EN_ROW
         else:
             # Default to the en-US New Tab if no 2-letter region can be derived from locale or region.
             return SurfaceId.NEW_TAB_EN_US
@@ -140,8 +115,7 @@ def derive_engagement_region(request: CuratedRecommendationsRequest) -> str | No
     branch = request.experimentBranch
 
     if (
-        get_recommendation_surface_id(request.locale, request.region, request)
-        == SurfaceId.NEW_TAB_EN_GB
+        get_recommendation_surface_id(request.locale, request.region) == SurfaceId.NEW_TAB_EN_GB
         and branch is not None
         and is_enrolled_in_experiment(
             request, ExperimentName.CTR_PREDICTION_ENGB_EXPERIMENT.value, branch

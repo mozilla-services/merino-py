@@ -2589,30 +2589,14 @@ def test_uk_sections_with_gb_backend_data(
 @pytest.mark.parametrize(
     "payload,expected_surface",
     [
-        (
-            {
-                "locale": "en-US",
-                "region": "DE",
-                "experimentName": "sections-in-en-europe",
-                "experimentBranch": "treatment",
-            },
-            SurfaceId.NEW_TAB_EN_XE,
-        ),
-        (
-            {
-                "locale": "es",
-                "region": "MX",
-                "experimentName": "sections-in-global-spanish",
-                "experimentBranch": "treatment",
-            },
-            SurfaceId.NEW_TAB_ES_XA,
-        ),
+        ({"locale": "en-US", "region": "DE"}, SurfaceId.NEW_TAB_EN_ROW),
+        ({"locale": "es", "region": "MX"}, SurfaceId.NEW_TAB_ES_ROW),
     ],
 )
-def test_experiment_surface_non_sections_request(
+def test_row_surface_non_sections_request(
     payload: dict, expected_surface: SurfaceId, client: TestClient
 ):
-    """Test that experiment surfaces (EN_XE/ES_XA) without feeds get a flat list from sections."""
+    """Test that rest-of-world surfaces without feeds get a flat list from sections."""
     response = client.post("/api/v1/curated-recommendations", json=payload)
     data = response.json()
 
@@ -2624,6 +2608,33 @@ def test_experiment_surface_non_sections_request(
     assert len(corpus_items) > 0
     # scheduledCorpusItemId equals corpusItemId (sections backend behavior)
     assert all(item["scheduledCorpusItemId"] == item["corpusItemId"] for item in corpus_items)
+
+
+@pytest.mark.parametrize(
+    "payload,expected_surface,expected_title",
+    [
+        ({"locale": "en-US", "region": "FR"}, SurfaceId.NEW_TAB_EN_ROW, "Top Stories"),
+        ({"locale": "es-ES", "region": "EC"}, SurfaceId.NEW_TAB_ES_ROW, "Destacados"),
+    ],
+)
+def test_row_surface_sections_request_returns_only_top_stories(
+    payload: dict, expected_surface: SurfaceId, expected_title: str, client: TestClient
+):
+    """Test that rest-of-world surfaces return a single, non-followable top stories section."""
+    response = client.post(
+        "/api/v1/curated-recommendations", json={**payload, "feeds": ["sections"]}
+    )
+    data = response.json()
+
+    assert response.status_code == 200
+    assert data["surfaceId"] == expected_surface.value
+    feeds = {name: section for name, section in data["feeds"].items() if section is not None}
+    assert list(feeds) == ["top_stories_section"]
+    top_stories = feeds["top_stories_section"]
+    assert top_stories["title"] == expected_title
+    assert top_stories["followable"] is False
+    assert top_stories["receivedFeedRank"] == 0
+    assert len(top_stories["recommendations"]) > 0
 
 
 def test_curated_recommendations_enriched_with_icons(
