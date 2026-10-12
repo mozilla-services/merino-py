@@ -60,12 +60,16 @@ def test_get_utm_source_return_none(surface_id):
         (SurfaceId.NEW_TAB_EN_US, "firefox-newtab-en-us"),
         (SurfaceId.NEW_TAB_EN_GB, "firefox-newtab-en-gb"),
         (SurfaceId.NEW_TAB_EN_CA, "firefox-newtab-en-ca"),
+        (SurfaceId.NEW_TAB_EN_IE, "firefox-newtab-en-ie"),
         (SurfaceId.NEW_TAB_EN_INTL, "firefox-newtab-en-intl"),
         (SurfaceId.NEW_TAB_EN_ROW, "firefox-newtab-en-row"),
         (SurfaceId.NEW_TAB_DE_DE, "firefox-newtab-de-de"),
+        (SurfaceId.NEW_TAB_DE_AT, "firefox-newtab-de-at"),
+        (SurfaceId.NEW_TAB_DE_CH, "firefox-newtab-de-ch"),
         (SurfaceId.NEW_TAB_ES_ES, "firefox-newtab-es-es"),
         (SurfaceId.NEW_TAB_ES_ROW, "firefox-newtab-es-row"),
         (SurfaceId.NEW_TAB_FR_FR, "firefox-newtab-fr-fr"),
+        (SurfaceId.NEW_TAB_FR_BE, "firefox-newtab-fr-be"),
         (SurfaceId.NEW_TAB_IT_IT, "firefox-newtab-it-it"),
         (SurfaceId.NEW_TAB_PL_PL, "firefox-newtab-pl-pl"),
     ],
@@ -73,6 +77,12 @@ def test_get_utm_source_return_none(surface_id):
 def test_get_utm_source(surface_id, expected_utm_source):
     """Testing get_utm_source() method ensuring correct utm_source is returned for a surface id."""
     assert get_utm_source(surface_id) == expected_utm_source
+
+
+@pytest.mark.parametrize("surface_id", list(SurfaceId))
+def test_get_utm_source_covers_every_surface(surface_id):
+    """Every surface needs a utm_source, so publishers can attribute New Tab traffic."""
+    assert get_utm_source(surface_id) is not None
 
 
 @pytest.mark.parametrize(

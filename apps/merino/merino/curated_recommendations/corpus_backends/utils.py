@@ -45,9 +45,12 @@ def get_utm_source(surface_id: SurfaceId) -> str | None:
         SurfaceId.NEW_TAB_EN_INTL: "firefox-newtab-en-intl",
         SurfaceId.NEW_TAB_EN_ROW: "firefox-newtab-en-row",
         SurfaceId.NEW_TAB_DE_DE: "firefox-newtab-de-de",
+        SurfaceId.NEW_TAB_DE_AT: "firefox-newtab-de-at",
+        SurfaceId.NEW_TAB_DE_CH: "firefox-newtab-de-ch",
         SurfaceId.NEW_TAB_ES_ES: "firefox-newtab-es-es",
         SurfaceId.NEW_TAB_ES_ROW: "firefox-newtab-es-row",
         SurfaceId.NEW_TAB_FR_FR: "firefox-newtab-fr-fr",
+        SurfaceId.NEW_TAB_FR_BE: "firefox-newtab-fr-be",
         SurfaceId.NEW_TAB_IT_IT: "firefox-newtab-it-it",
         SurfaceId.NEW_TAB_PL_PL: "firefox-newtab-pl-pl",
     }
