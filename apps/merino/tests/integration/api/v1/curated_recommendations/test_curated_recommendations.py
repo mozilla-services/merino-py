@@ -786,6 +786,9 @@ class TestCuratedRecommendationsRequestParameters:
             (Locale.FR_FR, SurfaceId.NEW_TAB_FR_FR),
             (Locale.ES, SurfaceId.NEW_TAB_ES_ES),
             (Locale.ES_ES, SurfaceId.NEW_TAB_ES_ES),
+            (Locale.ES_AR, SurfaceId.NEW_TAB_ES_ROW),
+            (Locale.ES_CL, SurfaceId.NEW_TAB_ES_ROW),
+            (Locale.ES_MX, SurfaceId.NEW_TAB_ES_ROW),
             (Locale.IT, SurfaceId.NEW_TAB_IT_IT),
             (Locale.IT_IT, SurfaceId.NEW_TAB_IT_IT),
             (Locale.PL, SurfaceId.NEW_TAB_PL_PL),
@@ -2615,6 +2618,7 @@ def test_row_surface_non_sections_request(
     [
         ({"locale": "en-US", "region": "FR"}, SurfaceId.NEW_TAB_EN_ROW, "Top Stories"),
         ({"locale": "es-ES", "region": "EC"}, SurfaceId.NEW_TAB_ES_ROW, "Destacados"),
+        ({"locale": "es-MX", "region": "MX"}, SurfaceId.NEW_TAB_ES_ROW, "Destacados"),
     ],
 )
 def test_row_surface_sections_request_returns_only_top_stories(
