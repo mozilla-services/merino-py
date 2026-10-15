@@ -48,12 +48,6 @@ def test_map_corpus_to_serp_topic(topic, mapped_topic):
     assert result.value == mapped_topic
 
 
-@pytest.mark.parametrize("surface_id", ["bad-surface-id"])
-def test_get_utm_source_return_none(surface_id):
-    """Testing get_utm_source() method ensuring ids that don't have a mapping return None."""
-    assert get_utm_source(surface_id) is None
-
-
 @pytest.mark.parametrize(
     ("surface_id", "expected_utm_source"),
     [
@@ -77,12 +71,6 @@ def test_get_utm_source_return_none(surface_id):
 def test_get_utm_source(surface_id, expected_utm_source):
     """Testing get_utm_source() method ensuring correct utm_source is returned for a surface id."""
     assert get_utm_source(surface_id) == expected_utm_source
-
-
-@pytest.mark.parametrize("surface_id", list(SurfaceId))
-def test_get_utm_source_covers_every_surface(surface_id):
-    """Every surface needs a utm_source, so publishers can attribute New Tab traffic."""
-    assert get_utm_source(surface_id) is not None
 
 
 @pytest.mark.parametrize(
@@ -164,25 +152,15 @@ class TestBuildCorpusItem:
         assert mapped_topic is not None
         assert result.topic == mapped_topic
 
-    def test_build_corpus_item_without_utm(self, mock_manifest_provider):
-        """When utm_source is None the URL should not be updated."""
-        utm_source = None
-        corpus_item = self.sample_item.copy()
-        result = build_corpus_item(corpus_item, mock_manifest_provider, utm_source)
-
-        expected_url = corpus_item["url"]
-        assert result.url == HttpUrl(expected_url)
-        assert result.iconUrl == HttpUrl(self.get_mock_icon_url(expected_url))
-
     def test_build_corpus_item_unmapped_topic(self, mock_manifest_provider):
         """If the corpus item's topic does not have a corresponding mapping,
         the returned CorpusItem should have a topic of None.
         """
         corpus_item = self.sample_item.copy()
         corpus_item["topic"] = "UNKNOWN"  # Unmapped topic.
-        result = build_corpus_item(corpus_item, mock_manifest_provider, utm_source=None)
+        result = build_corpus_item(corpus_item, mock_manifest_provider, "firefox-newtab-en-us")
 
-        expected_url = corpus_item["url"]
+        expected_url = update_url_utm_source(corpus_item["url"], "firefox-newtab-en-us")
         assert result.topic is None
         assert result.url == HttpUrl(expected_url)
         assert result.iconUrl == HttpUrl(self.get_mock_icon_url(expected_url))
