@@ -35,23 +35,9 @@ def map_corpus_topic_to_serp_topic(topic: str) -> Topic | None:
     return mapping.get(topic.upper())
 
 
-def get_utm_source(surface_id: SurfaceId) -> str | None:
-    """Return the utm_source for the given surface id."""
-    utm_mapping = {
-        SurfaceId.NEW_TAB_EN_US: "firefox-newtab-en-us",
-        SurfaceId.NEW_TAB_EN_GB: "firefox-newtab-en-gb",
-        SurfaceId.NEW_TAB_EN_CA: "firefox-newtab-en-ca",
-        SurfaceId.NEW_TAB_EN_IE: "firefox-newtab-en-ie",
-        SurfaceId.NEW_TAB_EN_INTL: "firefox-newtab-en-intl",
-        SurfaceId.NEW_TAB_EN_ROW: "firefox-newtab-en-row",
-        SurfaceId.NEW_TAB_DE_DE: "firefox-newtab-de-de",
-        SurfaceId.NEW_TAB_ES_ES: "firefox-newtab-es-es",
-        SurfaceId.NEW_TAB_ES_ROW: "firefox-newtab-es-row",
-        SurfaceId.NEW_TAB_FR_FR: "firefox-newtab-fr-fr",
-        SurfaceId.NEW_TAB_IT_IT: "firefox-newtab-it-it",
-        SurfaceId.NEW_TAB_PL_PL: "firefox-newtab-pl-pl",
-    }
-    return utm_mapping.get(surface_id)
+def get_utm_source(surface_id: SurfaceId) -> str:
+    """Return the utm_source for the given surface id, e.g. NEW_TAB_DE_AT -> firefox-newtab-de-at."""
+    return "firefox-newtab-" + surface_id.removeprefix("NEW_TAB_").lower().replace("_", "-")
 
 
 def update_url_utm_source(url: str, utm_source: str) -> str:
@@ -90,24 +76,22 @@ class CorpusApiGraphConfig:
 
 
 def build_corpus_item(
-    corpus_item: dict, manifest_provider: ManifestProvider, utm_source: str | None
+    corpus_item: dict, manifest_provider: ManifestProvider, utm_source: str
 ) -> CorpusItem:
     """Construct a CorpusItem from a GraphQL corpus item dictionary.
 
-    This function maps the corpus topic, updates the URL with the utm_source if provided,
+    This function maps the corpus topic, updates the URL with the utm_source,
     and adds an icon URL from the manifest provider if available.
 
     Args:
         corpus_item: The dictionary representing the corpus item from GraphQL.
-        utm_source: Optional utm_source string.
+        utm_source: The utm_source to set on the URL.
         manifest_provider: The manifest provider to obtain the icon URL.
 
     Returns:
         CorpusItem: The constructed CorpusItem.
     """
-    url = corpus_item["url"]
-    if utm_source is not None:
-        url = update_url_utm_source(corpus_item["url"], utm_source)
+    url = update_url_utm_source(corpus_item["url"], utm_source)
 
     return CorpusItem(
         corpusItemId=corpus_item["id"],
