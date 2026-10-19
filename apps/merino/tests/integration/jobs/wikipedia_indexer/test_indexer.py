@@ -247,6 +247,7 @@ def test_index_from_export(
     es_adapter.bulk.assert_called_once()
     es_adapter.refresh_index.assert_called_once()
     es_adapter.update_aliases.assert_called_once()
+    es_adapter.delete_index.assert_not_called()
     es_adapter.set_index_lifecycle_policy.assert_called_once_with(
         index=f"enwiki-20220101-v1-{EPOCH_FROZEN_TIME}", policy="enwiki_policy"
     )
@@ -585,6 +586,96 @@ def test_index_from_export_keeps_documents_without_a_page_type(
     indexer.index_from_export(1, "enwiki")
 
     es_adapter.bulk.assert_called_once()
+
+
+def _ready_to_index(file_manager, es_adapter, docs=1):
+    """Set the mocks up so index_from_export gets past creating the index."""
+    file_manager.get_latest_gcs.return_value = SNAPSHOT
+    es_adapter.index_exists.return_value = False
+    es_adapter.create_index.return_value = True
+    es_adapter.alias_exists.return_value = False
+    es_adapter.bulk.return_value = {"errors": False, "items": [{"id": 1000}]}
+
+    inputs = []
+    for i in range(docs):
+        inputs.append(json.dumps({"index": {"_type": "doc", "_id": str(i)}}))
+        inputs.append(
+            json.dumps(
+                {
+                    "title": f"Article {i}",
+                    "text_bytes": 1000,
+                    "incoming_links": 10,
+                    "popularity_score": 0.0003,
+                    "create_timestamp": "2001-06-10T22:29:58Z",
+                    "page_id": i,
+                }
+            )
+        )
+    file_manager.stream_from_gcs.return_value = (line for line in inputs)
+
+
+@pytest.mark.parametrize(
+    "failing_call",
+    ["bulk", "refresh_index", "forcemerge", "set_index_lifecycle_policy", "update_aliases"],
+)
+def test_index_from_export_discards_the_index_when_the_build_fails(
+    indexer, file_manager, es_adapter, failing_call
+):
+    """Verify an index that never reached the alias is deleted on any failure."""
+    _ready_to_index(file_manager, es_adapter)
+    getattr(es_adapter, failing_call).side_effect = RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    es_adapter.delete_index.assert_called_once()
+    deleted = es_adapter.delete_index.call_args.kwargs
+    assert deleted["index"] == es_adapter.create_index.call_args.kwargs["index"]
+    assert deleted["ignore_missing"] is True
+
+
+def test_index_from_export_discards_the_index_when_the_export_is_unreadable(
+    indexer, file_manager, es_adapter
+):
+    """Verify a failure while reading the export also cleans up."""
+    _ready_to_index(file_manager, es_adapter)
+    file_manager.stream_from_gcs.side_effect = RuntimeError("gcs is down")
+
+    with pytest.raises(RuntimeError, match="gcs is down"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    es_adapter.delete_index.assert_called_once()
+
+
+def test_index_from_export_keeps_the_index_once_the_alias_has_flipped(
+    indexer, file_manager, es_adapter
+):
+    """Verify a published index is never deleted, even if a later step fails."""
+    _ready_to_index(file_manager, es_adapter)
+
+    es_adapter.get_index_lifecycle_policies.side_effect = RuntimeError("too late")
+
+    with pytest.raises(RuntimeError, match="too late"):
+        indexer.index_from_export(1, "enwiki-{version}")
+
+    # The flip happened, so we chose not to delete.
+    es_adapter.update_aliases.assert_called_once()
+    es_adapter.delete_index.assert_not_called()
+
+
+def test_index_from_export_reports_the_original_error_when_cleanup_fails(
+    indexer, file_manager, es_adapter, caplog
+):
+    """Verify a failed cleanup is logged but does not mask what stopped the build."""
+    _ready_to_index(file_manager, es_adapter)
+    es_adapter.forcemerge.side_effect = RuntimeError("forcemerge timed out")
+    es_adapter.delete_index.side_effect = RuntimeError("delete also failed")
+
+    with caplog.at_level(logging.ERROR):
+        with pytest.raises(RuntimeError, match="forcemerge timed out"):
+            indexer.index_from_export(1, "enwiki-{version}")
+
+    assert any("Failed to discard unpublished index" in r.message for r in caplog.records)
 
 
 def _set_queue(indexer, n=1):

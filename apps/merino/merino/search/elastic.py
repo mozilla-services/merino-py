@@ -78,6 +78,16 @@ class ElasticSearchAdapter:
         """Refresh an index to make recent operations visible to search."""
         self.get_client().indices.refresh(index=index)
 
+    def delete_index(self, *, index: str, ignore_missing: bool = False) -> None:
+        """Delete an index.
+
+        Set `ignore_missing` when the index may never have been created, so that a
+        missing index is not treated as a failure.
+        """
+        self.get_client().options(ignore_status=[404] if ignore_missing else []).indices.delete(
+            index=index
+        )
+
     def bulk(
         self,
         *,

@@ -77,66 +77,83 @@ class Indexer:
         logger.info("Ensuring index exists", extra={"index": index_name})
 
         if self._create_index(index_name):
-            logger.info("Start indexing", extra={"index": index_name})
-            reporter = ProgressReporter(logger, "Indexing", latest.name, index_name, total_docs)
-            indexed = 0
-            blocked = 0
-            gcs_stream = self.file_manager.stream_from_gcs(latest)
-            # The following will chunk `gcs_stream` into a sequence of pairs of
-            # (`operator`, `document`), where the first element as the operator
-            # (i.e. `index`), the second element as the document data for the
-            # operator
-            while pair := tuple(islice(gcs_stream, 2)):
-                operator, document = pair
-                op = json.loads(operator)
-                doc = json.loads(document)
+            alias_flipped = False
+            try:
+                logger.info("Start indexing", extra={"index": index_name})
+                reporter = ProgressReporter(
+                    logger, "Indexing", latest.name, index_name, total_docs
+                )
+                indexed = 0
+                blocked = 0
+                gcs_stream = self.file_manager.stream_from_gcs(latest)
+                # The following will chunk `gcs_stream` into a sequence of pairs of
+                # (`operator`, `document`), where the first element as the operator
+                # (i.e. `index`), the second element as the document data for the
+                # operator
+                while pair := tuple(islice(gcs_stream, 2)):
+                    operator, document = pair
+                    op = json.loads(operator)
+                    doc = json.loads(document)
 
-                if self._should_filter(doc):
-                    blocked += 1
-                else:
-                    self._enqueue(index_name, (op, doc))
-                    indexed += self._index_docs(False)
+                    if self._should_filter(doc):
+                        blocked += 1
+                    else:
+                        self._enqueue(index_name, (op, doc))
+                        indexed += self._index_docs(False)
 
-                # report percent completed
-                reporter.report(indexed, blocked)
+                    # report percent completed
+                    reporter.report(indexed, blocked)
 
-            # Flush queue after enumerating the export to clear the queue
-            self._index_docs(True)
-            logger.info(
-                "Completed indexing",
-                extra={"latest_name": latest.name, "index": index_name},
-            )
+                # Flush queue after enumerating the export to clear the queue
+                self._index_docs(True)
+                logger.info(
+                    "Completed indexing",
+                    extra={"latest_name": latest.name, "index": index_name},
+                )
 
-            # Refresh the new index
-            self.elasticsearch.refresh_index(index=index_name)
-            logger.info("Refreshed index", extra={"index": index_name})
+                # Refresh the new index
+                self.elasticsearch.refresh_index(index=index_name)
+                logger.info("Refreshed index", extra={"index": index_name})
 
-            # Force merge to a single segment for optimal read performance.
-            # This is a long-running operation on large indices; use a 2-hour timeout.
-            self.elasticsearch.forcemerge(
-                index=index_name,
-                max_num_segments=1,
-                request_timeout=7200,
-                wait_for_completion=True,
-            )
-            logger.info("Force merged index", extra={"index": index_name})
+                # Force merge to a single segment for optimal read performance.
+                # This is a long-running operation on large indices; use a 2-hour timeout.
+                self.elasticsearch.forcemerge(
+                    index=index_name,
+                    max_num_segments=1,
+                    request_timeout=7200,
+                    wait_for_completion=True,
+                )
+                logger.info("Force merged index", extra={"index": index_name})
 
-            # Attach the never-delete policy before the swap so the index is never
-            # eligible for deletion while it is the one serving the alias.
-            self._apply_active_lifecycle_policy(index_name)
+                # Attach the never-delete policy before the swap so the index is never
+                # eligible for deletion while it is the one serving the alias.
+                self._apply_active_lifecycle_policy(index_name)
 
-            # Flip the alias pointer to the new index and remove the previous index
-            alias = self._flip_alias_to_latest(index_name, elasticsearch_alias)
-            logger.info(
-                "Flipped alias to latest index",
-                extra={"index": index_name, "alias": alias},
-            )
+                # Flip the alias pointer to the new index and remove the previous index
+                alias = self._flip_alias_to_latest(index_name, elasticsearch_alias)
+                alias_flipped = True
+                logger.info(
+                    "Flipped alias to latest index",
+                    extra={"index": index_name, "alias": alias},
+                )
 
-            # Anything the alias no longer points at is now a backup, so hand it
-            # over to the expiring policy.
-            self._apply_backup_lifecycle_policies(alias)
+                # Anything the alias no longer points at is now a backup, so hand it
+                # over to the expiring policy.
+                self._apply_backup_lifecycle_policies(alias)
+            except Exception:
+                if not alias_flipped:
+                    self._discard_index(index_name)
+                raise
         else:
             raise Exception("Could not create the index")
+
+    def _discard_index(self, index_name: str) -> None:
+        """Delete an index this run built but never published."""
+        try:
+            self.elasticsearch.delete_index(index=index_name, ignore_missing=True)
+            logger.info("Discarded unpublished index", extra={"index": index_name})
+        except Exception:
+            logger.exception("Failed to discard unpublished index", extra={"index": index_name})
 
     def _should_filter(self, doc: Dict[str, Any]) -> bool:
         """Return True if we want to filter out this document and not index it.
