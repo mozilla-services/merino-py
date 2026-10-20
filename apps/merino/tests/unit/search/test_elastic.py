@@ -148,6 +148,31 @@ def test_create_index_returns_acknowledged_false_when_missing(
     )
 
 
+def test_delete_index_calls_indices_delete(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that delete_index deletes the named index."""
+    client = _mock_client()
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.delete_index(index="my-index")
+
+    client.options.assert_called_once_with(ignore_status=[])
+    client.indices.delete.assert_called_once_with(index="my-index")
+
+
+def test_delete_index_can_ignore_a_missing_index(
+    adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that ignore_missing tells Elasticsearch not to fail on a 404."""
+    client = _mock_client()
+    monkeypatch.setattr(adapter, "get_client", MagicMock(return_value=client))
+
+    adapter.delete_index(index="my-index", ignore_missing=True)
+
+    client.options.assert_called_once_with(ignore_status=[404])
+
+
 def test_refresh_index_calls_indices_refresh(
     adapter: ElasticSearchAdapter, monkeypatch: pytest.MonkeyPatch
 ) -> None:
