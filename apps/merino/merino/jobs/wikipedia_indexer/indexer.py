@@ -77,7 +77,6 @@ class Indexer:
         logger.info("Ensuring index exists", extra={"index": index_name})
 
         if self._create_index(index_name):
-            alias_flipped = False
             try:
                 logger.info("Start indexing", extra={"index": index_name})
                 reporter = ProgressReporter(
@@ -131,7 +130,10 @@ class Indexer:
 
                 # Flip the alias pointer to the new index and remove the previous index
                 alias = self._flip_alias_to_latest(index_name, elasticsearch_alias)
-                alias_flipped = True
+            except Exception:
+                self._discard_index(index_name)
+                raise
+            else:
                 logger.info(
                     "Flipped alias to latest index",
                     extra={"index": index_name, "alias": alias},
@@ -140,10 +142,6 @@ class Indexer:
                 # Anything the alias no longer points at is now a backup, so hand it
                 # over to the expiring policy.
                 self._apply_backup_lifecycle_policies(alias)
-            except Exception:
-                if not alias_flipped:
-                    self._discard_index(index_name)
-                raise
         else:
             raise Exception("Could not create the index")
 
