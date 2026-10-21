@@ -23,6 +23,7 @@
     - [Integration Tests](./testing/integration-tests.md)
     - [Load Tests](./testing/load-tests.md)
 - [Providers](./providers/index.md)
+  - [ADM (Sponsored Suggestions)](./providers/adm.md)
   - [Flights](./providers/flights.md)
 - [Operations](./operations/index.md)
   - [Rollback](./operations/rollback.md)

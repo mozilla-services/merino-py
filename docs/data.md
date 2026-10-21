@@ -60,6 +60,16 @@ log inspection interfaces.
 
 - `WARNING merino.cron` - There was an error while executing a cron task.
 
+### ADM Icon Re-hosting
+
+- `INFO merino.utils.icon_processor` - `Failed to download favicon from {url}` or
+  `Invalid image from {url}`. The original MARS icon URL is served instead.
+- `WARNING merino.utils.icon_processor` - `Error processing icon {url}: {e}`. An unexpected
+  error occurred while processing an icon. The original MARS icon URL is served instead.
+- `ERROR merino.utils.gcs.gcs_uploader` - `Exception {e} occurred while uploading {destination_name}`.
+  The upload failed, but the CDN URL is still returned and cached. See
+  [ADM provider known limitations](./providers/adm.md#known-limitations).
+
 ### Merino Feature Flags
 
 - `ERROR merino.featureflags` - There was an error while attempting to assign a
@@ -159,6 +169,30 @@ log inspection interfaces.
 
   **Example**:
   `merino.suggestions-per.provider.wikipedia`
+
+### ADM (Sponsored Suggestions)
+
+The ADM provider records metrics for the MARS data sync and icon re-hosting.
+See the [ADM provider docs](./providers/adm.md) for the flow.
+
+- `mars.fetch` - A counter for MARS API fetch attempts, tagged with `country`, `form_factor`
+  and `status` (`success`, `not_modified`, `empty_response`, `error`).
+- `mars.fetch.response_size_bytes` - A gauge of the MARS response body size in bytes.
+- `mars.data.staleness_seconds` - A gauge of the time since MARS last returned new data.
+- `amp.index.<stat>` - Gauges for the AMP index after each build, tagged with `index`.
+- `icon_processor.requests` - A counter of icon URLs passed to the icon processor. Includes
+  CDN URLs returned unchanged and content-hash cache hits.
+- `icon_processor.processing_time` - A timer (in ms) for processing a single icon URL.
+- `icon_processor.download_time` - A timer (in ms) for downloading an icon.
+- `icon_processor.download_failures` - A counter of icons that failed to download.
+  The original MARS icon URL is served instead.
+- `icon_processor.invalid_images` - A counter of downloaded icons that failed validation
+  (non-image content type, or outside the allowed size). The original MARS icon URL is served instead.
+- `icon_processor.upload_time` - A timer (in ms) for the GCS existence check and upload.
+- `icon_processor.processed` - A counter of icons processed for the first time in a process
+  (uploaded, or found already present in GCS).
+- `icon_processor.errors` - A counter of unexpected errors while processing an icon.
+  The original MARS icon URL is served instead.
 
 ### AccuWeather
 
