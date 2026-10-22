@@ -10,7 +10,7 @@ Provider documentation:
 - Finance (stocks)
 - Sports
 - Weather
-- ADM (sponsored content)
+- [ADM (sponsored content)](./adm.md)
 - AMO (Addons)
 - Wikipedia
 - Top Picks

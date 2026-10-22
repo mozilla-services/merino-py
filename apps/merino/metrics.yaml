@@ -496,6 +496,90 @@ providers/rss/wikimedia_potd:
       The "api/v1/rss/picture-of-the-day" API endpoint.
     alert_policy: []
 
+utils/icon_processor:
+  icon_processor.requests:
+    description: |
+      A counter incremented for every icon URL passed to the icon processor.
+      Includes URLs already on the CDN (returned unchanged) and content-hash
+      cache hits.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
+  icon_processor.processing_time:
+    description: |
+      A timer to measure the duration (in ms) of processing a single icon URL,
+      including download, validation and upload.
+    type: timing
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
+  icon_processor.download_time:
+    description: |
+      A timer to measure the duration (in ms) of downloading an icon from its
+      original URL. Recorded for successful and failed downloads.
+    type: timing
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
+  icon_processor.download_failures:
+    description: |
+      A counter incremented when an icon fails to download. The original MARS
+      icon URL is served instead.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
+  icon_processor.invalid_images:
+    description: |
+      A counter incremented when a downloaded icon fails validation (content
+      type is not an image, or size is outside the allowed range). The original
+      MARS icon URL is served instead.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
+  icon_processor.upload_time:
+    description: |
+      A timer to measure the duration (in ms) of the GCS existence check and
+      upload for an icon not yet seen by this process.
+    type: timing
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
+  icon_processor.processed:
+    description: |
+      A counter incremented when an icon is processed for the first time in
+      this process (uploaded, or found already present in GCS). Content-hash
+      cache hits are not counted.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
+  icon_processor.errors:
+    description: |
+      A counter incremented when an unexpected error occurs while processing an
+      icon. The original MARS icon URL is served instead.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The ADM provider MARS backend icon re-hosting.
+    alert_policy: []
+
 utils/synced_gcs_blob_v2:
   gcs.sync.data.not_ready:
     description: |
