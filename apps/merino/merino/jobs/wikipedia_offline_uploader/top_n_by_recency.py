@@ -23,11 +23,12 @@ import re
 from collections import Counter
 
 # Ignore the internal Wikipedia pages such as "Portal:Current_events",
-# "Special:Search", "Wikipedia:About", "File:HispanTv.svg" etc.
+# "Special:Search", "Wikipedia:About", "Wikipédia:À_propos", "File:HispanTv.svg" etc.
 #
 # The title of the internal pages follows the pattern `\w:\w` except that the
-# underscore is not used on neither sides of ":".
-INTERNAL_PAGES = re.compile("[0-9A-Za-z]:[0-9A-Za-z]")
+# underscore is not used on neither sides of ":". `[^\W_]` matches a letter or
+# digit in any script, so accented and non-Latin namespaces are caught too.
+INTERNAL_PAGES = re.compile(r"[^\W_]:[^\W_]")
 
 
 def get_top_n_recency(language, top_n, tempdir) -> list[dict]:

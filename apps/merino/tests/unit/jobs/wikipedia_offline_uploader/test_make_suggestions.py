@@ -6,6 +6,7 @@ import freezegun
 import pytest
 
 from merino.jobs.wikipedia_offline_uploader import get_wiki_suggestions
+from merino.jobs.wikipedia_offline_uploader.top_n_by_frequency import INTERNAL_PAGES
 from merino.jobs.wikipedia_offline_uploader.make_suggestions import (
     make_keywords,
     scan,
@@ -169,3 +170,18 @@ async def test_get_wiki_suggestions_multi_lang(mocker):
     await get_wiki_suggestions("en,fr", "recency", "all-access", 3, 0.25)
 
     assert mock_fetch.call_count == 6
+
+
+@pytest.mark.parametrize(
+    ["title", "expected"],
+    [
+        ("Special:Search", True),
+        ("Catégorie:Économie", True),
+        ("Star_Wars,_épisode_III_:_La_Revanche_des_Sith", False),
+        ("April_Fools'_Day", False),
+    ],
+    ids=["ascii_namespace", "accented_namespace", "spaced_colon_in_title", "regular_article"],
+)
+def test_internal_pages(title, expected):
+    """Test INTERNAL_PAGES matches namespaced pages but not regular articles."""
+    assert bool(INTERNAL_PAGES.search(title)) is expected
