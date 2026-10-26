@@ -764,7 +764,7 @@ async def get_travel_listings(
     q: Annotated[str, Query(min_length=2, max_length=64)],
     locale: Annotated[str, Query(max_length=16)] = "en-US",
     provider: TravelProvider = Depends(get_travel_provider),
-) -> Response:  # pragma: no cover
+) -> Response:
     """Query merino for travel listings.
 
     **Args**:
