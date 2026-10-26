@@ -18,6 +18,7 @@ from merino.providers.suggest.wikipedia.backends.fake_backends import (
 )
 from merino.providers.suggest.wikipedia.backends.protocol import WikipediaBackend
 from merino.providers.suggest.wikipedia.provider import ADVERTISER, ICON, Provider
+from merino.utils.gcs.engagement.filemanager import EngagementData, EngagementFilemanager
 from tests.types import FilterCaplogFixture
 
 BLOCK_LIST: set[str] = {"Unsafe Content", "Blocked"}
@@ -83,6 +84,14 @@ SCENARIOS: dict[str, Scenario] = {
         expected_logs=set(),
     ),
 }
+
+
+@pytest.fixture(autouse=True)
+def fixture_mock_engagement_fetch(mocker: MockerFixture) -> None:
+    """Stub the engagement data fetch so the provider's background cron task doesn't hit
+    GCS and emit logs that race with the log assertions below.
+    """
+    mocker.patch.object(EngagementFilemanager, "get_file", return_value=EngagementData())
 
 
 @pytest.mark.parametrize(

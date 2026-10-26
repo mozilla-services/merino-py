@@ -609,7 +609,7 @@ class TestLegacyEndpoints:
     ):
         """Test that the count parameter limits results for both endpoints and all markets."""
         requested_count = 5
-        params = {locale_param: locale, count_param: requested_count}
+        params: dict[str, str | int] = {locale_param: locale, count_param: requested_count}
         if region:
             params["region"] = region
         response = client.get(f"/api/v1/curated-recommendations/{endpoint}", params=params)
