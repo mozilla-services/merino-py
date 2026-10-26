@@ -118,7 +118,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     """Initialize regular Merino services and register cleanup callbacks."""
     from merino import curated_recommendations
     from merino.message_handlers import search_terms
-    from merino.providers import games, manifest, rss, suggest
+    from merino.providers import games, manifest, rss, suggest, travel
 
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
@@ -134,6 +134,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
 
     curated_recommendations.init_provider()
     await games.init_providers()
+    await travel.init_providers()
 
 
 def _start_governance(cleanup_callbacks: list[CleanupCallback]) -> None:

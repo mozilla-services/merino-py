@@ -93,6 +93,10 @@ from merino.providers.games import get_particle_provider
 from merino.providers.games.particle.backends.protocol import Particle
 from merino.providers.games.particle.provider import Provider as ParticleProvider
 
+from merino.providers.travel import get_travel_provider
+from merino.providers.travel.kayak.backends.protocol import TravelListing, TravelVertical
+from merino.providers.travel.kayak.provider import Provider as TravelProvider
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -746,3 +750,32 @@ async def get_game_particle(
         content=jsonable_encoder(particle_data),
         headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )
+
+
+@router.get(
+    "/travel",
+    tags=["travel"],
+    summary="Travel listings",
+    response_model=list[TravelListing],
+)
+async def get_travel_listings(
+    request: Request,
+    vertical: TravelVertical,
+    q: Annotated[str, Query(min_length=2, max_length=64)],
+    locale: Annotated[str, Query(max_length=16)] = "en-US",
+    provider: TravelProvider = Depends(get_travel_provider),
+) -> Response:  # pragma: no cover
+    """Query merino for travel listings.
+
+    **Args**:
+    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`.
+    - `q`: The search query, between 2 and 64 characters.
+    - `locale`: [Optional] The client locale. Defaults to `en-US`.
+    - provider: Injected travel provider dependency used to fetch listings.
+    """
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+
+    with metrics_client.timeit("travel.request.timing"):
+        listings = await provider.get_listings(q, locale, vertical)
+
+    return JSONResponse(content=jsonable_encoder(listings))
