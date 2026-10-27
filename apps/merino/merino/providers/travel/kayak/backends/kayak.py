@@ -11,7 +11,6 @@ from merino.providers.travel.kayak.backends.protocol import TravelListing, Trave
 logger = logging.getLogger(__name__)
 
 DEFAULT_LANGUAGE = "en"
-DEFAULT_MARKET = "us"
 
 # Kayak returns at most this many autocomplete results.
 MAX_RESULTS = 6
@@ -41,12 +40,11 @@ class KayakBackend:
         self.metrics_client = metrics_client
 
     async def get_listings(
-        self, query: str, locale: str, vertical: TravelVertical
+        self, query: str, language: str, market: str, vertical: TravelVertical
     ) -> list[TravelListing]:
         """Fetch travel listings from Kayak's autocomplete API for the given vertical."""
-        language, market = self._parse_locale(locale)
         url = f"{self.url_base}{self.url_autocomplete_path}".format(
-            language=language, market=market, vertical=vertical
+            language=self._parse_language(language), market=market.lower(), vertical=vertical
         )
         params = {"apiKey": self.api_key, "searchTerm": query}
 
@@ -93,16 +91,13 @@ class KayakBackend:
         )
 
     @staticmethod
-    def _parse_locale(locale: str) -> tuple[str, str]:
-        """Split a locale such as `en-US` into a lowercase (language, market) pair.
+    def _parse_language(language: str) -> str:
+        """Extract the lowercase primary language subtag from a language tag such as `en-US`.
 
-        Falls back to the default language and market if the locale cannot be parsed.
+        Falls back to the default language if the tag cannot be parsed.
         """
-        language, _, market = locale.lower().partition("-")
-        if language.isalpha() and market.isalpha():
-            return language, market
-
-        return DEFAULT_LANGUAGE, DEFAULT_MARKET
+        primary, _, _ = language.lower().partition("-")
+        return primary if primary.isalpha() else DEFAULT_LANGUAGE
 
     async def shutdown(self) -> None:
         """Close the HTTP client."""

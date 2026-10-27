@@ -32,9 +32,9 @@ class TravelBackend(Protocol):
     """
 
     async def get_listings(
-        self, query: str, locale: str, vertical: TravelVertical
+        self, query: str, language: str, market: str, vertical: TravelVertical
     ) -> list[TravelListing]:
-        """Fetch travel listings for the given query, locale and vertical."""
+        """Fetch travel listings for the given query, language, market and vertical."""
         ...
 
     async def shutdown(self) -> None:  # pragma: no cover

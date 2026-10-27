@@ -1380,7 +1380,8 @@ connect_timeout_sec = 3.0
 api_key = ""
 
 # MERINO_KAYAK__URL_BASE
-# The base URL of the Kayak API. `{language}` and `{market}` are derived from the request locale.
+# The base URL of the Kayak API. `{language}` is derived from the request
+# `Accept-Language` header and `{market}` from the `market` query param.
 url_base = "https://affiliate-{language}-{market}.kayakaffiliates.com"
 
 # MERINO_KAYAK__URL_AUTOCOMPLETE_PATH

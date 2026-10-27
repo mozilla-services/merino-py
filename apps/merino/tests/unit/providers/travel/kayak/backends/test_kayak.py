@@ -71,7 +71,7 @@ async def test_get_listings_success(
     """Calls Kayak with the API key and search term, and maps results to travel listings."""
     http_client.get.return_value = kayak_response({"results": [kayak_place(12345)]})
 
-    listings = await kayak.get_listings("new york", "en-US", "flights")
+    listings = await kayak.get_listings("new york", "en-US", "US", "flights")
 
     assert listings == [
         TravelListing(
@@ -100,7 +100,7 @@ async def test_get_listings_drops_flights_without_iata_code(
         {"results": [kayak_place(1, iata_code=None), kayak_place(2), kayak_place(3, "")]}
     )
 
-    listings = await kayak.get_listings("new york", "en-US", "flights")
+    listings = await kayak.get_listings("new york", "en-US", "US", "flights")
 
     assert [listing.place_id for listing in listings] == [2]
 
@@ -115,7 +115,7 @@ async def test_get_listings_returns_at_most_six_listings(
         {"results": [kayak_place(place_id) for place_id in range(10)]}
     )
 
-    listings = await kayak.get_listings("new york", "en-US", "flights")
+    listings = await kayak.get_listings("new york", "en-US", "US", "flights")
 
     assert [listing.place_id for listing in listings] == [0, 1, 2, 3, 4, 5]
 
@@ -132,7 +132,7 @@ async def test_get_listings_http_error(
     caplog.set_level(logging.WARNING)
     http_client.get.return_value = kayak_response("Missing or incorrect API key", 401)
 
-    listings = await kayak.get_listings("new york", "en-US", "flights")
+    listings = await kayak.get_listings("new york", "en-US", "US", "flights")
 
     assert listings == []
     records = filter_caplog(caplog.records, "merino.providers.travel.kayak.backends.kayak")
@@ -159,7 +159,7 @@ async def test_get_listings_invalid_response(
     caplog.set_level(logging.WARNING)
     http_client.get.return_value = kayak_response(json)
 
-    listings = await kayak.get_listings("new york", "en-US", "flights")
+    listings = await kayak.get_listings("new york", "en-US", "US", "flights")
 
     assert listings == []
     records = filter_caplog(caplog.records, "merino.providers.travel.kayak.backends.kayak")
@@ -169,20 +169,36 @@ async def test_get_listings_invalid_response(
     statsd_mock.increment.assert_called_once_with("kayak.response.invalid")
 
 
+@pytest.mark.asyncio
+async def test_get_listings_uses_language_and_market_in_url(
+    kayak: KayakBackend, http_client: AsyncMock
+) -> None:
+    """Builds the Kayak host from the lowercased primary language subtag and market."""
+    http_client.get.return_value = kayak_response({"results": []})
+
+    await kayak.get_listings("london", "fr-CA", "GB", "flights")
+
+    http_client.get.assert_called_once_with(
+        "https://affiliate-fr-gb.kayakaffiliates.com/api/affiliate/autocomplete/v1/flights",
+        params={"apiKey": API_KEY, "searchTerm": "london"},
+    )
+
+
 @pytest.mark.parametrize(
-    ["locale", "expected"],
+    ["language", "expected"],
     [
-        ("en-US", ("en", "us")),
-        ("FR-ca", ("fr", "ca")),
-        ("fr", ("en", "us")),
-        ("de_DE", ("en", "us")),
-        ("en-US-x", ("en", "us")),
+        ("en-US", "en"),
+        ("FR", "fr"),
+        ("fr-CA", "fr"),
+        ("*", "en"),
+        ("", "en"),
+        ("en_US", "en"),
     ],
-    ids=["language_and_market", "mixed_case", "no_market", "underscore", "too_many_parts"],
+    ids=["language_and_region", "uppercase", "other_language", "wildcard", "empty", "underscore"],
 )
-def test_parse_locale(locale: str, expected: tuple[str, str]) -> None:
-    """Splits a locale into a lowercase language and market, with an `en-us` fallback."""
-    assert KayakBackend._parse_locale(locale) == expected
+def test_parse_language(language: str, expected: str) -> None:
+    """Extracts the lowercase primary language subtag, with an `en` fallback."""
+    assert KayakBackend._parse_language(language) == expected
 
 
 @pytest.mark.asyncio
