@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import HttpUrl
 
 from merino.providers.travel.kayak.backends.protocol import TravelListing
 from merino.providers.travel.kayak.provider import Provider as TravelProvider
@@ -19,28 +18,31 @@ TRAVEL_URL = "/api/v1/travel"
 def test_travel_returns_listings_from_the_backend(client: TestClient, backend_mock: Any) -> None:
     """Serves the backend's listings, passing the query, default locale and vertical through."""
     backend_mock.get_listings.return_value = [
-        TravelListing(title="Hotels in Paris", url=HttpUrl("https://www.kayak.com/hotels/Paris"))
+        TravelListing(
+            name="Charles de Gaulle Airport",
+            full_name="Charles de Gaulle Airport, Paris, France (CDG)",
+            type="airport",
+            iata_code="CDG",
+            place_id=1234,
+            country="France",
+        )
     ]
 
-    response = client.get(TRAVEL_URL, params={"vertical": "hotels", "q": "paris"})
+    response = client.get(TRAVEL_URL, params={"vertical": "flights", "q": "paris"})
 
     assert response.status_code == 200
     assert response.json() == [
-        {"title": "Hotels in Paris", "url": "https://www.kayak.com/hotels/Paris"}
+        {
+            "name": "Charles de Gaulle Airport",
+            "full_name": "Charles de Gaulle Airport, Paris, France (CDG)",
+            "type": "airport",
+            "iata_code": "CDG",
+            "place_id": 1234,
+            "city_id": None,
+            "country": "France",
+        }
     ]
-    backend_mock.get_listings.assert_called_once_with("paris", "en-US", "hotels")
-
-
-@pytest.mark.parametrize("vertical", ["hotels", "flights", "cars"])
-def test_travel_accepts_each_vertical(
-    client: TestClient, backend_mock: Any, vertical: str
-) -> None:
-    """Accepts every supported vertical and returns an empty list when there are no listings."""
-    response = client.get(TRAVEL_URL, params={"vertical": vertical, "q": "paris"})
-
-    assert response.status_code == 200
-    assert response.json() == []
-    backend_mock.get_listings.assert_called_once_with("paris", "en-US", vertical)
+    backend_mock.get_listings.assert_called_once_with("paris", "en-US", "flights")
 
 
 def test_travel_passes_the_requested_locale(client: TestClient, backend_mock: Any) -> None:
