@@ -34,7 +34,7 @@ reviews:
         - Do not comment on style, formatting, naming, or non-critical improvements.
         - Limit review comments to 3-5 items unless additional merge blockers exist.
         - Group similar issues into one comment; if a pattern repeats, mention it once at summary level.
-        - If there are no critical problems, respond with minimal approval and add nothing else.
+        - If there are no actionable findings, respond with minimal approval and add nothing else.
 
   pre_merge_checks:
     title:
