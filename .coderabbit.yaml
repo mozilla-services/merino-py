@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# --- Top level ---------------------------------------------------------------
+# Pick up org-level standards set by CodeRabbit admins.
+inheritance: true
+
+# --- Reviews -----------------------------------------------------------------
+reviews:
+  profile: chill
+  review_details: true
+  high_level_summary_in_walkthrough: true
+  high_level_summary_instructions: "Give a brief description of the changes in 50 words or less."
+  collapse_walkthrough: true
+  in_progress_fortune: false
+  poem: false
+
+  path_filters:
+    # Lockfile
+    - "!uv.lock"
+    # Binary images
+    - "!**/*.png"
+    - "!**/*.jpg"
+    # Binary data
+    - "!**/*.mmdb"
+    - "!**/*.gz"
+    # Local-dev seed data and dashboards
+    - "!dev/local_setup/elasticsearch/seed/**"
+    - "!dev/local_setup/otel/grafana/provisioning/dashboards-json/**"
+
+  path_instructions:
+    - path: "**/*"
+      instructions: >
+        - Restrict feedback to correctness bugs, security risks, and functionality-breaking problems.
+        - Do not comment on style, formatting, naming, or non-critical improvements.
+        - Limit review comments to 3-5 items unless additional merge blockers exist.
+        - Group similar issues into one comment; if a pattern repeats, mention it once at summary level.
+        - If there are no critical problems, respond with minimal approval and add nothing else.
+
+  pre_merge_checks:
+    title:
+      mode: "off"
+    description:
+      mode: "off"
+    docstrings:
+      mode: "off"
+    issue_assessment:
+      mode: "off"
+
+# --- Chat --------------------------------------------------------------------
+chat:
+  art: false
+
+# --- Knowledge base ----------------------------------------------------------
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    # Extends the defaults (the CLAUDE.md files are already picked up).
+    filePatterns:
+      - "CONTRIBUTING.md"
+      - files: "apps/merino/.claude/rules/architecture.md"
+        applyTo: "apps/merino/**"
+      - files: "docs/adr/0*.md"
+        applyTo: "**"
+      - files: "docs/operations/configs.md"
+        applyTo: "**"
+      - files: "docs/testing/*.md"
+        applyTo: "**/tests/**"
+  # Repo linking is disabled for now as CodeRabbit hasn't been installed for those linked repos yet.
+  automatic_repository_linking: false
+  # linked_repositories:
+  #   - repository: mozilla/telemetry-airflow
+  #     instructions: >
+  #       Airflow DAGs in this repo invoke the `merino-jobs` CLI. Flag changes to job
+  #       commands, options, or output locations here that would break those DAGs.
