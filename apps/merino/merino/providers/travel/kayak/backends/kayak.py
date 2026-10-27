@@ -57,7 +57,7 @@ class KayakBackend:
             response.raise_for_status()
             results = response.json()["results"]
 
-            # Flight results are only useful if they can be searched for by IATA code.
+            # Filter out flight results that are missing IATA code
             if vertical == "flights":
                 results = [item for item in results if item.get("iataCode")]
 
