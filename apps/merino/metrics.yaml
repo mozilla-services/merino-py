@@ -454,7 +454,7 @@ suggest/normalization:
       Time taken by the normalization pipeline to process a query, in
       milliseconds. Only emitted for treatment users when the pipeline
       is active.
-    type: timing
+    type: gauge
     labels: []
     scope: |
       The "api/v1/suggest" API endpoint, treatment branch only.
@@ -496,6 +496,43 @@ providers/rss/wikimedia_potd:
       The "api/v1/rss/picture-of-the-day" API endpoint.
     alert_policy: []
 
+providers/travel/kayak:
+  kayak.request.autocomplete.get:
+    description: |
+      A gauge to track the latency for Kayak autocomplete API requests.
+    type: gauge
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
+  kayak.request.autocomplete.success:
+    description: |
+      A counter for successful Kayak autocomplete API requests.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
+  kayak.request.autocomplete.failed:
+    description: |
+      A counter for failed Kayak autocomplete API requests (HTTP or transport errors).
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
+  kayak.response.invalid:
+    description: |
+      A counter for Kayak autocomplete responses that could not be parsed.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
 utils/icon_processor:
   icon_processor.requests:
     description: |
@@ -512,7 +549,7 @@ utils/icon_processor:
     description: |
       A timer to measure the duration (in ms) of processing a single icon URL,
       including download, validation and upload.
-    type: timing
+    type: gauge
     labels: [] # no labels
     scope: |
       The ADM provider MARS backend icon re-hosting.
@@ -522,7 +559,7 @@ utils/icon_processor:
     description: |
       A timer to measure the duration (in ms) of downloading an icon from its
       original URL. Recorded for successful and failed downloads.
-    type: timing
+    type: gauge
     labels: [] # no labels
     scope: |
       The ADM provider MARS backend icon re-hosting.
@@ -553,7 +590,7 @@ utils/icon_processor:
     description: |
       A timer to measure the duration (in ms) of the GCS existence check and
       upload for an icon not yet seen by this process.
-    type: timing
+    type: gauge
     labels: [] # no labels
     scope: |
       The ADM provider MARS backend icon re-hosting.
@@ -599,7 +636,7 @@ utils/synced_gcs_blob_v2:
   gcs.sync.update.timing:
     description: |
       A timer covering the count and latency of GCS blob update task executions.
-    type: timing
+    type: gauge
     labels:
       - name: bucket
         description: |
@@ -709,7 +746,7 @@ weather/hourly_forecasts:
   weather_hourly_forecasts_request_timing:
     description: |
       A timer covering the count and latency of requests to the hourly forecasts endpoint
-    type: timing
+    type: gauge
     labels: []
     scope: |
       The "api/v1/weather/hourly-forecasts" API endpoint.
@@ -748,7 +785,7 @@ curated_recommendations/spindle:
       A timer covering the count and latency of calls to the Spindle ML server
       `/find_similar_stories` endpoint, used to find near-duplicate stories
       by text embedding for the article balancer.
-    type: timing
+    type: gauge
     labels: []
     scope: |
       The Spindle ML server "/find_similar_stories" endpoint.
@@ -759,7 +796,7 @@ curated_recommendations/spindle:
       A timer covering the count and latency of calls to the Spindle ML server
       `/find_similar_images` endpoint, used to find near-duplicate stories
       by image embedding for the article balancer.
-    type: timing
+    type: gauge
     labels: []
     scope: |
       The Spindle ML server "/find_similar_images" endpoint.
@@ -900,7 +937,7 @@ utils/query_processing/fleece:
   fleece.pii.detect_duration:
     description: |
       A timer covering how long the merino-fleece PII check took to respond.
-    type: timing
+    type: gauge
     labels: []
     scope: |
       The "api/v1/suggest" API endpoint, when the `fleece-pii-detection`
