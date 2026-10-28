@@ -19,6 +19,7 @@ from tests.types import FilterCaplogFixture
 
 API_KEY = "test-api-key"
 FLIGHTS_URL = "https://affiliate-en-us.kayakaffiliates.com/api/affiliate/autocomplete/v1/flights"
+HOTELS_URL = "https://affiliate-en-us.kayakaffiliates.com/api/affiliate/autocomplete/v1/hotels"
 
 
 def kayak_place(place_id: int, iata_code: str | None = "JFK") -> dict[str, Any]:
@@ -39,11 +40,30 @@ def kayak_place(place_id: int, iata_code: str | None = "JFK") -> dict[str, Any]:
     return place
 
 
-def kayak_response(json: Any, status_code: int = 200) -> Response:
-    """Return an HTTP response from the Kayak flights autocomplete endpoint."""
-    return Response(
-        status_code=status_code, json=json, request=Request(method="GET", url=FLIGHTS_URL)
-    )
+def kayak_hotel_place() -> dict[str, Any]:
+    """Return a Kayak hotels autocomplete result for a hotel, which has no IATA code."""
+    return {
+        "placeId": 61746,
+        "primaryPlaceType": "hotel",
+        "displayPlaceType": {"type": "hotel", "displayName": "Hotel"},
+        "name": "Four Seasons Hotel Las Vegas",
+        "fullName": "Four Seasons Hotel Las Vegas, Las Vegas",
+        "location": {"latitude": 36.09024, "longitude": -115.17246},
+        "places": ["Las Vegas"],
+        "entityKey": "khotel:61746",
+        "hotelName": "Four Seasons Hotel Las Vegas",
+        "countryName": "United States",
+        "countryCode": "US",
+        "regionName": "Nevada",
+        "cityName": "Las Vegas",
+        "cityId": 15830,
+        "hotelId": 12345,
+    }
+
+
+def kayak_response(json: Any, status_code: int = 200, url: str = FLIGHTS_URL) -> Response:
+    """Return an HTTP response from the Kayak autocomplete endpoint."""
+    return Response(status_code=status_code, json=json, request=Request(method="GET", url=url))
 
 
 @pytest.fixture(name="kayak")
@@ -88,6 +108,36 @@ async def test_get_listings_success(
         FLIGHTS_URL, params={"apiKey": API_KEY, "searchTerm": "new york"}
     )
     statsd_mock.timeit.assert_called_once_with("kayak.request.autocomplete.get")
+    statsd_mock.increment.assert_called_once_with("kayak.request.autocomplete.success")
+
+
+@pytest.mark.asyncio
+async def test_get_listings_hotels_success(
+    kayak: KayakBackend, http_client: AsyncMock, statsd_mock: Any
+) -> None:
+    """Calls the hotels endpoint and maps hotel results, keeping those without an IATA code."""
+    http_client.get.return_value = kayak_response(
+        {"results": [kayak_hotel_place()]}, url=HOTELS_URL
+    )
+
+    listings = await kayak.get_listings("las vegas", "en-US", "US", "hotels")
+
+    assert listings == [
+        TravelListing(
+            name="Four Seasons Hotel Las Vegas",
+            full_name="Four Seasons Hotel Las Vegas, Las Vegas",
+            type="hotel",
+            iata_code=None,
+            place_id=61746,
+            city_id=15830,
+            country="United States",
+            hotel_id=12345,
+            entity_key="khotel:61746",
+        )
+    ]
+    http_client.get.assert_called_once_with(
+        HOTELS_URL, params={"apiKey": API_KEY, "searchTerm": "las vegas"}
+    )
     statsd_mock.increment.assert_called_once_with("kayak.request.autocomplete.success")
 
 

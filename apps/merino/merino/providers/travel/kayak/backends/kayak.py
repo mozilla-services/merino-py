@@ -80,14 +80,17 @@ class KayakBackend:
 
     @staticmethod
     def _to_listing(item: dict[str, Any]) -> TravelListing:
-        """Map a Kayak flights autocomplete result to a travel listing."""
+        """Map a Kayak autocomplete result of any vertical to a travel listing."""
         return TravelListing(
             name=item["name"],
             full_name=item["fullName"],
             type=item["primaryPlaceType"],
             iata_code=item.get("iataCode"),
             place_id=item["placeId"],
+            city_id=item.get("cityId"),
             country=item.get("countryName"),
+            hotel_id=item.get("hotelId"),
+            entity_key=item.get("entityKey"),
         )
 
     @staticmethod

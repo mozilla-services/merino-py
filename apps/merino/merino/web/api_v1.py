@@ -761,7 +761,7 @@ async def get_game_particle(
 async def get_travel_listings(
     request: Request,
     vertical: TravelVertical,
-    q: Annotated[str, Query(min_length=2, max_length=64)],
+    q: Annotated[str, Query(min_length=3, max_length=64)],
     market: Annotated[str, Query(min_length=2, max_length=2, pattern="^[A-Za-z]{2}$")] = "US",
     accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: TravelProvider = Depends(get_travel_provider),
@@ -769,8 +769,9 @@ async def get_travel_listings(
     """Query merino for travel listings.
 
     **Args**:
-    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`.
-    - `q`: The search query, between 2 and 64 characters.
+    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`. `cars` currently
+      returns an empty list.
+    - `q`: The search query, between 3 and 64 characters.
     - `market`: [Optional] Two-letter market (country) code, e.g. `US`, `GB`. Defaults to `US`.
     - provider: Injected travel provider dependency used to fetch listings.
 
