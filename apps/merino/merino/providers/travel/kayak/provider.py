@@ -10,9 +10,6 @@ from merino.providers.travel.kayak.backends.protocol import (
     TravelVertical,
 )
 
-# Temporary. Will be update in follow up work after this has been tested.
-SUPPORTED_VERTICALS: frozenset[TravelVertical] = frozenset({"flights", "hotels"})
-
 
 class Provider:
     """Provider for travel listings."""
@@ -37,7 +34,7 @@ class Provider:
         self, query: str, language: str, market: str, vertical: TravelVertical
     ) -> list[TravelListing]:
         """Return travel listings for the given query, language, market and vertical."""
-        if not self._enabled or vertical not in SUPPORTED_VERTICALS:
+        if not self._enabled:
             return []
 
         return await self.backend.get_listings(query, language, market, vertical)
