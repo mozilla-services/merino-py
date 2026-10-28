@@ -1,7 +1,6 @@
 """Pytest fixtures for Google Cloud Storage (GCS)"""
 
 import logging
-import os
 from typing import Generator
 
 import pytest
@@ -20,25 +19,28 @@ def gcs_storage_container() -> Generator[DockerContainer, None, None]:
     """
     logger.info("Starting up GCS storage container")
 
-    os.environ.setdefault("STORAGE_EMULATOR_HOST", "http://localhost:4443")
+    # Scope the emulator host to this module so it doesn't leak into later tests
+    # after the container is stopped.
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("STORAGE_EMULATOR_HOST", "http://localhost:4443")
 
-    # create a docker container using the `fake-gcs-server` image, waiting for it
-    # to emit its startup log line before the fixture proceeds. The tag is pinned so
-    # that a stale locally-cached `latest` can't drift from what CI pulls.
-    container = (
-        DockerContainer("fsouza/fake-gcs-server:1.55.1")
-        .with_command("-scheme http")
-        .with_bind_ports(4443, 4443)
-        .waiting_for(LogMessageWaitStrategy("server started at"))
-    ).start()
+        # create a docker container using the `fake-gcs-server` image, waiting for it
+        # to emit its startup log line before the fixture proceeds. The tag is pinned so
+        # that a stale locally-cached `latest` can't drift from what CI pulls.
+        container = (
+            DockerContainer("fsouza/fake-gcs-server:1.55.1")
+            .with_command("-scheme http")
+            .with_bind_ports(4443, 4443)
+            .waiting_for(LogMessageWaitStrategy("server started at"))
+        ).start()
 
-    port = container.get_exposed_port(4443)
+        port = container.get_exposed_port(4443)
 
-    logger.info(f"\n GCS server started on port: {port}")
-    yield container
+        logger.info(f"\n GCS server started on port: {port}")
+        yield container
 
-    container.stop()
-    logger.info("\n GCS storage container stopped")
+        container.stop()
+        logger.info("\n GCS storage container stopped")
 
 
 @pytest.fixture(scope="module")
