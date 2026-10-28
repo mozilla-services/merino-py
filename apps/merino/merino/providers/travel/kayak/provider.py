@@ -11,7 +11,7 @@ from merino.providers.travel.kayak.backends.protocol import (
 )
 
 # Temporary. Will be update in follow up work after this has been tested.
-SUPPORTED_VERTICALS: frozenset[TravelVertical] = frozenset({"flights"})
+SUPPORTED_VERTICALS: frozenset[TravelVertical] = frozenset({"flights", "hotels"})
 
 
 class Provider:

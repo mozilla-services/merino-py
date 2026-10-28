@@ -40,9 +40,45 @@ def test_travel_returns_listings_from_the_backend(client: TestClient, backend_mo
             "place_id": 1234,
             "city_id": None,
             "country": "France",
+            "hotel_id": None,
+            "entity_key": None,
         }
     ]
     backend_mock.get_listings.assert_called_once_with("paris", "en-US", "US", "flights")
+
+
+def test_travel_returns_hotel_listings(client: TestClient, backend_mock: Any) -> None:
+    """Serves the backend's hotel listings for the hotels vertical."""
+    backend_mock.get_listings.return_value = [
+        TravelListing(
+            name="Four Seasons Hotel Las Vegas",
+            full_name="Four Seasons Hotel Las Vegas, Las Vegas",
+            type="hotel",
+            place_id=61746,
+            city_id=15830,
+            country="United States",
+            hotel_id=12345,
+            entity_key="khotel:61746",
+        )
+    ]
+
+    response = client.get(TRAVEL_URL, params={"vertical": "hotels", "q": "las vegas"})
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "name": "Four Seasons Hotel Las Vegas",
+            "full_name": "Four Seasons Hotel Las Vegas, Las Vegas",
+            "type": "hotel",
+            "iata_code": None,
+            "place_id": 61746,
+            "city_id": 15830,
+            "country": "United States",
+            "hotel_id": 12345,
+            "entity_key": "khotel:61746",
+        }
+    ]
+    backend_mock.get_listings.assert_called_once_with("las vegas", "en-US", "US", "hotels")
 
 
 def test_travel_passes_the_requested_market(client: TestClient, backend_mock: Any) -> None:
@@ -72,7 +108,7 @@ def test_travel_passes_the_accepted_language(
     backend_mock.get_listings.assert_called_once_with("nyc", expected, "US", "flights")
 
 
-@pytest.mark.parametrize("q", ["a" * 2, "a" * 64])
+@pytest.mark.parametrize("q", ["a" * 3, "a" * 64])
 def test_travel_accepts_query_length_bounds(client: TestClient, q: str) -> None:
     """Accepts queries at the minimum and maximum allowed lengths."""
     response = client.get(TRAVEL_URL, params={"vertical": "cars", "q": q})
@@ -86,7 +122,7 @@ def test_travel_accepts_query_length_bounds(client: TestClient, q: str) -> None:
         {"q": "paris"},
         {"vertical": "boats", "q": "paris"},
         {"vertical": "hotels"},
-        {"vertical": "hotels", "q": "p"},
+        {"vertical": "hotels", "q": "pa"},
         {"vertical": "hotels", "q": "a" * 65},
         {"vertical": "hotels", "q": "paris", "market": "USA"},
         {"vertical": "hotels", "q": "paris", "market": "U"},

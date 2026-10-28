@@ -10,17 +10,26 @@ TravelVertical = Literal["hotels", "flights", "cars"]
 class TravelListing(BaseModel):
     """Model for a travel listing"""
 
-    name: str = Field(description="Localised name of the place, e.g. airport or city name")
+    name: str = Field(description="Localised name of the place, e.g. hotel, airport or city name")
     full_name: str = Field(
         description="Localised full name, may include city, region, country and airport name"
     )
-    type: str = Field(description="Primary place type of the place, e.g. `city` or `airport`")
+    type: str = Field(
+        description="Primary place type of the place, e.g. `city`, `airport` or `hotel`"
+    )
     iata_code: str | None = Field(
         default=None, description="IATA code for the airport or metro area"
     )
     place_id: int = Field(description="Kayak's unique identifier of the place")
     city_id: int | None = Field(default=None, description="Kayak's identifier of the city")
     country: str | None = Field(default=None, description="Localised country name of the place")
+    hotel_id: int | None = Field(
+        default=None, description="Kayak's identifier of the hotel, only set for hotel places"
+    )
+    entity_key: str | None = Field(
+        default=None,
+        description="Kayak's entity key of the place, e.g. `khotel:59560`, used for hotel search",
+    )
 
 
 class TravelBackend(Protocol):
