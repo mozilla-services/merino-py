@@ -1630,6 +1630,15 @@ export_base_url = "https://dumps.wikimedia.org/other/cirrus_search_index/"
 # Blocklist file as CSV. Contains a list of the categories for articles that we want to block.
 blocklist_file_url = "https://raw.githubusercontent.com/mozilla/search-terms-sanitization/7ab819c7515c526e6a407b08ba8e78d3bdb7f4e9/non_sensitive/wikipedia-content-moderation/blocklist_cats.csv"
 
+[default.jobs.wikipedia_article_blocklist]
+# MERINO_JOBS__WIKIPEDIA_ARTICLE_BLOCKLIST__GCS_STORAGE_BUCKET
+# GCS bucket where the article blocklist CSV is written.
+gcs_storage_bucket = ""
+
+# MERINO_JOBS__WIKIPEDIA_ARTICLE_BLOCKLIST__GCS_STORAGE_PROJECT
+# GCP project name where the GCS storage bucket lives.
+gcs_storage_project = ""
+
 [default.jobs.navigational_suggestions]
 # MERINO_JOBS__NAVIGATIONAL_SUGGESTIONS__SOURCE_GCP_PROJECT
 # GCP project name that contains domain data tables

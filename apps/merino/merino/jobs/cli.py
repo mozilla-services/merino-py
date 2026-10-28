@@ -17,6 +17,7 @@ from merino.jobs.games import cli as games_tasks_cmd
 from merino.jobs.polygon import cli as polygon_ingestion_cmd
 from merino.jobs.relevancy_uploader import relevancy_csv_rs_uploader_cmd
 from merino.jobs.sportsdata_jobs import cli as sportsdata_cmd
+from merino.jobs.wikipedia_article_blocklist import article_blocklist_cmd
 from merino.jobs.wikipedia_indexer import indexer_cmd
 from merino.jobs.wikipedia_offline_uploader import wiki_offline_uploader_cmd
 from merino.jobs.picture_of_the_day import cli as picture_of_the_day_upload_cmd
@@ -28,6 +29,9 @@ cli = typer.Typer(no_args_is_help=True, add_completion=False, pretty_exceptions_
 
 # Add the wikipedia-indexer subcommands
 cli.add_typer(indexer_cmd, no_args_is_help=True)
+
+# Add the wikipedia-article-blocklist subcommands
+cli.add_typer(article_blocklist_cmd, no_args_is_help=True)
 
 # Add the navigational suggestions subcommands
 cli.add_typer(navigational_suggestions_cmd, no_args_is_help=True)
