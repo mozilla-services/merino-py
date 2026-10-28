@@ -81,23 +81,44 @@ def test_travel_returns_hotel_listings(client: TestClient, backend_mock: Any) ->
     backend_mock.get_listings.assert_called_once_with("las vegas", "en-US", "US", "hotels")
 
 
-def test_travel_passes_the_requested_market(client: TestClient, backend_mock: Any) -> None:
-    """Forwards a client-provided market instead of the default."""
-    response = client.get(TRAVEL_URL, params={"vertical": "flights", "q": "nyc", "market": "GB"})
+@pytest.mark.parametrize("vertical", ["flights", "hotels", "cars"])
+def test_travel_returns_empty_list_for_each_vertical(
+    client: TestClient, backend_mock: Any, vertical: str
+) -> None:
+    """Forwards each vertical to the backend and returns an empty list when it has no listings."""
+    response = client.get(TRAVEL_URL, params={"vertical": vertical, "q": "new york"})
 
     assert response.status_code == 200
-    backend_mock.get_listings.assert_called_once_with("nyc", "en-US", "GB", "flights")
+    assert response.json() == []
+    backend_mock.get_listings.assert_called_once_with("new york", "en-US", "US", vertical)
+
+
+@pytest.mark.parametrize("market", ["GB", "gb"], ids=["uppercase", "lowercase"])
+def test_travel_passes_the_requested_market(
+    client: TestClient, backend_mock: Any, market: str
+) -> None:
+    """Forwards a client-provided market instead of the default, as given."""
+    response = client.get(TRAVEL_URL, params={"vertical": "flights", "q": "nyc", "market": market})
+
+    assert response.status_code == 200
+    backend_mock.get_listings.assert_called_once_with("nyc", "en-US", market, "flights")
 
 
 @pytest.mark.parametrize(
     ["accept_language", "expected"],
-    [("fr-CA,en;q=0.8", "fr-CA"), ("en;q=0.5, de-DE;q=0.9", "de-DE")],
-    ids=["first_language", "highest_quality"],
+    [
+        ("fr-CA,en;q=0.8", "fr-CA"),
+        ("en;q=0.5, de-DE;q=0.9", "de-DE"),
+        ("*", "en-US"),
+        ("", "en-US"),
+        ("fr;q=high", "en-US"),
+    ],
+    ids=["first_language", "highest_quality", "wildcard", "empty", "malformed_quality"],
 )
 def test_travel_passes_the_accepted_language(
     client: TestClient, backend_mock: Any, accept_language: str, expected: str
 ) -> None:
-    """Forwards the highest quality language from the `Accept-Language` header."""
+    """Forwards the highest quality language from `Accept-Language`, falling back to `en-US`."""
     response = client.get(
         TRAVEL_URL,
         params={"vertical": "flights", "q": "nyc"},
@@ -144,6 +165,18 @@ def test_travel_rejects_invalid_params(
 ) -> None:
     """Returns 400 for missing or invalid query params without calling the backend."""
     response = client.get(TRAVEL_URL, params=params)
+
+    assert response.status_code == 400
+    backend_mock.get_listings.assert_not_called()
+
+
+def test_travel_rejects_too_long_accept_language(client: TestClient, backend_mock: Any) -> None:
+    """Returns 400 without calling the backend when `Accept-Language` exceeds the max length."""
+    response = client.get(
+        TRAVEL_URL,
+        params={"vertical": "flights", "q": "nyc"},
+        headers={"Accept-Language": "en-US," * 20},
+    )
 
     assert response.status_code == 400
     backend_mock.get_listings.assert_not_called()

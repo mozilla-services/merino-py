@@ -82,7 +82,8 @@ class KayakBackend:
     def _to_listing(item: dict[str, Any]) -> TravelListing:
         """Map a Kayak autocomplete result of any vertical to a travel listing."""
         return TravelListing(
-            name=item["name"],
+            # Cars results have no `name`, so fall back to the full name.
+            name=item.get("name") or item["fullName"],
             full_name=item["fullName"],
             type=item["primaryPlaceType"],
             iata_code=item.get("iataCode"),
