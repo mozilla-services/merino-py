@@ -395,9 +395,13 @@ class AccuweatherBackend:
                 # add the ttl of the just cached request to the response dict we return
                 response_dict["cached_request_ttl"] = cached_request_ttl
             except (CacheAdapterError, ValueError) as exc:
-                logger.error(f"Error with storing Accuweather to cache: {exc}")
                 error_type = (
                     "set_error" if isinstance(exc, CacheAdapterError) else "ttl_date_error"
+                )
+                logger.warning(
+                    "Error with storing Accuweather to cache",
+                    exc_info=True,
+                    extra={"error_type": error_type},
                 )
                 self.metrics_client.increment(f"accuweather.cache.store.{error_type}")
                 raise AccuweatherError(AccuweatherErrorMessages.CACHE_WRITE_ERROR)
@@ -505,8 +509,12 @@ class AccuweatherBackend:
                 # the value returned from the cache since it's received as bytes as the method
                 # argument. This satisfies the type checker.
                 ttl = cast(int, ttl_cached)
-        except ValidationError as exc:
-            logger.error(f"Failed to load weather report data from Redis: {exc}")
+        except ValidationError:
+            logger.warning(
+                "Failed to load weather report data from Redis",
+                exc_info=True,
+                extra={"error_type": "cache_data_error"},
+            )
             self.metrics_client.increment("accuweather.cache.data.error")
 
         return WeatherData(location, current_conditions, forecast, ttl)
@@ -604,7 +612,11 @@ class AccuweatherBackend:
                 if cached_data:
                     cached_data = [LOCATION_SENTINEL, *cached_data]
         except CacheAdapterError as exc:
-            logger.error(f"Failed to fetch weather report from Redis: {exc}")
+            logger.warning(
+                "Failed to fetch weather report from Redis",
+                exc_info=True,
+                extra={"error_type": "fetch_via_location_key_error"},
+            )
             self.metrics_client.increment("accuweather.cache.fetch-via-location-key.error")
             # Propagate the error for circuit breaking.
             raise AccuweatherError(
@@ -688,7 +700,11 @@ class AccuweatherBackend:
                 weather_context, self._fetch_from_cache
             )
         except CacheAdapterError as exc:
-            logger.error(f"Failed to fetch weather report from Redis: {exc}")
+            logger.warning(
+                "Failed to fetch weather report from Redis",
+                exc_info=True,
+                extra={"error_type": "fetch_error"},
+            )
             self.metrics_client.increment("accuweather.cache.fetch.error")
             # Propagate the error for circuit breaking.
             raise AccuweatherError(
