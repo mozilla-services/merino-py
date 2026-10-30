@@ -135,6 +135,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     curated_recommendations.init_provider()
     await games.init_providers()
     await travel.init_providers()
+    cleanup_callbacks.append(travel.shutdown_providers)
 
 
 def _start_governance(cleanup_callbacks: list[CleanupCallback]) -> None:

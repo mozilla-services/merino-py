@@ -762,7 +762,8 @@ async def get_travel_listings(
     request: Request,
     vertical: TravelVertical,
     q: Annotated[str, Query(min_length=2, max_length=64)],
-    locale: Annotated[str, Query(max_length=16)] = "en-US",
+    market: Annotated[str, Query(min_length=2, max_length=2, pattern="^[A-Za-z]{2}$")] = "US",
+    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
     provider: TravelProvider = Depends(get_travel_provider),
 ) -> Response:
     """Query merino for travel listings.
@@ -770,12 +771,18 @@ async def get_travel_listings(
     **Args**:
     - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`.
     - `q`: The search query, between 2 and 64 characters.
-    - `locale`: [Optional] The client locale. Defaults to `en-US`.
+    - `market`: [Optional] Two-letter market (country) code, e.g. `US`, `GB`. Defaults to `US`.
     - provider: Injected travel provider dependency used to fetch listings.
+
+    **Headers**:
+    - `Accept-Language` - The primary language subtag of the highest `q` (quality) value
+      locale in this header is used to localize listings. If the header is not included,
+      empty or cannot be parsed, Merino will default to `en`.
     """
     metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+    languages = get_accepted_languages(accept_language)
 
     with metrics_client.timeit("travel.request.timing"):
-        listings = await provider.get_listings(q, locale, vertical)
+        listings = await provider.get_listings(q, languages[0], market, vertical)
 
     return JSONResponse(content=jsonable_encoder(listings))
