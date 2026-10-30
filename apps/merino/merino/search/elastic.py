@@ -169,6 +169,45 @@ class ElasticSearchAdapter:
             wait_for_completion=wait_for_completion,
         )
 
+    def block_writes(self, *, index: str) -> None:
+        """Add a write block to an index, e.g. before cloning it."""
+        self.get_client().indices.add_block(index=index, block="write")
+
+    def clone_index(
+        self,
+        *,
+        source: str,
+        target: str,
+        settings: dict[str, Any] | None = None,
+        wait_for_active_shards: str | int = "1",
+        request_timeout: float | None = None,
+    ) -> None:
+        """Clone `source` into a new index `target`.
+
+        The source must carry a write block. `settings` override those copied from the
+        source onto the target.
+        """
+        self.get_client().options(
+            request_timeout=request_timeout or self._create_index_timeout
+        ).indices.clone(
+            index=source,
+            target=target,
+            settings=settings,
+            wait_for_active_shards=wait_for_active_shards,
+        )
+
+    def get_shard_stats(self, *, index: str) -> dict[str, list[dict[str, Any]]]:
+        """Return shard-level stats for `index`, keyed by shard number.
+
+        Each shard number maps to a list with one entry per shard copy (primary and
+        replicas), including its `routing`, `seq_no` and `retention_leases`.
+        """
+        res = cast(
+            dict[str, Any],
+            self.get_client().indices.stats(index=index, level="shards"),
+        )
+        return cast(dict[str, list[dict[str, Any]]], res["indices"][index]["shards"])
+
     def get_index_lifecycle_policies(self, *, index: str) -> dict[str, str | None]:
         """Return the ILM policy attached to each index matching `index`.
 

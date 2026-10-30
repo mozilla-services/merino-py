@@ -37,6 +37,9 @@ def _index(**overrides):
         "elasticsearch_api_key": "key",
         "elasticsearch_request_timeout": 60,
         "elasticsearch_create_index_timeout": 120,
+        "follower_sync_timeout": 3600,
+        "follower_sync_poll_interval": 15,
+        "follower_discovery_period": 60,
         "blocklist_file_url": "http://blocklist/cats.csv",
         "index_version": "v1",
         "total_docs": 100,
@@ -79,6 +82,18 @@ def test_index_builds_the_indexer_and_runs_it(collaborators):
     collaborators["indexer"].return_value.index_from_export.assert_called_once_with(
         100, "enwiki-{version}"
     )
+
+
+def test_index_passes_the_follower_sync_settings_to_the_indexer(collaborators):
+    """Verify the CCR follower wait settings reach the Indexer."""
+    _index(follower_sync_timeout=600, follower_sync_poll_interval=5, follower_discovery_period=30)
+
+    kwargs = collaborators["indexer"].call_args.kwargs
+    assert kwargs == {
+        "follower_sync_timeout": 600,
+        "follower_sync_poll_interval": 5,
+        "follower_discovery_period": 30,
+    }
 
 
 def test_index_resolves_the_alias_for_the_requested_language(collaborators):

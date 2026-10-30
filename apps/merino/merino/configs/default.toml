@@ -1586,6 +1586,20 @@ es_request_timeout = 60
 # Seconds to wait on index creation.
 es_create_index_timeout = 120
 
+# MERINO_JOBS__WIKIPEDIA_INDEXER__FOLLOWER_SYNC_TIMEOUT
+# Seconds to wait for cross-cluster replication followers to replicate a new index
+# before flipping the alias. The job fails (and discards the new index) on timeout.
+follower_sync_timeout = 3600
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__FOLLOWER_SYNC_POLL_INTERVAL
+# Seconds between checks on cross-cluster replication follower progress.
+follower_sync_poll_interval = 15
+
+# MERINO_JOBS__WIKIPEDIA_INDEXER__FOLLOWER_DISCOVERY_PERIOD
+# Minimum seconds to wait for cross-cluster replication auto-follow to pick up a new
+# index before flipping the alias. Followers that appear later are not waited on.
+follower_discovery_period = 120
+
 # MERINO_JOBS__WIKIPEDIA_INDEXER__ES_ALIAS
 # Elasticsearch english alias value for indexing job.
 en_es_alias = "enwiki-{version}"
