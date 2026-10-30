@@ -156,14 +156,18 @@ docker-compose-up:  ## Run `docker-compose up` in `./dev`
 docker-compose-up-daemon:  ## Run `docker-compose up -d` in `./dev`
 	docker compose --env-file dev/.env -f dev/docker-compose.yaml up -d
 
+.PHONY: docker-compose-up-ccr
+docker-compose-up-ccr:  ## Run `docker-compose up -d` in `./dev` with an Elasticsearch CCR follower
+	docker compose --env-file dev/.env -f dev/docker-compose.yaml --profile ccr up -d
+
 .PHONY: docker-compose-down
 docker-compose-down:  ## Run `docker-compose down` in `./dev`
-	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down
+	docker compose  --env-file dev/.env -f dev/docker-compose.yaml --profile ccr down
 
 # Use if you want to e.g. wipe elasticsearch indices and data
 .PHONY: docker-compose-down-v
 docker-compose-down-v:  ## Run `docker-compose down` in `./dev` and remove volumes
-	docker compose  --env-file dev/.env -f dev/docker-compose.yaml down -v
+	docker compose  --env-file dev/.env -f dev/docker-compose.yaml --profile ccr down -v
 
 # Transitional aliases for targets replaced by moon tasks, kept so muscle memory still works.
 # Remove this block once contributors have switched to the moon commands.

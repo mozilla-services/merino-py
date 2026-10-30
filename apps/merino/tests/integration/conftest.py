@@ -22,20 +22,21 @@ ES_PROP = {
     "should_start": False,
 }
 
-SPORT_TESTS = "test_sportsdata"
+# Test modules that need the Elasticsearch container.
+ES_TESTS = ("test_sportsdata", "test_elastic_adapter")
 
 
 def pytest_collection_modifyitems(session, config, items):
-    """Move sports tests to the end."""
-    sports_tests = []
+    """Move Elasticsearch tests to the end, giving the container time to start."""
+    es_tests = []
     other_tests = []
     for item in items:
-        if SPORT_TESTS in item.nodeid:
-            sports_tests.append(item)
+        if any(name in item.nodeid for name in ES_TESTS):
+            es_tests.append(item)
         else:
             other_tests.append(item)
-    ES_PROP["should_start"] = len(sports_tests) > 0
-    items[:] = other_tests + sports_tests
+    ES_PROP["should_start"] = len(es_tests) > 0
+    items[:] = other_tests + es_tests
 
 
 def _start_container_in_thread(timeout=120):
@@ -102,6 +103,16 @@ def es_base_url():
     if ES_PROP.get("error") and not ES_PROP.get("base_url"):
         raise ES_PROP["error"]
     return ES_PROP.get("base_url")
+
+
+@pytest.fixture
+def es_url():
+    """Wait for the ES cluster to be green and return its URL, for synchronous tests."""
+    if not ES_PROP["done"].wait(timeout=130):
+        raise RuntimeError("Elasticsearch did not start in time")
+    if ES_PROP.get("error"):
+        raise ES_PROP["error"]
+    return ES_PROP["base_url"]
 
 
 @pytest_asyncio.fixture
