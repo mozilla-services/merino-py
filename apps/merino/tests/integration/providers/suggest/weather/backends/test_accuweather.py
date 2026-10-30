@@ -7,7 +7,7 @@
 import datetime
 import json
 import logging
-from logging import ERROR, LogRecord
+from logging import LogRecord
 from typing import Any, Optional, cast, AsyncGenerator, Generator
 from unittest.mock import AsyncMock
 
@@ -920,7 +920,7 @@ async def test_get_weather_report_with_location_key_with_cache_error(
     """Test that we catch the CacheAdapterError exception and raise an `AccuweatherError`
     when running the script against the cache.
     """
-    caplog.set_level(ERROR)
+    caplog.set_level(logging.WARNING)
 
     accuweather: AccuweatherBackend = AccuweatherBackend(
         cache=RedisAdapter(redis_client), **accuweather_parameters
@@ -940,9 +940,10 @@ async def test_get_weather_report_with_location_key_with_cache_error(
     client_mock.get.assert_not_called()
 
     assert len(records) == 1
-    assert records[0].message.startswith(
-        f"Failed to fetch weather report from Redis: {TEST_CACHE_ERROR}"
-    )
+    assert records[0].message == "Failed to fetch weather report from Redis"
+    assert records[0].levelname == "WARNING"
+    assert records[0].exc_info is not None
+    assert TEST_CACHE_ERROR in str(records[0].exc_info[1])
 
     metrics_timeit_called = [call_arg[0][0] for call_arg in statsd_mock.timeit.call_args_list]
     assert metrics_timeit_called == ["accuweather.cache.fetch-via-location-key"]

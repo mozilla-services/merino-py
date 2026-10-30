@@ -1317,7 +1317,7 @@ async def test_get_weather_report_with_cache_fetch_error(
     filter_caplog: FilterCaplogFixture,
 ) -> None:
     """Test that it should raise an exception on the cache bulk fetch error."""
-    caplog.set_level(logging.ERROR)
+    caplog.set_level(logging.WARNING)
 
     redis_mock = mocker.AsyncMock(spec=Redis)
 
@@ -1347,7 +1347,9 @@ async def test_get_weather_report_with_cache_fetch_error(
     )
 
     assert len(caplog.records) == 1
-    assert records[0].message.startswith("Failed to fetch weather report from Redis:")
+    assert records[0].message == "Failed to fetch weather report from Redis"
+    assert records[0].levelname == "WARNING"
+    assert records[0].exc_info is not None
 
 
 @pytest.mark.asyncio
@@ -2366,7 +2368,7 @@ def test_parse_cached_data_error(
     filter_caplog: FilterCaplogFixture,
 ):
     """Test cached data parsing with errors."""
-    caplog.set_level(logging.ERROR)
+    caplog.set_level(logging.WARNING)
 
     location, current_conditions, forecast, ttl = accuweather.parse_cached_data(
         [
@@ -2389,7 +2391,9 @@ def test_parse_cached_data_error(
     )
 
     assert len(caplog.records) == 1
-    assert records[0].message.startswith("Failed to load weather report data from Redis:")
+    assert records[0].message == "Failed to load weather report data from Redis"
+    assert records[0].levelname == "WARNING"
+    assert records[0].exc_info is not None
 
 
 @pytest.mark.asyncio
