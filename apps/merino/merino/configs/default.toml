@@ -1380,8 +1380,13 @@ connect_timeout_sec = 3.0
 api_key = ""
 
 # MERINO_KAYAK__URL_BASE
-# The base URL of the Kayak API.
-url_base = ""
+# The base URL of the Kayak API. `{language}` is derived from the request
+# `Accept-Language` header and `{market}` from the `market` query param.
+url_base = "https://affiliate-{language}-{market}.kayakaffiliates.com"
+
+# MERINO_KAYAK__URL_AUTOCOMPLETE_PATH
+# The path of the Kayak autocomplete endpoint. `{vertical}` is one of `flights`, `hotels`, `cars`.
+url_autocomplete_path = "/api/affiliate/autocomplete/v1/{vertical}"
 
 
 [default.curated_recommendations.gcs]

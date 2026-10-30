@@ -496,6 +496,43 @@ providers/rss/wikimedia_potd:
       The "api/v1/rss/picture-of-the-day" API endpoint.
     alert_policy: []
 
+providers/travel/kayak:
+  kayak.request.autocomplete.get:
+    description: |
+      A timer covering the count and latency of Kayak autocomplete API requests.
+    type: timing
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
+  kayak.request.autocomplete.success:
+    description: |
+      A counter for successful Kayak autocomplete API requests.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
+  kayak.request.autocomplete.failed:
+    description: |
+      A counter for failed Kayak autocomplete API requests (HTTP or transport errors).
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
+  kayak.response.invalid:
+    description: |
+      A counter for Kayak autocomplete responses that could not be parsed.
+    type: counter
+    labels: [] # no labels
+    scope: |
+      The "api/v1/travel" API endpoint.
+    alert_policy: []
+
 utils/icon_processor:
   icon_processor.requests:
     description: |

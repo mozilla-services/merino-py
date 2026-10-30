@@ -31,10 +31,14 @@ class Provider:
         self._enabled = enabled
 
     async def get_listings(
-        self, query: str, locale: str, vertical: TravelVertical
+        self, query: str, language: str, market: str, vertical: TravelVertical
     ) -> list[TravelListing]:
-        """Return travel listings for the given query, locale and vertical."""
+        """Return travel listings for the given query, language, market and vertical."""
         if not self._enabled:
             return []
 
-        return await self.backend.get_listings(query, locale, vertical)
+        return await self.backend.get_listings(query, language, market, vertical)
+
+    async def shutdown(self) -> None:
+        """Shut down the provider's backend."""
+        await self.backend.shutdown()
