@@ -755,10 +755,8 @@ def _shard(global_checkpoint: int, *ccr_retaining_seq_nos: int, primary: bool = 
     per follower, retaining the given sequence numbers.
 
     The shape mirrors a real `_stats?level=shards` response, which
-    tests/integration/search/test_elastic_adapter.py checks against Elasticsearch. The
-    CCR lease semantics (`source: "ccr"`, retaining the follower's global checkpoint
-    + 1) need two licensed clusters, so were verified manually with
-    `make docker-compose-up-ccr`.
+    tests/integration/search/test_elastic_adapter.py checks against Elasticsearch, and
+    test_indexer_ccr.py exercises real CCR leases against a leader and follower.
     """
     leases = [{"id": "peer_recovery/node", "retaining_seq_no": 0, "source": "peer recovery"}]
     leases += [
