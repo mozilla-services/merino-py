@@ -118,7 +118,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     """Initialize regular Merino services and register cleanup callbacks."""
     from merino import curated_recommendations
     from merino.message_handlers import search_terms
-    from merino.providers import games, manifest, rss, suggest, travel
+    from merino.providers import games, manifest, rss, suggest, travel, widgets
 
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
@@ -136,6 +136,8 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     await games.init_providers()
     await travel.init_providers()
     cleanup_callbacks.append(travel.shutdown_providers)
+
+    await widgets.init_providers()
 
 
 def _start_governance(cleanup_callbacks: list[CleanupCallback]) -> None:
@@ -204,9 +206,10 @@ def _include_routers(app: FastAPI, mode: RuntimeMode) -> None:
     app.include_router(dockerflow.router)
 
     if mode_enables(mode, RuntimeFeature.REGULAR_API):
-        from merino.web import api_v1
+        from merino.web import api_v1, api_v1_widgets
 
         app.include_router(api_v1.router, prefix="/api/v1")
+        app.include_router(api_v1_widgets.router, prefix="/api/v1")
 
 
 app = create_app()
