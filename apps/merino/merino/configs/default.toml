@@ -1366,7 +1366,7 @@ type = "kayak"
 
 # MERINO_TRAVEL_PROVIDERS__KAYAK__ENABLED
 # Whether this provider is enabled. Disabled by default and enabled per environment.
-enabled = true
+enabled = false
 
 # MERINO_TRAVEL_PROVIDERS__KAYAK__CONNECT_TIMEOUT_SEC
 # Timeout in seconds for establishing a connection to the Kayak endpoint.
