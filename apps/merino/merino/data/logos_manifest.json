@@ -420,6 +420,504 @@
       "VEG": { "name": "Vegas Golden Knights", "url": "logos/nhl/nhl_vgk.png" },
       "WPG": { "name": "Winnipeg Jets", "url": "logos/nhl/nhl_wpg.png" },
       "WAS": { "name": "Washington Capitals", "url": "logos/nhl/nhl_wsh.png" }
+    },
+    "soccer": {
+      "90000508": {
+        "name": "AFC Bournemouth",
+        "url": "logos/soccer/soccer_90000508.png"
+      },
+      "90000509": {
+        "name": "Arsenal FC",
+        "url": "logos/soccer/soccer_90000509.png"
+      },
+      "90000510": {
+        "name": "Aston Villa FC",
+        "url": "logos/soccer/soccer_90000510.png"
+      },
+      "90000511": {
+        "name": "Chelsea FC",
+        "url": "logos/soccer/soccer_90000511.png"
+      },
+      "90000512": {
+        "name": "Crystal Palace FC",
+        "url": "logos/soccer/soccer_90000512.png"
+      },
+      "90000513": {
+        "name": "Everton FC",
+        "url": "logos/soccer/soccer_90000513.png"
+      },
+      "90000514": {
+        "name": "Leicester City FC",
+        "url": "logos/soccer/soccer_90000514.png"
+      },
+      "90000515": {
+        "name": "Liverpool FC",
+        "url": "logos/soccer/soccer_90000515.png"
+      },
+      "90000516": {
+        "name": "Manchester City FC",
+        "url": "logos/soccer/soccer_90000516.png"
+      },
+      "90000517": {
+        "name": "Manchester United FC",
+        "url": "logos/soccer/soccer_90000517.png"
+      },
+      "90000518": {
+        "name": "Newcastle United FC",
+        "url": "logos/soccer/soccer_90000518.png"
+      },
+      "90000519": {
+        "name": "Norwich City FC",
+        "url": "logos/soccer/soccer_90000519.png"
+      },
+      "90000520": {
+        "name": "Southampton FC",
+        "url": "logos/soccer/soccer_90000520.png"
+      },
+      "90000521": {
+        "name": "Stoke City FC",
+        "url": "logos/soccer/soccer_90000521.png"
+      },
+      "90000522": {
+        "name": "Sunderland AFC",
+        "url": "logos/soccer/soccer_90000522.png"
+      },
+      "90000523": {
+        "name": "Swansea City AFC",
+        "url": "logos/soccer/soccer_90000523.png"
+      },
+      "90000524": {
+        "name": "Tottenham Hotspur FC",
+        "url": "logos/soccer/soccer_90000524.png"
+      },
+      "90000525": {
+        "name": "Watford FC",
+        "url": "logos/soccer/soccer_90000525.png"
+      },
+      "90000526": {
+        "name": "West Bromwich Albion FC",
+        "url": "logos/soccer/soccer_90000526.png"
+      },
+      "90000527": {
+        "name": "West Ham United FC",
+        "url": "logos/soccer/soccer_90000527.png"
+      },
+      "90000857": {
+        "name": "Burnley FC",
+        "url": "logos/soccer/soccer_90000857.png"
+      },
+      "90000972": {
+        "name": "Hull City AFC",
+        "url": "logos/soccer/soccer_90000972.png"
+      },
+      "90000973": {
+        "name": "Middlesbrough FC",
+        "url": "logos/soccer/soccer_90000973.png"
+      },
+      "90001116": {
+        "name": "Brighton & Hove Albion FC",
+        "url": "logos/soccer/soccer_90001116.png"
+      },
+      "90001117": {
+        "name": "Huddersfield Town AFC",
+        "url": "logos/soccer/soccer_90001117.png"
+      },
+      "90001461": {
+        "name": "Cardiff City FC",
+        "url": "logos/soccer/soccer_90001461.png"
+      },
+      "90001462": {
+        "name": "Fulham FC",
+        "url": "logos/soccer/soccer_90001462.png"
+      },
+      "90001463": {
+        "name": "Wolverhampton Wanderers FC",
+        "url": "logos/soccer/soccer_90001463.png"
+      },
+      "90001540": {
+        "name": "Sheffield United FC",
+        "url": "logos/soccer/soccer_90001540.png"
+      },
+      "90001735": {
+        "name": "Harborough Town FC",
+        "url": "logos/soccer/soccer_90001735.png"
+      },
+      "90001826": {
+        "name": "Plymouth Parkway FC",
+        "url": "logos/soccer/soccer_90001826.png"
+      },
+      "90001861": {
+        "name": "Sholing FC",
+        "url": "logos/soccer/soccer_90001861.png"
+      },
+      "90001939": {
+        "name": "Worcester City FC",
+        "url": "logos/soccer/soccer_90001939.png"
+      },
+      "90001943": {
+        "name": "Accrington Stanley FC",
+        "url": "logos/soccer/soccer_90001943.png"
+      },
+      "90001946": {
+        "name": "AFC Fylde",
+        "url": "logos/soccer/soccer_90001946.png"
+      },
+      "90001947": {
+        "name": "Hornchurch FC",
+        "url": "logos/soccer/soccer_90001947.png"
+      },
+      "90001948": {
+        "name": "AFC Rushden & Diamonds",
+        "url": "logos/soccer/soccer_90001948.png"
+      },
+      "90001952": {
+        "name": "AFC Wimbledon",
+        "url": "logos/soccer/soccer_90001952.png"
+      },
+      "90001953": {
+        "name": "Aldershot Town FC",
+        "url": "logos/soccer/soccer_90001953.png"
+      },
+      "90001955": {
+        "name": "Altrincham FC",
+        "url": "logos/soccer/soccer_90001955.png"
+      },
+      "90001956": {
+        "name": "Alvechurch FC",
+        "url": "logos/soccer/soccer_90001956.png"
+      },
+      "90001967": {
+        "name": "Barnet FC",
+        "url": "logos/soccer/soccer_90001967.png"
+      },
+      "90001968": {
+        "name": "Barnsley FC",
+        "url": "logos/soccer/soccer_90001968.png"
+      },
+      "90001970": {
+        "name": "Barrow AFC",
+        "url": "logos/soccer/soccer_90001970.png"
+      },
+      "90001983": {
+        "name": "Berkhamsted FC",
+        "url": "logos/soccer/soccer_90001983.png"
+      },
+      "90001988": {
+        "name": "Birmingham City FC",
+        "url": "logos/soccer/soccer_90001988.png"
+      },
+      "90001990": {
+        "name": "Blackburn Rovers FC",
+        "url": "logos/soccer/soccer_90001990.png"
+      },
+      "90001992": {
+        "name": "Blackpool FC",
+        "url": "logos/soccer/soccer_90001992.png"
+      },
+      "90001997": {
+        "name": "Bolton Wanderers FC",
+        "url": "logos/soccer/soccer_90001997.png"
+      },
+      "90001998": {
+        "name": "Boreham Wood FC",
+        "url": "logos/soccer/soccer_90001998.png"
+      },
+      "90002002": {
+        "name": "Bradford City AFC",
+        "url": "logos/soccer/soccer_90002002.png"
+      },
+      "90002005": {
+        "name": "Brentford FC",
+        "url": "logos/soccer/soccer_90002005.png"
+      },
+      "90002009": {
+        "name": "Bristol City FC",
+        "url": "logos/soccer/soccer_90002009.png"
+      },
+      "90002011": {
+        "name": "Bristol Rovers FC",
+        "url": "logos/soccer/soccer_90002011.png"
+      },
+      "90002012": {
+        "name": "Bromley FC",
+        "url": "logos/soccer/soccer_90002012.png"
+      },
+      "90002016": {
+        "name": "Burton Albion FC",
+        "url": "logos/soccer/soccer_90002016.png"
+      },
+      "90002021": {
+        "name": "Cambridge United FC",
+        "url": "logos/soccer/soccer_90002021.png"
+      },
+      "90002023": {
+        "name": "Carlisle United FC",
+        "url": "logos/soccer/soccer_90002023.png"
+      },
+      "90002026": {
+        "name": "Charlton Athletic FC",
+        "url": "logos/soccer/soccer_90002026.png"
+      },
+      "90002029": {
+        "name": "Cheltenham Town FC",
+        "url": "logos/soccer/soccer_90002029.png"
+      },
+      "90002033": {
+        "name": "Chesterfield FC",
+        "url": "logos/soccer/soccer_90002033.png"
+      },
+      "90002044": {
+        "name": "Colchester United FC",
+        "url": "logos/soccer/soccer_90002044.png"
+      },
+      "90002051": {
+        "name": "Coventry City FC",
+        "url": "logos/soccer/soccer_90002051.png"
+      },
+      "90002052": {
+        "name": "Crawley Town FC",
+        "url": "logos/soccer/soccer_90002052.png"
+      },
+      "90002053": {
+        "name": "Cray Wanderers FC",
+        "url": "logos/soccer/soccer_90002053.png"
+      },
+      "90002054": {
+        "name": "Crewe Alexandra FC",
+        "url": "logos/soccer/soccer_90002054.png"
+      },
+      "90002059": {
+        "name": "Derby County FC",
+        "url": "logos/soccer/soccer_90002059.png"
+      },
+      "90002062": {
+        "name": "Doncaster Rovers FC",
+        "url": "logos/soccer/soccer_90002062.png"
+      },
+      "90002065": {
+        "name": "Dover Athletic FC",
+        "url": "logos/soccer/soccer_90002065.png"
+      },
+      "90002071": {
+        "name": "Eastleigh FC",
+        "url": "logos/soccer/soccer_90002071.png"
+      },
+      "90002077": {
+        "name": "Exeter City FC",
+        "url": "logos/soccer/soccer_90002077.png"
+      },
+      "90002081": {
+        "name": "FC Halifax Town",
+        "url": "logos/soccer/soccer_90002081.png"
+      },
+      "90002085": {
+        "name": "Fleetwood Town FC",
+        "url": "logos/soccer/soccer_90002085.png"
+      },
+      "90002087": {
+        "name": "Forest Green Rovers FC",
+        "url": "logos/soccer/soccer_90002087.png"
+      },
+      "90002092": {
+        "name": "Gillingham FC",
+        "url": "logos/soccer/soccer_90002092.png"
+      },
+      "90002101": {
+        "name": "Grimsby Town FC",
+        "url": "logos/soccer/soccer_90002101.png"
+      },
+      "90002102": {
+        "name": "Guiseley AFC",
+        "url": "logos/soccer/soccer_90002102.png"
+      },
+      "90002108": {
+        "name": "Harrogate Town AFC",
+        "url": "logos/soccer/soccer_90002108.png"
+      },
+      "90002133": {
+        "name": "Ipswich Town FC",
+        "url": "logos/soccer/soccer_90002133.png"
+      },
+      "90002137": {
+        "name": "Kidderminster Harriers FC",
+        "url": "logos/soccer/soccer_90002137.png"
+      },
+      "90002148": {
+        "name": "Leeds United FC",
+        "url": "logos/soccer/soccer_90002148.png"
+      },
+      "90002152": {
+        "name": "Leyton Orient FC",
+        "url": "logos/soccer/soccer_90002152.png"
+      },
+      "90002153": {
+        "name": "Lincoln City FC",
+        "url": "logos/soccer/soccer_90002153.png"
+      },
+      "90002160": {
+        "name": "Luton Town FC",
+        "url": "logos/soccer/soccer_90002160.png"
+      },
+      "90002167": {
+        "name": "Mansfield Town FC",
+        "url": "logos/soccer/soccer_90002167.png"
+      },
+      "90002169": {
+        "name": "Marine AFC",
+        "url": "logos/soccer/soccer_90002169.png"
+      },
+      "90002179": {
+        "name": "Millwall FC",
+        "url": "logos/soccer/soccer_90002179.png"
+      },
+      "90002180": {
+        "name": "Milton Keynes Dons FC",
+        "url": "logos/soccer/soccer_90002180.png"
+      },
+      "90002188": {
+        "name": "Newport County AFC",
+        "url": "logos/soccer/soccer_90002188.png"
+      },
+      "90002193": {
+        "name": "Northampton Town FC",
+        "url": "logos/soccer/soccer_90002193.png"
+      },
+      "90002195": {
+        "name": "Nottingham Forest FC",
+        "url": "logos/soccer/soccer_90002195.png"
+      },
+      "90002196": {
+        "name": "Notts County FC",
+        "url": "logos/soccer/soccer_90002196.png"
+      },
+      "90002198": {
+        "name": "Oldham Athletic AFC",
+        "url": "logos/soccer/soccer_90002198.png"
+      },
+      "90002200": {
+        "name": "Oxford City FC",
+        "url": "logos/soccer/soccer_90002200.png"
+      },
+      "90002201": {
+        "name": "Oxford United FC",
+        "url": "logos/soccer/soccer_90002201.png"
+      },
+      "90002205": {
+        "name": "Peterborough United FC",
+        "url": "logos/soccer/soccer_90002205.png"
+      },
+      "90002210": {
+        "name": "Plymouth Argyle FC",
+        "url": "logos/soccer/soccer_90002210.png"
+      },
+      "90002213": {
+        "name": "Port Vale FC",
+        "url": "logos/soccer/soccer_90002213.png"
+      },
+      "90002214": {
+        "name": "Portsmouth FC",
+        "url": "logos/soccer/soccer_90002214.png"
+      },
+      "90002217": {
+        "name": "Preston North End FC",
+        "url": "logos/soccer/soccer_90002217.png"
+      },
+      "90002219": {
+        "name": "Queens Park Rangers FC",
+        "url": "logos/soccer/soccer_90002219.png"
+      },
+      "90002225": {
+        "name": "Reading FC",
+        "url": "logos/soccer/soccer_90002225.png"
+      },
+      "90002228": {
+        "name": "Rochdale AFC",
+        "url": "logos/soccer/soccer_90002228.png"
+      },
+      "90002231": {
+        "name": "Rotherham United FC",
+        "url": "logos/soccer/soccer_90002231.png"
+      },
+      "90002235": {
+        "name": "Salford City FC",
+        "url": "logos/soccer/soccer_90002235.png"
+      },
+      "90002236": {
+        "name": "Salisbury FC",
+        "url": "logos/soccer/soccer_90002236.png"
+      },
+      "90002240": {
+        "name": "Scunthorpe United FC",
+        "url": "logos/soccer/soccer_90002240.png"
+      },
+      "90002245": {
+        "name": "Sheffield Wednesday FC",
+        "url": "logos/soccer/soccer_90002245.png"
+      },
+      "90002247": {
+        "name": "Shrewsbury Town FC",
+        "url": "logos/soccer/soccer_90002247.png"
+      },
+      "90002262": {
+        "name": "Stafford Rangers FC",
+        "url": "logos/soccer/soccer_90002262.png"
+      },
+      "90002266": {
+        "name": "Stevenage FC",
+        "url": "logos/soccer/soccer_90002266.png"
+      },
+      "90002267": {
+        "name": "Stockport County FC",
+        "url": "logos/soccer/soccer_90002267.png"
+      },
+      "90002272": {
+        "name": "Sutton United FC",
+        "url": "logos/soccer/soccer_90002272.png"
+      },
+      "90002274": {
+        "name": "Swindon Town FC",
+        "url": "logos/soccer/soccer_90002274.png"
+      },
+      "90002290": {
+        "name": "Tranmere Rovers FC",
+        "url": "logos/soccer/soccer_90002290.png"
+      },
+      "90002294": {
+        "name": "Walsall FC",
+        "url": "logos/soccer/soccer_90002294.png"
+      },
+      "90002300": {
+        "name": "Wealdstone FC",
+        "url": "logos/soccer/soccer_90002300.png"
+      },
+      "90002313": {
+        "name": "Wigan Athletic FC",
+        "url": "logos/soccer/soccer_90002313.png"
+      },
+      "90002314": {
+        "name": "Wimborne Town FC",
+        "url": "logos/soccer/soccer_90002314.png"
+      },
+      "90002327": {
+        "name": "Wrexham AFC",
+        "url": "logos/soccer/soccer_90002327.png"
+      },
+      "90002328": {
+        "name": "Wycombe Wanderers FC",
+        "url": "logos/soccer/soccer_90002328.png"
+      },
+      "90002331": {
+        "name": "Yeovil Town FC",
+        "url": "logos/soccer/soccer_90002331.png"
+      },
+      "90002332": {
+        "name": "York City FC",
+        "url": "logos/soccer/soccer_90002332.png"
+      },
+      "90002540": {
+        "name": "Macclesfield FC",
+        "url": "logos/soccer/soccer_90002540.png"
+      }
     }
   }
 }
