@@ -491,6 +491,45 @@ async def test_query_with_missing_key(
 
 
 @pytest.mark.parametrize(
+    ("query", "expected_score"),
+    [
+        ("higher", 0.5),
+        ("above", 1.0),
+        ("equal", 0.3),
+        ("lower", 0.3),
+        ("zero", 0.3),
+        ("null", 0.3),
+        ("missing", 0.3),
+    ],
+    ids=[
+        "higher-than-default",
+        "above-range",
+        "equal-to-default",
+        "lower-than-default",
+        "zero",
+        "null",
+        "missing",
+    ],
+)
+@pytest.mark.asyncio
+async def test_query_score_uses_record_score_only_when_higher(
+    srequest: SuggestionRequestFixture,
+    adm_score: Provider,
+    query: str,
+    expected_score: float,
+) -> None:
+    """The record's score, capped at 1.0, is used only when it's higher than the default (0.3)."""
+    await adm_score.initialize()
+    user_agent = UserAgent(form_factor="desktop", browser="firefox", os_family="macos")
+    geolocation = Location(country="US")
+
+    res = await adm_score.query(srequest(query, geolocation, user_agent, None))
+
+    assert len(res) == 1
+    assert res[0].score == expected_score
+
+
+@pytest.mark.parametrize(
     ("query", "expected_is_top_pick"),
     [
         ("firefox", True),

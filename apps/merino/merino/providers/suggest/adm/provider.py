@@ -402,6 +402,13 @@ class Provider(BaseProvider):
                     )
 
             url: str = res.url
+            # Use the suggestion's own score, capped at 1.0, only when it's higher than
+            # the default.
+            score: float = (
+                min(res.score, 1.0)
+                if res.score is not None and res.score > self.score
+                else self.score
+            )
 
             suggestion_dict: dict[str, Any] = {
                 "block_id": res.block_id,
@@ -415,7 +422,7 @@ class Provider(BaseProvider):
                 "advertiser": res.advertiser,
                 "is_sponsored": is_sponsored,
                 "icon": self.suggestion_content.icons.get(res.icon, MISSING_ICON_ID),
-                "score": self.score,
+                "score": score,
                 "is_top_pick": is_top_pick,
                 "custom_details": CustomDetails(
                     amp=AmpDetails(
