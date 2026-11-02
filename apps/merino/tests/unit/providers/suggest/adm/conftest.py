@@ -143,6 +143,112 @@ def fixture_rs_attachment_raw_top_pick() -> str:
     )
 
 
+@pytest.fixture(name="rs_attachment_raw_score")
+def fixture_rs_attachment_raw_score() -> str:
+    """Raw attachment data with one record per `score` case, each under its own keyword."""
+    return json.dumps(
+        [
+            {
+                "id": 1,
+                "advertiser": "Higher",
+                "click_url": "https://example.org/click/higher",
+                "impression_url": "https://example.org/impression/higher",
+                "full_keywords": [["higher", 1]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": ["higher"],
+                "title": "Higher Score",
+                "url": "https://example.org/target/higher",
+                "score": 0.5,
+            },
+            {
+                "id": 7,
+                "advertiser": "Above",
+                "click_url": "https://example.org/click/above",
+                "impression_url": "https://example.org/impression/above",
+                "full_keywords": [["above", 1]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": ["above"],
+                "title": "Above Range Score",
+                "url": "https://example.org/target/above",
+                "score": 1.5,
+            },
+            {
+                "id": 2,
+                "advertiser": "Equal",
+                "click_url": "https://example.org/click/equal",
+                "impression_url": "https://example.org/impression/equal",
+                "full_keywords": [["equal", 1]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": ["equal"],
+                "title": "Equal Score",
+                "url": "https://example.org/target/equal",
+                "score": 0.3,
+            },
+            {
+                "id": 3,
+                "advertiser": "Lower",
+                "click_url": "https://example.org/click/lower",
+                "impression_url": "https://example.org/impression/lower",
+                "full_keywords": [["lower", 1]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": ["lower"],
+                "title": "Lower Score",
+                "url": "https://example.org/target/lower",
+                "score": 0.1,
+            },
+            {
+                "id": 4,
+                "advertiser": "Zero",
+                "click_url": "https://example.org/click/zero",
+                "impression_url": "https://example.org/impression/zero",
+                "full_keywords": [["zero", 1]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": ["zero"],
+                "title": "Zero Score",
+                "url": "https://example.org/target/zero",
+                "score": 0,
+            },
+            {
+                "id": 5,
+                "advertiser": "Null",
+                "click_url": "https://example.org/click/null",
+                "impression_url": "https://example.org/impression/null",
+                "full_keywords": [["null", 1]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": ["null"],
+                "title": "Null Score",
+                "url": "https://example.org/target/null",
+                "score": None,
+            },
+            {
+                "id": 6,
+                "advertiser": "Missing",
+                "click_url": "https://example.org/click/missing",
+                "impression_url": "https://example.org/impression/missing",
+                "full_keywords": [["missing", 1]],
+                "iab_category": "5 - Education",
+                "icon": "01",
+                "serp_categories": [],
+                "keywords": ["missing"],
+                "title": "Missing Score",
+                "url": "https://example.org/target/missing",
+            },
+        ]
+    )
+
+
 @pytest.fixture(name="rs_attachment_raw_no_custom_details_values")
 def fixture_rs_attachment_raw_no_custom_details_values() -> str:
     """Raw attachment data for a record that lacks a `suggestion_id` (rollout case)."""
@@ -308,6 +414,27 @@ def fixture_adm_top_pick(
 ) -> Provider:
     """AdM Provider backed by a single entry whose `top_pick_prefix` is 'fire'."""
     return Provider(backend=backend_mock_top_pick, metrics_client=statsd_mock, **adm_parameters)
+
+
+@pytest.fixture(name="backend_mock_score")
+def fixture_backend_mock_score(mocker: MockerFixture, rs_attachment_raw_score: str) -> Any:
+    """AdmBackend mock whose attachment records carry various `score` values."""
+    backend_mock: Any = mocker.AsyncMock(spec=AdmBackend)
+    index_manager = AmpIndexManager()  # type: ignore[no-untyped-call]
+    index_manager.build(f"US/({FormFactor.DESKTOP.value},)", rs_attachment_raw_score)
+    backend_mock.fetch.return_value = SuggestionContent(
+        index_manager=index_manager,
+        icons={"01": "attachment-host/main-workspace/quicksuggest/icon-01"},
+    )
+    return backend_mock
+
+
+@pytest.fixture(name="adm_score")
+def fixture_adm_score(
+    backend_mock_score: Any, adm_parameters: dict[str, Any], statsd_mock: Any
+) -> Provider:
+    """AdM Provider backed by entries whose `score` varies per keyword."""
+    return Provider(backend=backend_mock_score, metrics_client=statsd_mock, **adm_parameters)
 
 
 @pytest.fixture(name="thompson_sampler")

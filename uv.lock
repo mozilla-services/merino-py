@@ -1862,7 +1862,7 @@ requires-dist = [
     { name = "kinto-http", specifier = ">=11.9.0,<12" },
     { name = "mechanicalsoup", specifier = ">=1.3.0" },
     { name = "merino-common", editable = "packages/merino-common" },
-    { name = "mozilla-merino-ext", specifier = ">=0.3.3" },
+    { name = "mozilla-merino-ext", specifier = ">=0.4.0" },
     { name = "opentelemetry-api", specifier = ">=1.42.1" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.42.1" },
     { name = "opentelemetry-sdk", specifier = ">=1.42.1" },
@@ -2042,18 +2042,18 @@ dev = [
 
 [[package]]
 name = "mozilla-merino-ext"
-version = "0.3.3"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "maturin" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/af/ee/990a690c02c2ad3accb22e5487e043c5d8dbba65be9b861f3575ebfb9c3a/mozilla_merino_ext-0.3.3.tar.gz", hash = "sha256:502578f2b94eb8f1453e72c62af9df3811a66efdb4483d6c6dc510f07bcd2f49", size = 32733, upload-time = "2026-07-24T14:35:30.736Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/c4/171f196dabfa34230d9718d76f7c8c43fdd8fa3cc60ed98f369df15f92d8/mozilla_merino_ext-0.4.0.tar.gz", hash = "sha256:aad447927f054da90e7aba99084b8977f6129df12046d9ba7a8feeba01eea044", size = 33339, upload-time = "2026-11-02T17:12:08.698Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/9a/fe76d917a5324eda42e1cf085112eaf2c1b6d376bef2033eb20282c0f213/mozilla_merino_ext-0.3.3-cp313-abi3-macosx_10_12_x86_64.whl", hash = "sha256:0496e8c6744c8a29b10c039b40c9a440ad86dc8922d0a8a66c329fd8de53d9bc", size = 368068, upload-time = "2026-07-24T14:35:27.913Z" },
-    { url = "https://files.pythonhosted.org/packages/59/3f/0b403bc8eb8286715767d081a293d2f148096dc7b9a0ea11f5d6cc4fe5b2/mozilla_merino_ext-0.3.3-cp313-abi3-macosx_11_0_arm64.whl", hash = "sha256:25ace2873616ef64b428b2588d0d8187a0083141ac57f62cabb7c1e251adadbd", size = 355439, upload-time = "2026-07-24T14:35:26.325Z" },
-    { url = "https://files.pythonhosted.org/packages/ce/94/ffaa91d380b2341fb821af0b0e3451a1a369bc134f665c50b0ea00cb81cd/mozilla_merino_ext-0.3.3-cp313-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a19ffd0c305c15c4a62de3a4a7b607f78bd4e5d2ff2ccb4b69e7958a65fa34db", size = 392288, upload-time = "2026-07-24T14:35:24.794Z" },
-    { url = "https://files.pythonhosted.org/packages/4e/f4/e5917fb82b64ec6f59a448204fd4238e53c80510dd67d0ddf60b45dd40d8/mozilla_merino_ext-0.3.3-cp313-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:d6a553887281b31734c2267e5c4e02ff4d1a9f67a2df6e4cf44a68b7323561ea", size = 605200, upload-time = "2026-07-24T14:35:29.432Z" },
-    { url = "https://files.pythonhosted.org/packages/48/9c/fe270430580211ad60a47792f7a1951975ad9262924fd456329d18db2535/mozilla_merino_ext-0.3.3-cp313-abi3-win_amd64.whl", hash = "sha256:76255c24678dd6fd5b918f39c0437221e9d74291fd70a382eda6c9e11995e37e", size = 282405, upload-time = "2026-07-24T14:35:31.777Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/26/6dde19995dfaf8d0c87159572df301c956b0a67f870465a4d60a125de803/mozilla_merino_ext-0.4.0-cp313-abi3-macosx_10_12_x86_64.whl", hash = "sha256:3d38d6956183f3c029b7c1f5b8042ff719338c5503d8f485180049d4cdd89806", size = 366590, upload-time = "2026-11-02T17:12:06.459Z" },
+    { url = "https://files.pythonhosted.org/packages/7e/8c/ed9bcf30c7e3005075947ba7bf3db7b084dde65aa1a2ab1773d3de7d72ea/mozilla_merino_ext-0.4.0-cp313-abi3-macosx_11_0_arm64.whl", hash = "sha256:8bc0f2271ecde1c46ae60d1914f4984b42c4cee796bcf94bed9d927ac413a0ab", size = 352509, upload-time = "2026-11-02T17:12:05.43Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/47/a2cce756a0b9e4c1c1d75a35e9138fdeceb1fe221214b8e093a6e9c95a9d/mozilla_merino_ext-0.4.0-cp313-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e0167b6e2f3fbe50d940f7f2ec4ea88215fd100bb58553e0e33a379c443e98b1", size = 389495, upload-time = "2026-11-02T17:12:04.201Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/14/4cfd98704efec220bb462e67ea5ef3b20152c0afd877a4f76bee0613315a/mozilla_merino_ext-0.4.0-cp313-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:644a09399df9cebb2c0e29dba0c977d479f7ce4ccec6a7fc1b5d963e34f22ef5", size = 602983, upload-time = "2026-11-02T17:12:07.665Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/42/603e2b1791a8393db16eb8cfa3fa5cddd72857c628aa3783133540f251ce/mozilla_merino_ext-0.4.0-cp313-abi3-win_amd64.whl", hash = "sha256:24aa077d3334169c1f410753af03e22dd7112a1dd80a15996c2c76e31b2073c1", size = 282515, upload-time = "2026-11-02T17:12:09.484Z" },
 ]
 
 [[package]]
