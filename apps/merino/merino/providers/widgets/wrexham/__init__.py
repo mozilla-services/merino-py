@@ -1,0 +1,1 @@
+"""Wrexham AFC widget provider."""
