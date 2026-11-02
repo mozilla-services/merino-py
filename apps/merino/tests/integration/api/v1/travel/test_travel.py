@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import HttpUrl
 
 from merino.providers.travel.kayak.backends.protocol import TravelListing
 from merino.providers.travel.kayak.provider import Provider as TravelProvider
@@ -17,40 +16,60 @@ TRAVEL_URL = "/api/v1/travel"
 
 
 def test_travel_returns_listings_from_the_backend(client: TestClient, backend_mock: Any) -> None:
-    """Serves the backend's listings, passing the query, default locale and vertical through."""
+    """Serves the backend's listings, passing the query, default language, market and vertical through."""
     backend_mock.get_listings.return_value = [
-        TravelListing(title="Hotels in Paris", url=HttpUrl("https://www.kayak.com/hotels/Paris"))
+        TravelListing(
+            name="Charles de Gaulle Airport",
+            full_name="Charles de Gaulle Airport, Paris, France (CDG)",
+            type="airport",
+            iata_code="CDG",
+            place_id=1234,
+            country="France",
+        )
     ]
 
-    response = client.get(TRAVEL_URL, params={"vertical": "hotels", "q": "paris"})
+    response = client.get(TRAVEL_URL, params={"vertical": "flights", "q": "paris"})
 
     assert response.status_code == 200
     assert response.json() == [
-        {"title": "Hotels in Paris", "url": "https://www.kayak.com/hotels/Paris"}
+        {
+            "name": "Charles de Gaulle Airport",
+            "full_name": "Charles de Gaulle Airport, Paris, France (CDG)",
+            "type": "airport",
+            "iata_code": "CDG",
+            "place_id": 1234,
+            "city_id": None,
+            "country": "France",
+        }
     ]
-    backend_mock.get_listings.assert_called_once_with("paris", "en-US", "hotels")
+    backend_mock.get_listings.assert_called_once_with("paris", "en-US", "US", "flights")
 
 
-@pytest.mark.parametrize("vertical", ["hotels", "flights", "cars"])
-def test_travel_accepts_each_vertical(
-    client: TestClient, backend_mock: Any, vertical: str
-) -> None:
-    """Accepts every supported vertical and returns an empty list when there are no listings."""
-    response = client.get(TRAVEL_URL, params={"vertical": vertical, "q": "paris"})
+def test_travel_passes_the_requested_market(client: TestClient, backend_mock: Any) -> None:
+    """Forwards a client-provided market instead of the default."""
+    response = client.get(TRAVEL_URL, params={"vertical": "flights", "q": "nyc", "market": "GB"})
 
     assert response.status_code == 200
-    assert response.json() == []
-    backend_mock.get_listings.assert_called_once_with("paris", "en-US", vertical)
+    backend_mock.get_listings.assert_called_once_with("nyc", "en-US", "GB", "flights")
 
 
-def test_travel_passes_the_requested_locale(client: TestClient, backend_mock: Any) -> None:
-    """Forwards a client-provided locale instead of the default."""
+@pytest.mark.parametrize(
+    ["accept_language", "expected"],
+    [("fr-CA,en;q=0.8", "fr-CA"), ("en;q=0.5, de-DE;q=0.9", "de-DE")],
+    ids=["first_language", "highest_quality"],
+)
+def test_travel_passes_the_accepted_language(
+    client: TestClient, backend_mock: Any, accept_language: str, expected: str
+) -> None:
+    """Forwards the highest quality language from the `Accept-Language` header."""
     response = client.get(
-        TRAVEL_URL, params={"vertical": "flights", "q": "nyc", "locale": "fr-FR"}
+        TRAVEL_URL,
+        params={"vertical": "flights", "q": "nyc"},
+        headers={"Accept-Language": accept_language},
     )
 
     assert response.status_code == 200
-    backend_mock.get_listings.assert_called_once_with("nyc", "fr-FR", "flights")
+    backend_mock.get_listings.assert_called_once_with("nyc", expected, "US", "flights")
 
 
 @pytest.mark.parametrize("q", ["a" * 2, "a" * 64])
@@ -69,7 +88,9 @@ def test_travel_accepts_query_length_bounds(client: TestClient, q: str) -> None:
         {"vertical": "hotels"},
         {"vertical": "hotels", "q": "p"},
         {"vertical": "hotels", "q": "a" * 65},
-        {"vertical": "hotels", "q": "paris", "locale": "a" * 17},
+        {"vertical": "hotels", "q": "paris", "market": "USA"},
+        {"vertical": "hotels", "q": "paris", "market": "U"},
+        {"vertical": "hotels", "q": "paris", "market": "1A"},
     ],
     ids=[
         "missing_vertical",
@@ -77,7 +98,9 @@ def test_travel_accepts_query_length_bounds(client: TestClient, q: str) -> None:
         "missing_q",
         "q_too_short",
         "q_too_long",
-        "locale_too_long",
+        "market_too_long",
+        "market_too_short",
+        "market_non_alpha",
     ],
 )
 def test_travel_rejects_invalid_params(
