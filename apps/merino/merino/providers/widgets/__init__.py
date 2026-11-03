@@ -5,7 +5,7 @@ from merino.providers.widgets.wrexham.provider import WrexhamProvider
 
 _wrexham_provider: WrexhamProvider | None = None
 
-_wrexham_mock_data_enabled = settings.widget_providers.wrexham.mock_data_enabled
+_wrexham_mock_data_enabled = settings.widgets.providers.wrexham.mock_data_enabled
 
 
 async def init_providers() -> None:

@@ -1395,10 +1395,22 @@ url_base = "https://affiliate-{language}-{market}.kayakaffiliates.com"
 url_autocomplete_path = "/api/affiliate/autocomplete/v1/{vertical}"
 
 
-[default.widget_providers.wrexham]
-# MERINO_WIDGET_PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
+[default.widgets.providers.wrexham]
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
 # Whether the Wrexham widget endpoints serve mock data.
 mock_data_enabled = true
+
+[default.widgets.providers.wrexham.cache_ttls]
+# Redis expiry times for Wrexham data.
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CACHE_TTLS__FIXTURES_TTL_SEC
+fixtures_ttl_sec = 3600 # 1 hour
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CACHE_TTLS__LIVE_MATCHES_TTL_SEC
+live_matches_ttl_sec = 300 # 5 minutes
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CACHE_TTLS__STANDINGS_TTL_SEC
+standings_ttl_sec = 3600 # 1 hour
 
 
 [default.curated_recommendations.gcs]
