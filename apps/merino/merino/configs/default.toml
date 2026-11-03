@@ -316,6 +316,12 @@ socket_connect_timeout_sec = 3
 # Timeout to interact with Redis in seconds
 socket_timeout_sec = 3
 
+# MERINO_REDIS__WIDGETS_SERVER - URI to the Widgets Redis primary endpoint.
+widgets_server = "redis://localhost:6397"
+
+# MERINO_REDIS__WIDGETS_REPLICA - URI to the Widgets Redis replica endpoint.
+widgets_replica = "redis://localhost:6397"
+
 [default.sentry]
 # MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
