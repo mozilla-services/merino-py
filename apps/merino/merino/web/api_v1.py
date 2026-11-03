@@ -769,8 +769,7 @@ async def get_travel_listings(
     """Query merino for travel listings.
 
     **Args**:
-    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`. `cars` currently
-      returns an empty list.
+    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`.
     - `q`: The search query, between 3 and 64 characters.
     - `market`: [Optional] Two-letter market (country) code, e.g. `US`, `GB`. Defaults to `US`.
     - provider: Injected travel provider dependency used to fetch listings.
