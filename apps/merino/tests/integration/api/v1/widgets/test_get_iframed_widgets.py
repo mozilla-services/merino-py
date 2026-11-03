@@ -2,13 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-"""Integration tests for the /api/v1/widgets/iframed endpoint."""
+"""Integration tests for the /api/v1/widgets/framed endpoint."""
 
 from fastapi.testclient import TestClient
 
 from merino.providers.widgets.iframed.provider import Provider as IframedWidgetsProvider
 
-WIDGETS_URL = "/api/v1/widgets/iframed"
+WIDGETS_URL = "/api/v1/widgets/framed"
 
 
 def test_returns_widgets(

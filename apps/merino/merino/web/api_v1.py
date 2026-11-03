@@ -793,7 +793,7 @@ async def get_travel_listings(
 
 
 @router.get(
-    "/widgets/iframed",
+    "/widgets/framed",
     tags=["widgets"],
     summary="All enabled widgets intended to be displayed in iframes",
     response_model=IframedWidgetsResponse,

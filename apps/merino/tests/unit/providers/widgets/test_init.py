@@ -14,7 +14,7 @@ from merino.providers.widgets import (
     get_iframed_widgets_provider,
     get_wrexham_provider,
     init_providers,
-    shutdown_providers
+    shutdown_providers,
 )
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
@@ -68,6 +68,9 @@ async def test_shutdown_providers_when_not_initialized() -> None:
     """Does nothing when no provider has been initialized."""
     with patch("merino.providers.widgets._wrexham_provider", None):
         await shutdown_providers()
+
+
+@pytest.mark.asyncio
 async def test_init_providers() -> None:
     """Test for the `init_providers` method of the widgets provider"""
     with (
