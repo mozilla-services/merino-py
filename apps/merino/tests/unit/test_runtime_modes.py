@@ -199,6 +199,7 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
     import merino.main as main
     from merino.providers.widgets import get_wrexham_provider
     from merino.providers.widgets.wrexham.provider import WrexhamProvider
+    from merino.providers.widgets.wrexham.store import WrexhamStore
 
     async def configure_metrics() -> None:
         pass
@@ -207,7 +208,11 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
         pass
 
     def get_fake_wrexham_provider() -> WrexhamProvider:
-        return WrexhamProvider(mock_data_enabled=False)
+        return WrexhamProvider(
+            store=mocker.Mock(spec=WrexhamStore),
+            metrics_client=mocker.Mock(),
+            mock_data_enabled=True,
+        )
 
     mocker.patch.object(main, "configure_logging")
     mocker.patch.object(main, "configure_sentry")

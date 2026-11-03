@@ -11,6 +11,7 @@ from pydantic import BaseModel, HttpUrl, TypeAdapter, ValidationError, field_val
 from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.widgets.wrexham.protocol import (
+    WREXHAM_TEAM_ID,
     Competition,
     Match,
     MatchPeriod,
@@ -21,11 +22,6 @@ from merino.providers.widgets.wrexham.protocol import (
 from merino.utils.logos import LogoCategory, get_logo_url
 
 logger = logging.getLogger(__name__)
-
-WREXHAM_TEAM_ID = 90002327
-
-CHAMPIONSHIP = Competition(id=34, name="EFL Championship")
-FA_CUP = Competition(id=27, name="FA Cup")
 
 API_KEY_HEADER: str = settings.providers.sports.sportsdata.api_auth_header
 

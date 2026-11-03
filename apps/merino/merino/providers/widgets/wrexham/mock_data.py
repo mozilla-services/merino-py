@@ -10,6 +10,9 @@ from urllib.parse import urljoin
 from pydantic import HttpUrl
 
 from merino.providers.widgets.wrexham.protocol import (
+    CHAMPIONSHIP,
+    FA_CUP,
+    WREXHAM_TEAM_ID,
     Competition,
     Match,
     MatchesResponse,
@@ -18,11 +21,6 @@ from merino.providers.widgets.wrexham.protocol import (
     Standing,
     StandingsResponse,
     Team,
-)
-from merino.providers.widgets.wrexham.sportsdata import (
-    CHAMPIONSHIP,
-    FA_CUP,
-    WREXHAM_TEAM_ID,
 )
 from merino.utils.logos import CDN_ROOT_URL
 

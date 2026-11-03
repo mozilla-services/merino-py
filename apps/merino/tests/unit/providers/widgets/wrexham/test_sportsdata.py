@@ -15,11 +15,14 @@ from pydantic import HttpUrl
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.providers.widgets.wrexham.protocol import MatchPeriod, MatchStatus
-from merino.providers.widgets.wrexham.sportsdata import (
-    API_KEY_HEADER,
+from merino.providers.widgets.wrexham.protocol import (
     CHAMPIONSHIP,
     WREXHAM_TEAM_ID,
+    MatchPeriod,
+    MatchStatus,
+)
+from merino.providers.widgets.wrexham.sportsdata import (
+    API_KEY_HEADER,
     SportsDataBackend,
     SportsDataBackendError,
     SportsDataGame,

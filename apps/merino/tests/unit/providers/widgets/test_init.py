@@ -4,6 +4,7 @@
 
 """Unit tests for the __init__ widget provider module."""
 
+from datetime import timedelta
 from unittest.mock import patch
 from unittest.mock import Mock
 
@@ -30,6 +31,18 @@ async def test_init_providers_uses_mock_data_setting() -> None:
 
     assert isinstance(wrexham_provider, WrexhamProvider)
     assert wrexham_provider.mock_data_enabled is False
+
+
+@pytest.mark.asyncio
+async def test_init_providers_creates_a_store_with_the_configured_expiry_times() -> None:
+    """Gives the provider a store using the configured Redis expiry times."""
+    await init_providers()
+
+    store = get_wrexham_provider().store
+
+    assert store.fixtures_ttl == timedelta(hours=1)
+    assert store.live_matches_ttl == timedelta(minutes=5)
+    assert store.standings_ttl == timedelta(hours=1)
 
 
 @pytest.mark.asyncio
@@ -88,7 +101,7 @@ async def test_init_providers() -> None:
         assert iframed_widget_provider.name == "iframed Widgets Provider"
         assert iframed_widget_provider.metrics_client == mock_metrics_client_instance
 
-        mock_get_metrics_client.assert_called_once()
+        mock_get_metrics_client.assert_called()
 
 
 @pytest.mark.asyncio
