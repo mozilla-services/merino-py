@@ -31,6 +31,7 @@ class LogoCategory(StrEnum):
     NBA = "nba"
     NFL = "nfl"
     NHL = "nhl"
+    Soccer = "soccer"
 
 
 class Logo(BaseModel):
@@ -71,6 +72,9 @@ def get_logo_url(category: LogoCategory, key: str, format: str | None = None) ->
     For sports teams, it corresponds to the "key" field in the
     `merino.providers.suggest.sports.backends.sportsdata.common.Team`
     model.
+    For soccer clubs, it is the sportsdata.io `GlobalTeamId`, since soccer
+    team keys are not unique across clubs (e.g. "BAR" is Barnsley, Barnet
+    and Barrow).
 
     When `format` is set, will look for an entry with the specified
     format (e.g. "svg", "png") otherwise will fall back to the
@@ -82,7 +86,8 @@ def get_logo_url(category: LogoCategory, key: str, format: str | None = None) ->
         logger.warning(f"Logo does not exist for category={category} and key={key}")
         # Normalize to the manifest's uppercase storage form so "aa" and "AA"
         # collapse to a single series. Cardinality is bounded by the known key
-        # spaces (IATA codes, sports team keys), so this is safe for Prometheus.
+        # spaces (IATA codes, sports team keys, soccer team IDs), so this is safe
+        # for Prometheus.
         metrics_client.increment(
             "manifest.lookup",
             tags={"name": f"logos.{category}", "key": normalized_key, "result": "miss"},
