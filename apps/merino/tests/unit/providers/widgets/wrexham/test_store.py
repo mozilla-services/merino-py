@@ -171,9 +171,19 @@ async def test_written_value_holds_the_fetch_time_and_data(
     await store.write_live_matches([])
 
     assert orjson.loads(cache.values[LIVE_MATCHES_KEY]) == {
-        "fetched_at": "2026-11-02T15:30:00+00:00",
+        "fetched_at": "2026-11-02T15:30:00Z",
         "data": [],
     }
+
+
+@pytest.mark.asyncio
+async def test_read_accepts_a_utc_offset_written_as_plus_zero(
+    store: WrexhamStore, cache: FakeCache
+) -> None:
+    """A fetch time written as `+00:00` instead of `Z` is still read correctly."""
+    cache.values[LIVE_MATCHES_KEY] = b'{"fetched_at": "2026-11-02T15:30:00+00:00", "data": []}'
+
+    assert await store.read_live_matches() == ([], NOW)
 
 
 @pytest.mark.asyncio
@@ -192,6 +202,7 @@ async def test_read_returns_none_when_nothing_is_stored(store: WrexhamStore) -> 
         b'{"fetched_at": "yesterday", "data": []}',
         b'{"fetched_at": "2026-11-02T15:30:00+00:00", "data": {"not": "a table"}}',
         b"[]",
+        b'{"fetched_at": "2026-11-02T15:30:00", "data": []}',
     ],
     ids=[
         "invalid_json",
@@ -199,6 +210,7 @@ async def test_read_returns_none_when_nothing_is_stored(store: WrexhamStore) -> 
         "invalid_fetched_at",
         "invalid_data",
         "not_an_object",
+        "fetched_at_without_timezone",
     ],
 )
 @pytest.mark.asyncio
