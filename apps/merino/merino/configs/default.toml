@@ -1394,6 +1394,18 @@ url_autocomplete_path = "/api/affiliate/autocomplete/v1/{vertical}"
 # Whether the Wrexham widget endpoints serve mock data.
 mock_data_enabled = true
 
+[default.widget_providers.wrexham.cache_ttls]
+# Redis expiry times for Wrexham data.
+
+# MERINO_WIDGET_PROVIDERS__WREXHAM__CACHE_TTLS__FIXTURES_TTL_SEC
+fixtures_ttl_sec = 604800 # 7 days
+
+# MERINO_WIDGET_PROVIDERS__WREXHAM__CACHE_TTLS__LIVE_MATCHES_TTL_SEC
+live_matches_ttl_sec = 86400 # 1 day
+
+# MERINO_WIDGET_PROVIDERS__WREXHAM__CACHE_TTLS__STANDINGS_TTL_SEC
+standings_ttl_sec = 604800 # 7 days
+
 
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
