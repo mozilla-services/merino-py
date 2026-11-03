@@ -1,0 +1,1 @@
+"""iframed widgets provider."""

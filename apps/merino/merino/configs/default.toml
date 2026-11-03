@@ -1414,6 +1414,12 @@ live_matches_ttl_sec = 300 # 5 minutes
 standings_ttl_sec = 3600 # 1 hour
 
 
+[default.widget_providers.iframed]
+# MERINO_WIDGET_PROVIDERS__IFRAMED__ENABLED
+# Whether this provider is enabled. Enabled by default.
+enabled = true
+
+
 [default.curated_recommendations.gcs]
 # MERINO__CURATED_RECOMMENDATIONS__GCS__BUCKET_NAME
 # GCS bucket that contains Airflow data for Merino

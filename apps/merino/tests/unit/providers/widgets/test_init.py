@@ -5,12 +5,19 @@
 """Unit tests for the __init__ widget provider module."""
 
 from unittest.mock import patch
+from unittest.mock import Mock
 
 import pytest
 
 import merino.providers.widgets as widgets
-from merino.providers.widgets import get_wrexham_provider, init_providers, shutdown_providers
+from merino.providers.widgets import (
+    get_iframed_widgets_provider,
+    get_wrexham_provider,
+    init_providers,
+    shutdown_providers
+)
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
+from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
 
 
 @pytest.mark.asyncio
@@ -61,3 +68,36 @@ async def test_shutdown_providers_when_not_initialized() -> None:
     """Does nothing when no provider has been initialized."""
     with patch("merino.providers.widgets._wrexham_provider", None):
         await shutdown_providers()
+async def test_init_providers() -> None:
+    """Test for the `init_providers` method of the widgets provider"""
+    with (
+        patch("merino.providers.widgets._iframed_widgets_provider_enabled", True),
+        patch("merino.providers.widgets.get_metrics_client") as mock_get_metrics_client,
+    ):
+        mock_metrics_client_instance = Mock(name="mock_metrics_client")
+        mock_get_metrics_client.return_value = mock_metrics_client_instance
+
+        await init_providers()
+
+        iframed_widget_provider = widgets._iframed_widgets_provider
+
+        assert isinstance(iframed_widget_provider, IframedWidgetProvider)
+        assert iframed_widget_provider.name == "iframed Widgets Provider"
+        assert iframed_widget_provider.metrics_client == mock_metrics_client_instance
+
+        mock_get_metrics_client.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_iframed_widgets_provider_initialized() -> None:
+    """Verify get_iframed_widgets_provider returns class instance after init_providers call."""
+    await init_providers()
+
+    assert isinstance(get_iframed_widgets_provider(), IframedWidgetProvider)
+
+
+def test_get_iframed_widgets_provider_not_initialized() -> None:
+    """Verify that get_iframed_widgets_provider raises ValueError when _iframed_widget_provider is not initialized."""
+    with patch("merino.providers.widgets._iframed_widgets_provider", None):
+        with pytest.raises(ValueError, match="iframed widgets provider has not been initialized."):
+            get_iframed_widgets_provider()
