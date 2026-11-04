@@ -6,7 +6,7 @@ import logging
 from datetime import UTC, datetime
 
 from httpx import AsyncClient, HTTPError
-from pydantic import BaseModel, HttpUrl, TypeAdapter, ValidationError
+from pydantic import BaseModel, HttpUrl, TypeAdapter, ValidationError, field_validator
 
 from merino.exceptions import BackendError
 from merino.providers.widgets.wrexham.protocol import (
@@ -54,10 +54,11 @@ class SportsDataGame(BaseModel):
     Period: str | None
     Clock: int | None
     ClockExtra: int | None
-    GlobalHomeTeamId: int
-    GlobalAwayTeamId: int
-    HomeTeamName: str
-    AwayTeamName: str
+    # Teams are null when unknown, e.g. for a cup game cancelled before the draw.
+    GlobalHomeTeamId: int | None
+    GlobalAwayTeamId: int | None
+    HomeTeamName: str | None
+    AwayTeamName: str | None
     HomeTeamScore: int | None
     AwayTeamScore: int | None
     HomeTeamScorePenalty: int | None
@@ -84,6 +85,12 @@ class SportsDataRound(BaseModel):
     Games: list[SportsDataGame]
     Standings: list[SportsDataStanding]
 
+    @field_validator("Games", "Standings", mode="before")
+    @classmethod
+    def _null_as_empty(cls, value: object) -> object:
+        """Treat a null collection as an empty one."""
+        return [] if value is None else value
+
 
 _games_adapter = TypeAdapter(list[SportsDataGame])
 _rounds_adapter = TypeAdapter(list[SportsDataRound])
@@ -104,8 +111,17 @@ def to_match(
 ) -> Match | None:
     """Convert a SportsDataIO game to a match.
 
-    Returns None, and logs a warning, if the game status is not in the API contract.
+    Returns None if either team is unknown, and also logs a warning if the game status is not
+    in the API contract.
     """
+    home_id, away_id = game.GlobalHomeTeamId, game.GlobalAwayTeamId
+    home_name, away_name = game.HomeTeamName, game.AwayTeamName
+    if home_id is None or away_id is None or home_name is None or away_name is None:
+        logger.debug(
+            "Skipping SportsDataIO game with unknown teams", extra={"game_id": game.GameId}
+        )
+        return None
+
     if game.Status in _STATUS_ALIASES:
         status = _STATUS_ALIASES[game.Status]
     elif game.Status in MatchStatus:
@@ -132,14 +148,10 @@ def to_match(
         competition=competition,
         kickoff=_as_utc(game.DateTime),
         home_team=Team(
-            id=game.GlobalHomeTeamId,
-            name=game.HomeTeamName,
-            logo_url=team_logo_url(game.GlobalHomeTeamId, fallback_logo_url),
+            id=home_id, name=home_name, logo_url=team_logo_url(home_id, fallback_logo_url)
         ),
         away_team=Team(
-            id=game.GlobalAwayTeamId,
-            name=game.AwayTeamName,
-            logo_url=team_logo_url(game.GlobalAwayTeamId, fallback_logo_url),
+            id=away_id, name=away_name, logo_url=team_logo_url(away_id, fallback_logo_url)
         ),
         period=period,
         status=status,

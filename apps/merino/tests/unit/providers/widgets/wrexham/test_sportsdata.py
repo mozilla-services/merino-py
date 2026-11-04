@@ -80,13 +80,16 @@ def backend(handler: Any) -> SportsDataBackend:
 
 @pytest.mark.asyncio
 async def test_fetch_schedule_keeps_wrexham_matches_from_all_rounds() -> None:
-    """Return Wrexham matches only, earliest first, across rounds."""
+    """Return Wrexham matches only, earliest first, across rounds. Games with unknown teams
+    and null round collections don't fail the response.
+    """
     rounds = [
         {
             "SeasonType": 1,
             "Games": [
                 game(GameId=2, DateTime="2026-11-10T15:00:00"),
                 game(GameId=3, GlobalHomeTeamId=CARDIFF, GlobalAwayTeamId=WEST_HAM),
+                game(GameId=4, GlobalAwayTeamId=None, AwayTeamName=None),
             ],
             "Standings": [],
         },
@@ -95,6 +98,7 @@ async def test_fetch_schedule_keeps_wrexham_matches_from_all_rounds() -> None:
             "Games": [game(GameId=1, DateTime="2026-11-01T15:00:00")],
             "Standings": [],
         },
+        {"SeasonType": 3, "Games": None, "Standings": None},
     ]
 
     def handler(request: httpx.Request) -> httpx.Response:
