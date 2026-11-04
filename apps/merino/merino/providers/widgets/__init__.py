@@ -9,7 +9,7 @@ _wrexham_mock_data_enabled = settings.widgets.providers.wrexham.mock_data_enable
 
 
 async def init_providers() -> None:
-    """Initialize widget providers - currently only Wrexham AFC."""
+    """Initialize widget providers."""
     init_wrexham_provider()
 
 
@@ -18,6 +18,18 @@ def init_wrexham_provider() -> None:
     global _wrexham_provider
 
     _wrexham_provider = WrexhamProvider(mock_data_enabled=_wrexham_mock_data_enabled)
+
+
+async def shutdown_providers() -> None:
+    """Shut down widget providers.
+
+    This should only be called once at the shutdown of the application.
+    """
+    global _wrexham_provider
+
+    if _wrexham_provider is not None:
+        await _wrexham_provider.shutdown()
+        _wrexham_provider = None
 
 
 def get_wrexham_provider() -> WrexhamProvider:

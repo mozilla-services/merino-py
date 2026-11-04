@@ -30,8 +30,9 @@ suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
 [default.runtime]
 # MERINO_RUNTIME__MODE
 # Boot-time feature profile.
-# Allowed values: ALL, REGULAR.
-# Both currently serve the main Suggest API.
+# Allowed values: ALL, REGULAR, WIDGET.
+# REGULAR serves the main Suggest API, WIDGET serves the New Tab widgets API,
+# and ALL serves both.
 mode = "ALL"
 
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
