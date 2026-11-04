@@ -65,6 +65,25 @@ def test_invalid_configured_runtime_mode_fails_startup() -> None:
     assert "runtime.mode" in result.stderr
     assert "ALL" in result.stderr
     assert "REGULAR" in result.stderr
+    assert "WIDGET" in result.stderr
+
+
+@pytest.mark.parametrize("mode", list(RuntimeMode))
+def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) -> None:
+    """Every runtime mode is accepted by config validation at import time."""
+    env = os.environ.copy()
+    env["MERINO_RUNTIME__MODE"] = mode.value
+    # Fixed argv, shell=False, no untrusted input.
+    result = subprocess.run(  # nosec B603
+        [sys.executable, "-c", "import merino.main"],
+        cwd=Path(__file__).parents[4],
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize(
