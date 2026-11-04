@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 
 import merino.providers.widgets as widgets
-from merino.providers.widgets import get_wrexham_provider, init_providers
+from merino.providers.widgets import get_wrexham_provider, init_providers, shutdown_providers
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 
 
@@ -38,3 +38,26 @@ def test_get_wrexham_provider_not_initialized() -> None:
     with patch("merino.providers.widgets._wrexham_provider", None):
         with pytest.raises(ValueError, match="Wrexham widget provider has not been initialized."):
             get_wrexham_provider()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_providers_shuts_down_and_resets() -> None:
+    """Shuts down the Wrexham provider and clears module state."""
+    await init_providers()
+    provider = widgets._wrexham_provider
+    assert provider is not None
+
+    with patch.object(provider, "shutdown") as shutdown:
+        await shutdown_providers()
+
+    shutdown.assert_awaited_once()
+    assert widgets._wrexham_provider is None
+    with pytest.raises(ValueError, match="Wrexham widget provider has not been initialized."):
+        get_wrexham_provider()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_providers_when_not_initialized() -> None:
+    """Does nothing when no provider has been initialized."""
+    with patch("merino.providers.widgets._wrexham_provider", None):
+        await shutdown_providers()

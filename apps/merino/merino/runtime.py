@@ -7,6 +7,7 @@ class RuntimeFeature(StrEnum):
     """Feature groups controlled by the runtime mode."""
 
     REGULAR_API = "regular_api"
+    WIDGETS = "widgets"
 
 
 class RuntimeMode(StrEnum):
@@ -14,13 +15,15 @@ class RuntimeMode(StrEnum):
 
     ALL = "ALL"
     REGULAR = "REGULAR"
+    WIDGET = "WIDGET"
 
 
 _ALLOWED_RUNTIME_MODES = ", ".join(mode.value for mode in RuntimeMode)
 
 _RUNTIME_MODE_FEATURES: dict[RuntimeMode, frozenset[RuntimeFeature]] = {
-    RuntimeMode.ALL: frozenset({RuntimeFeature.REGULAR_API}),
+    RuntimeMode.ALL: frozenset({RuntimeFeature.REGULAR_API, RuntimeFeature.WIDGETS}),
     RuntimeMode.REGULAR: frozenset({RuntimeFeature.REGULAR_API}),
+    RuntimeMode.WIDGET: frozenset({RuntimeFeature.WIDGETS}),
 }
 
 

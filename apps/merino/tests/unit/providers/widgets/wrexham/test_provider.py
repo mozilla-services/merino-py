@@ -5,7 +5,9 @@
 """Unit tests for the Wrexham widget provider."""
 
 import pytest
+from pytest_mock import MockerFixture
 
+from merino.cache.protocol import CacheAdapter
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 
 
@@ -64,3 +66,22 @@ async def test_get_standings_returns_empty_table_when_mock_data_disabled() -> No
 
     assert standings.competition.name == "EFL Championship"
     assert standings.standings == []
+
+
+@pytest.mark.asyncio
+async def test_shutdown_without_cache_is_a_noop() -> None:
+    """Shutdown does nothing when no cache is configured."""
+    provider = WrexhamProvider(mock_data_enabled=True)
+
+    await provider.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_closes_cache(mocker: MockerFixture) -> None:
+    """Shutdown closes the Redis cache connection when one is configured."""
+    cache = mocker.AsyncMock(spec=CacheAdapter)
+    provider = WrexhamProvider(mock_data_enabled=False, cache=cache)
+
+    await provider.shutdown()
+
+    cache.close.assert_awaited_once()
