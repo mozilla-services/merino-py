@@ -44,7 +44,6 @@ class WrexhamProvider:
         return build_mock_standings()
 
     async def shutdown(self) -> None:
-        """Release resources held by the provider.
-        """
+        """Release resources held by the provider."""
         if self.cache is not None:
             await self.cache.close()
