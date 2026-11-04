@@ -30,6 +30,7 @@ class ArticleBlocklistGenerator:
         """Stream the latest export from GCS and return the article blocklist as CSV.
 
         Each row holds the article title and its Wikidata QID (`wikibase_item`).
+        Blocked articles without a QID are skipped.
         Raises a `RuntimeError` if no export is available or no article is blocked.
         """
         latest = self.file_manager.get_latest_gcs()
@@ -45,6 +46,7 @@ class ArticleBlocklistGenerator:
 
         scanned = 0
         blocked = 0
+        skipped_no_qid = 0
         gcs_stream = self.file_manager.stream_from_gcs(latest)
         # The export is a sequence of pairs of (`operator`, `document`) lines,
         # only the document is needed here.
@@ -54,14 +56,23 @@ class ArticleBlocklistGenerator:
             scanned += 1
 
             if self._should_block(doc):
-                writer.writerow([doc.get("title", ""), doc.get("wikibase_item", "")])
-                blocked += 1
+                # Consumers match on the QID, so a row without one is unusable.
+                if qid := doc.get("wikibase_item"):
+                    writer.writerow([doc.get("title", ""), qid])
+                    blocked += 1
+                else:
+                    skipped_no_qid += 1
 
             reporter.report(scanned)
 
         logger.info(
             "Completed generating article blocklist",
-            extra={"export": latest.name, "scanned": scanned, "blocked": blocked},
+            extra={
+                "export": latest.name,
+                "scanned": scanned,
+                "blocked": blocked,
+                "skipped_no_qid": skipped_no_qid,
+            },
         )
         # An empty blocklist most likely means the export or the category blocklist
         # changed shape. Fail rather than replace the last good blocklist.

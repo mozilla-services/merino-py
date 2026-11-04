@@ -34,20 +34,21 @@ def fixture_file_manager(mocker):
 
 
 def test_generate_writes_blocked_articles(file_manager):
-    """Verify only articles in a blocked category are written, with their QID."""
+    """Verify only articles in a blocked category with a QID are written."""
     file_manager.stream_from_gcs.return_value = iter(
         _export(
             {"title": "Blocked", "category": ["Bad", "Other"], "wikibase_item": "Q1"},
             {"title": "Allowed", "category": ["Other"], "wikibase_item": "Q2"},
             {"title": "No QID", "category": ["Bad"]},
+            {"title": "Empty QID", "category": ["Bad"], "wikibase_item": ""},
             {"title": "Redirect", "category": ["Bad"], "page_type": "redirect"},
             {"title": "No categories", "wikibase_item": "Q3"},
         )
     )
 
-    result = ArticleBlocklistGenerator({"Bad"}, file_manager).generate(5)
+    result = ArticleBlocklistGenerator({"Bad"}, file_manager).generate(6)
 
-    assert result.splitlines() == ["title,qid", "Blocked,Q1", "No QID,"]
+    assert result.splitlines() == ["title,qid", "Blocked,Q1"]
     file_manager.stream_from_gcs.assert_called_once_with(SNAPSHOT)
 
 

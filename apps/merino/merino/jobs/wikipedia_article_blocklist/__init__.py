@@ -1,14 +1,14 @@
 """CLI commands for the wikipedia_article_blocklist module"""
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 import typer
 
 from merino.configs import settings as config
 from merino.jobs.wikipedia_article_blocklist.generator import ArticleBlocklistGenerator
-from merino.jobs.wikipedia_article_blocklist.utils import create_blocklist
 from merino.jobs.wikipedia_indexer.filemanager import FileManager
+from merino.jobs.wikipedia_indexer.utils import create_blocklist
 from merino.utils.gcs import initialize_storage_client
 
 logger = logging.getLogger(__name__)
@@ -53,8 +53,8 @@ def generate(
     ),
 ):
     """Write the title and QID of English articles in a blocked category to a CSV on GCS"""
-    # check the destination up front
-    if not gcs_storage_bucket or not gcs_storage_project:
+    # check the gcs values up front
+    if not all((gcs_path, gcp_project, gcs_storage_bucket, gcs_storage_project)):
         raise ValueError("Both the GCS storage bucket and project must be set")
 
     blocklist = create_blocklist(blocklist_file_url)
@@ -64,7 +64,7 @@ def generate(
     file_manager = FileManager(gcs_path, gcp_project, "", LANGUAGE)
     content = ArticleBlocklistGenerator(blocklist, file_manager).generate(total_docs)
 
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
 
     client = initialize_storage_client(destination_gcp_project=gcs_storage_project)
     bucket = client.bucket(gcs_storage_bucket)

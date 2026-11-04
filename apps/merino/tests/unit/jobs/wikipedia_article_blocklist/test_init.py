@@ -1,5 +1,7 @@
 """Unit tests for the wikipedia article blocklist CLI commands."""
 
+from datetime import UTC
+
 import pytest
 
 from merino.jobs.wikipedia_article_blocklist import generate
@@ -16,6 +18,7 @@ def fixture_collaborators(mocker):
     datetime.now.return_value.strftime.return_value = "20260316120000"
 
     return {
+        "datetime": datetime,
         "file_manager": mocker.patch(f"{MODULE}.FileManager"),
         "generator": generator,
         "storage_client": mocker.patch(f"{MODULE}.initialize_storage_client"),
@@ -63,6 +66,7 @@ def test_generate_uploads_timestamped_csv_and_copies_it_to_latest(collaborators)
     )
     bucket = collaborators["storage_client"].return_value.bucket
     bucket.assert_called_once_with("storage-bucket")
+    collaborators["datetime"].now.assert_called_once_with(UTC)
     bucket.return_value.blob.assert_called_once_with(f"{prefix}/20260316120000.csv")
     blob = bucket.return_value.blob.return_value
     blob.upload_from_string.assert_called_once_with(
