@@ -1,0 +1,80 @@
+inheritedBy:
+  language: rust
+
+# Task names match python.yml, so `moon run :lint` and `moon ci ':#quality' :test` cover both.
+# Tasks run from the project root, where Cargo expects to run. `target/` is never a task output:
+# moon's archive doesn't scale to target directories, so CI caches it separately.
+fileGroups:
+  sources:
+    - src/**/*
+    - Cargo.toml
+    - Cargo.lock
+    - configs/**/*
+    - build.rs
+    # Embedded with `include_str!`, so it's a compile input like the sources.
+    - /version.json
+  tests:
+    - tests/**/*
+  configs:
+    - rust-toolchain.toml
+    - clippy.toml
+    - rustfmt.toml
+
+tasks:
+  format-check:
+    description: Check rustfmt formatting for this project
+    command: cargo
+    args:
+      - fmt
+      - --check
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "@group(configs)"
+    tags:
+      - quality
+      - ci
+
+  lint:
+    description: Run Clippy for this project
+    # Warnings stay warnings locally, so work in progress compiles; CI denies them.
+    command: cargo
+    args:
+      - clippy
+      - --all-targets
+      - --locked
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "@group(configs)"
+    tags:
+      - quality
+      - ci
+
+  unit-test:
+    description: Run the tests for this project
+    command: cargo
+    args:
+      - test
+      - --locked
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "@group(configs)"
+    tags:
+      - test
+      - ci
+    options:
+      outputStyle: stream
+
+  test:
+    description: Run all tests for this project
+    command: noop
+    deps:
+      - unit-test
+    tags:
+      - test
+      - ci
+    options:
+      # A cache hit replays the target's last stdout, which may be stale from a former `test`.
+      cache: false

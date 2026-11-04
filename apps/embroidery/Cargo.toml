@@ -1,0 +1,46 @@
+[package]
+name = "embroidery"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MPL-2.0"
+publish = false
+
+[dependencies]
+anyhow = "1"
+axum = "0.8"
+clap = { version = "4.6", features = ["derive", "env"] }
+config = { version = "0.15", default-features = false, features = ["toml"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1.54", features = ["macros", "rt-multi-thread", "net", "signal", "time"] }
+tower = "0.5"
+tower-http = { version = "0.7", features = ["trace", "request-id", "timeout", "catch-panic"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+
+[dev-dependencies]
+http-body-util = "0.1"
+insta = { version = "1.49", features = ["json", "redactions"] }
+tempfile = "3.27.0"
+tokio = { version = "1.54", features = ["io-util"] }
+tower = { version = "0.5", features = ["util"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+unreachable_pub = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+dbg_macro = "warn"
+todo = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+
+[profile.release]
+lto = "thin"
+# Readable backtraces for Sentry
+debug = "line-tables-only"

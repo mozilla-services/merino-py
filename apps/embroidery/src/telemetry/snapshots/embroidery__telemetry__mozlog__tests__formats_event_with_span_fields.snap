@@ -1,0 +1,20 @@
+---
+source: src/telemetry/mozlog.rs
+expression: "lines[0]"
+---
+{
+  "EnvVersion": "2.0",
+  "Fields": {
+    "latency_ms": 3,
+    "msg": "request finished",
+    "path": "/__heartbeat__",
+    "request_id": "abc",
+    "status": 200
+  },
+  "Hostname": "[hostname]",
+  "Logger": "embroidery",
+  "Pid": "[pid]",
+  "Severity": 6,
+  "Timestamp": "[timestamp]",
+  "Type": "embroidery.http"
+}

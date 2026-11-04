@@ -33,3 +33,6 @@ local_data/
 
 # Ignore generated credentials from google-github-actions/auth
 gha-creds-*.json
+
+# Rust build output; a debug target/ easily holds several gigabytes.
+apps/embroidery/target/

@@ -58,6 +58,9 @@ jobs:
           MOON_BASE: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
           MOON_HEAD: ${{ github.sha }}
           MOON_FORCE: ${{ github.event_name == 'workflow_dispatch' || github.event.forced == true }}
+          # Rust warnings, including Clippy's, fail CI. Local task runs keep them as warnings so
+          # work in progress still compiles.
+          RUSTFLAGS: "-D warnings"
         # Moon owns affected selection. Merino coverage runs whenever Merino is affected, reusing
         # the unit and integration results from `:test`.
         run: >-
