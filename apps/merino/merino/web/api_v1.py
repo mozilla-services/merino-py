@@ -97,6 +97,10 @@ from merino.providers.travel import get_travel_provider
 from merino.providers.travel.kayak.backends.protocol import TravelListing, TravelVertical
 from merino.providers.travel.kayak.provider import Provider as TravelProvider
 
+from merino.providers.widgets import get_iframed_widgets_provider
+from merino.providers.widgets.iframed.backends.protocol import IframedWidgetsResponse
+from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -786,3 +790,28 @@ async def get_travel_listings(
         listings = await provider.get_listings(q, languages[0], market, vertical)
 
     return JSONResponse(content=jsonable_encoder(listings))
+
+
+@router.get(
+    "/widgets/framed",
+    tags=["widgets"],
+    summary="All enabled widgets intended to be displayed in iframes",
+    response_model=IframedWidgetsResponse,
+)
+async def get_iframed_widgets(
+    request: Request,
+    locale: Annotated[str, Query(max_length=16)] = "en-US",
+    provider: IframedWidgetProvider = Depends(get_iframed_widgets_provider),
+) -> Response:
+    """Query merino for iframed widgets.
+
+    **Args**:
+    - locale: optionally provided by the caller, defaults to en-US (future-proofing design)
+    - provider: Injected iframed widgets provider dependency used to build response.
+    """
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+
+    with metrics_client.timeit("widgets.iframed.request.timing"):
+        widgets_response = await provider.get_widgets(locale=locale)
+
+    return JSONResponse(content=jsonable_encoder(widgets_response))
