@@ -3,12 +3,9 @@
 from datetime import UTC, datetime
 
 from merino.cache.protocol import CacheAdapter
-from merino.providers.widgets.wrexham.mock_data import (
-    CHAMPIONSHIP,
-    build_mock_matches,
-    build_mock_standings,
-)
+from merino.providers.widgets.wrexham.mock_data import build_mock_matches, build_mock_standings
 from merino.providers.widgets.wrexham.protocol import MatchesResponse, StandingsResponse
+from merino.providers.widgets.wrexham.sportsdata import CHAMPIONSHIP
 
 
 class WrexhamProvider:

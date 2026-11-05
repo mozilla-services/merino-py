@@ -19,12 +19,12 @@ from merino.providers.widgets.wrexham.protocol import (
     StandingsResponse,
     Team,
 )
+from merino.providers.widgets.wrexham.sportsdata import (
+    CHAMPIONSHIP,
+    FA_CUP,
+    WREXHAM_TEAM_ID,
+)
 from merino.utils.logos import CDN_ROOT_URL
-
-WREXHAM_TEAM_ID = 90002327
-
-CHAMPIONSHIP = Competition(id=34, name="EFL Championship")
-FA_CUP = Competition(id=27, name="FA Cup")
 
 # Global team ID -> (full name, abbreviated name).
 _TEAMS: dict[int, tuple[str, str]] = {

@@ -6,14 +6,9 @@
 
 from datetime import UTC, datetime
 
-from merino.providers.widgets.wrexham.mock_data import (
-    CHAMPIONSHIP,
-    FA_CUP,
-    WREXHAM_TEAM_ID,
-    build_mock_matches,
-    build_mock_standings,
-)
+from merino.providers.widgets.wrexham.mock_data import build_mock_matches, build_mock_standings
 from merino.providers.widgets.wrexham.protocol import Match, MatchPeriod, MatchStatus
+from merino.providers.widgets.wrexham.sportsdata import CHAMPIONSHIP, FA_CUP, WREXHAM_TEAM_ID
 
 NOW = datetime(2026, 11, 2, 15, 30, tzinfo=UTC)
 

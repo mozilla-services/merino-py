@@ -581,11 +581,15 @@ api_key=""
 request_timeout_sec = 0.25
 
 [default.providers.sports.sportsdata]
-# MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__API_KEY
 # The SportsData API key for local or remote access
 api_key=""
 
-# MERINO_PROVIDERS__SPORTS__SPORTSDATA_CACHE_DIR
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__API_AUTH_HEADER
+# The HTTP header that carries the SportsData API key
+api_auth_header="Ocp-Apim-Subscription-Key"
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__CACHE_DIR
 # Directory to store JSON request responses
 cache_dir="/tmp"
 
@@ -1400,6 +1404,27 @@ url_autocomplete_path = "/api/affiliate/autocomplete/v1/{vertical}"
 # MERINO_WIDGETS__PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
 # Whether the Wrexham widget endpoints serve mock data.
 mock_data_enabled = true
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__FALLBACK_LOGO_URL
+# Image used for teams without a logo in the logo manifest.
+# TODO: replace with the real fallback image once it's uploaded to the CDN.
+fallback_logo_url = "https://prod-images.merino.prod.webservices.mozgcp.net/logos/soccer/fallback.png"
+
+[default.widgets.providers.wrexham.sportsdata]
+# The SportsDataIO API key is shared with the sports provider:
+# `providers.sports.sportsdata.api_key`.
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__SPORTSDATA__URL_BASE
+# Base URL of the SportsDataIO soccer API.
+url_base = "https://api.sportsdata.io/v4/soccer/scores/json/"
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__SPORTSDATA__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for connecting to SportsDataIO.
+connect_timeout_sec = 3.0
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__SPORTSDATA__REQUEST_TIMEOUT_SEC
+# Timeout in seconds for a SportsDataIO request.
+request_timeout_sec = 10.0
 
 [default.widgets.providers.wrexham.cache_ttls]
 # Redis expiry times for Wrexham data.
