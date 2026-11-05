@@ -541,7 +541,7 @@ providers/widgets/wrexham:
     labels:
       - name: data
         description: |
-          The data that couldn't be read, e.g. "matches".
+          The data that couldn't be read: "matches" or "standings".
     scope: |
       The "api/v1/widgets/wrexham/*" API endpoints.
     alert_policy: []

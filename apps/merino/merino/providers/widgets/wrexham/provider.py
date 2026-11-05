@@ -67,15 +67,40 @@ class WrexhamProvider:
         return group_matches(matches, limit)
 
     async def get_standings(self) -> StandingsResponse:
-        """Return the EFL Championship table."""
-        if not self.mock_data_enabled:
-            return StandingsResponse(competition=CHAMPIONSHIP, standings=[])
+        """Return the EFL Championship table, ordered by league position.
 
-        return build_mock_standings()
+        The table is empty when none is available yet, e.g. before the season starts.
+
+        Raises:
+            - `WrexhamDataUnavailableError` if the standings can't be read from Redis.
+        """
+        if self.mock_data_enabled:
+            return build_mock_standings()
+
+        try:
+            stored = await self.store.read_standings()
+        except CacheAdapterError as ex:
+            self._record_redis_error("standings", ex)
+            raise WrexhamDataUnavailableError("Could not read Wrexham standings.") from ex
+
+        if stored is None:
+            logger.warning("No Wrexham standings are stored in Redis")
+            raise WrexhamDataUnavailableError("No Wrexham standings are stored.")
+
+        standings, _ = stored
+        return StandingsResponse(
+            competition=CHAMPIONSHIP,
+            standings=sorted(standings, key=lambda standing: standing.position),
+        )
 
     async def shutdown(self) -> None:
         """Close the provider's Redis connection."""
         await self.store.cache.close()
+
+    def _record_redis_error(self, data: str, ex: CacheAdapterError) -> None:
+        """Log and count a failed Redis read of `data` (e.g. "matches")."""
+        logger.error(f"Could not read Wrexham {data} from Redis", extra={"error": str(ex)})
+        self.metrics_client.increment("widgets.wrexham.redis.error", tags={"data": data})
 
     async def _read_matches(self) -> list[Match]:
         """Read Wrexham's fixtures for both competitions and apply the live match data."""
@@ -86,8 +111,7 @@ class WrexhamProvider:
             ]
             stored_live = await self.store.read_live_matches()
         except CacheAdapterError as ex:
-            logger.error("Could not read Wrexham matches from Redis", extra={"error": str(ex)})
-            self.metrics_client.increment("widgets.wrexham.redis.error", tags={"data": "matches"})
+            self._record_redis_error("matches", ex)
             raise WrexhamDataUnavailableError("Could not read Wrexham matches.") from ex
 
         if all(stored is None for stored in stored_fixtures):

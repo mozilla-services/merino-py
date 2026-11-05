@@ -22,7 +22,7 @@ from merino.providers.widgets.wrexham.provider import (
 )
 from merino.providers.widgets.wrexham.store import WrexhamStore
 from tests.types import FilterCaplogFixture
-from tests.unit.providers.widgets.wrexham.conftest import MakeMatch
+from tests.unit.providers.widgets.wrexham.conftest import MakeMatch, MakeStanding
 
 CHAMPIONSHIP_ID = 34
 FA_CUP_ID = 27
@@ -296,14 +296,66 @@ async def test_get_standings_returns_the_mock_table(mock_provider: WrexhamProvid
 
 
 @pytest.mark.asyncio
-async def test_get_standings_returns_empty_table_when_mock_data_disabled(
-    provider: WrexhamProvider,
+async def test_get_standings_returns_the_stored_table_by_position(
+    provider: WrexhamProvider, store: WrexhamStore, make_standing: MakeStanding
 ) -> None:
-    """Returns the Championship with an empty table when mock data is disabled."""
+    """Returns the stored Championship table, ordered by league position."""
+    await store.write_standings([make_standing(3), make_standing(1), make_standing(2)])
+
     standings = await provider.get_standings()
 
     assert standings.competition.name == "EFL Championship"
+    assert [row.position for row in standings.standings] == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_get_standings_returns_an_empty_stored_table(
+    provider: WrexhamProvider, store: WrexhamStore
+) -> None:
+    """Returns an empty table when the stored table is empty, e.g. before the season starts."""
+    await store.write_standings([])
+
+    standings = await provider.get_standings()
+
     assert standings.standings == []
+
+
+@pytest.mark.asyncio
+async def test_get_standings_raises_when_no_standings_are_stored(
+    provider: WrexhamProvider,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """Raises WrexhamDataUnavailableError and logs when no standings are stored."""
+    with pytest.raises(WrexhamDataUnavailableError):
+        await provider.get_standings()
+
+    records = filter_caplog(caplog.records, "merino.providers.widgets.wrexham.provider")
+    assert [record.message for record in records] == ["No Wrexham standings are stored in Redis"]
+
+
+@pytest.mark.asyncio
+async def test_get_standings_raises_logs_and_counts_redis_errors(
+    store: WrexhamStore,
+    statsd_mock: Any,
+    mocker: MockerFixture,
+    caplog: LogCaptureFixture,
+    filter_caplog: FilterCaplogFixture,
+) -> None:
+    """A Redis read failure is logged, counted and raised as WrexhamDataUnavailableError."""
+    mocker.patch.object(store, "read_standings", side_effect=CacheAdapterError("Redis is down"))
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+
+    with pytest.raises(WrexhamDataUnavailableError):
+        await provider.get_standings()
+
+    statsd_mock.increment.assert_called_once_with(
+        "widgets.wrexham.redis.error", tags={"data": "standings"}
+    )
+    records = filter_caplog(caplog.records, "merino.providers.widgets.wrexham.provider")
+    assert [record.message for record in records] == [
+        "Could not read Wrexham standings from Redis"
+    ]
 
 
 @pytest.mark.asyncio

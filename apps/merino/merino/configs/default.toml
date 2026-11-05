@@ -1409,6 +1409,10 @@ mock_data_enabled = true
 # How long Fastly and browsers can cache responses from the matches endpoint.
 matches_cache_control_ttl_sec = 10
 
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__STANDINGS_CACHE_CONTROL_TTL_SEC
+# How long Fastly and browsers can cache responses from the standings endpoint.
+standings_cache_control_ttl_sec = 60
+
 # MERINO_WIDGETS__PROVIDERS__WREXHAM__FALLBACK_LOGO_URL
 # Image used for teams without a logo in the logo manifest.
 # TODO: replace with the real fallback image once it's uploaded to the CDN.
