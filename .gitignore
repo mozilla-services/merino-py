@@ -179,3 +179,7 @@ dev/local_data/
 dev/local_setup/gcs
 # Don't ignore files we need in source control for tests
 !dev/local_setup/gcs/logos
+
+# Embroidery build output and local config overrides
+apps/embroidery/target/
+apps/embroidery/configs/*.local.toml

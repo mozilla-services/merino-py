@@ -1,0 +1,18 @@
+language: rust
+stack: backend
+layer: application
+
+project:
+  title: Embroidery
+  description: Providing favicons and logos for Firefox
+
+toolchains:
+  default: rust
+
+env:
+  CARGO_TERM_COLOR: always
+
+tasks:
+  unit-test:
+    env:
+      EMBROIDERY_ENV: testing

@@ -11,6 +11,7 @@
 - [Social contract](./social-contract.md)
 - [Working on the Code](./dev/index.md)
   - [Working in the monorepo](./dev/monorepo.md)
+  - [Embroidery: local development](./dev/embroidery.md)
   - [Content Moderation](./dev/content-moderation.md)
   - [Dependencies](./dev/dependencies.md)
   - [Logging and Metrics](./dev/logging-and-metrics.md)
