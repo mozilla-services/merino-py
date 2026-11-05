@@ -1,0 +1,25 @@
+name: Set up Rust
+description: Install the Rust toolchain pinned in rust-toolchain.toml and restore the Cargo cache
+runs:
+  using: composite
+  steps:
+    # Install once, before `moon ci` runs Rust tasks in parallel. Otherwise every concurrent
+    # `cargo` call triggers rustup's auto-install of the same toolchain into the same
+    # ~/.rustup, and the installs fail on each other's partial files.
+    - name: Install the pinned toolchain
+      shell: bash
+      # Without arguments, rustup installs the toolchain and components from the root
+      # rust-toolchain.toml, which every Rust project in the repository shares.
+      run: rustup toolchain install && rustc --version && cargo --version
+    # After the install: the cache key includes the rustc version, so a toolchain bump starts a
+    # fresh cache instead of restoring artifacts the new compiler can't use.
+    # Conditionally approved for Mozilla orgs (MoCo-GHE-Admin/Approved-GHE-Add-Ons): keep it
+    # pinned by SHA, review the diff before bumping, and keep secrets out of any job that uses it,
+    # since cached paths are restored into later runs.
+    - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        workspaces: apps/embroidery
+        shared-key: embroidery
+        # PRs only restore. GitHub caps cache storage per repository, so PR caches would evict
+        # the main cache that every PR starts from.
+        save-if: ${{ github.ref == 'refs/heads/main' }}

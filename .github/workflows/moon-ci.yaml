@@ -36,6 +36,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-moon
+      - uses: ./.github/actions/setup-rust
       - name: Set up documentation tools
         run: |
           mkdir -p bin
