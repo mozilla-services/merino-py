@@ -16,6 +16,7 @@ from dynaconf.base import LazySettings
 from httpx import AsyncClient
 from pydantic import BaseModel
 
+from merino.configs import settings
 from merino.providers.suggest.sports import (
     LOGGING_TAG,
     TEAM_TTL_WEEKS,
@@ -44,7 +45,7 @@ logger = logging.getLogger(__name__)
 SPORTSDATA_UTC = ZoneInfo("UTC")
 SPORTSDATA_US_EASTERN = ZoneInfo("America/New_York")
 SPORTSDATA_LEAGUE_NA_SPORTS = {"MLB", "NBA", "NHL", "NFL"}
-SPORTSDATA_API_KEY_HEADER = "Ocp-Apim-Subscription-Key"
+SPORTSDATA_API_KEY_HEADER: str = settings.providers.sports.sportsdata.api_auth_header
 
 
 def sportsdata_timezone_for_sport(sport: str) -> ZoneInfo:

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from httpx import AsyncClient, HTTPError
 from pydantic import BaseModel, HttpUrl, TypeAdapter, ValidationError, field_validator
 
+from merino.configs import settings
 from merino.exceptions import BackendError
 from merino.providers.widgets.wrexham.protocol import (
     Competition,
@@ -26,19 +27,17 @@ WREXHAM_TEAM_ID = 90002327
 CHAMPIONSHIP = Competition(id=34, name="EFL Championship")
 FA_CUP = Competition(id=27, name="FA Cup")
 
-API_KEY_HEADER = "Ocp-Apim-Subscription-Key"
+API_KEY_HEADER: str = settings.providers.sports.sportsdata.api_auth_header
 
 # SportsDataIO `SeasonType` of regular-season rounds (play-off rounds are 3, "postseason").
 REGULAR_SEASON = 1
 
-# SportsDataIO statuses outside the contract that map to a contract status.
+# SportsDataIO statuses that MatchStatus doesn't include, and the MatchStatus used for each.
 _STATUS_ALIASES: dict[str, MatchStatus] = {
     "Start Delay": MatchStatus.Delayed,
     "Rain Delay": MatchStatus.Delayed,
     "Awarded": MatchStatus.Final,
 }
-
-_LIVE_STATUSES = {MatchStatus.InProgress, MatchStatus.Break}
 
 
 class SportsDataBackendError(BackendError):
@@ -49,11 +48,12 @@ class SportsDataGame(BaseModel):
     """The SportsDataIO game fields used by the widget."""
 
     GameId: int
-    DateTime: datetime
-    Status: str
+    # Null for some games, e.g. cancelled or awarded early-round cup games with no kickoff time.
+    DateTime: datetime | None
+    Status: str | None
     Period: str | None
-    Clock: int | None
-    ClockExtra: int | None
+    # Display clock during play, e.g. "90+3". Empty before kickoff and after the match.
+    ClockDisplay: str | None
     # Teams are null when unknown, e.g. for a cup game cancelled before the draw.
     GlobalHomeTeamId: int | None
     GlobalAwayTeamId: int | None
@@ -63,7 +63,7 @@ class SportsDataGame(BaseModel):
     AwayTeamScore: int | None
     HomeTeamScorePenalty: int | None
     AwayTeamScorePenalty: int | None
-    UpdatedUtc: datetime
+    UpdatedUtc: datetime | None
 
 
 class SportsDataStanding(BaseModel):
@@ -85,11 +85,26 @@ class SportsDataRound(BaseModel):
     Games: list[SportsDataGame]
     Standings: list[SportsDataStanding]
 
-    @field_validator("Games", "Standings", mode="before")
+    @field_validator("Games", mode="before")
     @classmethod
     def _null_as_empty(cls, value: object) -> object:
         """Treat a null collection as an empty one."""
         return [] if value is None else value
+
+    @field_validator("Standings", mode="before")
+    @classmethod
+    def _total_rows_only(cls, value: object) -> object:
+        """Keep only the overall table's rows, treating a null collection as an empty one.
+
+        Rows are dropped before they're validated, so an incomplete row in a table we don't
+        serve can't fail the whole response.
+        """
+        if not isinstance(value, list):
+            return [] if value is None else value
+        # Each round has three tables, one per `Scope`: `Total` counts all matches, `Home`
+        # only home matches and `Away` only away matches. The widget shows the league table,
+        # which is the `Total` one; it's also the only one whose `Order` is the league position.
+        return [row for row in value if isinstance(row, dict) and row.get("Scope") == "Total"]
 
 
 _games_adapter = TypeAdapter(list[SportsDataGame])
@@ -111,15 +126,22 @@ def to_match(
 ) -> Match | None:
     """Convert a SportsDataIO game to a match.
 
-    Returns None if either team is unknown, and also logs a warning if the game status is not
-    in the API contract.
+    Returns None if either team, the kickoff time, the status or the update time is unknown,
+    and also logs a warning if the game status is not in the API contract.
     """
     home_id, away_id = game.GlobalHomeTeamId, game.GlobalAwayTeamId
     home_name, away_name = game.HomeTeamName, game.AwayTeamName
-    if home_id is None or away_id is None or home_name is None or away_name is None:
-        logger.debug(
-            "Skipping SportsDataIO game with unknown teams", extra={"game_id": game.GameId}
-        )
+    kickoff, updated_at = game.DateTime, game.UpdatedUtc
+    if (
+        home_id is None
+        or away_id is None
+        or home_name is None
+        or away_name is None
+        or kickoff is None
+        or updated_at is None
+        or game.Status is None
+    ):
+        logger.debug("Skipping incomplete SportsDataIO game", extra={"game_id": game.GameId})
         return None
 
     if game.Status in _STATUS_ALIASES:
@@ -133,20 +155,18 @@ def to_match(
         )
         return None
 
-    # SportsDataIO sends a period even before kickoff; the contract wants none until the
-    # match begins.
+    # SportsDataIO sends a period even before kickoff, but we only return one once the
+    # match has started.
     period = None
     if game.HomeTeamScore is not None and game.Period is not None and game.Period in MatchPeriod:
         period = MatchPeriod(game.Period)
 
-    clock = None
-    if status in _LIVE_STATUSES and game.Clock is not None:
-        clock = f"{game.Clock}+{game.ClockExtra}" if game.ClockExtra else str(game.Clock)
+    clock = game.ClockDisplay or None
 
     return Match(
         id=game.GameId,
         competition=competition,
-        kickoff=_as_utc(game.DateTime),
+        kickoff=_as_utc(kickoff),
         home_team=Team(
             id=home_id, name=home_name, logo_url=team_logo_url(home_id, fallback_logo_url)
         ),
@@ -160,7 +180,7 @@ def to_match(
         away_score=game.AwayTeamScore,
         home_penalty_score=game.HomeTeamScorePenalty,
         away_penalty_score=game.AwayTeamScorePenalty,
-        updated_at=_as_utc(game.UpdatedUtc),
+        updated_at=_as_utc(updated_at),
     )
 
 
@@ -187,10 +207,8 @@ def to_standings(rounds: list[SportsDataRound], fallback_logo_url: HttpUrl) -> l
     for round in reversed(rounds):
         if round.SeasonType != REGULAR_SEASON:
             continue
-        # Each round has three tables, one per `Scope`: `Total` counts all matches, `Home`
-        # only home matches and `Away` only away matches. The widget shows the league table,
-        # which is the `Total` one; it's also the only one whose `Order` is the league position.
-        rows = [row for row in round.Standings if row.Scope == "Total"]
+        # Only `Total` rows are kept when the response is parsed.
+        rows = round.Standings
         if rows:
             return [
                 Standing(

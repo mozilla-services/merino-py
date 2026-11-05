@@ -585,7 +585,11 @@ request_timeout_sec = 0.25
 # The SportsData API key for local or remote access
 api_key=""
 
-# MERINO_PROVIDERS__SPORTS__SPORTSDATA_CACHE_DIR
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__API_AUTH_HEADER
+# The HTTP header that carries the SportsData API key
+api_auth_header="Ocp-Apim-Subscription-Key"
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__CACHE_DIR
 # Directory to store JSON request responses
 cache_dir="/tmp"
 

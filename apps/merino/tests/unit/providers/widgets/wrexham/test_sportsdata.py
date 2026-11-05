@@ -43,8 +43,7 @@ def game(**overrides: Any) -> dict[str, Any]:
         "DateTime": "2026-11-04T19:45:00",
         "Status": "Scheduled",
         "Period": "Regular",
-        "Clock": None,
-        "ClockExtra": None,
+        "ClockDisplay": "",
         "GlobalHomeTeamId": WREXHAM_TEAM_ID,
         "GlobalAwayTeamId": CARDIFF,
         "HomeTeamName": "Wrexham AFC",
@@ -80,8 +79,8 @@ def backend(handler: Any) -> SportsDataBackend:
 
 @pytest.mark.asyncio
 async def test_fetch_schedule_keeps_wrexham_matches_from_all_rounds() -> None:
-    """Return Wrexham matches only, earliest first, across rounds. Games with unknown teams
-    and null round collections don't fail the response.
+    """Return Wrexham matches only, earliest first, across rounds. Incomplete games (unknown
+    teams or kickoff time) and null round collections don't fail the response.
     """
     rounds = [
         {
@@ -90,6 +89,7 @@ async def test_fetch_schedule_keeps_wrexham_matches_from_all_rounds() -> None:
                 game(GameId=2, DateTime="2026-11-10T15:00:00"),
                 game(GameId=3, GlobalHomeTeamId=CARDIFF, GlobalAwayTeamId=WEST_HAM),
                 game(GameId=4, GlobalAwayTeamId=None, AwayTeamName=None),
+                game(GameId=5, DateTime=None),
             ],
             "Standings": [],
         },
@@ -139,7 +139,9 @@ async def test_fetch_live_matches_requests_today_in_utc(
 
 @pytest.mark.asyncio
 async def test_fetch_standings_uses_latest_regular_season_table() -> None:
-    """Serve the overall table of the latest regular-season round that has one, by position."""
+    """Serve the overall table of the latest regular-season round that has one, by position.
+    An incomplete row outside the overall table doesn't fail the response.
+    """
     rounds = [
         {"SeasonType": 1, "Games": [], "Standings": [standing(WEST_HAM, "Old", 1)]},
         {
@@ -148,7 +150,7 @@ async def test_fetch_standings_uses_latest_regular_season_table() -> None:
             "Standings": [
                 standing(CARDIFF, "Cardiff City", 2),
                 standing(UNKNOWN_TEAM, "Nowhere", 1),
-                standing(WEST_HAM, "West Ham", 1, scope="Home"),
+                standing(WEST_HAM, "West Ham", 1, scope="Home") | {"Points": None},
             ],
         },
         {"SeasonType": 1, "Games": [], "Standings": []},
@@ -202,13 +204,12 @@ def test_to_match_skips_unsupported_status(
 
 
 def test_to_match_live_and_shootout_fields() -> None:
-    """Format stoppage time in the clock and keep penalty shootout scores."""
+    """Use the display clock during play and keep penalty shootout scores."""
     raw = SportsDataGame.model_validate(
         game(
             Status="InProgress",
             Period="PenaltyShootout",
-            Clock=90,
-            ClockExtra=3,
+            ClockDisplay="90+3",
             HomeTeamScore=1,
             AwayTeamScore=1,
             HomeTeamScorePenalty=4,
