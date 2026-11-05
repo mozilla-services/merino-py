@@ -15,13 +15,15 @@ from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
 from merino.jobs.widgets.wrexham import WrexhamIngester
-from merino.providers.widgets.wrexham.protocol import Competition, Match, MatchStatus, Team
-from merino.providers.widgets.wrexham.sportsdata import (
+from merino.providers.widgets.wrexham.protocol import (
     CHAMPIONSHIP,
     FA_CUP,
-    SportsDataBackend,
-    SportsDataBackendError,
+    Competition,
+    Match,
+    MatchStatus,
+    Team,
 )
+from merino.providers.widgets.wrexham.sportsdata import SportsDataBackend, SportsDataBackendError
 from merino.providers.widgets.wrexham.store import WrexhamStore
 from tests.types import FilterCaplogFixture
 

@@ -10,6 +10,9 @@ from urllib.parse import urljoin
 from pydantic import HttpUrl
 
 from merino.providers.widgets.wrexham.protocol import (
+    CHAMPIONSHIP,
+    FA_CUP,
+    WREXHAM_TEAM_ID,
     Competition,
     Match,
     MatchesResponse,
@@ -18,11 +21,6 @@ from merino.providers.widgets.wrexham.protocol import (
     Standing,
     StandingsResponse,
     Team,
-)
-from merino.providers.widgets.wrexham.sportsdata import (
-    CHAMPIONSHIP,
-    FA_CUP,
-    WREXHAM_TEAM_ID,
 )
 from merino.utils.logos import CDN_ROOT_URL
 
@@ -138,7 +136,7 @@ def _match(
 def build_mock_matches(now: datetime) -> MatchesResponse:
     """Return mock matches covering a range of match states, relative to `now`.
 
-    `previous` is newest first and `upcoming` earliest first, as in the API contract.
+    `previous` is newest first and `upcoming` earliest first, as the matches endpoint returns them.
     """
     base = now.replace(minute=0, second=0, microsecond=0)
 

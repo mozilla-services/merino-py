@@ -1,11 +1,17 @@
 """Response models for the Wrexham widget endpoints."""
 
-from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import AwareDatetime, BaseModel, Field, HttpUrl
 
 
+# Before changing these statuses:
+# - Removing or renaming one: matches are stored in Redis with their status, and a stored match
+#   whose status is no longer listed here can't be loaded. That makes the whole Redis key count
+#   as missing. Bump `KEY_PREFIX` in `store.py` (e.g. to `wrexham:v2`) so the old data is ignored
+#   and rewritten by the job.
+# - Adding one: add it to one of the groups in `provider.py` (previous, current or upcoming),
+#   and map SportsDataIO's value to it in `sportsdata.py` if the names differ.
 class MatchStatus(StrEnum):
     """Match status, normalized from SportsDataIO."""
 
@@ -17,7 +23,6 @@ class MatchStatus(StrEnum):
     Canceled = "Canceled"
     Suspended = "Suspended"
     Delayed = "Delayed"
-    Unknown = "Unknown"
 
 
 class MatchPeriod(StrEnum):
@@ -35,6 +40,12 @@ class Competition(BaseModel):
     name: str = Field(description="Competition name.")
 
 
+WREXHAM_TEAM_ID = 90002327  # SportsDataIO global team ID
+
+CHAMPIONSHIP = Competition(id=34, name="EFL Championship")
+FA_CUP = Competition(id=27, name="FA Cup")
+
+
 class Team(BaseModel):
     """A team taking part in a match or listed in the standings."""
 
@@ -48,7 +59,7 @@ class Match(BaseModel):
 
     id: int = Field(description="Unique match identifier.")
     competition: Competition = Field(description="Competition the match belongs to.")
-    kickoff: datetime = Field(description="Latest scheduled kickoff time, in UTC.")
+    kickoff: AwareDatetime = Field(description="Latest scheduled kickoff time, in UTC.")
     home_team: Team = Field(description="Home team.")
     away_team: Team = Field(description="Away team.")
     period: MatchPeriod | None = Field(
@@ -58,7 +69,7 @@ class Match(BaseModel):
     status: MatchStatus = Field(description="Match status.")
     clock: str | None = Field(
         description="Elapsed minutes including stoppage time, e.g. '67' or '90+3'. "
-        "Null when the match is not live."
+        "Null when the match is not live or when match is on break."
     )
     home_score: int | None = Field(
         description="Home goals including extra time, excluding the penalty shootout. "
@@ -74,7 +85,7 @@ class Match(BaseModel):
     away_penalty_score: int | None = Field(
         description="Away penalty shootout goals. Null when not applicable."
     )
-    updated_at: datetime = Field(description="Time the match data was last updated, in UTC.")
+    updated_at: AwareDatetime = Field(description="Time the match data was last updated, in UTC.")
 
 
 class MatchesResponse(BaseModel):
@@ -95,6 +106,13 @@ class Standing(BaseModel):
     played: int = Field(ge=0, description="Number of matches played.")
     goal_difference: int = Field(description="Goals scored minus goals conceded.")
     points: int = Field(description="League points. Can be negative after a points deduction.")
+
+
+class ErrorResponse(BaseModel):
+    """Error response for the widget endpoints."""
+
+    status_code: int = Field(serialization_alias="statusCode", description="HTTP status code.")
+    message: str = Field(description="Human-readable error message.")
 
 
 class StandingsResponse(BaseModel):

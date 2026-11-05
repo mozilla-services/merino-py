@@ -7,8 +7,14 @@
 from datetime import UTC, datetime
 
 from merino.providers.widgets.wrexham.mock_data import build_mock_matches, build_mock_standings
-from merino.providers.widgets.wrexham.protocol import Match, MatchPeriod, MatchStatus
-from merino.providers.widgets.wrexham.sportsdata import CHAMPIONSHIP, FA_CUP, WREXHAM_TEAM_ID
+from merino.providers.widgets.wrexham.protocol import (
+    CHAMPIONSHIP,
+    FA_CUP,
+    WREXHAM_TEAM_ID,
+    Match,
+    MatchPeriod,
+    MatchStatus,
+)
 
 NOW = datetime(2026, 11, 2, 15, 30, tzinfo=UTC)
 
@@ -25,7 +31,7 @@ def test_matches_are_grouped_relative_to_now() -> None:
     assert all(match.kickoff > NOW for match in matches.upcoming)
 
 
-def test_matches_are_ordered_as_in_the_contract() -> None:
+def test_matches_are_ordered_newest_and_earliest_first() -> None:
     """Previous matches are newest first and upcoming matches earliest first."""
     matches = build_mock_matches(NOW)
 
@@ -54,7 +60,7 @@ def test_matches_have_unique_ids() -> None:
 
 
 def test_matches_cover_a_range_of_states() -> None:
-    """Groups hold the statuses the contract assigns them, with a range of states covered."""
+    """Each group holds the statuses that belong in it, with a range of states covered."""
     matches = build_mock_matches(NOW)
 
     assert {match.status for match in matches.previous} == {

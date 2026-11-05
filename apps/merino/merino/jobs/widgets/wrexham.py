@@ -16,12 +16,8 @@ from pydantic import HttpUrl
 
 from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
-from merino.providers.widgets.wrexham.protocol import Match
-from merino.providers.widgets.wrexham.sportsdata import (
-    CHAMPIONSHIP,
-    FA_CUP,
-    SportsDataBackend,
-)
+from merino.providers.widgets.wrexham.protocol import CHAMPIONSHIP, FA_CUP, Match
+from merino.providers.widgets.wrexham.sportsdata import SportsDataBackend
 from merino.providers.widgets.wrexham.store import WrexhamStore
 from merino_common.utils.http_client import create_http_client
 

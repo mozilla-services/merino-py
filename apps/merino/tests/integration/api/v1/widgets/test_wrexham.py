@@ -4,13 +4,23 @@
 
 """Integration tests for the /api/v1/widgets/wrexham endpoints."""
 
+import asyncio
+from datetime import UTC, datetime, timedelta
+
 import pytest
+from fastapi.openapi.utils import get_openapi
 from fastapi.testclient import TestClient
 
+from merino.providers.widgets.wrexham.protocol import Competition, Match, MatchStatus, Team
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
+from merino.providers.widgets.wrexham.store import WrexhamStore
+from merino.web import api_v1_widgets
 
 MATCHES_URL = "/api/v1/widgets/wrexham/matches"
 STANDINGS_URL = "/api/v1/widgets/wrexham/standings"
+CHAMPIONSHIP_ID = 34
+FA_CUP_ID = 27
+KICKOFF = datetime(2026, 11, 2, 15, tzinfo=UTC)
 
 MATCH_FIELDS = {
     "id",
@@ -29,8 +39,29 @@ MATCH_FIELDS = {
 }
 
 
-def test_matches_returns_the_contract_shape(client: TestClient) -> None:
-    """Returns previous, current and upcoming groups with the contract's match fields."""
+def _match(match_id: int, status: MatchStatus, kickoff: datetime) -> Match:
+    """Build a Championship match for tests."""
+    started = status in (MatchStatus.InProgress, MatchStatus.Final)
+    team = Team(id=1, name="Team", logo_url="https://example.com/logo.png")
+    return Match(
+        id=match_id,
+        competition=Competition(id=CHAMPIONSHIP_ID, name="EFL Championship"),
+        kickoff=kickoff,
+        home_team=team,
+        away_team=team,
+        period=None,
+        status=status,
+        clock="60" if status == MatchStatus.InProgress else None,
+        home_score=1 if started else None,
+        away_score=0 if started else None,
+        home_penalty_score=None,
+        away_penalty_score=None,
+        updated_at=kickoff,
+    )
+
+
+def test_matches_returns_the_expected_shape(client: TestClient) -> None:
+    """Returns previous, current and upcoming groups with the expected match fields."""
     response = client.get(MATCHES_URL)
 
     assert response.status_code == 200
@@ -70,8 +101,8 @@ def test_matches_rejects_an_invalid_limit(client: TestClient, limit: str) -> Non
     assert response.status_code == 400
 
 
-def test_standings_returns_the_contract_shape(client: TestClient) -> None:
-    """Returns the Championship table with the contract's standing fields."""
+def test_standings_returns_the_expected_shape(client: TestClient) -> None:
+    """Returns the Championship table with the expected standing fields."""
     response = client.get(STANDINGS_URL)
 
     assert response.status_code == 200
@@ -87,16 +118,66 @@ def test_standings_returns_the_contract_shape(client: TestClient) -> None:
     }
 
 
-def test_matches_returns_empty_groups_when_mock_data_disabled(
-    client: TestClient, wrexham_provider: WrexhamProvider
+def test_matches_sets_cache_control_header(client: TestClient) -> None:
+    """Sets a Cache-Control header so Fastly can cache the response."""
+    response = client.get(MATCHES_URL)
+
+    assert response.headers["Cache-Control"] == "public, max-age=10, s-maxage=10"
+
+
+def test_matches_returns_grouped_matches_from_redis(
+    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
 ) -> None:
-    """Returns 200 with empty match groups when mock data is disabled."""
+    """Returns stored matches grouped by status, with live data replacing fixture data."""
     wrexham_provider.mock_data_enabled = False
+    asyncio.run(
+        store.write_fixtures(
+            CHAMPIONSHIP_ID,
+            [
+                _match(1, MatchStatus.Final, KICKOFF - timedelta(days=7)),
+                _match(2, MatchStatus.Scheduled, KICKOFF),
+                _match(3, MatchStatus.Scheduled, KICKOFF + timedelta(days=7)),
+            ],
+        )
+    )
+    asyncio.run(store.write_fixtures(FA_CUP_ID, []))
+    asyncio.run(store.write_live_matches([_match(2, MatchStatus.InProgress, KICKOFF)]))
 
     response = client.get(MATCHES_URL)
 
     assert response.status_code == 200
-    assert response.json() == {"previous": [], "current": [], "upcoming": []}
+    body = response.json()
+    assert [match["id"] for match in body["previous"]] == [1]
+    assert [match["id"] for match in body["current"]] == [2]
+    assert [match["id"] for match in body["upcoming"]] == [3]
+    assert body["current"][0]["status"] == "InProgress"
+    assert response.headers["Cache-Control"] == "public, max-age=10, s-maxage=10"
+
+
+def test_matches_returns_503_when_no_fixtures_are_stored(
+    client: TestClient, wrexham_provider: WrexhamProvider
+) -> None:
+    """Returns the 503 error response, without caching, when no fixtures are stored."""
+    wrexham_provider.mock_data_enabled = False
+
+    response = client.get(MATCHES_URL)
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "statusCode": 503,
+        "message": "Wrexham data is temporarily unavailable. Please try again later.",
+    }
+    assert "Cache-Control" not in response.headers
+
+
+def test_matches_documents_the_503_response() -> None:
+    """Lists the 503 error response, with its fields, in the API docs."""
+    docs = get_openapi(title="widgets", version="test", routes=api_v1_widgets.router.routes)
+
+    responses = docs["paths"]["/widgets/wrexham/matches"]["get"]["responses"]
+    schema_ref = responses["503"]["content"]["application/json"]["schema"]["$ref"]
+    schema = docs["components"]["schemas"][schema_ref.rsplit("/", 1)[-1]]
+    assert set(schema["properties"]) == {"statusCode", "message"}
 
 
 def test_standings_returns_empty_table_when_mock_data_disabled(

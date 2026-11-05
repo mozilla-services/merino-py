@@ -12,16 +12,8 @@ from freezegun import freeze_time
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.cache.none import NoCacheAdapter
 from merino.exceptions import CacheAdapterError
-from merino.providers.widgets.wrexham.protocol import (
-    Competition,
-    Match,
-    MatchPeriod,
-    MatchStatus,
-    Standing,
-    Team,
-)
+from merino.providers.widgets.wrexham.protocol import MatchStatus
 from merino.providers.widgets.wrexham.store import (
     LIVE_MATCHES_KEY,
     STANDINGS_KEY,
@@ -29,81 +21,11 @@ from merino.providers.widgets.wrexham.store import (
     fixtures_key,
 )
 from tests.types import FilterCaplogFixture
+from tests.unit.providers.widgets.wrexham.conftest import FakeCache, MakeMatch, MakeStanding
 
 NOW = datetime(2026, 11, 2, 15, 30, tzinfo=UTC)
-FIXTURES_TTL = timedelta(hours=3)
-LIVE_MATCHES_TTL = timedelta(minutes=10)
-STANDINGS_TTL = timedelta(hours=6)
 CHAMPIONSHIP_ID = 34
 FA_CUP_ID = 27
-
-
-def _team(team_id: int) -> Team:
-    """Build a team for testing."""
-    return Team(id=team_id, name=f"Team {team_id}", logo_url="https://example.com/logo.png")
-
-
-def _match(match_id: int, competition_id: int, status: MatchStatus = MatchStatus.Final) -> Match:
-    """Build a match for testing."""
-    finished = status == MatchStatus.Final
-    return Match(
-        id=match_id,
-        competition=Competition(id=competition_id, name=f"Competition {competition_id}"),
-        kickoff=datetime(2026, 10, 31, 15, tzinfo=UTC),
-        home_team=_team(1),
-        away_team=_team(2),
-        period=MatchPeriod.Regular if finished else None,
-        status=status,
-        clock=None,
-        home_score=2 if finished else None,
-        away_score=1 if finished else None,
-        home_penalty_score=None,
-        away_penalty_score=None,
-        updated_at=datetime(2026, 10, 31, 17, tzinfo=UTC),
-    )
-
-
-def _standing(position: int) -> Standing:
-    """Build a table row for tests."""
-    return Standing(
-        position=position, team=_team(position), played=14, goal_difference=0, points=20
-    )
-
-
-class FakeCache(NoCacheAdapter):
-    """In-memory stand-in for a cache adapter that records expiry times."""
-
-    def __init__(self) -> None:
-        self.values: dict[str, bytes] = {}
-        self.ttls: dict[str, timedelta | None] = {}
-
-    async def get(self, key: str) -> bytes | None:
-        """Return the stored value, or None."""
-        return self.values.get(key)
-
-    async def set(
-        self, key: str, value: bytes | str, ttl: timedelta | None = None, nx: bool = False
-    ) -> None:
-        """Store a value and record its expiry."""
-        self.values[key] = value.encode() if isinstance(value, str) else value
-        self.ttls[key] = ttl
-
-
-@pytest.fixture(name="cache")
-def fixture_cache() -> FakeCache:
-    """Return an empty in-memory cache."""
-    return FakeCache()
-
-
-@pytest.fixture(name="store")
-def fixture_store(cache: FakeCache) -> WrexhamStore:
-    """Return a store backed by the in-memory cache."""
-    return WrexhamStore(
-        cache=cache,
-        fixtures_ttl=FIXTURES_TTL,
-        live_matches_ttl=LIVE_MATCHES_TTL,
-        standings_ttl=STANDINGS_TTL,
-    )
 
 
 def test_key_names_use_the_versioned_prefix() -> None:
@@ -116,29 +38,33 @@ def test_key_names_use_the_versioned_prefix() -> None:
 
 @freeze_time(NOW)
 @pytest.mark.asyncio
-async def test_fixtures_round_trip_per_competition(store: WrexhamStore, cache: FakeCache) -> None:
+async def test_fixtures_round_trip_per_competition(
+    store: WrexhamStore, fake_cache: FakeCache, make_match: MakeMatch
+) -> None:
     """Fixtures are written and read per competition, with the fetch time and expiry."""
-    championship = [_match(1, CHAMPIONSHIP_ID), _match(2, CHAMPIONSHIP_ID)]
-    fa_cup = [_match(3, FA_CUP_ID)]
+    championship = [make_match(1), make_match(2)]
+    fa_cup = [make_match(3, competition_id=FA_CUP_ID)]
 
     await store.write_fixtures(CHAMPIONSHIP_ID, championship)
     await store.write_fixtures(FA_CUP_ID, fa_cup)
 
     assert await store.read_fixtures(CHAMPIONSHIP_ID) == (championship, NOW)
     assert await store.read_fixtures(FA_CUP_ID) == (fa_cup, NOW)
-    assert cache.ttls[fixtures_key(CHAMPIONSHIP_ID)] == FIXTURES_TTL
+    assert fake_cache.ttls[fixtures_key(CHAMPIONSHIP_ID)] == store.fixtures_ttl
 
 
 @freeze_time(NOW)
 @pytest.mark.asyncio
-async def test_live_matches_round_trip(store: WrexhamStore, cache: FakeCache) -> None:
+async def test_live_matches_round_trip(
+    store: WrexhamStore, fake_cache: FakeCache, make_match: MakeMatch
+) -> None:
     """Live matches are written and read under one key, with the fetch time and expiry."""
-    live = [_match(4, CHAMPIONSHIP_ID, status=MatchStatus.InProgress)]
+    live = [make_match(4, status=MatchStatus.InProgress)]
 
     await store.write_live_matches(live)
 
     assert await store.read_live_matches() == (live, NOW)
-    assert cache.ttls[LIVE_MATCHES_KEY] == LIVE_MATCHES_TTL
+    assert fake_cache.ttls[LIVE_MATCHES_KEY] == store.live_matches_ttl
 
 
 @freeze_time(NOW)
@@ -152,25 +78,27 @@ async def test_empty_live_matches_round_trip(store: WrexhamStore) -> None:
 
 @freeze_time(NOW)
 @pytest.mark.asyncio
-async def test_standings_round_trip(store: WrexhamStore, cache: FakeCache) -> None:
+async def test_standings_round_trip(
+    store: WrexhamStore, fake_cache: FakeCache, make_standing: MakeStanding
+) -> None:
     """The table is written and read with its fetch time and expiry."""
-    standings = [_standing(1), _standing(2), _standing(3)]
+    standings = [make_standing(1), make_standing(2), make_standing(3)]
 
     await store.write_standings(standings)
 
     assert await store.read_standings() == (standings, NOW)
-    assert cache.ttls[STANDINGS_KEY] == STANDINGS_TTL
+    assert fake_cache.ttls[STANDINGS_KEY] == store.standings_ttl
 
 
 @freeze_time(NOW)
 @pytest.mark.asyncio
 async def test_written_value_holds_the_fetch_time_and_data(
-    store: WrexhamStore, cache: FakeCache
+    store: WrexhamStore, fake_cache: FakeCache
 ) -> None:
     """The stored JSON holds the fetch time next to the data."""
     await store.write_live_matches([])
 
-    assert orjson.loads(cache.values[LIVE_MATCHES_KEY]) == {
+    assert orjson.loads(fake_cache.values[LIVE_MATCHES_KEY]) == {
         "fetched_at": "2026-11-02T15:30:00Z",
         "data": [],
     }
@@ -178,12 +106,28 @@ async def test_written_value_holds_the_fetch_time_and_data(
 
 @pytest.mark.asyncio
 async def test_read_accepts_a_utc_offset_written_as_plus_zero(
-    store: WrexhamStore, cache: FakeCache
+    store: WrexhamStore, fake_cache: FakeCache
 ) -> None:
     """A fetch time written as `+00:00` instead of `Z` is still read correctly."""
-    cache.values[LIVE_MATCHES_KEY] = b'{"fetched_at": "2026-11-02T15:30:00+00:00", "data": []}'
+    fake_cache.values[LIVE_MATCHES_KEY] = (
+        b'{"fetched_at": "2026-11-02T15:30:00+00:00", "data": []}'
+    )
 
     assert await store.read_live_matches() == ([], NOW)
+
+
+@pytest.mark.parametrize("field", ["kickoff", "updated_at"])
+@pytest.mark.asyncio
+async def test_read_returns_none_when_a_match_time_has_no_timezone(
+    store: WrexhamStore, fake_cache: FakeCache, make_match: MakeMatch, field: str
+) -> None:
+    """A stored match whose time has no timezone is treated as missing."""
+    await store.write_live_matches([make_match(1)])
+    stored = orjson.loads(fake_cache.values[LIVE_MATCHES_KEY])
+    stored["data"][0][field] = "2026-10-31T15:00:00"
+    fake_cache.values[LIVE_MATCHES_KEY] = orjson.dumps(stored)
+
+    assert await store.read_live_matches() is None
 
 
 @pytest.mark.asyncio
@@ -216,13 +160,13 @@ async def test_read_returns_none_when_nothing_is_stored(store: WrexhamStore) -> 
 @pytest.mark.asyncio
 async def test_read_returns_none_and_logs_when_data_cant_be_parsed(
     store: WrexhamStore,
-    cache: FakeCache,
+    fake_cache: FakeCache,
     caplog: LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,
     raw: bytes,
 ) -> None:
     """A stored value that can't be parsed is logged and treated as missing."""
-    cache.values[STANDINGS_KEY] = raw
+    fake_cache.values[STANDINGS_KEY] = raw
 
     assert await store.read_standings() is None
 
@@ -239,9 +183,9 @@ async def test_read_raises_cache_errors(mocker: MockerFixture) -> None:
     cache.get.side_effect = CacheAdapterError("Redis is down")
     store = WrexhamStore(
         cache=cache,
-        fixtures_ttl=FIXTURES_TTL,
-        live_matches_ttl=LIVE_MATCHES_TTL,
-        standings_ttl=STANDINGS_TTL,
+        fixtures_ttl=timedelta(hours=3),
+        live_matches_ttl=timedelta(minutes=10),
+        standings_ttl=timedelta(hours=6),
     )
 
     with pytest.raises(CacheAdapterError):
