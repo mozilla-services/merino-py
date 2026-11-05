@@ -11,7 +11,13 @@ import pytest
 from fastapi.openapi.utils import get_openapi
 from fastapi.testclient import TestClient
 
-from merino.providers.widgets.wrexham.protocol import Competition, Match, MatchStatus, Team
+from merino.providers.widgets.wrexham.protocol import (
+    Competition,
+    Match,
+    MatchStatus,
+    Standing,
+    Team,
+)
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 from merino.providers.widgets.wrexham.store import WrexhamStore
 from merino.web import api_v1_widgets
@@ -118,6 +124,12 @@ def test_standings_returns_the_expected_shape(client: TestClient) -> None:
     }
 
 
+def _standing(position: int) -> Standing:
+    """Build a table row for tests."""
+    team = Team(id=position, name=f"Team {position}", logo_url="https://example.com/logo.png")
+    return Standing(position=position, team=team, played=14, goal_difference=0, points=20)
+
+
 def test_matches_sets_cache_control_header(client: TestClient) -> None:
     """Sets a Cache-Control header so Fastly can cache the response."""
     response = client.get(MATCHES_URL)
@@ -170,21 +182,46 @@ def test_matches_returns_503_when_no_fixtures_are_stored(
     assert "Cache-Control" not in response.headers
 
 
-def test_matches_documents_the_503_response() -> None:
+@pytest.mark.parametrize("path", ["/widgets/wrexham/matches", "/widgets/wrexham/standings"])
+def test_endpoints_document_the_503_response(path: str) -> None:
     """Lists the 503 error response, with its fields, in the API docs."""
     docs = get_openapi(title="widgets", version="test", routes=api_v1_widgets.router.routes)
 
-    responses = docs["paths"]["/widgets/wrexham/matches"]["get"]["responses"]
+    responses = docs["paths"][path]["get"]["responses"]
     schema_ref = responses["503"]["content"]["application/json"]["schema"]["$ref"]
     schema = docs["components"]["schemas"][schema_ref.rsplit("/", 1)[-1]]
     assert set(schema["properties"]) == {"statusCode", "message"}
 
 
-def test_standings_returns_empty_table_when_mock_data_disabled(
-    client: TestClient, wrexham_provider: WrexhamProvider
+def test_standings_sets_cache_control_header(client: TestClient) -> None:
+    """Sets a Cache-Control header so Fastly can cache the response."""
+    response = client.get(STANDINGS_URL)
+
+    assert response.headers["Cache-Control"] == "public, max-age=60, s-maxage=60"
+
+
+def test_standings_returns_the_stored_table_from_redis(
+    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
 ) -> None:
-    """Returns 200 with an empty table when mock data is disabled."""
+    """Returns the stored table, ordered by position, with a Cache-Control header."""
     wrexham_provider.mock_data_enabled = False
+    asyncio.run(store.write_standings([_standing(2), _standing(1)]))
+
+    response = client.get(STANDINGS_URL)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["competition"] == {"id": 34, "name": "EFL Championship"}
+    assert [row["position"] for row in body["standings"]] == [1, 2]
+    assert response.headers["Cache-Control"] == "public, max-age=60, s-maxage=60"
+
+
+def test_standings_returns_an_empty_stored_table(
+    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
+) -> None:
+    """Returns 200 with an empty table when the stored table is empty."""
+    wrexham_provider.mock_data_enabled = False
+    asyncio.run(store.write_standings([]))
 
     response = client.get(STANDINGS_URL)
 
@@ -193,3 +230,19 @@ def test_standings_returns_empty_table_when_mock_data_disabled(
         "competition": {"id": 34, "name": "EFL Championship"},
         "standings": [],
     }
+
+
+def test_standings_returns_503_when_no_standings_are_stored(
+    client: TestClient, wrexham_provider: WrexhamProvider
+) -> None:
+    """Returns the 503 error response, without caching, when no standings are stored."""
+    wrexham_provider.mock_data_enabled = False
+
+    response = client.get(STANDINGS_URL)
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "statusCode": 503,
+        "message": "Wrexham data is temporarily unavailable. Please try again later.",
+    }
+    assert "Cache-Control" not in response.headers

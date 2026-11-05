@@ -21,11 +21,19 @@ from merino.providers.widgets.wrexham.provider import (
 router = APIRouter()
 
 DEFAULT_MATCH_LIMIT = 5
-MAX_MATCH_LIMIT = 5  # will confirm max with product.
+MAX_MATCH_LIMIT = 5
 
 _matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
+_standings_cache_control_ttl = settings.widgets.providers.wrexham.standings_cache_control_ttl_sec
 
 _WREXHAM_UNAVAILABLE_MESSAGE = "Wrexham data is temporarily unavailable. Please try again later."
+
+
+def _cache_control(ttl: int) -> dict[str, str]:
+    """Return a Cache-Control header letting Fastly and browsers cache a response for `ttl`
+    seconds.
+    """
+    return {"Cache-Control": f"public, max-age={ttl}, s-maxage={ttl}"}
 
 
 def _wrexham_unavailable() -> JSONResponse:
@@ -74,13 +82,7 @@ async def get_wrexham_matches(
         return _wrexham_unavailable()
 
     return JSONResponse(
-        content=jsonable_encoder(matches),
-        headers={
-            "Cache-Control": (
-                f"public, max-age={_matches_cache_control_ttl}, "
-                f"s-maxage={_matches_cache_control_ttl}"
-            )
-        },
+        content=jsonable_encoder(matches), headers=_cache_control(_matches_cache_control_ttl)
     )
 
 
@@ -89,9 +91,24 @@ async def get_wrexham_matches(
     tags=["widgets"],
     summary="EFL Championship standings",
     response_model=StandingsResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": "Wrexham data can't be read right now.",
+        }
+    },
 )
 async def get_wrexham_standings(
     provider: WrexhamProvider = Depends(get_wrexham_provider),
-) -> StandingsResponse:
-    """Return the EFL Championship table, ordered by league position."""
-    return await provider.get_standings()
+) -> Response:
+    """Return the EFL Championship table, ordered by league position. The table is empty when
+    none is available yet, e.g. before the season starts.
+    """
+    try:
+        standings = await provider.get_standings()
+    except WrexhamDataUnavailableError:
+        return _wrexham_unavailable()
+
+    return JSONResponse(
+        content=jsonable_encoder(standings), headers=_cache_control(_standings_cache_control_ttl)
+    )
