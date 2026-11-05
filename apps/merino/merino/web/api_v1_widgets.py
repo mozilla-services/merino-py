@@ -8,7 +8,11 @@ from fastapi.responses import JSONResponse
 
 from merino.configs import settings
 from merino.providers.widgets import get_wrexham_provider
-from merino.providers.widgets.wrexham.protocol import MatchesResponse, StandingsResponse
+from merino.providers.widgets.wrexham.protocol import (
+    ErrorResponse,
+    MatchesResponse,
+    StandingsResponse,
+)
 from merino.providers.widgets.wrexham.provider import (
     WrexhamDataUnavailableError,
     WrexhamProvider,
@@ -21,15 +25,17 @@ MAX_MATCH_LIMIT = 5  # will confirm max with product.
 
 _matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
 
+_WREXHAM_UNAVAILABLE_MESSAGE = "Wrexham data is temporarily unavailable. Please try again later."
+
 
 def _wrexham_unavailable() -> JSONResponse:
     """Return the error response for Wrexham data that can't be served."""
+    error = ErrorResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, message=_WREXHAM_UNAVAILABLE_MESSAGE
+    )
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={
-            "statusCode": status.HTTP_503_SERVICE_UNAVAILABLE,
-            "message": "Wrexham data is temporarily unavailable. Please try again later.",
-        },
+        content=error.model_dump(by_alias=True),
     )
 
 
@@ -38,6 +44,12 @@ def _wrexham_unavailable() -> JSONResponse:
     tags=["widgets"],
     summary="Wrexham AFC matches",
     response_model=MatchesResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": "Wrexham data can't be read right now.",
+        }
+    },
 )
 async def get_wrexham_matches(
     limit: Annotated[

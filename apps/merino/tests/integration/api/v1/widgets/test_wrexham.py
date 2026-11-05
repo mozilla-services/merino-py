@@ -8,11 +8,13 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fastapi.openapi.utils import get_openapi
 from fastapi.testclient import TestClient
 
 from merino.providers.widgets.wrexham.protocol import Competition, Match, MatchStatus, Team
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 from merino.providers.widgets.wrexham.store import WrexhamStore
+from merino.web import api_v1_widgets
 
 MATCHES_URL = "/api/v1/widgets/wrexham/matches"
 STANDINGS_URL = "/api/v1/widgets/wrexham/standings"
@@ -58,8 +60,8 @@ def _match(match_id: int, status: MatchStatus, kickoff: datetime) -> Match:
     )
 
 
-def test_matches_returns_the_contract_shape(client: TestClient) -> None:
-    """Returns previous, current and upcoming groups with the contract's match fields."""
+def test_matches_returns_the_expected_shape(client: TestClient) -> None:
+    """Returns previous, current and upcoming groups with the expected match fields."""
     response = client.get(MATCHES_URL)
 
     assert response.status_code == 200
@@ -99,8 +101,8 @@ def test_matches_rejects_an_invalid_limit(client: TestClient, limit: str) -> Non
     assert response.status_code == 400
 
 
-def test_standings_returns_the_contract_shape(client: TestClient) -> None:
-    """Returns the Championship table with the contract's standing fields."""
+def test_standings_returns_the_expected_shape(client: TestClient) -> None:
+    """Returns the Championship table with the expected standing fields."""
     response = client.get(STANDINGS_URL)
 
     assert response.status_code == 200
@@ -166,6 +168,16 @@ def test_matches_returns_503_when_no_fixtures_are_stored(
         "message": "Wrexham data is temporarily unavailable. Please try again later.",
     }
     assert "Cache-Control" not in response.headers
+
+
+def test_matches_documents_the_503_response() -> None:
+    """Lists the 503 error response, with its fields, in the API docs."""
+    docs = get_openapi(title="widgets", version="test", routes=api_v1_widgets.router.routes)
+
+    responses = docs["paths"]["/widgets/wrexham/matches"]["get"]["responses"]
+    schema_ref = responses["503"]["content"]["application/json"]["schema"]["$ref"]
+    schema = docs["components"]["schemas"][schema_ref.rsplit("/", 1)[-1]]
+    assert set(schema["properties"]) == {"statusCode", "message"}
 
 
 def test_standings_returns_empty_table_when_mock_data_disabled(

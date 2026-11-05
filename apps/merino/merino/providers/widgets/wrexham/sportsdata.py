@@ -123,7 +123,7 @@ def to_match(
     """Convert a SportsDataIO game to a match.
 
     Returns None if either team, the kickoff time, the status or the update time is unknown,
-    and also logs a warning if the game status is not in the API contract.
+    and also logs a warning if the game status isn't one we support.
     """
     home_id, away_id = game.GlobalHomeTeamId, game.GlobalAwayTeamId
     home_name, away_name = game.HomeTeamName, game.AwayTeamName
@@ -157,7 +157,9 @@ def to_match(
     if game.HomeTeamScore is not None and game.Period is not None and game.Period in MatchPeriod:
         period = MatchPeriod(game.Period)
 
-    clock = game.ClockDisplay or None
+    # Only send the clock while the match is being played. It's null at half-time, and when
+    # play is suspended or delayed
+    clock = (game.ClockDisplay or None) if status is MatchStatus.InProgress else None
 
     return Match(
         id=game.GameId,

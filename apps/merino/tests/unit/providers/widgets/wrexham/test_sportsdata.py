@@ -183,10 +183,10 @@ async def test_fetch_standings_uses_latest_regular_season_table() -> None:
         ("Rain Delay", MatchStatus.Delayed),
         ("Awarded", MatchStatus.Final),
     ],
-    ids=["contract", "start-delay", "rain-delay", "awarded"],
+    ids=["same-name", "start-delay", "rain-delay", "awarded"],
 )
 def test_to_match_maps_status(status: str, expected: MatchStatus) -> None:
-    """Map SportsDataIO statuses to contract statuses."""
+    """Map SportsDataIO statuses to our match statuses."""
     match = to_match(SportsDataGame.model_validate(game(Status=status)), CHAMPIONSHIP, FALLBACK)
 
     assert match is not None
@@ -196,7 +196,7 @@ def test_to_match_maps_status(status: str, expected: MatchStatus) -> None:
 def test_to_match_skips_unsupported_status(
     caplog: LogCaptureFixture, filter_caplog: FilterCaplogFixture
 ) -> None:
-    """Drop a game with a status outside the contract and log a warning."""
+    """Drop a game with a status we don't support and log a warning."""
     caplog.set_level(logging.WARNING)
 
     raw = SportsDataGame.model_validate(game(Status="NotNecessary"))
@@ -204,6 +204,43 @@ def test_to_match_skips_unsupported_status(
     assert to_match(raw, CHAMPIONSHIP, FALLBACK) is None
     [record] = filter_caplog(caplog.records, "merino.providers.widgets.wrexham.sportsdata")
     assert record.__dict__["status"] == "NotNecessary"
+
+
+@pytest.mark.parametrize(
+    ("status", "clock_display", "expected"),
+    [
+        ("InProgress", "67", "67"),
+        ("InProgress", "90+3", "90+3"),
+        ("InProgress", "", None),
+        ("Break", "45+2", None),
+        ("Suspended", "60", None),
+        ("Delayed", "0", None),
+        ("Final", "", None),
+        ("Scheduled", "", None),
+    ],
+    ids=[
+        "in-progress",
+        "stoppage-time",
+        "in-progress-without-clock",
+        "half-time",
+        "suspended",
+        "delayed",
+        "final",
+        "scheduled",
+    ],
+)
+def test_to_match_only_sets_the_clock_while_in_progress(
+    status: str, clock_display: str, expected: str | None
+) -> None:
+    """Send the display clock only while the match is being played."""
+    raw = SportsDataGame.model_validate(
+        game(Status=status, ClockDisplay=clock_display, HomeTeamScore=1, AwayTeamScore=0)
+    )
+
+    match = to_match(raw, CHAMPIONSHIP, FALLBACK)
+
+    assert match is not None
+    assert match.clock == expected
 
 
 def test_to_match_live_and_shootout_fields() -> None:

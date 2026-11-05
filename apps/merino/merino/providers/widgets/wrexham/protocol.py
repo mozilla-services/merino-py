@@ -5,6 +5,13 @@ from enum import StrEnum
 from pydantic import AwareDatetime, BaseModel, Field, HttpUrl
 
 
+# Before changing these statuses:
+# - Removing or renaming one: matches are stored in Redis with their status, and a stored match
+#   whose status is no longer listed here can't be loaded. That makes the whole Redis key count
+#   as missing. Bump `KEY_PREFIX` in `store.py` (e.g. to `wrexham:v2`) so the old data is ignored
+#   and rewritten by the job.
+# - Adding one: add it to one of the groups in `provider.py` (previous, current or upcoming),
+#   and map SportsDataIO's value to it in `sportsdata.py` if the names differ.
 class MatchStatus(StrEnum):
     """Match status, normalized from SportsDataIO."""
 
@@ -99,6 +106,13 @@ class Standing(BaseModel):
     played: int = Field(ge=0, description="Number of matches played.")
     goal_difference: int = Field(description="Goals scored minus goals conceded.")
     points: int = Field(description="League points. Can be negative after a points deduction.")
+
+
+class ErrorResponse(BaseModel):
+    """Error response for the widget endpoints."""
+
+    status_code: int = Field(serialization_alias="statusCode", description="HTTP status code.")
+    message: str = Field(description="Human-readable error message.")
 
 
 class StandingsResponse(BaseModel):

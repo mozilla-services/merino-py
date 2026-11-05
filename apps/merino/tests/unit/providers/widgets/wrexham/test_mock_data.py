@@ -31,7 +31,7 @@ def test_matches_are_grouped_relative_to_now() -> None:
     assert all(match.kickoff > NOW for match in matches.upcoming)
 
 
-def test_matches_are_ordered_as_in_the_contract() -> None:
+def test_matches_are_ordered_newest_and_earliest_first() -> None:
     """Previous matches are newest first and upcoming matches earliest first."""
     matches = build_mock_matches(NOW)
 
@@ -60,7 +60,7 @@ def test_matches_have_unique_ids() -> None:
 
 
 def test_matches_cover_a_range_of_states() -> None:
-    """Groups hold the statuses the contract assigns them, with a range of states covered."""
+    """Each group holds the statuses that belong in it, with a range of states covered."""
     matches = build_mock_matches(NOW)
 
     assert {match.status for match in matches.previous} == {

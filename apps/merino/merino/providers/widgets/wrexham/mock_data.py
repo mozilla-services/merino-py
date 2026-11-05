@@ -136,7 +136,7 @@ def _match(
 def build_mock_matches(now: datetime) -> MatchesResponse:
     """Return mock matches covering a range of match states, relative to `now`.
 
-    `previous` is newest first and `upcoming` earliest first, as in the API contract.
+    `previous` is newest first and `upcoming` earliest first, as the matches endpoint returns them.
     """
     base = now.replace(minute=0, second=0, microsecond=0)
 
