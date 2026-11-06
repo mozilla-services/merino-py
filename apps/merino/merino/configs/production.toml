@@ -209,3 +209,8 @@ type = "kayak"
 # MERINO_TRAVEL_PROVIDERS__KAYAK__ENABLED
 # Whether this provider is enabled. Disabled by default and enabled per environment.
 enabled = true
+
+[production.widgets.providers.wrexham]
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
+# Whether the Wrexham widget endpoints serve mock data.
+mock_data_enabled = false

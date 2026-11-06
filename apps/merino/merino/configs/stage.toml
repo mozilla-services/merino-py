@@ -191,3 +191,8 @@ connect_timeout_sec = 3.0
 
 # MERINO_MESSAGE_HANDLER__PUBSUB_TOPIC
 pubsub_topic = "projects/moz-fx-merino-nonprod-db57/topics/merino-fleece-sanitization-stage"
+
+[stage.widgets.providers.wrexham]
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
+# Whether the Wrexham widget endpoints serve mock data.
+mock_data_enabled = false
