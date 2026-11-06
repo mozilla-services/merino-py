@@ -1370,16 +1370,16 @@ manifest_gcs_file_name = "runtime-manifest.v1.json"
 # Timeout in seconds for establishing a connection to Particle endpoint.
 connect_timeout_sec = 3.0
 
-[default.travel_providers.kayak]
-# MERINO_TRAVEL_PROVIDERS__KAYAK__TYPE
+[default.widgets.providers.travel.kayak]
+# MERINO_WIDGETS__PROVIDERS__TRAVEL__KAYAK__TYPE
 # The type of this provider, should be `kayak`.
 type = "kayak"
 
-# MERINO_TRAVEL_PROVIDERS__KAYAK__ENABLED
+# MERINO_WIDGETS__PROVIDERS__TRAVEL__KAYAK__ENABLED
 # Whether this provider is enabled. Disabled by default and enabled per environment.
 enabled = false
 
-# MERINO_TRAVEL_PROVIDERS__KAYAK__CONNECT_TIMEOUT_SEC
+# MERINO_WIDGETS__PROVIDERS__TRAVEL__KAYAK__CONNECT_TIMEOUT_SEC
 # Timeout in seconds for establishing a connection to the Kayak endpoint.
 connect_timeout_sec = 3.0
 

@@ -69,9 +69,6 @@ from merino.providers.suggest.weather.backends.protocol import (
 )
 from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
 from merino.providers.suggest.weather.provider import Provider as WeatherProvider
-from merino.providers.travel import get_travel_provider
-from merino.providers.travel.kayak.backends.protocol import TravelListing, TravelVertical
-from merino.providers.travel.kayak.provider import Provider as TravelProvider
 from merino.utils import task_runner
 from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
@@ -747,39 +744,3 @@ async def get_game_particle(
         content=jsonable_encoder(particle_data),
         headers={"Cache-Control": (f"private, max-age={_games_particle_ttl}")},
     )
-
-
-@router.get(
-    "/travel",
-    tags=["travel"],
-    summary="Travel listings",
-    response_model=list[TravelListing],
-)
-async def get_travel_listings(
-    request: Request,
-    vertical: TravelVertical,
-    q: Annotated[str, Query(min_length=3, max_length=64)],
-    market: Annotated[str, Query(min_length=2, max_length=2, pattern="^[A-Za-z]{2}$")] = "US",
-    accept_language: Annotated[str | None, Header(max_length=HEADER_CHARACTER_MAX)] = None,
-    provider: TravelProvider = Depends(get_travel_provider),
-) -> Response:
-    """Query merino for travel listings.
-
-    **Args**:
-    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`.
-    - `q`: The search query, between 3 and 64 characters.
-    - `market`: [Optional] Two-letter market (country) code, e.g. `US`, `GB`. Defaults to `US`.
-    - provider: Injected travel provider dependency used to fetch listings.
-
-    **Headers**:
-    - `Accept-Language` - The primary language subtag of the highest `q` (quality) value
-      locale in this header is used to localize listings. If the header is not included,
-      empty or cannot be parsed, Merino will default to `en`.
-    """
-    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
-    languages = get_accepted_languages(accept_language)
-
-    with metrics_client.timeit("travel.request.timing"):
-        listings = await provider.get_listings(q, languages[0], market, vertical)
-
-    return JSONResponse(content=jsonable_encoder(listings))

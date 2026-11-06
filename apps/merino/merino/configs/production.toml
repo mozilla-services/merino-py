@@ -201,12 +201,12 @@ connect_timeout_sec = 3.0
 # MERINO_MESSAGE_HANDLER__PUBSUB_TOPIC
 pubsub_topic = "projects/moz-fx-merino-prod-5de4/topics/merino-fleece-sanitization-prod"
 
-[production.travel_providers.kayak]
-# MERINO_TRAVEL_PROVIDERS__KAYAK__TYPE
+[production.widgets.providers.travel.kayak]
+# MERINO_WIDGETS__PROVIDERS__TRAVEL__KAYAK__TYPE
 # The type of this provider, should be `kayak`.
 type = "kayak"
 
-# MERINO_TRAVEL_PROVIDERS__KAYAK__ENABLED
+# MERINO_WIDGETS__PROVIDERS__TRAVEL__KAYAK__ENABLED
 # Whether this provider is enabled. Disabled by default and enabled per environment.
 enabled = true
 
