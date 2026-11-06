@@ -6,7 +6,6 @@ import logging
 import orjson
 import pytest
 
-from merino.configs import settings
 from merino.main import app
 from merino.providers.manifest.backends.protocol import ManifestData
 from merino.providers.manifest.provider import Provider
@@ -153,14 +152,12 @@ async def test_missing_manifest_is_silent_when_gcs_disabled(client, cleanup, cap
 
 
 @pytest.mark.asyncio
-async def test_missing_manifest_logs_error_in_production(client, cleanup, monkeypatch, caplog):
+async def test_missing_manifest_logs_error_in_production(client, cleanup, force_env, caplog):
     """In production a missing manifest is a genuine failure, so the 404 must emit an error
     log for Sentry to surface as an issue.
     """
     await _prime_empty_manifest(cleanup)
-    # current_env is a computed Dynaconf property; FORCE_ENV_FOR_DYNACONF is the supported
-    # override knob and monkeypatch restores it after the test.
-    monkeypatch.setattr(settings, "FORCE_ENV_FOR_DYNACONF", "production")
+    force_env("production")
 
     with caplog.at_level(logging.ERROR, logger="merino.web.api_v1"):
         response = client.get("/api/v1/manifest")
