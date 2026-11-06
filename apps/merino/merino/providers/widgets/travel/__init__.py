@@ -1,8 +1,8 @@
 """Initialize travel providers."""
 
 from merino.configs import settings
-from merino.providers.travel.kayak.backends.kayak import KayakBackend
-from merino.providers.travel.kayak.provider import Provider
+from merino.providers.widgets.travel.kayak.backends.kayak import KayakBackend
+from merino.providers.widgets.travel.kayak.provider import Provider
 from merino.utils.metrics import get_metrics_client
 from merino_common.utils.http_client import create_http_client
 
