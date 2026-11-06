@@ -1403,7 +1403,7 @@ url_autocomplete_path = "/api/affiliate/autocomplete/v1/{vertical}"
 [default.widgets.providers.wrexham]
 # MERINO_WIDGETS__PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
 # Whether the Wrexham widget endpoints serve mock data.
-mock_data_enabled = true
+mock_data_enabled = false
 
 # MERINO_WIDGETS__PROVIDERS__WREXHAM__MATCHES_CACHE_CONTROL_TTL_SEC
 # How long Fastly and browsers can cache responses from the matches endpoint.
