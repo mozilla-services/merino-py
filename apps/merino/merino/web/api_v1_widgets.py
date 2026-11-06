@@ -2,12 +2,17 @@
 
 from typing import Annotated
 
+from aiodogstatsd import Client
 from fastapi import APIRouter, Depends, Query, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from starlette.requests import Request
 
 from merino.configs import settings
-from merino.providers.widgets import get_wrexham_provider
+from merino.middleware import ScopeKey
+from merino.providers.widgets import get_iframed_widgets_provider, get_wrexham_provider
+from merino.providers.widgets.iframed.backends.protocol import IframedWidgetsResponse
+from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
 from merino.providers.widgets.wrexham.protocol import (
     ErrorResponse,
     MatchesResponse,
@@ -112,3 +117,28 @@ async def get_wrexham_standings(
     return JSONResponse(
         content=jsonable_encoder(standings), headers=_cache_control(_standings_cache_control_ttl)
     )
+
+
+@router.get(
+    "/widgets/framed",
+    tags=["widgets"],
+    summary="All enabled widgets intended to be displayed in iframes",
+    response_model=IframedWidgetsResponse,
+)
+async def get_iframed_widgets(
+    request: Request,
+    locale: Annotated[str, Query(max_length=16)] = "en-US",
+    provider: IframedWidgetProvider = Depends(get_iframed_widgets_provider),
+) -> Response:
+    """Query merino for iframed widgets.
+
+    **Args**:
+    - locale: optionally provided by the caller, defaults to en-US (future-proofing design)
+    - provider: Injected iframed widgets provider dependency used to build response.
+    """
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+
+    with metrics_client.timeit("widgets.iframed.request.timing"):
+        widgets_response = await provider.get_widgets(locale=locale)
+
+    return JSONResponse(content=jsonable_encoder(widgets_response))
