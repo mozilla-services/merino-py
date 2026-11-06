@@ -137,6 +137,7 @@ testpaths = [
   "apps/fleece/tests",
 ]
 pythonpath = ["apps/merino"]
+asyncio_default_fixture_loop_scope = "function"
 norecursedirs = [
   "apps/merino/tests/data/",
   "apps/merino/tests/utils/",
