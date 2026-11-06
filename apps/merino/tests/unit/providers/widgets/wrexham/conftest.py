@@ -18,6 +18,10 @@ from merino.providers.widgets.wrexham.protocol import (
     Standing,
     Team,
 )
+from merino.providers.widgets.wrexham.provider import (
+    matches_circuit_breaker,
+    standings_circuit_breaker,
+)
 from merino.providers.widgets.wrexham.store import WrexhamStore
 
 # Statuses of matches that have kicked off, so they have a period and a score.
@@ -57,6 +61,13 @@ def _team(team_id: int) -> Team:
 def fixture_fake_cache() -> FakeCache:
     """Return an empty in-memory cache."""
     return FakeCache()
+
+
+@pytest.fixture(name="reset_circuit_breakers", autouse=True)
+def fixture_reset_circuit_breakers() -> None:
+    """Close the Wrexham circuit breakers before each test, since their state is shared."""
+    matches_circuit_breaker.reset()
+    standings_circuit_breaker.reset()
 
 
 @pytest.fixture(name="store")

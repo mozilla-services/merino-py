@@ -4,8 +4,10 @@ import logging
 from datetime import UTC, datetime
 
 import aiodogstatsd
+from circuitbreaker import CircuitBreakerError
 
 from merino.exceptions import CacheAdapterError
+from merino.providers.widgets.wrexham.circuitbreaker import WrexhamCircuitBreaker, guarded_by
 from merino.providers.widgets.wrexham.mock_data import build_mock_matches, build_mock_standings
 from merino.providers.widgets.wrexham.protocol import (
     CHAMPIONSHIP,
@@ -13,6 +15,7 @@ from merino.providers.widgets.wrexham.protocol import (
     Match,
     MatchesResponse,
     MatchStatus,
+    Standing,
     StandingsResponse,
 )
 from merino.providers.widgets.wrexham.store import WrexhamStore
@@ -24,6 +27,12 @@ CURRENT_STATUSES = frozenset(
     {MatchStatus.InProgress, MatchStatus.Break, MatchStatus.Delayed, MatchStatus.Suspended}
 )
 UPCOMING_STATUSES = frozenset({MatchStatus.Scheduled, MatchStatus.Postponed})
+
+# One breaker per endpoint, so Redis problems reading one kind of data don't block the other.
+matches_circuit_breaker = WrexhamCircuitBreaker(name="wrexham_matches")
+standings_circuit_breaker = WrexhamCircuitBreaker(name="wrexham_standings")
+
+StoredMatches = tuple[list[Match], datetime]
 
 
 class WrexhamDataUnavailableError(Exception):
@@ -78,7 +87,9 @@ class WrexhamProvider:
             return build_mock_standings()
 
         try:
-            stored = await self.store.read_standings()
+            stored = await self._read_stored_standings()
+        except CircuitBreakerError as ex:
+            raise WrexhamDataUnavailableError("Wrexham standings circuit breaker is open.") from ex
         except CacheAdapterError as ex:
             self._record_redis_error("standings", ex)
             raise WrexhamDataUnavailableError("Could not read Wrexham standings.") from ex
@@ -97,6 +108,28 @@ class WrexhamProvider:
         """Close the provider's Redis connection."""
         await self.store.cache.close()
 
+    @guarded_by(matches_circuit_breaker)
+    async def _read_stored_matches(
+        self,
+    ) -> tuple[list[StoredMatches | None], StoredMatches | None]:
+        """Read both competitions' fixtures and the live match data from Redis.
+
+        Redis errors are raised, so the circuit breaker can count them.
+        """
+        fixtures = [
+            await self.store.read_fixtures(competition.id)
+            for competition in (CHAMPIONSHIP, FA_CUP)
+        ]
+        return fixtures, await self.store.read_live_matches()
+
+    @guarded_by(standings_circuit_breaker)
+    async def _read_stored_standings(self) -> tuple[list[Standing], datetime] | None:
+        """Read the Championship table from Redis.
+
+        Redis errors are raised, so the circuit breaker can count them.
+        """
+        return await self.store.read_standings()
+
     def _record_redis_error(self, data: str, ex: CacheAdapterError) -> None:
         """Log and count a failed Redis read of `data` (e.g. "matches")."""
         logger.error(f"Could not read Wrexham {data} from Redis", extra={"error": str(ex)})
@@ -105,11 +138,9 @@ class WrexhamProvider:
     async def _read_matches(self) -> list[Match]:
         """Read Wrexham's fixtures for both competitions and apply the live match data."""
         try:
-            stored_fixtures = [
-                await self.store.read_fixtures(competition.id)
-                for competition in (CHAMPIONSHIP, FA_CUP)
-            ]
-            stored_live = await self.store.read_live_matches()
+            stored_fixtures, stored_live = await self._read_stored_matches()
+        except CircuitBreakerError as ex:
+            raise WrexhamDataUnavailableError("Wrexham matches circuit breaker is open.") from ex
         except CacheAdapterError as ex:
             self._record_redis_error("matches", ex)
             raise WrexhamDataUnavailableError("Could not read Wrexham matches.") from ex
