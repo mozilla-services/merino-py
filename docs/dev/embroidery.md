@@ -6,8 +6,13 @@ to Firefox.
 
 ## Prerequisites
 
-- [rustup](https://rustup.rs). The first Cargo command in `apps/embroidery` installs the
-  toolchain pinned in `rust-toolchain.toml`.
+- [rustup](https://rustup.rs). From the repository root, install the toolchain pinned in
+  `rust-toolchain.toml` once, before running moon tasks, which start several Cargo commands in
+  parallel:
+
+  ```bash
+  rustup toolchain install
+  ```
 - Moon, as described in [Working in the monorepo](./monorepo.md).
 
 ## Run the service

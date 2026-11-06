@@ -16,7 +16,8 @@ fileGroups:
   tests:
     - tests/**/*
   configs:
-    - rust-toolchain.toml
+    # One toolchain for every Rust project; rustup finds it from any subdirectory.
+    - /rust-toolchain.toml
     - clippy.toml
     - rustfmt.toml
 
