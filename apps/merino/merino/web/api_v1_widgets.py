@@ -10,7 +10,11 @@ from starlette.requests import Request
 
 from merino.configs import settings
 from merino.middleware import ScopeKey
-from merino.providers.widgets import get_iframed_widgets_provider, get_wrexham_provider
+from merino.providers.widgets import (
+    get_iframed_widgets_provider,
+    get_travel_provider,
+    get_wrexham_provider,
+)
 from merino.providers.widgets.iframed.backends.protocol import IframedWidgetsResponse
 from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
 from merino.providers.widgets.wrexham.protocol import (
@@ -23,7 +27,6 @@ from merino.providers.widgets.wrexham.provider import (
     WrexhamProvider,
 )
 
-from merino.providers.widgets.travel import get_travel_provider
 from merino.providers.widgets.travel.kayak.backends.protocol import TravelListing, TravelVertical
 from merino.providers.widgets.travel.kayak.provider import Provider as TravelProvider
 

@@ -5,20 +5,21 @@
 """Unit tests for the __init__ widget provider module."""
 
 from datetime import timedelta
-from unittest.mock import patch
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 import merino.providers.widgets as widgets
 from merino.providers.widgets import (
     get_iframed_widgets_provider,
+    get_travel_provider,
     get_wrexham_provider,
     init_providers,
     shutdown_providers,
 )
 from merino.providers.widgets.wrexham.provider import WrexhamProvider
 from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
+from merino.providers.widgets.travel.kayak.provider import Provider as TravelProvider
 
 
 @pytest.mark.asyncio
@@ -117,3 +118,75 @@ def test_get_iframed_widgets_provider_not_initialized() -> None:
     with patch("merino.providers.widgets._iframed_widgets_provider", None):
         with pytest.raises(ValueError, match="iframed widgets provider has not been initialized."):
             get_iframed_widgets_provider()
+
+
+@pytest.mark.asyncio
+async def test_init_providers_creates_travel_provider() -> None:
+    """Initializes the travel provider with a Kayak backend built from settings."""
+    with (
+        patch("merino.providers.widgets._travel_enabled", True),
+        patch("merino.providers.widgets._kayak_api_key", "mock_api_key"),
+        patch("merino.providers.widgets._kayak_url_base", "mock_url_base"),
+        patch(
+            "merino.providers.widgets._kayak_url_autocomplete_path", "mock_url_autocomplete_path"
+        ),
+        patch("merino.providers.widgets.create_http_client") as mock_create_http_client,
+        patch("merino.providers.widgets.get_metrics_client") as mock_get_metrics_client,
+        patch("merino.providers.widgets.KayakBackend") as mock_kayak_backend,
+    ):
+        mock_http_client_instance = Mock(name="mock_http_client")
+        mock_create_http_client.return_value = mock_http_client_instance
+
+        mock_metrics_client_instance = Mock(name="mock_metrics_client")
+        mock_get_metrics_client.return_value = mock_metrics_client_instance
+
+        mock_kayak_backend_instance = Mock(name="mock_kayak_backend")
+        mock_kayak_backend.return_value = mock_kayak_backend_instance
+
+        await init_providers()
+
+        travel_provider = widgets._travel_provider
+
+        assert isinstance(travel_provider, TravelProvider)
+        assert travel_provider.name == "Travel Provider"
+        assert travel_provider.backend == mock_kayak_backend_instance
+        assert travel_provider.metrics_client == mock_metrics_client_instance
+
+        mock_kayak_backend.assert_called_once_with(
+            api_key="mock_api_key",
+            http_client=mock_http_client_instance,
+            url_base="mock_url_base",
+            url_autocomplete_path="mock_url_autocomplete_path",
+            metrics_client=mock_metrics_client_instance,
+        )
+
+
+@pytest.mark.asyncio
+async def test_get_travel_provider_initialized() -> None:
+    """Verify get_travel_provider returns class instance after init_providers call."""
+    await init_providers()
+
+    assert isinstance(get_travel_provider(), TravelProvider)
+
+
+def test_get_travel_provider_not_initialized() -> None:
+    """Verify that get_travel_provider raises ValueError when _travel_provider is not initialized."""
+    with patch("merino.providers.widgets._travel_provider", None):
+        with pytest.raises(ValueError, match="Travel provider has not been initialized."):
+            get_travel_provider()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_providers_shuts_down_travel_provider() -> None:
+    """Shuts down the travel provider's backend and clears module state."""
+    backend_mock = AsyncMock(name="mock_kayak_backend")
+    provider = TravelProvider(backend=backend_mock, metrics_client=Mock(), name="test_travel")
+
+    with (
+        patch("merino.providers.widgets._wrexham_provider", None),
+        patch("merino.providers.widgets._travel_provider", provider),
+    ):
+        await shutdown_providers()
+        assert widgets._travel_provider is None
+
+    backend_mock.shutdown.assert_awaited_once()

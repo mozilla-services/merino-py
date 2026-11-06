@@ -13,8 +13,8 @@ from httpx import AsyncClient, ConnectTimeout, Request, Response
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.providers.travel.kayak.backends.kayak import KayakBackend
-from merino.providers.travel.kayak.backends.protocol import TravelListing, TravelVertical
+from merino.providers.widgets.travel.kayak.backends.kayak import KayakBackend
+from merino.providers.widgets.travel.kayak.backends.protocol import TravelListing, TravelVertical
 from tests.types import FilterCaplogFixture
 
 API_KEY = "test-api-key"
@@ -256,7 +256,7 @@ async def test_get_listings_http_error(
     listings = await kayak.get_listings("new york", "en-US", "US", "flights")
 
     assert listings == []
-    records = filter_caplog(caplog.records, "merino.providers.travel.kayak.backends.kayak")
+    records = filter_caplog(caplog.records, "merino.providers.widgets.travel.kayak.backends.kayak")
     assert [record.message for record in records] == ["Kayak autocomplete request failed"]
     assert API_KEY not in caplog.text
     statsd_mock.increment.assert_called_once_with("kayak.request.autocomplete.failed")
@@ -277,7 +277,7 @@ async def test_get_listings_transport_error(
     listings = await kayak.get_listings("new york", "en-US", "US", "flights")
 
     assert listings == []
-    records = filter_caplog(caplog.records, "merino.providers.travel.kayak.backends.kayak")
+    records = filter_caplog(caplog.records, "merino.providers.widgets.travel.kayak.backends.kayak")
     assert [record.message for record in records] == ["Kayak autocomplete request failed"]
     statsd_mock.increment.assert_called_once_with("kayak.request.autocomplete.failed")
 
@@ -318,7 +318,7 @@ async def test_get_listings_invalid_response(
     listings = await kayak.get_listings("new york", "en-US", "US", vertical)
 
     assert listings == []
-    records = filter_caplog(caplog.records, "merino.providers.travel.kayak.backends.kayak")
+    records = filter_caplog(caplog.records, "merino.providers.widgets.travel.kayak.backends.kayak")
     assert [record.message for record in records] == [
         "Kayak autocomplete response has incorrect shape"
     ]
