@@ -70,6 +70,19 @@ jobs:
       workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
     secrets:
       DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
+  run-publish-gar-image-embroidery:
+    permissions:
+      contents: read
+      id-token: write
+    needs: moon-ci
+    if: github.ref == 'refs/heads/main' && needs.moon-ci.outputs.embroidery == 'true'
+    uses: ./.github/workflows/publish-gar-image-embroidery.yaml
+    with:
+      image_tag: latest
+      project_id: ${{ vars.GCP_PROJECT_ID }}
+      workload_identity_pool_project_number: ${{ vars.GCPV2_WORKLOAD_IDENTITY_POOL_PROJECT_NUMBER }}
+    secrets:
+      DOCKER_IMAGE_PATH: ${{ secrets.DOCKER_IMAGE_PATH }}
   run-publish-gar-image-locust:
     permissions:
       contents: read

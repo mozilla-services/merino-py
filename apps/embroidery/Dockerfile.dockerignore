@@ -1,0 +1,9 @@
+# BuildKit reads this file instead of the root .dockerignore when it builds this Dockerfile.
+# The context is the repository root; only the crate, version.json and the toolchain file go in.
+*
+!apps/embroidery/
+!version.json
+!rust-toolchain.toml
+apps/embroidery/target/
+apps/embroidery/.agents/
+apps/embroidery/.claude/
