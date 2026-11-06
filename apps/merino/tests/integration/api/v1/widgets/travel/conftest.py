@@ -10,9 +10,9 @@ import pytest
 from pytest_mock import MockerFixture
 
 from merino.main import app
-from merino.providers.travel import get_travel_provider
-from merino.providers.travel.kayak.backends.protocol import TravelBackend
-from merino.providers.travel.kayak.provider import Provider as TravelProvider
+from merino.providers.widgets import get_travel_provider
+from merino.providers.widgets.travel.kayak.backends.protocol import TravelBackend
+from merino.providers.widgets.travel.kayak.provider import Provider as TravelProvider
 
 
 @pytest.fixture(name="backend_mock")

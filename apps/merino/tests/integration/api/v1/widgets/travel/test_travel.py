@@ -9,10 +9,10 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from merino.providers.travel.kayak.backends.protocol import TravelListing
-from merino.providers.travel.kayak.provider import Provider as TravelProvider
+from merino.providers.widgets.travel.kayak.backends.protocol import TravelListing
+from merino.providers.widgets.travel.kayak.provider import Provider as TravelProvider
 
-TRAVEL_URL = "/api/v1/travel"
+TRAVEL_URL = "/api/v1/widgets/travel"
 
 
 def test_travel_returns_listings_from_the_backend(client: TestClient, backend_mock: Any) -> None:
