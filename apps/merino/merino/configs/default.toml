@@ -1413,6 +1413,15 @@ matches_cache_control_ttl_sec = 10
 # How long Fastly and browsers can cache responses from the standings endpoint.
 standings_cache_control_ttl_sec = 60
 
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CIRCUIT_BREAKER_FAILURE_THRESHOLD
+# The endpoints stop reading from Redis after this many Redis errors in a row, and return a
+# 503 straight away until the recovery timeout below has passed.
+circuit_breaker_failure_threshold = 10
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CIRCUIT_BREAKER_RECOVER_TIMEOUT_SEC
+# How long the endpoints wait before trying Redis again after the circuit breaker opens.
+circuit_breaker_recover_timeout_sec = 30
+
 # MERINO_WIDGETS__PROVIDERS__WREXHAM__FALLBACK_LOGO_URL
 # Image used for teams without a logo in the logo manifest.
 # TODO: replace with the real fallback image once it's uploaded to the CDN.

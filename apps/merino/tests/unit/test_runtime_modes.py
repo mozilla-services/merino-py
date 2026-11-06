@@ -220,6 +220,7 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
     mocker.patch.object(main, "_close_metrics_client", side_effect=close_metrics_client)
     # _start_widget_services runs for real so widget startup/shutdown is exercised.
     regular_start = mocker.patch.object(main, "_start_regular_services")
+    governance_start = mocker.patch.object(main, "_start_governance")
 
     app = create_app(RuntimeMode.WIDGET)
     app.dependency_overrides[get_wrexham_provider] = get_fake_wrexham_provider
@@ -230,6 +231,7 @@ def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
         assert client.get("/api/v1/suggest", params={"q": "nonsponsored"}).status_code == 404
 
     regular_start.assert_not_called()
+    governance_start.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -258,10 +260,10 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "sentry_start",
                 "metrics_start",
                 "regular_start",
-                "governance_start",
                 "widget_start",
-                "widget_shutdown",
+                "governance_start",
                 "governance_shutdown",
+                "widget_shutdown",
                 "regular_shutdown",
                 "metrics_shutdown",
             ],
@@ -286,6 +288,8 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "sentry_start",
                 "metrics_start",
                 "widget_start",
+                "governance_start",
+                "governance_shutdown",
                 "widget_shutdown",
                 "metrics_shutdown",
             ],
