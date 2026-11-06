@@ -5,10 +5,12 @@ from pathlib import Path
 
 from dynaconf import Dynaconf, Validator
 
+from merino.runtime import RuntimeMode
+
 _MERINO_PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 
 # Validators for Merino settings.
-_RUNTIME_MODE_VALUES = ["ALL", "REGULAR"]
+_RUNTIME_MODE_VALUES = [mode.value for mode in RuntimeMode]
 
 _validators = [
     Validator(

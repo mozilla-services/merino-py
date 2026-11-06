@@ -30,7 +30,11 @@ def _route_paths(app: FastAPI) -> set[str]:
 def test_runtime_mode_predicates() -> None:
     """Runtime modes enable the intended feature groups."""
     assert mode_enables(RuntimeMode.ALL, RuntimeFeature.REGULAR_API)
+    assert mode_enables(RuntimeMode.ALL, RuntimeFeature.WIDGETS)
     assert mode_enables(RuntimeMode.REGULAR, RuntimeFeature.REGULAR_API)
+    assert mode_enables(RuntimeMode.WIDGET, RuntimeFeature.WIDGETS)
+    assert not mode_enables(RuntimeMode.WIDGET, RuntimeFeature.REGULAR_API)
+    assert not mode_enables(RuntimeMode.REGULAR, RuntimeFeature.WIDGETS)
 
 
 def test_runtime_mode_coercion_rejects_unknown_mode() -> None:
@@ -61,6 +65,25 @@ def test_invalid_configured_runtime_mode_fails_startup() -> None:
     assert "runtime.mode" in result.stderr
     assert "ALL" in result.stderr
     assert "REGULAR" in result.stderr
+    assert "WIDGET" in result.stderr
+
+
+@pytest.mark.parametrize("mode", list(RuntimeMode))
+def test_configured_runtime_mode_passes_startup_validation(mode: RuntimeMode) -> None:
+    """Every runtime mode is accepted by config validation at import time."""
+    env = os.environ.copy()
+    env["MERINO_RUNTIME__MODE"] = mode.value
+    # Fixed argv, shell=False, no untrusted input.
+    result = subprocess.run(  # nosec B603
+        [sys.executable, "-c", "import merino.main"],
+        cwd=Path(__file__).parents[4],
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize(
@@ -68,13 +91,23 @@ def test_invalid_configured_runtime_mode_fails_startup() -> None:
     [
         (
             RuntimeMode.ALL,
-            {"/__heartbeat__", "/api/v1/suggest"},
+            {
+                "/__heartbeat__",
+                "/api/v1/suggest",
+                "/api/v1/widgets/wrexham/matches",
+                "/api/v1/widgets/framed",
+            },
             set(),
         ),
         (
             RuntimeMode.REGULAR,
             {"/__heartbeat__", "/api/v1/suggest"},
-            set(),
+            {"/api/v1/widgets/wrexham/matches", "/api/v1/widgets/framed"},
+        ),
+        (
+            RuntimeMode.WIDGET,
+            {"/__heartbeat__", "/api/v1/widgets/wrexham/matches", "/api/v1/widgets/framed"},
+            {"/api/v1/suggest"},
         ),
     ],
 )
@@ -91,8 +124,9 @@ def test_create_app_registers_routes_by_mode(
 @pytest.mark.parametrize(
     ("mode", "expected_tags"),
     [
-        (RuntimeMode.ALL, ["suggest", "providers"]),
+        (RuntimeMode.ALL, ["suggest", "providers", "widgets"]),
         (RuntimeMode.REGULAR, ["suggest", "providers"]),
+        (RuntimeMode.WIDGET, ["widgets"]),
     ],
 )
 def test_create_app_registers_openapi_tags_by_mode(
@@ -104,7 +138,7 @@ def test_create_app_registers_openapi_tags_by_mode(
     assert tags == expected_tags
 
 
-@pytest.mark.parametrize("mode", [RuntimeMode.ALL, RuntimeMode.REGULAR])
+@pytest.mark.parametrize("mode", [RuntimeMode.ALL, RuntimeMode.REGULAR, RuntimeMode.WIDGET])
 def test_create_app_registers_same_middleware_by_mode(mode: RuntimeMode) -> None:
     """Runtime modes keep the existing middleware stack unchanged."""
     middleware_names = [
@@ -165,6 +199,44 @@ def test_regular_mode_serves_regular_api(mocker: MockerFixture) -> None:
     governance_start.assert_called_once()
 
 
+def test_widget_mode_serves_only_widgets(mocker: MockerFixture) -> None:
+    """Widget mode serves the widget API but not the regular suggest API."""
+    import merino.main as main
+    from merino.providers.widgets import get_wrexham_provider
+    from merino.providers.widgets.wrexham.provider import WrexhamProvider
+    from merino.providers.widgets.wrexham.store import WrexhamStore
+
+    async def configure_metrics() -> None:
+        pass
+
+    async def close_metrics_client() -> None:
+        pass
+
+    def get_fake_wrexham_provider() -> WrexhamProvider:
+        return WrexhamProvider(
+            store=mocker.Mock(spec=WrexhamStore),
+            metrics_client=mocker.Mock(),
+            mock_data_enabled=True,
+        )
+
+    mocker.patch.object(main, "configure_logging")
+    mocker.patch.object(main, "configure_sentry")
+    mocker.patch.object(main, "configure_metrics", side_effect=configure_metrics)
+    mocker.patch.object(main, "_close_metrics_client", side_effect=close_metrics_client)
+    # _start_widget_services runs for real so widget startup/shutdown is exercised.
+    regular_start = mocker.patch.object(main, "_start_regular_services")
+
+    app = create_app(RuntimeMode.WIDGET)
+    app.dependency_overrides[get_wrexham_provider] = get_fake_wrexham_provider
+
+    with TestClient(app) as client:
+        assert client.get("/__heartbeat__").status_code == 200
+        assert client.get("/api/v1/widgets/wrexham/matches").status_code == 200
+        assert client.get("/api/v1/suggest", params={"q": "nonsponsored"}).status_code == 404
+
+    regular_start.assert_not_called()
+
+
 @pytest.mark.asyncio
 async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
     """Cleanup callbacks may return incidental values."""
@@ -192,6 +264,8 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "metrics_start",
                 "regular_start",
                 "governance_start",
+                "widget_start",
+                "widget_shutdown",
                 "governance_shutdown",
                 "regular_shutdown",
                 "metrics_shutdown",
@@ -207,6 +281,17 @@ async def test_cleanup_callbacks_ignore_non_awaitable_return_values() -> None:
                 "governance_start",
                 "governance_shutdown",
                 "regular_shutdown",
+                "metrics_shutdown",
+            ],
+        ),
+        (
+            RuntimeMode.WIDGET,
+            [
+                "logging_start",
+                "sentry_start",
+                "metrics_start",
+                "widget_start",
+                "widget_shutdown",
                 "metrics_shutdown",
             ],
         ),
@@ -242,12 +327,17 @@ def test_lifespan_starts_and_stops_services_by_mode(
         events.append("governance_start")
         cleanup_callbacks.append(record("governance_shutdown"))
 
+    async def start_widgets(cleanup_callbacks) -> None:
+        events.append("widget_start")
+        cleanup_callbacks.append(record("widget_shutdown"))
+
     mocker.patch.object(main, "configure_logging", side_effect=record("logging_start"))
     mocker.patch.object(main, "configure_sentry", side_effect=record("sentry_start"))
     mocker.patch.object(main, "configure_metrics", side_effect=configure_metrics)
     mocker.patch.object(main, "_close_metrics_client", side_effect=close_metrics_client)
     mocker.patch.object(main, "_start_regular_services", side_effect=start_regular)
     mocker.patch.object(main, "_start_governance", side_effect=start_governance)
+    mocker.patch.object(main, "_start_widget_services", side_effect=start_widgets)
 
     with TestClient(create_app(mode)):
         pass

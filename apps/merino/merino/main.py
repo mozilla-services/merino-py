@@ -42,8 +42,13 @@ tags_metadata = [
         "name": "providers",
         "description": "Get a list of Firefox Suggest providers and their availability.",
     },
+    {
+        "name": "widgets",
+        "description": "APIs serving Firefox New Tab widgets.",
+    },
 ]
 _REGULAR_API_TAG_NAMES = frozenset({"suggest", "providers"})
+_WIDGETS_TAG_NAMES = frozenset({"widgets"})
 
 logger = logging.getLogger(__name__)
 CleanupCallback = Callable[[], object]
@@ -107,6 +112,9 @@ def create_lifespan(mode: RuntimeMode | str):
                 await _start_regular_services(cleanup_callbacks)
                 _start_governance(cleanup_callbacks)
 
+            if mode_enables(runtime_mode, RuntimeFeature.WIDGETS):
+                await _start_widget_services(cleanup_callbacks)
+
             yield
         finally:
             await _run_cleanup_callbacks(cleanup_callbacks)
@@ -118,7 +126,7 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     """Initialize regular Merino services and register cleanup callbacks."""
     from merino import curated_recommendations
     from merino.message_handlers import search_terms
-    from merino.providers import games, manifest, rss, suggest, travel, widgets
+    from merino.providers import games, manifest, rss, suggest, travel
 
     await suggest.init_providers()
     cleanup_callbacks.append(suggest.shutdown_providers)
@@ -137,7 +145,13 @@ async def _start_regular_services(cleanup_callbacks: list[CleanupCallback]) -> N
     await travel.init_providers()
     cleanup_callbacks.append(travel.shutdown_providers)
 
+
+async def _start_widget_services(cleanup_callbacks: list[CleanupCallback]) -> None:
+    """Initialize only New Tab widget services and register cleanup callbacks."""
+    from merino.providers import widgets
+
     await widgets.init_providers()
+    cleanup_callbacks.append(widgets.shutdown_providers)
 
 
 def _start_governance(cleanup_callbacks: list[CleanupCallback]) -> None:
@@ -182,6 +196,9 @@ def _get_tags_metadata(mode: RuntimeMode) -> list[dict[str, str]]:
     if mode_enables(mode, RuntimeFeature.REGULAR_API):
         enabled_tag_names.update(_REGULAR_API_TAG_NAMES)
 
+    if mode_enables(mode, RuntimeFeature.WIDGETS):
+        enabled_tag_names.update(_WIDGETS_TAG_NAMES)
+
     return [tag for tag in tags_metadata if tag["name"] in enabled_tag_names]
 
 
@@ -206,9 +223,13 @@ def _include_routers(app: FastAPI, mode: RuntimeMode) -> None:
     app.include_router(dockerflow.router)
 
     if mode_enables(mode, RuntimeFeature.REGULAR_API):
-        from merino.web import api_v1, api_v1_widgets
+        from merino.web import api_v1
 
         app.include_router(api_v1.router, prefix="/api/v1")
+
+    if mode_enables(mode, RuntimeFeature.WIDGETS):
+        from merino.web import api_v1_widgets
+
         app.include_router(api_v1_widgets.router, prefix="/api/v1")
 
 

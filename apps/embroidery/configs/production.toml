@@ -1,0 +1,1 @@
+# Production. Deployment-specific values come from `EMBROIDERY_*` environment variables.

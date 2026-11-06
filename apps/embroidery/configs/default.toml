@@ -1,0 +1,15 @@
+# Defaults for every environment. `configs/${EMBROIDERY_ENV}.toml` overrides these, then
+# `configs/${EMBROIDERY_ENV}.local.toml` on disk, then `EMBROIDERY_SECTION__KEY` variables.
+
+[server]
+host = "0.0.0.0"
+port = 8000
+# Kept below the 30-second Kubernetes termination grace period, so that graceful shutdown can
+# finish every in-flight request before the pod is killed.
+request_timeout_secs = 10
+
+[logging]
+# `mozlog` (JSON for Mozilla's log pipeline) or `pretty` (human-readable).
+format = "mozlog"
+# An `EnvFilter` directive, for example `info` or `embroidery=debug,tower_http=info`.
+level = "info"

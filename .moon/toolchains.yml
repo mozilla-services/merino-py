@@ -1,0 +1,4 @@
+# The Rust plugin gives Cargo-aware task hashing (toolchain version and the locked dependency set).
+# No `version`: the root rust-toolchain.toml pins the toolchain. CI installs it once in
+# .github/actions/setup-rust, before tasks run in parallel; parallel rustup auto-installs collide.
+rust: {}

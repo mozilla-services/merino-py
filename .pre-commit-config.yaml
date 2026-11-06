@@ -36,3 +36,10 @@ repos:
         types: [python]
         pass_filenames: false
         always_run: true
+      - id: embroidery-fmt
+        name: cargo fmt (embroidery)
+        # Runs the same task as CI, which uses the toolchain pinned in the root rust-toolchain.toml.
+        entry: moon run embroidery:format-check
+        language: system
+        files: ^apps/embroidery/.*\.rs$
+        pass_filenames: false

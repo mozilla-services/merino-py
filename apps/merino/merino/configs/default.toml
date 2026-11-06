@@ -30,8 +30,9 @@ suggest_supported_languages = ["en", "fr", "de", "it", "pl"]
 [default.runtime]
 # MERINO_RUNTIME__MODE
 # Boot-time feature profile.
-# Allowed values: ALL, REGULAR.
-# Both currently serve the main Suggest API.
+# Allowed values: ALL, REGULAR, WIDGET.
+# REGULAR serves the main Suggest API, WIDGET serves the New Tab widgets API,
+# and ALL serves both.
 mode = "ALL"
 
 # MERINO_RUNTIME__QUERY_TIMEOUT_SEC
@@ -316,6 +317,12 @@ socket_connect_timeout_sec = 3
 # Timeout to interact with Redis in seconds
 socket_timeout_sec = 3
 
+# MERINO_REDIS__WIDGETS_SERVER - URI to the Widgets Redis primary endpoint.
+widgets_server = "redis://localhost:6379"
+
+# MERINO_REDIS__WIDGETS_REPLICA - URI to the Widgets Redis replica endpoint.
+widgets_replica = "redis://localhost:6379"
+
 [default.sentry]
 # MERINO_SENTRY__MODE
 # Any of "release", "debug", or "disabled".
@@ -574,11 +581,15 @@ api_key=""
 request_timeout_sec = 0.25
 
 [default.providers.sports.sportsdata]
-# MERINO_PROVIDERS__SPORTS__SPORTSDATA_API_KEY
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__API_KEY
 # The SportsData API key for local or remote access
 api_key=""
 
-# MERINO_PROVIDERS__SPORTS__SPORTSDATA_CACHE_DIR
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__API_AUTH_HEADER
+# The HTTP header that carries the SportsData API key
+api_auth_header="Ocp-Apim-Subscription-Key"
+
+# MERINO_PROVIDERS__SPORTS__SPORTSDATA__CACHE_DIR
 # Directory to store JSON request responses
 cache_dir="/tmp"
 
@@ -1389,10 +1400,77 @@ url_base = "https://affiliate-{language}-{market}.kayakaffiliates.com"
 url_autocomplete_path = "/api/affiliate/autocomplete/v1/{vertical}"
 
 
-[default.widget_providers.wrexham]
-# MERINO_WIDGET_PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
+[default.widgets.providers.wrexham]
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__MOCK_DATA_ENABLED
 # Whether the Wrexham widget endpoints serve mock data.
 mock_data_enabled = true
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__MATCHES_CACHE_CONTROL_TTL_SEC
+# How long Fastly and browsers can cache responses from the matches endpoint.
+matches_cache_control_ttl_sec = 10
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__STANDINGS_CACHE_CONTROL_TTL_SEC
+# How long Fastly and browsers can cache responses from the standings endpoint.
+standings_cache_control_ttl_sec = 60
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__FALLBACK_LOGO_URL
+# Image used for teams without a logo in the logo manifest.
+# TODO: replace with the real fallback image once it's uploaded to the CDN.
+fallback_logo_url = "https://prod-images.merino.prod.webservices.mozgcp.net/logos/soccer/fallback.png"
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__SEASON
+# SportsDataIO season to ingest, named after the year it ends (2026-27 is 2027).
+# Bump it each summer when the new season's schedule is published.
+season = 2027
+
+[default.widgets.providers.wrexham.job]
+# Settings for the `merino-jobs wrexham run-loop` ingestion job.
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__JOB__LOOP_INTERVAL_SEC
+# Seconds between runs. Live matches are refreshed on every run.
+loop_interval_sec = 10
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__JOB__FIXTURES_REFRESH_INTERVAL_SEC
+# Seconds between fixtures refreshes.
+fixtures_refresh_interval_sec = 600 # 10 minutes
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__JOB__STANDINGS_REFRESH_INTERVAL_SEC
+# Seconds between standings refreshes.
+standings_refresh_interval_sec = 600 # 10 minutes
+
+[default.widgets.providers.wrexham.sportsdata]
+# The SportsDataIO API key is shared with the sports provider:
+# `providers.sports.sportsdata.api_key`.
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__SPORTSDATA__URL_BASE
+# Base URL of the SportsDataIO soccer API.
+url_base = "https://api.sportsdata.io/v4/soccer/scores/json/"
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__SPORTSDATA__CONNECT_TIMEOUT_SEC
+# Timeout in seconds for connecting to SportsDataIO.
+connect_timeout_sec = 3.0
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__SPORTSDATA__REQUEST_TIMEOUT_SEC
+# Timeout in seconds for a SportsDataIO request.
+request_timeout_sec = 10.0
+
+[default.widgets.providers.wrexham.cache_ttls]
+# Redis expiry times for Wrexham data.
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CACHE_TTLS__FIXTURES_TTL_SEC
+fixtures_ttl_sec = 3600 # 1 hour
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CACHE_TTLS__LIVE_MATCHES_TTL_SEC
+live_matches_ttl_sec = 300 # 5 minutes
+
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__CACHE_TTLS__STANDINGS_TTL_SEC
+standings_ttl_sec = 3600 # 1 hour
+
+
+[default.widget_providers.iframed]
+# MERINO_WIDGET_PROVIDERS__IFRAMED__ENABLED
+# Whether this provider is enabled. Enabled by default.
+enabled = true
 
 
 [default.curated_recommendations.gcs]

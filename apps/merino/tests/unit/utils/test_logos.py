@@ -31,6 +31,31 @@ def test_get_logo_url_exists(category: LogoCategory, key: str) -> None:
     assert str(result) == f"{host}/logos/airline/airline_aa.png"
 
 
+def test_get_logo_url_soccer_by_global_team_id(mocker, make_manifest) -> None:
+    """Soccer logos are keyed by the sportsdata.io GlobalTeamId."""
+    mocker.patch(
+        "merino.utils.logos.load_manifest",
+        return_value=make_manifest((LogoCategory.Soccer, "90002327")),
+    )
+
+    result = get_logo_url(LogoCategory.Soccer, "90002327")
+
+    assert str(result) == f"{host}/logos/soccer/soccer_90002327.png"
+
+
+@pytest.mark.restore_load_manifest
+def test_soccer_manifest_entries_follow_naming() -> None:
+    """Every soccer entry points at logos/soccer/soccer_{GlobalTeamId}.png."""
+    load_manifest.cache_clear()
+
+    soccer = load_manifest().lookups[LogoCategory.Soccer]
+
+    assert soccer
+    for team_id, logo in soccer.items():
+        assert team_id.isdigit()
+        assert logo.url == f"logos/soccer/soccer_{team_id}.png"
+
+
 def test_get_logo_url_not_found(
     caplog: pytest.LogCaptureFixture,
     filter_caplog: FilterCaplogFixture,

@@ -2,16 +2,54 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from aiodogstatsd import Client
+from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
 
-from merino.providers.widgets import get_wrexham_provider
-from merino.providers.widgets.wrexham.protocol import MatchesResponse, StandingsResponse
-from merino.providers.widgets.wrexham.provider import WrexhamProvider
+from merino.configs import settings
+from merino.middleware import ScopeKey
+from merino.providers.widgets import get_iframed_widgets_provider, get_wrexham_provider
+from merino.providers.widgets.iframed.backends.protocol import IframedWidgetsResponse
+from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
+from merino.providers.widgets.wrexham.protocol import (
+    ErrorResponse,
+    MatchesResponse,
+    StandingsResponse,
+)
+from merino.providers.widgets.wrexham.provider import (
+    WrexhamDataUnavailableError,
+    WrexhamProvider,
+)
 
 router = APIRouter()
 
 DEFAULT_MATCH_LIMIT = 5
-MAX_MATCH_LIMIT = 5  # will confirm max with product.
+MAX_MATCH_LIMIT = 5
+
+_matches_cache_control_ttl = settings.widgets.providers.wrexham.matches_cache_control_ttl_sec
+_standings_cache_control_ttl = settings.widgets.providers.wrexham.standings_cache_control_ttl_sec
+
+_WREXHAM_UNAVAILABLE_MESSAGE = "Wrexham data is temporarily unavailable. Please try again later."
+
+
+def _cache_control(ttl: int) -> dict[str, str]:
+    """Return a Cache-Control header letting Fastly and browsers cache a response for `ttl`
+    seconds.
+    """
+    return {"Cache-Control": f"public, max-age={ttl}, s-maxage={ttl}"}
+
+
+def _wrexham_unavailable() -> JSONResponse:
+    """Return the error response for Wrexham data that can't be served."""
+    error = ErrorResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, message=_WREXHAM_UNAVAILABLE_MESSAGE
+    )
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content=error.model_dump(by_alias=True),
+    )
 
 
 @router.get(
@@ -19,6 +57,12 @@ MAX_MATCH_LIMIT = 5  # will confirm max with product.
     tags=["widgets"],
     summary="Wrexham AFC matches",
     response_model=MatchesResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": "Wrexham data can't be read right now.",
+        }
+    },
 )
 async def get_wrexham_matches(
     limit: Annotated[
@@ -30,14 +74,21 @@ async def get_wrexham_matches(
         ),
     ] = DEFAULT_MATCH_LIMIT,
     provider: WrexhamProvider = Depends(get_wrexham_provider),
-) -> MatchesResponse:
+) -> Response:
     """Return Wrexham's EFL Championship and FA Cup matches, grouped into previous,
     current and upcoming.
 
     **Args**:
     - `limit`: [Optional] Maximum number of previous and upcoming matches. Defaults to 5.
     """
-    return await provider.get_matches(limit)
+    try:
+        matches = await provider.get_matches(limit)
+    except WrexhamDataUnavailableError:
+        return _wrexham_unavailable()
+
+    return JSONResponse(
+        content=jsonable_encoder(matches), headers=_cache_control(_matches_cache_control_ttl)
+    )
 
 
 @router.get(
@@ -45,9 +96,49 @@ async def get_wrexham_matches(
     tags=["widgets"],
     summary="EFL Championship standings",
     response_model=StandingsResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ErrorResponse,
+            "description": "Wrexham data can't be read right now.",
+        }
+    },
 )
 async def get_wrexham_standings(
     provider: WrexhamProvider = Depends(get_wrexham_provider),
-) -> StandingsResponse:
-    """Return the EFL Championship table, ordered by league position."""
-    return await provider.get_standings()
+) -> Response:
+    """Return the EFL Championship table, ordered by league position. The table is empty when
+    none is available yet, e.g. before the season starts.
+    """
+    try:
+        standings = await provider.get_standings()
+    except WrexhamDataUnavailableError:
+        return _wrexham_unavailable()
+
+    return JSONResponse(
+        content=jsonable_encoder(standings), headers=_cache_control(_standings_cache_control_ttl)
+    )
+
+
+@router.get(
+    "/widgets/framed",
+    tags=["widgets"],
+    summary="All enabled widgets intended to be displayed in iframes",
+    response_model=IframedWidgetsResponse,
+)
+async def get_iframed_widgets(
+    request: Request,
+    locale: Annotated[str, Query(max_length=16)] = "en-US",
+    provider: IframedWidgetProvider = Depends(get_iframed_widgets_provider),
+) -> Response:
+    """Query merino for iframed widgets.
+
+    **Args**:
+    - locale: optionally provided by the caller, defaults to en-US (future-proofing design)
+    - provider: Injected iframed widgets provider dependency used to build response.
+    """
+    metrics_client: Client = request.scope[ScopeKey.METRICS_CLIENT]
+
+    with metrics_client.timeit("widgets.iframed.request.timing"):
+        widgets_response = await provider.get_widgets(locale=locale)
+
+    return JSONResponse(content=jsonable_encoder(widgets_response))

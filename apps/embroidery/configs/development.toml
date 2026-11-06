@@ -1,0 +1,8 @@
+# Local development. Run from `apps/embroidery`, so that `configs/*.local.toml` is found.
+
+[server]
+host = "127.0.0.1"
+
+[logging]
+format = "pretty"
+level = "embroidery=debug,tower_http=debug,info"

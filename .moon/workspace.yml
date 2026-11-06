@@ -4,6 +4,7 @@ projects:
   workspace: .
   merino: apps/merino
   fleece: apps/fleece
+  embroidery: apps/embroidery
   merino-common: packages/merino-common
   load-tests: tools/load-tests
   docs: docs

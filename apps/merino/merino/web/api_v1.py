@@ -6,37 +6,46 @@ from functools import partial
 from itertools import chain
 from typing import Annotated, Literal
 
+from aiodogstatsd import Client
 from asgi_correlation_id.context import correlation_id
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from merino_common.utils.query_processing.pii_detect import PIIType, basic_detect
 from starlette.requests import Request
-from aiodogstatsd import Client
 from starlette.responses import Response
 
 from merino.configs import settings
 from merino.curated_recommendations import (
-    get_provider as get_corpus_api_provider,
     get_legacy_provider,
 )
-from merino.curated_recommendations.provider import (
-    CuratedRecommendationsProvider,
+from merino.curated_recommendations import (
+    get_provider as get_corpus_api_provider,
+)
+from merino.curated_recommendations.legacy.protocol import (
+    CuratedRecommendationsLegacyFx114Request,
+    CuratedRecommendationsLegacyFx114Response,
+    CuratedRecommendationsLegacyFx115Fx129Request,
+    CuratedRecommendationsLegacyFx115Fx129Response,
+)
+from merino.curated_recommendations.legacy.provider import (
+    LegacyCuratedRecommendationsProvider,
 )
 from merino.curated_recommendations.protocol import (
     CuratedRecommendationsRequest,
     CuratedRecommendationsResponse,
 )
-from merino.curated_recommendations.legacy.provider import (
-    LegacyCuratedRecommendationsProvider,
-)
-from merino.curated_recommendations.legacy.protocol import (
-    CuratedRecommendationsLegacyFx115Fx129Request,
-    CuratedRecommendationsLegacyFx114Request,
-    CuratedRecommendationsLegacyFx115Fx129Response,
-    CuratedRecommendationsLegacyFx114Response,
+from merino.curated_recommendations.provider import (
+    CuratedRecommendationsProvider,
 )
 from merino.middleware import ScopeKey
 from merino.middleware.user_agent import UserAgent
+from merino.providers.games import get_particle_provider
+from merino.providers.games.particle.backends.protocol import Particle
+from merino.providers.games.particle.provider import Provider as ParticleProvider
+from merino.providers.manifest import get_provider as get_manifest_provider
+from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.manifest.provider import Provider as ManifestProvider
 from merino.providers.rss import get_wikimedia_potd_provider
 from merino.providers.rss.wikimedia_potd.backends.protocol import PictureOfTheDay
 from merino.providers.rss.wikimedia_potd.provider import (
@@ -45,15 +54,12 @@ from merino.providers.rss.wikimedia_potd.provider import (
 from merino.providers.suggest import get_providers as get_suggest_providers
 from merino.providers.suggest import get_weather_provider
 from merino.providers.suggest.adm.provider import AMP_FUZZY_ENABLED
-from merino.providers.suggest.manager import ProviderType
-from merino.providers.manifest import get_provider as get_manifest_provider
 from merino.providers.suggest.base import (
     BaseProvider,
     BaseSuggestion,
     SuggestionRequest,
 )
-
-from merino.providers.manifest.backends.protocol import ManifestData
+from merino.providers.suggest.manager import ProviderType
 from merino.providers.suggest.weather.backends.accuweather.errors import (
     AccuweatherError,
 )
@@ -62,8 +68,11 @@ from merino.providers.suggest.weather.backends.protocol import (
     WeatherContext,
 )
 from merino.providers.suggest.weather.provider import NO_LOCATION_KEY_SUGGESTION
+from merino.providers.suggest.weather.provider import Provider as WeatherProvider
+from merino.providers.travel import get_travel_provider
+from merino.providers.travel.kayak.backends.protocol import TravelListing, TravelVertical
+from merino.providers.travel.kayak.provider import Provider as TravelProvider
 from merino.utils import task_runner
-
 from merino.utils.api.cache_control import (
     get_ttl_for_cache_control_header_for_suggestions,
 )
@@ -71,31 +80,19 @@ from merino.utils.api.metrics import (
     emit_normalization_metrics,
     emit_suggestions_per_metrics,
 )
-from merino.utils.query_processing.query_patterns import (
-    QueryPatternMatcher,
-    build_query_pattern_matcher,
-    emit_query_pattern_metrics,
-)
-from merino_common.utils.query_processing.pii_detect import basic_detect, PIIType
 from merino.utils.query_processing.geo_params import (
     get_accepted_languages,
     refine_geolocation_for_suggestion,
     validate_suggest_custom_location_params,
 )
-
-from merino.web.models_v1 import ProviderResponse, SuggestResponse
-from merino.providers.manifest.provider import Provider as ManifestProvider
-from merino.providers.suggest.weather.provider import Provider as WeatherProvider
 from merino.utils.query_processing.normalization import get_pipeline
 from merino.utils.query_processing.normalization.pipeline import tier_a
-
-from merino.providers.games import get_particle_provider
-from merino.providers.games.particle.backends.protocol import Particle
-from merino.providers.games.particle.provider import Provider as ParticleProvider
-
-from merino.providers.travel import get_travel_provider
-from merino.providers.travel.kayak.backends.protocol import TravelListing, TravelVertical
-from merino.providers.travel.kayak.provider import Provider as TravelProvider
+from merino.utils.query_processing.query_patterns import (
+    QueryPatternMatcher,
+    build_query_pattern_matcher,
+    emit_query_pattern_metrics,
+)
+from merino.web.models_v1 import ProviderResponse, SuggestResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -769,8 +766,7 @@ async def get_travel_listings(
     """Query merino for travel listings.
 
     **Args**:
-    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`. `cars` currently
-      returns an empty list.
+    - `vertical`: Travel vertical, one of `hotels`, `flights` or `cars`.
     - `q`: The search query, between 3 and 64 characters.
     - `market`: [Optional] Two-letter market (country) code, e.g. `US`, `GB`. Defaults to `US`.
     - provider: Injected travel provider dependency used to fetch listings.

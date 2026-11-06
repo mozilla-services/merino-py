@@ -533,6 +533,19 @@ providers/travel/kayak:
       The "api/v1/travel" API endpoint.
     alert_policy: []
 
+providers/widgets/wrexham:
+  widgets.wrexham.redis.error:
+    description: |
+      A counter for failed reads of Wrexham widget data from Redis.
+    type: counter
+    labels:
+      - name: data
+        description: |
+          The data that couldn't be read: "matches" or "standings".
+    scope: |
+      The "api/v1/widgets/wrexham/*" API endpoints.
+    alert_policy: []
+
 utils/icon_processor:
   icon_processor.requests:
     description: |

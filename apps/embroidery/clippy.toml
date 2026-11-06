@@ -1,0 +1,4 @@
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+# Product and Kubernetes terms, not code. ".." keeps Clippy's default list.
+doc-valid-idents = ["MozLog", "CronJob", "CronJobs", ".."]

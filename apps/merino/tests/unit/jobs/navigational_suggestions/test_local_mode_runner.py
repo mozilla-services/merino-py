@@ -3,6 +3,7 @@
 import json
 import os
 import socket
+from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -80,6 +81,14 @@ class TestCheckGcsEmulatorRunning:
 
 class TestSetupGcsEmulator:
     """Test cases for setup_gcs_emulator function."""
+
+    @pytest.fixture(autouse=True)
+    def restore_environ(self) -> Iterator[None]:
+        """Restore `os.environ` after each test, since `setup_gcs_emulator` sets
+        `STORAGE_EMULATOR_HOST` on it directly.
+        """
+        with patch.dict(os.environ):
+            yield
 
     @patch("merino.jobs.navigational_suggestions.modes.local_mode_runner.logger")
     @patch("merino.jobs.navigational_suggestions.modes.local_mode_runner.GcsUploader")

@@ -94,19 +94,20 @@ _**Usage:**_
 ```python
 @pytest.fixture(scope="module")
 def your_docker_container() -> DockerContainer:
-    os.environ.setdefault("STORAGE_EMULATOR_HOST", "http://localhost:4443")
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("STORAGE_EMULATOR_HOST", "http://localhost:4443")
 
-    container = (
-        DockerContainer("your-docker-image")
-        .with_command("-scheme http")
-        .with_bind_ports(4443, 4443)
-    ).start()
+        container = (
+            DockerContainer("your-docker-image")
+            .with_command("-scheme http")
+            .with_bind_ports(4443, 4443)
+        ).start()
 
-    # wait for the container to start and emit logs
-    delay = wait_for_logs(container, "server started at")
-    port = container.get_exposed_port(4443)
+        # wait for the container to start and emit logs
+        delay = wait_for_logs(container, "server started at")
+        port = container.get_exposed_port(4443)
 
-    yield container
+        yield container
 
-    container.stop()
+        container.stop()
 ```
