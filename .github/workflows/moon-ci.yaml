@@ -9,6 +9,9 @@ on:
       fleece:
         description: Whether a Fleece image was built and uploaded
         value: ${{ jobs.ci.outputs.fleece }}
+      embroidery:
+        description: Whether an Embroidery image was built and uploaded
+        value: ${{ jobs.ci.outputs.embroidery }}
       load_tests:
         description: Whether a Locust image was built and uploaded
         value: ${{ jobs.ci.outputs.load_tests }}
@@ -28,6 +31,7 @@ jobs:
     outputs:
       merino: ${{ steps.images.outputs.merino }}
       fleece: ${{ steps.images.outputs.fleece }}
+      embroidery: ${{ steps.images.outputs.embroidery }}
       load_tests: ${{ steps.images.outputs.load_tests }}
       docs: ${{ steps.docs.outputs.built }}
     steps:
@@ -73,6 +77,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           for entry in 'merino app:build merino' 'fleece app-fleece:build merino-fleece' \
+            'embroidery app-embroidery:build merino-embroidery' \
             'load_tests merino-locust:build locust-image'; do
             read -r project image artifact <<< "$entry"
             if docker image inspect "$image" > /dev/null 2>&1; then
@@ -92,6 +97,12 @@ jobs:
         with:
           name: merino-fleece
           path: workspace/images/merino-fleece/image.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        if: steps.images.outputs.embroidery == 'true'
+        with:
+          name: merino-embroidery
+          path: workspace/images/merino-embroidery/image.tar.gz
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         if: steps.images.outputs.load_tests == 'true'
