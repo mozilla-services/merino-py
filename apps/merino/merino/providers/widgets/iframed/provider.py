@@ -70,7 +70,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-kayak-travel.merino.prod.webservices.mozgcp.net/1.0.202610272219/index.html"
+                        "https://prod-widgets-kayak-travel.merino.prod.webservices.mozgcp.net/1.3.202611061554/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -78,7 +78,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://prod-widgets-wrexhamafc.merino.prod.webservices.mozgcp.net/1.0.202611031928/index.html"
+                        "https://prod-widgets-wrexhamafc.merino.prod.webservices.mozgcp.net/1.0.202611061428/index.html"
                     ),
                 ),
             ]
@@ -113,7 +113,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-kayak-travel.merino.nonprod.webservices.mozgcp.net/1.0.202610272219/index.html"
+                        "https://stage-widgets-kayak-travel.merino.nonprod.webservices.mozgcp.net/1.3.202611061554/index.html"
                     ),
                 ),
                 IframedWidget(
@@ -121,7 +121,7 @@ class Provider:
                     vendor="mozilla",
                     enabled=True,
                     url=HttpUrl(
-                        "https://stage-widgets-wrexhamafc.merino.nonprod.webservices.mozgcp.net/1.0.202611031928/index.html"
+                        "https://stage-widgets-wrexhamafc.merino.nonprod.webservices.mozgcp.net/1.0.202611061428/index.html"
                     ),
                 ),
             ]
