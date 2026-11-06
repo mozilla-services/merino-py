@@ -110,10 +110,13 @@ def create_lifespan(mode: RuntimeMode | str):
 
             if mode_enables(runtime_mode, RuntimeFeature.REGULAR_API):
                 await _start_regular_services(cleanup_callbacks)
-                _start_governance(cleanup_callbacks)
 
             if mode_enables(runtime_mode, RuntimeFeature.WIDGETS):
                 await _start_widget_services(cleanup_callbacks)
+
+            # Started once for every mode, after the services, so circuit breakers in both the
+            # regular and widget services are reported.
+            _start_governance(cleanup_callbacks)
 
             yield
         finally:
@@ -155,7 +158,7 @@ async def _start_widget_services(cleanup_callbacks: list[CleanupCallback]) -> No
 
 
 def _start_governance(cleanup_callbacks: list[CleanupCallback]) -> None:
-    """Start regular service governance and register cleanup."""
+    """Start service governance (e.g. circuit breaker metrics) and register cleanup."""
     from merino import governance
 
     governance.start()

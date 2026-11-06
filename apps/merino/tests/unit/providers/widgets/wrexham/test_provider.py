@@ -12,6 +12,7 @@ import pytest
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
+from merino import governance
 from merino.configs import settings
 from merino.exceptions import CacheAdapterError
 from merino.providers.widgets.wrexham.protocol import MatchesResponse, MatchStatus
@@ -477,3 +478,22 @@ async def test_circuit_breakers_are_separate(
     assert matches_circuit_breaker.opened
     assert standings_circuit_breaker.closed
     assert [row.position for row in standings.standings] == [1]
+
+
+@pytest.mark.asyncio
+async def test_open_circuit_breaker_is_reported_by_governance(
+    store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture
+) -> None:
+    """An open breaker shows up in the governance daemon's circuit breaker metrics."""
+    mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
+    provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
+    for _ in range(FAILURE_THRESHOLD):
+        with pytest.raises(WrexhamDataUnavailableError):
+            await provider.get_matches(limit=5)
+    metrics_client = mocker.patch.object(governance.governing, "metrics_client")
+
+    await governance.governing.cron()
+
+    metrics_client.gauge.assert_any_call(
+        "governance.circuits.wrexham_matches", value=FAILURE_THRESHOLD
+    )
