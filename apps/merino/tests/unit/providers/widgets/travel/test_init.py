@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-import merino.providers.travel as travel
-from merino.providers.travel import get_travel_provider, init_providers, shutdown_providers
-from merino.providers.travel.kayak.provider import Provider as TravelProvider
+import merino.providers.widgets.travel as travel
+from merino.providers.widgets.travel import get_travel_provider, init_providers, shutdown_providers
+from merino.providers.widgets.travel.kayak.provider import Provider as TravelProvider
 
 
 @pytest.mark.asyncio

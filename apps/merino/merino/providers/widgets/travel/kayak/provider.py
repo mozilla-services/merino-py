@@ -4,7 +4,7 @@ from typing import Any
 
 import aiodogstatsd
 
-from merino.providers.travel.kayak.backends.protocol import (
+from merino.providers.widgets.travel.kayak.backends.protocol import (
     TravelBackend,
     TravelListing,
     TravelVertical,

@@ -6,7 +6,7 @@ from typing import Any
 import aiodogstatsd
 from httpx import AsyncClient, HTTPError, Response
 
-from merino.providers.travel.kayak.backends.protocol import TravelListing, TravelVertical
+from merino.providers.widgets.travel.kayak.backends.protocol import TravelListing, TravelVertical
 
 logger = logging.getLogger(__name__)
 
