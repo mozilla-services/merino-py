@@ -94,7 +94,7 @@ async def test_updater(
         }
         return mock_sport
 
-    monkeypatch.setattr(settings.providers.sports, "sports", ["nfl", "NbA", "NHL", "NoneSuch"])
+    monkeypatch.setitem(settings.providers.sports, "sports", ["nfl", "NbA", "NHL", "NoneSuch"])
     updater = SportDataUpdater(settings=settings.providers.sports, store=sport_data_store)
     assert list(updater.sports.keys()) == ["NFL", "NBA", "NHL"]
     assert updater.store == sport_data_store
