@@ -50,8 +50,9 @@ def es_adapter(mocker):
     # Defaults so the lifecycle sweep after the alias flip has iterable results.
     adapter_mock.get_indices_for_alias.return_value = []
     adapter_mock.get_index_lifecycle_policies.return_value = {}
-    # No CCR followers unless a test says otherwise.
-    adapter_mock.get_shard_stats.return_value = {}
+    # A single started shard with no CCR followers unless a test says otherwise.
+    adapter_mock.get_number_of_shards.return_value = 1
+    adapter_mock.get_shard_stats.return_value = {"0": [_shard(0)]}
     return adapter_mock
 
 
@@ -810,6 +811,7 @@ def test_wait_for_followers_polls_until_every_shard_catches_up(
         # Caught up.
         {"0": [_shard(99, 100, 100)], "1": [_shard(42, 43, 43)]},
     ]
+    es_adapter.get_number_of_shards.return_value = 2
     indexer = Indexer(
         "v1",
         category_blocklist,
@@ -890,6 +892,55 @@ def test_wait_for_followers_names_shards_without_a_primary_on_timeout(
     )
 
     with pytest.raises(TimeoutError, match=r"shard 0 \(no started primary\)"):
+        indexer._wait_for_followers("enwiki-1")
+
+
+def test_wait_for_followers_waits_while_a_shard_has_no_started_copies(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a shard missing from the stats counts as lagging, even when every
+    reported shard is in sync, until a copy of it is started again.
+    """
+    es_adapter.get_number_of_shards.return_value = 2
+    es_adapter.get_shard_stats.side_effect = [
+        {"0": [_shard(99, 100)]},
+        {},
+        {"0": [_shard(99, 100)], "1": [_shard(42, 43)]},
+    ]
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 3
+    es_adapter.get_number_of_shards.assert_called_once_with(index="enwiki-1")
+
+
+def test_wait_for_followers_names_shards_without_started_copies_on_timeout(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a shard that never comes back fails the wait, naming the shard."""
+    es_adapter.get_number_of_shards.return_value = 2
+    es_adapter.get_shard_stats.return_value = {"0": [_shard(99, 100)]}
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=30,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError, match=r"shard 1 \(no started copies\)"):
         indexer._wait_for_followers("enwiki-1")
 
 
@@ -1029,6 +1080,7 @@ def test_index_from_export_builds_under_temp_name_and_clones(
         "forcemerge",
         "block_writes",
         "clone_index",
+        "get_number_of_shards",
         "get_shard_stats",
         "update_aliases",
         "delete_index",
@@ -1047,6 +1099,7 @@ def test_index_from_export_builds_under_temp_name_and_clones(
         "forcemerge",
         "block_writes",
         "clone_index",
+        "get_number_of_shards",
         "get_shard_stats",
         "update_aliases",
         "delete_index",

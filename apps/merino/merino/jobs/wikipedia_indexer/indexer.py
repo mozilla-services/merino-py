@@ -331,9 +331,11 @@ class Indexer:
         start = time.monotonic()
         if cloned_at is None:
             cloned_at = start
+        # Shard count is fixed at creation
+        number_of_shards = self.elasticsearch.get_number_of_shards(index=index_name)
         discovered: set[str] = set()
         while True:
-            followers, lagging = self._get_follower_progress(index_name)
+            followers, lagging = self._get_follower_progress(index_name, number_of_shards)
             now = time.monotonic()
             for follower in sorted(followers - discovered):
                 logger.info(
@@ -367,16 +369,22 @@ class Indexer:
             )
             time.sleep(self.follower_sync_poll_interval)
 
-    def _get_follower_progress(self, index_name: str) -> tuple[set[str], set[str]]:
+    def _get_follower_progress(
+        self, index_name: str, number_of_shards: int
+    ) -> tuple[set[str], set[str]]:
         """Return the CCR follower lease IDs on `index_name` and the subset still behind.
 
         Shard stats only list started copies, so a primary can be briefly missing, for
-        example while a replica is promoted after a node restart. Progress on that shard
-        is then unknown, so it is reported as lagging until its primary is back.
+        example while a replica is promoted after a node restart, and a shard with no
+        started copies is missing entirely. Progress on such a shard is then unknown,
+        so it is reported as lagging until its primary is back.
         """
         followers: set[str] = set()
         lagging: set[str] = set()
-        for shard, copies in self.elasticsearch.get_shard_stats(index=index_name).items():
+        stats = self.elasticsearch.get_shard_stats(index=index_name)
+        for missing in {str(n) for n in range(number_of_shards)} - stats.keys():
+            lagging.add(f"shard {missing} (no started copies)")
+        for shard, copies in stats.items():
             primary = next((copy for copy in copies if copy["routing"]["primary"]), None)
             if primary is None:
                 lagging.add(f"shard {shard} (no started primary)")

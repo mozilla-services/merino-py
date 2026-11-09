@@ -200,13 +200,25 @@ class ElasticSearchAdapter:
         """Return shard-level stats for `index`, keyed by shard number.
 
         Each shard number maps to a list with one entry per shard copy (primary and
-        replicas), including its `routing`, `seq_no` and `retention_leases`.
+        replicas), including its `routing`, `seq_no` and `retention_leases`. Only
+        started copies are listed, so a shard with none is absent, and an index with
+        none at all yields an empty dict.
         """
         res = cast(
             dict[str, Any],
             self.get_client().indices.stats(index=index, level="shards"),
         )
+        if index not in res["indices"]:
+            return {}
         return cast(dict[str, list[dict[str, Any]]], res["indices"][index]["shards"])
+
+    def get_number_of_shards(self, *, index: str) -> int:
+        """Return the number of primary shards configured for `index`."""
+        res = cast(
+            dict[str, Any],
+            self.get_client().indices.get_settings(index=index, name="index.number_of_shards"),
+        )
+        return int(res[index]["settings"]["index"]["number_of_shards"])
 
     def get_index_lifecycle_policies(self, *, index: str) -> dict[str, str | None]:
         """Return the ILM policy attached to each index matching `index`.

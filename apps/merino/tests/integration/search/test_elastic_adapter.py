@@ -49,6 +49,33 @@ def test_get_shard_stats_exposes_checkpoints_and_retention_leases(
     assert {"id", "retaining_seq_no", "source"} <= leases[0].keys()
 
 
+def test_get_shard_stats_is_empty_for_an_index_without_started_copies(
+    adapter: ElasticSearchAdapter,
+) -> None:
+    """Verify an index whose only shard cannot be allocated yields no stats, not an
+    error.
+    """
+    adapter.create_index(
+        index=CLONE,
+        settings={
+            "number_of_shards": 1,
+            "number_of_replicas": 0,
+            "index.routing.allocation.require._name": "no-such-node",
+        },
+        wait_for_active_shards=0,
+    )
+
+    assert adapter.get_shard_stats(index=CLONE) == {}
+
+
+def test_get_number_of_shards(adapter: ElasticSearchAdapter) -> None:
+    """Verify the configured primary shard count is read back as an integer."""
+    adapter.create_index(index=CLONE, settings={"number_of_shards": 3, "number_of_replicas": 0})
+
+    assert adapter.get_number_of_shards(index=SOURCE) == 1
+    assert adapter.get_number_of_shards(index=CLONE) == 3
+
+
 def test_clone_index_clears_the_inherited_write_block(adapter: ElasticSearchAdapter) -> None:
     """Verify a blocked index can be cloned, and the clone left writable."""
     adapter.block_writes(index=SOURCE)

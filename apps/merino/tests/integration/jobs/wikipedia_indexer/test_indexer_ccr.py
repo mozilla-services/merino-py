@@ -87,9 +87,9 @@ def test_followers_start_with_the_finished_index_before_the_alias_flips(
     assert not leader.indices.exists(index=f"temp-{index}")
 
     # The indexer found the follower through its retention lease on the leader.
-    [discovered] = [r for r in caplog.records if r.message == "Discovered follower"]
-    assert f"/{index}/" in discovered.follower
-    assert discovered.seconds_since_clone < 10
+    [discovered] = [r.__dict__ for r in caplog.records if r.message == "Discovered follower"]
+    assert f"/{index}/" in discovered["follower"]
+    assert discovered["seconds_since_clone"] < 10
 
     # The follower bootstrapped from the finished clone, never from the build...
     assert list(follower.indices.get(index="*wiki-*,temp-*")) == [index]
