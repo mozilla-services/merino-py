@@ -4,8 +4,10 @@
 # CCR is a Platinum feature, required on both the leader and the follower, so both
 # clusters are moved onto the 30-day trial license here. The default `LICENSE=basic` in
 # `dev/.env` is left alone, so clusters started without the `ccr` profile stay on basic.
-# A cluster can start a trial only once; after it expires, use
-# `make docker-compose-down-v` to wipe the volumes and reset it.
+# A cluster can start a trial only once. An expired trial doesn't revert to basic on its
+# own, and it blocks the cluster health API, which also breaks es01 for the default setup.
+# Revert to basic with `POST /_license/start_basic?acknowledge=true` to keep the data, or
+# use `make docker-compose-down-v` to wipe the volumes and allow a new trial.
 set -e
 LEADER_URL="http://es01:9200"
 FOLLOWER_URL="http://es02:9200"
@@ -24,7 +26,8 @@ start_trial() {
     echo "Started trial license on $1"
   else
     echo "Could not start a trial license on $1: a trial was already used on this" >&2
-    echo "cluster and has expired. Run 'make docker-compose-down-v' to reset it." >&2
+    echo "cluster and has expired. Run 'make docker-compose-down-v' to reset it, or" >&2
+    echo "revert it to basic (see 'Trial license' in docs/dev/dependencies.md)." >&2
     exit 1
   fi
 }

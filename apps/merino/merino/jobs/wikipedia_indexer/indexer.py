@@ -63,8 +63,15 @@ class Indexer:
         elasticsearch: ElasticSearchAdapter,
         follower_sync_timeout: float = 3600,
         follower_sync_poll_interval: float = 15,
-        follower_discovery_period: float = 60,
+        follower_discovery_period: float = 120,
     ):
+        if follower_sync_timeout < follower_discovery_period:
+            # The wait can only succeed once the discovery period has elapsed, so a
+            # shorter timeout would fail every run.
+            raise ValueError(
+                f"follower_sync_timeout ({follower_sync_timeout}s) must be at least "
+                f"follower_discovery_period ({follower_discovery_period}s)"
+            )
         self.queue = []
         self.follower_sync_timeout = follower_sync_timeout
         self.follower_sync_poll_interval = follower_sync_poll_interval
@@ -301,7 +308,7 @@ class Indexer:
     def _wait_for_followers(self, index_name: str, cloned_at: float | None = None) -> None:
         """Block until every CCR follower of `index_name` has replicated all of it.
 
-        Thi runs on the leader cluster. Followers are discovered from the retention 
+        This runs on the leader cluster. Followers are discovered from the retention
         leases they hold on the leader's primary shard. Auto-follow only creates
         a follower after noticing the new index, so leases are collected for at least
         `follower_discovery_period` before concluding which followers exist. A
@@ -316,7 +323,7 @@ class Indexer:
         interval, which can be used to tune the `follower_discovery_period`.
 
         If no followers are configured, this method will proceed after the
-        `folower_discovery_period` has elapsed.
+        `follower_discovery_period` has elapsed.
 
         Raises:
             TimeoutError: If followers have not caught up within `follower_sync_timeout`.
@@ -361,11 +368,19 @@ class Indexer:
             time.sleep(self.follower_sync_poll_interval)
 
     def _get_follower_progress(self, index_name: str) -> tuple[set[str], set[str]]:
-        """Return the CCR follower lease IDs on `index_name` and the subset still behind."""
+        """Return the CCR follower lease IDs on `index_name` and the subset still behind.
+
+        Shard stats only list started copies, so a primary can be briefly missing, for
+        example while a replica is promoted after a node restart. Progress on that shard
+        is then unknown, so it is reported as lagging until its primary is back.
+        """
         followers: set[str] = set()
         lagging: set[str] = set()
-        for copies in self.elasticsearch.get_shard_stats(index=index_name).values():
-            primary = next(copy for copy in copies if copy["routing"]["primary"])
+        for shard, copies in self.elasticsearch.get_shard_stats(index=index_name).items():
+            primary = next((copy for copy in copies if copy["routing"]["primary"]), None)
+            if primary is None:
+                lagging.add(f"shard {shard} (no started primary)")
+                continue
             global_checkpoint = primary["seq_no"]["global_checkpoint"]
             for lease in primary["retention_leases"]["leases"]:
                 if lease["source"] != CCR_RETENTION_LEASE_SOURCE:

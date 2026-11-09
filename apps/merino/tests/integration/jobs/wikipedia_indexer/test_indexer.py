@@ -839,12 +839,79 @@ def test_wait_for_followers_times_out(
         es_adapter,
         follower_sync_timeout=60,
         follower_sync_poll_interval=15,
+        follower_discovery_period=0,
     )
 
     with pytest.raises(TimeoutError, match=r"enwiki-1 did not catch up within 60s.*follower-1"):
         indexer._wait_for_followers("enwiki-1")
 
     assert clock.now == 60
+
+
+def test_wait_for_followers_waits_while_a_primary_is_missing(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a shard with no started primary counts as lagging, rather than failing
+    the run, until its primary is back.
+    """
+    es_adapter.get_shard_stats.side_effect = [
+        {"0": [_shard(99, 100)], "1": [_shard(42, 43, primary=False)]},
+        {"0": [_shard(99, 100)], "1": [_shard(42, 43)]},
+    ]
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    indexer._wait_for_followers("enwiki-1")
+
+    assert es_adapter.get_shard_stats.call_count == 2
+
+
+def test_wait_for_followers_names_shards_without_a_primary_on_timeout(
+    file_manager, es_adapter, category_blocklist, title_blocklist, clock
+):
+    """Test that a primary that never comes back fails the wait, naming its shard."""
+    es_adapter.get_shard_stats.return_value = {"0": [_shard(42, 43, primary=False)]}
+    indexer = Indexer(
+        "v1",
+        category_blocklist,
+        title_blocklist,
+        file_manager,
+        es_adapter,
+        follower_sync_timeout=30,
+        follower_sync_poll_interval=15,
+        follower_discovery_period=0,
+    )
+
+    with pytest.raises(TimeoutError, match=r"shard 0 \(no started primary\)"):
+        indexer._wait_for_followers("enwiki-1")
+
+
+@pytest.mark.parametrize(
+    ("timeout", "discovery_period"),
+    [(59, 60), (0, 1)],
+    ids=["shorter-than-discovery", "zero-timeout"],
+)
+def test_init_rejects_a_sync_timeout_shorter_than_the_discovery_period(
+    file_manager, es_adapter, category_blocklist, title_blocklist, timeout, discovery_period
+):
+    """Test that a timeout that could never be met is rejected up front."""
+    with pytest.raises(ValueError, match="must be at least follower_discovery_period"):
+        Indexer(
+            "v1",
+            category_blocklist,
+            title_blocklist,
+            file_manager,
+            es_adapter,
+            follower_sync_timeout=timeout,
+            follower_discovery_period=discovery_period,
+        )
 
 
 @freezegun.freeze_time(FROZEN_TIME)
@@ -872,6 +939,7 @@ def test_index_from_export_discards_index_when_followers_time_out(
         file_manager,
         es_adapter,
         follower_sync_timeout=0,
+        follower_discovery_period=0,
     )
 
     with pytest.raises(TimeoutError):

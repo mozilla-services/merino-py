@@ -70,6 +70,12 @@ Creating indices with new data dumps proceeds as follows:
    found has caught up. It logs `Discovered follower` with `seconds_since_clone` for each
    follower, which helps when tuning the discovery period. If the leader has no
    followers, the job logs `Index has no followers` and continues.
+
+   The leader only learns about a follower once it holds a lease, so the discovery
+   period is a heuristic. A follower whose auto-follow picks up the index after the
+   period ends isn't waited on. It bootstraps with the alias already flipped, so on that
+   cluster the alias points at an index that is still recovering. Keep the period
+   comfortably above the `seconds_since_clone` values you see in production.
 4. **Flip the alias.** Alias changes replicate separately from the data, so the alias
    only moves once the followers hold the full index.
 

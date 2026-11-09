@@ -155,10 +155,22 @@ is stored in the cluster's data volume (`esdata01`, `esdata02`). The 30 days the
 count from the first `make docker-compose-up-ccr` on that volume. Running
 `make docker-compose-up-daemon` afterwards leaves `es01` on the trial until it expires.
 
-Once the trial expires, the cluster falls back to the basic license. Everything other
-than cross-cluster replication keeps working, but the CCR follower stops replicating,
-and `es-ccr-setup` fails with a message saying the trial was already used. To start a
-new trial, wipe the volumes and start again:
+An expired trial does **not** fall back to the basic license on its own. Reads and
+writes keep working, but Elasticsearch blocks the cluster health, cluster stats, and
+index stats APIs. The `es01` healthcheck uses cluster health, so it fails, and this
+affects the default setup too (`make docker-compose-up-daemon`). The CCR follower also
+stops replicating, and `es-ccr-setup` fails with a message saying the trial was already
+used.
+
+To get the default setup working again and keep your data, move `es01` back onto the
+basic license:
+
+```sh
+$ curl -X POST "http://localhost:9200/_license/start_basic?acknowledge=true"
+```
+
+A cluster can't start a second trial, so to use CCR again, wipe the volumes and start
+again:
 
 ```sh
 $ make docker-compose-down-v   # deletes all local Elasticsearch data
