@@ -6,6 +6,9 @@ from logging import Logger
 
 import requests
 
+# Timeout for downloading the category blocklist.
+BLOCKLIST_TIMEOUT = 60
+
 
 class ProgressReporter:
     """Report progress via logs"""
@@ -44,8 +47,8 @@ class ProgressReporter:
 
 
 def create_blocklist(blocklist_file_url: str) -> set[str]:
-    """Create blocklist from an external file url."""
-    block_list = requests.get(blocklist_file_url).text  # nosec
-    file_like_io = StringIO(block_list)
-    csv_reader = csv.DictReader(file_like_io, delimiter=",")
+    """Create the category blocklist from an external file url."""
+    resp = requests.get(blocklist_file_url, timeout=BLOCKLIST_TIMEOUT)  # nosec
+    resp.raise_for_status()
+    csv_reader = csv.DictReader(StringIO(resp.text), delimiter=",")
     return set(row["name"] for row in csv_reader)

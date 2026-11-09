@@ -3,6 +3,7 @@
 import logging
 
 import pytest
+import requests
 from pytest import LogCaptureFixture
 
 from merino.jobs.wikipedia_indexer.utils import (
@@ -29,10 +30,19 @@ def test_create_blocklist(
     categories = create_blocklist(blocklist_file_url=url)
 
     assert {
-        "Child abuse",
-        "Orgasm",
-        "Paraphilias",
+        "Blocked category A",
+        "Blocked category B",
+        "Blocked category C",
     } == categories
+
+
+def test_create_blocklist_raises_on_http_error(requests_mock):
+    """Test that an HTTP error is raised rather than returning an empty blocklist."""
+    url = "https://localhost"
+    requests_mock.get(url, status_code=404, text="404: Not Found")  # nosec
+
+    with pytest.raises(requests.HTTPError):
+        create_blocklist(blocklist_file_url=url)
 
 
 @pytest.mark.parametrize(
