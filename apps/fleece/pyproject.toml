@@ -41,3 +41,4 @@ merino-fleece = "merino_fleece.main:main"
 [tool.pytest.ini_options]
 addopts = [ "--import-mode=importlib" ]
 pythonpath = [ "." ]
+asyncio_default_fixture_loop_scope = "function"

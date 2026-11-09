@@ -4,12 +4,14 @@
 
 """Module for test configurations for the tests directory."""
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 from logging import LogRecord
 from typing import Any
 
 import aiodogstatsd
 import pytest
+from dynaconf.base import Settings
 from pytest_mock import MockerFixture
 
 from merino.utils.logos import Logo, LogoCategory, LogoManifest
@@ -87,3 +89,21 @@ def mock_load_manifest(request, mocker: MockerFixture, make_manifest) -> None:
         "merino.utils.logos.load_manifest",
         return_value=make_manifest((LogoCategory.Airline, "aa")),
     )
+
+
+@pytest.fixture(name="force_env")
+def fixture_force_env(monkeypatch: pytest.MonkeyPatch) -> Callable[[str], None]:
+    """Return a function that makes `settings.current_env` report the given environment for
+    the rest of the test.
+
+    `current_env` is patched on the Dynaconf `Settings` class rather than via
+    `monkeypatch.setattr(settings, "FORCE_ENV_FOR_DYNACONF", ...)`: since pytest 9.2,
+    monkeypatch records the old value from the instance `__dict__`, which Dynaconf's
+    `LazySettings` does not use, so undo would delete `FORCE_ENV_FOR_DYNACONF` from the
+    global settings and break `current_env` for every later test.
+    """
+
+    def force_env(env: str) -> None:
+        monkeypatch.setattr(Settings, "current_env", property(lambda _: env))
+
+    return force_env

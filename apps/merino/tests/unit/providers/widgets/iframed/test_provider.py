@@ -6,7 +6,6 @@
 
 import pytest
 
-from merino.configs import settings
 from merino.providers.widgets.iframed.provider import Provider as IframedWidgetProvider
 
 
@@ -45,13 +44,10 @@ class TestGetWidgets:
 
     @pytest.mark.asyncio
     async def test_returns_stage_widgets_for_stage_env(
-        self, provider: IframedWidgetProvider, monkeypatch
+        self, provider: IframedWidgetProvider, force_env
     ) -> None:
         """Test that get_widgets returns the hard-coded staging list."""
-        # force settings env to be stage
-        # current_env is a computed Dynaconf property; FORCE_ENV_FOR_DYNACONF is the supported
-        # override knob and monkeypatch restores it after the test.
-        monkeypatch.setattr(settings, "FORCE_ENV_FOR_DYNACONF", "stage")
+        force_env("stage")
 
         response = await provider.get_widgets(locale="en-US")
 
@@ -63,13 +59,10 @@ class TestGetWidgets:
 
     @pytest.mark.asyncio
     async def test_returns_prod_widgets_for_prod_env(
-        self, provider: IframedWidgetProvider, monkeypatch
+        self, provider: IframedWidgetProvider, force_env
     ) -> None:
         """Test that get_widgets returns the hard-coded production list."""
-        # force settings env to be production
-        # current_env is a computed Dynaconf property; FORCE_ENV_FOR_DYNACONF is the supported
-        # override knob and monkeypatch restores it after the test.
-        monkeypatch.setattr(settings, "FORCE_ENV_FOR_DYNACONF", "production")
+        force_env("production")
 
         response = await provider.get_widgets(locale="en-US")
 
