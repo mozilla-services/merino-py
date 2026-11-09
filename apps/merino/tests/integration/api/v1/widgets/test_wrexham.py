@@ -10,6 +10,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.openapi.utils import get_openapi
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
+
+from merino.configs import settings
+from merino.exceptions import CacheAdapterError
 
 from merino.providers.widgets.wrexham.protocol import (
     Competition,
@@ -180,6 +184,30 @@ def test_matches_returns_503_when_no_fixtures_are_stored(
         "message": "Wrexham data is temporarily unavailable. Please try again later.",
     }
     assert "Cache-Control" not in response.headers
+
+
+@pytest.mark.parametrize(
+    ("url", "store_method"),
+    [(MATCHES_URL, "read_fixtures"), (STANDINGS_URL, "read_standings")],
+    ids=["matches", "standings"],
+)
+def test_endpoints_return_503_without_reading_redis_once_the_breaker_opens(
+    client: TestClient,
+    wrexham_provider: WrexhamProvider,
+    store: WrexhamStore,
+    mocker: MockerFixture,
+    url: str,
+    store_method: str,
+) -> None:
+    """After repeated Redis errors, the endpoint keeps returning 503 without reading Redis."""
+    wrexham_provider.mock_data_enabled = False
+    read = mocker.patch.object(store, store_method, side_effect=CacheAdapterError("Redis is down"))
+    threshold = settings.widgets.providers.wrexham.circuit_breaker_failure_threshold
+
+    statuses = [client.get(url).status_code for _ in range(threshold + 3)]
+
+    assert set(statuses) == {503}
+    assert read.await_count == threshold
 
 
 @pytest.mark.parametrize("path", ["/widgets/wrexham/matches", "/widgets/wrexham/standings"])

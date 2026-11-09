@@ -13,7 +13,10 @@ from merino.cache.none import NoCacheAdapter
 from merino.main import app
 from merino.providers.widgets import get_iframed_widgets_provider, get_wrexham_provider
 from merino.providers.widgets.iframed.provider import Provider as IframedWidgetsProvider
-from merino.providers.widgets.wrexham.provider import WrexhamProvider
+from merino.providers.widgets.wrexham.provider import (
+    WrexhamProvider,
+    circuit_breaker,
+)
 from merino.providers.widgets.wrexham.store import WrexhamStore
 
 
@@ -32,6 +35,12 @@ class InMemoryCache(NoCacheAdapter):
     ) -> None:
         """Store a value."""
         self.values[key] = value.encode() if isinstance(value, str) else value
+
+
+@pytest.fixture(name="reset_circuit_breaker", autouse=True)
+def fixture_reset_circuit_breaker() -> None:
+    """Close the Wrexham circuit breaker before each test, since its state is shared."""
+    circuit_breaker.reset()
 
 
 @pytest.fixture(name="store")
