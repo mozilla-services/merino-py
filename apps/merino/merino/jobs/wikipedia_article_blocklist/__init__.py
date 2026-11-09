@@ -19,8 +19,6 @@ indexer_settings = config.jobs.wikipedia_indexer
 # The article blocklist is only generated from the English export.
 LANGUAGE = "en"
 
-DESTINATION_PREFIX = "suggest-merino-exports/wikipedia/article_blocklist"
-
 article_blocklist_cmd = typer.Typer(
     name="wikipedia-article-blocklist",
     help="Commands for generating the Wikipedia article blocklist",
@@ -51,11 +49,18 @@ def generate(
         "--gcs-storage-project",
         help="GCP project of the GCS bucket to write the article blocklist CSV to",
     ),
+    destination_prefix: str = typer.Option(
+        "",
+        "--destination-prefix",
+        help="Object prefix (folders) in the GCS bucket to write the article blocklist CSV to",
+    ),
 ):
     """Write the title and QID of English articles in a blocked category to a CSV on GCS"""
     # check the gcs values up front
-    if not all((gcs_path, gcp_project, gcs_storage_bucket, gcs_storage_project)):
-        raise ValueError("Both the GCS storage bucket and project must be set")
+    if not all(
+        (gcs_path, gcp_project, gcs_storage_bucket, gcs_storage_project, destination_prefix)
+    ):
+        raise ValueError("GCS values must be set")
 
     blocklist = create_blocklist(blocklist_file_url)
 
@@ -68,8 +73,8 @@ def generate(
 
     client = initialize_storage_client(destination_gcp_project=gcs_storage_project)
     bucket = client.bucket(gcs_storage_bucket)
-    blob = bucket.blob(f"{DESTINATION_PREFIX}/{timestamp}.csv")
+    blob = bucket.blob(f"{destination_prefix}/{timestamp}.csv")
     blob.upload_from_string(content, content_type="text/csv")
-    bucket.copy_blob(blob, bucket, f"{DESTINATION_PREFIX}/latest.csv")
+    bucket.copy_blob(blob, bucket, f"{destination_prefix}/latest.csv")
 
     logger.info("Uploaded Wikipedia article blocklist", extra={"blob": blob.name})
