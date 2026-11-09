@@ -28,9 +28,7 @@ CURRENT_STATUSES = frozenset(
 )
 UPCOMING_STATUSES = frozenset({MatchStatus.Scheduled, MatchStatus.Postponed})
 
-# One breaker per endpoint, so Redis problems reading one kind of data don't block the other.
-matches_circuit_breaker = WrexhamCircuitBreaker(name="wrexham_matches")
-standings_circuit_breaker = WrexhamCircuitBreaker(name="wrexham_standings")
+circuit_breaker = WrexhamCircuitBreaker(name="wrexham")
 
 StoredMatches = tuple[list[Match], datetime]
 
@@ -89,7 +87,7 @@ class WrexhamProvider:
         try:
             stored = await self._read_stored_standings()
         except CircuitBreakerError as ex:
-            raise WrexhamDataUnavailableError("Wrexham standings circuit breaker is open.") from ex
+            raise WrexhamDataUnavailableError("Wrexham circuit breaker is open.") from ex
         except CacheAdapterError as ex:
             self._record_redis_error("standings", ex)
             raise WrexhamDataUnavailableError("Could not read Wrexham standings.") from ex
@@ -108,7 +106,7 @@ class WrexhamProvider:
         """Close the provider's Redis connection."""
         await self.store.cache.close()
 
-    @guarded_by(matches_circuit_breaker)
+    @guarded_by(circuit_breaker)
     async def _read_stored_matches(
         self,
     ) -> tuple[list[StoredMatches | None], StoredMatches | None]:
@@ -122,7 +120,7 @@ class WrexhamProvider:
         ]
         return fixtures, await self.store.read_live_matches()
 
-    @guarded_by(standings_circuit_breaker)
+    @guarded_by(circuit_breaker)
     async def _read_stored_standings(self) -> tuple[list[Standing], datetime] | None:
         """Read the Championship table from Redis.
 
@@ -140,7 +138,7 @@ class WrexhamProvider:
         try:
             stored_fixtures, stored_live = await self._read_stored_matches()
         except CircuitBreakerError as ex:
-            raise WrexhamDataUnavailableError("Wrexham matches circuit breaker is open.") from ex
+            raise WrexhamDataUnavailableError("Wrexham circuit breaker is open.") from ex
         except CacheAdapterError as ex:
             self._record_redis_error("matches", ex)
             raise WrexhamDataUnavailableError("Could not read Wrexham matches.") from ex

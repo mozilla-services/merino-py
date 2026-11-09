@@ -22,8 +22,7 @@ from merino.providers.widgets.wrexham.provider import (
     UPCOMING_STATUSES,
     WrexhamDataUnavailableError,
     WrexhamProvider,
-    matches_circuit_breaker,
-    standings_circuit_breaker,
+    circuit_breaker,
 )
 from merino.providers.widgets.wrexham.store import WrexhamStore
 from tests.types import FilterCaplogFixture
@@ -380,7 +379,7 @@ RECOVERY_TIMEOUT = settings.widgets.providers.wrexham.circuit_breaker_recover_ti
 
 
 @pytest.mark.asyncio
-async def test_matches_circuit_breaker_opens_and_stays_open_after_redis_errors(
+async def test_circuit_breaker_opens_and_stays_open_after_redis_errors(
     store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture
 ) -> None:
     """After repeated Redis errors, matches return unavailable without calling Redis."""
@@ -393,7 +392,7 @@ async def test_matches_circuit_breaker_opens_and_stays_open_after_redis_errors(
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
 
-    assert matches_circuit_breaker.opened
+    assert circuit_breaker.opened
     assert read_fixtures.await_count == FAILURE_THRESHOLD
 
     for _ in range(3):
@@ -405,7 +404,7 @@ async def test_matches_circuit_breaker_opens_and_stays_open_after_redis_errors(
 
 
 @pytest.mark.asyncio
-async def test_matches_circuit_breaker_recovers_once_redis_works_again(
+async def test_circuit_breaker_recovers_once_redis_works_again(
     store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture, make_match: MakeMatch
 ) -> None:
     """After the recovery timeout, a successful Redis read closes the breaker."""
@@ -416,7 +415,7 @@ async def test_matches_circuit_breaker_recovers_once_redis_works_again(
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
-    assert matches_circuit_breaker.opened
+    assert circuit_breaker.opened
 
     read_fixtures.side_effect = None
     read_fixtures.return_value = ([make_match(1)], KICKOFF)
@@ -425,11 +424,11 @@ async def test_matches_circuit_breaker_recovers_once_redis_works_again(
     matches = await provider.get_matches(limit=5)
 
     assert _ids(matches) == ([1], [], [])
-    assert matches_circuit_breaker.closed
+    assert circuit_breaker.closed
 
 
 @pytest.mark.asyncio
-async def test_missing_matches_do_not_trip_the_circuit_breaker(
+async def test_missing_data_does_not_trip_the_circuit_breaker(
     provider: WrexhamProvider,
 ) -> None:
     """Having no fixtures stored isn't a Redis failure, so the breaker stays closed."""
@@ -437,14 +436,14 @@ async def test_missing_matches_do_not_trip_the_circuit_breaker(
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
 
-    assert matches_circuit_breaker.closed
+    assert circuit_breaker.closed
 
 
 @pytest.mark.asyncio
-async def test_standings_circuit_breaker_opens_after_redis_errors(
+async def test_standings_redis_errors_open_the_circuit_breaker(
     store: WrexhamStore, statsd_mock: Any, mocker: MockerFixture
 ) -> None:
-    """After repeated Redis errors, standings return unavailable without calling Redis."""
+    """Repeated Redis errors reading standings open the breaker too."""
     read_standings = mocker.patch.object(
         store, "read_standings", side_effect=CacheAdapterError("Redis is down")
     )
@@ -454,30 +453,30 @@ async def test_standings_circuit_breaker_opens_after_redis_errors(
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_standings()
 
-    assert standings_circuit_breaker.opened
+    assert circuit_breaker.opened
     assert read_standings.await_count == FAILURE_THRESHOLD
 
 
 @pytest.mark.asyncio
-async def test_circuit_breakers_are_separate(
+async def test_open_circuit_breaker_blocks_both_endpoints(
     store: WrexhamStore,
     statsd_mock: Any,
     mocker: MockerFixture,
     make_standing: MakeStanding,
 ) -> None:
-    """An open matches breaker doesn't stop standings from being read."""
+    """Both endpoints share the breaker, so once it opens, standings aren't read either."""
     mocker.patch.object(store, "read_fixtures", side_effect=CacheAdapterError("Redis is down"))
     provider = WrexhamProvider(store=store, metrics_client=statsd_mock, mock_data_enabled=False)
     for _ in range(FAILURE_THRESHOLD):
         with pytest.raises(WrexhamDataUnavailableError):
             await provider.get_matches(limit=5)
     await store.write_standings([make_standing(1)])
+    read_standings = mocker.spy(store, "read_standings")
 
-    standings = await provider.get_standings()
+    with pytest.raises(WrexhamDataUnavailableError, match="circuit breaker is open"):
+        await provider.get_standings()
 
-    assert matches_circuit_breaker.opened
-    assert standings_circuit_breaker.closed
-    assert [row.position for row in standings.standings] == [1]
+    read_standings.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -494,6 +493,4 @@ async def test_open_circuit_breaker_is_reported_by_governance(
 
     await governance.governing.cron()
 
-    metrics_client.gauge.assert_any_call(
-        "governance.circuits.wrexham_matches", value=FAILURE_THRESHOLD
-    )
+    metrics_client.gauge.assert_any_call("governance.circuits.wrexham", value=FAILURE_THRESHOLD)

@@ -19,8 +19,7 @@ from merino.providers.widgets.wrexham.protocol import (
     Team,
 )
 from merino.providers.widgets.wrexham.provider import (
-    matches_circuit_breaker,
-    standings_circuit_breaker,
+    circuit_breaker,
 )
 from merino.providers.widgets.wrexham.store import WrexhamStore
 
@@ -63,11 +62,10 @@ def fixture_fake_cache() -> FakeCache:
     return FakeCache()
 
 
-@pytest.fixture(name="reset_circuit_breakers", autouse=True)
-def fixture_reset_circuit_breakers() -> None:
-    """Close the Wrexham circuit breakers before each test, since their state is shared."""
-    matches_circuit_breaker.reset()
-    standings_circuit_breaker.reset()
+@pytest.fixture(name="reset_circuit_breaker", autouse=True)
+def fixture_reset_circuit_breaker() -> None:
+    """Close the Wrexham circuit breaker before each test, since its state is shared."""
+    circuit_breaker.reset()
 
 
 @pytest.fixture(name="store")
