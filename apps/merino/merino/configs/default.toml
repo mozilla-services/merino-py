@@ -1433,7 +1433,8 @@ fallback_logo_url = "https://prod-images.merino.prod.webservices.mozgcp.net/logo
 
 # MERINO_WIDGETS__PROVIDERS__WREXHAM__SEASON
 # SportsDataIO season to ingest, named after the year it ends (2026-27 is 2027).
-# Bump it each summer when the new season's schedule is published.
+# Bump it each summer when the new season's schedule is published, and update
+# `TEAM_SHORT_NAMES` in `merino/jobs/widgets/wrexham.py` with the new Championship teams.
 season = 2027
 
 [default.widgets.providers.wrexham.job]

@@ -16,7 +16,7 @@ from pydantic import HttpUrl
 
 from merino.cache.redis import RedisAdapter, create_redis_clients
 from merino.configs import settings
-from merino.providers.widgets.wrexham.protocol import CHAMPIONSHIP, FA_CUP, Match
+from merino.providers.widgets.wrexham.protocol import CHAMPIONSHIP, FA_CUP, Match, Team
 from merino.providers.widgets.wrexham.sportsdata import SportsDataBackend
 from merino.providers.widgets.wrexham.store import WrexhamStore
 from merino_common.utils.http_client import create_http_client
@@ -25,6 +25,58 @@ logger = logging.getLogger(__name__)
 
 # Competitions to ingest fixtures and live matches for. Standings are Championship only.
 COMPETITIONS = [CHAMPIONSHIP, FA_CUP]
+
+# Short name for each 2026-27 EFL Championship team, by global team ID. SportsDataIO only
+# provides short names in the standings, so these are used until the job has fetched them,
+# e.g. right after it starts. Update them each summer, along with the `season` setting.
+TEAM_SHORT_NAMES: dict[int, str] = {
+    90000519: "Norwich",
+    90000520: "Southampton",
+    90000521: "Stoke",
+    90000523: "Swansea",
+    90000525: "Watford",
+    90000526: "West Brom",
+    90000527: "West Ham",
+    90000857: "Burnley",
+    90000973: "Middlesbrough",
+    90001461: "Cardiff",
+    90001463: "Wolverhampton",
+    90001540: "Sheffield Utd",
+    90001988: "Birmingham",
+    90001990: "Blackburn",
+    90001997: "Bolton",
+    90002009: "Bristol City",
+    90002026: "Charlton Athl.",
+    90002059: "Derby County",
+    90002153: "Lincoln City",
+    90002179: "Millwall",
+    90002214: "Portsmouth",
+    90002217: "Preston NE",
+    90002219: "QPR",
+    90002327: "Wrexham",
+}
+
+
+def use_short_names(matches: list[Match], short_names: dict[int, str]) -> list[Match]:
+    """Replace each team's name with its short name, for teams in `short_names`.
+
+    Teams without a short name, e.g. FA Cup opponents from outside the Championship, keep
+    their full name.
+    """
+
+    def with_short_name(team: Team) -> Team:
+        short_name = short_names.get(team.id)
+        return team if short_name is None else team.model_copy(update={"name": short_name})
+
+    return [
+        match.model_copy(
+            update={
+                "home_team": with_short_name(match.home_team),
+                "away_team": with_short_name(match.away_team),
+            }
+        )
+        for match in matches
+    ]
 
 
 class WrexhamIngester:
@@ -42,6 +94,7 @@ class WrexhamIngester:
     standings_interval: timedelta
     _fixtures_due_at: float
     _standings_due_at: float
+    _short_names: dict[int, str]
 
     def __init__(
         self,
@@ -59,6 +112,8 @@ class WrexhamIngester:
         # Due on the first run.
         self._fixtures_due_at = float("-inf")
         self._standings_due_at = float("-inf")
+        # Updated from the standings on each standings refresh.
+        self._short_names = dict(TEAM_SHORT_NAMES)
 
     async def refresh_fixtures(self) -> None:
         """Write the season's Wrexham fixtures for each competition.
@@ -68,6 +123,7 @@ class WrexhamIngester:
         for competition in COMPETITIONS:
             try:
                 matches = await self.backend.fetch_schedule(competition, self.season)
+                matches = use_short_names(matches, self._short_names)
                 await self.store.write_fixtures(competition.id, matches)
                 logger.info(
                     "Refreshed Wrexham fixtures",
@@ -96,6 +152,7 @@ class WrexhamIngester:
         matches: list[Match] = []
         for competition in COMPETITIONS:
             matches.extend(await self.backend.fetch_live_matches(competition))
+        matches = use_short_names(matches, self._short_names)
         await self.store.write_live_matches(sorted(matches, key=lambda match: match.kickoff))
         logger.info(
             "Refreshed Wrexham live matches",
@@ -107,9 +164,14 @@ class WrexhamIngester:
         )
 
     async def refresh_standings(self) -> None:
-        """Write the Championship table."""
+        """Write the Championship table, and use its short team names for later matches.
+
+        Teams from `TEAM_SHORT_NAMES` that aren't in the table, e.g. relegated last season,
+        keep their short names.
+        """
         standings = await self.backend.fetch_standings(CHAMPIONSHIP, self.season)
         await self.store.write_standings(standings)
+        self._short_names = TEAM_SHORT_NAMES | {row.team.id: row.team.name for row in standings}
         logger.info(
             "Refreshed Wrexham standings",
             extra={"refresh": "standings", "team_count": len(standings)},

@@ -14,13 +14,14 @@ from pydantic import HttpUrl
 from pytest import LogCaptureFixture
 from pytest_mock import MockerFixture
 
-from merino.jobs.widgets.wrexham import WrexhamIngester
+from merino.jobs.widgets.wrexham import TEAM_SHORT_NAMES, WrexhamIngester, use_short_names
 from merino.providers.widgets.wrexham.protocol import (
     CHAMPIONSHIP,
     FA_CUP,
     Competition,
     Match,
     MatchStatus,
+    Standing,
     Team,
 )
 from merino.providers.widgets.wrexham.sportsdata import SportsDataBackend, SportsDataBackendError
@@ -195,3 +196,102 @@ async def test_shutdown_closes_connections(
 
     backend.shutdown.assert_awaited_once()
     store.cache.close.assert_awaited_once()
+
+
+WREXHAM_ID = 90002327
+CARDIFF_ID = 90001461
+NEW_TEAM_ID = 1  # A team in neither the fallback table nor the standings.
+
+
+def match_between(home_id: int, away_id: int) -> Match:
+    """Return a match between two teams whose names are the full names."""
+    return match(1, CHAMPIONSHIP, 12).model_copy(
+        update={
+            "home_team": Team(id=home_id, name=f"Full name {home_id}", logo_url=LOGO),
+            "away_team": Team(id=away_id, name=f"Full name {away_id}", logo_url=LOGO),
+        }
+    )
+
+
+def standing(team_id: int, short_name: str) -> Standing:
+    """Return a table row for a team, named with its short name as SportsDataIO gives it."""
+    team = Team(id=team_id, name=short_name, logo_url=LOGO)
+    return Standing(position=1, team=team, played=12, goal_difference=0, points=20)
+
+
+def test_use_short_names_replaces_known_teams_only() -> None:
+    """Teams with a short name get it; other teams keep their full name."""
+    [result] = use_short_names([match_between(WREXHAM_ID, NEW_TEAM_ID)], {WREXHAM_ID: "Wrexham"})
+
+    assert (result.home_team.name, result.away_team.name) == ("Wrexham", "Full name 1")
+
+
+@pytest.mark.asyncio
+async def test_first_run_uses_the_fallback_short_names(
+    ingester: WrexhamIngester, backend: Any, store: Any
+) -> None:
+    """Before any standings are fetched, fixtures and live matches use the fallback table."""
+    backend.fetch_schedule.side_effect = lambda competition, season: [
+        match_between(WREXHAM_ID, CARDIFF_ID)
+    ]
+    backend.fetch_live_matches.side_effect = lambda competition: [
+        match_between(CARDIFF_ID, NEW_TEAM_ID)
+    ]
+
+    await ingester.run_once()
+
+    _, fixtures = store.write_fixtures.call_args_list[0].args
+    assert (fixtures[0].home_team.name, fixtures[0].away_team.name) == (
+        TEAM_SHORT_NAMES[WREXHAM_ID],
+        TEAM_SHORT_NAMES[CARDIFF_ID],
+    )
+    [live] = store.write_live_matches.call_args.args
+    assert (live[0].home_team.name, live[0].away_team.name) == (
+        TEAM_SHORT_NAMES[CARDIFF_ID],
+        "Full name 1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_later_runs_use_short_names_from_the_standings(
+    ingester: WrexhamIngester, backend: Any, store: Any
+) -> None:
+    """After a standings refresh, its short names are used, and fallback teams that aren't
+    in the table keep theirs.
+    """
+    backend.fetch_standings.return_value = [
+        standing(WREXHAM_ID, "Wrexham AFC (table)"),
+        standing(NEW_TEAM_ID, "New Team"),
+    ]
+    backend.fetch_live_matches.side_effect = lambda competition: [
+        match_between(WREXHAM_ID, NEW_TEAM_ID)
+        if competition == CHAMPIONSHIP
+        else match_between(CARDIFF_ID, NEW_TEAM_ID)
+    ]
+    await ingester.run_once()  # Live matches, fixtures, then standings.
+
+    await ingester.run_once()  # Live matches only, now with the table's names.
+
+    [live] = store.write_live_matches.call_args.args
+    names = {(m.home_team.name, m.away_team.name) for m in live}
+    assert names == {
+        ("Wrexham AFC (table)", "New Team"),
+        (TEAM_SHORT_NAMES[CARDIFF_ID], "New Team"),
+    }
+
+
+@pytest.mark.asyncio
+async def test_failed_standings_refresh_keeps_the_short_names(
+    ingester: WrexhamIngester, backend: Any, store: Any
+) -> None:
+    """If a standings refresh fails, the short names already in use are kept."""
+    backend.fetch_standings.side_effect = SportsDataBackendError("boom")
+    backend.fetch_live_matches.side_effect = lambda competition: [
+        match_between(WREXHAM_ID, NEW_TEAM_ID)
+    ]
+
+    await ingester.run_once()
+    await ingester.run_once()
+
+    [live] = store.write_live_matches.call_args.args
+    assert live[0].home_team.name == TEAM_SHORT_NAMES[WREXHAM_ID]
