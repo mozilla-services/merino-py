@@ -39,6 +39,7 @@ def _generate(**overrides):
         "gcp_project": "a-project",
         "gcs_storage_bucket": "storage-bucket",
         "gcs_storage_project": "storage-project",
+        "destination_prefix": "exports/article_blocklist",
     }
     kwargs.update(overrides)
     return generate(**kwargs)
@@ -60,7 +61,7 @@ def test_generate_uploads_timestamped_csv_and_copies_it_to_latest(collaborators)
     """Verify the CSV is uploaded once, then copied to the latest destination."""
     _generate()
 
-    prefix = "suggest-merino-exports/wikipedia/article_blocklist"
+    prefix = "exports/article_blocklist"
     collaborators["storage_client"].assert_called_once_with(
         destination_gcp_project="storage-project"
     )
@@ -91,12 +92,24 @@ def test_generate_raises_when_upload_fails(collaborators):
 
 @pytest.mark.parametrize(
     "overrides",
-    [{"gcs_storage_bucket": ""}, {"gcs_storage_project": ""}],
-    ids=["missing_bucket", "missing_project"],
+    [
+        {"gcs_path": ""},
+        {"gcp_project": ""},
+        {"gcs_storage_bucket": ""},
+        {"gcs_storage_project": ""},
+        {"destination_prefix": ""},
+    ],
+    ids=[
+        "missing_gcs_path",
+        "missing_gcp_project",
+        "missing_bucket",
+        "missing_project",
+        "missing_destination_prefix",
+    ],
 )
 def test_generate_requires_the_storage_destination(collaborators, overrides):
     """Verify a missing destination fails before the export is scanned."""
-    with pytest.raises(ValueError, match="GCS storage bucket and project must be set"):
+    with pytest.raises(ValueError, match="GCS values must be set"):
         _generate(**overrides)
 
     collaborators["create_blocklist"].assert_not_called()
