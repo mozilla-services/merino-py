@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.openapi.utils import get_openapi
 from fastapi.testclient import TestClient
+from freezegun import freeze_time
 from pytest_mock import MockerFixture
 
 from merino.configs import settings
@@ -168,6 +169,25 @@ def test_matches_returns_grouped_matches_from_redis(
     assert [match["id"] for match in body["upcoming"]] == [3]
     assert body["current"][0]["status"] == "InProgress"
     assert response.headers["Cache-Control"] == "public, max-age=10, s-maxage=10"
+
+
+@freeze_time(KICKOFF + timedelta(hours=2))
+def test_matches_keep_a_just_finished_match_in_current(
+    client: TestClient, wrexham_provider: WrexhamProvider, store: WrexhamStore
+) -> None:
+    """A match that finished in the last few minutes is still returned in current."""
+    wrexham_provider.mock_data_enabled = False
+    finished = _match(1, MatchStatus.Final, KICKOFF).model_copy(
+        update={"updated_at": KICKOFF + timedelta(hours=1, minutes=58)}
+    )
+    asyncio.run(store.write_fixtures(CHAMPIONSHIP_ID, [finished]))
+
+    response = client.get(MATCHES_URL)
+
+    body = response.json()
+    assert [match["id"] for match in body["current"]] == [1]
+    assert body["current"][0]["status"] == "Final"
+    assert body["previous"] == []
 
 
 def test_matches_returns_503_when_no_fixtures_are_stored(

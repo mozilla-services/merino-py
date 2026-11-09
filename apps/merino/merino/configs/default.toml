@@ -1422,6 +1422,10 @@ circuit_breaker_failure_threshold = 10
 # How long the endpoints wait before trying Redis again after the circuit breaker opens.
 circuit_breaker_recover_timeout_sec = 30
 
+# MERINO_WIDGETS__PROVIDERS__WREXHAM__FINISHED_MATCH_GRACE_PERIOD_SEC
+# How long a match stays in `current` after it finishes, before it moves to `previous`.
+finished_match_grace_period_sec = 300
+
 # MERINO_WIDGETS__PROVIDERS__WREXHAM__FALLBACK_LOGO_URL
 # Image used for teams without a logo in the logo manifest.
 # TODO: replace with the real fallback image once it's uploaded to the CDN.
